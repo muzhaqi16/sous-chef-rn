@@ -215,6 +215,7 @@ describe('useQuantityEditModal', () => {
         quantity: '5',
         unitId: 'unit-1',
         version: 3,
+        idempotencyKey: expect.any(String),
       },
     });
   });
@@ -249,6 +250,7 @@ describe('useQuantityEditModal', () => {
         quantity: '1.5',
         unitId: 'unit-1',
         version: 3,
+        idempotencyKey: expect.any(String),
       },
     });
   });
@@ -283,6 +285,7 @@ describe('useQuantityEditModal', () => {
         quantity: '2 1/3',
         unitId: 'unit-1',
         version: 3,
+        idempotencyKey: expect.any(String),
       },
     });
   });

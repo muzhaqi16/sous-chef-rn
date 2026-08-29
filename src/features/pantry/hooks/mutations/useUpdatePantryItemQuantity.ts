@@ -1,18 +1,19 @@
 /**
- * useUpdatePantryItemQuantity - Update mutation for pantry item quantity/unit
- * (local-first).
+ * useUpdatePantryItemQuantity — update a pantry item's quantity and tracking
+ * unit (local-first).
  *
- * Single responsibility:
- * - Update quantity and unit fields via dedicated endpoint
- * - Version conflict handling
- * - Writes the updated quantity/unit to the cache PERMANENTLY before firing
- *   (an `optimisticResponse` would roll back the moment the offline queue
- *   completes the request with a null result). A queued update stays visible
- *   and replays via the idempotent `SyncPantryItem` upsert; a real rejection
- *   restores the pre-edit snapshot.
+ * The change goes through the declared write path: describe it once as a
+ * `WriteIntent`, let the kit apply it permanently, invert it, and carry it to
+ * the queue. A queued update stays visible and replays via the idempotent
+ * `SyncPantryItem` upsert; a refusal is undone from the intent's inverse.
+ *
+ * The mutation is fired WITHOUT being awaited so `onSuccess` (which navigates
+ * away) runs on the same tick as the tap.
  */
 
+import { gql } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
+import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
 import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import {
@@ -23,8 +24,10 @@ import {
   handleMutationError,
   versionConflictCheck,
 } from '#/utils/errorHandlers';
-import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+import { useWrite } from '#/apollo/write/useWrite';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import { t } from '#/i18n';
 import { buildOptimisticUnit } from './utils';
 import type { UnitSelection } from './types';
 import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
@@ -45,11 +48,37 @@ interface UpdateQuantityParams {
   trackingUnit: UnitSelection;
 }
 
+/**
+ * The unit fields the item's own selection reads.
+ *
+ * The picked unit is normalized into the cache before the item is pointed at
+ * it: `SearchUnits` does not select `autoConvertThreshold`, so a bare reference
+ * to a just-searched unit would leave the item's read INCOMPLETE and drop it
+ * out of every list until the server answered. `buildOptimisticUnit` fills the
+ * gaps; this document is what writes them.
+ */
+const OPTIMISTIC_UNIT = gql`
+  fragment UpdatePantryItemQuantityUnit on Unit {
+    id
+    name
+    symbol
+    type
+    isMetric
+    baseUnitId
+    conversionFactor
+    isCommon
+    displayAsFraction
+    minPrecision
+    autoConvertThreshold
+  }
+`;
+
 export function useUpdatePantryItemQuantity({
   onSuccess,
   refetch,
 }: UseUpdatePantryItemQuantityOptions) {
   const client = useApolloClient();
+  const { apply } = useWrite();
 
   const [updateQuantityMutation] = useMutation(
     UpdatePantryItemQuantityDocument,
@@ -64,8 +93,8 @@ export function useUpdatePantryItemQuantity({
   );
 
   /**
-   * Update quantity and/or unit of a pantry item
-   * Fires mutation asynchronously - doesn't await to allow immediate navigation
+   * Update quantity and/or unit of a pantry item.
+   * Fires the mutation without awaiting so navigation is not held up.
    */
   const updateQuantity = ({
     itemId,
@@ -74,6 +103,8 @@ export function useUpdatePantryItemQuantity({
     unitId,
     trackingUnit,
   }: UpdateQuantityParams): void => {
+    // Still read: `version` rides on the input, and the current unit supplies
+    // the defaults for any field the picked one did not carry.
     const currentItem =
       client.cache.readFragment<UseUpdatePantryItemQuantity_PantryItemFragment>(
         {
@@ -94,32 +125,29 @@ export function useUpdatePantryItemQuantity({
     const quantityText = quantityInput || quantityValue.toString();
     const newQuantity = parseFractionalInput(quantityText) ?? NaN;
 
-    // Fire mutation asynchronously - don't await to allow immediate navigation
-    const optimisticPantryItem = enhanceWithVersion(currentItem, {
-      quantity: newQuantity,
-      unit: buildOptimisticUnit(trackingUnit, currentItem.unit),
-    });
-
-    // Permanent write BEFORE firing: survives an offline/API-down queue
-    // (where no response ever arrives to materialize the change).
-    const cacheId = client.cache.identify({
-      __typename: 'PantryItem',
-      id: itemId,
-    });
-    const writeItem = (data: UseUpdatePantryItemQuantity_PantryItemFragment) =>
+    const optimisticUnit = buildOptimisticUnit(trackingUnit, currentItem.unit);
+    if (optimisticUnit) {
       client.cache.writeFragment({
-        id: cacheId,
-        fragment: UseUpdatePantryItemQuantity_PantryItemFragmentDoc,
-        fragmentName: 'useUpdatePantryItemQuantity_pantryItem',
-        data,
-      });
-    try {
-      writeItem(optimisticPantryItem);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Update Pantry Item Quantity (optimistic)',
+        id: `Unit:${optimisticUnit.id}`,
+        fragment: OPTIMISTIC_UNIT,
+        data: optimisticUnit,
       });
     }
+
+    // The unit is patched as a REFERENCE, not as the unit object: a plain
+    // object value is shallow-merged, and merging unit fields into the stored
+    // `{ __ref }` would leave the item pointing at the old unit.
+    const { context, revert } = apply({
+      target: { __typename: 'PantryItem', id: itemId },
+      patch: {
+        quantity: newQuantity,
+        unit: optimisticUnit ? { __ref: `Unit:${optimisticUnit.id}` } : null,
+      },
+      // The value is a final one the person typed as a fact, so a version
+      // conflict is resolved by refreshing the version and re-sending rather
+      // than by discarding their number. See `WriteConvergence`.
+      convergence: 'absolute',
+    });
 
     updateQuantityMutation({
       variables: {
@@ -130,38 +158,32 @@ export function useUpdatePantryItemQuantity({
           quantity: normalizeNumericTextForApi(quantityText),
           unitId: unitId,
           version: currentItem.version ?? undefined,
+          // Claimed before the server's version check, so a queued replay
+          // converges instead of being refused on the version it carries.
+          idempotencyKey: generateEntityId(),
         },
       },
-      // Queue offline / on API-down — replays via the idempotent SyncPantryItem.
-      context: { localFirst: true },
+      context,
     })
       .then(result => {
         // 'queued' (null payload, no error) keeps the permanent write — the
-        // change replays later. A rejection restores the pre-edit snapshot;
-        // the user-facing alert comes from the mutation's onError.
-        const outcome = classifyCreateResult(result);
-        if (outcome === 'rejected') {
-          try {
-            writeItem(currentItem);
-          } catch (cacheError) {
-            errorService.reportError(cacheError, {
-              operation: 'Revert rejected Pantry Item quantity update',
-            });
-          }
+        // change replays later. A refusal reached the server on the spot, so
+        // it never entered the queue and the queue's withdrawal will never see
+        // it; a queued write refused on a later replay is undone from its
+        // persisted intent instead. `alertRejectedMutation` stays silent when
+        // the result carries an `error`, which the mutation's `onError`
+        // already surfaced.
+        if (classifyCreateResult(result) === 'rejected') {
+          revert();
+          alertRejectedMutation(result, t('errors.updateItemFailed'));
         }
       })
       .catch(error => {
-        try {
-          writeItem(currentItem);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert failed Pantry Item quantity update',
-          });
-        }
+        revert();
         errorService.reportError(error, {
           operation: 'updatePantryItemQuantity',
         });
-        // Error already handled by mutation's onError
+        // The user-facing alert comes from the mutation's onError.
       });
 
     onSuccess?.();

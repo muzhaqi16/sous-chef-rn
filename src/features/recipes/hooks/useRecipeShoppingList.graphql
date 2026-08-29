@@ -5,6 +5,17 @@
 # the display fields a freshly-added cell needs.
 fragment useRecipeShoppingList_addedItem on ShoppingListItem {
   id
+  # The parent's counters ride back on the response by design: the shared
+  # updater calls addNewItemToShoppingListCache(..., bumpTotalItems = false)
+  # precisely because they do. Omitting them here left the list's counts stale
+  # after adding from a recipe.
+  shoppingList {
+    id
+    totalItems
+    completedItems
+    remainingItems
+    completionRate
+  }
   itemName
   quantity
   quantityInput

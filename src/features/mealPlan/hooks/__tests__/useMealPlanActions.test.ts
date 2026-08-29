@@ -1,7 +1,18 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+
+jest.mock('#/apollo/links/tokenScheduler');
+
+jest.mock('#/services/toastService', () => ({
+  toastService: {
+    success: jest.fn(),
+    error: jest.fn(),
+  },
+}));
+
 import {
   recordMock,
   renderHookWithApollo,
+  seedCache,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreateMealPlanDocument,
@@ -9,13 +20,16 @@ import {
   DeleteMealPlanDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import type { CreateMealPlanInput } from '#/graphql/generated/schemaTypes';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { toastService } from '#/services/toastService';
+import { useStore } from '#store';
 import { useMealPlanActions } from '../useMealPlanActions';
-
-jest.mock('#/apollo/links/tokenScheduler');
 
 beforeEach(() => {
   jest.clearAllMocks();
+});
+
+afterEach(() => {
+  useStore.setState({ apiReachable: true, isOnline: true });
 });
 
 describe('useMealPlanActions', () => {
@@ -69,50 +83,6 @@ describe('useMealPlanActions', () => {
         id: expect.stringMatching(/^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/),
       },
     });
-  });
-
-  it('createMealPlan holds the minted id unconfirmed until the server answers', async () => {
-    const create = recordMock(CreateMealPlanDocument, {
-      data: {
-        createMealPlan: {
-          __typename: 'CreateMealPlanPayload',
-          mealPlan: { __typename: 'MealPlan', id: 'plan-1', name: 'Camping' },
-        },
-      },
-      // Must comfortably exceed testing-library's waitFor poll interval (50ms).
-      // At the previous 20ms the mutation had usually already resolved by the
-      // first poll, so `unconfirmedCreates` was cleared before the in-flight
-      // assertion below ran — the test passed only when a poll happened to
-      // land inside that 20ms window, which is why it failed intermittently
-      // under full-suite load and passed in isolation.
-      delay: 1000,
-    });
-
-    const { result } = renderHookWithApollo(() => useMealPlanActions(), {
-      operationMocks: [create.mock],
-    });
-
-    let pending: Promise<unknown> | undefined;
-    act(() => {
-      pending = result.current.createMealPlan({
-        name: 'Camping',
-        startDate: '2025-06-01',
-        endDate: '2025-06-07',
-      } as CreateMealPlanInput);
-    });
-
-    await waitFor(() => expect(create.fired).toHaveLength(1));
-    const { id } = create.fired[0]?.input as { id: string };
-
-    // In flight: the plan is in the cache and drives the active-plan selection,
-    // but no server row exists for it yet.
-    expect(unconfirmedCreates.has(id)).toBe(true);
-
-    await act(async () => {
-      await pending;
-    });
-
-    expect(unconfirmedCreates.has(id)).toBe(false);
   });
 
   it('createMealPlan returns null when mutation returns no data', async () => {
@@ -216,5 +186,117 @@ describe('useMealPlanActions', () => {
     });
 
     expect(deleted).toBe(false);
+  });
+  it('deleteMealPlan evicts the plan only once the server confirms', async () => {
+    const cache = seedCache([
+      { __typename: 'MealPlan', id: 'plan-1', name: 'Week Plan' },
+    ]);
+    const del = recordMock(DeleteMealPlanDocument, {
+      data: {
+        deleteMealPlan: {
+          __typename: 'DeleteMealPlanPayload',
+          mealPlan: { __typename: 'MealPlan', id: 'plan-1' },
+        },
+      },
+    });
+
+    const { result } = renderHookWithApollo(() => useMealPlanActions(), {
+      operationMocks: [del.mock],
+      cache,
+    });
+
+    expect(cache.extract()['MealPlan:plan-1']).toBeDefined();
+
+    await act(async () => {
+      await result.current.deleteMealPlan('plan-1');
+    });
+
+    expect(cache.extract()['MealPlan:plan-1']).toBeUndefined();
+  });
+
+  it('deleteMealPlan leaves the plan in the cache when the server refuses', async () => {
+    const cache = seedCache([
+      { __typename: 'MealPlan', id: 'plan-1', name: 'Week Plan' },
+    ]);
+    const del = recordMock(DeleteMealPlanDocument, {
+      data: {
+        deleteMealPlan: {
+          __typename: 'NotFoundError',
+          code: 'NOT_FOUND',
+          message: 'Meal plan not found',
+        },
+      },
+    });
+
+    const { result } = renderHookWithApollo(() => useMealPlanActions(), {
+      operationMocks: [del.mock],
+      cache,
+    });
+
+    await act(async () => {
+      await result.current.deleteMealPlan('plan-1');
+    });
+
+    expect(cache.extract()['MealPlan:plan-1']).toBeDefined();
+  });
+
+  describe('when the API is unavailable', () => {
+    it('exposes isApiUnavailable, toasts, and skips every mutation', async () => {
+      useStore.setState({ apiReachable: false });
+      const create = recordMock(CreateMealPlanDocument, {
+        data: {
+          createMealPlan: {
+            __typename: 'CreateMealPlanPayload',
+            mealPlan: { __typename: 'MealPlan', id: 'plan-1', name: 'Nope' },
+          },
+        },
+      });
+      const update = recordMock(UpdateMealPlanDocument, {
+        data: {
+          updateMealPlan: {
+            __typename: 'UpdateMealPlanPayload',
+            mealPlan: { __typename: 'MealPlan', id: 'plan-1', name: 'Nope' },
+          },
+        },
+      });
+      const del = recordMock(DeleteMealPlanDocument, {
+        data: {
+          deleteMealPlan: {
+            __typename: 'DeleteMealPlanPayload',
+            mealPlan: { __typename: 'MealPlan', id: 'plan-1' },
+          },
+        },
+      });
+
+      const { result } = renderHookWithApollo(() => useMealPlanActions(), {
+        operationMocks: [create.mock, update.mock, del.mock],
+      });
+
+      expect(result.current.isApiUnavailable).toBe(true);
+
+      let created: unknown;
+      let updated: unknown;
+      let deleted: boolean | undefined;
+      await act(async () => {
+        created = await result.current.createMealPlan({
+          name: 'Week Plan',
+          startDate: '2025-06-01',
+          endDate: '2025-06-07',
+        } as CreateMealPlanInput);
+        updated = await result.current.updateMealPlan('plan-1', {
+          name: 'Updated',
+        });
+        deleted = await result.current.deleteMealPlan('plan-1');
+      });
+
+      expect(created).toBeNull();
+      expect(updated).toBeNull();
+      expect(deleted).toBe(false);
+      expect(toastService.error).toHaveBeenCalledWith('Not available offline');
+      expect(toastService.error).toHaveBeenCalledTimes(3);
+      expect(create.fired).toHaveLength(0);
+      expect(update.fired).toHaveLength(0);
+      expect(del.fired).toHaveLength(0);
+    });
   });
 });

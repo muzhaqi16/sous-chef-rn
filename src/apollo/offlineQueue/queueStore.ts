@@ -8,6 +8,7 @@ import {
   QueueStatus,
 } from './types';
 import { logger } from '#/utils/environment';
+import { queuedEntityIds } from './queuedEntityIds';
 
 const QUEUE_STORAGE_KEY = 'apollo-mutation-queue';
 const CURRENT_USER_KEY = 'apollo-queue-current-user';
@@ -37,12 +38,23 @@ function isTerminal(status: QueueStatus): boolean {
   );
 }
 
-// The server prunes its idempotency-dedup records after 90 days
-// (docs/api/offline-sync.md "Sync queued cumulative ops within 90 days").
-// Replaying an idempotency-keyed op past that horizon would double-apply —
-// the dedup row that would classify it IDEMPOTENT_REPLAY no longer exists —
-// so PENDING entries older than this are marked FAILED instead of replayed.
-const MAX_PENDING_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+/**
+ * How long a queued write may wait before the app gives up on it.
+ *
+ * Bounded by the server's idempotency-dedup retention: past that horizon the
+ * dedup record that would classify a replay as IDEMPOTENT_REPLAY is gone, so
+ * replaying would apply the write a SECOND time.
+ *
+ * The number is the server's to decide, and it now publishes it as
+ * `Query.offlineWritePolicy.replayHorizonDays`. Restating it here as a literal
+ * meant two constants that had to agree with nothing checking them — and a
+ * disagreement does not fail loudly, it double-applies a write. So this is a
+ * fallback for the launches that have not read the policy yet, and
+ * {@link QueueStore.setReplayHorizonDays} carries the server's answer once
+ * one has.
+ */
+const FALLBACK_HORIZON_DAYS = 90;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * On-disk shape of a queued mutation: identical to {@link QueuedMutation}
@@ -50,16 +62,6 @@ const MAX_PENDING_AGE_MS = 90 * 24 * 60 * 60 * 1000;
  */
 type SerializedQueuedMutation = Omit<QueuedMutation, 'mutation'> & {
   mutation: string;
-};
-
-/**
- * Add `value` to `ids` when it is a non-empty string. Queued variables are
- * duck-typed (`OperationVariables` spans every queued operation and rides a
- * persistence boundary), so client-id extraction guards at runtime instead of
- * trusting a compile-time shape.
- */
-const addIfClientId = (ids: Set<string>, value: unknown): void => {
-  if (typeof value === 'string' && value) ids.add(value);
 };
 
 /**
@@ -78,10 +80,29 @@ export class QueueStore {
   private currentUserId: string | null | undefined = undefined;
   private pendingClientIds: Set<string> | null = null;
 
+  /**
+   * The server's replay horizon, once something has read it. Deliberately not
+   * persisted: a stale horizon is worse than no horizon, and re-reading it is
+   * one field on a query the app already makes.
+   */
+  private replayHorizonDays: number = FALLBACK_HORIZON_DAYS;
+
   // Subscribers notified on every queue change (add/remove/update/clear and
   // user switches). Lets UI read live queue state — e.g. the offline banner's
   // pending-changes count — via useSyncExternalStore without polling MMKV.
   private listeners = new Set<() => void>();
+
+  /**
+   * Adopt the server's published replay horizon.
+   *
+   * Ignores a non-positive value rather than trusting it: a zero would expire
+   * every queued write on the next drain, which is the one failure mode worse
+   * than the drift this exists to remove.
+   */
+  setReplayHorizonDays(days: number): void {
+    if (!Number.isFinite(days) || days <= 0) return;
+    this.replayHorizonDays = days;
+  }
 
   /**
    * Subscribe to queue changes. Returns an unsubscribe function.
@@ -205,7 +226,7 @@ export class QueueStore {
    * - Multiple moves of the same item are merged into a single mutation
    * - Only the final position is kept, reducing server load
    */
-  addMutation(mutation: QueuedMutation): void {
+  addMutation(mutation: QueuedMutation): QueuedMutation | null {
     const queue = this.loadQueue();
 
     // OPTIMIZATION: Coalesce move mutations for the same item
@@ -229,7 +250,7 @@ export class QueueStore {
           );
           queue[existingIndex] = mutation;
           this.saveQueue(queue);
-          return;
+          return null;
         }
       }
     }
@@ -259,7 +280,21 @@ export class QueueStore {
         );
         throw new QueueCapacityError();
       }
-      queue.splice(evictIndex, 1); // Remove the oldest terminal entry
+      const [evicted] = queue.splice(evictIndex, 1);
+      queue.push(mutation);
+      this.saveQueue(queue);
+
+      logger.debug(
+        `📥 Queue: Added mutation ${mutation.operationName} (${mutation.id}) for user ${mutation.userId}`,
+      );
+
+      // Only an AUTH_ERROR eviction is reported. SUCCESS replayed and FAILED
+      // was already withdrawn, so neither has a local change left standing —
+      // but an auth-parked entry's change has been on screen since it was made,
+      // waiting for a sign-in, and evicting it here is the moment the queue
+      // gives up on it. Reported rather than withdrawn in place: the store must
+      // not reach back into the cache or the failure pipeline.
+      return evicted?.status === QueueStatus.AUTH_ERROR ? evicted : null;
     }
 
     queue.push(mutation);
@@ -268,6 +303,7 @@ export class QueueStore {
     logger.debug(
       `📥 Queue: Added mutation ${mutation.operationName} (${mutation.id}) for user ${mutation.userId}`,
     );
+    return null;
   }
 
   /**
@@ -324,6 +360,23 @@ export class QueueStore {
   }
 
   /**
+   * Every PENDING mutation, whoever queued it, oldest first.
+   *
+   * Deliberately not user-scoped: the one caller runs at boot, before anything
+   * has hydrated a user, and `CURRENT_USER_KEY` is only written on a user
+   * CHANGE — so a session that has simply been signed in for a while has no
+   * value there to scope by. Scoping is the persisted Apollo cache's job
+   * instead: it is cleared on sign-out, so it holds only the current session's
+   * entities and a write aimed at anyone else's names an entity that is not in
+   * it.
+   */
+  getAllPendingMutations(): QueuedMutation[] {
+    return this.loadQueue()
+      .filter(m => m.status === QueueStatus.PENDING)
+      .sort((a, b) => a.createdAt - b.createdAt);
+  }
+
+  /**
    * Get all pending mutations for a specific user (ordered by creation time)
    */
   getPendingMutationsForUser(userId: string): QueuedMutation[] {
@@ -361,17 +414,21 @@ export class QueueStore {
   }
 
   /**
-   * Mark PENDING entries older than the server's 90-day idempotency-dedup
+   * Mark PENDING entries older than the server's published idempotency-dedup
    * horizon as FAILED so they surface through the normal failure UX instead
    * of replaying into a potential double-apply. Runs at drain start (before
    * replay ordering) — expiry is age-based, so a FIFO queue can only expire
-   * a prefix, never punch a hole mid dependency chain. Returns the number of
-   * entries expired.
+   * a prefix, never punch a hole mid dependency chain.
+   *
+   * Returns the expired ENTRIES, not a count: each one records a local change
+   * that is now on screen with nothing that will ever send it, so the caller
+   * has to withdraw it. Returning a number left the change standing forever,
+   * with no way for the person to discover it or act on it.
    */
-  expireStalePending(userId: string): number {
+  expireStalePending(userId: string): QueuedMutation[] {
     const queue = this.loadQueue();
-    const cutoff = Date.now() - MAX_PENDING_AGE_MS;
-    let expired = 0;
+    const cutoff = Date.now() - this.replayHorizonDays * DAY_MS;
+    const expired: QueuedMutation[] = [];
     const updated = queue.map(m => {
       if (
         m.userId !== userId ||
@@ -380,27 +437,27 @@ export class QueueStore {
       ) {
         return m;
       }
-      expired++;
       const lastError: QueueError = {
         type: 'unknown',
-        message:
-          'Queued change expired: older than the 90-day offline sync window',
+        message: `Queued change expired: older than the ${this.replayHorizonDays}-day offline sync window`,
         code: 'OFFLINE_SYNC_WINDOW_EXPIRED',
         timestamp: Date.now(),
         retryable: false,
       };
-      return {
+      const failed = {
         ...m,
         status: QueueStatus.FAILED,
         updatedAt: Date.now(),
         lastError,
       };
+      expired.push(failed);
+      return failed;
     });
 
-    if (expired > 0) {
+    if (expired.length > 0) {
       this.saveQueue(updated);
       logger.warn(
-        `🧹 Queue: Expired ${expired} PENDING mutation(s) past the 90-day sync window`,
+        `🧹 Queue: Expired ${expired.length} PENDING mutation(s) past the ${this.replayHorizonDays}-day sync window`,
       );
     }
     return expired;
@@ -423,17 +480,7 @@ export class QueueStore {
     const userId = this.getCurrentUserId();
     if (userId) {
       for (const { variables } of this.getPendingMutationsForUser(userId)) {
-        addIfClientId(
-          ids,
-          variables?.input?.id ?? variables?.input?.itemId ?? variables?.id,
-        );
-        // Batch-shaped creates (AddItemsToShoppingListInput) mint one client
-        // id per item. Array.isArray guards persisted entries from older
-        // builds whose shape may not match what the app enqueues today.
-        const items = variables?.input?.items;
-        if (Array.isArray(items)) {
-          for (const item of items) addIfClientId(ids, item?.id);
-        }
+        for (const id of queuedEntityIds(variables)) ids.add(id);
       }
     }
     this.pendingClientIds = ids;

@@ -5,11 +5,27 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { MarkShoppingListAsDefaultDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { toastService } from '#/services/toastService';
 import { useSetDefaultShoppingList } from '../useSetDefaultShoppingList';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
+
+jest.mock('#/services/toastService', () => ({
+  toastService: { error: jest.fn(), success: jest.fn() },
+}));
+
+// Setting the default list is ONLINE-ONLY: it no longer writes the cache ahead
+// of the server or queues for replay, so the offline gate is part of the hook's
+// contract rather than an incidental detail.
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: jest.fn(() => false),
+}));
+const mockIsApiUnavailable = useIsApiUnavailable as jest.MockedFunction<
+  typeof useIsApiUnavailable
+>;
 
 const IS_DEFAULT = gql`
   fragment testIsDefault on ShoppingList {
@@ -28,7 +44,12 @@ const seedList = () =>
   seedCache([{ __typename: 'ShoppingList', id: 'list-1', isDefault: false }]);
 
 describe('useSetDefaultShoppingList', () => {
-  it('flips isDefault optimistically before settle; a queued (null) result keeps it and returns true', async () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockIsApiUnavailable.mockReturnValue(false);
+  });
+
+  it("normalizes the server's isDefault and returns true", async () => {
     const cache = seedList();
     const { result } = renderHookWithApollo(() => useSetDefaultShoppingList(), {
       cache,
@@ -38,7 +59,20 @@ describe('useSetDefaultShoppingList', () => {
             query: MarkShoppingListAsDefaultDocument,
             variables: () => true,
           },
-          result: { data: { markShoppingListAsDefault: null } },
+          result: {
+            data: {
+              markShoppingListAsDefault: {
+                __typename: 'MarkShoppingListAsDefaultPayload',
+                shoppingList: {
+                  __typename: 'ShoppingList',
+                  id: 'list-1',
+                  isDefault: true,
+                  updatedAt: '2026-08-28T00:00:00.000Z',
+                  version: 2,
+                },
+              },
+            },
+          },
         },
       ],
     });
@@ -46,15 +80,18 @@ describe('useSetDefaultShoppingList', () => {
     let resolved: boolean | undefined;
     await act(async () => {
       const promise = result.current.setAsDefault('list-1');
-      expect(readDefault(cache)).toBe(true);
+      // Nothing is written ahead of the server any more.
+      expect(readDefault(cache)).toBe(false);
       resolved = await promise;
     });
 
     expect(resolved).toBe(true);
-    expect(readDefault(cache)).toBe(true);
+    await waitFor(() => {
+      expect(readDefault(cache)).toBe(true);
+    });
   });
 
-  it('reverts to the prior flag and returns false on a rejection', async () => {
+  it('leaves the flag untouched and returns false on a rejection', async () => {
     const cache = seedList();
     const { result } = renderHookWithApollo(() => useSetDefaultShoppingList(), {
       cache,
@@ -85,8 +122,26 @@ describe('useSetDefaultShoppingList', () => {
     });
 
     expect(resolved).toBe(false);
-    await waitFor(() => {
-      expect(readDefault(cache)).toBe(false);
+    expect(readDefault(cache)).toBe(false);
+  });
+
+  it('refuses offline without firing the mutation', async () => {
+    mockIsApiUnavailable.mockReturnValue(true);
+    const cache = seedList();
+    const { result } = renderHookWithApollo(() => useSetDefaultShoppingList(), {
+      cache,
+      operationMocks: [],
     });
+
+    expect(result.current.isApiUnavailable).toBe(true);
+
+    let resolved: boolean | undefined;
+    await act(async () => {
+      resolved = await result.current.setAsDefault('list-1');
+    });
+
+    expect(resolved).toBe(false);
+    expect(readDefault(cache)).toBe(false);
+    expect(toastService.error).toHaveBeenCalled();
   });
 });

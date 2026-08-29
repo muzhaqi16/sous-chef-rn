@@ -52,6 +52,7 @@
       "homeMemberAlreadyExists": "Përdoruesi është tashmë anëtar i kësaj shtëpie"
     },
     "addItemFailed": "Nuk u shtua dot artikulli",
+    "queuedChangeOverwritten": "Dikush tjetër e ndryshoi më parë, prandaj ndryshimi juaj nuk u ruajt.",
     "updateItemFailed": "Nuk u përditësua dot artikulli",
     "removeItemFailed": "Nuk u hoq dot artikulli",
     "discardExpiredFailed": "Nuk u hodhën dot artikujt e skaduar",

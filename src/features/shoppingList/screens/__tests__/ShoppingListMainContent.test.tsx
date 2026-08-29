@@ -116,10 +116,6 @@ jest.mock('#features/shoppingList/context/ShoppingListTutorialContext', () => {
   };
 });
 
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: { clearType: jest.fn() },
-}));
-
 jest.mock('#/services/telemetry', () => ({
   Telemetry: { trackEvent: jest.fn() },
 }));

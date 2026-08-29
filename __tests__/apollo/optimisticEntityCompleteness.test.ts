@@ -18,15 +18,18 @@
  * That is exactly what shipped: `buildOptimisticPantryItem` never wrote
  * `createdAt`, which `GetPantry` selects on every node.
  *
- * Three writers are covered, because all three produce the entity the list
- * reads:
- *  1. the optimistic entity written before the mutation fires,
- *  2. the mutation's own response shape (`CreatePantryItem`), and
- *  3. the offline queue's replay response (`SyncPantryItem`) — the only one of
- *     the three that lands while still offline, so a field missing there is the
- *     worst case: the row the user added stays invisible until a full network
- *     read. Its fragment carries a comment saying it must remain a superset of
- *     what `GetPantry` reads off a node; this is what holds it to that.
+ * TWO writers are covered, because two produce the entity the list reads:
+ *  1. the optimistic entity written before the mutation fires, and
+ *  2. the mutation's own response shape (`CreatePantryItem`).
+ *
+ * There used to be a third — the offline queue's replay response, which had its
+ * own `Sync*` fragment and was the worst case, because it lands while the app
+ * may still be offline and a field missing there could not be repaired by a
+ * refetch. That writer is gone, and not because it was dropped: the queue now
+ * replays the SAME document the app sends online, so a replay CANNOT select a
+ * different shape from writer 2. The whole failure class is designed out rather
+ * than guarded, which is why the case that covered it is now an assertion that
+ * the replay document is unchanged.
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -47,7 +50,6 @@ import {
   GetPantryItemDocument,
   GetPantryItemBatchesDocument,
   CreatePantryItemDocument,
-  SyncPantryItemDocument,
   type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import {
@@ -97,7 +99,6 @@ const mockedSchema = addMocksToSchema({
     // Result unions default to their first member (an error type), which would
     // leave the success inline fragment unmatched and the payload undefined.
     CreatePantryItemResult: () => ({ __typename: 'CreatePantryItemPayload' }),
-    SyncPantryItemResult: () => ({ __typename: 'SyncPantryItemPayload' }),
   },
 });
 
@@ -279,23 +280,31 @@ describe('optimistic entity completeness', () => {
       expectCompletePantry(readPantry(cache));
     });
 
-    it('keeps GetPantry complete after a SyncPantryItem replay lands', async () => {
-      // The offline queue replays a queued create as SyncPantryItem and writes
-      // the response back. That happens while the app may still be offline, so
-      // a field its fragment omits can't be repaired by a refetch.
-      const cache = await seedPantryCache();
-      const synced = await runAgainstSchema<{
-        syncPantryItem: { item: { id: string; pantryId: string } };
-      }>(SyncPantryItemDocument, {
-        input: { clientId: 'client-cuid-5', pantryId: 'pantry-1' },
-      });
-      const item = synced.syncPantryItem.item;
-      item.id = 'client-cuid-5';
-      item.pantryId = 'pantry-1';
+    it('replays the SAME document, so a replay cannot select a different shape', () => {
+      // This replaces a case that drove a separate `SyncPantryItem` fragment
+      // through the cache. There is no separate fragment any more: the queue
+      // sends back exactly what it was given, so writer 2's shape IS the
+      // replay's shape and the two cannot drift apart. Asserted rather than
+      // assumed, because re-introducing a translation step here would quietly
+      // re-open the worst failure mode this file exists for.
+      const queued = {
+        id: 'q1',
+        userId: 'u1',
+        operationName: 'CreatePantryItem',
+        mutation: CreatePantryItemDocument,
+        variables: { input: { id: 'client-cuid-5', pantryId: 'pantry-1' } },
+        status: QueueStatus.PENDING,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        retryCount: 0,
+        maxRetries: 3,
+        requiresAuth: true,
+      };
 
-      addToPantryItemsCache(cache, 'pantry-1', item);
+      const { syncMutation, syncVariables } = convertToSyncMutation(queued);
 
-      expectCompletePantry(readPantry(cache));
+      expect(syncMutation).toBe(CreatePantryItemDocument);
+      expect(syncVariables).toBe(queued.variables);
     });
 
     // The LIST cases above are the only completeness this file ever asserted,
@@ -517,53 +526,50 @@ describe('optimistic entity completeness', () => {
 
     /**
      * The other direction of completeness, and the one that shipped broken: a
-     * row can be COMPLETE for every query that displays it and still be
-     * unreplayable, because the offline queue reads a field no display query
-     * needs.
+     * row could be COMPLETE for every query that displays it and still be
+     * unreplayable, because the offline queue read a field no display query
+     * needed.
      *
      * `ToggleShoppingListItemPurchased` / `UpdateShoppingListItemQuantity` /
-     * `UpdateShoppingListItem` send only the row id, so the replay builder has
-     * to backfill `SyncShoppingListItemFieldsInput.shoppingListId` by reading
-     * `shoppingList { id }` back off the cached row. No query that populates
-     * the list selected it, so the read returned null, the builder threw, and
-     * the queue withdrew the change — every offline toggle silently reverted on
-     * reconnect with "A change couldn't be saved and has been undone".
+     * `UpdateShoppingListItem` send only the row id, so the replay builder had
+     * to backfill `shoppingListId` by reading `shoppingList { id }` back off
+     * the cached row. No query that populated the list selected it, so the read
+     * returned null, the builder threw, and the queue withdrew the change —
+     * every offline toggle silently reverted on reconnect with "A change
+     * couldn't be saved and has been undone".
      *
-     * The builder's own tests could not catch it: they stub `readFragment`, so
-     * they assert the builder works GIVEN the parent link, never that a real
-     * cache holds one. This drives the real cache, seeded by the real list
-     * query, through the real dispatch.
+     * That cannot happen any more, and this asserts why rather than trusting
+     * it: a replay is now a pure function of the persisted entry. It reads
+     * NOTHING from the cache, so there is no field a display query can fail to
+     * have put there — and the entire "replay completeness ≠ display
+     * completeness" class goes with it. The old builder's own tests could not
+     * have caught the original bug anyway: they stubbed `readFragment`, so they
+     * asserted the builder worked GIVEN the parent link, never that a real
+     * cache held one.
      */
-    it('can build a toggle replay from a row the list query cached', async () => {
-      const cache = await seedListCache();
+    it('replays from the persisted entry alone, reading nothing from the cache', () => {
+      const variables = { input: { id: 'row-1', purchased: true } };
+      const document = { kind: Kind.DOCUMENT, definitions: [] } as DocumentNode;
 
-      const row = cache.readQuery<Unmasked<GetShoppingListItemsFilteredQuery>>({
-        query: GetShoppingListItemsFilteredDocument,
-        variables: LIST_VARS,
-      })?.shoppingList?.itemsConnection.edges[0]?.node;
-      // The parent link the builder has to find, read from the same cache the
-      // builder reads — so this asserts the round trip, not a literal.
-      expect(row?.shoppingList?.id).toBeTruthy();
+      const { syncMutation, syncVariables } = convertToSyncMutation({
+        id: 'queued-1',
+        userId: 'user-1',
+        operationName: 'ToggleShoppingListItemPurchased',
+        mutation: document,
+        variables,
+        status: QueueStatus.PENDING,
+        createdAt: 0,
+        updatedAt: 0,
+        retryCount: 0,
+        maxRetries: 3,
+        requiresAuth: true,
+      });
 
-      const { syncVariables } = convertToSyncMutation(
-        {
-          id: 'queued-1',
-          userId: 'user-1',
-          operationName: 'ToggleShoppingListItemPurchased',
-          mutation: { kind: Kind.DOCUMENT, definitions: [] },
-          variables: { input: { id: row!.id, purchased: true } },
-          status: QueueStatus.PENDING,
-          createdAt: 0,
-          updatedAt: 0,
-          retryCount: 0,
-          maxRetries: 3,
-          requiresAuth: true,
-        },
-        cache,
-      );
-
-      const input = syncVariables.input as { item: { shoppingListId: string } };
-      expect(input.item.shoppingListId).toBe(row!.shoppingList!.id);
+      // Same document, same variables, no cache consulted — so an empty or
+      // purged cache cannot make a queued write unreplayable.
+      expect(syncMutation).toBe(document);
+      expect(syncVariables).toBe(variables);
+      expect(convertToSyncMutation).toHaveLength(1);
     });
 
     it('keeps GetShoppingListsLite complete after an optimistic list create', async () => {

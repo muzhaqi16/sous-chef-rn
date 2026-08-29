@@ -8,10 +8,11 @@ import { useStore } from '#store';
 import { shouldTreatAsOffline } from '#store/slices/networkSlice';
 import { queueStore } from './queueStore';
 import { queueManager } from './queueManager';
-import { hasSyncMapping } from './convertToSyncMutation';
 import { OfflineRejectedError } from './OfflineRejectedError';
 import { QueueCapacityError } from './types';
 import { QueuedMutation, QueueStatus } from './types';
+import type { WriteConvergence } from './types';
+import type { WriteIntent } from '#/apollo/write/writeIntent';
 
 /**
  * Why a mutation was queued instead of fired. Carried on the queued result as
@@ -82,12 +83,12 @@ export const createQueueLink = () => {
 
     const state = useStore.getState();
     const localFirst = operation.getContext().localFirst === true;
-    // Replay allowlist: local-first opt-ins (their hooks already wrote the change
-    // to the cache and treat the queued result as success) and Sync*-mapped
-    // operations (idempotent upserts, safe to auto-replay even without the
-    // opt-in). Applied identically to the offline and breaker-open paths below.
-    const replayable =
-      localFirst || hasSyncMapping(operation.operationName ?? '');
+    // The replay allowlist is the explicit opt-in, and nothing else. It used
+    // to also admit anything with a `Sync*` twin, which meant an operation
+    // could be queued without its hook ever asking to be — including hooks
+    // pairing an `optimisticResponse` with it, which reverts on screen the
+    // moment the queued null result lands.
+    const replayable = localFirst;
 
     // Device offline — queue only mutations on the replay allowlist. Anything
     // else fails fast with a network-shaped error (instant honest toast, no
@@ -198,6 +199,16 @@ function enqueueAndComplete(
       mutation: operation.query,
       variables: operation.variables,
       context: pickPersistedContext(operationContext),
+      convergence: readConvergence(operationContext),
+      // The local change this stands for, so a withdrawal after a restart can
+      // restore what was there instead of dropping the entity.
+      // Always a list, even for the single-entity case: one shape to read at
+      // withdrawal time rather than two.
+      intents:
+        (operationContext.writeIntents as WriteIntent[] | undefined) ??
+        (operationContext.writeIntent
+          ? [operationContext.writeIntent as WriteIntent]
+          : undefined),
       status: QueueStatus.PENDING,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -207,7 +218,19 @@ function enqueueAndComplete(
     };
 
     try {
-      queueStore.addMutation(queuedMutation);
+      const evicted = queueStore.addMutation(queuedMutation);
+      if (evicted) {
+        // Making room cost an auth-parked entry its place in the queue. Its
+        // local change has been on screen since it was made, waiting for a
+        // sign-in that never came — so this is the moment the queue gives up on
+        // it, and the person has to be told rather than left trusting it.
+        queueManager.withdrawUnqueueableWrite(evicted, {
+          type: 'auth',
+          message: 'Queued change discarded to make room for newer changes',
+          timestamp: Date.now(),
+          retryable: false,
+        });
+      }
     } catch (error) {
       if (!(error instanceof QueueCapacityError)) throw error;
       // The local-first cache write has already landed — that is the whole
@@ -260,6 +283,18 @@ function pickPersistedContext(context: DefaultContext): DefaultContext {
     persisted.localFirst = context.localFirst;
   }
   return persisted;
+}
+
+/**
+ * The write's declared convergence, defaulted to the safe direction.
+ *
+ * `relative` is safe because it never re-sends: a write that does not say its
+ * value is absolute is reported to the person rather than replayed against a
+ * refreshed version, so a mis-declared delta cannot double-apply. An operation
+ * that wants the re-send has to ask for it.
+ */
+function readConvergence(context: DefaultContext): WriteConvergence {
+  return context.convergence === 'absolute' ? 'absolute' : 'relative';
 }
 
 /**

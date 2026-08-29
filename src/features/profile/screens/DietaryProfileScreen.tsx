@@ -41,6 +41,7 @@ export const DietaryProfileScreen: React.FC = () => {
     updateDietaryProfile,
     addDietaryRestriction,
     removeDietaryRestriction,
+    isApiUnavailable,
   } = useDietaryProfile();
 
   // State for modals and editing
@@ -57,7 +58,11 @@ export const DietaryProfileScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             const success = await removeDietaryRestriction(id);
-            if (!success) {
+            // These edits are online-only, and the hook reports that refusal
+            // itself. Alerting again would stack a generic "removing failed"
+            // modal on top of a toast that already said why, and the modal is
+            // the less accurate of the two.
+            if (!success && !isApiUnavailable) {
               alertService.alert(
                 t('labels.error'),
                 t('dietary.removeRestrictionFailed'),

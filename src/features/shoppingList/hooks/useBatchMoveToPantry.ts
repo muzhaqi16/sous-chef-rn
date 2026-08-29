@@ -1,5 +1,4 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import type { ApolloCache } from '@apollo/client';
 import { MovePurchasedItemsToPantryDocument } from './useBatchMoveToPantry.generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
@@ -8,125 +7,54 @@ import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { t } from '#/i18n';
 import { getI18n } from '#/i18n/config';
 import { errorService } from '#/services/errorService';
-import {
-  safeEvictMany,
-  type ConnectionData,
-} from '#/apollo/utils/cacheUpdaters';
-import { isPurchasedVariant } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { useWrite } from '#/apollo/write/useWrite';
+import { revertIntent } from '#/apollo/write/applyIntent';
+import { adjustBy, type WriteIntentDraft } from '#/apollo/write/writeIntent';
+import {} from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { generateEntityId } from '#/utils/generateEntityId';
 
 /**
- * Cache side of a batch move-to-pantry: drop the moved rows from the purchased
- * connection variant, decrement the list counters, and evict the entities.
+ * One purchased row leaving the list, as a `WriteIntent`.
  *
- * Module-level rather than inlined into the mutation's `update` because its body
- * contains `?.` / `||` / `!` value blocks, and the React Compiler bails out of
- * the entire hook when one appears inside a try/catch — leaving the caller's try
- * body a single plain call. See scripts/probe-compiler-try-forms.mjs.
- */
-/**
- * Take the purchased rows out of the list WITHOUT evicting them.
+ * `lifecycle: 'remove'` snapshots the row before taking it out, which is what
+ * makes a batch move undoable at all: the old hand-rolled path removed the
+ * edges with nothing able to put them back, so a replay refused after a restart
+ * left those rows gone from the list and never in the pantry. Restoring them
+ * needed a refetch, and offline there is none.
  *
- * Separate from {@link applyBatchMoveCacheUpdate}, which runs on the server
- * response and evicts: eviction is right once the move is confirmed, but a row
- * evicted before the server answers cannot be restored if it refuses. Restoring
- * is `restorePurchasedCount` plus a refetch — the edges themselves come back
- * from the server, and offline there is nothing to refuse in the first place.
+ * The pantry side is deliberately absent — this mutation takes no `pantryId`,
+ * so the client cannot know where the rows land. They appear when it syncs.
  */
-function removePurchasedEdges(
-  cache: ApolloCache,
-  currentListId: string,
-  ids: string[],
-): void {
-  if (ids.length === 0) return;
-  const removing = new Set(ids);
-
-  const parentCacheId = cache.identify({
-    __typename: 'ShoppingList',
-    id: currentListId,
-  });
-  if (!parentCacheId) return;
-
-  cache.modify({
-    id: parentCacheId,
-    fields: {
-      itemsConnection(
-        existing: ConnectionData | undefined,
-        { readField, storeFieldName },
-      ) {
-        if (!isPurchasedVariant(storeFieldName) || !existing?.edges)
-          return existing;
-        return {
-          ...existing,
-          edges: existing.edges.filter(
-            edge => !removing.has(readField<string>('id', edge?.node)!),
-          ),
-          totalCount: Math.max(0, (existing.totalCount || 0) - ids.length),
-        };
+function purchasedRemovalIntent(
+  itemId: string,
+  listId: string,
+): WriteIntentDraft {
+  return {
+    target: { __typename: 'ShoppingListItem', id: itemId },
+    lifecycle: 'remove',
+    patch: {},
+    // Every row here is purchased, so both counters move by one each.
+    // Relative, so a withdrawal cannot discard a count that moved meanwhile.
+    aggregates: [
+      {
+        target: { __typename: 'ShoppingList', id: listId },
+        patch: { totalItems: adjustBy(-1), completedItems: adjustBy(-1) },
       },
-      totalItems(existing: number = 0) {
-        return Math.max(0, existing - ids.length);
-      },
-      completedItems(existing: number = 0) {
-        return Math.max(0, existing - ids.length);
-      },
+    ],
+    reindex: {
+      parent: { __typename: 'ShoppingList', id: listId },
+      field: 'itemsConnection',
+      decidableFilters: ['isPurchased'],
+      after: {},
+      // Where the row was, so the UNDO can put it back — every row here is
+      // purchased. A removal needs no membership statement to LEAVE; it needs
+      // one to come BACK.
+      before: { isPurchased: true },
     },
-  });
-}
-
-function applyBatchMoveCacheUpdate(
-  cache: ApolloCache,
-  currentListId: string,
-  movedItems: { shoppingListItemId: string }[],
-): void {
-  const movedCount = movedItems.length;
-  if (movedCount === 0) return;
-
-  const movedIds = new Set(movedItems.map(item => item.shoppingListItemId));
-
-  const parentCacheId = cache.identify({
-    __typename: 'ShoppingList',
-    id: currentListId,
-  });
-  if (!parentCacheId) return;
-
-  // Single cache.modify: remove from purchased variant only + update counters
-  cache.modify({
-    id: parentCacheId,
-    fields: {
-      itemsConnection(
-        existing: ConnectionData | undefined,
-        { readField, storeFieldName },
-      ) {
-        if (!isPurchasedVariant(storeFieldName) || !existing?.edges)
-          return existing;
-
-        return {
-          ...existing,
-          edges: existing.edges.filter(
-            edge => !movedIds.has(readField<string>('id', edge?.node)!),
-          ),
-          totalCount: Math.max(0, (existing.totalCount || 0) - movedCount),
-        };
-      },
-      totalItems(existing: number = 0) {
-        return Math.max(0, existing - movedCount);
-      },
-      completedItems(existing: number = 0) {
-        return Math.max(0, existing - movedCount);
-      },
-    },
-  });
-
-  // Evict all moved items from cache
-  safeEvictMany(
-    cache,
-    movedItems.map(item => ({
-      typename: 'ShoppingListItem',
-      id: item.shoppingListItemId,
-    })),
-  );
+    // The move is idempotent on the item's id, so a replay re-sends it.
+    convergence: 'absolute',
+  };
 }
 
 interface UseBatchMoveToPantryOptions {
@@ -155,26 +83,10 @@ export function useBatchMoveToPantry({
   onSuccess,
 }: UseBatchMoveToPantryOptions): UseBatchMoveToPantryReturn {
   const client = useApolloClient();
+  const { applyAll } = useWrite();
   const [movePurchasedMutation, { loading }] = useMutation(
     MovePurchasedItemsToPantryDocument,
     {
-      update: (cache, { data }) => {
-        const payload = data?.movePurchasedItemsToPantry;
-        if (
-          payload?.__typename !== 'MovePurchasedItemsToPantryPayload' ||
-          !currentListId
-        )
-          return;
-        const { movedItems } = payload;
-
-        try {
-          applyBatchMoveCacheUpdate(cache, currentListId, movedItems);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Cache update failed for batch move to pantry:',
-          });
-        }
-      },
       onError: error => {
         handleMutationError(error, { operation: 'Batch Move to Pantry' });
       },
@@ -201,13 +113,13 @@ export function useBatchMoveToPantry({
     // Only the shopping side is written eagerly. The pantry side cannot be:
     // this mutation takes no `pantryId`, so the client does not know which
     // pantry the rows will land in. They appear when the move syncs.
-    try {
-      removePurchasedEdges(client.cache, currentListId, movingIds);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Batch move to pantry (optimistic)',
-      });
-    }
+    //
+    // ONE write over N entities: a mutation carries one context, so N separate
+    // `apply` calls would send only the last intent to the queue and leave the
+    // rest applied with nothing able to undo them.
+    const { context, intents, revert } = applyAll(
+      movingIds.map(id => purchasedRemovalIntent(id, currentListId)),
+    );
 
     // Built outside the try: a `&&` spread is a value block, and one inside a
     // try body bails this whole hook out of the React Compiler.
@@ -220,7 +132,7 @@ export function useBatchMoveToPantry({
     try {
       result = await movePurchasedMutation({
         variables: { input: moveInput },
-        context: { localFirst: true },
+        context,
       });
     } catch (error) {
       errorService.reportError(error, {
@@ -248,12 +160,28 @@ export function useBatchMoveToPantry({
       // so the mutation `onError` never fired for it. Surface it here — guarded
       // to skip the transport-error case (`result.error`), which onError already
       // alerted, so the two never double-alert.
+      // Refused on the spot, so it never entered the queue and the queue's
+      // withdrawal will never see it. Without this the rows stayed gone from
+      // the list, absent from the pantry, with the snapshots that could restore
+      // them discarded.
+      revert();
       alertRejectedMutation(result, t('errors.codes.genericRetry'));
       return;
     }
 
     const movedCount = payload.summary.succeeded;
     const skippedCount = payload.summary.skipped;
+
+    // Every row was taken out of the list before firing, but the server decides
+    // which lines actually move — a line no longer purchased is SKIPPED. Put
+    // those back: without this the toast says "2 moved, 1 skipped" over a list
+    // that lost all three, and the skipped row is in neither place.
+    const moved = new Set(
+      payload.movedItems.map(item => item.shoppingListItemId),
+    );
+    for (const intent of intents) {
+      if (!moved.has(intent.target.id)) revertIntent(client.cache, intent);
+    }
 
     if (movedCount > 0) {
       const skipped =

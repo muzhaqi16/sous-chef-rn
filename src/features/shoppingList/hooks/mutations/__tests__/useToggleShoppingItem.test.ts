@@ -9,10 +9,6 @@ import {
   ToggleShoppingListItemPurchasedDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  moveShoppingListItemToPurchased,
-  moveShoppingListItemToUnpurchased,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
 import { useToggleShoppingItem } from '../useToggleShoppingItem';
 
 const mockHandleApolloError = jest.fn(() => ({ message: 'Toggle error' }));
@@ -21,20 +17,6 @@ jest.mock('#/services/errorService', () => ({
   useErrorService: () => ({
     handleApolloError: mockHandleApolloError,
   }),
-}));
-
-jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
-  moveShoppingListItemToPurchased: jest.fn(),
-  moveShoppingListItemToUnpurchased: jest.fn(),
-}));
-
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: {
-    save: jest.fn(),
-    clear: jest.fn(),
-    // track() returns the clearPersistence callback recordPurchase invokes.
-    track: jest.fn(() => jest.fn()),
-  },
 }));
 
 jest.mock('#/utils/isNetworkError', () => ({
@@ -310,17 +292,13 @@ describe('useToggleShoppingItem — recordPurchase', () => {
 
     expect(ok).toBe(true);
     // Optimistic move to the purchased connection + purchaseInfo flip.
-    expect(moveShoppingListItemToPurchased).toHaveBeenCalledWith(
-      expect.anything(),
-      'list-1',
-      { id: 'item-1' },
-    );
     expect(readPurchased(cache)).toBe(true);
     // The mutation carried the cached snapshot version + entered amounts.
     expect(recorded).toContainEqual({
       input: {
         id: 'item-1',
         version: 3,
+        idempotencyKey: expect.any(String),
         purchaseTracking: {
           isPurchased: true,
           purchasedQuantity: 2,
@@ -328,7 +306,6 @@ describe('useToggleShoppingItem — recordPurchase', () => {
         },
       },
     });
-    expect(moveShoppingListItemToUnpurchased).not.toHaveBeenCalled();
   });
 
   it("writes the server's purchase summary and amounts into the cache", async () => {
@@ -388,15 +365,11 @@ describe('useToggleShoppingItem — recordPurchase', () => {
       input: {
         id: 'item-1',
         version: 3,
+        idempotencyKey: expect.any(String),
         purchaseTracking: { isPurchased: true, purchasedQuantity: 2 },
       },
     });
     // The resolved error-union rejection reverts the optimistic purchase.
-    expect(moveShoppingListItemToUnpurchased).toHaveBeenCalledWith(
-      expect.anything(),
-      'list-1',
-      { id: 'item-1' },
-    );
     expect(readPurchased(cache)).toBe(false);
     expect(mockAlert).toHaveBeenCalledTimes(1);
   });

@@ -11,6 +11,8 @@ import type { SettingsSectionProps } from '#components/organisms/SettingsSection
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 
 jest.mock('#features/profile/hooks/useProfileData', () => ({
   useProfileData: () => ({
@@ -45,6 +47,19 @@ jest.mock('#/services/errorService', () => ({
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
+
+jest.mock('#/services/toastService', () => ({
+  toastService: { error: jest.fn(), success: jest.fn() },
+}));
+
+// The screen is ONLINE-ONLY: profile edits no longer queue for replay, so the
+// offline gate is part of its contract rather than an incidental detail.
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: jest.fn(() => false),
+}));
+const mockIsApiUnavailable = useIsApiUnavailable as jest.MockedFunction<
+  typeof useIsApiUnavailable
+>;
 
 jest.mock('#/utils/finallyHelpers');
 
@@ -161,6 +176,7 @@ jest.mock('#components/organisms/SettingsSection', () => {
         {items?.map(item => (
           <View key={item.key} testID={`setting-${item.key}`}>
             <Text>{item.label}</Text>
+            {item.disabled ? <View testID={`disabled-${item.key}`} /> : null}
             {item.value !== undefined && (
               <Text testID={`value-${item.key}`}>{String(item.value)}</Text>
             )}
@@ -181,6 +197,7 @@ jest.mock('#components/organisms/SettingsSection', () => {
 describe('PersonalInformationScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockIsApiUnavailable.mockReturnValue(false);
   });
 
   it('renders the screen with correct title', () => {
@@ -274,8 +291,8 @@ describe('PersonalInformationScreen', () => {
       );
     });
 
-    // Without this the optimistic write was reverted and the row just snapped
-    // back with nothing said.
+    // A refusal has to say so — the row simply keeps its old value otherwise,
+    // with nothing said.
     it('tells the user when the server refuses the change', async () => {
       const { mock } = recordMock(UpdateUserProfileDocument, {
         data: {
@@ -294,6 +311,46 @@ describe('PersonalInformationScreen', () => {
       );
 
       await waitFor(() => expect(alertService.alert).toHaveBeenCalled());
+    });
+  });
+
+  describe('offline', () => {
+    it('marks every writable row disabled while the API is unreachable', () => {
+      mockIsApiUnavailable.mockReturnValue(true);
+      renderWithApollo(<PersonalInformationScreen />);
+
+      expect(screen.getByTestId('disabled-firstName')).toBeTruthy();
+      expect(screen.getByTestId('disabled-profileVisibility')).toBeTruthy();
+      expect(screen.getByTestId('disabled-showEmail')).toBeTruthy();
+      // The read-only email row has no write path, so it is not gated.
+      expect(screen.queryByTestId('disabled-email')).toBeNull();
+    });
+
+    it('toasts instead of firing the mutation while the API is unreachable', async () => {
+      mockIsApiUnavailable.mockReturnValue(true);
+      const { mock, fired } = recordMock(UpdateUserProfileDocument, {
+        data: {
+          updateProfile: {
+            __typename: 'UpdateProfilePayload',
+            userProfile: {
+              __typename: 'UserProfile',
+              id: 'profile-1',
+              profileVisibility: ProfileVisibility.Friends,
+            },
+          },
+        },
+      });
+      renderWithApollo(<PersonalInformationScreen />, {
+        operationMocks: [mock],
+      });
+
+      await userEvent.press(
+        screen.getByTestId('option-profileVisibility-FRIENDS'),
+      );
+
+      await waitFor(() => expect(toastService.error).toHaveBeenCalled());
+      expect(fired).toHaveLength(0);
+      expect(alertService.alert).not.toHaveBeenCalled();
     });
   });
 });

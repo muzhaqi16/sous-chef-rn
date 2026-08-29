@@ -1,40 +1,100 @@
 /**
- * useRemoveShoppingItem - Remove item mutation for shopping list
+ * useRemoveShoppingItem — remove an item from a shopping list (local-first).
  *
- * Evicts the item and decrements the list stats in the cache before firing the
- * mutation, and leaves those changes in place. The removal persists even when the
- * delete is queued offline or the API is unreachable — the queue replays it,
- * idempotent by the item's id. An `optimisticResponse` can't be used here: Apollo
- * would roll it back the moment the request is queued (null result). On a real
- * (non-network) error the item still exists server-side, so it's restored via
- * refetch.
+ * The removal goes through the declared write path: it is described once as a
+ * `WriteIntent`, and the kit snapshots the row, evicts it, drops it from every
+ * cached `itemsConnection` variant, and adjusts the list's counters — leaving
+ * all of it in place, because the delete replays from the queue keyed by the
+ * item's id.
+ *
+ * The snapshot is what makes this undoable at all. A withdrawal used to be a
+ * bare evict with nothing to restore from, so a refused delete simply lost the
+ * row: offline there is no read that could bring it back. It is also the case
+ * that forced the kit to learn about existence — spelling a removal as a patch
+ * with no fields made the reindexer ADD the row to every unfiltered variant.
  */
 
 import { gql } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { RemoveItemFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { removeFromShoppingListItemsCache } from './utils';
+import { useWrite } from '#/apollo/write/useWrite';
+import { adjustBy, type WriteIntentDraft } from '#/apollo/write/writeIntent';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { errorService } from '#/services/errorService';
 
-// Minimal cache-read fragments — only the fields the optimistic-update path needs.
-const ShoppingListStatsFragment = gql`
-  fragment _RemoveShoppingItemStats on ShoppingList {
-    totalItems
-    completedItems
-    remainingItems
-    completionRate
-  }
-`;
-
-const ShoppingListItemPurchaseFragment = gql`
-  fragment _RemoveShoppingItemPurchase on ShoppingListItem {
+/**
+ * The purchased flag decides which counter moves, so it has to be read before
+ * the row is evicted. Everything else the hook used to snapshot is the kit's
+ * business now.
+ */
+const ITEM_STATE = gql`
+  fragment _RemoveShoppingItemState on ShoppingListItem {
     purchaseInfo {
       isPurchased
     }
   }
 `;
+
+const LIST_STATS = gql`
+  fragment _RemoveShoppingItemStats on ShoppingList {
+    totalItems
+    completedItems
+  }
+`;
+
+/**
+ * `completionRate` is DERIVED from the two counters, so it is the one aggregate
+ * that cannot be a delta — a rate has no meaningful increment. It is written as
+ * the value the counters imply after this removal, and the kit's inverse
+ * restores the previous one.
+ *
+ * `reindex` states where the row WAS, not where it is going: a removal leaves
+ * every variant regardless, but its UNDO has to know which variant to put it
+ * back into. Left `{}`, a withdrawn delete restored the row into no list at
+ * all.
+ */
+function removalIntent(
+  itemId: string,
+  listId: string,
+  wasPurchased: boolean,
+  stats: { totalItems: number; completedItems: number },
+): WriteIntentDraft {
+  const newTotal = Math.max(0, stats.totalItems - 1);
+  const newCompleted = wasPurchased
+    ? Math.max(0, stats.completedItems - 1)
+    : stats.completedItems;
+
+  return {
+    target: { __typename: 'ShoppingListItem', id: itemId },
+    lifecycle: 'remove',
+    patch: {},
+    // Relative, so a withdrawal cannot discard a count that moved meanwhile.
+    aggregates: [
+      {
+        target: { __typename: 'ShoppingList', id: listId },
+        patch: {
+          totalItems: adjustBy(-1),
+          ...(wasPurchased
+            ? { completedItems: adjustBy(-1) }
+            : { remainingItems: adjustBy(-1) }),
+          completionRate: newTotal > 0 ? newCompleted / newTotal : 0,
+        },
+      },
+    ],
+    reindex: {
+      parent: { __typename: 'ShoppingList', id: listId },
+      field: 'itemsConnection',
+      decidableFilters: ['isPurchased'],
+      after: {},
+      before: { isPurchased: wasPurchased },
+    },
+    // A delete is idempotent, so a replay re-sends it. The mutation carries no
+    // version, so there is nothing for it to conflict on.
+    convergence: 'absolute',
+  };
+}
 
 interface UseRemoveShoppingItemOptions {
   listId: string | null | undefined;
@@ -50,12 +110,13 @@ export function useRemoveShoppingItem({
   refetch,
 }: UseRemoveShoppingItemOptions): UseRemoveShoppingItemReturn {
   const client = useApolloClient();
+  const { apply } = useWrite();
 
   const [removeItemMutation] = useMutation(RemoveItemFromShoppingListDocument, {
     update(cache, { data }, { variables }) {
       // Re-evict on the server response: Apollo re-normalizes the
       // `shoppingListItem { id }` payload, which would otherwise resurrect the
-      // (already optimistically evicted) entity into its connection.
+      // (already removed) entity into its connection.
       if (
         data?.removeItemFromShoppingList?.__typename !==
           'RemoveItemFromShoppingListPayload' ||
@@ -76,7 +137,7 @@ export function useRemoveShoppingItem({
     },
     onError: error => {
       // Network/transient error: queueLink queued the delete for replay — keep
-      // the optimistic eviction; do NOT restore.
+      // the removal; do NOT restore.
       if (isNetworkError(error)) return;
       // Real (server/validation) error: the item still exists → restore.
       handleMutationError(error, { operation: 'Remove Shopping List Item' });
@@ -87,63 +148,38 @@ export function useRemoveShoppingItem({
   const removeItem = async (itemId: string) => {
     if (!listId) return false;
 
-    // Snapshot list stats + purchased state to compute the decremented
-    // aggregates (the old optimisticResponse path did this via the response).
-    const listStats = client.cache.readFragment<{
-      totalItems: number;
-      completedItems: number;
-      remainingItems: number;
-      completionRate: number;
-    }>({
-      id: client.cache.identify({ __typename: 'ShoppingList', id: listId }),
-      fragment: ShoppingListStatsFragment,
-      fragmentName: '_RemoveShoppingItemStats',
-    });
-    const itemPurchase = client.cache.readFragment<{
+    const itemState = client.cache.readFragment<{
       purchaseInfo: { isPurchased: boolean } | null;
     }>({
-      id: client.cache.identify({
-        __typename: 'ShoppingListItem',
-        id: itemId,
-      }),
-      fragment: ShoppingListItemPurchaseFragment,
-      fragmentName: '_RemoveShoppingItemPurchase',
+      id: client.cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+      fragment: ITEM_STATE,
+      fragmentName: '_RemoveShoppingItemState',
+    });
+    const stats = client.cache.readFragment<{
+      totalItems: number;
+      completedItems: number;
+    }>({
+      id: client.cache.identify({ __typename: 'ShoppingList', id: listId }),
+      fragment: LIST_STATS,
+      fragmentName: '_RemoveShoppingItemStats',
     });
 
-    const wasPurchased = itemPurchase?.purchaseInfo?.isPurchased ?? false;
-    const prevTotal = listStats?.totalItems ?? 0;
-    const prevCompleted = listStats?.completedItems ?? 0;
-    const newTotal = Math.max(0, prevTotal - 1);
-    const newCompleted = wasPurchased
-      ? Math.max(0, prevCompleted - 1)
-      : prevCompleted;
-    const newRemaining = Math.max(0, newTotal - newCompleted);
-    const newCompletionRate = newTotal > 0 ? newCompleted / newTotal : 0;
-
-    // Apply the removal to the cache before the mutation, and leave it in place.
-    try {
-      removeFromShoppingListItemsCache(client.cache, listId, itemId, {
-        evictItem: true,
-      });
-      client.cache.modify({
-        id: client.cache.identify({ __typename: 'ShoppingList', id: listId }),
-        fields: {
-          totalItems: () => newTotal,
-          completedItems: () => newCompleted,
-          remainingItems: () => newRemaining,
-          completionRate: () => newCompletionRate,
+    const { context } = apply(
+      removalIntent(
+        itemId,
+        listId,
+        itemState?.purchaseInfo?.isPurchased ?? false,
+        {
+          totalItems: stats?.totalItems ?? 0,
+          completedItems: stats?.completedItems ?? 0,
         },
-      });
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Remove Shopping List Item (optimistic evict + stats)',
-      });
-    }
+      ),
+    );
 
     try {
       return await removeItemMutation({
         variables: { input: { id: itemId } },
-        context: { localFirst: true },
+        context,
       });
     } catch (error) {
       errorService.reportError(error, {

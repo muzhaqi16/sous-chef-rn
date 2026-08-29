@@ -44,7 +44,7 @@ jest.mock('../queueStore', () => ({
   queueStore: {
     getPendingMutationsForUser: jest.fn(() => []),
     resetProcessingToPending: jest.fn(() => 0),
-    expireStalePending: jest.fn(() => 0),
+    expireStalePending: jest.fn(() => []),
     updateMutation: jest.fn(() => true),
     removeMutation: jest.fn(() => true),
     incrementRetry: jest.fn(() => true),
@@ -62,6 +62,7 @@ jest.mock('../queueStore', () => ({
       authErrors: 0,
     })),
     getMutationsForUser: jest.fn(() => []),
+    invalidateCache: jest.fn(),
   },
 }));
 
@@ -84,12 +85,6 @@ jest.mock('../../links/refreshToken', () => ({
 
 // Mock persisted optimistic-field storage — replay success/convergence must
 // clear entries so restoration can't re-apply stale values.
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: { clearEntity: jest.fn() },
-}));
-const { optimisticDataPersistence } = jest.requireMock(
-  '#/apollo/offline/OptimisticDataPersistence',
-) as { optimisticDataPersistence: { clearEntity: jest.Mock } };
 
 // Mock the logger
 const mockedGetState = useStore.getState as jest.Mock;
@@ -396,7 +391,7 @@ describe('QueueManager', () => {
   // -------------------------------------------------------------------------
   // drain halts on transient defer
   // -------------------------------------------------------------------------
-  describe('drain halts on transient defer', () => {
+  describe('drain blocking is per dependency chain', () => {
     beforeEach(() => {
       // Device online and the reachability breaker closed — the drain would
       // otherwise keep going; only a per-mutation transient defer should stop it.
@@ -409,10 +404,13 @@ describe('QueueManager', () => {
       manager['validateTokenBeforeReplay'] = jest.fn().mockResolvedValue(true);
     });
 
-    it('stops the drain when a mutation defers, leaving the tail PENDING and in order', async () => {
-      // createA fails with a one-off 5xx and is deferred back to PENDING;
-      // updateA depends on createA, so replaying it (or createB) ahead of the
-      // un-synced createA would be out-of-order.
+    it("holds back a deferred write's dependents but drains unrelated entities", async () => {
+      // createA fails with a one-off 5xx and is deferred back to PENDING.
+      // updateA targets the same row, so it must wait — replaying it against a
+      // create that never landed is out-of-order. createB touches a different
+      // entity and has no reason to wait: FIFO is global, so breaking the whole
+      // drain here meant one stuck pantry write held back every shopping-list
+      // write behind it, for as long as the condition lasted.
       const createA = makeMutation({
         id: 'mut-create-a',
         operationName: 'CreatePantryItem',
@@ -447,12 +445,107 @@ describe('QueueManager', () => {
 
       await manager.processQueue();
 
-      // Only createA was attempted; the drain broke before updateA/createB, so
-      // they were never dequeued — they stay PENDING for the next drain, in order.
-      expect(processed).toEqual(['mut-create-a']);
+      // updateA shares an entity with the deferred createA, so it waits and
+      // stays PENDING in its original position. createB does not, so it lands.
+      expect(processed).toEqual(['mut-create-a', 'mut-create-b']);
       expect(processed).not.toContain('mut-update-a');
-      expect(processed).not.toContain('mut-create-b');
-      expect(manager['processMutation']).toHaveBeenCalledTimes(1);
+    });
+
+    it('gives up on an entry that will not stop deferring', async () => {
+      // Nothing else bounded this: the drain broke on the first defer and the
+      // next drain started at the same entry, with only the 90-day expiry or a
+      // sign-out as an escape. Driven through the error handler directly — the
+      // full drain would spend the in-run retry backoff on real timers first.
+      const handler = jest.fn();
+      manager.setFailureHandler(handler);
+      const stuck = makeMutation({
+        id: 'stuck',
+        operationName: 'AdjustPantryItemQuantity',
+        variables: { input: { id: 'item-1' } },
+        deferCount: 10,
+        // In-run retries already spent, so the handler reaches the defer branch
+        // rather than sleeping on a backoff the suite's fake timers never run.
+        retryCount: 3,
+        maxRetries: 3,
+      });
+
+      const result = await manager['handleMutationError'](stuck, {
+        message: 'shedding load',
+        networkError: { statusCode: 503 },
+      });
+
+      expect(result.deferred).toBeUndefined();
+      expect(queueStore.markMutationFailed).toHaveBeenCalledWith(
+        'stuck',
+        expect.anything(),
+      );
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ mutationId: 'stuck' }),
+      );
+    });
+
+    it('keeps deferring while the bound has room', async () => {
+      const stuck = makeMutation({
+        id: 'still-trying',
+        operationName: 'AdjustPantryItemQuantity',
+        variables: { input: { id: 'item-1' } },
+        deferCount: 1,
+        retryCount: 3,
+        maxRetries: 3,
+      });
+
+      const result = await manager['handleMutationError'](stuck, {
+        message: 'shedding load',
+        networkError: { statusCode: 503 },
+      });
+
+      expect(result.deferred).toBe(true);
+      expect(queueStore.updateMutation).toHaveBeenCalledWith(
+        'still-trying',
+        expect.objectContaining({
+          status: QueueStatus.PENDING,
+          deferCount: 2,
+        }),
+      );
+    });
+
+    it('holds back a whole chain, not just its first link', async () => {
+      // createA → updateA → deleteA: once createA defers, neither dependent can
+      // land, and the second must be held on the strength of the first having
+      // been held rather than on the create alone.
+      const chain = [
+        makeMutation({
+          id: 'chain-create',
+          variables: { input: { id: 'a' } },
+        }),
+        makeMutation({
+          id: 'chain-update',
+          variables: { input: { itemId: 'a' } },
+        }),
+        makeMutation({ id: 'chain-delete', variables: { id: 'a' } }),
+        makeMutation({
+          id: 'unrelated',
+          variables: { input: { id: 'z' } },
+        }),
+      ];
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue(
+        chain,
+      );
+
+      const processed: string[] = [];
+      manager['processMutation'] = jest.fn(
+        async (mutation: QueuedMutation): Promise<ProcessingResult> => {
+          processed.push(mutation.id);
+          if (mutation.id === 'chain-create') {
+            return { success: false, deferred: true, mutationId: mutation.id };
+          }
+          return { success: true, mutationId: mutation.id };
+        },
+      );
+
+      await manager.processQueue();
+
+      expect(processed).toEqual(['chain-create', 'unrelated']);
     });
   });
 
@@ -720,6 +813,9 @@ describe('QueueManager', () => {
       expect(queueStore.updateMutation).toHaveBeenCalledWith('proc-1', {
         status: QueueStatus.SUCCESS,
         processedAt: expect.any(Number),
+        // The failure counters are reset with the entry's run of failures.
+        deferCount: 0,
+        conflictCount: 0,
       });
     });
 
@@ -736,133 +832,6 @@ describe('QueueManager', () => {
       jest.useFakeTimers();
 
       expect(result.success).toBe(false);
-    });
-
-    describe('persisted optimistic-field clearing', () => {
-      it('clears the entity entry on replay success', async () => {
-        const mutation = makeMutation({
-          id: 'proc-clear',
-          variables: { input: { id: 'cuid-item-1' } },
-        });
-        client.mutate.mockResolvedValue({
-          data: { syncPantryItem: { item: {}, converged: false } },
-        });
-        client.cache.extract.mockReturnValue(
-          normalizedFixture([{ __typename: 'PantryItem', id: 'cuid-item-1' }]),
-        );
-
-        jest.useRealTimers();
-        await processMutation(mutation);
-        jest.useFakeTimers();
-
-        expect(optimisticDataPersistence.clearEntity).toHaveBeenCalledWith(
-          'PantryItem',
-          'cuid-item-1',
-        );
-      });
-
-      it('clears every item entry of a batch-shaped create', async () => {
-        const mutation = makeMutation({
-          id: 'proc-clear-batch',
-          operationName: 'AddItemsToShoppingList',
-          variables: {
-            input: {
-              shoppingListId: 'list-1',
-              items: [{ id: 'cuid-a' }, { id: 'cuid-b' }],
-            },
-          },
-        });
-        client.mutate.mockResolvedValue({
-          data: { addItemsToShoppingList: { results: [] } },
-        });
-        client.cache.extract.mockReturnValue(
-          normalizedFixture([
-            { __typename: 'ShoppingListItem', id: 'cuid-a' },
-            { __typename: 'ShoppingListItem', id: 'cuid-b' },
-          ]),
-        );
-
-        jest.useRealTimers();
-        await processMutation(mutation);
-        jest.useFakeTimers();
-
-        expect(optimisticDataPersistence.clearEntity).toHaveBeenCalledWith(
-          'ShoppingListItem',
-          'cuid-a',
-        );
-        expect(optimisticDataPersistence.clearEntity).toHaveBeenCalledWith(
-          'ShoppingListItem',
-          'cuid-b',
-        );
-        // One snapshot for the whole batch, not one per entity id.
-        expect(client.cache.extract).toHaveBeenCalledTimes(1);
-      });
-
-      it('clears on idempotent convergence too', async () => {
-        const mutation = makeMutation({
-          id: 'proc-clear-converged',
-          operationName: 'CreateShoppingList',
-          variables: { input: { id: 'cuid-list-1' } },
-        });
-        client.mutate.mockResolvedValue({
-          data: {
-            createShoppingList: {
-              __typename: 'ConflictError',
-              code: 'IDEMPOTENT_REPLAY',
-              message: 'already exists',
-            },
-          },
-        });
-        client.cache.extract.mockReturnValue(
-          normalizedFixture([
-            { __typename: 'ShoppingList', id: 'cuid-list-1' },
-          ]),
-        );
-
-        jest.useRealTimers();
-        const result = await processMutation(mutation);
-        jest.useFakeTimers();
-
-        expect(result.success).toBe(true);
-        expect(optimisticDataPersistence.clearEntity).toHaveBeenCalledWith(
-          'ShoppingList',
-          'cuid-list-1',
-        );
-      });
-
-      it('does not clear when the replay fails', async () => {
-        const mutation = makeMutation({
-          id: 'proc-no-clear',
-          retryCount: 3,
-          maxRetries: 3,
-          variables: { input: { id: 'cuid-item-1' } },
-        });
-        client.mutate.mockRejectedValue(new Error('Server error'));
-
-        jest.useRealTimers();
-        await processMutation(mutation);
-        jest.useFakeTimers();
-
-        expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
-      });
-
-      it('skips entities absent from the cache without throwing', async () => {
-        const mutation = makeMutation({
-          id: 'proc-clear-uncached',
-          variables: { input: { id: 'cuid-gone' } },
-        });
-        client.mutate.mockResolvedValue({
-          data: { syncPantryItem: { item: {}, converged: false } },
-        });
-        client.cache.extract.mockReturnValue({});
-
-        jest.useRealTimers();
-        const result = await processMutation(mutation);
-        jest.useFakeTimers();
-
-        expect(result.success).toBe(true);
-        expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
-      });
     });
 
     // Under errorPolicy 'all' a server refusal resolves as an error union
@@ -893,7 +862,10 @@ describe('QueueManager', () => {
         expect(queueStore.markMutationFailed).not.toHaveBeenCalled();
         expect(queueStore.updateMutation).toHaveBeenCalledWith(
           'proc-converged',
-          { status: QueueStatus.SUCCESS, processedAt: expect.any(Number) },
+          expect.objectContaining({
+            status: QueueStatus.SUCCESS,
+            processedAt: expect.any(Number),
+          }),
         );
       });
 
@@ -1401,6 +1373,244 @@ describe('QueueManager', () => {
       );
     });
 
+    it('reports an entry expired past the sync horizon', async () => {
+      // The queue has decided never to send this. Its local change is on screen
+      // with nothing left that would make it true, so the person has to be told
+      // — it used to be marked FAILED and left standing indefinitely, with no
+      // way to discover it.
+      const handler = jest.fn();
+      manager.setFailureHandler(handler);
+      const expired = makeMutation({
+        id: 'expired-1',
+        operationName: 'UpdatePantryItem',
+        variables: { input: { id: 'item-1' } },
+        status: QueueStatus.FAILED,
+        lastError: {
+          type: 'unknown',
+          message: 'Queued change expired',
+          code: 'OFFLINE_SYNC_WINDOW_EXPIRED',
+          timestamp: Date.now(),
+          retryable: false,
+        },
+      });
+      (queueStore.expireStalePending as jest.Mock).mockReturnValueOnce([
+        expired,
+      ]);
+
+      await manager.processQueue();
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mutationId: 'expired-1',
+          entityId: 'item-1',
+          error: expect.objectContaining({
+            code: 'OFFLINE_SYNC_WINDOW_EXPIRED',
+          }),
+        }),
+      );
+    });
+
+    it('reports an auth-parked entry dropped to make room', () => {
+      // `queueLink` hands a capacity eviction here. The write was never seen by
+      // the server, so its change has been on screen since it was made.
+      const handler = jest.fn();
+      manager.setFailureHandler(handler);
+      const parked = makeMutation({
+        id: 'parked-1',
+        variables: { input: { id: 'item-x' } },
+        status: QueueStatus.AUTH_ERROR,
+      });
+
+      manager.withdrawUnqueueableWrite(parked, {
+        type: 'auth',
+        message: 'Queued change discarded to make room for newer changes',
+        timestamp: Date.now(),
+        retryable: false,
+      });
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ mutationId: 'parked-1', entityId: 'item-x' }),
+      );
+    });
+
+    describe('version conflicts', () => {
+      const { client } = require('../../client');
+
+      beforeEach(() => {
+        // A drain needs an authenticated, reachable session; the outer block
+        // only seeds the cache the entity lookup reads.
+        mockedGetState.mockReturnValue({
+          user: { id: 'user-1' },
+          accessToken: 'token',
+          isOnline: true,
+          apiReachable: true,
+        });
+      });
+
+      const conflictingReplay = () =>
+        (client.mutate as jest.Mock).mockResolvedValue({
+          data: {
+            adjustPantryItemQuantity: {
+              __typename: 'ConflictError',
+              code: 'VERSION_CONFLICT',
+              message: 'stale version',
+            },
+          },
+        });
+
+      const queueOne = (mutation: QueuedMutation) =>
+        (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
+          mutation,
+        ]);
+
+      const absoluteWrite = () =>
+        makeMutation({
+          id: 'conflict-1',
+          operationName: 'AdjustPantryItemQuantity',
+          convergence: 'absolute',
+          variables: { input: { id: 'item-1', version: 3 } },
+        });
+
+      it('refreshes the version and re-queues an absolute write', async () => {
+        // The stale version is the whole cause: two offline edits to one row
+        // send the same number twice. Reading it back from the cache — which
+        // the failed replay's own response just updated — is what makes the
+        // re-send land, and the API rolls the idempotency claim back with the
+        // conflict so the same key applies exactly once.
+        conflictingReplay();
+        (client.cache.readFragment as jest.Mock).mockReturnValue({
+          version: 7,
+        });
+        queueOne(absoluteWrite());
+
+        await manager.processQueue();
+
+        expect(queueStore.updateMutation).toHaveBeenCalledWith(
+          'conflict-1',
+          expect.objectContaining({
+            status: QueueStatus.PENDING,
+            conflictCount: 1,
+            variables: { input: { id: 'item-1', version: 7 } },
+          }),
+        );
+      });
+
+      it('withdraws a relative write instead of re-sending it', async () => {
+        // Re-sending a delta against a refreshed version applies it a SECOND
+        // time — the double-apply idempotencyKey exists to prevent.
+        const handler = jest.fn();
+        manager.setFailureHandler(handler);
+        conflictingReplay();
+        (client.cache.readFragment as jest.Mock).mockReturnValue({
+          version: 7,
+        });
+        queueOne(
+          makeMutation({
+            id: 'conflict-rel',
+            operationName: 'AdjustPantryItemQuantity',
+            convergence: 'relative',
+            variables: { input: { id: 'item-1', version: 3 } },
+          }),
+        );
+
+        await manager.processQueue();
+
+        expect(handler).toHaveBeenCalledWith(
+          expect.objectContaining({
+            mutationId: 'conflict-rel',
+            error: expect.objectContaining({ type: 'conflict' }),
+          }),
+        );
+        expect(queueStore.markMutationFailed).toHaveBeenCalledWith(
+          'conflict-rel',
+          expect.objectContaining({ type: 'conflict' }),
+        );
+      });
+
+      it('treats a write that declares nothing as relative', async () => {
+        // The safe default: an entry persisted before convergence existed, or
+        // an operation that never declared, is reported rather than re-sent.
+        const handler = jest.fn();
+        manager.setFailureHandler(handler);
+        conflictingReplay();
+        (client.cache.readFragment as jest.Mock).mockReturnValue({
+          version: 7,
+        });
+        queueOne(
+          makeMutation({
+            id: 'conflict-undeclared',
+            operationName: 'AdjustPantryItemQuantity',
+            variables: { input: { id: 'item-1', version: 3 } },
+          }),
+        );
+
+        await manager.processQueue();
+
+        expect(handler).toHaveBeenCalled();
+        expect(queueStore.updateMutation).not.toHaveBeenCalledWith(
+          'conflict-undeclared',
+          expect.objectContaining({ conflictCount: 1 }),
+        );
+      });
+
+      it('stops re-sending once the conflict bound is spent', async () => {
+        // A row edited from another device faster than this queue drains is not
+        // converging; retrying forever would hold up everything behind it.
+        const handler = jest.fn();
+        manager.setFailureHandler(handler);
+        conflictingReplay();
+        (client.cache.readFragment as jest.Mock).mockReturnValue({
+          version: 7,
+        });
+        queueOne({ ...absoluteWrite(), conflictCount: 3 });
+
+        await manager.processQueue();
+
+        expect(handler).toHaveBeenCalledWith(
+          expect.objectContaining({ mutationId: 'conflict-1' }),
+        );
+      });
+
+      it('reports an overwrite the server resolved in its own favour', async () => {
+        // The sync path answers a version conflict with a SUCCESS payload
+        // carrying `converged: true`, so this dequeued as a plain success and
+        // the row silently snapped back with no message at all.
+        const handler = jest.fn();
+        manager.setFailureHandler(handler);
+        (client.mutate as jest.Mock).mockResolvedValue({
+          data: {
+            syncPantryItem: {
+              __typename: 'SyncPantryItemPayload',
+              converged: true,
+              conflict: { message: 'newer change won' },
+            },
+          },
+        });
+        queueOne(
+          makeMutation({
+            id: 'overwritten-1',
+            operationName: 'AdjustPantryItemQuantity',
+            variables: { input: { id: 'item-1' } },
+          }),
+        );
+
+        await manager.processQueue();
+
+        expect(handler).toHaveBeenCalledWith(
+          expect.objectContaining({
+            mutationId: 'overwritten-1',
+            error: expect.objectContaining({ type: 'conflict' }),
+          }),
+        );
+        // Still a success for the queue: the write landed, the server just kept
+        // its own value, and its state is already normalized into the cache.
+        expect(queueStore.updateMutation).toHaveBeenCalledWith(
+          'overwritten-1',
+          expect.objectContaining({ status: QueueStatus.SUCCESS }),
+        );
+      });
+    });
+
     it('stores the failure handler via setFailureHandler', () => {
       const handler = jest.fn();
       manager.setFailureHandler(handler);
@@ -1744,6 +1954,13 @@ describe('QueueManager', () => {
 
 // A session the server ended must not leave a timer waiting to replay against
 // credentials that cannot come back.
+//
+// SCOPE: this suite mocks `queueStore` and `../../client`, and never imports
+// `logoutCleanup` — so the 'apollo' teardown step is absent from the registry
+// this runs. It can prove what the QUEUE's own step does, and nothing about
+// what another step does to the queue's storage keys. That question is covered
+// where both real steps are registered, in
+// `src/apollo/__tests__/logoutCleanup.test.ts`.
 describe('session teardown step', () => {
   it('cancels a pending drain without touching the queued entries', async () => {
     const { queueManager } = require('../queueManager');
@@ -1763,6 +1980,9 @@ describe('session teardown step', () => {
     // The entries stay: a rejected refresh token is not the user choosing to
     // discard unsynced work. Only `onLogout` deletes them.
     expect(queueStore.clearQueueForUser).not.toHaveBeenCalled();
+    // The mirror goes, so RAM cannot outlive whatever the disk holds and a
+    // later write cannot persist a stale view back.
+    expect(queueStore.invalidateCache).toHaveBeenCalled();
 
     processQueue.mockRestore();
     jest.useRealTimers();

@@ -12,7 +12,7 @@ import {
   handleMutationError,
   versionConflictCheck,
 } from '#/utils/errorHandlers';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { useWrite, type AppliedWrite } from '#/apollo/write/useWrite';
 import { isUnpurchasedVariant } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { logger } from '#/utils/environment';
 
@@ -72,6 +72,7 @@ export function useItemReordering<T extends ShoppingListItem>(
 ) {
   const { listId, items, refetch } = options;
   const client = useApolloClient();
+  const { apply } = useWrite();
 
   const [moveItem] = useMutation(MoveShoppingListItemDocument, {
     // NO optimisticResponse and NO update callback
@@ -164,19 +165,23 @@ export function useItemReordering<T extends ShoppingListItem>(
     // PERFORMANCE: Batch both cache modifications into a single update
     // This ensures FlashList sees a consistent state and reduces re-render cycles
     // Per apollo-client-patterns.md Pattern 5: Use cache.modify for simple field updates
+    let applied: AppliedWrite | undefined;
+
     client.cache.batch({
       update: cache => {
-        // 1. Update the item's sortOrder and timestamp
-        cache.modify({
-          id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-          fields: {
-            sortOrder() {
-              return newSortOrder;
-            },
-            updatedAt() {
-              return new Date().toISOString();
-            },
+        // 1. Update the item's sortOrder and timestamp. Going through the kit
+        //    inside the batch keeps this one commit — FlashList sees the new
+        //    sortOrder and the re-sorted edges together — while still reading
+        //    the previous position first, which is what makes the move
+        //    undoable. `sortOrder` is a fractional index the person chose, so
+        //    a version conflict re-sends it rather than discarding the move.
+        applied = apply({
+          target: { __typename: 'ShoppingListItem', id: itemId },
+          patch: {
+            sortOrder: newSortOrder,
+            updatedAt: new Date().toISOString(),
           },
+          convergence: 'absolute',
         });
 
         // Helper to sort edges by sortOrder with secondary sort by id
@@ -223,13 +228,16 @@ export function useItemReordering<T extends ShoppingListItem>(
       },
     });
 
-    // Persist optimistic sortOrder to survive cache-and-network refetches while offline
-    optimisticDataPersistence.save(
-      'ShoppingListItem',
-      itemId,
-      'sortOrder',
-      newSortOrder,
-    );
+    // `cache.batch` runs its callback before returning, so this is never taken.
+    // It is a narrowing, not a guard: an optional chain on `applied` inside the
+    // try below would be a value block, which bails the whole function out of
+    // the React Compiler.
+    if (!applied) return;
+
+    // The queue entry's intent is the durable record of this move now. It
+    // replaces a persisted marker that had to be cleared by hand on three
+    // different outcomes — and was cleared unconditionally on one of them, so
+    // an offline reorder lost its restart protection entirely.
 
     // Execute mutation (NO optimisticResponse - cache already updated above)
     const moveAfterItemId = afterItemId ?? undefined;
@@ -244,9 +252,10 @@ export function useItemReordering<T extends ShoppingListItem>(
             beforeItemId: moveBeforeItemId,
           },
         },
-        // Local-first: queue on an API-down-while-online failure (moves are
-        // coalesced latest-wins on replay via SyncMoveShoppingListItem).
-        context: { localFirst: true },
+        // Local-first: queue on an API-down-while-online failure. The
+        // intent rides along, so a replay refused after a restart puts the
+        // row back where it was.
+        context: applied.context,
       });
     } catch (error) {
       handleMutationError(error, {
@@ -255,10 +264,9 @@ export function useItemReordering<T extends ShoppingListItem>(
       });
     }
     if (!result) {
-      // The mutation threw (handled by the onError above). Drop the persisted
-      // optimistic sortOrder — it carries no version, so the restoration hook
-      // would otherwise re-apply the failed move on every cold start.
-      optimisticDataPersistence.clear('ShoppingListItem', itemId, 'sortOrder');
+      // The mutation threw (handled by the onError above). Put the previous
+      // position back rather than leaving the row where the failed move left it.
+      applied.revert();
       return;
     }
 
@@ -268,7 +276,7 @@ export function useItemReordering<T extends ShoppingListItem>(
         operation: 'Move Item',
         checks: [versionConflictCheck({ onRefresh: () => refetch?.() })],
       });
-      optimisticDataPersistence.clear('ShoppingListItem', itemId, 'sortOrder');
+      applied.revert();
       refetch?.(); // Refetch to restore correct order
       return;
     }
@@ -292,8 +300,13 @@ export function useItemReordering<T extends ShoppingListItem>(
     const serverSortOrder = serverItem?.sortOrder;
     const originalVersion = currentItem.version;
 
-    // Server confirmed — clear persisted optimistic sortOrder
-    optimisticDataPersistence.clear('ShoppingListItem', itemId, 'sortOrder');
+    // Clear the persisted optimistic sortOrder only once the SERVER has
+    // confirmed. Offline, `queueLink` completes the mutation with a null
+    // payload — which is a queued success, not a server one — so clearing
+    // unconditionally here discarded the marker for a move that had not been
+    // sent yet, and an app kill before the replay snapped the order back to
+    // whatever was last persisted. That is the one thing this marker exists to
+    // prevent. Every other writer already gates on the outcome.
 
     if (serverVersion === originalVersion) {
       // No-op move - item was already in correct position

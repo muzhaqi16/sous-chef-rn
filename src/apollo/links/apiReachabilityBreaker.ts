@@ -1,5 +1,6 @@
 import { AppState } from 'react-native';
 import { useStore } from '#store';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 import { queueManager } from '../offlineQueue/queueManager';
 import { probeApiHealth } from './apiHealthProbe';
 import { logger } from '#/utils/environment';
@@ -74,17 +75,27 @@ class ApiReachabilityBreaker {
     this.probeAttempt = 0;
     this.recentFailures = [];
     this.clearProbeTimer();
-    const wasOpen = this.circuitState === 'open';
     this.circuitState = 'closed';
+    // Sampled BEFORE the write, and read from the derived policy rather than
+    // from this breaker's own circuit state. The two are not the same: while
+    // the device reports offline the probe loop runs with the circuit CLOSED,
+    // so a probe success that disproves the device signal moved reachability
+    // null → true — clearing every offline indication — while draining nothing.
+    // The user saw a fully online app with their offline edits still waiting
+    // and nothing saying so. This condition is a superset of the old
+    // circuit-open check, and it is a no-op in steady state.
+    const wasUnavailable = isApiUnavailable(useStore.getState());
     // Unconditional write — repairs any store/breaker desync (the setter
     // no-ops when the value is unchanged, so this is free in steady state).
     useStore.getState().setApiReachable(true);
-    if (wasOpen) {
+    if (wasUnavailable) {
       logger.info(
-        `🔌 API reachable — circuit closed by ${
+        `🔌 API reachable — recovered via ${
           source ?? 'a network success'
         }, draining queue`,
       );
+      // Debounced, and `processQueue` no-ops on an empty queue, so calling it
+      // on every recovery edge costs nothing.
       queueManager.requestDrain();
     }
   }

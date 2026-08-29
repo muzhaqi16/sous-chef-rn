@@ -5,6 +5,8 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { RemoveItemsFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { alertService } from '#/services/alertService';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { toastService } from '#/services/toastService';
 import { useClearShoppingListItems } from '../useClearShoppingListItems';
 
 jest.mock('#/utils/finallyHelpers');
@@ -13,10 +15,24 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
+jest.mock('#/services/toastService', () => ({
+  toastService: { error: jest.fn(), success: jest.fn() },
+}));
+
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   clearAllPurchasedItemsFromCache: jest.fn(),
   clearAllUnpurchasedItemsFromCache: jest.fn(),
 }));
+
+// Clearing a list is ONLINE-ONLY: nothing is written to the cache ahead of the
+// server and nothing queues for replay, so the offline gate is part of the
+// hook's contract rather than an incidental detail.
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: jest.fn(() => false),
+}));
+const mockIsApiUnavailable = useIsApiUnavailable as jest.MockedFunction<
+  typeof useIsApiUnavailable
+>;
 
 const {
   clearAllPurchasedItemsFromCache: mockClearAllPurchased,
@@ -25,6 +41,7 @@ const {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockIsApiUnavailable.mockReturnValue(false);
 });
 
 interface TestClearItem {
@@ -155,7 +172,7 @@ describe('useClearShoppingListItems', () => {
     expect(mockClearAllPurchased).not.toHaveBeenCalled();
   });
 
-  it('clears purchased items from cache and fires mutation', async () => {
+  it('fires the mutation and clears purchased items from cache on the response', async () => {
     const recorded: Array<Record<string, unknown>> = [];
     const { result } = renderHookWithApollo(
       () =>
@@ -183,8 +200,8 @@ describe('useClearShoppingListItems', () => {
       ['item-1', 'item-3'],
     );
 
-    // P2-16: the mutation replays the exact captured ids (matching the
-    // optimistically-cleared set), not a re-evaluated `purchased` filter.
+    // The mutation carries the exact captured ids, not a re-evaluated
+    // `purchased` filter, so it deletes only what the tap targeted.
     expect(recorded).toContainEqual({
       input: {
         shoppingListId: 'list-1',
@@ -193,7 +210,7 @@ describe('useClearShoppingListItems', () => {
     });
   });
 
-  it('clears unpurchased items from cache and fires mutation', async () => {
+  it('fires the mutation and clears unpurchased items from cache on the response', async () => {
     const recorded: Array<Record<string, unknown>> = [];
     const { result } = renderHookWithApollo(
       () =>
@@ -221,7 +238,7 @@ describe('useClearShoppingListItems', () => {
       ['item-1', 'item-3'],
     );
 
-    // P2-16: id-based replay, matching the optimistically-cleared set.
+    // Id-based, matching the cleared set.
     expect(recorded).toContainEqual({
       input: {
         shoppingListId: 'list-1',
@@ -261,7 +278,7 @@ describe('useClearShoppingListItems', () => {
     expect(recorded).toHaveLength(1);
   });
 
-  it('alerts and refetches when the clear is rejected (union error)', async () => {
+  it('alerts when the clear is rejected (union error) and touches no cache', async () => {
     const { result } = renderHookWithApollo(
       () =>
         useClearShoppingListItems({
@@ -279,9 +296,38 @@ describe('useClearShoppingListItems', () => {
       await result.current.clearItems(true);
     });
 
-    // A server refusal surfaces one alert (no longer a silent revert) and
-    // refetches to restore the evicted items.
+    // A server refusal surfaces one alert. Nothing was written ahead of the
+    // server, so the rows stay put and there is nothing to restore.
     expect(alertService.alert).toHaveBeenCalledTimes(1);
-    expect(mockRefetch).toHaveBeenCalledTimes(1);
+    expect(mockClearAllPurchased).not.toHaveBeenCalled();
+    expect(mockRefetch).not.toHaveBeenCalled();
+  });
+
+  it('refuses the clear offline and leaves the cache alone', async () => {
+    mockIsApiUnavailable.mockReturnValue(true);
+    const recorded: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(
+      () =>
+        useClearShoppingListItems({
+          listId: 'list-1',
+          unpurchasedItems: [],
+          purchasedItems: [
+            createItem({ id: 'item-1', purchaseInfo: { isPurchased: true } }),
+          ],
+          refetch: mockRefetch,
+        }),
+      { operationMocks: [createClearMock(recorded)] },
+    );
+
+    expect(result.current.isApiUnavailable).toBe(true);
+
+    await act(async () => {
+      await result.current.clearItems(true);
+    });
+
+    expect(toastService.error).toHaveBeenCalled();
+    expect(recorded).toEqual([]);
+    expect(mockClearAllPurchased).not.toHaveBeenCalled();
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 });

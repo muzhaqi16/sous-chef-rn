@@ -52,6 +52,7 @@
       "homeMemberAlreadyExists": "El usuario ya es miembro de este hogar"
     },
     "addItemFailed": "No se pudo añadir el artículo",
+    "queuedChangeOverwritten": "Otra persona lo cambió antes, así que tu cambio no se conservó.",
     "updateItemFailed": "No se pudo actualizar el artículo",
     "removeItemFailed": "No se pudo quitar el artículo",
     "discardExpiredFailed": "No se pudieron descartar los artículos caducados",

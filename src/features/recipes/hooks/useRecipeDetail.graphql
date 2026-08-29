@@ -27,6 +27,13 @@ mutation AddItemsToShoppingListFromRecipe($input: AddItemsToShoppingListInput!) 
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
   }
 }
 

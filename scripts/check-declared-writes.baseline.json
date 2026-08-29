@@ -1,0 +1,85 @@
+{
+  "total": 42,
+  "files": [
+    {
+      "file": "src/apollo/utils/localFirstFields.ts",
+      "count": 2
+    },
+    {
+      "file": "src/features/barcode/components/SearchResults.tsx",
+      "count": 3
+    },
+    {
+      "file": "src/features/catalog/hooks/useCreateStorageLocation.ts",
+      "count": 1
+    },
+    {
+      "file": "src/features/catalog/hooks/useStorageLocationManagement.ts",
+      "count": 3
+    },
+    {
+      "file": "src/features/catalog/hooks/useUnitAutocomplete.ts",
+      "count": 1
+    },
+    {
+      "file": "src/features/notifications/hooks/useExpirationNotificationSync.ts",
+      "count": 3
+    },
+    {
+      "file": "src/features/notifications/hooks/useNotificationSettings.ts",
+      "count": 2
+    },
+    {
+      "file": "src/features/notifications/hooks/useNotificationSync.ts",
+      "count": 6
+    },
+    {
+      "file": "src/features/pantry/components/modals/AddToPantrySheet/AddToPantrySheet.tsx",
+      "count": 4
+    },
+    {
+      "file": "src/features/pantry/hooks/mutations/usePantryItemMutations.ts",
+      "count": 1
+    },
+    {
+      "file": "src/features/pantry/hooks/usePantryItemActions.ts",
+      "count": 3
+    },
+    {
+      "file": "src/features/pantry/hooks/usePantryItemDetailActions.ts",
+      "count": 1
+    },
+    {
+      "file": "src/features/pantry/hooks/usePantryItemSubmission.ts",
+      "count": 2
+    },
+    {
+      "file": "src/features/pantry/screens/FilteredPantryItems.tsx",
+      "count": 1
+    },
+    {
+      "file": "src/features/pantry/screens/PantrySettings.tsx",
+      "count": 1
+    },
+    {
+      "file": "src/features/profile/hooks/useAppSettings.tsx",
+      "count": 1
+    },
+    {
+      "file": "src/features/profile/hooks/useConfigurableSettings.tsx",
+      "count": 1
+    },
+    {
+      "file": "src/features/recipes/hooks/useRecipeShoppingList.ts",
+      "count": 3
+    },
+    {
+      "file": "src/features/shoppingList/components/AddToShoppingListSheet/AddToShoppingListSheet.tsx",
+      "count": 2
+    },
+    {
+      "file": "src/features/shoppingList/screens/AddEditItem.tsx",
+      "count": 1
+    }
+  ]
+}

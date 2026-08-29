@@ -24,7 +24,7 @@ import { SLIDE_PRESETS } from '#/constants/animations';
 import { usePantryActions } from './PantryActionsContext';
 import { Text } from '#components/atoms/Text';
 import { resolveImageUrl } from '#utils/imageUtils';
-import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
+import { useIsWritePending } from '#/apollo/write/useWriteState';
 import {
   getExpirationStatus,
   formatPackageBreakdown,
@@ -187,7 +187,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   // BEFORE the `!complete` early return — a hook after it is conditional, which
   // bails the whole component out of the React Compiler. The snapshot is a
   // boolean, so this re-renders the row only when its own state flips.
-  const isPendingSync = useIsPendingSync(pantryItem?.id);
+  const isPendingSync = useIsWritePending(pantryItem?.id);
 
   if (!complete) return null;
 

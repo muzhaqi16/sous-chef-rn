@@ -1,9 +1,10 @@
-# Snapshot/write shape for useShoppingListBudget's optimistic writes: the budget
-# limit / currency / price-tracking flag the screen edits plus the
-# version/updatedAt pair the revert restores. Every field must be selected by the
-# reading query (GetShoppingListDetails) so the snapshot reads complete —
-# otherwise the optimistic write silently skips. totalCost / estimatedTotal are
-# server-derived and never written optimistically.
+# Precondition read for useShoppingListBudget: `version`, which updateShoppingList
+# requires (an update sent without one reports success while overwriting a
+# concurrent edit). The budget/currency/price-tracking fields are the ones the
+# screen edits, kept here so the read and the reading query (GetShoppingListDetails)
+# select the same shape — readFragment returns null on a partial entity, and a
+# null read refuses the update. Server-derived totalCost / estimatedTotal are not
+# part of it; they reconcile from the mutation response.
 fragment useShoppingListBudget_list on ShoppingList {
   id
   budgetAmount

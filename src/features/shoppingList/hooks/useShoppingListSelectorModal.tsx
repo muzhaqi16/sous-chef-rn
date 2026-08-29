@@ -140,28 +140,40 @@ export function useShoppingListSelectorModal({
               subscriptionService.registerParentDeletion(id),
             );
 
-            let result;
+            let outcomes: boolean[] = [];
             try {
-              result = await Promise.all(
+              outcomes = await Promise.all(
                 idsToDelete.map(id => deleteShoppingList(id)),
               );
             } catch {
-              // Deletion failed — unregister immediately
-              idsToDelete.forEach(id =>
-                subscriptionService.unregisterParentDeletion(id),
-              );
-              toastService.error(t('shoppingListSelector.deleteFailed'));
+              // Reported by the hook; `outcomes` stays empty.
             }
 
-            if (!result) return;
+            // Every list must actually be gone before this reports a deletion:
+            // a refusal or an offline call now resolves rather than throwing,
+            // so the throw alone no longer distinguishes the two.
+            const deleted = idsToDelete.filter((_, i) => outcomes[i]);
+            if (deleted.length !== idsToDelete.length) {
+              idsToDelete
+                .filter((_, i) => !outcomes[i])
+                .forEach(id =>
+                  subscriptionService.unregisterParentDeletion(id),
+                );
+              if (deleted.length === 0) {
+                toastService.error(t('shoppingListSelector.deleteFailed'));
+                return;
+              }
+            }
 
             // Clear selection — useShoppingListSelection auto-selects the next list
-            if (currentListId && idsToDelete.includes(currentListId)) {
+            if (currentListId && deleted.includes(currentListId)) {
               useStore.getState().setSelectedShoppingListId(null);
             }
 
             toastService.success(
-              t('shoppingListSelector.deletedToast', { count }),
+              t('shoppingListSelector.deletedToast', {
+                count: deleted.length,
+              }),
             );
             exitDeleteMode();
           },

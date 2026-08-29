@@ -2,37 +2,34 @@
  * useRecurringShoppingList — turn a list's recurrence on/off and generate the
  * next occurrence.
  *
- * setRecurring / cancelRecurring are local-first: the recurrence fields are
- * absolute sets keyed by the list id, so we write them to the cache before
- * firing and a queued replay re-applies the same state idempotently. A real
- * rejection restores the pre-change snapshot and alerts.
+ * All three are ONLINE-ONLY: recurrence is list configuration set at home, and
+ * generateNext creates a list whose id the server mints. Each refuses with a
+ * localized toast while the API is unreachable; `isApiUnavailable` is returned
+ * so the screen can disable the affordances up front.
  *
- * generateNext is ONLINE-ONLY: it creates a brand-new list whose id the server
- * mints, so there's no client id to key idempotency on — a queued replay would
- * spawn duplicates. It adds the created list to the overview connection (same
- * updater createShoppingList uses) and returns its id for navigation.
+ * Apollo normalizes the recurrence fields from each mutation's own response, so
+ * only generateNext needs an `update` — it adds the created list to the overview
+ * connection (the same updater createShoppingList uses) and returns its id for
+ * navigation.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import {
   CreateRecurringShoppingListDocument,
   CancelRecurringDocument,
   GenerateNextRecurringListDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  UseRecurringShoppingList_ListFragmentDoc,
-  type UseRecurringShoppingList_ListFragment,
-} from './useRecurringShoppingList.generated';
 import { addShoppingListToQueryCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import type { RecurringPattern } from '#/graphql/generated/schemaTypes';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { toastService } from '#/services/toastService';
 import { errorService } from '#/services/errorService';
 
 export function useRecurringShoppingList() {
   const { t } = useTranslation();
-  const client = useApolloClient();
+  const isApiUnavailable = useIsApiUnavailable();
   const [setupMutation, { loading: settingUp }] = useMutation(
     CreateRecurringShoppingListDocument,
   );
@@ -56,36 +53,15 @@ export function useRecurringShoppingList() {
     },
   );
 
-  const applyOptimistic = (
-    id: string,
-    patch: Partial<UseRecurringShoppingList_ListFragment>,
-    label: string,
-  ): (() => void) =>
-    applyOptimisticFragmentPatch(
-      client.cache,
-      { typename: 'ShoppingList', id },
-      {
-        fragment: UseRecurringShoppingList_ListFragmentDoc,
-        fragmentName: 'useRecurringShoppingList_list',
-      },
-      patch,
-      label,
-    );
-
   const setRecurring = async (
     id: string,
     pattern: RecurringPattern,
     interval: number,
   ): Promise<boolean> => {
-    const revert = applyOptimistic(
-      id,
-      {
-        isRecurring: true,
-        recurringPattern: pattern,
-        recurringInterval: interval,
-      },
-      'Set Recurring',
-    );
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
+    }
 
     let result;
     try {
@@ -97,7 +73,6 @@ export function useRecurringShoppingList() {
             recurringInterval: interval,
           },
         },
-        context: { localFirst: true },
       });
     } catch (error) {
       errorService.reportError(error, {
@@ -105,46 +80,34 @@ export function useRecurringShoppingList() {
       });
     }
 
-    if (!result) {
-      revert();
-      return false;
-    }
+    if (!result) return false;
     if (
       alertIfRejected(result, t('shoppingListScreens.failedToSetRecurring'))
     ) {
-      revert();
       return false;
     }
     return true;
   };
 
   const cancelRecurring = async (id: string): Promise<boolean> => {
-    const revert = applyOptimistic(
-      id,
-      { isRecurring: false },
-      'Cancel Recurring',
-    );
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
+    }
 
     let result;
     try {
-      result = await cancelMutation({
-        variables: { input: { id } },
-        context: { localFirst: true },
-      });
+      result = await cancelMutation({ variables: { input: { id } } });
     } catch (error) {
       errorService.reportError(error, {
         operation: 'Cancel Recurring error:',
       });
     }
 
-    if (!result) {
-      revert();
-      return false;
-    }
+    if (!result) return false;
     if (
       alertIfRejected(result, t('shoppingListScreens.failedToCancelRecurring'))
     ) {
-      revert();
       return false;
     }
     return true;
@@ -152,6 +115,11 @@ export function useRecurringShoppingList() {
 
   // Returns the created list's id (for navigation) or null on failure.
   const generateNext = async (id: string): Promise<string | null> => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return null;
+    }
+
     let result;
     try {
       result = await generateMutation({ variables: { input: { id } } });
@@ -180,5 +148,6 @@ export function useRecurringShoppingList() {
     settingUp,
     cancelling,
     generating,
+    isApiUnavailable,
   };
 }

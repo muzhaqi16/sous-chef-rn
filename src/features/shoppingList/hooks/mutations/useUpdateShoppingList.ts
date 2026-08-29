@@ -2,11 +2,15 @@
  * useUpdateShoppingList - Rename / settings update for a shopping list
  * (local-first).
  *
- * Writes the changed fields to the cache PERMANENTLY before firing, so the
- * update survives an offline / API-down queue (the replay re-sends the
- * original mutation — absolute field sets keyed by the list id, idempotent).
- * A real rejection restores the pre-edit snapshot and throws the precise
- * domain error for the caller's toast.
+ * The edit goes through the declared write path: the change is described once
+ * as a `WriteIntent`, the kit writes it to the cache PERMANENTLY before firing
+ * (an `optimisticResponse` would be torn down the moment the offline queue
+ * completes the request with a null result), derives the patch that undoes it,
+ * and carries the intent to the queue — so a withdrawal after a restart
+ * restores the preceding values instead of evicting the list.
+ *
+ * A real rejection reverts and throws the precise domain error for the caller's
+ * localized toast.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -16,8 +20,10 @@ import {
   type UseUpdateShoppingList_ListFragment,
 } from './useUpdateShoppingList.generated';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { useWrite } from '#/apollo/write/useWrite';
 import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
+import { generateEntityId } from '#/utils/generateEntityId';
 import type { ListStatus } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 
@@ -30,6 +36,7 @@ interface ShoppingListSettingsUpdate {
 
 export function useUpdateShoppingList(fallbackErrorMessage: string) {
   const client = useApolloClient();
+  const { apply } = useWrite();
   const [mutate, { loading }] = useMutation(UpdateShoppingListDocument);
 
   const updateShoppingList = async (
@@ -37,7 +44,13 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
     updates: ShoppingListSettingsUpdate,
   ) => {
     const cacheId = client.cache.identify({ __typename: 'ShoppingList', id });
-    const snapshot = cacheId
+    // Read for two things the kit cannot supply: the version the server checks
+    // against (`UpdateShoppingListInput.version` is required — an update sent
+    // without one reports success while overwriting a concurrent edit), and the
+    // is-this-row-cached guard. The read stays on the full settings fragment so
+    // the guard keeps refusing exactly what it refused before; nothing else
+    // here is snapshotted, because the intent owns the undo.
+    const cached = cacheId
       ? client.cache.readFragment<UseUpdateShoppingList_ListFragment>({
           id: cacheId,
           fragment: UseUpdateShoppingList_ListFragmentDoc,
@@ -45,62 +58,42 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
         })
       : null;
 
-    const writeList = (data: UseUpdateShoppingList_ListFragment) =>
-      client.cache.writeFragment({
-        id: cacheId,
-        fragment: UseUpdateShoppingList_ListFragmentDoc,
-        fragmentName: 'useUpdateShoppingList_list',
-        data,
-      });
+    if (!cached) {
+      throw new GraphQLNetworkError(fallbackErrorMessage);
+    }
 
-    // Permanent write BEFORE firing — survives an offline/API-down queue
-    // (where no response ever arrives to materialize the change).
-    if (snapshot) {
-      // Built before the try — conditional spreads inside a try body make the
-      // React Compiler bail out of this hook.
-      const optimisticList = {
-        ...snapshot,
+    const { context, revert } = apply({
+      target: { __typename: 'ShoppingList', id },
+      patch: {
         ...(updates.name !== undefined && { name: updates.name }),
         ...(updates.isDefault !== undefined && {
           isDefault: updates.isDefault,
         }),
         ...(updates.status !== undefined && { status: updates.status }),
         updatedAt: new Date().toISOString(),
-      };
-      try {
-        writeList(optimisticList);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Update Shopping List (optimistic)',
-        });
-      }
-    }
+      },
+      // Every field here carries the final value the person chose, so a version
+      // conflict on replay is resolved by re-sending against a fresh version
+      // rather than by discarding the edit.
+      convergence: 'absolute',
+    });
 
-    const revert = () => {
-      if (snapshot) {
-        try {
-          writeList(snapshot);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert rejected Shopping List update',
-          });
-        }
-      }
+    // Built above the try: anything conditional inside a try body bails the
+    // React Compiler out of the whole function, and this project's bailout
+    // baseline is empty.
+    const input = {
+      id,
+      ...updates,
+      version: cached.version,
+      // Claimed by the server BEFORE its version check, so a queued replay
+      // converges instead of being refused on the stale version it necessarily
+      // carries.
+      idempotencyKey: generateEntityId(),
     };
-
-    // The server requires the version: an update sent without one reports
-    // success while overwriting a concurrent edit. The snapshot is the row this
-    // write is based on, so its version is the one to check against.
-    if (!snapshot) {
-      throw new GraphQLNetworkError(fallbackErrorMessage);
-    }
 
     let result;
     try {
-      result = await mutate({
-        variables: { input: { id, ...updates, version: snapshot.version } },
-        context: { localFirst: true },
-      });
+      result = await mutate({ variables: { input }, context });
     } catch (error) {
       errorService.reportError(error, {
         operation: 'Update Shopping List error:',
@@ -120,6 +113,10 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
       return null;
     }
     if (outcome === 'rejected') {
+      // Refused on the spot — and a refusal that never entered the queue is one
+      // the queue's withdrawal will never see, so undo it here. This covers a
+      // surfaced `result.error` too: with no payload object, that classifies
+      // as a refusal.
       revert();
     }
     // Success returns the server entity; rejection throws the domain error.

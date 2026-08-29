@@ -333,6 +333,9 @@ export const ListSettings: React.FC<
             const parsed =
               budgetInput.trim() === '' ? null : Number(budgetInput);
             if (parsed === null || !Number.isNaN(parsed)) {
+              // Durable, like the rename above it: offline this queues and
+              // the entered amount stands, so the two halves of one Save press
+              // no longer disagree.
               await setBudget(listId!, parsed, currency ?? undefined);
             }
           }
@@ -364,18 +367,26 @@ export const ListSettings: React.FC<
             // 10s auto-cleanup timeout in service handles unregistration
             subscriptionService.registerParentDeletion(listId);
 
+            let deleted = false;
             try {
-              await deleteShoppingList(listId!);
-
-              // Clear selection — useShoppingListSelection auto-selects the next list
-              setSelectedShoppingListId(null);
-              // Use goBack() to pop ListSettings off the stack, unmounting its
-              // query watcher so late subscription updates can't trigger a refetch
-              goBack();
+              deleted = await deleteShoppingList(listId!);
             } catch {
-              // Deletion failed — list wasn't actually deleted, so unregister immediately
-              subscriptionService.unregisterParentDeletion(listId);
+              // Reported by the hook; `deleted` stays false.
             }
+
+            if (!deleted) {
+              // The list is still there — a refusal, or offline. Leaving the
+              // parent-deletion registration in place would suppress its own
+              // subscription updates for the next ten seconds.
+              subscriptionService.unregisterParentDeletion(listId);
+              return;
+            }
+
+            // Clear selection — useShoppingListSelection auto-selects the next list
+            setSelectedShoppingListId(null);
+            // Use goBack() to pop ListSettings off the stack, unmounting its
+            // query watcher so late subscription updates can't trigger a refetch
+            goBack();
           },
         },
       ],

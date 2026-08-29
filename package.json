@@ -80,7 +80,9 @@
     "prepare": "husky",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"./*.{json,js}\"",
     "codegen:fillers": "node scripts/generate-optimistic-fillers.mjs",
-    "check:fillers": "node scripts/generate-optimistic-fillers.mjs --check"
+    "check:fillers": "node scripts/generate-optimistic-fillers.mjs --check",
+    "check:declared-writes": "node scripts/check-declared-writes.mjs",
+    "check:write-tiers": "node scripts/check-write-tiers.mjs"
   },
   "dependencies": {
     "@apollo/client": "^4.2.12",

@@ -225,7 +225,6 @@ const RecipeMainInner: React.FC = () => {
     // No recipe entity persists optimistic field markers — favorites survive a
     // restart through the raw MMKV Apollo cache (savedRecipesConnection edges),
     // not this per-field restore path.
-    optimisticTypes: [],
     telemetryProperties: () => ({
       discovery_count: screen.discovery.items.length,
       view: 'discovery',

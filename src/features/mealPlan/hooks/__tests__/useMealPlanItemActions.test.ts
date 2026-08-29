@@ -17,6 +17,7 @@ import {
   type UpdateMealPlanItemInput,
 } from '#/graphql/generated/schemaTypes';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
+import { useStore } from '#store';
 import { useMealPlanItemActions } from '../useMealPlanItemActions';
 
 const seedToggleItem = (overrides: Record<string, unknown> = {}) =>
@@ -69,6 +70,10 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+afterEach(() => {
+  useStore.setState({ apiReachable: true, isOnline: true });
+});
+
 describe('useMealPlanItemActions', () => {
   it('returns loading states all false initially', () => {
     const { result } = renderHookWithApollo(() =>
@@ -79,6 +84,95 @@ describe('useMealPlanItemActions', () => {
     expect(result.current.creating).toBe(false);
     expect(result.current.updating).toBe(false);
     expect(result.current.deleting).toBe(false);
+    expect(result.current.isApiUnavailable).toBe(false);
+  });
+
+  describe('when the API is unavailable', () => {
+    // These actions are online-only: they refuse up front instead of writing
+    // the cache ahead of the server and replaying later.
+    it('exposes isApiUnavailable and refuses every action without firing', async () => {
+      useStore.setState({ apiReachable: false });
+
+      const create = recordMock(CreateMealPlanItemDocument, {
+        data: {
+          createMealPlanItem: {
+            __typename: 'CreateMealPlanItemPayload',
+            mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
+          },
+        },
+      });
+      const update = recordMock(UpdateMealPlanItemDocument, {
+        data: {
+          updateMealPlanItem: {
+            __typename: 'UpdateMealPlanItemPayload',
+            mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
+          },
+        },
+      });
+      const del = recordMock(DeleteMealPlanItemDocument, {
+        data: {
+          deleteMealPlanItem: {
+            __typename: 'DeleteMealPlanItemPayload',
+            mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
+          },
+        },
+      });
+
+      const cache = seedToggleItem();
+      const { result } = renderHookWithApollo(
+        () => useMealPlanItemActions('plan-1'),
+        { operationMocks: [create.mock, update.mock, del.mock], cache },
+      );
+
+      expect(result.current.isApiUnavailable).toBe(true);
+
+      let created: unknown;
+      let updated: unknown;
+      let toggled: unknown;
+      let deleted: unknown;
+      await act(async () => {
+        created = await result.current.createItem({
+          mealPlanId: 'plan-1',
+          meal: { recipeId: 'r-1' },
+          mealType: MealType.Dinner,
+          date: '2025-06-15',
+        } satisfies CreateMealPlanItemInput);
+        updated = await result.current.updateItem('mpi-1', { servings: 3 });
+        toggled = await result.current.toggleCompleted('mpi-1');
+        deleted = await result.current.deleteItem('mpi-1');
+      });
+
+      expect(created).toBeNull();
+      expect(updated).toBeNull();
+      expect(toggled).toBeNull();
+      expect(deleted).toBe(false);
+
+      expect(create.fired).toHaveLength(0);
+      expect(update.fired).toHaveLength(0);
+      expect(del.fired).toHaveLength(0);
+      expect(mockToastError).toHaveBeenCalledTimes(4);
+      expect(mockToastError).toHaveBeenCalledWith('Not available offline');
+      expect(mockToastSuccess).not.toHaveBeenCalled();
+    });
+
+    it('leaves the row untouched in the cache', async () => {
+      useStore.setState({ apiReachable: false });
+
+      const cache = seedToggleItem();
+      const { result } = renderHookWithApollo(
+        () => useMealPlanItemActions('plan-1'),
+        { cache },
+      );
+
+      await act(async () => {
+        await result.current.toggleCompleted('mpi-1');
+        await result.current.deleteItem('mpi-1');
+      });
+
+      expect(
+        cache.extract()['MealPlanItem:mpi-1'] as { isCompleted: boolean },
+      ).toEqual(expect.objectContaining({ isCompleted: false }));
+    });
   });
 
   describe('createItem', () => {
@@ -142,7 +236,9 @@ describe('useMealPlanItemActions', () => {
       });
 
       expect(created).toBeNull();
-      expect(mockToastError).toHaveBeenCalledWith('Conflict');
+      // The server's `message` ('Conflict') is unlocalizable English and is
+      // never what the person reads.
+      expect(mockToastError).toHaveBeenCalledWith('Failed to add item');
     });
   });
 

@@ -126,7 +126,6 @@ const PantryMainInner: React.FC = () => {
   // ── Lifecycle: optimistic restoration, cache persistence, perf tracking ──
   useTabScreenLifecycle({
     screenName: 'PantryMain',
-    optimisticTypes: ['Pantry', 'PantryItem'],
     telemetryProperties: () => ({
       home_id: screen.selectedHomeId,
       pantry_id: screen.pantry?.id,

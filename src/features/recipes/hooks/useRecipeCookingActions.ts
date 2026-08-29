@@ -8,7 +8,7 @@ import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { logger } from '#/utils/environment';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 
 interface UseRecipeCookingActionsOptions {
   recipeId: string | undefined;
@@ -39,13 +39,14 @@ export function useRecipeCookingActions({
 
   const [markRecipeAsCookedMutation] = useMutation(MarkRecipeAsCookedDocument);
 
+  const isApiUnavailable = useIsApiUnavailable();
+
   /**
-   * Fire the cook-log mutation with a client-minted cooking-log id and queue it
-   * locally when the API is unreachable (`localFirst`). The shared id means a
-   * queued replay converges on the same cooking log instead of creating a
-   * duplicate and re-deducting the pantry. Returns the classified outcome:
-   * `'rejected'` means the server refused it (or the call threw); `'created'` /
-   * `'queued'` both succeed (a queued cook replays later).
+   * Fire the cook-log mutation with a client-minted cooking-log id. The id is
+   * an idempotency token: a cook that reaches the server twice converges on the
+   * same cooking log instead of creating a duplicate and re-deducting the
+   * pantry. Returns the classified outcome: `'rejected'` means the server
+   * refused it (or the call threw), `'created'` means the cook was logged.
    */
   const fireMarkCooked = async (vars: FireMarkCookedVars) => {
     const id = generateEntityId();
@@ -53,25 +54,11 @@ export function useRecipeCookingActions({
     try {
       result = await markRecipeAsCookedMutation({
         variables: { input: { ...vars, id } },
-        context: { localFirst: true },
       });
     } catch (error) {
       // Report only — a throw classifies as 'rejected' below and every
       // caller toasts on that outcome; toasting here too would double up.
       errorService.reportError(error, { operation: 'markRecipeAsCooked' });
-    }
-
-    // Replay diagnostics: `converged: true` means this client-minted cooking-log
-    // id already existed (an idempotent replay), not a fresh cook.
-    const payload = result ? result.data?.markRecipeAsCooked : undefined;
-    if (
-      payload?.__typename === 'MarkRecipeAsCookedPayload' &&
-      payload.converged
-    ) {
-      logger.info('markRecipeAsCooked converged — replay of a committed cook', {
-        recipeId: vars.recipeId,
-        cookingLogId: id,
-      });
     }
 
     // A falsy result (the call threw) classifies as 'rejected'.
@@ -81,6 +68,11 @@ export function useRecipeCookingActions({
   const handleMarkAsCooked = (input: MarkCookedInput) => {
     if (!recipeId) {
       toastService.error(t('recipes.cookExternalError'));
+      return;
+    }
+
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
       return;
     }
 
@@ -130,6 +122,14 @@ export function useRecipeCookingActions({
   // Skip review handler — falls back to simple markRecipeAsCooked with deductFromPantry: true
   const handleSkipReview = () => {
     if (!recipeId) return;
+
+    // Guarded before the sheet closes: the review sheet is the user's context
+    // for retrying, so a refused skip leaves it standing.
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return;
+    }
+
     ingredientMatching.closeSheet();
     executeWithLoadingState(async () => {
       const outcome = await fireMarkCooked({
@@ -152,5 +152,6 @@ export function useRecipeCookingActions({
     handleMarkAsCooked,
     handleSkipReview,
     ingredientMatching,
+    isApiUnavailable,
   };
 }

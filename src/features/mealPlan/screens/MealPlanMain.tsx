@@ -174,7 +174,6 @@ const MealPlanMainInner: React.FC = () => {
   // Lifecycle: optimistic restoration, cache persistence, perf tracking
   useTabScreenLifecycle({
     screenName: 'MealPlanMain',
-    optimisticTypes: ['MealPlan', 'MealPlanItem'],
     telemetryProperties: () => ({
       plan_id: activePlanId,
       item_count: items.length,

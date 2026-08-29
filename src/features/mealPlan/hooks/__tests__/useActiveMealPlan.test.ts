@@ -140,16 +140,17 @@ describe('useActiveMealPlan', () => {
     expect(cache.extract()['MealPlan:plan-gone']).toBeUndefined();
   });
 
-  it('keeps a plan whose create has not been acknowledged', async () => {
-    // Offline-first: null on a client-minted id means the create hasn't synced,
-    // not that the plan is gone. Evicting here would delete queued work — so
-    // useMealPlan never asks, and nothing reads a miss.
+  it('treats a marked plan id as any other — the marker is inert here', async () => {
+    // Creating a plan is online-only now, so a client-minted id is never
+    // unacknowledged and a miss means the plan is genuinely gone. The marker
+    // used to suppress the read; asserting it no longer does is what stops a
+    // deleted plan staying selected forever if something marks an id again.
     useStore.setState({ selectedMealPlanId: 'plan-unsynced' });
     unconfirmedCreates.mark('plan-unsynced');
     const cache = seedCache([
       { __typename: 'MealPlan', id: 'plan-unsynced', name: 'Camping Trip' },
     ]);
-    const wouldMiss = missMock('plan-unsynced');
+    const miss = missMock('plan-unsynced');
 
     const { result } = renderHookWithApollo(
       () =>
@@ -157,14 +158,16 @@ describe('useActiveMealPlan', () => {
           currentPlanId: 'plan-current',
           planIds: ['plan-current'],
         }),
-      { operationMocks: [wouldMiss.mock], cache },
+      { operationMocks: [miss.mock], cache },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(wouldMiss.fired).toHaveLength(0);
-    expect(result.current.activePlanId).toBe('plan-unsynced');
-    expect(useStore.getState().selectedMealPlanId).toBe('plan-unsynced');
-    expect(cache.extract()['MealPlan:plan-unsynced']).toBeDefined();
+    // Evicted like any other gone plan, and the selection falls through to the
+    // one plan that is left rather than to nothing.
+    await waitFor(() =>
+      expect(result.current.activePlanId).toBe('plan-current'),
+    );
+    expect(miss.fired).toContainEqual({ id: 'plan-unsynced' });
+    expect(cache.extract()['MealPlan:plan-unsynced']).toBeUndefined();
 
     unconfirmedCreates.confirm('plan-unsynced');
   });

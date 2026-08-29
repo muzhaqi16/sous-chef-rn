@@ -45,9 +45,17 @@ function seedIngredientCache(ids: string[]) {
   );
 }
 
+// Mutable so a test can flip the network signals `useIsApiUnavailable` reads
+// (`apiReachable === false || (!isOnline && apiReachable !== true)`).
+const mockStoreState = {
+  selectedPantryId: 'pantry-1',
+  isOnline: true,
+  apiReachable: true,
+};
+
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (s: RootState) => unknown) =>
-    selector({ selectedPantryId: 'pantry-1' } as RootState),
+    selector(mockStoreState as unknown as RootState),
   useSelectedPantryId: jest.fn(() => 'pantry-1'),
 }));
 
@@ -79,6 +87,8 @@ jest.mock('#/apollo/links/tokenScheduler');
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockStoreState.isOnline = true;
+  mockStoreState.apiReachable = true;
 });
 
 function matchesMock(matches: Record<string, unknown>[]) {
@@ -483,7 +493,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     return rendered;
   }
 
-  it('sends a client-minted cooking-log id with context.localFirst on success', async () => {
+  it('sends a client-minted cooking-log id on success', async () => {
     const confirm = confirmMock({ kind: 'success' });
     const { result } = await loadOneMatch(confirm);
 
@@ -501,6 +511,27 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     expect(mockToastSuccess).toHaveBeenCalled();
     await waitFor(() => expect(result.current.isSheetVisible).toBe(false));
     expect(result.current.editableMatches).toEqual([]);
+  });
+
+  it('toasts offline and skips the mutation when the API is unavailable', async () => {
+    const confirm = confirmMock({ kind: 'success' });
+    const { result } = await loadOneMatch(confirm);
+
+    mockStoreState.apiReachable = false;
+    // Re-render so the hook re-reads the network signal.
+    await act(async () => {
+      result.current.updateMatch(0, { isIncluded: true });
+    });
+
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith('Not available offline');
+    expect(confirm.fired).toHaveLength(0);
+    // Nothing was consumed, so the sheet stays open with its selection intact.
+    expect(result.current.isSheetVisible).toBe(true);
+    expect(result.current.editableMatches).toHaveLength(1);
   });
 
   it('toasts an error and keeps the sheet open when the server rejects', async () => {

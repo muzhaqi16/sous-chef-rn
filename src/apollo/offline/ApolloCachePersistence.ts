@@ -92,7 +92,19 @@ const LEGACY_SPLIT_KEYS = [
  * key count is unchanged. Under the old per-key check that read as "nothing
  * changed", so the edit was never written to disk and the next cold start
  * restored the previous values.
+ *
+ * `__META` is the one key that must be compared by VALUE. Apollo allocates it
+ * fresh on every `extract()` (verified against @apollo/client 4.2.12: two
+ * back-to-back extracts of an untouched cache return `__META` objects that are
+ * `!==`), so an identity scan that includes it can never report "unchanged" —
+ * and `__META` is present from the first `writeFragment` in an install's
+ * history onward. The skip therefore never fired: every debounce window in
+ * which anything touched the cache re-serialized and re-wrote the entire blob,
+ * including windows where nothing had actually changed. It holds a sorted list
+ * of retained ids, so comparing its length is a sound cheap proxy.
  */
+const META_KEY = '__META';
+
 function hasCacheChanged(
   cache: NormalizedCacheObject,
   snapshot: NormalizedCacheObject,
@@ -100,9 +112,44 @@ function hasCacheChanged(
   const keys = Object.keys(cache);
   if (keys.length !== Object.keys(snapshot).length) return true;
   for (const key of keys) {
+    if (key === META_KEY) continue;
     if (cache[key] !== snapshot[key]) return true;
   }
-  return false;
+  return extraRootIdCount(cache) !== extraRootIdCount(snapshot);
+}
+
+/** How many entity ids `__META` pins, tolerating its absence. */
+function extraRootIdCount(cache: NormalizedCacheObject): number {
+  const meta = cache[META_KEY] as { extraRootIds?: unknown[] } | undefined;
+  return meta?.extraRootIds?.length ?? 0;
+}
+
+/**
+ * Drop pins for entities the cache no longer holds.
+ *
+ * Every non-optimistic `cache.writeFragment` ends in `store.retain()`, so its
+ * entity is pinned as a GC root for the life of the store — `cache.gc()`
+ * provably cannot collect it (verified against @apollo/client 4.2.12). The pin
+ * list rides out through `extract()` as `__META.extraRootIds` and `restore()`
+ * re-applies it, so on a device that never signs out the set only grows, and it
+ * lands on the cold-start `JSON.parse` path.
+ *
+ * Pruning here fixes the accumulation in one place rather than auditing 30
+ * write sites for a matching `release()`. Only ids with no entity left in the
+ * extract are dropped: an absent id has nothing to protect, so the pin is pure
+ * carry-over.
+ */
+function pruneStrandedPins(
+  cache: NormalizedCacheObject,
+): NormalizedCacheObject {
+  const meta = cache[META_KEY] as { extraRootIds?: string[] } | undefined;
+  const pinned = meta?.extraRootIds;
+  if (!pinned || pinned.length === 0) return cache;
+
+  const live = pinned.filter(id => cache[id] !== undefined);
+  if (live.length === pinned.length) return cache;
+
+  return { ...cache, [META_KEY]: { ...meta, extraRootIds: live } };
 }
 
 class ApolloCachePersistence {
@@ -274,14 +321,15 @@ class ApolloCachePersistence {
             return;
           }
 
-          const cacheString = JSON.stringify(cache);
+          const pruned = pruneStrandedPins(cache);
+          const cacheString = JSON.stringify(pruned);
           const tStringify = performance.now();
           const sizeKB = Math.round(cacheString.length / 1024);
 
           storage.set(CACHE_STORAGE_KEY, cacheString);
           storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
           this.removeLegacySplitCache();
-          this.lastPersistedSnapshot = cache;
+          this.lastPersistedSnapshot = pruned;
 
           // Persisted-cache size and serialize cost are release signals — they
           // bear on cold start — so they report from every build. Only the
@@ -335,12 +383,26 @@ class ApolloCachePersistence {
    * without this the optimistic cache state only reappears after the queue
    * replays on next launch; flushing keeps it visible from disk on cold start.
    *
-   * No-op when nothing is pending (no debounced save and no scheduled idle
-   * serialization), so it's cheap to call on every background transition.
+   * No-op when nothing is pending (no debounced save, no scheduled idle
+   * serialization, and nothing held behind a pause), so it's cheap to call on
+   * every background transition.
    *
    * @param extractor - Lazy cache extractor; only invoked when a save is pending.
    */
   flushPending(extractor: () => NormalizedCacheObject): void {
+    // A save requested while paused is held in `pausedExtractor`, not in a
+    // timer — so the timer check below could never see it, and persistence is
+    // paused for the whole time any pushed screen is up. A write made there
+    // (the pantry detail corrections) reached disk only if the user returned to
+    // a tab screen first; otherwise a background-kill lost it, and only the
+    // separate optimistic-field store made that survivable. Drain it here.
+    if (this.paused && this.pendingWhilePaused && this.pausedExtractor) {
+      const pausedExtractor = this.pausedExtractor;
+      this.pendingWhilePaused = false;
+      this.pausedExtractor = null;
+      this.saveImmediate(pausedExtractor());
+      return;
+    }
     if (this.saveTimeout == null && this.idleCallbackId == null) return;
     if (this.idleCallbackId != null) {
       cancelIdleCallback(this.idleCallbackId);
@@ -363,13 +425,14 @@ class ApolloCachePersistence {
     }
 
     try {
-      const cacheString = JSON.stringify(cache);
+      const pruned = pruneStrandedPins(cache);
+      const cacheString = JSON.stringify(pruned);
       const sizeKB = Math.round(cacheString.length / 1024);
 
       storage.set(CACHE_STORAGE_KEY, cacheString);
       storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
       this.removeLegacySplitCache();
-      this.lastPersistedSnapshot = cache;
+      this.lastPersistedSnapshot = pruned;
 
       if (__DEV__) {
         logger.debug(`💾 Cache: Persisted cache immediately (${sizeKB} KB)`);

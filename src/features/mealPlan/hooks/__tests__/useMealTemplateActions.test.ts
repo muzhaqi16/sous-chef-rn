@@ -255,6 +255,28 @@ describe('useMealTemplateActions', () => {
       expect(create.fired).toHaveLength(0);
     });
 
+    it('deleteTemplate toasts, returns false, and skips the mutation', async () => {
+      useStore.setState({ apiReachable: false });
+      const del = recordMock(DeleteMealTemplateDocument, {
+        data: {
+          deleteMealTemplate: {
+            __typename: 'DeleteMealTemplatePayload',
+            mealTemplate: { __typename: 'MealTemplate', id: 'template-1' },
+          },
+        },
+      });
+
+      const { result } = renderHookWithApollo(() => useMealTemplateActions(), {
+        operationMocks: [del.mock],
+      });
+
+      const success = await result.current.deleteTemplate('template-1');
+
+      expect(success).toBe(false);
+      expect(toastService.error).toHaveBeenCalledWith('Not available offline');
+      expect(del.fired).toHaveLength(0);
+    });
+
     it('duplicateTemplate toasts, returns null, and skips the mutation', async () => {
       useStore.setState({ apiReachable: false });
       const dup = recordMock(DuplicateTemplateDocument, {

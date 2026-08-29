@@ -165,6 +165,12 @@ jest.mock('#store', () => ({
   },
 }));
 
+// Deleting a list is ONLINE-ONLY, so useDeleteShoppingList reads the offline
+// gate — which reaches the real store this suite replaces above.
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: jest.fn(() => false),
+}));
+
 const makeLists = (): ShoppingListSelectorItem[] => [
   makeList({
     id: 'list-1',

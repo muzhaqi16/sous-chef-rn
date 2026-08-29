@@ -1104,25 +1104,6 @@ export function revertOptimisticShoppingList(
 }
 
 /**
- * Snapshot a list's display shape before a local-first delete, so a server
- * rejection can restore it via {@link addOptimisticShoppingList} (items
- * repopulate on the next visit's refetch). Null when the cache copy is
- * incomplete — the caller then relies on the next overview refetch instead.
- */
-export function readShoppingListSnapshot(
-  cache: ApolloCache,
-  listId: string,
-): OptimisticShoppingList | null {
-  const cacheId = cache.identify({ __typename: 'ShoppingList', id: listId });
-  if (!cacheId) return null;
-  return cache.readFragment<OptimisticShoppingList>({
-    id: cacheId,
-    fragment: OptimisticShoppingListFragment,
-    fragmentName: '_OptimisticShoppingList',
-  });
-}
-
-/**
  * Reconcile a local-first list create after its mutation resolves. Same
  * keep/revert rule as {@link reconcileShoppingCreate}: a `'rejected'` result
  * (a surfaced error, or a non-success payload such as

@@ -6,6 +6,8 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { CreateRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
+import { storeApi } from '#store';
 import { RecipeFormScreen } from '../index';
 
 type RecipeFormScreenProps = StaticScreenProps<
@@ -69,8 +71,18 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
+jest.mock('#/services/toastService', () => ({
+  toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
+}));
+
 beforeEach(() => {
   jest.clearAllMocks();
+  // The screen is online-only; `apiReachable: false` is what its guard keys on.
+  storeApi.getState().setApiReachable(true);
+});
+
+afterEach(() => {
+  storeApi.getState().setApiReachable(true);
 });
 
 describe('RecipeFormScreen', () => {
@@ -132,5 +144,29 @@ describe('RecipeFormScreen', () => {
     await user.press(getByTestId('save-button'));
 
     expect(create.fired).toEqual([]);
+  });
+
+  it('refuses to save while the API is unavailable', async () => {
+    const user = userEvent.setup();
+    const create = recordMock(CreateRecipeDocument, {
+      data: {
+        createRecipe: {
+          __typename: 'CreateRecipePayload',
+          success: true,
+        },
+      },
+    });
+    const { getByTestId } = renderWithApollo(
+      <RecipeFormScreen {...defaultProps} />,
+      { operationMocks: [create.mock] },
+    );
+    storeApi.getState().setApiReachable(false);
+
+    await user.press(getByTestId('save-button'));
+
+    expect(toastService.error).toHaveBeenCalledWith('Not available offline');
+    expect(create.fired).toEqual([]);
+    // The offline guard precedes validation, so no field error is raised either.
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 });

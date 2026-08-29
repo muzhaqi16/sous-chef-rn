@@ -6,6 +6,7 @@ import {
   type Reference,
 } from '@apollo/client';
 import { logger } from '#/utils/environment';
+import { restorePendingIntents } from '#/apollo/write/restorePendingIntents';
 import { createLink } from './links/index';
 import { registerApolloClient } from './links/refreshToken';
 import { makeCache } from './cache';
@@ -78,6 +79,12 @@ export function restorePersistedCache(): void {
     );
     cacheInstance.restore(persistedCache);
   }
+
+  // After the restore, never before: `restore()` replaces cache contents
+  // wholesale, so a write re-applied first would be thrown away by it. Covers
+  // the window where a kill landed between the synchronous queue write and the
+  // debounced cache write, leaving the change queued but off the screen.
+  restorePendingIntents(cacheInstance);
 
   // Reported on BOTH paths, carrying the outcome. `logger` is console-only and
   // console is stripped in release, so this histogram is the only evidence on a

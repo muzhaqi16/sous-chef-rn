@@ -23,6 +23,8 @@ import {
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { isNetworkError } from '#/utils/isNetworkError';
+import { useWrite } from '#/apollo/write/useWrite';
+import { adjustBy } from '#/apollo/write/writeIntent';
 import { generateEntityId } from '#/utils/generateEntityId';
 import type { ShoppingListItemInput } from './types';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
@@ -56,6 +58,8 @@ export function useAddShoppingItem({
       handleMutationError(error, { operation: 'Add Shopping List Item' });
     },
   });
+
+  const { describe } = useWrite();
 
   const addItem = async (input: ShoppingListItemInput) => {
     if (!listId) return undefined;
@@ -130,11 +134,32 @@ export function useAddShoppingItem({
       });
     }
 
+    // The write above is the feature's own — it owns what a COMPLETE
+    // ShoppingListItem is. What was missing is the undo: a create refused on a
+    // later replay was evicted by the queue, which dropped the row but left
+    // `totalItems` / `remainingItems` inflated until the next stats fetch,
+    // because an evict knows nothing about the counters the add bumped.
+    // Describing the change gives the queue an exact undo for both.
+    const { context } = describe({
+      target: { __typename: 'ShoppingListItem', id },
+      lifecycle: 'create',
+      patch: {},
+      aggregates: [
+        {
+          target: { __typename: 'ShoppingList', id: listId },
+          patch: { totalItems: adjustBy(1), remainingItems: adjustBy(1) },
+        },
+      ],
+      // The add carries a final row, and its client-minted id IS the server's
+      // dedup token, so a replay resolves to the same row.
+      convergence: 'absolute',
+    });
+
     let result;
     try {
       result = await addItemMutation({
         variables: { input: { shoppingListId: listId, items: [itemInput] } },
-        context: { localFirst: true },
+        context,
       });
     } catch (error) {
       errorService.reportError(error, {

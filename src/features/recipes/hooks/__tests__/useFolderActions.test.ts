@@ -4,7 +4,12 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { DeleteRecipeFolderDocument } from '#features/recipes/graphql/recipe.generated';
+import {
+  DeleteRecipeFolderDocument,
+  SavedRecipeFoldersDocument,
+  type SavedRecipeFoldersQuery,
+} from '#features/recipes/graphql/recipe.generated';
+import { useStore } from '#store';
 import { useFolderActions } from '../useFolderActions';
 import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
 
@@ -42,6 +47,25 @@ jest.mock('#/apollo/links/tokenScheduler');
 beforeEach(() => {
   jest.clearAllMocks();
 });
+
+afterEach(() => {
+  useStore.setState({ apiReachable: true, isOnline: true });
+});
+
+function seededFolderCache(folders: string[]) {
+  const cache = makeCacheWithPossibleTypes();
+  cache.writeQuery<SavedRecipeFoldersQuery>({
+    query: SavedRecipeFoldersDocument,
+    data: { __typename: 'Query', savedRecipeFolders: folders },
+  });
+  return cache;
+}
+
+function readFolders(cache: InMemoryCache) {
+  return cache.readQuery<SavedRecipeFoldersQuery>({
+    query: SavedRecipeFoldersDocument,
+  })?.savedRecipeFolders;
+}
 
 describe('useFolderActions', () => {
   describe('renameFolder', () => {
@@ -183,6 +207,145 @@ describe('useFolderActions', () => {
       // Production code returns false on non-Success union members.
       expect(success).toBe(false);
       expect(mockToastError).toHaveBeenCalledWith('Folder not found');
+    });
+  });
+
+  describe('when the API is unavailable', () => {
+    it('refuses a rename, toasts, and never fires the mutation', async () => {
+      useStore.setState({ apiReachable: false });
+      const del = recordMock(DeleteRecipeFolderDocument, {
+        data: {
+          deleteRecipeFolder: {
+            __typename: 'DeleteRecipeFolderPayload',
+            folder: 'Old',
+            movedCount: 0,
+          },
+        },
+      });
+      const cache = seededFolderCache(['Old', 'Other']);
+
+      const { result } = renderHookWithApollo(() => useFolderActions(), {
+        operationMocks: [del.mock],
+        cache,
+      });
+
+      expect(result.current.isApiUnavailable).toBe(true);
+
+      let success: boolean | undefined;
+      await act(async () => {
+        success = await result.current.renameFolder('Old', 'New');
+      });
+
+      expect(success).toBe(false);
+      expect(del.fired).toHaveLength(0);
+      expect(mockToastError).toHaveBeenCalledWith('Not available offline');
+      // No optimistic write survives the refusal.
+      expect(readFolders(cache)).toEqual(['Old', 'Other']);
+    });
+
+    it('refuses a delete, toasts, and never fires the mutation', async () => {
+      useStore.setState({ apiReachable: false });
+      const del = recordMock(DeleteRecipeFolderDocument, {
+        data: {
+          deleteRecipeFolder: {
+            __typename: 'DeleteRecipeFolderPayload',
+            folder: 'MyFolder',
+            movedCount: 0,
+          },
+        },
+      });
+      const cache = seededFolderCache(['MyFolder', 'Other']);
+
+      const { result } = renderHookWithApollo(() => useFolderActions(), {
+        operationMocks: [del.mock],
+        cache,
+      });
+
+      let success: boolean | undefined;
+      await act(async () => {
+        success = await result.current.deleteFolder('MyFolder');
+      });
+
+      expect(success).toBe(false);
+      expect(del.fired).toHaveLength(0);
+      expect(mockToastError).toHaveBeenCalledWith('Not available offline');
+      expect(readFolders(cache)).toEqual(['MyFolder', 'Other']);
+    });
+  });
+
+  describe('cache reconciliation on an accepted result', () => {
+    it('renames the folder in the cached list only after the server accepts', async () => {
+      const del = recordMock(DeleteRecipeFolderDocument, {
+        data: {
+          deleteRecipeFolder: {
+            __typename: 'DeleteRecipeFolderPayload',
+            folder: 'Old',
+            movedCount: 2,
+          },
+        },
+      });
+      const cache = seededFolderCache(['Old', 'Other']);
+
+      const { result } = renderHookWithApollo(() => useFolderActions(), {
+        operationMocks: [del.mock],
+        cache,
+      });
+
+      expect(result.current.isApiUnavailable).toBe(false);
+
+      await act(async () => {
+        await result.current.renameFolder('Old', 'New');
+      });
+
+      expect(readFolders(cache)).toEqual(['New', 'Other']);
+    });
+
+    it('leaves the cached list untouched when the server refuses', async () => {
+      const del = recordMock(DeleteRecipeFolderDocument, {
+        data: {
+          deleteRecipeFolder: {
+            __typename: 'NotFoundError',
+            code: 'NOT_FOUND',
+            message: 'Folder not found',
+          },
+        },
+      });
+      const cache = seededFolderCache(['MyFolder', 'Other']);
+
+      const { result } = renderHookWithApollo(() => useFolderActions(), {
+        operationMocks: [del.mock],
+        cache,
+      });
+
+      await act(async () => {
+        await result.current.deleteFolder('MyFolder');
+      });
+
+      expect(readFolders(cache)).toEqual(['MyFolder', 'Other']);
+    });
+
+    it('drops the folder from the cached list on an accepted delete', async () => {
+      const del = recordMock(DeleteRecipeFolderDocument, {
+        data: {
+          deleteRecipeFolder: {
+            __typename: 'DeleteRecipeFolderPayload',
+            folder: 'MyFolder',
+            movedCount: 0,
+          },
+        },
+      });
+      const cache = seededFolderCache(['MyFolder', 'Other']);
+
+      const { result } = renderHookWithApollo(() => useFolderActions(), {
+        operationMocks: [del.mock],
+        cache,
+      });
+
+      await act(async () => {
+        await result.current.deleteFolder('MyFolder');
+      });
+
+      expect(readFolders(cache)).toEqual(['Other']);
     });
   });
 

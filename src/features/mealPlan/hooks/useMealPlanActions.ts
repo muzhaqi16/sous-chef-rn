@@ -1,37 +1,22 @@
 /**
- * useMealPlanActions - Meal plan create / update / delete (local-first).
+ * useMealPlanActions - Meal plan create / update / delete (online-only).
  *
- * Each operation writes its change to the cache PERMANENTLY before firing, so
- * it survives an offline / API-down queue (an `optimisticResponse` would roll
- * back the moment the queue completes the request with a null result):
- * - create: mints the permanent cuid PK, materializes a complete
- *   `MealPlanDisplay` entity (creator + home resolved from cache) and adds the
- *   overview connection edge — the queued replay re-sends the original
- *   mutation keyed by that id.
- * - update: merges the changed fields over a snapshot; a rejection restores it.
- * - delete: removes edge + entity up front; a rejection restores the snapshot.
+ * Every write fires against the API and reconciles the cache from the SERVER's
+ * response: create and delete maintain the `mealPlans` overview connection in
+ * their `update` callbacks, and update needs none — the mutation returns the
+ * whole `MealPlanDisplay`, which Apollo normalizes by `__typename + id`.
+ *
+ * Offline the hook refuses up front and toasts localized copy; callers read the
+ * returned `isApiUnavailable` to disable the affordance instead of letting the
+ * user reach a refusal.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import type { ApolloCache } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
 import {
   CreateMealPlanDocument,
   UpdateMealPlanDocument,
   DeleteMealPlanDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
-import {
-  MealPlanDisplayFragmentDoc,
-  type MealPlanDisplayFragment,
-} from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import {
-  UseMealPlanActions_CreatorFragmentDoc,
-  type UseMealPlanActions_CreatorFragment,
-  UseMealPlanActions_HomeFragmentDoc,
-  type UseMealPlanActions_HomeFragment,
-  UseMealPlanActions_DetailStubFragmentDoc,
-  type UseMealPlanActions_DetailStubFragment,
-} from './useMealPlanActions.generated';
-import { NEUTRAL_MEAL_PLAN_DETAIL } from './mealPlanDetailNeutral.generated';
 import {
   type CreateMealPlanInput,
   type UpdateMealPlanInput,
@@ -41,10 +26,11 @@ import {
   createRemoveFromQueryConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { useUser } from '#store/useAppStore';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { toastService } from '#/services/toastService';
+import { t } from '#/i18n';
 import { errorService } from '#/services/errorService';
 
 const addToMealPlans = createAddToQueryConnectionUpdater(
@@ -56,121 +42,8 @@ const removeFromMealPlans = createRemoveFromQueryConnectionUpdater(
   'MealPlan',
 );
 
-/** Queued create/update results reported to callers as success. */
-const QUEUED_CREATE_PAYLOAD: { __typename: 'CreateMealPlanPayload' } = {
-  __typename: 'CreateMealPlanPayload',
-};
-const QUEUED_UPDATE_PAYLOAD: { __typename: 'UpdateMealPlanPayload' } = {
-  __typename: 'UpdateMealPlanPayload',
-};
-
-/**
- * Materialize a complete `MealPlanDisplay` entity for a local-first create.
- * Creator identity and home display fields come from the cache's canonical
- * entities; both degrade gracefully (profile-less creator, null home) when the
- * cache copy is incomplete — the post-replay refetch heals the gap.
- */
-function buildOptimisticMealPlan(
-  cache: ApolloCache,
-  id: string,
-  input: CreateMealPlanInput,
-  creatorId: string,
-): MealPlanDisplayFragment {
-  const creatorCacheId = cache.identify({ __typename: 'User', id: creatorId });
-  const cachedCreator = creatorCacheId
-    ? cache.readFragment<UseMealPlanActions_CreatorFragment>({
-        id: creatorCacheId,
-        fragment: UseMealPlanActions_CreatorFragmentDoc,
-        fragmentName: 'useMealPlanActions_creator',
-      })
-    : null;
-
-  const homeCacheId = input.homeId
-    ? cache.identify({ __typename: 'Home', id: input.homeId })
-    : undefined;
-  const home = homeCacheId
-    ? cache.readFragment<UseMealPlanActions_HomeFragment>({
-        id: homeCacheId,
-        fragment: UseMealPlanActions_HomeFragmentDoc,
-        fragmentName: 'useMealPlanActions_home',
-      })
-    : null;
-
-  const now = new Date().toISOString();
-  return {
-    __typename: 'MealPlan',
-    id,
-    name: input.name,
-    description: input.description ?? null,
-    planType: input.planType,
-    startDate: input.startDate,
-    endDate: input.endDate,
-    servings: input.servings ?? 2,
-    totalCalories: null,
-    totalProtein: null,
-    totalCarbs: null,
-    totalFat: null,
-    actualCost: 0,
-    budgetAmount: input.budgetAmount ?? null,
-    homeId: input.homeId ?? null,
-    home,
-    // The creator of a new plan is also its owner — used for permission gating.
-    user: {
-      __typename: 'User',
-      id: creatorId,
-    },
-    createdBy: cachedCreator ?? {
-      __typename: 'User',
-      id: creatorId,
-      profile: null,
-    },
-    version: 1,
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
-/**
- * A meal plan created offline must render on its complete-gated detail screen —
- * `useMealPlan` reads `MealPlanMain_mealPlan` and returns null unless the whole
- * fragment is `complete`. Materialize the detail-only fields alongside the
- * `MealPlanDisplay` write so the fragment is complete until the server response
- * / queued replay fills real values.
- *
- * The values are the neutral base derived from the SDL (see
- * scripts/generate-optimistic-fillers.mjs) — zeroed nutrition, no goal
- * progress, empty items — so a field added to the fragment cannot be forgotten
- * here, an omission that is invisible until the detail screen blanks offline.
- */
-function buildMealPlanDetailStub(
-  planId: string,
-): UseMealPlanActions_DetailStubFragment {
-  return { ...NEUTRAL_MEAL_PLAN_DETAIL, id: planId };
-}
-
-/** Fields an update can change that live on the cached `MealPlanDisplay`. */
-function mergeUpdateIntoSnapshot(
-  snapshot: MealPlanDisplayFragment,
-  input: Omit<UpdateMealPlanInput, 'id'>,
-): MealPlanDisplayFragment {
-  return {
-    ...snapshot,
-    ...(input.name != null && { name: input.name }),
-    ...(input.description !== undefined && { description: input.description }),
-    ...(input.planType != null && { planType: input.planType }),
-    ...(input.startDate != null && { startDate: input.startDate }),
-    ...(input.endDate != null && { endDate: input.endDate }),
-    ...(input.servings != null && { servings: input.servings }),
-    ...(input.budgetAmount !== undefined && {
-      budgetAmount: input.budgetAmount,
-    }),
-    updatedAt: new Date().toISOString(),
-  };
-}
-
 export function useMealPlanActions() {
-  const client = useApolloClient();
-  const user = useUser();
+  const isApiUnavailable = useIsApiUnavailable();
 
   const [createMealPlanMutation, { loading: creating }] = useMutation(
     CreateMealPlanDocument,
@@ -191,68 +64,32 @@ export function useMealPlanActions() {
   const [deleteMealPlanMutation, { loading: deleting }] = useMutation(
     DeleteMealPlanDocument,
     {
+      update: (cache, { data }) => {
+        const result = data?.deleteMealPlan;
+        if (result?.__typename === 'DeleteMealPlanPayload') {
+          removeFromMealPlans(cache, result.mealPlan.id, { evictItem: true });
+        }
+      },
       onError: error => {
         handleMutationError(error, { operation: 'Delete Meal Plan' });
       },
     },
   );
 
-  const writePlan = (data: MealPlanDisplayFragment) =>
-    client.cache.writeFragment({
-      id: client.cache.identify(data),
-      fragment: MealPlanDisplayFragmentDoc,
-      fragmentName: 'MealPlanDisplay',
-      data,
-    });
-
-  const writePlanDetailStub = (planId: string) =>
-    client.cache.writeFragment({
-      id: client.cache.identify({ __typename: 'MealPlan', id: planId }),
-      fragment: UseMealPlanActions_DetailStubFragmentDoc,
-      fragmentName: 'useMealPlanActions_detailStub',
-      data: buildMealPlanDetailStub(planId),
-    });
-
-  const readPlanSnapshot = (id: string) => {
-    const cacheId = client.cache.identify({ __typename: 'MealPlan', id });
-    return cacheId
-      ? client.cache.readFragment<MealPlanDisplayFragment>({
-          id: cacheId,
-          fragment: MealPlanDisplayFragmentDoc,
-          fragmentName: 'MealPlanDisplay',
-        })
-      : null;
-  };
-
   const createMealPlan = async (input: CreateMealPlanInput) => {
-    // Local-first: mint the permanent cuid (the row's real PK) and write the
-    // plan into the cache before firing, so creation works fully offline.
-    const id = generateEntityId();
-    // The cache write below publishes this id to every consumer, including the
-    // detail query on MealPlanMain. Hold that query off until the server has a
-    // row to answer with — see `unconfirmedCreates`.
-    unconfirmedCreates.mark(id);
-    const optimisticPlan = user
-      ? buildOptimisticMealPlan(client.cache, id, input, user.id)
-      : null;
-    if (optimisticPlan) {
-      try {
-        writePlan(optimisticPlan);
-        // Make the complete-gated detail screen render offline too.
-        writePlanDetailStub(id);
-        addToMealPlans(client.cache, optimisticPlan, { position: 'start' });
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Create Meal Plan (optimistic)',
-        });
-      }
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return null;
     }
+
+    // Client-minted PK: a retry whose first response was lost resolves as
+    // ConflictError(IDEMPOTENT_REPLAY) instead of creating a second plan.
+    const id = generateEntityId();
 
     let result;
     try {
       result = await createMealPlanMutation({
         variables: { input: { ...input, id } },
-        context: { localFirst: true },
       });
     } catch (error) {
       errorService.reportError(error, {
@@ -260,54 +97,23 @@ export function useMealPlanActions() {
       });
     }
 
-    // Released on every outcome: acknowledged and rejected both leave nothing
-    // for a detail read to miss, and a queued create has already been handed
-    // off to `queueStore` by the time the mutation resolves.
-    unconfirmedCreates.confirm(id);
-
-    const outcome = classifyCreateResult(result);
-
-    if (outcome === 'rejected') {
-      if (optimisticPlan) {
-        try {
-          removeFromMealPlans(client.cache, id, { evictItem: true });
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert rejected Meal Plan',
-          });
-        }
-      }
-      return result ? result.data?.createMealPlan ?? null : null;
-    }
-    if (outcome === 'queued' && optimisticPlan) {
-      // Offline / API down: the plan stays in cache and the create replays
-      // keyed by the same id — report success to the caller.
-      return QUEUED_CREATE_PAYLOAD;
-    }
-    return result ? result.data?.createMealPlan ?? null : null;
+    if (!result) return null;
+    return result.data?.createMealPlan ?? null;
   };
 
   const updateMealPlan = async (
     id: string,
     input: Omit<UpdateMealPlanInput, 'id'>,
   ) => {
-    const snapshot = readPlanSnapshot(id);
-    // Permanent write BEFORE firing — survives an offline/API-down queue.
-    if (snapshot) {
-      try {
-        writePlan(mergeUpdateIntoSnapshot(snapshot, input));
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Update Meal Plan (optimistic)',
-        });
-      }
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return null;
     }
 
     let result;
     try {
       result = await updateMealPlanMutation({
         variables: { input: { ...input, id } },
-        context: { localFirst: true },
       });
     } catch (error) {
       errorService.reportError(error, {
@@ -315,46 +121,20 @@ export function useMealPlanActions() {
       });
     }
 
-    const outcome = classifyCreateResult(result);
-
-    if (outcome === 'rejected') {
-      if (snapshot) {
-        try {
-          writePlan(snapshot);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert rejected Meal Plan update',
-          });
-        }
-      }
-      return result ? result.data?.updateMealPlan ?? null : null;
-    }
-    if (outcome === 'queued' && snapshot) {
-      return QUEUED_UPDATE_PAYLOAD;
-    }
-    return result ? result.data?.updateMealPlan ?? null : null;
+    if (!result) return null;
+    return result.data?.updateMealPlan ?? null;
   };
 
   const deleteMealPlan = async (id: string) => {
-    // Snapshot first so a server rejection can restore the plan card.
-    const snapshot = readPlanSnapshot(id);
-
-    // Local-first: remove from the cache BEFORE firing, so the deletion is
-    // visible immediately and survives an offline queue (a duplicate replay
-    // surfaces as NotFound, which the queue drops).
-    try {
-      removeFromMealPlans(client.cache, id, { evictItem: true });
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Delete Meal Plan (optimistic)',
-      });
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
     }
 
     let result;
     try {
       result = await deleteMealPlanMutation({
         variables: { input: { id } },
-        context: { localFirst: true },
       });
     } catch (error) {
       errorService.reportError(error, {
@@ -362,22 +142,9 @@ export function useMealPlanActions() {
       });
     }
 
-    const outcome = classifyCreateResult(result);
-
-    if (outcome === 'rejected') {
-      if (snapshot) {
-        try {
-          writePlan(snapshot);
-          addToMealPlans(client.cache, snapshot, { position: 'start' });
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Restore refused Meal Plan delete',
-          });
-        }
-      }
-      return false;
-    }
-    return true;
+    // A refusal (or a throw) leaves the card in place: the `update` callback
+    // above removes it only on the server's success payload.
+    return classifyCreateResult(result) !== 'rejected';
   };
 
   return {
@@ -388,5 +155,6 @@ export function useMealPlanActions() {
     creating,
     updating,
     deleting,
+    isApiUnavailable,
   };
 }

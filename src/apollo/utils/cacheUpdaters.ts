@@ -37,6 +37,26 @@ export function gcResetResultCache(cache: ApolloCache): string[] {
   return cache.gc();
 }
 
+/**
+ * Un-pin an entity so `cache.gc()` can collect it once nothing references it.
+ *
+ * Every non-optimistic `cache.writeFragment` ends in `store.retain()`, which
+ * makes its entity a GC root permanently — `gc()` cannot collect it however
+ * unreachable it becomes, and the pin is serialized out through `extract()` and
+ * re-applied on restore. Call this for an entity written as a deliberate
+ * throwaway, so its docblock's promise that `gc()` reclaims it is actually
+ * true.
+ *
+ * `release` is on `InMemoryCache`, not the abstract `ApolloCache`, so narrow
+ * the same way {@link gcResetResultCache} does. Releasing does not remove the
+ * entity — it only stops it being a root.
+ */
+export function releaseEntity(cache: ApolloCache, cacheId: string): void {
+  if (cache instanceof InMemoryCache) {
+    cache.release(cacheId);
+  }
+}
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -120,10 +140,23 @@ export function skipUnmatchedFilterVariants(
   equals: Record<string, unknown>,
 ): (storeFieldName: string) => boolean {
   return storeFieldName => {
-    const argsStart = storeFieldName.indexOf('(');
-    if (argsStart === -1) return false;
+    // Two store-field-name shapes, and reading only the parenthesised one made
+    // this skip NOTHING at any of its call sites: with a `keyArgs` policy
+    // InMemoryCache emits `field:{"filters":{…}}` — a colon and bare JSON —
+    // not `field({…})`. Every variant therefore parsed as "no arguments",
+    // returned false, and was written to regardless of its filter, which is
+    // how a template created under one category appeared under another.
+    const parenStart = storeFieldName.indexOf('(');
+    const colonStart = storeFieldName.indexOf(':');
 
-    const args = storeFieldName.slice(argsStart + 1, -1);
+    let args: string;
+    if (parenStart !== -1) {
+      args = storeFieldName.slice(parenStart + 1, -1);
+    } else if (colonStart !== -1) {
+      args = storeFieldName.slice(colonStart + 1);
+    } else {
+      return false;
+    }
     if (!args) return false;
 
     let parsed: unknown;
@@ -764,75 +797,6 @@ export function setCachedFields(
       serializeError(error),
     );
   }
-}
-
-/**
- * Snapshot a cached entity via its fragment, write `patch` over it PERMANENTLY
- * (a plain write, not Apollo's transient optimistic layer — it survives an
- * offline/queued mutation where no response ever arrives), and return a revert
- * that restores the snapshot.
- *
- * Contract for the fragment: it must select every field the patch writes plus
- * `updatedAt` (bumped on write so watchers re-render), and every field it
- * selects must be cached by the query that loads the entity — `readFragment`
- * returns null on ANY missing field, in which case both the write and the
- * revert silently no-op (the mutation response then becomes the only UI
- * update). The local-first list-settings hooks (complete / recurring / budget /
- * reminder / template) all share this shape.
- */
-export function applyOptimisticFragmentPatch<TFragment>(
-  cache: ApolloCache,
-  entity: { typename: string; id: string },
-  doc: {
-    fragment: TypedDocumentNode<TFragment, unknown>;
-    fragmentName: string;
-  },
-  patch: Partial<Unmasked<TFragment>>,
-  label: string,
-): () => void {
-  const cacheId = cache.identify({
-    __typename: entity.typename,
-    id: entity.id,
-  });
-  // readFragment/writeFragment operate on Unmasked<TFragment> — that's
-  // Apollo's own signature for the round trip, not a mask bypass; the snapshot
-  // fragments here are flat (no nested spreads), so the shape is unchanged.
-  const snapshot = cacheId
-    ? cache.readFragment<TFragment>({
-        id: cacheId,
-        fragment: doc.fragment,
-        fragmentName: doc.fragmentName,
-      })
-    : null;
-
-  const write = (data: Unmasked<TFragment>, writeLabel: string) => {
-    try {
-      cache.writeFragment({
-        id: cacheId,
-        fragment: doc.fragment,
-        fragmentName: doc.fragmentName,
-        data,
-      });
-    } catch (error) {
-      logger.warn(
-        `Cache update failed for ${writeLabel}:`,
-        serializeError(error),
-      );
-    }
-  };
-
-  if (snapshot) {
-    write(
-      { ...snapshot, ...patch, updatedAt: new Date().toISOString() },
-      `${label} (optimistic)`,
-    );
-  }
-
-  return () => {
-    if (snapshot) {
-      write(snapshot, `Revert ${label}`);
-    }
-  };
 }
 
 // =============================================================================

@@ -30,3 +30,15 @@ node scripts/check-launch-arg-auth.mjs || exit 1
 node scripts/check-layer-purity.mjs || exit 1
 node scripts/check-feature-shape.mjs || exit 1
 node scripts/check-dead-modules.mjs || exit 1
+
+# What the app guarantees offline is a property of the OPERATION, so two call
+# sites sending the same mutation at different tiers make the guarantee
+# unpredictable — durable from one screen, refused from another, with no copy
+# able to explain it. Sub-second, and the split is invisible in either diff
+# because the two call sites are usually in different features.
+node scripts/check-write-tiers.mjs || exit 1
+
+# The hand-rolled `localFirst: true` opt-ins still to be converted. A WORKLIST
+# rather than an invariant — its baseline is non-empty and may only shrink — but
+# it was wired into nothing, so a new one landed with no gate failing.
+node scripts/check-declared-writes.mjs || exit 1

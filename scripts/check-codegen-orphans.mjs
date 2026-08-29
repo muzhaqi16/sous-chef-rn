@@ -38,14 +38,6 @@ const SKIP_FILES = new Set([
     'RecipeForm',
     'recipeFormFieldsNeutral.generated.ts',
   ),
-  // Same generator, derived from `useMealPlanActions.graphql`.
-  fromRoot(
-    'src',
-    'features',
-    'mealPlan',
-    'hooks',
-    'mealPlanDetailNeutral.generated.ts',
-  ),
 ]);
 
 const fix = process.argv.includes('--fix');

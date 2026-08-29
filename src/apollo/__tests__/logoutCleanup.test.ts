@@ -25,12 +25,6 @@ jest.mock('../offline/ApolloCachePersistence', () => ({
   },
 }));
 
-jest.mock('../offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: {
-    clearAll: jest.fn(),
-  },
-}));
-
 jest.mock('#store', () => ({
   useStore: {
     getState: jest.fn(() => ({ isLoggingOut: false })),
@@ -56,7 +50,6 @@ import { LogoutCleanup } from '../logoutCleanup';
 import { client, cancelCachePersistence } from '../client';
 import { cancelTokenRefresh } from '../links/tokenScheduler';
 import { apolloCachePersistence } from '../offline/ApolloCachePersistence';
-import { optimisticDataPersistence } from '../offline/OptimisticDataPersistence';
 import { storage } from '#/storage/mmkv';
 import { useStore } from '#store';
 
@@ -118,7 +111,6 @@ describe('LogoutCleanup', () => {
         resetResultCache: true,
       });
       expect(apolloCachePersistence.clear).toHaveBeenCalled();
-      expect(optimisticDataPersistence.clearAll).toHaveBeenCalled();
     });
 
     it('clears legacy storage keys', async () => {
@@ -127,8 +119,19 @@ describe('LogoutCleanup', () => {
       expect(storage.remove).toHaveBeenCalledWith('navigation_state');
       expect(storage.remove).toHaveBeenCalledWith('apollo-client-cache');
       expect(storage.remove).toHaveBeenCalledWith('persisted-queries');
-      expect(storage.remove).toHaveBeenCalledWith('apollo-mutation-queue');
-      expect(storage.remove).toHaveBeenCalledWith('apollo-queue-current-user');
+    });
+
+    it('leaves the offline mutation queue alone', async () => {
+      // The queue is owned by queueManager/queueStore, which delete through the
+      // store so the in-memory mirror and the disk blob cannot diverge, and
+      // delete only the signed-out user's entries. This method runs on EVERY
+      // session end, including a rejected refresh token — where
+      // `session-termination` requires unsynced writes be preserved.
+      await LogoutCleanup.performLogoutCleanup();
+      expect(storage.remove).not.toHaveBeenCalledWith('apollo-mutation-queue');
+      expect(storage.remove).not.toHaveBeenCalledWith(
+        'apollo-queue-current-user',
+      );
     });
 
     it('skips cache clearing when clearCache is false', async () => {
@@ -307,5 +310,22 @@ describe('session teardown step', () => {
     await runStep();
 
     expect(LogoutCleanup.isInLogoutProcess()).toBe(false);
+  });
+
+  it('preserves the durable offline queue with BOTH real steps registered', async () => {
+    // The guard that used to live in queueManager.test.ts could not fail: that
+    // suite mocks the Apollo client and never imports this module, so the
+    // 'apollo' step was absent from the registry it ran. Here both real steps
+    // are registered — this module registers 'apollo' on import, and requiring
+    // queueManager registers 'offline-queue' — so the assertion is about what
+    // a real session end actually does to the queue's storage keys.
+    require('../offlineQueue/queueManager');
+
+    await runStep();
+
+    expect(storage.remove).not.toHaveBeenCalledWith('apollo-mutation-queue');
+    expect(storage.remove).not.toHaveBeenCalledWith(
+      'apollo-queue-current-user',
+    );
   });
 });

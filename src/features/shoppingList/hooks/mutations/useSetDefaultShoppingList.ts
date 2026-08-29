@@ -1,83 +1,47 @@
 /**
- * useSetDefaultShoppingList — mark a list as the user's default (local-first).
+ * useSetDefaultShoppingList — mark a list as the user's default (online-only).
  *
  * Uses the dedicated markShoppingListAsDefault mutation rather than
  * updateShoppingList({ isDefault: true }) because the server unsets the previous
- * default in the same transaction. We optimistically flip only THIS list's
- * isDefault before firing (an absolute set keyed by the list id, idempotent on a
- * queued replay); the previously-default list clears when the network response /
- * cache-and-network refetch lands — a brief two-defaults flash that self-heals.
- * A real rejection restores the prior flag and alerts.
+ * default in the same transaction. The payload returns this list's new
+ * isDefault, which Apollo normalizes by id; the previously-default list clears
+ * when the cache-and-network refetch lands.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { MarkShoppingListAsDefaultDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { toastService } from '#/services/toastService';
 import { errorService } from '#/services/errorService';
 
 export function useSetDefaultShoppingList() {
   const { t } = useTranslation();
-  const client = useApolloClient();
   const [mutate, { loading }] = useMutation(MarkShoppingListAsDefaultDocument);
+  const isApiUnavailable = useIsApiUnavailable();
 
   const setAsDefault = async (id: string): Promise<boolean> => {
-    const cacheId = client.cache.identify({ __typename: 'ShoppingList', id });
-    let previous: boolean | undefined;
-
-    try {
-      client.cache.modify({
-        id: cacheId,
-        fields: {
-          isDefault(existing: boolean) {
-            previous = existing;
-            return true;
-          },
-        },
-      });
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Set Default Shopping List (optimistic)',
-      });
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
     }
-
-    const revert = () => {
-      if (previous !== undefined) {
-        try {
-          client.cache.modify({
-            id: cacheId,
-            fields: { isDefault: () => previous },
-          });
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert Set Default Shopping List',
-          });
-        }
-      }
-    };
 
     let result;
     try {
-      result = await mutate({
-        variables: { input: { id } },
-        context: { localFirst: true },
-      });
+      result = await mutate({ variables: { input: { id } } });
     } catch (error) {
       errorService.reportError(error, {
         operation: 'Set Default Shopping List error:',
       });
     }
 
-    if (!result) {
-      revert();
-      return false;
-    }
+    if (!result) return false;
     if (alertIfRejected(result, t('shoppingListScreens.failedToSetDefault'))) {
-      revert();
       return false;
     }
     return true;
   };
 
-  return { setAsDefault, loading };
+  return { setAsDefault, loading, isApiUnavailable };
 }

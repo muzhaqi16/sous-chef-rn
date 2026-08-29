@@ -91,7 +91,7 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
 # The whole purchase record on a shopping-list item.
 # Spread by: shoppingList.graphql (UpdateShoppingListItem,
 #   ToggleShoppingListItemPurchased), queueManager.graphql
-#   (queueManager_syncItem), useShoppingListSubscriptions.graphql
+#   useShoppingListSubscriptions.graphql
 #   (useShoppingListSubscriptions_item)
 # Read via the cache by: ItemDetail.tsx (which selects these fields inline
 #   rather than spreading this, because a named spread would mask them from

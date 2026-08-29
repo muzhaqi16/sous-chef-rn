@@ -15,7 +15,6 @@ import {
   RecipeForm_RecipeFragmentDoc,
   type RecipeForm_RecipeFragment,
 } from './RecipeForm.generated';
-import { useUser } from '#store/useAppStore';
 import { useRecipeForm } from './useRecipeForm';
 import { RecipeBasicFields } from './components/RecipeBasicFields';
 import { RecipeCategoryFields } from './components/RecipeCategoryFields';
@@ -33,13 +32,9 @@ import { RecipeTagsSection } from './components/RecipeTagsSection';
 import type { IngredientFormState, StepFormState } from './useRecipeForm';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { generateEntityId } from '#/utils/generateEntityId';
-import {
-  upsertMyRecipesEdge,
-  writeOptimisticRecipe,
-  revertOptimisticRecipe,
-  type RecipeCreatedBy,
-} from './recipeCacheWriters';
-import { errorService } from '#/services/errorService';
+import { upsertMyRecipesEdge } from './recipeCacheWriters';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { toastService } from '#/services/toastService';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 export const RecipeFormScreen: React.FC<
@@ -66,7 +61,6 @@ export const RecipeFormScreen: React.FC<
   // populateFromRecipe sees the fields it needs (non-render context —
   // useFragment is a hook and can't run inside useEffect).
   const apolloClient = useApolloClient();
-  const user = useUser();
   const recipeRef = recipeData?.recipe ?? null;
 
   // Populate form when recipe data arrives
@@ -88,8 +82,8 @@ export const RecipeFormScreen: React.FC<
     {
       update: (cache, { data }) => {
         if (data?.createRecipe?.__typename !== 'CreateRecipePayload') return;
-        // Upsert: the local-first pre-fire write already inserted the edge
-        // under the same client-minted id — the server row replaces it.
+        // Reconciles the server's row into the My Recipes connection; upsert
+        // because an idempotent replay can return an edge that is already there.
         upsertMyRecipesEdge(cache, data.createRecipe.recipe);
       },
     },
@@ -99,8 +93,14 @@ export const RecipeFormScreen: React.FC<
   const [updateRecipeIngredientsMutation, { loading: updatingIngredients }] =
     useMutation(UpdateRecipeIngredientsDocument);
   const loading = creating || updating || updatingIngredients;
+  const isApiUnavailable = useIsApiUnavailable();
 
   const handleSave = async () => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return;
+    }
+
     const error = form.validate();
     if (error) {
       alertService.alert(t('labels.validationError'), error);
@@ -114,13 +114,9 @@ export const RecipeFormScreen: React.FC<
     const runSave = async () => {
       if (isEditMode && recipeId) {
         const input = form.buildUpdateInput();
-        // Local-first: both edits queue together offline and replay in FIFO
-        // order against the same recipe id (the queue serializes same-entity
-        // ops). The local display catches up when the replay syncs.
         const [updateResult, ingredientsResult] = await Promise.all([
           updateRecipeMutation({
             variables: { input: { ...input, id: recipeId } },
-            context: { localFirst: true },
           }),
           updateRecipeIngredientsMutation({
             variables: {
@@ -129,11 +125,8 @@ export const RecipeFormScreen: React.FC<
                 ingredients: form.buildIngredientsInput(),
               },
             },
-            context: { localFirst: true },
           }),
         ]);
-        // 'queued' (null payload, no error) counts as success — the edit
-        // replays on reconnect.
         const recipeSuccess = classifyCreateResult(updateResult) !== 'rejected';
         const ingredientsSuccess =
           classifyCreateResult(ingredientsResult) !== 'rejected';
@@ -158,39 +151,17 @@ export const RecipeFormScreen: React.FC<
         }
       } else {
         const input = form.buildCreateInput();
-        // Local-first: mint the permanent cuid (the row's real PK) and put
-        // the recipe into My Recipes before firing, so creating works fully
-        // offline — the queued create replays keyed by this same id.
+        // Client-minted permanent cuid: it is the row's real PK, so a retry
+        // whose first response was lost comes back as IDEMPOTENT_REPLAY rather
+        // than creating a second recipe.
         const id = generateEntityId();
-        const createdBy: RecipeCreatedBy = user
-          ? { __typename: 'User', id: user.id, email: user.email }
-          : null;
-        // Writes the MyRecipes edge + the full detail entity, so creating a
-        // recipe works fully offline (the detail screen is complete-gated).
-        try {
-          writeOptimisticRecipe(apolloClient.cache, id, input, createdBy);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Create Recipe (optimistic)',
-          });
-        }
         const result = await createRecipeMutation({
           variables: { input: { ...input, id } },
-          context: { localFirst: true },
         });
         const outcome = classifyCreateResult(result);
         if (outcome !== 'rejected') {
-          // Online success or queued offline — the recipe is in My Recipes
-          // either way.
           goBack();
         } else {
-          try {
-            revertOptimisticRecipe(apolloClient.cache, id);
-          } catch (cacheError) {
-            errorService.reportError(cacheError, {
-              operation: 'Revert rejected Recipe create',
-            });
-          }
           const createPayload = result.data?.createRecipe;
           const message =
             createPayload && 'message' in createPayload

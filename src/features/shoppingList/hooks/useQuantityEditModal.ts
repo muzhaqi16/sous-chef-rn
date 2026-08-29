@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { generateEntityId } from '#/utils/generateEntityId';
 import { useFragment, useMutation } from '@apollo/client/react';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -10,6 +11,8 @@ import { resolveImageUrl } from '#utils/imageUtils';
 import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import { useWrite } from '#/apollo/write/useWrite';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 /**
  * Transformed item for QuantityEditSheet
@@ -75,6 +78,8 @@ export function useQuantityEditModal(
   options: UseQuantityEditModalOptions,
 ): UseQuantityEditModalResult {
   const { items } = options;
+
+  const { apply } = useWrite();
 
   const [visible, setVisible] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -159,6 +164,22 @@ export function useQuantityEditModal(
 
     setIsLoading(true);
 
+    // Durable, like the stepper on the row behind this sheet: both send
+    // UpdateShoppingListItemQuantity, and editing a quantity is an in-store
+    // action. The value is the RESULT the person typed, not a delta, so a
+    // replay writes the same number twice rather than adding twice, and a
+    // version conflict re-sends against a fresh version.
+    const { context, revert } = apply({
+      target: { __typename: 'ShoppingListItem', id: selectedItemRaw.id },
+      patch: {
+        quantity: parseDecimalInput(quantity),
+        ...(unitId && {
+          unit: { __ref: `Unit:${unitId}` },
+        }),
+      },
+      convergence: 'absolute',
+    });
+
     let result;
     try {
       result = await updateQuantity({
@@ -171,8 +192,13 @@ export function useQuantityEditModal(
             quantity: normalizeNumericTextForApi(quantity),
             unitId,
             version: selectedItemRaw.version,
+            // Claimed by the server BEFORE its version check, so a queued
+            // replay converges instead of being refused on the stale version
+            // it necessarily carries.
+            idempotencyKey: generateEntityId(),
           },
         },
+        context,
       });
     } catch {
       // Deliberately silent: this mutation's own `onError` above already
@@ -188,7 +214,10 @@ export function useQuantityEditModal(
     // only suppresses when there is a `result.error` to suppress on — so
     // without this guard the one failure produces two alerts. The sheet stays
     // open, as it would for any rejection.
-    if (!result) return;
+    if (!result) {
+      revert();
+      return;
+    }
 
     // A refused quantity resolves as a ValidationError payload with no `error`,
     // so onError never fires. Closing the sheet on that reads as a save that
@@ -196,6 +225,7 @@ export function useQuantityEditModal(
     // and say so instead. 'queued' (offline) replays via SyncShoppingListItem,
     // so it closes like a success.
     if (classifyCreateResult(result) === 'rejected') {
+      revert();
       alertRejectedMutation(result, t('errors.adjustQuantityFailed'));
       return;
     }

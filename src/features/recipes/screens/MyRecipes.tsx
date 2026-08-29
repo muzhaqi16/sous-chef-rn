@@ -5,7 +5,6 @@ import { useTranslation } from '#/i18n';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
-import { useApolloClient } from '@apollo/client/react';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { Header } from '#components/molecules/Header';
 import { DataStateView } from '#components/molecules/DataStateView';
@@ -23,6 +22,8 @@ import {
 } from '#features/recipes/hooks/useRecipeManagement';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { alertService } from '#services/alertService';
+import { toastService } from '#/services/toastService';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
@@ -102,29 +103,34 @@ export const MyRecipes: React.FC = () => {
           },
         };
 
-  const apolloClient = useApolloClient();
-  const [deleteRecipeMutation] = useMutation(DeleteRecipeDocument);
-
-  const removeRecipeEdge = (id: string) => {
-    apolloClient.cache.updateQuery<MyRecipesQuery>(
-      { query: MyRecipesDocument },
-      existing => {
-        if (!existing?.recipes) return existing;
-        const present = existing.recipes.edges.some(
-          edge => edge.node.id === id,
-        );
-        if (!present) return existing;
-        return {
-          ...existing,
-          recipes: {
-            ...existing.recipes,
-            edges: existing.recipes.edges.filter(edge => edge.node.id !== id),
-            totalCount: (existing.recipes.totalCount ?? 0) - 1,
-          },
-        };
-      },
-    );
-  };
+  const isApiUnavailable = useIsApiUnavailable();
+  // The list edge is dropped from the SERVER's response: `deleteRecipe` returns
+  // the deleted recipe, and Apollo does not prune connection edges on its own.
+  const [deleteRecipeMutation] = useMutation(DeleteRecipeDocument, {
+    update(cache, { data }) {
+      const payload = data?.deleteRecipe;
+      if (payload?.__typename !== 'DeleteRecipePayload') return;
+      const id = payload.recipe.id;
+      cache.updateQuery<MyRecipesQuery>(
+        { query: MyRecipesDocument },
+        existing => {
+          if (!existing?.recipes) return existing;
+          const present = existing.recipes.edges.some(
+            edge => edge.node.id === id,
+          );
+          if (!present) return existing;
+          return {
+            ...existing,
+            recipes: {
+              ...existing.recipes,
+              edges: existing.recipes.edges.filter(edge => edge.node.id !== id),
+              totalCount: (existing.recipes.totalCount ?? 0) - 1,
+            },
+          };
+        },
+      );
+    },
+  });
 
   const handleItemPress = (id: string) => {
     toRecipeDetail({ recipeId: id });
@@ -135,38 +141,22 @@ export const MyRecipes: React.FC = () => {
   };
 
   const handleDeleteRecipe = async (id: string) => {
-    // Local-first: remove from the list BEFORE firing, so the deletion is
-    // visible immediately and survives an offline queue (a duplicate replay
-    // surfaces as NotFound, which the queue drops).
-    try {
-      removeRecipeEdge(id);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Delete Recipe (optimistic)',
-      });
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return;
     }
 
     let result;
     try {
-      result = await deleteRecipeMutation({
-        variables: { input: { id } },
-        context: { localFirst: true },
-      });
+      result = await deleteRecipeMutation({ variables: { input: { id } } });
     } catch (error) {
       errorService.reportError(error, { operation: 'deleteRecipe' });
       alertService.alert(t('labels.error'), t('recipes.deleteRecipeFailed'));
     }
-    // A rejection means the recipe still exists server-side — alert (the silent
-    // revert would otherwise just snap the recipe back) and refetch to restore
-    // the authoritative list. A queued result keeps the removal and replays
-    // later. A null result (transport throw) already alerted via onError above.
-    const wasRejected = alertIfRejected(
-      result,
-      t('recipes.deleteRecipeFailed'),
-    );
-    if (!result || wasRejected) {
-      await refetch();
-    }
+    // A rejection means the recipe still exists server-side; the list is
+    // untouched until the payload says otherwise, so alerting is all there is
+    // to do. A null result (transport throw) already alerted above.
+    alertIfRejected(result, t('recipes.deleteRecipeFailed'));
   };
 
   const handleRefresh = async () => {

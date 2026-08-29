@@ -1,8 +1,8 @@
-# Snapshot/write shape for useUpdateShoppingList's permanent local-first
-# write: the settings the screen edits (name, default, status — status drives
-# archive via updateShoppingList(status: ARCHIVED)) plus the version/updatedAt
-# pair the revert restores. status/isCompleted/completedShopDate must be present
-# so the snapshot reads complete and the revert restores them intact.
+# Read shape for useUpdateShoppingList: the version its mutation must carry,
+# plus the settings the screen edits. The extra fields are load-bearing as a
+# guard rather than as data — readFragment yields null unless ALL of them are
+# cached, which is how the hook refuses to update a row it does not hold. The
+# undo is owned by the write intent, not by this read.
 fragment useUpdateShoppingList_list on ShoppingList {
   id
   name

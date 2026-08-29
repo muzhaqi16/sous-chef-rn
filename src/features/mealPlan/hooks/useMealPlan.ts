@@ -1,7 +1,6 @@
 import { useApolloClient, useFragment, useQuery } from '@apollo/client/react';
 import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import {
   MealPlanMain_MealPlanFragmentDoc,
   type MealPlanMain_MealPlanFragment,
@@ -10,20 +9,9 @@ import {
 export function useMealPlan(id: string | null) {
   const client = useApolloClient();
 
-  // A plan created here owns its id before the server does: `createMealPlan`
-  // mints the cuid and writes the plan to the cache first, which is what makes
-  // it the active plan. Reading the server in that window is a race the client
-  // can only lose — the row is the client's until the create (or its queued
-  // replay) lands, so the read returns null no matter how honestly the server
-  // answers. Worse, `planNotFound` below reads that null as "deleted". Skipping
-  // until the create is acknowledged is what makes the distinction sound, and
-  // it turns the acknowledgement into the fetch trigger. The optimistic write
-  // plus detail stub render the screen meanwhile.
-  const isUnconfirmed = useIsCreateUnconfirmed(id);
-
   const { data, loading, error, refetch } = useQuery(GetMealPlanDocument, {
     variables: { id: id! },
-    skip: !id || isUnconfirmed,
+    skip: !id,
   });
 
   useApolloErrorLogger('GetMealPlan', error);

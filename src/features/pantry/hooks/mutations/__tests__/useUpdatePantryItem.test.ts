@@ -23,16 +23,6 @@ jest.mock('#/utils/errors/versionConflict', () => ({
   getVersionConflictMessage: jest.fn(() => 'Version conflict'),
 }));
 
-jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
-  enhanceWithVersion: jest.fn((item, updates) => ({ ...item, ...updates })),
-  buildOptimisticMutationResponse: jest.fn(
-    (opName, payloadTypename, fields) => ({
-      __typename: 'Mutation',
-      [opName]: { __typename: payloadTypename, ...fields },
-    }),
-  ),
-}));
-
 jest.mock('../utils', () => ({
   buildDirtyUpdateInput: jest.fn(
     (data: FormDataInput, dirtyFields: Record<string, boolean>) => {
@@ -42,12 +32,6 @@ jest.mock('../utils', () => ({
       return input;
     },
   ),
-  buildOptimisticUnit: jest.fn(() => ({
-    __typename: 'Unit',
-    id: 'new-unit-id',
-    symbol: 'kg',
-    name: 'Kilogram',
-  })),
   stateToCountKey: jest.fn(() => 'ambient'),
 }));
 
@@ -189,9 +173,18 @@ describe('useUpdatePantryItem', () => {
     expect(buildDirtyUpdateInput.mock.results[0]?.value).toEqual({});
   });
 
-  it('builds optimistic unit when trackingUnit has different id', () => {
+  // A normalized field holds a REFERENCE, so the assertion is on the raw
+  // normalized record: writing an object literal into `unit` would leave the
+  // old `__ref` in place and the read would silently follow it.
+  const cachedUnitRef = (cache: ReturnType<typeof seedCache>) =>
+    (cache.extract() as Record<string, Record<string, unknown>>)[
+      'PantryItem:item-1'
+    ]?.unit;
+
+  it('points the item at the new unit when trackingUnit has a different id', () => {
+    const cache = seedItem();
     const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
-      cache: seedItem(),
+      cache,
     });
 
     result.current.updatePantryItemFields({
@@ -208,13 +201,13 @@ describe('useUpdatePantryItem', () => {
       },
     });
 
-    const { buildOptimisticUnit } = jest.requireMock('../utils');
-    expect(buildOptimisticUnit).toHaveBeenCalled();
+    expect(cachedUnitRef(cache)).toEqual({ __ref: 'Unit:new-unit-id' });
   });
 
-  it('does not build optimistic unit when trackingUnit matches current', () => {
+  it('leaves the unit alone when trackingUnit matches the current one', () => {
+    const cache = seedItem();
     const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
-      cache: seedItem(),
+      cache,
     });
 
     result.current.updatePantryItemFields({
@@ -226,8 +219,7 @@ describe('useUpdatePantryItem', () => {
       trackingUnit: { id: 'unit-1', name: 'Gram', symbol: 'g', type: 'WEIGHT' },
     });
 
-    const { buildOptimisticUnit } = jest.requireMock('../utils');
-    expect(buildOptimisticUnit).not.toHaveBeenCalled();
+    expect(cachedUnitRef(cache)).toEqual({ __ref: 'Unit:unit-1' });
   });
 });
 

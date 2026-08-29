@@ -1055,60 +1055,6 @@ mutation ConvertExpiredBatchesToWaste($input: ConvertExpiredBatchesToWasteInput!
 # OFFLINE SYNC MUTATIONS
 # ============================================
 
-mutation SyncPantryItem($input: SyncPantryItemInput!) {
-  syncPantryItem(input: $input) {
-    __typename
-    ... on SyncPantryItemPayload {
-      clientId
-      serverId
-      operation
-      converged
-      item {
-        id
-        ...queueManager_syncPantryItem
-      }
-      conflict {
-        clientVersion
-        serverVersion
-        message
-        serverItem {
-          id
-          version
-        }
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-  }
-}
-
-mutation SyncDeletePantryItem($input: SyncDeletePantryItemInput!) {
-  syncDeletePantryItem(input: $input) {
-    __typename
-    ... on SyncPantryItemPayload {
-      clientId
-      serverId
-      operation
-      converged
-      item {
-        id
-        itemName
-      }
-      conflict {
-        clientVersion
-        serverVersion
-        message
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-  }
-}
-
 # NOTE: The granular pantry deltas (adjust / restock / consume / open-batch /
 # waste / convert-expired) no longer have `sync*` twins. They are made
 # replay-safe by passing a client-minted `idempotencyKey` on the CANONICAL

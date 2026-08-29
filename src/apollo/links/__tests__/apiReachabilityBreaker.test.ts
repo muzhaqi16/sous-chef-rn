@@ -28,8 +28,26 @@ function setAppState(state: 'active' | 'background') {
   });
 }
 
+/**
+ * A store double that actually REMEMBERS what `setApiReachable` wrote.
+ *
+ * It used to return a frozen object, so the state the breaker read back never
+ * reflected the failures it had just recorded — an open circuit still read as
+ * `apiReachable: true`. That was invisible while the drain gate was the
+ * breaker's own private circuit field; now that the gate reads the same derived
+ * policy the rest of the app does, a double that cannot change is a double that
+ * cannot represent the situation under test.
+ */
 function mockState(apiReachable: boolean | null = true, isOnline = true) {
-  mockedGetState.mockReturnValue({ setApiReachable, apiReachable, isOnline });
+  const state = {
+    setApiReachable: (value: boolean | null) => {
+      state.apiReachable = value;
+      setApiReachable(value);
+    },
+    apiReachable,
+    isOnline,
+  };
+  mockedGetState.mockImplementation(() => state);
 }
 
 /** Flush the microtask chain behind an async probe under fake timers. */
@@ -204,13 +222,26 @@ describe('apiReachabilityBreaker', () => {
     expect(mockedProbe).toHaveBeenCalledTimes(probeCalls);
   });
 
-  it('a success while already closed still repairs the store flag, without draining', () => {
+  it('a success while already closed repairs the store flag AND drains', () => {
     // The desync the stuck-offline bug hinged on: store says unreachable,
-    // breaker singleton thinks it is closed. Any success must heal the flag.
+    // breaker singleton thinks it is closed. Any success must heal the flag —
+    // and must drain, because from every consumer's point of view the app was
+    // unavailable and has just recovered. Gating on the breaker's own circuit
+    // state missed exactly this: while the device reports offline the probe
+    // loop runs with the circuit CLOSED, so the probe success that proved the
+    // API reachable cleared the offline indication and drained nothing.
     mockState(false);
     apiReachabilityBreaker.recordSuccess();
 
     expect(setApiReachable).toHaveBeenCalledWith(true);
+    expect(queueManager.requestDrain).toHaveBeenCalledTimes(1);
+  });
+
+  it('a success while genuinely available does not drain', () => {
+    // The steady-state path: nothing was wrong, so there is no recovery edge.
+    mockState(true);
+    apiReachabilityBreaker.recordSuccess();
+
     expect(queueManager.requestDrain).not.toHaveBeenCalled();
   });
 

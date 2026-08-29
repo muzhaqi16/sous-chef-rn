@@ -3,17 +3,15 @@ import {
   registerQueueFailureHandler,
 } from '../queueFailureHandler';
 import { queueManager } from '../queueManager';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { revertIntent } from '#/apollo/write/applyIntent';
 import { toastService } from '#/services/toastService';
 import { queueStore } from '../queueStore';
 import type { FailedMutationInfo } from '../types';
 
 jest.mock('#/apollo/client', () => ({ client: { cache: {} } }));
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({ safeEvict: jest.fn() }));
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: { clearEntity: jest.fn() },
-}));
+jest.mock('#/apollo/write/applyIntent', () => ({ revertIntent: jest.fn() }));
 jest.mock('#/services/toastService', () => ({
   toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
 }));
@@ -59,16 +57,6 @@ describe('queue failure handler', () => {
     );
   });
 
-  it('clears the persisted optimistic value so it cannot come back', () => {
-    // Restoration replays persisted optimistic fields on the next launch; a
-    // withdrawn change left behind there would reappear over server data.
-    handleQueueFailure(failure());
-    expect(optimisticDataPersistence.clearEntity).toHaveBeenCalledWith(
-      'PantryItem',
-      'item-1',
-    );
-  });
-
   it('tells the person', () => {
     handleQueueFailure(failure());
     expect(toastService.error).toHaveBeenCalledTimes(1);
@@ -88,7 +76,6 @@ describe('queue failure handler', () => {
     handleQueueFailure(failure({ entityType: null, entityId: null }));
 
     expect(safeEvict).not.toHaveBeenCalled();
-    expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
     expect(toastService.error).toHaveBeenCalledTimes(1);
   });
 });
@@ -128,5 +115,61 @@ describe('queue failure handler — dequeue and sole ownership', () => {
 
     expect(hits).toHaveLength(1);
     expect(hits[0]).toContain('queueFailureHandler.ts');
+  });
+
+  describe('a write that changed several entities', () => {
+    // A batch move takes N rows out of a list in ONE mutation. Undoing only one
+    // of them leaves the rest gone from the list and never on the server —
+    // which is what the queue did while an entry could hold a single intent.
+    const intentFor = (id: string) => ({
+      target: { __typename: 'ShoppingListItem', id },
+      lifecycle: 'remove' as const,
+      patch: {},
+      inverse: {},
+      convergence: 'absolute' as const,
+    });
+
+    it('undoes every one of them, last first', () => {
+      const intents = [intentFor('a'), intentFor('b'), intentFor('c')];
+
+      handleQueueFailure(failure({ intents }));
+
+      expect(revertIntent).toHaveBeenCalledTimes(3);
+      // Reverse order: a write that depended on an earlier one is undone while
+      // that one still stands.
+      expect((revertIntent as jest.Mock).mock.calls.map(([, i]) => i)).toEqual([
+        intents[2],
+        intents[1],
+        intents[0],
+      ]);
+      // The intents own the undo, so the blunt evict must not also fire.
+      expect(safeEvict).not.toHaveBeenCalled();
+    });
+  });
+
+  it('still evicts when the only intent describes nothing', () => {
+    // A context-only intent — `useConvertExpiredBatchesToWaste` files one
+    // because the server resolves the effect and there is no local value to
+    // write. Treating it as the undo made the withdrawal a no-op under a
+    // "we couldn't save this" toast, with the row keeping whatever it had.
+    handleQueueFailure(
+      failure({
+        intents: [
+          {
+            target: { __typename: 'PantryItem', id: 'item-1' },
+            patch: {},
+            inverse: {},
+            convergence: 'relative',
+          },
+        ],
+      }),
+    );
+
+    expect(revertIntent).not.toHaveBeenCalled();
+    expect(safeEvict).toHaveBeenCalledWith(
+      expect.anything(),
+      'PantryItem',
+      'item-1',
+    );
   });
 });

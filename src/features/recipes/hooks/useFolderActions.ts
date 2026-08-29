@@ -10,12 +10,10 @@ import {
 } from '#features/recipes/graphql/recipe.generated';
 import { toastService } from '#/services/toastService';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 
-/**
- * Read / write the folder list. Module-level so each caller's try body stays a
- * single plain call — a value block inside a try bails the whole hook out of
- * the React Compiler.
- */
+/** Read / write the folder list — the mutation's payload carries no folder list,
+ *  so the cached one is reconciled from the accepted result. */
 function readFolders(cache: ApolloCache): string[] | undefined {
   return (
     cache.readQuery<SavedRecipeFoldersQuery>({
@@ -32,8 +30,8 @@ function writeFolders(cache: ApolloCache, folders: string[]): void {
 }
 
 /**
- * Hook for folder management actions (rename, delete)
- * Uses the deleteRecipeFolder mutation which handles both operations:
+ * Hook for folder management actions (rename, delete). Online only — both go
+ * through the deleteRecipeFolder mutation, which handles both operations:
  * - Delete: deleteRecipeFolder(folder) - recipes become unfoldered
  * - Rename: deleteRecipeFolder(folder, moveTo) - recipes move to new folder
  */
@@ -41,6 +39,7 @@ export function useFolderActions() {
   const { t } = useTranslation();
   const client = useApolloClient();
   const [loading, setLoading] = useState(false);
+  const isApiUnavailable = useIsApiUnavailable();
 
   const [deleteRecipeFolderMutation] = useMutation(DeleteRecipeFolderDocument, {
     onError: err => {
@@ -59,24 +58,17 @@ export function useFolderActions() {
   ): Promise<boolean> => {
     if (!oldName || !newName || oldName === newName) return false;
 
-    setLoading(true);
-
-    // Rename the folder in the cache BEFORE firing so it survives a queued
-    // (offline / API-down) call; a refusal restores the snapshot. Replaying is
-    // safe: the old folder is already gone, which the server converges.
-    const previousFolders = readFolders(client.cache);
-    if (previousFolders) {
-      writeFolders(
-        client.cache,
-        previousFolders.map(f => (f === oldName ? newName : f)),
-      );
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
     }
+
+    setLoading(true);
 
     let result;
     try {
       result = await deleteRecipeFolderMutation({
         variables: { input: { folder: oldName, moveTo: newName } },
-        context: { localFirst: true },
       });
     } catch (error) {
       errorService.reportError(error, { operation: 'renameFolder' });
@@ -85,12 +77,19 @@ export function useFolderActions() {
     setLoading(false);
 
     if (classifyCreateResult(result) === 'rejected') {
-      if (previousFolders) writeFolders(client.cache, previousFolders);
       const rejected = result?.data?.deleteRecipeFolder;
       const reason =
         rejected && 'message' in rejected ? rejected.message : null;
       toastService.error(reason ?? t('recipes.renameFolderFailedRetry'));
       return false;
+    }
+
+    const folders = readFolders(client.cache);
+    if (folders) {
+      writeFolders(
+        client.cache,
+        folders.map(f => (f === oldName ? newName : f)),
+      );
     }
 
     toastService.success(t('recipes.folderRenamed', { oldName, newName }));
@@ -104,21 +103,17 @@ export function useFolderActions() {
   const deleteFolder = async (folderName: string): Promise<boolean> => {
     if (!folderName) return false;
 
-    setLoading(true);
-
-    const previousFolders = readFolders(client.cache);
-    if (previousFolders) {
-      writeFolders(
-        client.cache,
-        previousFolders.filter(f => f !== folderName),
-      );
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
     }
+
+    setLoading(true);
 
     let result;
     try {
       result = await deleteRecipeFolderMutation({
         variables: { input: { folder: folderName } },
-        context: { localFirst: true },
       });
     } catch (error) {
       errorService.reportError(error, { operation: 'deleteFolder' });
@@ -127,12 +122,19 @@ export function useFolderActions() {
     setLoading(false);
 
     if (classifyCreateResult(result) === 'rejected') {
-      if (previousFolders) writeFolders(client.cache, previousFolders);
       const rejected = result?.data?.deleteRecipeFolder;
       const reason =
         rejected && 'message' in rejected ? rejected.message : null;
       toastService.error(reason ?? t('recipes.deleteFolderFailed'));
       return false;
+    }
+
+    const folders = readFolders(client.cache);
+    if (folders) {
+      writeFolders(
+        client.cache,
+        folders.filter(f => f !== folderName),
+      );
     }
 
     toastService.success(t('recipes.folderDeleted', { folderName }));
@@ -143,5 +145,6 @@ export function useFolderActions() {
     loading,
     renameFolder,
     deleteFolder,
+    isApiUnavailable,
   };
 }

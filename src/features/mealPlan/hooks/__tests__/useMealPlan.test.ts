@@ -10,24 +10,18 @@ import { useMealPlan } from '../useMealPlan';
 jest.mock('#/apollo/links/tokenScheduler');
 
 describe('useMealPlan', () => {
-  it('skips the detail query until the local-first create is acknowledged', async () => {
-    // The row does not exist server-side yet, so this read could only come back
-    // RESOURCE_NOT_FOUND.
+  it('queries a marked id anyway — meal plans no longer have an unconfirmed window', async () => {
+    // Creating a plan is online-only now: the id is the server's before any
+    // screen reads it, so there is nothing to wait for. Only pantry and barcode
+    // still mark ids, and this asserts the meal-plan read is not gated on a
+    // marker that will never be set for it.
     unconfirmedCreates.mark('plan-1');
     const get = recordMock(GetMealPlanDocument, {
-      error: new Error('should not fire while unconfirmed'),
+      error: new Error('network unavailable'),
     });
 
-    const { result } = renderHookWithApollo(() => useMealPlan('plan-1'), {
+    renderHookWithApollo(() => useMealPlan('plan-1'), {
       operationMocks: [get.mock],
-    });
-
-    expect(get.fired).toHaveLength(0);
-    expect(result.current.loading).toBe(false);
-
-    // Acknowledgement is the fetch trigger: the server now has data to give.
-    act(() => {
-      unconfirmedCreates.confirm('plan-1');
     });
 
     await waitFor(() => expect(get.fired).toContainEqual({ id: 'plan-1' }));

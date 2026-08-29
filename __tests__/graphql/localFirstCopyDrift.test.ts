@@ -5,9 +5,11 @@
  * The Feature API Boundary Convention stops a feature importing another's
  * `graphql/`, so several mutations exist as near-identical copies — four of
  * `AddItemsToShoppingList`, two of `CreatePantryItem`. Every copy is registered
- * in a `*_SYNC_BUILDERS` table and replays through the SAME `Sync*` fragment,
- * so the queue treats them as one operation while their selection sets are
- * maintained by hand, separately, in different features.
+ * replays through the queue, and each now replays AS ITSELF — so a copy with a
+ * thinner selection set writes that thinner set back into the cache on replay.
+ * This mattered before, when every copy replayed through one shared `Sync*`
+ * fragment that masked the difference; it matters more now that the fragment is
+ * gone and each copy's own selection is what lands.
  *
  * They had already drifted before this test existed, and nothing reported it:
  * the two pantry copies of `AddItemsToShoppingList` omit the parent-list
@@ -27,8 +29,11 @@
  * has already put it there complete) rather than from the response. That is a
  * different architecture, not drift, and the exemption below says so.
  *
- * The operation list is derived from the sync registries rather than hand-kept,
- * so a newly registered copy is covered by being registered.
+ * The copy list is DERIVED, from the documents themselves: two client
+ * operations selecting the same server mutation field are copies of each other,
+ * by definition. That replaced a derivation from the sync registries, which no
+ * longer exist — and is the better source anyway, because it cannot go stale
+ * through someone forgetting to register something.
  */
 import type {
   DocumentNode,
@@ -36,16 +41,19 @@ import type {
   FragmentDefinitionNode,
   SelectionSetNode,
 } from 'graphql';
-import { PANTRY_SYNC_BUILDERS } from '#features/pantry/offline/syncBuilders';
-import { SHOPPING_LIST_SYNC_BUILDERS } from '#features/shoppingList/offline/syncBuilders';
-import {
-  CreatePantryItemDocument,
-  SyncPantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
+import { readFileSync } from 'fs';
+import { globSync } from 'glob';
+import { parse } from 'graphql';
+import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   AddItemToShoppingListDocument,
-  SyncShoppingListItemDocument,
+  AddItemsToShoppingListDocument,
+  CreateShoppingListDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  AddItemsToShoppingListFromRecipeDocument,
+  CreateShoppingListForRecipeDocument,
+} from '#features/recipes/hooks/useRecipeDetail.generated';
 import {
   BarcodeCreatePantryItemDocument,
   BarcodeAddItemToShoppingListDocument,
@@ -161,7 +169,6 @@ const FAMILIES: Family[] = [
     fragmentSources: [
       CreatePantryItemDocument,
       BarcodeCreatePantryItemDocument,
-      SyncPantryItemDocument,
     ],
   },
   {
@@ -183,34 +190,91 @@ const FAMILIES: Family[] = [
         name: 'AddItemToShoppingListFromPantryItem',
         document: AddItemToShoppingListFromPantryItemDocument,
       },
+      // Surfaced by deriving the family from the documents rather than from
+      // the sync registry — neither was ever checked, because neither was
+      // registered for replay.
+      {
+        name: 'AddItemsToShoppingList',
+        document: AddItemsToShoppingListDocument,
+      },
+      {
+        name: 'AddItemsToShoppingListFromRecipe',
+        document: AddItemsToShoppingListFromRecipeDocument,
+      },
     ],
     fragmentSources: [
       AddItemToShoppingListDocument,
       BarcodeAddItemToShoppingListDocument,
       AddItemToShoppingListFromFilteredPantryDocument,
       AddItemToShoppingListFromPantryItemDocument,
-      SyncShoppingListItemDocument,
+      AddItemsToShoppingListDocument,
+      AddItemsToShoppingListFromRecipeDocument,
+    ],
+  },
+  {
+    entity: 'ShoppingList',
+    canonical: {
+      name: 'CreateShoppingList',
+      document: CreateShoppingListDocument,
+    },
+    copies: [
+      {
+        name: 'CreateShoppingListForRecipe',
+        document: CreateShoppingListForRecipeDocument,
+      },
+    ],
+    fragmentSources: [
+      CreateShoppingListDocument,
+      CreateShoppingListForRecipeDocument,
     ],
   },
 ];
 
-const REGISTERED = new Set([
-  ...Object.keys(PANTRY_SYNC_BUILDERS),
-  ...Object.keys(SHOPPING_LIST_SYNC_BUILDERS),
-]);
+/**
+ * Client operations grouped by the SERVER mutation they select.
+ *
+ * Two operations hitting the same root field are copies of one another —
+ * that is what makes them a family, and it is readable off the documents
+ * rather than off a list someone has to maintain.
+ */
+function copyFamiliesFromSource(): Map<string, string[]> {
+  const byRootField = new Map<string, string[]>();
+  for (const file of globSync('src/**/*.graphql', { absolute: true })) {
+    const document = parse(readFileSync(file, 'utf8'));
+    for (const definition of document.definitions) {
+      if (
+        definition.kind !== 'OperationDefinition' ||
+        definition.operation !== 'mutation' ||
+        !definition.name
+      ) {
+        continue;
+      }
+      const rootField = definition.selectionSet.selections.find(
+        (s): s is FieldNode => s.kind === 'Field',
+      );
+      if (!rootField) continue;
+      const key = rootField.name.value;
+      byRootField.set(key, [
+        ...(byRootField.get(key) ?? []),
+        definition.name.value,
+      ]);
+    }
+  }
+  return new Map([...byRootField].filter(([, ops]) => ops.length > 1));
+}
 
 describe('local-first copy drift', () => {
-  it('covers every copy the sync registries actually replay', () => {
-    // Derived, not hand-kept: a copy registered for replay but absent from
-    // FAMILIES would go unchecked, which is exactly how the current drift got
-    // in. This fails when someone registers a new copy without listing it.
+  it('covers every create/add family that exists in the source', () => {
+    // Derived from the documents, not hand-kept: a new copy of a create is
+    // covered by existing, which is how the original drift got in unnoticed.
     const covered = new Set(
       FAMILIES.flatMap(f => [f.canonical.name, ...f.copies.map(c => c.name)]),
     );
-    const registeredCreates = [...REGISTERED].filter(
-      op => op.startsWith('Create') || op.startsWith('AddItem') || op.includes('Barcode'),
-    );
-    const uncovered = registeredCreates.filter(op => !covered.has(op));
+    const uncovered = [...copyFamiliesFromSource()]
+      .filter(([rootField]) => /^(create|addItems?)/i.test(rootField))
+      .flatMap(([, ops]) => ops)
+      .filter(op => !covered.has(op));
+
     expect(uncovered).toEqual([]);
   });
 

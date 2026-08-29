@@ -13,33 +13,23 @@
  * response on replay.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { gql } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
 import { WastePantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
 import { BatchStatus, type WasteReason } from '#/graphql/generated/schemaTypes';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { handleMutationError } from '#/utils/errorHandlers';
+import { useWrite } from '#/apollo/write/useWrite';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { t } from '#/i18n';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { errorService } from '#/services/errorService';
 
 interface UseWastePantryItemBatchOptions {
   onSuccess?: () => void;
 }
 
-const BATCH_STATUS_FRAGMENT = gql`
-  fragment useWastePantryItemBatch_state on PantryItemBatch {
-    id
-    status
-  }
-`;
-
 export function useWastePantryItemBatch({
   onSuccess,
 }: UseWastePantryItemBatchOptions = {}) {
-  const client = useApolloClient();
   const [wasteMutation, { loading }] = useMutation(
     WastePantryItemBatchDocument,
     {
@@ -49,6 +39,8 @@ export function useWastePantryItemBatch({
     },
   );
 
+  const { apply } = useWrite();
+
   const wasteBatch = async (
     batchId: string,
     wasteReason?: WasteReason,
@@ -56,36 +48,14 @@ export function useWastePantryItemBatch({
     isRecycled?: boolean,
     notes?: string,
   ): Promise<boolean> => {
-    const batchCacheId = client.cache.identify({
-      __typename: 'PantryItemBatch',
-      id: batchId,
+    // The persisted marker is gone with this: it named a typename no screen
+    // registered for restoration, so it was written and never read. The intent
+    // on the queue entry is the durable record now.
+    const { context, revert } = apply({
+      target: { __typename: 'PantryItemBatch', id: batchId },
+      patch: { status: BatchStatus.Wasted },
+      convergence: 'absolute',
     });
-    const snapshot = client.cache.readFragment<{ status: BatchStatus }>({
-      id: batchCacheId,
-      fragment: BATCH_STATUS_FRAGMENT,
-      fragmentName: 'useWastePantryItemBatch_state',
-    });
-
-    const writeStatus = (status: BatchStatus) =>
-      client.cache.modify({
-        id: batchCacheId,
-        fields: { status: () => status },
-      });
-
-    // Permanent optimistic write before firing — survives an offline/queued waste.
-    const clearPersistence = optimisticDataPersistence.track(
-      'PantryItemBatch',
-      batchId,
-      'status',
-      BatchStatus.Wasted,
-    );
-    try {
-      writeStatus(BatchStatus.Wasted);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Waste Pantry Item Batch (optimistic)',
-      });
-    }
 
     const result = await wasteMutation({
       variables: {
@@ -98,33 +68,19 @@ export function useWastePantryItemBatch({
           idempotencyKey: generateEntityId(),
         },
       },
-      context: { localFirst: true },
+      context,
     });
 
     const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
-      // Resolved before the try — a `??` inside a try body makes the React
-      // Compiler bail out of this hook.
-      const revertedStatus = snapshot?.status ?? BatchStatus.Active;
-      try {
-        writeStatus(revertedStatus);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Revert rejected batch waste',
-        });
-      }
-      clearPersistence();
-      // onError covers transport errors; a non-success union payload has none.
+      revert();
       alertRejectedMutation(result, t('errors.wasteBatchFailed'));
       return false;
     }
 
     // created (response normalized the authoritative batches) or queued
     // (replays the canonical mutation, deduped by its idempotencyKey).
-    if (outcome === 'created') {
-      clearPersistence();
-    }
     onSuccess?.();
     return true;
   };

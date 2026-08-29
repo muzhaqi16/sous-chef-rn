@@ -13,7 +13,6 @@ import { ScreenHeader } from '#components/molecules/ScreenHeader';
 import { LoadingInline } from '#components/atoms/Loading';
 import { InfoRow } from '#components/molecules/InfoRow';
 import { useApolloClient, useQuery, useMutation } from '@apollo/client/react';
-import { updateEntityFieldsLocalFirst } from '#/apollo/utils/localFirstFields';
 import type { ApolloCache } from '@apollo/client';
 import {
   GetPantryDocument,
@@ -36,7 +35,12 @@ import {
   executeAsyncWithCleanup,
 } from '#/utils/finallyHelpers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import {
+  alertIfRejected,
+  alertRejectedMutation,
+} from '#/apollo/utils/alertRejectedMutation';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { toastService } from '#/services/toastService';
 import { generateEntityId } from '#/utils/generateEntityId';
 import {
   addPantryToHomeCache,
@@ -58,9 +62,8 @@ function buildDeletePantryUpdater(selectedHomeId: string | null | undefined) {
     { variables }: { variables?: DeletePantryMutationVariables },
   ) {
     // Keyed off the VARIABLES, not the payload: `DeletePantryPayload.pantry` is
-    // nullable — it is null when the server converges a replay on an
-    // already-deleted row — so a guard on it would skip the cache update for
-    // precisely the replay case this has to handle.
+    // nullable — the server returns it null when the row was already gone — so a
+    // guard on it would skip the cache update for exactly that case.
     const isDeletePayload =
       data?.deletePantry?.__typename === 'DeletePantryPayload';
     if (!isDeletePayload || !variables?.input?.id || !selectedHomeId) return;
@@ -100,18 +103,11 @@ function buildCreatePantryUpdater(selectedHomeId: string | null | undefined) {
 async function safeSetDefaultPantry(
   setDefaultPantry: (opts: {
     variables: { input: { id: string } };
-    context?: { localFirst: boolean };
   }) => Promise<unknown>,
   pantryId: string,
 ): Promise<void> {
   try {
-    await setDefaultPantry({
-      variables: { input: { id: pantryId } },
-      // Absolute flag on an existing row: replaying sets it again, which is the
-      // same state. The server clears the previous holder; the cached flag on
-      // that row corrects on the next fetch.
-      context: { localFirst: true },
-    });
+    await setDefaultPantry({ variables: { input: { id: pantryId } } });
   } catch (error) {
     errorService.reportError(error, {
       operation: 'PantrySettings.setDefaultPantry',
@@ -161,6 +157,12 @@ export const PantrySettings: React.FC<
   const setSelectedPantryId = useSetSelectedPantryId();
   const apolloClient = useApolloClient();
   const permissions = usePantryPermissions();
+  const isApiUnavailable = useIsApiUnavailable();
+
+  // Renaming, deleting and re-flagging an existing pantry are online-only.
+  // Creating one is not: the pantry it mints is the parent a queued
+  // `createPantryItem` references, so that path stays local-first.
+  const editOffline = !!pantryId && isApiUnavailable;
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -251,6 +253,11 @@ export const PantrySettings: React.FC<
       return;
     }
 
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return;
+    }
+
     // Optimistically update UI
     setIsDefault(newValue);
 
@@ -259,6 +266,11 @@ export const PantrySettings: React.FC<
   };
 
   const handleSave = () => {
+    if (editOffline) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return;
+    }
+
     if (!name.trim()) {
       alertService.alert(t('labels.error'), t('pantrySettings.nameEmptyError'));
       return;
@@ -330,27 +342,18 @@ export const PantrySettings: React.FC<
           setSelectedPantryId(id);
           goBack();
         } else {
-          // Absolute field write on an existing row, so a replay lands the same
-          // state twice — safe to queue, and the rename shows immediately.
+          // Online-only: the mutation returns the Pantry, which Apollo
+          // normalizes by `__typename + id`, so no cache write of our own.
           const updates = {
             name: name.trim(),
             description: description.trim(),
           };
-          await updateEntityFieldsLocalFirst({
-            cache: apolloClient.cache,
-            entity: { __typename: 'Pantry', id: pantryId },
-            updates,
-            previous: {
-              name: pantry?.name ?? '',
-              description: pantry?.description ?? '',
-            },
-            logLabel: 'PantrySettings.updatePantry',
-            mutate: () =>
-              updatePantry({
-                variables: { input: { id: pantryId, ...updates } },
-                context: { localFirst: true },
-              }),
+          const result = await updatePantry({
+            variables: { input: { id: pantryId, ...updates } },
           });
+          // `updatePantry` has no `onError`, so this has to surface the
+          // transport-error case too.
+          alertIfRejected(result, t('errors.saveSettingsFailed'));
         }
       },
       setSaving,
@@ -368,6 +371,11 @@ export const PantrySettings: React.FC<
   const handleDelete = () => {
     if (!pantryId) return;
 
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return;
+    }
+
     alertService.alert(
       t('labels.deletePantry'),
       t('pantrySettings.deleteConfirmMessage'),
@@ -382,13 +390,19 @@ export const PantrySettings: React.FC<
 
             executeAsyncWithCleanup(
               async () => {
-                // Queued when offline: the delete converges server-side on
-                // replay (`converged: true` for an already-deleted row), so
-                // re-sending it is safe rather than a permanent failure.
-                await deletePantry({
+                const result = await deletePantry({
                   variables: { input: { id: pantryId } },
-                  context: { localFirst: true },
                 });
+                // `errorPolicy: 'all'` resolves a refusal instead of throwing,
+                // and the delete is online-only now, so "it resolved" no longer
+                // means "it happened". Navigating away on a failed delete left
+                // the pantry selected-as-null and the row still on the server.
+                if (
+                  result.data?.deletePantry?.__typename !==
+                  'DeletePantryPayload'
+                ) {
+                  return;
+                }
                 setSelectedPantryId(null);
                 goBack();
               },
@@ -428,8 +442,11 @@ export const PantrySettings: React.FC<
           ) ? (
             <Pressable
               onPress={handleSave}
-              disabled={saving}
-              style={({ pressed }) => pressed && styles.pressed}
+              disabled={saving || editOffline}
+              style={({ pressed }) => [
+                pressed && styles.pressed,
+                editOffline && styles.disabled,
+              ]}
             >
               <Text size="md" weight="semibold" tone="accent">
                 {saving
@@ -473,7 +490,11 @@ export const PantrySettings: React.FC<
                 {t('pantrySettings.defaultPantryDesc')}
               </Text>
             </View>
-            <BaseSwitch value={isDefault} onValueChange={handleToggleDefault} />
+            <BaseSwitch
+              value={isDefault}
+              onValueChange={handleToggleDefault}
+              disabled={editOffline}
+            />
           </View>
         </View>
 
@@ -499,7 +520,11 @@ export const PantrySettings: React.FC<
               {t('labels.dangerZone')}
             </Text>
 
-            <AppPressable style={styles.deleteButton} onPress={handleDelete}>
+            <AppPressable
+              style={[styles.deleteButton, editOffline && styles.disabled]}
+              onPress={handleDelete}
+              disabled={editOffline}
+            >
               <Icon name="trash-outline" size={20} tone="error" />
               <Text
                 size="md"
@@ -553,5 +578,8 @@ const styles = StyleSheet.create(theme => ({
   },
   pressed: {
     opacity: theme.opacity.pressed,
+  },
+  disabled: {
+    opacity: theme.opacity.disabled,
   },
 }));

@@ -48,6 +48,7 @@ import {
 import { errorService } from '#/services/errorService';
 import { validationFieldName } from '#/utils/errors/mutationPayload';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { useWrite } from '#/apollo/write/useWrite';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
@@ -65,6 +66,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   const { t } = useTranslation();
   const navigation = useAppNavigation();
   const client = useApolloClient();
+  const { apply } = useWrite();
   const { listId, itemId } = route.params;
   // Extract initialItemName (only present when navigating from AddItem route)
   const initialItemName =
@@ -96,6 +98,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     setFromItem,
     buildUnitInput,
     buildDirtyInput,
+    buildDirtyPatch,
     parseNetWeightInput,
     hasDirtyFields,
   } = useShoppingListItemForm();
@@ -219,6 +222,20 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
           // Only send changed fields - sends raw quantityInput string
           const input = buildDirtyInput();
+
+          // Durable, like adding and ticking an item: this is the in-store edit
+          // screen, and it already branched on a queued outcome it could never
+          // receive, because nothing opted the write into replay. The kit
+          // writes the change permanently, derives the undo, and carries the
+          // intent to the queue.
+          const { context, revert } = apply({
+            target: { __typename: 'ShoppingListItem', id: itemId },
+            patch: buildDirtyPatch(),
+            // Final values the person typed, so a version conflict re-sends
+            // against a fresh version rather than discarding the edit.
+            convergence: 'absolute',
+          });
+
           const result = await updateItem({
             variables: {
               input: {
@@ -226,15 +243,25 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
                 id: itemId,
                 // Include version for strict version checking (optimistic concurrency control)
                 version: itemVersion,
+                idempotencyKey: generateEntityId(),
               },
             },
+            context,
           });
 
           // 'queued' carries `updateShoppingListItem: null` — a payload check
           // alone reads that offline save as a refusal.
           if (classifyCreateResult(result) !== 'rejected') {
             navigation.goBack();
-          } else if (result.data) {
+            return;
+          }
+
+          // Refused on the spot, so it never entered the queue and the queue's
+          // withdrawal will never see it. A replay refused later is undone from
+          // the persisted intent instead.
+          revert();
+
+          if (result.data) {
             // A refusal that names a field gets copy for that field — this
             // mutation carries `brand`, `netWeight`, `unit` and `storage` in
             // one call, so "couldn't update" alone does not say which was

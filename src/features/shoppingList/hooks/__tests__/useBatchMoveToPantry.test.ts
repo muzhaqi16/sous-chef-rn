@@ -2,6 +2,7 @@ import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
+  seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { MovePurchasedItemsToPantryDocument } from '../useBatchMoveToPantry.generated';
 import { useBatchMoveToPantry } from '../useBatchMoveToPantry';
@@ -375,6 +376,71 @@ describe('useBatchMoveToPantry', () => {
       expect(new Set(input.pantryItemIds?.map(h => h.pantryItemId)).size).toBe(
         2,
       );
+    });
+  });
+
+  describe('rows the server did not take', () => {
+    // Every purchased row is removed from the list BEFORE firing. The server
+    // decides which lines actually move, so anything it does not take has to
+    // come back — otherwise the toast reports a skip over a list that lost the
+    // row, and the row is in neither place.
+    const seedRow = (id: string) =>
+      seedCache([
+        { __typename: 'ShoppingListItem', id },
+        { __typename: 'ShoppingList', id: 'list-1' },
+      ]);
+
+    it('puts a SKIPPED row back', async () => {
+      const cache = seedRow('item-1');
+      const move = moveMock({
+        movedCount: 0,
+        skippedCount: 1,
+        targetPantryName: 'My Pantry',
+        movedItemIds: [],
+      });
+
+      const { result } = renderHookWithApollo(
+        () =>
+          useBatchMoveToPantry({
+            currentListId: 'list-1',
+            purchasedItems: [{ id: 'item-1' }],
+          }),
+        { cache, operationMocks: [move.mock] },
+      );
+
+      await act(async () => {
+        await result.current.batchMoveToPantry();
+      });
+
+      expect(cache.extract()['ShoppingListItem:item-1']).toBeDefined();
+    });
+
+    it('puts every row back when the server refuses outright', async () => {
+      const cache = seedRow('item-1');
+      const move = recordMock(MovePurchasedItemsToPantryDocument, {
+        data: {
+          movePurchasedItemsToPantry: {
+            __typename: 'ForbiddenError',
+            code: 'FORBIDDEN',
+            message: 'Not allowed',
+          },
+        },
+      });
+
+      const { result } = renderHookWithApollo(
+        () =>
+          useBatchMoveToPantry({
+            currentListId: 'list-1',
+            purchasedItems: [{ id: 'item-1' }],
+          }),
+        { cache, operationMocks: [move.mock] },
+      );
+
+      await act(async () => {
+        await result.current.batchMoveToPantry();
+      });
+
+      expect(cache.extract()['ShoppingListItem:item-1']).toBeDefined();
     });
   });
 });

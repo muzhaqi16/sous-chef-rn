@@ -1,6 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
-import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
 import { useScreenTransition } from '#/hooks/performance/useScreenTransition';
 import { useScreenTelemetry } from '#/hooks/performance/useScreenTelemetry';
 
@@ -23,24 +22,21 @@ const onScreenFocus = () => {
 
 interface UseTabScreenLifecycleOptions {
   screenName: string;
-  optimisticTypes: string[];
   telemetryProperties: () => Record<string, unknown>;
 }
 
 /**
- * Consolidates the four hooks that every tab screen calls identically:
+ * Consolidates the three hooks that every tab screen calls identically:
  *
- * 1. `useOptimisticDataRestorationMultiple` -- restores persisted optimistic data
- * 2. `useFocusEffect(onScreenFocus)` -- pauses/resumes cache persistence
- * 3. `useScreenTransition` -- measures navigation performance
- * 4. `useScreenTelemetry` -- tracks screen view once
+ * 1. `useFocusEffect(onScreenFocus)` -- pauses/resumes cache persistence
+ * 2. `useScreenTransition` -- measures navigation performance
+ * 3. `useScreenTelemetry` -- tracks screen view once
  *
  * @example
  * ```tsx
  * function PantryMainInner() {
  *   useTabScreenLifecycle({
  *     screenName: 'PantryMain',
- *     optimisticTypes: ['Pantry', 'PantryItem'],
  *     telemetryProperties: () => ({
  *       home_id: selectedHomeId,
  *       pantry_id: pantry?.id,
@@ -53,10 +49,8 @@ interface UseTabScreenLifecycleOptions {
  */
 export function useTabScreenLifecycle({
   screenName,
-  optimisticTypes,
   telemetryProperties,
 }: UseTabScreenLifecycleOptions): void {
-  useOptimisticDataRestorationMultiple(optimisticTypes);
   useFocusEffect(onScreenFocus);
   useScreenTransition(screenName);
   useScreenTelemetry(screenName, telemetryProperties);

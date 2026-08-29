@@ -12,6 +12,7 @@ import {
   type UpdateShoppingListItemInput,
   type UnitSpecInput,
 } from '#/graphql/generated/schemaTypes';
+import { refToCacheId, type FieldPatch } from '#/apollo/write/writeIntent';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatNumberForInput } from '#/utils/formatters/number';
@@ -220,6 +221,101 @@ export function useShoppingListItemForm(
     return input;
   };
 
+  /**
+   * The same edit, said in the ENTITY's vocabulary instead of the mutation
+   * input's — what the person will see change, rather than what the server is
+   * told. The two differ at almost every field (`pricing.estimatedPrice` on the
+   * wire is `priceEstimate.estimated` here), which is why they live side by
+   * side: a field added to one and missed in the other is then one screen apart
+   * rather than in a different module.
+   *
+   * A normalized field takes a `__ref`, never an object literal — the kit
+   * shallow-merges object values, and merging onto an existing `{ __ref }`
+   * leaves the ref in place, so the change is silently lost on read.
+   *
+   * Deliberately PARTIAL: a brand or unit given only by NAME is resolved (and
+   * possibly created) by the server, so there is no id to point at yet and no
+   * honest local value to write. Those fields stay as they were until the write
+   * lands; everything else moves immediately. That is sound here in a way it
+   * would not be for a create — the entity already exists and is already
+   * complete, so a subset cannot make it unreadable.
+   */
+  const buildDirtyPatch = (): FieldPatch => {
+    const patch: FieldPatch = {};
+    const v = getValues();
+
+    if (dirtyFields.itemName) patch.itemName = v.itemName;
+    if (dirtyFields.notes) patch.notes = v.notes;
+    if (dirtyFields.category) patch.category = v.category;
+    if (dirtyFields.priority) patch.priority = v.priority;
+
+    if (dirtyFields.quantityInput) {
+      // Both, because the row reads the number and the form reads the string
+      // the person actually typed ("1 1/4" must survive a round trip).
+      patch.quantityInput = v.quantityInput;
+      const parsed = parseFractionalInput(v.quantityInput);
+      if (parsed !== null) patch.quantity = parsed;
+    }
+
+    if (dirtyFields.unit || dirtyFields.selectedUnitId) {
+      patch.unitName = v.unit;
+      if (v.selectedUnitId) {
+        patch.unit = {
+          __ref: refToCacheId({ __typename: 'Unit', id: v.selectedUnitId }),
+        };
+      }
+    }
+
+    if (dirtyFields.estimatedPrice && v.estimatedPrice) {
+      patch.priceEstimate = { estimated: parseDecimalInput(v.estimatedPrice) };
+    }
+
+    if (dirtyFields.storeId) {
+      patch.storeInfo = {
+        preferredStore: v.storeId
+          ? { __ref: refToCacheId({ __typename: 'Store', id: v.storeId }) }
+          : null,
+      };
+    }
+
+    // Only a CLEAR and an id are expressible locally; a typed name is the
+    // server's to resolve.
+    if (dirtyFields.brand || dirtyFields.brandId) {
+      if (v.brandId) {
+        patch.brand = {
+          __ref: refToCacheId({ __typename: 'Brand', id: v.brandId }),
+        };
+      } else if (!v.brand.trim()) {
+        patch.brand = null;
+      }
+    }
+
+    if (
+      dirtyFields.netWeight ||
+      dirtyFields.netWeightUnit ||
+      dirtyFields.netWeightUnitId
+    ) {
+      const value = parseNetWeightInput();
+      if (value === undefined) {
+        // The server clears the value and its unit together.
+        patch.netWeight = null;
+        patch.netWeightUnit = null;
+      } else {
+        patch.netWeight = value;
+        if (v.netWeightUnitId) {
+          patch.netWeightUnit = {
+            __ref: refToCacheId({
+              __typename: 'Unit',
+              id: v.netWeightUnitId,
+            }),
+          };
+        }
+      }
+    }
+
+    return patch;
+  };
+
   const parseQuantityInput = () => {
     const result = parseFractionalInput(getValues('quantityInput'));
     if (result === null || result <= 0) {
@@ -245,5 +341,6 @@ export function useShoppingListItemForm(
     parseNetWeightInput,
     buildUnitInput,
     buildDirtyInput,
+    buildDirtyPatch,
   };
 }

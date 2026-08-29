@@ -33,6 +33,8 @@ import { Button } from '#components/atoms/Button';
 import { AnimatedChip } from '#components/atoms/AnimatedChip';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
+import { toastService } from '#/services/toastService';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { getPantryItemDuplicateFromResult } from '#/utils/errors/pantryItemDuplicate';
 import { logger } from '#/utils/environment';
@@ -109,6 +111,7 @@ export const SelectPantryItems = () => {
   const apolloClient = useApolloClient();
 
   const selectedPantryId = useSelectedPantryId();
+  const isApiUnavailable = useIsApiUnavailable();
 
   const {
     data,
@@ -216,9 +219,17 @@ export const SelectPantryItems = () => {
 
   const onNext = () => {
     if (hasChanges && selectedPantryId) {
+      // Online-only: onboarding runs on a connection (the chip set itself comes
+      // from the network) and nothing downstream waits on these rows, so the
+      // adds and removes go straight to the server.
+      if (isApiUnavailable) {
+        toastService.error(t('errors.notAvailableOffline'));
+        return;
+      }
+
       executeWithLoadingState(
         async () => {
-          await Promise.all([
+          const outcomes = await Promise.all([
             ...itemsToAdd.map(async item => {
               const id = generateEntityId();
               const result = await addItemToPantry({
@@ -240,7 +251,6 @@ export const SelectPantryItems = () => {
                     },
                   },
                 },
-                context: { localFirst: true },
               });
               // The list is pre-filtered by existingCatalogIds, but a race
               // (another device adding the same item) can still surface the
@@ -274,6 +284,15 @@ export const SelectPantryItems = () => {
               });
             }),
           ]);
+
+          // Onboarding always advances — trapping someone on this step over a
+          // failed optional add would be worse. But it must not advance in
+          // SILENCE: these writes are online-only now, so a request that fails
+          // after the up-front check (the breaker still closed, NetInfo not yet
+          // flipped) is simply lost, and the next screen looks like it worked.
+          if (outcomes.some(r => r?.error)) {
+            toastService.error(t('errors.addItemFailed'));
+          }
           navigateToNextStep('SelectPantryItems');
         },
         setIsSaving,
@@ -345,6 +364,9 @@ export const SelectPantryItems = () => {
         }
         onPress={onNext}
         variant="primary"
+        // Deliberately still pressable while the API is unreachable: disabling
+        // it left a dead button and no explanation, since the offline branch it
+        // was guarding could then never be reached. Pressing now says why.
         disabled={isSaving || (isFirstVisit && selectedItems.length === 0)}
       />
     </OnBoardingWrapper>

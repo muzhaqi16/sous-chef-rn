@@ -46,7 +46,6 @@ const ShoppingListMainInner: React.FC = () => {
   // --- Lifecycle: optimistic restoration, cache persistence, perf tracking ---
   useTabScreenLifecycle({
     screenName: 'ShoppingListMain',
-    optimisticTypes: ['ShoppingList', 'ShoppingListItem'],
     telemetryProperties: () => ({
       list_id: screenData.state.currentListId,
       item_count:

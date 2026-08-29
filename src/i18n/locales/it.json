@@ -52,6 +52,7 @@
       "homeMemberAlreadyExists": "L’utente è già membro di questa casa"
     },
     "addItemFailed": "Impossibile aggiungere l'articolo",
+    "queuedChangeOverwritten": "Qualcun altro l'ha modificato prima, quindi la tua modifica non è stata mantenuta.",
     "updateItemFailed": "Impossibile aggiornare l'articolo",
     "removeItemFailed": "Impossibile rimuovere l'articolo",
     "discardExpiredFailed": "Impossibile eliminare gli articoli scaduti",

@@ -16,24 +16,18 @@
  * restores the pre-adjust snapshot.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useMutation } from '@apollo/client/react';
 import { AdjustPantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
-import {
-  UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
-  type UseAdjustPantryItemQuantity_PantryItemFragment,
-} from './useAdjustPantryItemQuantity.generated';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import {
   handleMutationError,
   versionConflictCheck,
   invalidUnitCheck,
 } from '#/utils/errorHandlers';
+import { useWrite } from '#/apollo/write/useWrite';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { t } from '#/i18n';
-import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { errorService } from '#/services/errorService';
 
 interface UseAdjustPantryItemQuantityOptions {
   onSuccess?: () => void;
@@ -42,7 +36,7 @@ interface UseAdjustPantryItemQuantityOptions {
 export function useAdjustPantryItemQuantity({
   onSuccess,
 }: UseAdjustPantryItemQuantityOptions = {}) {
-  const client = useApolloClient();
+  const { apply } = useWrite();
 
   const [adjustMutation, { loading }] = useMutation(
     AdjustPantryItemQuantityDocument,
@@ -63,49 +57,16 @@ export function useAdjustPantryItemQuantity({
     version: number,
     remainingNetWeight?: number,
   ): Promise<boolean> => {
-    const cacheId = client.cache.identify({
-      __typename: 'PantryItem',
-      id: pantryItemId,
-    });
-    const currentItem =
-      client.cache.readFragment<UseAdjustPantryItemQuantity_PantryItemFragment>(
-        {
-          id: cacheId,
-          fragment: UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
-          fragmentName: 'useAdjustPantryItemQuantity_pantryItem',
-        },
-      );
-
-    const writeItem = (data: UseAdjustPantryItemQuantity_PantryItemFragment) =>
-      client.cache.writeFragment({
-        id: cacheId,
-        fragment: UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
-        fragmentName: 'useAdjustPantryItemQuantity_pantryItem',
-        data,
-      });
-
-    // Permanent optimistic write before firing — newQuantity is absolute (a
-    // physical recount), so set it directly. Persist it too so the exact value
-    // survives an app-kill before the queue replays.
-    if (currentItem) {
-      const optimistic = enhanceWithVersion(currentItem, {
+    // The corrected count is absolute (a physical recount), so it sets the
+    // value directly rather than adjusting by a delta.
+    const { context, revert } = apply({
+      target: { __typename: 'PantryItem', id: pantryItemId },
+      patch: {
         quantity: newQuantity,
         ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
-      });
-      try {
-        writeItem(optimistic);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Adjust Pantry Item Quantity (optimistic)',
-        });
-      }
-      optimisticDataPersistence.save(
-        'PantryItem',
-        pantryItemId,
-        'quantity',
-        newQuantity,
-      );
-    }
+      },
+      convergence: 'absolute',
+    });
 
     // idempotencyKey dedups the ADJUSTMENT ledger entry on replay. `version` is
     // the optimistic-concurrency check the server now requires.
@@ -120,35 +81,19 @@ export function useAdjustPantryItemQuantity({
           ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
         },
       },
-      context: { localFirst: true },
+      context,
     });
 
     const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
-      // Server refused the adjust — restore the pre-adjust snapshot. A transport
-      // error already alerted via onError; a non-success union payload
-      // (Validation/Forbidden/NotFound/Conflict) has no error, so alert here.
-      if (currentItem) {
-        try {
-          writeItem(currentItem);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert rejected pantry quantity adjust',
-          });
-        }
-      }
-      optimisticDataPersistence.clear('PantryItem', pantryItemId, 'quantity');
+      // Refused on the spot, so it never entered the queue. A queued write
+      // refused on a later replay is undone from its persisted intent.
+      revert();
       alertRejectedMutation(result, t('errors.adjustQuantityFailed'));
       return false;
     }
 
-    // created (server confirmed, response normalized the authoritative value)
-    // or queued (offline / API down — replays the canonical mutation, deduped
-    // by its idempotencyKey).
-    if (outcome === 'created') {
-      optimisticDataPersistence.clear('PantryItem', pantryItemId, 'quantity');
-    }
     onSuccess?.();
     return true;
   };

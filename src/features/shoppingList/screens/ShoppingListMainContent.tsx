@@ -51,7 +51,6 @@ import {
   type ShoppingListCollaboratorFragment,
   type ShoppingListOwnershipFragment,
 } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { Telemetry } from '#/services/telemetry';
 import { getShoppingListPermissionsWithOwner } from '#/utils/permissions/shoppingListPermissions';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
@@ -242,10 +241,15 @@ export const ShoppingListMainContent: React.FC<
     useSwipeableCoordinator();
 
   // Handle refresh
-  const handleRefresh = () => {
-    optimisticDataPersistence.clearType('ShoppingListItem');
-    return executeRefreshWithFinally(() => refetchItems(), setRefreshing);
-  };
+  const handleRefresh = () =>
+    // Deliberately does NOT clear persisted optimistic fields. Pulling to
+    // refresh says "show me the server's version", not "abandon my unsynced
+    // edits" — and a pull-to-refresh in a shop, on a flaky connection, is
+    // exactly when there are unsynced edits to abandon. Every marker is
+    // already bounded by its own writer, which clears it on a confirmed
+    // success or a rejection; wiping the whole type here only discarded
+    // restart protection for replays that had not happened yet.
+    executeRefreshWithFinally(() => refetchItems(), setRefreshing);
 
   // Classified on the LIST query, not the items query: with no lists there is
   // no list to have items for, so the question is only whether the list fetch

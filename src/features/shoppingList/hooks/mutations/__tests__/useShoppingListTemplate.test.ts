@@ -1,5 +1,7 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import type { InMemoryCache } from '@apollo/client';
 import {
+  recordMock,
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
@@ -7,12 +9,36 @@ import {
   MarkAsTemplateDocument,
   CreateFromTemplateDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { UseShoppingListTemplate_ListFragmentDoc } from '../useShoppingListTemplate.generated';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useShoppingListTemplate } from '../useShoppingListTemplate';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
+
+const mockToastError = jest.fn();
+jest.mock('#/services/toastService', () => ({
+  toastService: {
+    success: jest.fn(),
+    error: (...args: unknown[]) => mockToastError(...args),
+    info: jest.fn(),
+    warning: jest.fn(),
+  },
+}));
+
+// Both operations are online-only, so the guard's input is the only network
+// state these tests need.
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: jest.fn(() => false),
+}));
+const mockIsApiUnavailable = useIsApiUnavailable as jest.MockedFunction<
+  typeof useIsApiUnavailable
+>;
+
+beforeEach(() => {
+  mockIsApiUnavailable.mockReturnValue(false);
+  mockToastError.mockClear();
+});
 
 const LIST = {
   __typename: 'ShoppingList',
@@ -23,39 +49,50 @@ const LIST = {
   updatedAt: '2026-01-01T00:00:00Z',
 };
 
-const readTemplate = (cache: ReturnType<typeof seedCache>) =>
-  cache.readFragment<{ isTemplate: boolean; templateName: string | null }>({
-    id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
-    fragment: UseShoppingListTemplate_ListFragmentDoc,
-    fragmentName: 'useShoppingListTemplate_list',
-  });
+const readList = (cache: InMemoryCache) =>
+  cache.extract()['ShoppingList:list-1'] as
+    | { isTemplate: boolean; templateName: string | null }
+    | undefined;
 
 describe('useShoppingListTemplate', () => {
-  it('markAsTemplate writes the flags optimistically; a queued (null) result keeps them and returns true', async () => {
+  it('markAsTemplate writes the flags the server returns and resolves true', async () => {
     const cache = seedCache([LIST]);
+    const marked = recordMock(MarkAsTemplateDocument, {
+      data: {
+        markAsTemplate: {
+          __typename: 'MarkAsTemplatePayload',
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            isTemplate: true,
+            templateName: 'Weekly Staples',
+            status: 'TEMPLATE',
+            updatedAt: '2026-01-02T00:00:00Z',
+            version: 2,
+          },
+        },
+      },
+    });
     const { result } = renderHookWithApollo(() => useShoppingListTemplate(), {
       cache,
-      operationMocks: [
-        {
-          request: { query: MarkAsTemplateDocument, variables: () => true },
-          result: { data: { markAsTemplate: null } },
-        },
-      ],
+      operationMocks: [marked.mock],
     });
 
     let resolved: boolean | undefined;
     await act(async () => {
-      const promise = result.current.markAsTemplate('list-1', 'Weekly Staples');
-      expect(readTemplate(cache)?.isTemplate).toBe(true);
-      expect(readTemplate(cache)?.templateName).toBe('Weekly Staples');
-      resolved = await promise;
+      resolved = await result.current.markAsTemplate(
+        'list-1',
+        'Weekly Staples',
+      );
     });
 
     expect(resolved).toBe(true);
-    expect(readTemplate(cache)?.isTemplate).toBe(true);
+    expect(marked.fired).toHaveLength(1);
+    expect(readList(cache)?.isTemplate).toBe(true);
+    expect(readList(cache)?.templateName).toBe('Weekly Staples');
   });
 
-  it('markAsTemplate reverts and returns false on a rejection', async () => {
+  it('markAsTemplate returns false on a rejection and leaves the cache alone', async () => {
     const cache = seedCache([LIST]);
     const { result } = renderHookWithApollo(() => useShoppingListTemplate(), {
       cache,
@@ -82,9 +119,31 @@ describe('useShoppingListTemplate', () => {
     });
 
     expect(resolved).toBe(false);
-    await waitFor(() => {
-      expect(readTemplate(cache)?.isTemplate).toBe(false);
+    expect(readList(cache)?.isTemplate).toBe(false);
+  });
+
+  it('markAsTemplate refuses offline: no mutation, a localized toast, false', async () => {
+    mockIsApiUnavailable.mockReturnValue(true);
+    const cache = seedCache([LIST]);
+    const marked = recordMock(MarkAsTemplateDocument);
+    const { result } = renderHookWithApollo(() => useShoppingListTemplate(), {
+      cache,
+      operationMocks: [marked.mock],
     });
+
+    let resolved: boolean | undefined;
+    await act(async () => {
+      resolved = await result.current.markAsTemplate(
+        'list-1',
+        'Weekly Staples',
+      );
+    });
+
+    expect(resolved).toBe(false);
+    expect(marked.fired).toHaveLength(0);
+    expect(mockToastError).toHaveBeenCalledWith('Not available offline');
+    expect(readList(cache)?.isTemplate).toBe(false);
+    expect(result.current.isApiUnavailable).toBe(true);
   });
 
   it('createFromTemplate returns the created list id on success', async () => {
@@ -128,5 +187,24 @@ describe('useShoppingListTemplate', () => {
     });
 
     expect(newId).toBe('list-2');
+  });
+
+  it('createFromTemplate refuses offline: no mutation, a localized toast, null', async () => {
+    mockIsApiUnavailable.mockReturnValue(true);
+    const cache = seedCache([{ ...LIST, isTemplate: true }]);
+    const created = recordMock(CreateFromTemplateDocument);
+    const { result } = renderHookWithApollo(() => useShoppingListTemplate(), {
+      cache,
+      operationMocks: [created.mock],
+    });
+
+    let newId: string | null = 'unset';
+    await act(async () => {
+      newId = await result.current.createFromTemplate('list-1');
+    });
+
+    expect(newId).toBeNull();
+    expect(created.fired).toHaveLength(0);
+    expect(mockToastError).toHaveBeenCalledWith('Not available offline');
   });
 });

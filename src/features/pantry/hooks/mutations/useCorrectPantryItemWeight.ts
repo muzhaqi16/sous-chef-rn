@@ -18,23 +18,17 @@
  * loses the race is a genuine conflict and is surfaced, not swallowed.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useMutation } from '@apollo/client/react';
 import { AdjustPantryItemWeightDocument } from '#features/pantry/graphql/pantry.generated';
-import {
-  UseCorrectPantryItemWeight_PantryItemFragmentDoc,
-  type UseCorrectPantryItemWeight_PantryItemFragment,
-} from './useCorrectPantryItemWeight.generated';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import {
   handleMutationError,
   versionConflictCheck,
   invalidUnitCheck,
 } from '#/utils/errorHandlers';
+import { useWrite } from '#/apollo/write/useWrite';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
-import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { errorService } from '#/services/errorService';
 import { t } from '#/i18n';
 
 interface UseCorrectPantryItemWeightOptions {
@@ -44,7 +38,7 @@ interface UseCorrectPantryItemWeightOptions {
 export function useCorrectPantryItemWeight({
   onSuccess,
 }: UseCorrectPantryItemWeightOptions = {}) {
-  const client = useApolloClient();
+  const { apply } = useWrite();
 
   const [correctMutation, { loading }] = useMutation(
     AdjustPantryItemWeightDocument,
@@ -65,47 +59,16 @@ export function useCorrectPantryItemWeight({
     version: number,
     netWeightUnitId?: string,
   ): Promise<boolean> => {
-    const cacheId = client.cache.identify({
-      __typename: 'PantryItem',
-      id: pantryItemId,
-    });
-    const currentItem =
-      client.cache.readFragment<UseCorrectPantryItemWeight_PantryItemFragment>({
-        id: cacheId,
-        fragment: UseCorrectPantryItemWeight_PantryItemFragmentDoc,
-        fragmentName: 'useCorrectPantryItemWeight_pantryItem',
-      });
-
-    const writeItem = (data: UseCorrectPantryItemWeight_PantryItemFragment) =>
-      client.cache.writeFragment({
-        id: cacheId,
-        fragment: UseCorrectPantryItemWeight_PantryItemFragmentDoc,
-        fragmentName: 'useCorrectPantryItemWeight_pantryItem',
-        data,
-      });
-
-    // The correction is absolute (a physical re-weigh), so set it directly.
-    // Persist it too, so the exact value survives an app-kill before replay.
-    // The unit is deliberately NOT changed locally: `netWeightUnitId` only
-    // names a unit id, and inventing a `netWeightUnit` object from it would
+    // The correction is absolute (a physical re-weigh), so it sets the value
+    // directly. The unit is deliberately NOT changed locally: `netWeightUnitId`
+    // only names a unit id, and inventing a `netWeightUnit` object from it would
     // write a half-populated Unit into the cache. The server's response fills
     // it in.
-    if (currentItem) {
-      const optimistic = enhanceWithVersion(currentItem, { netWeight });
-      try {
-        writeItem(optimistic);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Correct Pantry Item Weight (optimistic)',
-        });
-      }
-      optimisticDataPersistence.save(
-        'PantryItem',
-        pantryItemId,
-        'netWeight',
-        netWeight,
-      );
-    }
+    const { context, revert } = apply({
+      target: { __typename: 'PantryItem', id: pantryItemId },
+      patch: { netWeight },
+      convergence: 'absolute',
+    });
 
     const result = await correctMutation({
       variables: {
@@ -118,34 +81,20 @@ export function useCorrectPantryItemWeight({
           ...(netWeightUnitId ? { netWeightUnitId } : {}),
         },
       },
-      context: { localFirst: true },
+      context,
     });
 
     const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
-      // Restore the pre-correction snapshot. A transport error already alerted
-      // via onError; a non-success union member carries no error, so alert here.
-      if (currentItem) {
-        try {
-          writeItem(currentItem);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert rejected pantry weight correction',
-          });
-        }
-      }
-      optimisticDataPersistence.clear('PantryItem', pantryItemId, 'netWeight');
+      // Refused on the spot, so it never entered the queue and the queue's
+      // withdrawal will never see it. A queued write refused on a later replay
+      // is undone from its persisted intent instead.
+      revert();
       alertRejectedMutation(result, t('errors.correctWeightFailed'));
       return false;
     }
 
-    // 'created' (server confirmed, the response normalized the authoritative
-    // value) or 'queued' (offline / API down — replays the canonical mutation,
-    // deduped by its idempotencyKey).
-    if (outcome === 'created') {
-      optimisticDataPersistence.clear('PantryItem', pantryItemId, 'netWeight');
-    }
     onSuccess?.();
     return true;
   };

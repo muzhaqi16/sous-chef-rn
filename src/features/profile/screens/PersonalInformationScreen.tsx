@@ -10,7 +10,7 @@ import {
   type SettingItemConfig,
   type SettingOptionConfig,
 } from '#/config/settingsConfig';
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useMutation } from '@apollo/client/react';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import {
   ProfileVisibility,
@@ -20,7 +20,8 @@ import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { errorService } from '#/services/errorService';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { toastService } from '#/services/toastService';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 
@@ -28,46 +29,36 @@ export const PersonalInformationScreen: React.FC = () => {
   const { t } = useTranslation();
   const { profile, refetch } = useProfileData();
   const user = useUser();
-  const client = useApolloClient();
   const [updateProfileMutation] = useMutation(UpdateUserProfileDocument);
   const [refreshing, setRefreshing] = useState(false);
+  const isApiUnavailable = useIsApiUnavailable();
 
   const handleRefresh = () => {
     executeRefreshWithFinally(() => refetch(), setRefreshing);
   };
 
+  // Online-only: the mutation returns the whole `userProfile`, so Apollo
+  // normalizes the new values into the cache and the rows update from the real
+  // result.
   const updateProfile = async (input: UpdateProfileInput) => {
     if (!profile) return;
-    const cacheId = client.cache.identify({
-      __typename: 'UserProfile',
-      id: profile.id,
-    });
-    const { revert } = optimisticFieldUpdate(
-      client.cache,
-      cacheId,
-      profile,
-      input,
-      'Update Profile',
-    );
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return;
+    }
 
     let result;
     try {
-      result = await updateProfileMutation({
-        variables: { input },
-        context: { localFirst: true },
-      });
+      result = await updateProfileMutation({ variables: { input } });
     } catch (error) {
       errorService.reportError(error, {
         operation: 'PersonalInformation.updateProfile',
       });
     }
 
-    // Rejection restores the snapshot; a queued (null) result keeps the write.
     // `alertIfRejected` stays quiet when the mutation threw — `errorService`
-    // above already reported that — so the two never double-report, and a
-    // refusal no longer snaps the row back with nothing said.
+    // above already reported that — so the two never double-report.
     if (classifyCreateResult(result) === 'rejected') {
-      revert();
       alertIfRejected(result, t('errors.updateProfileFailed'));
     }
   };
@@ -166,10 +157,17 @@ export const PersonalInformationScreen: React.FC = () => {
     return baseItem;
   };
 
+  // Rows that write are dead while the API is unreachable, so mark them
+  // disabled rather than letting a tap fall through to the offline toast.
+  const gateWhileOffline = (item: SettingItem): SettingItem =>
+    item.onSave || item.onPress
+      ? { ...item, disabled: isApiUnavailable }
+      : item;
+
   const sections = (() => {
     return PERSONAL_INFO_CONFIG.map(configSection => ({
       title: configSection.titleKey ? t(configSection.titleKey) : '',
-      items: configSection.items.map(createSettingItem),
+      items: configSection.items.map(createSettingItem).map(gateWhileOffline),
     }));
   })();
 

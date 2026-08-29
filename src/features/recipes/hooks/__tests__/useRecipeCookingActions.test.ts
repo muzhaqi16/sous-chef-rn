@@ -7,12 +7,26 @@ import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.gen
 import type { RootState } from '#store';
 import { useRecipeCookingActions } from '../useRecipeCookingActions';
 
-// useRecipeIngredientMatching (used internally) reads the selected pantry id.
+// useRecipeIngredientMatching (used internally) reads the selected pantry id;
+// useIsApiUnavailable reads the network signals through the same store, so the
+// state is mutable per test — `apiReachable: false` is what the offline guard
+// keys on.
+const mockStoreState = {
+  selectedPantryId: 'pantry-1',
+  isOnline: true,
+  apiReachable: true,
+};
+
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (s: RootState) => unknown) =>
-    selector({ selectedPantryId: 'pantry-1' } as RootState),
+    selector(mockStoreState as RootState),
   useSelectedPantryId: jest.fn(() => 'pantry-1'),
 }));
+
+beforeEach(() => {
+  mockStoreState.isOnline = true;
+  mockStoreState.apiReachable = true;
+});
 
 const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
@@ -90,7 +104,7 @@ describe('useRecipeCookingActions', () => {
     );
   });
 
-  it('simple deduction sends a client-minted id with context.localFirst', async () => {
+  it('simple deduction sends a client-minted id', async () => {
     const cooked = cookedMock({ kind: 'success' });
     const { result } = renderHookWithApollo(
       () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
@@ -166,7 +180,7 @@ describe('useRecipeCookingActions', () => {
     expect(mockToastSuccess).not.toHaveBeenCalled();
   });
 
-  it('skip review sends a client-minted id with context.localFirst', async () => {
+  it('skip review sends a client-minted id', async () => {
     const cooked = cookedMock({ kind: 'success' });
     const { result } = renderHookWithApollo(
       () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
@@ -187,5 +201,44 @@ describe('useRecipeCookingActions', () => {
         }),
       }),
     );
+  });
+
+  it('refuses to mark cooked while the API is unavailable', async () => {
+    mockStoreState.apiReachable = false;
+    const cooked = cookedMock({ kind: 'success' });
+    const { result } = renderHookWithApollo(
+      () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
+      { operationMocks: [cooked.mock] },
+    );
+
+    expect(result.current.isApiUnavailable).toBe(true);
+
+    await act(async () => {
+      result.current.handleMarkAsCooked({
+        servings: 4,
+        deductFromPantry: true,
+        useGranularDeduction: false,
+      });
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith('Not available offline');
+    expect(cooked.fired).toHaveLength(0);
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+  });
+
+  it('refuses skip review while the API is unavailable', async () => {
+    mockStoreState.apiReachable = false;
+    const cooked = cookedMock({ kind: 'success' });
+    const { result } = renderHookWithApollo(
+      () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
+      { operationMocks: [cooked.mock] },
+    );
+
+    await act(async () => {
+      result.current.handleSkipReview();
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith('Not available offline');
+    expect(cooked.fired).toHaveLength(0);
   });
 });

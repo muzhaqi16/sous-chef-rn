@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useIsOnline, useUserId } from '#store/useAppStore';
+import { useUserId } from '#store/useAppStore';
+import { useIsApiUnavailable } from '#/hooks/app/useIsApiUnavailable';
 import { backfillActiveQueries } from '#/apollo/offline/reconnectBackfill';
 
 /**
@@ -17,19 +18,28 @@ import { backfillActiveQueries } from '#/apollo/offline/reconnectBackfill';
  *
  * A launch that begins online never increments it: there is nothing to catch up
  * on when every query is already fetching fresh.
+ *
+ * The trigger is the DERIVED reachability decision, not the raw device link.
+ * Reading `isOnline` meant the most common outage there is — the API down while
+ * connectivity is fine, which is the only shape the reachability breaker exists
+ * for — ended with no backfill at all: `nextFetchPolicy: 'cache-first'` stops a
+ * settled observable correcting itself, and `HomeTabs` runs
+ * `inactiveBehavior: 'none'` so background tabs stay mounted too. Every screen
+ * kept pre-outage data until the user pulled to refresh, with no spinner and no
+ * error to suggest it. One condition now covers both outage shapes.
  */
 export function useReconnectBackfill(): void {
-  const isOnline = useIsOnline();
+  const isUnavailable = useIsApiUnavailable();
   const userId = useUserId();
 
-  const [wasOnline, setWasOnline] = useState(isOnline);
+  const [wasUnavailable, setWasUnavailable] = useState(isUnavailable);
   const [reconnectCount, setReconnectCount] = useState(0);
 
-  if (wasOnline !== isOnline) {
-    setWasOnline(isOnline);
+  if (wasUnavailable !== isUnavailable) {
+    setWasUnavailable(isUnavailable);
     // Signed out, there are no watched queries worth refreshing, and whoever
     // signs in next fetches from scratch.
-    if (isOnline && userId) {
+    if (!isUnavailable && userId) {
       setReconnectCount(count => count + 1);
     }
   }

@@ -1,6 +1,6 @@
 import { useUser } from '#store/useAppStore';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
-import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import { useMutation, useQuery } from '@apollo/client/react';
 import type { Reference } from '@apollo/client';
 import {
   GetDietaryProfileDocument,
@@ -16,11 +16,12 @@ import {
   HealthGoal,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { errorService } from '#/services/errorService';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { toastService } from '#/services/toastService';
+import { useTranslation } from '#/i18n';
 
 export interface DietaryRestriction {
   id: string;
@@ -56,6 +57,11 @@ export interface DietaryProfileData {
 
 export const useDietaryProfile = () => {
   const user = useUser();
+  const { t } = useTranslation();
+
+  // Online-only: dietary preferences are configured at home, so they carry no
+  // offline replay machinery — the affordance is gated on this instead.
+  const isApiUnavailable = useIsApiUnavailable();
 
   // The cache-and-network → cache-first pair
   // means first mount fires once, subsequent mounts read cache only.
@@ -67,12 +73,7 @@ export const useDietaryProfile = () => {
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
   const profile = usePreservedQueryData(data?.me?.dietaryProfile, null);
 
-  const client = useApolloClient();
-
   // ===== MUTATION 1: Update Dietary Profile =====
-  // Local-first: the wrapper writes the changed fields to the cached
-  // DietaryProfile PERMANENTLY before firing (an optimisticResponse would be
-  // torn down on the offline queue's null result) and reverts on rejection.
   const [updateProfile] = useMutation(UpdateDietaryProfileDocument, {
     onError: error => {
       handleMutationError(error, { operation: 'Update Dietary Profile' });
@@ -121,8 +122,6 @@ export const useDietaryProfile = () => {
   });
 
   // ===== MUTATION 3: Update Dietary Restriction =====
-  // Local-first: the wrapper writes the changed restriction fields to cache
-  // PERMANENTLY before firing and reverts on rejection.
   const [updateRestriction] = useMutation(UpdateDietaryRestrictionDocument, {
     onError: error => {
       handleMutationError(error, { operation: 'Update Dietary Restriction' });
@@ -212,6 +211,11 @@ export const useDietaryProfile = () => {
     maxCookTimeMinutes?: number | null;
     budgetPerMeal?: number | null;
   }) => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
+    }
+
     // Convert null to undefined for GraphQL input
     const cleanedUpdates = Object.fromEntries(
       Object.entries(updates).map(([key, value]) => [
@@ -220,31 +224,13 @@ export const useDietaryProfile = () => {
       ]),
     );
 
-    // Permanent optimistic write of the changed (flat) fields + snapshot revert.
-    const cacheId = profile
-      ? client.cache.identify({ __typename: 'DietaryProfile', id: profile.id })
-      : undefined;
-    const { revert } = optimisticFieldUpdate(
-      client.cache,
-      cacheId,
-      profile,
-      cleanedUpdates,
-      'Update Dietary Profile',
-    );
-
     let result;
     try {
-      result = await updateProfile({
-        variables: { input: cleanedUpdates },
-        context: { localFirst: true },
-      });
+      result = await updateProfile({ variables: { input: cleanedUpdates } });
     } catch (error) {
       errorService.reportError(error, {
         operation: 'Failed to update dietary profile',
       });
-    }
-    if (classifyCreateResult(result) === 'rejected') {
-      revert();
     }
     return result ? !!result.data : false;
   };
@@ -259,15 +245,17 @@ export const useDietaryProfile = () => {
     notes?: string,
     appliesToHomeId?: string,
   ) => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
+    }
+
     let result;
     try {
       result = await addRestriction({
         variables: {
           input: { ...restriction, severity, notes, appliesToHomeId },
         },
-        // No optimisticResponse to tear down — queue offline and replay
-        // idempotently; the cache update runs on the (replayed) response.
-        context: { localFirst: true },
       });
     } catch (error) {
       errorService.reportError(error, {
@@ -284,46 +272,33 @@ export const useDietaryProfile = () => {
       notes?: string;
     },
   ) => {
-    // Permanent optimistic write of the changed restriction fields + revert.
-    const cacheId = client.cache.identify({
-      __typename: 'DietaryRestriction',
-      id,
-    });
-    const currentRestriction = profile?.restrictions?.find(r => r.id === id);
-    const { revert } = optimisticFieldUpdate(
-      client.cache,
-      cacheId,
-      currentRestriction,
-      updates,
-      'Update Dietary Restriction',
-    );
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
+    }
 
     let result;
     try {
       result = await updateRestriction({
         variables: { input: { id, ...updates } },
-        context: { localFirst: true },
       });
     } catch (error) {
       errorService.reportError(error, {
         operation: 'Failed to update dietary restriction',
       });
     }
-    if (classifyCreateResult(result) === 'rejected') {
-      revert();
-    }
     return result ? !!result.data : false;
   };
 
   const removeDietaryRestriction = async (id: string) => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
+    }
+
     let result;
     try {
-      result = await removeRestriction({
-        variables: { input: { id } },
-        // No optimisticResponse to tear down — queue offline and replay
-        // idempotently; the cache removal runs on the (replayed) response.
-        context: { localFirst: true },
-      });
+      result = await removeRestriction({ variables: { input: { id } } });
     } catch (error) {
       errorService.reportError(error, {
         operation: 'Failed to remove dietary restriction',
@@ -339,5 +314,6 @@ export const useDietaryProfile = () => {
     addDietaryRestriction,
     updateDietaryRestriction,
     removeDietaryRestriction,
+    isApiUnavailable,
   };
 };

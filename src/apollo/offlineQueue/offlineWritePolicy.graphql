@@ -1,0 +1,8 @@
+# The server's own replay horizon, so the client stops restating it as a
+# literal. Two constants that must agree, with nothing checking them, is the
+# drift that surfaces as a double-applied write rather than as a failure.
+query GetOfflineWritePolicy {
+  offlineWritePolicy {
+    replayHorizonDays
+  }
+}

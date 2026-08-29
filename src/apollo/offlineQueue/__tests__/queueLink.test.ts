@@ -391,7 +391,7 @@ describe('createQueueLink', () => {
       });
     });
 
-    it('queues a Sync*-mapped operation even WITHOUT localFirst (idempotent replay)', done => {
+    it('REFUSES an operation that never opted in, even one that used to be Sync*-mapped', done => {
       mockedGetState.mockReturnValue({
         isOnline: false,
         user: { id: 'user-1' },
@@ -400,20 +400,20 @@ describe('createQueueLink', () => {
         query: MOCK_MUTATION,
         operationName: 'UpdatePantryItem',
         variables: { input: { id: 'item-1', quantity: 2 } },
-        // no localFirst — allowlisted via SYNC_REGISTRY
+        // no localFirst — and that is now the whole test. The allowlist used
+        // to also admit anything with a `Sync*` twin, so an operation could be
+        // queued without its hook ever asking to be: it would show a failure
+        // and then ghost-execute on reconnect, and a hook pairing an
+        // `optimisticResponse` with it would revert on screen the moment the
+        // queued null result landed.
       });
       const forward = makeForward();
 
       link.request(operation, forward)!.subscribe({
-        next(result) {
-          expect(result.extensions).toEqual({
-            queued: true,
-            queuedReason: 'offline',
-          });
-        },
-        complete() {
+        error(err) {
+          expect(err.name).toBe('OfflineRejectedError');
           expect(forward).not.toHaveBeenCalled();
-          expect(queueStore.addMutation).toHaveBeenCalledTimes(1);
+          expect(queueStore.addMutation).not.toHaveBeenCalled();
           done();
         },
       });
@@ -534,7 +534,7 @@ describe('createQueueLink', () => {
       });
     });
 
-    it('queues a Sync*-mapped operation WITHOUT localFirst (matches the offline allowlist)', done => {
+    it('passes through an operation that never opted in, rather than queueing it', done => {
       mockedGetState.mockReturnValue({
         isOnline: true,
         apiReachable: false,
@@ -544,20 +544,16 @@ describe('createQueueLink', () => {
         query: MOCK_MUTATION,
         operationName: 'UpdatePantryItem',
         variables: { input: { id: 'item-1', quantity: 2 } },
-        // no localFirst — allowlisted via SYNC_REGISTRY, same as the offline path
+        // no localFirst. With the breaker open the request still goes out —
+        // only the explicit opt-in is queued, and everything else keeps its
+        // existing behaviour of failing honestly rather than replaying later.
       });
       const forward = makeForward();
 
       link.request(operation, forward)!.subscribe({
-        next(result) {
-          expect(result.extensions).toEqual({
-            queued: true,
-            queuedReason: 'api-unreachable',
-          });
-        },
         complete() {
-          expect(forward).not.toHaveBeenCalled();
-          expect(queueStore.addMutation).toHaveBeenCalledTimes(1);
+          expect(forward).toHaveBeenCalled();
+          expect(queueStore.addMutation).not.toHaveBeenCalled();
           done();
         },
       });

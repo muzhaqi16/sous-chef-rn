@@ -10,6 +10,9 @@ import {
   type PantryFixture,
 } from '../../../../../__tests__/helpers/fixtures/pantryFixtures';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { PantrySettings } from '../PantrySettings';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -51,6 +54,14 @@ jest.mock('#features/pantry/hooks/usePantryPermissions');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
+}));
+
+jest.mock('#/services/toastService', () => ({
+  toastService: { success: jest.fn(), error: jest.fn() },
+}));
+
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: jest.fn(() => false),
 }));
 
 jest.mock('#components/molecules/ScreenHeader', () => ({
@@ -135,9 +146,16 @@ const defaultPantry: PantryFixture = {
   items: [{ id: 'i1' }, { id: 'i2' }],
 };
 
+const mockIsApiUnavailable = useIsApiUnavailable as jest.MockedFunction<
+  typeof useIsApiUnavailable
+>;
+
 describe('PantrySettings', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // `clearAllMocks` keeps a `mockReturnValue` from a previous test, so the
+    // online default has to be restored explicitly.
+    mockIsApiUnavailable.mockReturnValue(false);
   });
 
   it('renders settings title when editing', () => {
@@ -275,6 +293,63 @@ describe('PantrySettings', () => {
       }),
     });
     expect(screen.getByText('0 items')).toBeTruthy();
+  });
+
+  describe('when the API is unavailable', () => {
+    beforeEach(() => {
+      mockIsApiUnavailable.mockReturnValue(true);
+    });
+
+    it('does not save an edit', () => {
+      renderWithApollo(<PantrySettings route={editRoute} />, {
+        cache: cacheWithPantry(defaultPantry),
+      });
+
+      expect(screen.getByText('Save')).toBeDisabled();
+
+      fireEvent.press(screen.getByText('Save'));
+
+      expect(executeWithLoadingState).not.toHaveBeenCalled();
+      expect(alertService.alert).not.toHaveBeenCalled();
+    });
+
+    it('does not open the delete confirmation', () => {
+      renderWithApollo(<PantrySettings route={editRoute} />, {
+        cache: cacheWithPantry(defaultPantry),
+      });
+
+      expect(screen.getByText('Delete Pantry')).toBeDisabled();
+
+      fireEvent.press(screen.getByText('Delete Pantry'));
+
+      expect(alertService.alert).not.toHaveBeenCalled();
+    });
+
+    it('still runs the create path, which stays local-first', () => {
+      renderWithApollo(<PantrySettings route={createRoute} />, {
+        cache: new InMemoryCache(),
+      });
+
+      fireEvent.changeText(
+        screen.getByPlaceholderText('Enter pantry name (e.g., Kitchen Pantry)'),
+        'New Pantry',
+      );
+      fireEvent.press(screen.getByText('Create'));
+
+      expect(toastService.error).not.toHaveBeenCalled();
+      expect(executeWithLoadingState).toHaveBeenCalled();
+    });
+  });
+
+  it('runs the save path for an edit when online', () => {
+    renderWithApollo(<PantrySettings route={editRoute} />, {
+      cache: cacheWithPantry(defaultPantry),
+    });
+
+    fireEvent.press(screen.getByText('Save'));
+
+    expect(toastService.error).not.toHaveBeenCalled();
+    expect(executeWithLoadingState).toHaveBeenCalled();
   });
 
   it('shows no home selected error when saving without selectedHomeId', () => {

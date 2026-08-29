@@ -2,6 +2,7 @@
 
 import type { StoreObject } from '@apollo/client';
 import { storage } from '#storage/mmkv';
+import { InMemoryCache, gql } from '@apollo/client';
 import { apolloCachePersistence } from '../ApolloCachePersistence';
 import { logger } from '#/utils/environment';
 
@@ -172,19 +173,71 @@ describe('ApolloCachePersistence', () => {
     it('still skips a save when nothing changed at all', () => {
       // The optimization has to survive the fix: identical extracts must not
       // re-serialize the whole cache on every debounce tick.
-      const cache = {
-        ROOT_QUERY: { __typename: 'Query' },
-        'PantryItem:1': { __typename: 'PantryItem', id: '1', name: 'Same' },
-      };
-      apolloCachePersistence.save(cache);
+      //
+      // Two DISTINCT objects, each with its own `__META`, because that is what
+      // `cache.extract()` actually returns — it allocates `__META` fresh on
+      // every call. Passing the same reference twice (as this test used to)
+      // made the assertion pass no matter what the comparison did, which is
+      // how the skip came to be permanently broken without a failing test.
+      const entity = { __typename: 'PantryItem', id: '1', name: 'Same' };
+      const rootQuery = { __typename: 'Query' };
+      const extract = () => ({
+        ROOT_QUERY: rootQuery,
+        'PantryItem:1': entity,
+        __META: { extraRootIds: ['PantryItem:1'] },
+      });
+
+      apolloCachePersistence.save(extract());
       settle();
 
       const debugSpy = jest.spyOn(logger, 'debug');
-      apolloCachePersistence.save(cache);
+      apolloCachePersistence.save(extract());
       settle();
 
       expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('skipped'));
       debugSpy.mockRestore();
+    });
+
+    it('skips a save across two real cache.extract() calls', () => {
+      // The production shape, driven by Apollo rather than by a hand-drawn
+      // object: a writeFragment adds `__META.extraRootIds`, and two extracts of
+      // an unchanged cache must still be recognised as unchanged.
+      const cache = new InMemoryCache();
+      cache.writeFragment({
+        id: 'Recipe:1',
+        fragment: gql`
+          fragment PersistProbe on Recipe {
+            id
+            title
+          }
+        `,
+        data: { __typename: 'Recipe', id: '1', title: 'Soup' },
+      });
+
+      apolloCachePersistence.save(cache.extract());
+      settle();
+
+      const debugSpy = jest.spyOn(logger, 'debug');
+      apolloCachePersistence.save(cache.extract());
+      settle();
+
+      expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('skipped'));
+      debugSpy.mockRestore();
+    });
+
+    it('drops pins for entities the cache no longer holds', () => {
+      // `writeFragment` retains its entity permanently, so an evicted one stays
+      // pinned in `__META.extraRootIds` and rides through storage into the next
+      // launch. Only ids with no entity left are dropped.
+      apolloCachePersistence.save({
+        ROOT_QUERY: { __typename: 'Query' },
+        'Recipe:1': { __typename: 'Recipe', id: '1' },
+        __META: { extraRootIds: ['Recipe:1', 'Recipe:gone'] },
+      });
+      settle();
+
+      const persisted = JSON.parse(storage.getString(CACHE_KEY)!);
+      expect(persisted.__META.extraRootIds).toEqual(['Recipe:1']);
     });
 
     it('persists an entity added without any other change', () => {
@@ -245,6 +298,42 @@ describe('ApolloCachePersistence', () => {
       apolloCachePersistence.flushPending(extractor);
       expect(extractor).not.toHaveBeenCalled();
       expect(storage.getString(CACHE_KEY)).toBeUndefined();
+    });
+
+    it('writes a save that was requested while paused', () => {
+      // Persistence is paused for the whole time a pushed screen is up, and a
+      // save requested then is held in the paused extractor rather than in a
+      // timer. Without this, a pantry-detail correction made offline never
+      // reached disk before a background-kill — the reason a separate
+      // optimistic-field store had to exist to cover it.
+      const pending = {
+        ROOT_QUERY: { __typename: 'Query' },
+        'PantryItem:1': { id: '1', quantity: 7 },
+      };
+      apolloCachePersistence.pause();
+      apolloCachePersistence.scheduleExtractAndSave(() => pending);
+      expect(storage.getString(CACHE_KEY)).toBeUndefined();
+
+      apolloCachePersistence.flushPending(() => ({}));
+
+      expect(JSON.parse(storage.getString(CACHE_KEY)!)).toEqual(pending);
+      apolloCachePersistence.resume();
+    });
+
+    it('does not re-write the paused save once it has been flushed', () => {
+      // Draining must consume the pending state, or resume() would write a
+      // second time from a stale extractor.
+      apolloCachePersistence.pause();
+      const extractor = jest.fn(() => ({
+        ROOT_QUERY: { __typename: 'Query' },
+      }));
+      apolloCachePersistence.scheduleExtractAndSave(extractor);
+      apolloCachePersistence.flushPending(() => ({}));
+      expect(extractor).toHaveBeenCalledTimes(1);
+
+      apolloCachePersistence.resume();
+      jest.advanceTimersByTime(10_000);
+      expect(extractor).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -16,6 +16,7 @@ import {
 } from '#features/recipes/graphql/recipeFragments.generated';
 import { type ConfirmedIngredientConsumptionInput } from '#/graphql/generated/schemaTypes';
 import { useSelectedPantryId } from '#store/useAppStore';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
@@ -65,6 +66,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
   const { t } = useTranslation();
   const pantryId = useSelectedPantryId();
   const client = useApolloClient();
+  const isApiUnavailable = useIsApiUnavailable();
   const [editableMatches, setEditableMatches] = useState<EditableMatch[]>([]);
   const [isSheetVisible, setIsSheetVisible] = useState(false);
 
@@ -180,6 +182,11 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
   const confirmConsumption = async () => {
     if (!recipeId || !pantryId) return;
 
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return;
+    }
+
     const consumptions: ConfirmedIngredientConsumptionInput[] = editableMatches
       .filter(em => em.isIncluded && em.match.matchedPantryItem)
       .map(em => ({
@@ -198,17 +205,16 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
       return;
     }
 
-    // Mint the cooking-log id client-side and queue + replay (`localFirst`) when
-    // the API is unreachable. The shared id means a re-synced consumption
-    // converges on the same cooking log instead of creating a duplicate and
-    // re-consuming the pantry.
+    // The cooking-log id is minted client-side so a retried confirmation (a
+    // double-tap, or a retry whose first response was lost) converges on the
+    // same cooking log instead of creating a duplicate and re-consuming the
+    // pantry.
     let result;
     try {
       result = await confirmMutation({
         variables: {
           input: { id: generateEntityId(), recipeId, pantryId, consumptions },
         },
-        context: { localFirst: true },
       });
     } catch (error) {
       errorService.reportError(error, {
@@ -219,8 +225,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
 
     // A resolved refusal (error union member / transport error) under
     // errorPolicy:'all' RESOLVES rather than throws — bail before the success
-    // toast / sheet-close. 'created' and 'queued' both succeed (a queued
-    // consumption replays later).
+    // toast / sheet-close.
     if (classifyCreateResult(result) === 'rejected') {
       toastService.error(t('recipes.markCookedFailed'));
       return;
@@ -233,38 +238,37 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
       payload?.__typename === 'ConfirmRecipeConsumptionPayload'
         ? payload
         : null;
-    // Replay diagnostics: `converged: true` means this whole confirmation had
-    // already committed (idempotent replay). A fresh commit — including one
-    // that healed leftover items from a partially-crashed earlier attempt —
+    if (!data) {
+      // Neither a payload nor a refusal: the write never reached the server.
+      // This mutation is online-only, so nothing is queued to replay — report
+      // the failure and leave the sheet open to retry.
+      toastService.error(t('recipes.markCookedFailed'));
+      return;
+    }
+    // `converged: true` means this confirmation had already committed under the
+    // same client-minted id (an idempotent retry). A fresh commit — including
+    // one that healed leftover items from a partially-crashed earlier attempt —
     // reports false, so only `true` is logged.
-    if (data?.converged) {
+    if (data.converged) {
       logger.info(
-        'confirmRecipeConsumption converged — replay of a committed confirmation',
+        'confirmRecipeConsumption converged — retry of a committed confirmation',
         { recipeId },
       );
     }
-    if (data) {
-      toastService.success(
-        data.totalFailed > 0
-          ? t('recipes.deductedFromPantryFailed', {
-              count: data.totalConsumed,
-              failed: data.totalFailed,
-            })
-          : t('recipes.deductedFromPantry', { count: data.totalConsumed }),
-      );
-    } else {
-      // Queued offline — no response yet; show the optimistic count (every
-      // included consumption replays on reconnect).
-      toastService.success(
-        t('recipes.deductedFromPantry', { count: consumptions.length }),
-      );
-    }
+    toastService.success(
+      data.totalFailed > 0
+        ? t('recipes.deductedFromPantryFailed', {
+            count: data.totalConsumed,
+            failed: data.totalFailed,
+          })
+        : t('recipes.deductedFromPantry', { count: data.totalConsumed }),
+    );
 
     Telemetry.trackEvent('recipe_consumption_confirmed', {
       recipe_id: recipeId,
       pantry_id: pantryId,
-      consumed_count: data?.totalConsumed ?? 0,
-      failed_count: data?.totalFailed ?? 0,
+      consumed_count: data.totalConsumed,
+      failed_count: data.totalFailed,
     });
 
     setIsSheetVisible(false);
@@ -286,5 +290,6 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     isSheetVisible,
     closeSheet,
     hasPantry: !!pantryId,
+    isApiUnavailable,
   };
 }

@@ -12,10 +12,17 @@ import {
 } from '#operations/user/user.generated';
 import { Diet, RestrictionSeverity } from '#/graphql/generated/schemaTypes';
 import type { RootState } from '#store/index';
+import { toastService } from '#/services/toastService';
 import { useDietaryProfile } from '../useDietaryProfile';
 
+// `useIsApiUnavailable` reads the network slice through the same store, so the
+// mocked state must carry a reachable API or every mutation hits the offline
+// guard. `networkState` is mutable so a test can flip the hook offline.
+const networkState = { isOnline: true, apiReachable: true as boolean | null };
+
 jest.mock('#store/useAppStore', () => {
-  const getState = () => ({ user: { id: 'user-1' } } as Partial<RootState>);
+  const getState = () =>
+    ({ user: { id: 'user-1' }, ...networkState } as Partial<RootState>);
   return {
     useAppStore: jest.fn(
       <T>(selector: (state: RootState) => T): T =>
@@ -200,6 +207,8 @@ function buildRemoveRestrictionMock(): MockedResponse {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  networkState.isOnline = true;
+  networkState.apiReachable = true;
 });
 
 describe('useDietaryProfile', () => {
@@ -332,6 +341,65 @@ describe('useDietaryProfile', () => {
     });
 
     expect(success).toBe(true);
+  });
+
+  describe('when the API is unavailable', () => {
+    // Dietary preferences are online-only: no offline queueing, so each write
+    // refuses up front with localized copy instead of half-applying.
+    const goOffline = () => {
+      networkState.isOnline = false;
+      networkState.apiReachable = null;
+    };
+
+    it('exposes isApiUnavailable so the screen can gate the affordance', async () => {
+      goOffline();
+      const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+        operationMocks: [buildGetProfileMock()],
+      });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.isApiUnavailable).toBe(true);
+    });
+
+    it('refuses every write without firing a mutation', async () => {
+      const errorToast = jest.spyOn(toastService, 'error').mockImplementation();
+      goOffline();
+
+      // No mutation mocks: an attempted mutation would reject as unmocked.
+      const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+        operationMocks: [buildGetProfileMock()],
+      });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      const outcomes: boolean[] = [];
+      await act(async () => {
+        outcomes.push(
+          await result.current.updateDietaryProfile({ mealsPerDay: 4 }),
+        );
+        outcomes.push(
+          await result.current.addDietaryRestriction(
+            { diet: Diet.Vegan },
+            RestrictionSeverity.Allergy,
+          ),
+        );
+        outcomes.push(
+          await result.current.updateDietaryRestriction('r1', {
+            severity: RestrictionSeverity.Preference,
+          }),
+        );
+        outcomes.push(await result.current.removeDietaryRestriction('r1'));
+      });
+
+      expect(outcomes).toEqual([false, false, false, false]);
+      expect(errorToast).toHaveBeenCalledTimes(4);
+      errorToast.mockRestore();
+    });
   });
 
   it('provides defaults for missing profile fields', async () => {

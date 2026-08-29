@@ -3,6 +3,8 @@
 import React from 'react';
 import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { toastService } from '#/services/toastService';
 import { SelectPantryItems } from '../SelectPantryItems';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -76,6 +78,20 @@ jest.mock('#hooks/useSelectableItems', () => ({
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
+}));
+
+// Stocking the pantry during onboarding is ONLINE-ONLY: the adds and removes no
+// longer queue for replay, so the offline gate is part of the screen's contract
+// rather than an incidental detail.
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: jest.fn(() => false),
+}));
+const mockIsApiUnavailable = useIsApiUnavailable as jest.MockedFunction<
+  typeof useIsApiUnavailable
+>;
+
+jest.mock('#/services/toastService', () => ({
+  toastService: { error: jest.fn(), success: jest.fn() },
 }));
 jest.mock('#/utils/finallyHelpers');
 
@@ -192,6 +208,7 @@ const onboardingMocks = {
 describe('SelectPantryItems', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockIsApiUnavailable.mockReturnValue(false);
   });
 
   it('renders the title', async () => {
@@ -290,5 +307,66 @@ describe('SelectPantryItems', () => {
     });
     const { errorService } = jest.requireMock('#/services/errorService');
     expect(errorService.reportError).not.toHaveBeenCalled();
+  });
+
+  describe('offline gate', () => {
+    const selectOneItem = () => {
+      const { useSelectableItems } = jest.requireMock(
+        '#hooks/useSelectableItems',
+      );
+      useSelectableItems.mockReturnValue({
+        items: mockItems,
+        selectedItems: [mockItems[0]],
+        toggleItem: jest.fn(),
+        isMaxReached: false,
+      });
+    };
+
+    it('refuses to save while the API is unreachable', async () => {
+      selectOneItem();
+      mockIsApiUnavailable.mockReturnValue(true);
+
+      renderWithApollo(<SelectPantryItems />, { mocks: onboardingMocks });
+
+      // Deliberately still pressable: disabling it left a dead button and no
+      // explanation, because the refusal could then never be reached.
+      const button = await screen.findByTestId('action-button');
+      expect(button).not.toBeDisabled();
+
+      fireEvent.press(button);
+
+      // Nothing is written and the step does not advance, and pressing says so;
+      // the wrapper's Skip is the way forward offline.
+      expect(toastService.error).toHaveBeenCalled();
+      expect(mockNavigateToNextStep).not.toHaveBeenCalled();
+    });
+
+    it('saves normally when the API is reachable', async () => {
+      selectOneItem();
+
+      renderWithApollo(<SelectPantryItems />, {
+        mocks: {
+          ...onboardingMocks,
+          Mutation: () => ({
+            createPantryItem: {
+              __typename: 'CreatePantryItemPayload',
+              pantryItem: { id: 'pi1', itemId: 'i1', item: { id: 'i1' } },
+            },
+          }),
+        },
+      });
+
+      const button = await screen.findByTestId('action-button');
+      expect(button).not.toBeDisabled();
+
+      fireEvent.press(button);
+
+      await waitFor(() => {
+        expect(mockNavigateToNextStep).toHaveBeenCalledWith(
+          'SelectPantryItems',
+        );
+      });
+      expect(toastService.error).not.toHaveBeenCalled();
+    });
   });
 });

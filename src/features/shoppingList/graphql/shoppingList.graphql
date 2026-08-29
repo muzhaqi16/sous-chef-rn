@@ -1134,6 +1134,13 @@ mutation AddItemsToShoppingList($input: AddItemsToShoppingListInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -1193,91 +1200,6 @@ mutation JoinShoppingListByShareCode(
 # ============================================
 # OFFLINE SYNC MUTATIONS
 # ============================================
-
-mutation SyncShoppingListItem($input: SyncShoppingListItemInput!) {
-  syncShoppingListItem(input: $input) {
-    __typename
-    ... on SyncShoppingListItemPayload {
-      clientId
-      serverId
-      operation
-      converged
-      item {
-        id
-        ...queueManager_syncItem
-      }
-      conflict {
-        clientVersion
-        serverVersion
-        message
-        serverItem {
-          id
-          version
-          sortOrder
-        }
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-  }
-}
-
-mutation SyncDeleteShoppingListItem($input: SyncDeleteShoppingListItemInput!) {
-  syncDeleteShoppingListItem(input: $input) {
-    __typename
-    ... on SyncShoppingListItemPayload {
-      clientId
-      serverId
-      operation
-      converged
-      item {
-        id
-        itemName
-      }
-      conflict {
-        clientVersion
-        serverVersion
-        message
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-  }
-}
-
-mutation SyncMoveShoppingListItem($input: SyncMoveShoppingListItemInput!) {
-  syncMoveShoppingListItem(input: $input) {
-    __typename
-    ... on SyncShoppingListItemPayload {
-      clientId
-      serverId
-      operation
-      converged
-      item {
-        id
-        ...queueManager_syncMoveItem
-      }
-      conflict {
-        clientVersion
-        serverVersion
-        message
-        serverItem {
-          id
-          version
-          sortOrder
-        }
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-  }
-}
 
 # ============================================
 # SUBSCRIPTIONS

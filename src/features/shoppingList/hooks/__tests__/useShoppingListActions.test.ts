@@ -42,13 +42,6 @@ jest.mock('#/utils/errors/versionConflict', () => ({
   getVersionConflictMessage: jest.fn(() => 'Item was updated'),
 }));
 
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: {
-    save: jest.fn(),
-    clear: jest.fn(),
-  },
-}));
-
 jest.mock('#/utils/finallyHelpers', () => ({
   executeWithLoadingState: jest.fn(
     async (fn: () => Promise<void>, setLoading: (value: boolean) => void) => {
@@ -436,6 +429,7 @@ describe('useShoppingListActions', () => {
             itemId: 'item-1',
             quantity: '3',
             version: 1,
+            idempotencyKey: expect.any(String),
           },
         });
       });
@@ -464,6 +458,7 @@ describe('useShoppingListActions', () => {
             itemId: 'item-1',
             quantity: '1',
             version: 1,
+            idempotencyKey: expect.any(String),
           },
         });
       });
@@ -526,6 +521,7 @@ describe('useShoppingListActions', () => {
             itemId: 'item-1',
             quantity: '4',
             version: 2,
+            idempotencyKey: expect.any(String),
           },
         });
       });
@@ -849,12 +845,8 @@ describe('useShoppingListActions', () => {
     });
   });
 
-  describe('handleIncrementQuantity - persistence save', () => {
-    it('saves optimistic data before mutation', async () => {
-      const {
-        optimisticDataPersistence,
-      } = require('#/apollo/offline/OptimisticDataPersistence');
-
+  describe('handleIncrementQuantity - local write', () => {
+    it('writes the new quantity to the cache before the mutation resolves', async () => {
       const cache = seedShoppingListItem({ quantity: 5, version: 3 });
       const m = recordMock(UpdateShoppingListItemQuantityDocument, {
         data: buildUpdateMockResponse(6, 4),
@@ -869,12 +861,15 @@ describe('useShoppingListActions', () => {
         await result.current.handleIncrementQuantity('item-1');
       });
 
-      expect(optimisticDataPersistence.save).toHaveBeenCalledWith(
-        'ShoppingListItem',
-        'item-1',
-        'quantity',
-        6,
-      );
+      // The write kit applies the intent to the cache permanently, so the
+      // assertion is on the cache rather than on a persistence marker.
+      expect(
+        cache.readFragment<UseShoppingListActions_ItemFragment>({
+          id: 'ShoppingListItem:item-1',
+          fragment: UseShoppingListActions_ItemFragmentDoc,
+          fragmentName: 'useShoppingListActions_item',
+        })?.quantity,
+      ).toBe(6);
     });
   });
 

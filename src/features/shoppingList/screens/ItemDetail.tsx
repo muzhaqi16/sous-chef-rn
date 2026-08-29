@@ -85,14 +85,19 @@ export const ShoppingListItemDetail: React.FC<
   // The detail screen owns its own narrow fragment. useFragment subscribes
   // to the entity record so edits made elsewhere (e.g., AddEditItem) refresh
   // this detail view automatically.
-  const itemRef = data?.shoppingListItem ?? null;
+  // Read by CACHE KEY, not through the query's returned ref. Gating on the ref
+  // made the screen unrenderable without a server round trip: offline, or
+  // simply before the query is back, `data` is undefined and the screen sat on
+  // "Loading" forever even though the row was in the cache — reachable after
+  // any cold start with the API down, which is exactly when an offline edit
+  // most needs to be visible. `PantryItemDetail` reads the same way, and for
+  // the same reason.
   const itemFragmentResult = useFragment({
     fragment: ItemDetail_ShoppingListItemFragmentDoc,
     fragmentName: 'ItemDetail_shoppingListItem',
-    from: itemRef,
+    from: { __typename: 'ShoppingListItem', id: itemId },
   });
-  const item =
-    itemRef && itemFragmentResult.complete ? itemFragmentResult.data : null;
+  const item = itemFragmentResult.complete ? itemFragmentResult.data : null;
 
   const handleEdit = () => {
     toEditItem({ listId, itemId });

@@ -153,29 +153,6 @@ const TARGETS = [
       ],
     },
   },
-  {
-    graphql: fromRoot(
-      'src',
-      'features',
-      'mealPlan',
-      'hooks',
-      'useMealPlanActions.graphql',
-    ),
-    out: fromRoot(
-      'src',
-      'features',
-      'mealPlan',
-      'hooks',
-      'mealPlanDetailNeutral.generated.ts',
-    ),
-    typesFrom: './useMealPlanActions.generated',
-    fragments: {
-      useMealPlanActions_detailStub: [
-        'NEUTRAL_MEAL_PLAN_DETAIL',
-        'UseMealPlanActions_DetailStubFragment',
-      ],
-    },
-  },
 ];
 
 function neutralForField(schema, parentType, fieldName, selectionSet, path) {

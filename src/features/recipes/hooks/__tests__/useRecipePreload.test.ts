@@ -15,6 +15,7 @@ import type { RecipeInformation } from '#/services/recipeApi/types';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import { useRecipePreload, type PreloadedRecipe } from '../useRecipePreload';
 import { makeCache } from '#/apollo/cache';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 
 jest.mock('#/services/recipeApi/SpoonacularService', () => ({
   spoonacularService: { getRecipePriceBreakdown: jest.fn() },
@@ -41,8 +42,17 @@ jest.mock('#/services/toastService', () => ({
 
 jest.mock('#/utils/finallyHelpers');
 
-// Deterministic client-minted SavedRecipe id so the optimistic-write/revert
-// assertions can target a known cache key.
+// Favoriting is ONLINE-ONLY: it no longer queues for replay, so the offline
+// gate is part of the hook's contract rather than an incidental detail.
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: jest.fn(() => false),
+}));
+const mockIsApiUnavailable = useIsApiUnavailable as jest.MockedFunction<
+  typeof useIsApiUnavailable
+>;
+
+// Deterministic client-minted SavedRecipe id (sent as `input.id`) so the
+// cache assertions can target a known key.
 const SAVED_RECIPE_ID = 'client-saved-1';
 jest.mock('#/utils/generateEntityId', () => ({
   generateEntityId: jest.fn(() => 'client-saved-1'),
@@ -171,6 +181,7 @@ function recordUpsertMock() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockIsApiUnavailable.mockReturnValue(false);
 });
 
 describe('useRecipePreload', () => {
@@ -475,11 +486,11 @@ describe('useRecipePreload', () => {
 });
 
 // =============================================================================
-// Local-first favorite (client-minted SavedRecipe id)
+// Favorite (online only, client-minted SavedRecipe id)
 // =============================================================================
 
-// Reads just the optimistic-write signals: the SavedRecipe entity, the recipe's
-// savedDetails pointer, and the MySavedRecipes edge.
+// Reads the three cache signals the server response drives: the SavedRecipe
+// entity, the recipe's savedDetails pointer, and the MySavedRecipes edge.
 const SAVED_DETAILS_FRAGMENT = gql`
   fragment _TestSavedDetails on Recipe {
     id
@@ -549,19 +560,16 @@ const readSavedEdges = (cache: InMemoryCache) =>
     ?.savedRecipesConnection;
 
 /**
- * Mock AddRecipeToFavorites. `queued` resolves the field as null (offline / API
- * down — the optimistic write stands, no server overwrite), which is the
- * local-first case that proves the client-minted optimistic write survives.
- * `created` echoes the client-minted SavedRecipe id (the server persists it as
- * the PK) so the online `update` callback's dedup-by-id guard fires. `rejected`
- * resolves a refusal union member (revert path).
+ * Mock AddRecipeToFavorites. `created` echoes the client-minted SavedRecipe id
+ * (the server persists it as the PK); `divergent` returns an EXISTING row under
+ * a different id (already favorited elsewhere); `rejected` resolves a refusal
+ * union member.
  */
 const SERVER_SAVED_ID = 'server-saved-2';
 
 const favoriteMock = (
   outcome:
-    | { kind: 'queued' }
-    | { kind: 'created' }
+    | { kind: 'created'; folder?: string | null; tags?: string[] }
     | { kind: 'divergent' }
     | { kind: 'rejected'; __typename: 'ValidationError' },
 ): MockedResponse => ({
@@ -572,9 +580,7 @@ const favoriteMock = (
   result: {
     data: {
       addRecipeToFavorites:
-        outcome.kind === 'queued'
-          ? null
-          : outcome.kind === 'created' || outcome.kind === 'divergent'
+        outcome.kind === 'created' || outcome.kind === 'divergent'
           ? {
               __typename: 'AddRecipeToFavoritesPayload',
               savedRecipe: {
@@ -585,15 +591,30 @@ const favoriteMock = (
                     : SAVED_RECIPE_ID,
                 recipeId: 'backend-1',
                 userId: 'u1',
-                folder: null,
-                tags: [],
+                folder:
+                  outcome.kind === 'created' ? outcome.folder ?? null : null,
+                tags: outcome.kind === 'created' ? outcome.tags ?? [] : [],
                 notes: null,
                 personalRating: null,
                 cookedCount: 0,
                 lastCookedAt: null,
                 createdAt: '2026-01-01T00:00:00.000Z',
                 updatedAt: '2026-01-01T00:00:00.000Z',
-                recipe: { __typename: 'Recipe', id: 'backend-1' },
+                // The real response spreads BasicRecipeFragment here, which
+                // covers every field the MySavedRecipes card node reads — the
+                // server response is now the only writer of that edge, so the
+                // mock has to carry them or the connection read goes incomplete.
+                recipe: {
+                  __typename: 'Recipe',
+                  id: 'backend-1',
+                  name: 'Test Recipe',
+                  description: null,
+                  imageUrl: null,
+                  servings: 4,
+                  prepTimeMinutes: 10,
+                  cookTimeMinutes: 20,
+                  totalTimeMinutes: 30,
+                },
               },
             }
           : {
@@ -606,8 +627,8 @@ const favoriteMock = (
   },
 });
 
-describe('useRecipePreload — local-first favorite', () => {
-  it('writes the optimistic SavedRecipe (client id), savedDetails, and MySavedRecipes edge', async () => {
+describe('useRecipePreload — favorite (online only)', () => {
+  it('writes the server SavedRecipe, savedDetails, and MySavedRecipes edge', async () => {
     const cache = seedFavoriteCache();
     const { result } = renderHookWithApollo(() => useRecipePreload(), {
       cache,
@@ -616,7 +637,7 @@ describe('useRecipePreload — local-first favorite', () => {
           { id: 'backend-1', name: 'Test Recipe', imageUrl: null },
           true,
         ),
-        favoriteMock({ kind: 'queued' }),
+        favoriteMock({ kind: 'created', folder: 'Dinner', tags: ['quick'] }),
       ],
     });
 
@@ -630,7 +651,8 @@ describe('useRecipePreload — local-first favorite', () => {
 
     expect(saveResult).toEqual({ success: true, recipeId: 'backend-1' });
 
-    // (1) Optimistic SavedRecipe keyed by the CLIENT-MINTED id.
+    // (1) SavedRecipe normalized from the response, keyed by the id the client
+    //     minted and the server persisted.
     const savedRecipe = readSavedRecipe(cache);
     expect(savedRecipe).toEqual(
       expect.objectContaining({
@@ -641,18 +663,46 @@ describe('useRecipePreload — local-first favorite', () => {
       }),
     );
 
-    // (2) Recipe.savedDetails points at the optimistic SavedRecipe.
+    // (2) Recipe.savedDetails points at the SavedRecipe (this is what fills the
+    //     heart — the mutation response omits recipe.savedDetails).
     expect(readSavedDetails(cache)).toEqual(
       expect.objectContaining({ id: SAVED_RECIPE_ID }),
     );
 
-    // (3) MySavedRecipes edge added, keyed by the client id, totalCount bumped.
+    // (3) MySavedRecipes edge added, totalCount bumped.
     const conn = readSavedEdges(cache);
     expect(conn?.totalCount).toBe(1);
     expect(conn?.edges.map(e => e.node.id)).toContain(SAVED_RECIPE_ID);
   });
 
-  it('reverts all three cache writes when the server rejects', async () => {
+  it('toasts and fires nothing while the API is unreachable', async () => {
+    mockIsApiUnavailable.mockReturnValue(true);
+    const cache = seedFavoriteCache();
+    const { mock: upsert, fired: upsertFired } = recordUpsertMock();
+    const { result } = renderHookWithApollo(() => useRecipePreload(), {
+      cache,
+      operationMocks: [upsert, favoriteMock({ kind: 'created' })],
+    });
+
+    let saveResult!: { success: boolean; recipeId?: string };
+    await act(async () => {
+      saveResult = await result.current.saveRecipeToFavorites(
+        makeSpoonacularRecipe(),
+      );
+    });
+
+    expect(saveResult).toEqual({ success: false });
+    expect(mockToastError).toHaveBeenCalled();
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    // Neither the ingest nor the favorite left the device.
+    expect(upsertFired).toHaveLength(0);
+    expect(readSavedRecipe(cache)).toBeNull();
+    expect(readSavedEdges(cache)?.totalCount).toBe(0);
+    // The screen can gate the affordance up front.
+    expect(result.current.isApiUnavailable).toBe(true);
+  });
+
+  it('leaves the cache untouched when the server rejects', async () => {
     const cache = seedFavoriteCache();
     const { result } = renderHookWithApollo(() => useRecipePreload(), {
       cache,
@@ -674,7 +724,12 @@ describe('useRecipePreload — local-first favorite', () => {
 
     expect(saveResult).toEqual({ success: false });
 
-    // All three optimistic writes are undone.
+    // A refusal RESOLVES under errorPolicy:'all', so the guard against a refused
+    // favorite sticking is the classifyCreateResult check, not a throw.
+    expect(mockToastError).toHaveBeenCalled();
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+
+    // Nothing was written for the refused favorite.
     expect(readSavedRecipe(cache)).toBeNull();
     expect(readSavedDetails(cache) ?? null).toBeNull();
     const conn = readSavedEdges(cache);
@@ -682,10 +737,9 @@ describe('useRecipePreload — local-first favorite', () => {
     expect(conn?.edges).toHaveLength(0);
   });
 
-  it('does not duplicate the MySavedRecipes edge when the online response echoes the client id', async () => {
-    // The server persists the client-minted id, so the online `update` callback
-    // adds an edge with the SAME id the optimistic write already added — the
-    // callback's exists-by-id guard must skip it (no duplicate / no double count).
+  it('adds exactly one MySavedRecipes edge for a save', async () => {
+    // The `update` callback's exists-by-id guard is what keeps a re-favorite of
+    // an already-edged SavedRecipe from double-counting the connection.
     const cache = seedFavoriteCache();
     const { result } = renderHookWithApollo(() => useRecipePreload(), {
       cache,
@@ -709,12 +763,12 @@ describe('useRecipePreload — local-first favorite', () => {
     expect(conn?.totalCount).toBe(1);
   });
 
-  it('reconciles a divergent server id (recipe already favorited elsewhere)', async () => {
+  it('follows a divergent server id (recipe already favorited elsewhere)', async () => {
     // The recipe was already favorited on another device, so the server resolves
     // to an EXISTING SavedRecipe whose id differs from the client-minted one.
-    // The stale client-id entity must be evicted (its dangling edge drops) and
-    // savedDetails re-pointed — leaving exactly one server-id edge, no phantom.
-    // Uses the real cache policies so the self-healing connection read applies.
+    // Everything must follow the response: savedDetails points at the server row
+    // and the one edge carries the server id — nothing is written under the
+    // client id. Uses the real cache policies so the connection read applies.
     const cache = seedFavoriteCache(makeCache());
     const { result } = renderHookWithApollo(() => useRecipePreload(), {
       cache,
@@ -731,10 +785,10 @@ describe('useRecipePreload — local-first favorite', () => {
       await result.current.saveRecipeToFavorites(makeSpoonacularRecipe());
     });
 
-    // The optimistic client-id SavedRecipe is evicted.
+    // Nothing was written under the client-minted id.
     expect(readSavedRecipe(cache)).toBeNull();
 
-    // savedDetails points at the server row, not the dangling client id.
+    // savedDetails points at the server row.
     expect(readSavedDetails(cache)).toEqual(
       expect.objectContaining({ id: SERVER_SAVED_ID }),
     );

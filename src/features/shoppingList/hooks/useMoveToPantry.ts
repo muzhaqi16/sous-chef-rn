@@ -8,6 +8,7 @@ import { Telemetry } from '#/services/telemetry';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { errorService } from '#/services/errorService';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
+import { useWrite } from '#/apollo/write/useWrite';
 import {
   addToPantryItemsCache,
   removeFromPantryItemsCache,
@@ -177,6 +178,7 @@ export function useMoveToPantry({
   );
 
   const client = useApolloClient();
+  const { describe } = useWrite();
 
   /**
    * Move a shopping list item to the pantry (local-first).
@@ -233,6 +235,29 @@ export function useMoveToPantry({
       });
     }
 
+    // The builder above wrote the complete entity — completeness against every
+    // query that reads a PantryItem is its business, not the kit's — so this
+    // RECORDS the create rather than performing it. What it buys is the undo:
+    // a replay refused after a restart is withdrawn from the persisted intent,
+    // which takes the row out of the pantry's connection instead of leaving a
+    // bare evict behind. `reindex` states no membership because a create is
+    // inserted by the builder; the spec exists for the undo's sake.
+    const { context } = describe({
+      target: { __typename: 'PantryItem', id: pantryItemId },
+      lifecycle: 'create',
+      patch: {},
+      reindex: {
+        parent: { __typename: 'Pantry', id: input.pantryId },
+        field: 'itemsConnection',
+        decidableFilters: [],
+        after: {},
+        before: {},
+      },
+      // The move carries the quantities the person confirmed at the shelf, so
+      // a conflict re-sends them rather than discarding the move.
+      convergence: 'absolute',
+    });
+
     let result;
     try {
       result = await moveShoppingItemToPantry({
@@ -251,7 +276,7 @@ export function useMoveToPantry({
             notes: input.notes,
           },
         },
-        context: { localFirst: true },
+        context,
       });
     } catch (error) {
       errorService.reportError(error, {

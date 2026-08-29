@@ -52,6 +52,7 @@
       "homeMemberAlreadyExists": "User is already a member of this home"
     },
     "addItemFailed": "Failed to add item",
+    "queuedChangeOverwritten": "Someone else changed this first, so your change wasn't kept.",
     "updateItemFailed": "Failed to update item",
     "removeItemFailed": "Failed to remove item",
     "discardExpiredFailed": "Failed to discard expired items",

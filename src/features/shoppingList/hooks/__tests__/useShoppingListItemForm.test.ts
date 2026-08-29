@@ -626,4 +626,78 @@ describe('useShoppingListItemForm', () => {
       expect(result.current.parseQuantityInput()).toBeNull();
     });
   });
+
+  describe('buildDirtyPatch', () => {
+    // The entity-shaped twin of buildDirtyInput. Both describe the same edit,
+    // and every field they disagree about is a place the two can drift.
+    type Edit = Parameters<
+      ReturnType<typeof useShoppingListItemForm>['setFieldValue']
+    >;
+
+    const edited = (
+      initial: Parameters<typeof useShoppingListItemForm>[0],
+      edits: Edit[],
+    ) => {
+      const { result } = renderHook(() => useShoppingListItemForm(initial));
+      act(() => {
+        edits.forEach(([field, value]) => {
+          result.current.setFieldValue(field, value);
+        });
+      });
+      return result;
+    };
+
+    it('writes a normalized field as a ref, never an object literal', () => {
+      // The kit shallow-merges object values, so merging onto an existing
+      // `{ __ref }` leaves the ref in place and the change is lost on read.
+      const result = edited({ unit: 'kg' }, [
+        ['unit', 'g'],
+        ['selectedUnitId', 'unit-9'],
+      ]);
+
+      const patch = result.current.buildDirtyPatch();
+
+      expect(patch.unit).toEqual({ __ref: 'Unit:unit-9' });
+      expect(patch.unitName).toBe('g');
+    });
+
+    it('carries both the parsed number and the string the person typed', () => {
+      const result = edited({ quantityInput: '1' }, [
+        ['quantityInput', '1 1/4'],
+      ]);
+
+      const patch = result.current.buildDirtyPatch();
+
+      expect(patch.quantity).toBe(1.25);
+      expect(patch.quantityInput).toBe('1 1/4');
+    });
+
+    it('clears a brand locally but leaves a typed name to the server', () => {
+      // A name the server has to resolve (and may create) has no id to point
+      // at, so there is no honest local value to write.
+      const cleared = edited({ brand: 'Acme' }, [['brand', '']]);
+      expect(cleared.current.buildDirtyPatch().brand).toBeNull();
+
+      const typed = edited({ brand: '' }, [['brand', 'Newco']]);
+      expect(typed.current.buildDirtyPatch()).not.toHaveProperty('brand');
+    });
+
+    it('clears a net weight and its unit together', () => {
+      const result = edited({ netWeight: '500', netWeightUnitId: 'unit-1' }, [
+        ['netWeight', ''],
+      ]);
+
+      const patch = result.current.buildDirtyPatch();
+
+      expect(patch.netWeight).toBeNull();
+      expect(patch.netWeightUnit).toBeNull();
+    });
+
+    it('is empty when nothing was edited', () => {
+      const { result } = renderHook(() =>
+        useShoppingListItemForm({ itemName: 'Milk' }),
+      );
+      expect(result.current.buildDirtyPatch()).toEqual({});
+    });
+  });
 });

@@ -3,7 +3,6 @@ import { InMemoryCache } from '@apollo/client';
 import { useStore } from '#store';
 import { storage } from '#/storage/mmkv';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
-import { optimisticDataPersistence } from './offline/OptimisticDataPersistence';
 import { cancelTokenRefresh } from './links/tokenScheduler';
 import { disposeWebSocket } from './links/wsLink';
 import { registerSessionTeardown } from '#store/sessionTeardown';
@@ -151,7 +150,14 @@ export class LogoutCleanup {
   }
 
   /**
-   * Clear Apollo cache and persistent storage
+   * Clear Apollo cache and persistent storage.
+   *
+   * Deliberately does NOT touch the offline mutation queue. `queueManager`
+   * owns that: it deletes through `queueStore`, so the in-memory mirror and
+   * the on-disk blob cannot diverge, and it deletes only the signed-out user's
+   * entries rather than every account's on a shared device. Removing the keys
+   * here ran on EVERY session end — including a rejected refresh token — which
+   * destroyed unsynced writes that `session-termination` requires be kept.
    */
   private static async clearApolloCache(): Promise<void> {
     try {
@@ -168,16 +174,11 @@ export class LogoutCleanup {
       // Clear new cache persistence
       apolloCachePersistence.clear();
 
-      // Clear optimistic data persistence
-      optimisticDataPersistence.clearAll();
-
       // Clear storage keys (legacy cleanup)
       storage.remove('apollo-cache');
       storage.remove('navigation_state');
       storage.remove('apollo-client-cache');
       storage.remove('persisted-queries');
-      storage.remove('apollo-mutation-queue'); // Clear offline mutation queue
-      storage.remove('apollo-queue-current-user'); // Clear queue user ID
 
       // Get secure storage and clear auth-related data
       try {
@@ -186,15 +187,11 @@ export class LogoutCleanup {
         secureStorage.remove('apollo-cache');
         secureStorage.remove('navigation_state');
         secureStorage.remove('apollo-client-cache');
-        secureStorage.remove('apollo-mutation-queue');
-        secureStorage.remove('apollo-queue-current-user');
       } catch (storageError) {
         logger.warn('Failed to clear secure storage:', storageError);
       }
 
-      logger.info(
-        '🗑️ Apollo cache, navigation state, and mutation queue cleared',
-      );
+      logger.info('🗑️ Apollo cache and navigation state cleared');
     } catch (error) {
       logger.warn('Failed to clear Apollo cache:', error);
     }

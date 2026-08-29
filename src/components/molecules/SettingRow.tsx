@@ -142,14 +142,20 @@ export const SettingRow: React.FC<SettingRowProps> = ({
     <>
       <AppPressable
         testID={item.testID || `profile-${item.key}-button`}
-        onPress={item.type === 'info' ? undefined : handlePress}
+        onPress={
+          item.type === 'info' || item.disabled ? undefined : handlePress
+        }
         // Selection tick on rows that do something on press. Info rows aren't
         // pressable; switch rows toggle via the switch widget (a row-level
         // haptic there would double-fire with the switch's own feedback).
         haptic={
           item.type !== 'info' && item.type !== 'switch' && !item.disabled
         }
-        disabled={item.type === 'info'}
+        // `item.disabled` blocks the press, not just the announcement. It
+        // reached `accessibilityState` alone, so a row a caller had gated —
+        // the online-only profile edits, say — stayed fully pressable and
+        // undimmed, and the gate did nothing a sighted user could see or feel.
+        disabled={item.type === 'info' || item.disabled}
         android_ripple={item.type === 'info' ? null : RIPPLE.SUBTLE}
         style={[
           styles.rowWrapper,
@@ -194,6 +200,9 @@ export const SettingRow: React.FC<SettingRowProps> = ({
               testID={`profile-${item.key}-switch`}
               value={item.value as boolean}
               onValueChange={handleSwitchChange}
+              // A switch toggles through the widget, not the row, so the row's
+              // own disabled state does not reach it.
+              disabled={item.disabled}
             />
           )}
 

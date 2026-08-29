@@ -3,32 +3,34 @@
  * (local-first).
  *
  * Finishing a shopping trip is exactly the moment you're likely offline (at the
- * store, no signal), so both directions write the new status to the cache
- * PERMANENTLY before firing and queue the canonical mutation. The status is an
- * absolute set keyed by the list id, so a queued replay re-applies the same
- * state idempotently. A real rejection restores the pre-change snapshot and
- * surfaces an alert (there's no mutation onError, so alertIfRejected is the sole
- * alerter — it also covers a resolved transport error under errorPolicy 'all').
+ * store, no signal), so both directions describe the status change as a
+ * `WriteIntent`: the kit writes it to the cache PERMANENTLY before firing,
+ * derives the patch that undoes it, and carries both to the queue.
+ *
+ * Both writes are `absolute` — each carries the final state the person chose
+ * (completed, or active again), keyed by the list id — so a queued replay
+ * re-applies the same state rather than compounding, and a version conflict is
+ * resolved by re-sending against a fresh version.
+ *
+ * There is no mutation `onError` here, so `alertIfRejected` is the sole alerter:
+ * it covers the resolved union refusal AND the resolved transport error that
+ * `errorPolicy: 'all'` produces, both with localized copy.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import {
   CompleteShoppingListDocument,
   MarkShoppingListActiveDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  UseCompleteShoppingList_ListFragmentDoc,
-  type UseCompleteShoppingList_ListFragment,
-} from './useCompleteShoppingList.generated';
 import { ListStatus } from '#/graphql/generated/schemaTypes';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
+import { useWrite } from '#/apollo/write/useWrite';
 import { errorService } from '#/services/errorService';
 
 export function useCompleteShoppingList() {
   const { t } = useTranslation();
-  const client = useApolloClient();
+  const { apply } = useWrite();
   const [completeMutation, { loading: completing }] = useMutation(
     CompleteShoppingListDocument,
   );
@@ -36,52 +38,34 @@ export function useCompleteShoppingList() {
     MarkShoppingListActiveDocument,
   );
 
-  // Permanent write BEFORE firing (survives an offline/API-down queue where no
-  // response ever arrives), returning a revert that restores the snapshot.
-  const applyOptimistic = (
-    id: string,
-    patch: Partial<UseCompleteShoppingList_ListFragment>,
-    label: string,
-  ): (() => void) =>
-    applyOptimisticFragmentPatch(
-      client.cache,
-      { typename: 'ShoppingList', id },
-      {
-        fragment: UseCompleteShoppingList_ListFragmentDoc,
-        fragmentName: 'useCompleteShoppingList_list',
-      },
-      patch,
-      label,
-    );
-
   const completeList = async (
     id: string,
     totalCost?: number,
   ): Promise<boolean> => {
     const now = new Date().toISOString();
-    const revert = applyOptimistic(
-      id,
-      {
+    const { context, revert } = apply({
+      target: { __typename: 'ShoppingList', id },
+      patch: {
         status: ListStatus.Completed,
         isCompleted: true,
         completedShopDate: now,
+        // Bumped so watchers of the list re-render on the local write alone.
+        updatedAt: now,
       },
-      'Complete Shopping List',
-    );
+      convergence: 'absolute',
+    });
+
+    // Built above the try: a value block (`&&`, `??`, `?.`, a ternary) inside a
+    // try body bails the React Compiler out of the whole hook.
+    const input = {
+      id,
+      completedShopDate: now,
+      ...(totalCost !== undefined && { totalCost }),
+    };
 
     let result;
-    const completeMutationOptions = {
-      variables: {
-        input: {
-          id,
-          completedShopDate: now,
-          ...(totalCost !== undefined && { totalCost }),
-        },
-      },
-      context: { localFirst: true },
-    };
     try {
-      result = await completeMutation(completeMutationOptions);
+      result = await completeMutation({ variables: { input }, context });
     } catch (error) {
       errorService.reportError(error, {
         operation: 'Complete Shopping List error:',
@@ -95,29 +79,34 @@ export function useCompleteShoppingList() {
       return false;
     }
     if (alertIfRejected(result, t('shoppingListScreens.failedToComplete'))) {
+      // Refused on the spot, so it never entered the queue and the queue's
+      // withdrawal will never see it. A queued write refused on a later replay
+      // is undone from its persisted intent instead.
       revert();
       return false;
     }
-    // created (server) or queued (offline) — keep the optimistic write.
+    // Applied (server) or queued (offline) — keep the local write.
     return true;
   };
 
   const reactivateList = async (id: string): Promise<boolean> => {
-    const revert = applyOptimistic(
-      id,
-      {
+    const now = new Date().toISOString();
+    const { context, revert } = apply({
+      target: { __typename: 'ShoppingList', id },
+      patch: {
         status: ListStatus.Active,
         isCompleted: false,
         completedShopDate: null,
+        updatedAt: now,
       },
-      'Reactivate Shopping List',
-    );
+      convergence: 'absolute',
+    });
 
     let result;
     try {
       result = await reactivateMutation({
         variables: { input: { id } },
-        context: { localFirst: true },
+        context,
       });
     } catch (error) {
       errorService.reportError(error, {

@@ -23,12 +23,15 @@ import {
 import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { useWrite } from '#/apollo/write/useWrite';
+import { ROOT_PARENT } from '#/apollo/write/writeIntent';
 import { useUser } from '#store/useAppStore';
 import type { CreateShoppingListInput } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 
 export function useCreateShoppingList(fallbackErrorMessage: string) {
   const client = useApolloClient();
+  const { describe } = useWrite();
   const user = useUser();
 
   const [mutate, { loading }] = useMutation(CreateShoppingListDocument, {
@@ -66,11 +69,35 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
       }
     }
 
+    // Records the create so the QUEUE can undo it: a replay refused after a
+    // restart used to be a blind evict, which left the new list's edge dangling
+    // in the overview. The overview is a ROOT-QUERY connection, which is why
+    // `parent` is the root here rather than an entity.
+    //
+    // The builder above still owns the local write, and the synchronous failure
+    // path below still uses `revertOptimisticShoppingList` — it undoes more
+    // than the entity and its overview edge (the empty `itemsConnection`
+    // variants, the ownership row), and none of that is expressible as a
+    // reindex.
+    const { context } = describe({
+      target: { __typename: 'ShoppingList', id },
+      lifecycle: 'create',
+      patch: {},
+      reindex: {
+        parent: ROOT_PARENT,
+        field: 'shoppingLists',
+        decidableFilters: [],
+        after: {},
+        before: {},
+      },
+      convergence: 'absolute',
+    });
+
     let result;
     try {
       result = await mutate({
         variables: { input: { ...input, id } },
-        context: { localFirst: true },
+        context,
       });
     } catch (error) {
       errorService.reportError(error, {

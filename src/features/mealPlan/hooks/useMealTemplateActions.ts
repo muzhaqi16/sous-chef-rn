@@ -1,14 +1,10 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useMutation } from '@apollo/client/react';
 import {
   CreateMealPlanFromTemplateDocument,
   CreateTemplateFromMealPlanDocument,
   DeleteMealTemplateDocument,
   DuplicateTemplateDocument,
 } from '#features/mealPlan/graphql/mealTemplate.generated';
-import {
-  MealTemplateDisplayFragmentDoc,
-  type MealTemplateDisplayFragment,
-} from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import {
   type CreateMealPlanFromTemplateInput,
   type CreateTemplateFromMealPlanInput,
@@ -40,7 +36,6 @@ const removeFromMealTemplates = createRemoveFromQueryConnectionUpdater(
 );
 
 export function useMealTemplateActions() {
-  const client = useApolloClient();
   const isApiUnavailable = useIsApiUnavailable();
 
   const [createFromTemplateMutation, { loading: creatingFromTemplate }] =
@@ -79,11 +74,19 @@ export function useMealTemplateActions() {
     },
   );
 
-  // The optimistic remove + revert live in deleteTemplate (local-first), so this
-  // mutation has no update callback — only the transport-error reporter.
   const [deleteTemplateMutation, { loading: deleting }] = useMutation(
     DeleteMealTemplateDocument,
     {
+      // Runs on the server's response, not ahead of it: the row leaves the
+      // browser sheet's connections once the delete is confirmed.
+      update: (cache, { data }) => {
+        const payload = data?.deleteMealTemplate;
+        if (payload?.__typename === 'DeleteMealTemplatePayload') {
+          removeFromMealTemplates(cache, payload.mealTemplate.id, {
+            evictItem: true,
+          });
+        }
+      },
       onError: error => {
         handleMutationError(error, { operation: 'Delete Template' });
       },
@@ -163,68 +166,21 @@ export function useMealTemplateActions() {
   };
 
   const deleteTemplate = async (id: string) => {
-    // Snapshot first so a server rejection can restore the template card.
-    const cacheId = client.cache.identify({ __typename: 'MealTemplate', id });
-    const snapshot = cacheId
-      ? client.cache.readFragment<MealTemplateDisplayFragment>({
-          id: cacheId,
-          fragment: MealTemplateDisplayFragmentDoc,
-          fragmentName: 'MealTemplateDisplay',
-        })
-      : null;
-
-    // Local-first: remove from the cache BEFORE firing, so the deletion shows
-    // immediately and survives an offline queue. Replaying the delete for an
-    // already-deleted template is idempotent on the API — it resolves to a
-    // success payload, so the queue drains the entry without a spurious
-    // sync-failed toast. Mirrors deleteMealPlan.
-    try {
-      removeFromMealTemplates(client.cache, id, { evictItem: true });
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Delete Template (optimistic)',
-      });
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
     }
-
     let result;
     try {
-      result = await deleteTemplateMutation({
-        variables: { input: { id } },
-        context: { localFirst: true },
-      });
+      result = await deleteTemplateMutation({ variables: { input: { id } } });
     } catch (error) {
       errorService.reportError(error, {
         operation: 'Delete meal template error:',
       });
     }
 
-    const outcome = classifyCreateResult(result);
+    if (classifyCreateResult(result) === 'rejected') return false;
 
-    if (outcome === 'rejected') {
-      if (snapshot && cacheId) {
-        try {
-          client.cache.writeFragment({
-            id: cacheId,
-            fragment: MealTemplateDisplayFragmentDoc,
-            fragmentName: 'MealTemplateDisplay',
-            data: snapshot,
-          });
-          addToMealTemplates(client.cache, snapshot, {
-            position: 'start',
-            skipStoreField: skipUnmatchedFilterVariants({
-              category: snapshot.category,
-            }),
-          });
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Restore refused Template delete',
-          });
-        }
-      }
-      return false;
-    }
-
-    // 'created' (online) or 'queued' (offline) — both keep the optimistic remove.
     toastService.success(t('mealTemplateActions.templateDeleted'));
     return true;
   };

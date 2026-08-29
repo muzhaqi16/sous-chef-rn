@@ -1,8 +1,16 @@
+import { gql } from '@apollo/client';
+import type { DocumentNode } from 'graphql';
 import { client } from '../client';
 import type { OperationVariables, TypedDocumentNode } from '@apollo/client';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 import { queueStore } from './queueStore';
+import { GetOfflineWritePolicyDocument } from './offlineWritePolicy.generated';
+import {
+  entryIntents,
+  primaryQueuedEntityId,
+  queuedEntityIds,
+} from './queuedEntityIds';
 import {
   QueuedMutation,
   QueueStatus,
@@ -23,7 +31,6 @@ import {
 import { extractMutationPayload } from '#/utils/errors/mutationPayload';
 import { logger } from '#/utils/environment';
 import { Telemetry } from '#/services/telemetry';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { registerSessionTeardown } from '#store/sessionTeardown';
 
 /**
@@ -33,6 +40,53 @@ const DEFAULT_CONFIG: QueueConfig = {
   retryDelayMs: 1000,
   processingTimeoutMs: 30000,
 };
+
+/**
+ * How many times one entry may conflict before the queue stops re-sending it
+ * and tells the person instead. A row being edited from another device faster
+ * than this queue drains is not converging, and retrying forever holds up
+ * everything behind it.
+ */
+const MAX_CONFLICT_RETRIES = 3;
+
+/**
+ * How many drains one entry may defer before it stops holding up the queue.
+ *
+ * A deferral is meant to be transient — the API is down, a rate limit is in
+ * force — so an entry that keeps deferring is not converging, and nothing else
+ * bounded it: the drain broke on the first defer and the next drain started at
+ * the same entry, with only the 90-day expiry or a sign-out as an escape.
+ * A starting value, not a measured one; `offline_queue_depth` and
+ * `offline_queue_oldest_age_ms` are what tune it.
+ */
+const MAX_DEFERRALS = 10;
+
+/**
+ * Reads just the optimistic-lock version off an entity of a known typename.
+ *
+ * Built per typename rather than declared once `on Node`, because this schema
+ * has NO `Node` interface — a fragment on a type that does not exist matches
+ * nothing, so the read came back as `{ __typename }` with no `version` and
+ * every conflict silently fell through to withdrawal. The whole
+ * refresh-and-re-send path was dead, which is invisible in a test that stubs
+ * `readFragment` to hand back a version the real cache would never have given.
+ *
+ * Cached, because a drain can hit many entries of the same type and `gql`
+ * parsing is not free.
+ */
+const versionFragments = new Map<string, DocumentNode>();
+
+function entityVersionFragment(typename: string): DocumentNode {
+  const cached = versionFragments.get(typename);
+  if (cached) return cached;
+  const fragment = gql`
+    fragment QueuedEntityVersion on ${typename} {
+      version
+    }
+  `;
+  versionFragments.set(typename, fragment);
+  return fragment;
+}
 
 /**
  * Queue Manager - Processes offline mutations with auth-aware logic
@@ -50,6 +104,8 @@ export class QueueManager {
   private processingPromise: Promise<void> | null = null;
   private failureHandler: FailureHandler | null = null;
   private drainTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Whether this session has read the server's replay horizon yet. */
+  private policyRead = false;
 
   constructor(config: Partial<QueueConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -136,6 +192,34 @@ export class QueueManager {
   }
 
   /**
+   * Adopt the server's replay horizon, once per session.
+   *
+   * Failure is deliberately silent and non-blocking: the queue keeps its
+   * fallback and drains anyway. A drain that refused to run because a policy
+   * read failed would strand exactly the writes it exists to deliver.
+   */
+  private async readReplayHorizon(): Promise<void> {
+    if (this.policyRead) return;
+    this.policyRead = true;
+
+    let days: number | undefined;
+    try {
+      const result = await client.query({
+        query: GetOfflineWritePolicyDocument,
+        fetchPolicy: 'network-only',
+      });
+      days = result.data?.offlineWritePolicy?.replayHorizonDays;
+    } catch (error) {
+      logger.debug('Queue: could not read the replay horizon', error);
+    }
+
+    if (typeof days === 'number') {
+      queueStore.setReplayHorizonDays(days);
+      logger.info(`📅 Queue: replay horizon is ${days} day(s)`);
+    }
+  }
+
+  /**
    * Replay all pending mutations strictly in insertion order.
    *
    * The queue is append-only from a single user's actions, so insertion order
@@ -145,6 +229,13 @@ export class QueueManager {
    * dependency analysis needed — FIFO is correct by construction.
    */
   private async _processQueueInternal(userId: string): Promise<void> {
+    // Read once per session, and only where a reachable server has already
+    // been established. Deliberately INSIDE the drain rather than before it:
+    // `processQueue` returns early when a drain is already running, and an
+    // await between that check and the `isProcessing` latch would let a second
+    // caller slip past while the first was still reading the policy.
+    await this.readReplayHorizon();
+
     // Validate token before processing
     const hasValidToken = await this.validateTokenBeforeReplay();
     if (!hasValidToken) {
@@ -160,7 +251,21 @@ export class QueueManager {
     // Never replay past the server's 90-day idempotency-dedup horizon — the
     // dedup record is pruned by then, so a replay would double-apply instead
     // of classifying as IDEMPOTENT_REPLAY. Expired entries surface as FAILED.
-    queueStore.expireStalePending(userId);
+    // An expired entry is one the queue has decided never to send. Its local
+    // change is on screen with nothing left that would ever make it true, so it
+    // takes the same withdrawal as any other abandoned write — the person is
+    // told, rather than trusting a change that silently never synced.
+    for (const expired of queueStore.expireStalePending(userId)) {
+      this.invokeFailureHandler(
+        expired,
+        expired.lastError ?? {
+          type: 'unknown',
+          message: 'Queued change expired before it could be sent',
+          timestamp: Date.now(),
+          retryable: false,
+        },
+      );
+    }
 
     this.reconcileDiscardedEntries();
 
@@ -189,7 +294,19 @@ export class QueueManager {
 
     let succeeded = 0;
     let failed = 0;
+    // Client ids whose write could not be delivered this drain. Anything
+    // touching one of them waits, because it may be the create that has to
+    // land first.
+    const blocked = new Set<string>();
     for (const mutation of mutations) {
+      const ids = this.getAllEntityIds(mutation);
+      if (ids.some(id => blocked.has(id))) {
+        // Its dependency is still undelivered, so this cannot land either.
+        // Stays PENDING for the next drain, in its original position.
+        for (const id of ids) blocked.add(id);
+        continue;
+      }
+
       // Stop replaying the moment the server becomes unreachable — the rest
       // of the queue stays PENDING for the next drain.
       if (isApiUnavailable(useStore.getState())) {
@@ -202,15 +319,20 @@ export class QueueManager {
         if (result.success) succeeded++;
         else failed++;
 
-        // A transient defer left this mutation PENDING. Stop the drain so a
-        // later mutation (which may depend on this one) can't replay ahead of
-        // it — the whole tail stays PENDING for the next drain, preserving
-        // FIFO order. Mirrors the isApiUnavailable break above.
+        // A transient defer left this mutation PENDING. Hold back the writes
+        // that DEPEND on it — a write to an entity must never be sent before
+        // the write that created it — but let unrelated entities through.
+        //
+        // Breaking the whole drain here was the head-of-line problem: FIFO is
+        // global, so one stuck pantry write held back every shopping-list write
+        // behind it, for as long as the condition lasted. Causal order only
+        // needs the entries that actually share an entity.
         if (result.deferred) {
+          for (const id of this.getAllEntityIds(mutation)) blocked.add(id);
           logger.info(
-            '🕓 Queue: Mutation deferred (transient), pausing drain to preserve order',
+            `🕓 Queue: ${mutation.operationName} deferred — holding back its dependents, continuing with the rest`,
           );
-          break;
+          continue;
         }
       } catch (error) {
         failed++;
@@ -244,18 +366,14 @@ export class QueueManager {
       // Execute mutation with timeout
       const result = await this.executeWithTimeout(mutation);
 
-      // Success - remove from queue
+      // Success - remove from queue. The counters go with it: they bound a run
+      // of failures, and this entry's run is over.
       queueStore.updateMutation(mutationId, {
         status: QueueStatus.SUCCESS,
         processedAt: Date.now(),
+        deferCount: 0,
+        conflictCount: 0,
       });
-
-      // The change is on the server now (plain success or IDEMPOTENT_REPLAY
-      // convergence both reach here) — drop the persisted optimistic fields
-      // for the touched entities so restoration can't re-apply stale values
-      // over fresher server state on later mounts. Entries for still-PENDING
-      // mutations are untouched.
-      this.clearPersistedOptimisticFields(mutation);
 
       // Remove after short delay (allows for reconciliation)
       setTimeout(() => queueStore.removeMutation(mutationId), 5000);
@@ -284,12 +402,9 @@ export class QueueManager {
   private async executeMutation(
     mutation: QueuedMutation,
   ): Promise<Record<string, unknown> | undefined> {
-    const { syncMutation, syncVariables } = convertToSyncMutation(
-      mutation,
-      client.cache,
-    );
+    const { syncMutation, syncVariables } = convertToSyncMutation(mutation);
 
-    logger.info(`🔄 Queue: Replaying ${mutation.operationName} via sync`);
+    logger.info(`🔄 Queue: Replaying ${mutation.operationName}`);
 
     // A replay's payload field name varies per queued operation, so its shape
     // is only knowable structurally. Apollo 4.2's modern signatures reject a
@@ -349,19 +464,150 @@ export class QueueManager {
       );
     }
 
-    // Server wins on conflict — the server's version already rides back in the
-    // response; just surface it for diagnostics.
+    // The server accepted this write's ARRIVAL but kept its own value for the
+    // field: it caught the version conflict and answered with a success payload
+    // carrying `converged: true` plus the conflict. So the entry is genuinely
+    // done — re-sending is wrong, the payload's `item` has already normalized
+    // the authoritative state into the cache, and the cache is correct.
+    //
+    // What was missing is the person. This dequeued as a plain success, so a
+    // shopping row or pantry quantity edited offline silently snapped back to
+    // another device's value with no message at all — the only trace being a
+    // counter in Mimir. Report it WITHOUT evicting: the cache already holds the
+    // truth, so only the signal is owed.
     if (payload?.conflict) {
       logger.warn(
-        `⚠️ Queue: Conflict detected for ${mutation.operationName}:`,
+        `⚠️ Queue: ${mutation.operationName} overwritten by a newer change:`,
         payload.conflict.message,
       );
       Telemetry.increment('offline_queue_conflicts_total', 1, {
         operation: mutation.operationName,
       });
+      this.reportOverwritten(mutation);
     }
 
     return result.data;
+  }
+
+  /**
+   * Tell the person a queued change was overwritten, without withdrawing it.
+   *
+   * The server already resolved this one in its own favour and returned its
+   * state, which Apollo has normalized — so the cache is right and an evict
+   * would throw away the truth rather than a stale value. `entityType`/
+   * `entityId` are still resolved so the handler can point at the row.
+   */
+  private reportOverwritten(mutation: QueuedMutation): void {
+    this.invokeFailureHandler(mutation, {
+      type: 'conflict',
+      message: 'Queued change was overwritten by a newer change',
+      code: 'OVERWRITTEN',
+      timestamp: Date.now(),
+      retryable: false,
+    });
+  }
+
+  /**
+   * A queued write the server declined because the entity has changed since.
+   *
+   * Split by what the write's value MEANS, which is the one thing that cannot
+   * be read off the input:
+   *
+   * - **absolute** — the input carries a final value the person typed as a
+   *   fact. Refresh the version from cache and re-send: last-writer-wins is
+   *   what they meant. Safe because the API rolls the idempotency claim back
+   *   with the conflict, so the same key re-sent against a fresh version
+   *   applies exactly once.
+   * - **relative** — the input carries a change to whatever is there.
+   *   Re-sending against a refreshed version would apply it a SECOND time, so
+   *   the write is withdrawn and the person told their change was overwritten.
+   *
+   * Bounded either way: a row under constant concurrent edit withdraws rather
+   * than deferring forever.
+   */
+  private handleVersionConflict(
+    mutation: QueuedMutation,
+    queueError: QueueError,
+  ): ProcessingResult {
+    const conflicts = (mutation.conflictCount ?? 0) + 1;
+    const refreshed =
+      mutation.convergence === 'absolute' && conflicts <= MAX_CONFLICT_RETRIES
+        ? this.refreshQueuedVersion(mutation)
+        : null;
+
+    if (refreshed != null) {
+      queueStore.updateMutation(mutation.id, {
+        status: QueueStatus.PENDING,
+        retryCount: 0,
+        conflictCount: conflicts,
+        variables: refreshed,
+        lastError: queueError,
+      });
+      logger.info(
+        `🔀 Queue: ${mutation.operationName} conflicted — version refreshed, re-queued (attempt ${conflicts})`,
+      );
+      Telemetry.increment('offline_queue_conflicts_total', 1, {
+        operation: mutation.operationName,
+      });
+      return {
+        success: false,
+        deferred: true,
+        mutationId: mutation.id,
+        error: queueError,
+      };
+    }
+
+    // Either the value is relative (re-sending would double-apply), the row is
+    // under constant edit, or the entity is no longer cached to read a version
+    // from. The server's state stands; the person is told it did.
+    logger.warn(
+      `🔀 Queue: ${mutation.operationName} overwritten by a newer change — withdrawing`,
+    );
+    Telemetry.increment('offline_queue_conflicts_total', 1, {
+      operation: mutation.operationName,
+    });
+    queueStore.markMutationFailed(mutation.id, queueError);
+    this.invokeFailureHandler(mutation, queueError);
+    return { success: false, mutationId: mutation.id, error: queueError };
+  }
+
+  /**
+   * The queued variables with `input.version` refreshed from the cache, or null
+   * when there is no fresher version to send.
+   *
+   * The stale version is the whole cause: hooks capture it when the person taps
+   * and nothing updates it before the replay, so two offline edits to one row
+   * send the same number twice. Reading it back from the normalized cache —
+   * which the failed replay's own response has just updated — is what makes the
+   * re-send land.
+   */
+  private refreshQueuedVersion(
+    mutation: QueuedMutation,
+  ): OperationVariables | null {
+    const input = mutation.variables?.input;
+    if (!input || typeof input !== 'object') return null;
+    const staleVersion = (input as { version?: unknown }).version;
+    if (typeof staleVersion !== 'number') return null;
+
+    const entityId = this.getEntityId(mutation);
+    if (!entityId) return null;
+    const entityType = this.findCachedTypename(
+      entityId,
+      this.extractCacheSnapshot(),
+    );
+    if (!entityType) return null;
+
+    const cached = client.cache.readFragment<{ version?: number }>({
+      id: `${entityType}:${entityId}`,
+      fragment: entityVersionFragment(entityType),
+    });
+    const current = cached?.version;
+    if (typeof current !== 'number' || current === staleVersion) return null;
+
+    return {
+      ...mutation.variables,
+      input: { ...(input as object), version: current },
+    };
   }
 
   /**
@@ -372,6 +618,12 @@ export class QueueManager {
     error: unknown,
   ): Promise<ProcessingResult> {
     const queueError = classifyError(error);
+
+    // The entity moved on since this write was made. Neither a retry nor a
+    // withdrawal is right on its own — see handleVersionConflict.
+    if (queueError.type === 'conflict') {
+      return this.handleVersionConflict(mutation, queueError);
+    }
 
     // Auth errors: force ONE token refresh, then retry through the same
     // bounded counter as every other retryable error. (A dedicated auth path
@@ -437,12 +689,32 @@ export class QueueManager {
     // queued change must not be lost just because the API was unreachable for a
     // while. (Reset retryCount so the next drain gets a fresh attempt.)
     if (queueError.type === 'network' || queueError.type === 'server') {
+      const deferrals = (mutation.deferCount ?? 0) + 1;
+
+      // A deferral is supposed to be transient. One that keeps recurring is not
+      // converging, and it holds the whole queue behind it — so past the bound
+      // the entry stops being the head and is resolved like any other write the
+      // queue has given up on, with the person told.
+      if (deferrals > MAX_DEFERRALS) {
+        logger.warn(
+          `🛑 Queue: ${mutation.id} deferred ${MAX_DEFERRALS} times — giving up so the queue can drain`,
+        );
+        Telemetry.increment('offline_queue_permanent_failures_total', 1, {
+          operation: mutation.operationName,
+          error_type: 'deferral_bound',
+        });
+        queueStore.markMutationFailed(mutation.id, queueError);
+        this.invokeFailureHandler(mutation, queueError);
+        return { success: false, mutationId: mutation.id, error: queueError };
+      }
+
       queueStore.updateMutation(mutation.id, {
         status: QueueStatus.PENDING,
         retryCount: 0,
+        deferCount: deferrals,
       });
       logger.info(
-        `🕓 Queue: ${mutation.id} deferred (transient ${queueError.type}) — stays PENDING for next drain`,
+        `🕓 Queue: ${mutation.id} deferred (transient ${queueError.type}, ${deferrals}/${MAX_DEFERRALS}) — stays PENDING for next drain`,
       );
       return {
         success: false,
@@ -520,22 +792,7 @@ export class QueueManager {
    * handler's evict target.
    */
   private getEntityId(mutation: QueuedMutation): string | null {
-    const vars = mutation.variables ?? {};
-    return (
-      vars.id ??
-      vars.input?.id ??
-      // Single adds ride the batch AddItemsToShoppingListInput shape — the
-      // client-minted row id lives on the one queued item.
-      vars.input?.items?.[0]?.id ??
-      vars.input?.pantryItemId ??
-      vars.input?.itemId ??
-      vars.itemId ??
-      vars.input?.recipeId ??
-      vars.input?.mealPlanId ??
-      vars.input?.batchId ??
-      vars.clientId ??
-      null
-    );
+    return primaryQueuedEntityId(mutation.variables);
   }
 
   /**
@@ -567,37 +824,7 @@ export class QueueManager {
    * adds carry one client-minted id per row).
    */
   private getAllEntityIds(mutation: QueuedMutation): string[] {
-    const ids = new Set<string>();
-    const single = this.getEntityId(mutation);
-    if (single) ids.add(single);
-
-    const items = mutation.variables?.input?.items;
-    if (Array.isArray(items)) {
-      for (const item of items) {
-        if (typeof item?.id === 'string' && item.id) ids.add(item.id);
-      }
-    }
-    return [...ids];
-  }
-
-  /**
-   * Drop persisted optimistic field values for every entity a landed mutation
-   * touched. Typename comes off the normalized cache the same way the failure
-   * pipeline resolves its evict target; an uncached entity has nothing to
-   * restore, so skipping it is correct.
-   */
-  private clearPersistedOptimisticFields(mutation: QueuedMutation): void {
-    const entityIds = this.getAllEntityIds(mutation);
-    if (entityIds.length === 0) return;
-    // One cache snapshot for every entity this mutation touched — a batch
-    // create scans the single normalized map instead of re-extracting it per id.
-    const snapshot = this.extractCacheSnapshot();
-    for (const entityId of entityIds) {
-      const entityType = this.findCachedTypename(entityId, snapshot);
-      if (entityType) {
-        optimisticDataPersistence.clearEntity(entityType, entityId);
-      }
-    }
+    return queuedEntityIds(mutation.variables);
   }
 
   /**
@@ -685,6 +912,7 @@ export class QueueManager {
       entityType,
       entityId,
       error,
+      intents: entryIntents(mutation),
     };
 
     try {
@@ -825,4 +1053,9 @@ export const queueManager = new QueueManager();
 // deliberate sign-out path).
 registerSessionTeardown('offline-queue', () => {
   queueManager.cancelPendingDrain();
+  // Drop the write-through mirror too. It is populated lazily, so a session end
+  // can otherwise leave RAM holding entries whose durability was decided
+  // elsewhere — and a later write would persist that stale view back to disk.
+  // Reading from disk on the next access is the only way the two cannot drift.
+  queueStore.invalidateCache();
 });

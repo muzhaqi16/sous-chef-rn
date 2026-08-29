@@ -1,4 +1,5 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
+import { generateEntityId } from '#/utils/generateEntityId';
 import {
   UseShoppingListActions_ItemFragmentDoc,
   type UseShoppingListActions_ItemFragment,
@@ -9,8 +10,9 @@ import {
   handleMutationError,
   versionConflictCheck,
 } from '#/utils/errorHandlers';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import { setCachedFields } from '#/apollo/utils/cacheUpdaters';
+import { useWrite } from '#/apollo/write/useWrite';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { useHaptic } from '#hooks/haptic/useHaptic';
 import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
@@ -30,37 +32,6 @@ interface UseShoppingListActionsOptions {
 }
 
 // --- Module-level helpers (outside hook body for React Compiler) ---
-
-async function executeQuantityUpdate(
-  updateFn: () => Promise<{ error?: unknown } | undefined>,
-  revertCache: () => void,
-  clearPersistence: () => void,
-  refetchItems: () => Promise<unknown>,
-): Promise<void> {
-  const fail = (error: unknown) => {
-    revertCache();
-    clearPersistence();
-
-    handleMutationError(error, {
-      operation: 'Update Quantity',
-      checks: [versionConflictCheck({ onRefresh: () => refetchItems() })],
-    });
-  };
-
-  let result;
-  try {
-    result = await updateFn();
-  } catch (error) {
-    fail(error);
-    return;
-  }
-
-  // `errorPolicy: 'all'` RESOLVES a failed mutation with `error` set instead of
-  // rejecting, so the catch above only sees a link-level throw. Both outcomes
-  // must revert the optimistic quantity — without this a refused update stayed
-  // on screen with no message and no version-conflict refresh.
-  if (result?.error) fail(result.error);
-}
 
 async function executeTogglePurchase(
   haptic: { selection: () => void; error: () => void },
@@ -176,14 +147,12 @@ export function useShoppingListActions({
 }: UseShoppingListActionsOptions) {
   const client = useApolloClient();
   const haptic = useHaptic();
+  const { apply } = useWrite();
 
-  const [updateQuantity] = useMutation(
-    UpdateShoppingListItemQuantityDocument,
-    {},
-  );
+  const [updateQuantity] = useMutation(UpdateShoppingListItemQuantityDocument);
 
   /**
-   * Move an item's quantity by a delta, optimistically.
+   * Move an item's quantity by a delta, locally first.
    *
    * Increment and decrement were two copies of this, identical but for the
    * arithmetic and the word in the warning — which is how they came to
@@ -196,18 +165,11 @@ export function useShoppingListActions({
    * jump from the 0 on screen straight to 2.
    */
   const adjustQuantity = async (itemId: string, delta: number) => {
-    const cacheId = client.cache.identify({
-      __typename: 'ShoppingListItem',
-      id: itemId,
-    });
-    if (!cacheId) {
-      logger.warn('Item not in cache, cannot adjust quantity:', itemId);
-      return;
-    }
-
+    // The cached row is the only source for both halves of the write: the
+    // quantity the arithmetic starts from, and the version the server checks.
     const cachedItem = client.readFragment<UseShoppingListActions_ItemFragment>(
       {
-        id: cacheId,
+        id: `ShoppingListItem:${itemId}`,
         fragment: UseShoppingListActions_ItemFragmentDoc,
         fragmentName: 'useShoppingListActions_item',
       },
@@ -221,53 +183,62 @@ export function useShoppingListActions({
     // the floor is 1 in both directions rather than only on the way down.
     const newQuantity = Math.max(1, (cachedItem.quantity ?? 0) + delta);
 
-    setCachedFields(client.cache, 'ShoppingListItem', itemId, {
-      quantity: newQuantity,
+    // The mutation carries the RESULT of the arithmetic, not the delta, so a
+    // replay writes the same number twice rather than adding twice, and a
+    // version conflict is resolved by re-sending against a fresh version.
+    const { context, revert } = apply({
+      target: { __typename: 'ShoppingListItem', id: itemId },
+      patch: { quantity: newQuantity },
+      convergence: 'absolute',
     });
 
-    optimisticDataPersistence.save(
-      'ShoppingListItem',
-      itemId,
-      'quantity',
-      newQuantity,
-    );
+    const fail = (error: unknown) => {
+      // Undoes the local write from the intent's own inverse, so a concurrent
+      // change to the same field is not clobbered by a restored snapshot.
+      revert();
+      handleMutationError(error, {
+        operation: 'Update Quantity',
+        checks: [versionConflictCheck({ onRefresh: () => refetchItems() })],
+      });
+    };
 
-    await executeQuantityUpdate(
-      async () => {
-        return await updateQuantity({
-          variables: {
-            input: {
-              itemId,
-              quantity: newQuantity.toString(),
-              version: cachedItem.version,
-            },
+    let result;
+    try {
+      result = await updateQuantity({
+        variables: {
+          input: {
+            itemId,
+            quantity: newQuantity.toString(),
+            version: cachedItem.version,
+            // Claimed by the server BEFORE its version check, so a queued
+            // replay converges instead of being refused on a stale version.
+            idempotencyKey: generateEntityId(),
           },
-          // Local-first: queue on an API-down-while-online failure (absolute
-          // quantity → idempotent on replay via SyncShoppingListItem).
-          context: { localFirst: true },
-          onCompleted: data => {
-            const payload = data?.updateShoppingListItemQuantity;
-            if (
-              payload?.__typename === 'UpdateShoppingListItemQuantityPayload'
-            ) {
-              optimisticDataPersistence.clear(
-                'ShoppingListItem',
-                payload.shoppingListItem.id,
-                'quantity',
-              );
-            }
-          },
-        });
-      },
-      () => {
-        setCachedFields(client.cache, 'ShoppingListItem', itemId, {
-          quantity: cachedItem.quantity,
-        });
-      },
-      () =>
-        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantity'),
-      refetchItems,
-    );
+        },
+        context,
+      });
+    } catch (error) {
+      fail(error);
+      return;
+    }
+
+    // `errorPolicy: 'all'` RESOLVES a failed mutation with `error` set instead
+    // of rejecting, so the catch above only sees a link-level throw. Both
+    // outcomes must undo the local quantity — without this a refused update
+    // stayed on screen with no message and no version-conflict refresh.
+    if (result.error) {
+      fail(result.error);
+      return;
+    }
+
+    // A union refusal (ValidationError / ConflictError) arrives as DATA with no
+    // `error`, so `onError` never fires and the branch above cannot see it. A
+    // queued write classifies as `'queued'` and keeps the local quantity; the
+    // queue owns its undo, including after a restart.
+    if (classifyCreateResult(result) === 'rejected') {
+      revert();
+      alertRejectedMutation(result, t('errors.updateItemFailed'));
+    }
   };
 
   const handleIncrementQuantity = (itemId: string) => adjustQuantity(itemId, 1);
@@ -286,7 +257,7 @@ export function useShoppingListActions({
     await executeDeleteItem(haptic, removeItem, itemId);
   };
 
-  // Clear items handler - uses optimistic cache clearing for instant UI
+  // Clear items handler — online-only; the rows go on the server's response.
   const { clearItems } = useClearShoppingListItems({
     listId: currentListId,
     unpurchasedItems,

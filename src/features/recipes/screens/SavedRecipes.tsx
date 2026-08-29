@@ -21,10 +21,14 @@ import {
 import { useRecipeFolders } from '#features/recipes/hooks/useRecipeFolders';
 import { useRecipeTags } from '#features/recipes/hooks/useRecipeTags';
 import { useFolderActions } from '#features/recipes/hooks/useFolderActions';
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useMutation } from '@apollo/client/react';
 import { RemoveRecipeFromFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
-import { performOptimisticUnfavorite } from '#features/recipes/utils/optimisticUnfavorite';
+import { removeSavedRecipeFromCache } from '#features/recipes/utils/removeSavedRecipeFromCache';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
+import { errorService } from '#/services/errorService';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
@@ -37,7 +41,7 @@ export const SavedRecipes: React.FC = () => {
   useScreenTransition('SavedRecipes');
   const { t } = useTranslation();
   const { toRecipeDetail, goBack } = useAppNavigation();
-  const client = useApolloClient();
+  const isApiUnavailable = useIsApiUnavailable();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
@@ -70,13 +74,24 @@ export const SavedRecipes: React.FC = () => {
     loading: folderActionLoading,
   } = useFolderActions();
 
-  // Unfavorite (remove from saved) recipe mutation. The cache work (drop the
-  // MySavedRecipes edge + clear Recipe.savedDetails) runs optimistically BEFORE
-  // the mutation fires in handleRemoveRecipe, so the removal sticks even fully
-  // offline (the queue replays the idempotent unfavorite). A rejected result
-  // reverts from a snapshot — so no update callback here.
+  // Unfavorite (remove from saved) recipe mutation. Online-only: the cache work
+  // (drop the MySavedRecipes edge + clear Recipe.savedDetails) runs from the
+  // server's confirmed response, so a refusal leaves nothing to revert.
   const [unfavoriteRecipeMutation] = useMutation(
     RemoveRecipeFromFavoritesDocument,
+    {
+      update(cache, { data }, { variables }) {
+        if (
+          data?.removeRecipeFromFavorites.__typename !==
+          'RemoveRecipeFromFavoritesPayload'
+        ) {
+          return;
+        }
+        const recipeId = variables?.input.recipeId;
+        if (!recipeId) return;
+        removeSavedRecipeFromCache(cache, recipeId);
+      },
+    },
   );
 
   // Folder, tags AND search all filter here, never inside the cell: a
@@ -154,21 +169,30 @@ export const SavedRecipes: React.FC = () => {
     await refetch();
   };
 
+  const reportRemoveFailure = () => {
+    alertService.alert(t('labels.error'), t('recipes.removeRecipeFailed'));
+  };
+
   const handleRemoveRecipe = async (recipeId: string) => {
-    await performOptimisticUnfavorite({
-      client,
-      recipeId,
-      mutate: () =>
-        unfavoriteRecipeMutation({
-          variables: { input: { recipeId } },
-          // Local-first: queue + replay (idempotent) when the API is
-          // unreachable instead of surfacing a blocking error.
-          context: { localFirst: true },
-        }),
-      operation: 'removeSavedRecipe',
-      reportFailure: () =>
-        alertService.alert(t('labels.error'), t('recipes.removeRecipeFailed')),
-    });
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return;
+    }
+
+    let result;
+    try {
+      result = await unfavoriteRecipeMutation({
+        variables: { input: { recipeId } },
+      });
+    } catch (error: unknown) {
+      errorService.reportError(error, { operation: 'removeSavedRecipe' });
+      reportRemoveFailure();
+    }
+    if (!result) return; // threw -> already reported above
+
+    if (classifyCreateResult(result) === 'rejected') {
+      reportRemoveFailure();
+    }
   };
 
   const handleItemPress = (recipeId: string) => {
@@ -256,6 +280,9 @@ export const SavedRecipes: React.FC = () => {
     );
   })();
 
+  // The remove action stays visible while the API is unreachable: the row
+  // offers no disabled state, and dropping the icon would take the only
+  // affordance away without saying why. `handleRemoveRecipe` answers instead.
   const renderItem = ({ item }: { item: SavedRecipeNode }) => (
     <SavedRecipeCard
       savedRecipeRef={item}

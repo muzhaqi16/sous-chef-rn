@@ -3,9 +3,12 @@ import {
   CombinedProtocolErrors,
   ServerError,
 } from '@apollo/client/errors';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import {
   classifyError,
   classifyReplayResult,
+  contractRetryableCodes,
   ReplayRejectedError,
 } from '../queueErrorPolicy';
 
@@ -313,5 +316,135 @@ describe('classifyError — CLIENT_UPGRADE_REQUIRED', () => {
     expect(queueError.type).toBe('server');
     expect(queueError.retryable).toBe(false);
     expect(queueError.code).toBe('CLIENT_UPGRADE_REQUIRED');
+  });
+});
+
+describe('classifyError — codes the contract designates retryable', () => {
+  // Losing a user's queued write over a condition that clears on its own is the
+  // inverse of what the queue exists for. These three used to classify
+  // permanent, so a 503 during a deploy reverted the change on screen.
+  const RETRYABLE_TOP_LEVEL = [
+    'SERVICE_UNAVAILABLE',
+    'RATE_LIMIT_EXCEEDED',
+    'OPERATION_RATE_LIMITED',
+  ];
+
+  it.each(RETRYABLE_TOP_LEVEL)('defers %s instead of reverting', code => {
+    const queueError = classifyError(
+      new CombinedGraphQLErrors({
+        data: null,
+        errors: [{ message: 'transient', extensions: { code } }],
+      }),
+    );
+
+    expect(queueError.type).toBe('server');
+    expect(queueError.retryable).toBe(true);
+    expect(queueError.code).toBe(code);
+  });
+
+  it.each(RETRYABLE_TOP_LEVEL)(
+    'defers %s when it arrives as a resolved payload member',
+    code => {
+      // DEADLOCK travels inside `data` while the rest travel top-level, so the
+      // classifier must see both channels; a set read on only one is how
+      // DEADLOCK was invisible to retry helpers in the first place.
+      const queueError = classifyError(
+        new ReplayRejectedError('ConflictError', 'transient', code),
+      );
+
+      expect(queueError.type).toBe('server');
+      expect(queueError.retryable).toBe(true);
+    },
+  );
+
+  it('still fails a refusal the contract does not call retryable', () => {
+    const queueError = classifyError(
+      new ReplayRejectedError('ValidationError', 'nope', 'VALIDATION_ERROR'),
+    );
+
+    expect(queueError.type).toBe('unknown');
+    expect(queueError.retryable).toBe(false);
+  });
+
+  it('matches the API contract exactly', () => {
+    // Pins the set to the contract rather than to a hand-maintained list. A
+    // code added to RETRYABLE_ERRORS upstream and not here means a queued write
+    // is reverted over a transient condition — silent, and invisible to every
+    // other test. Skips rather than fails when the sibling API repo is absent,
+    // so this suite still runs in a client-only checkout.
+    const docPath = join(
+      __dirname,
+      '../../../../../sous-chef-api/docs/api/errors.md',
+    );
+    let doc: string;
+    try {
+      doc = readFileSync(docPath, 'utf8');
+    } catch {
+      console.warn('API docs not present — skipping the contract pin');
+      return;
+    }
+
+    const block = doc.match(/const RETRYABLE_ERRORS = \[([\s\S]*?)\];/);
+    expect(block).not.toBeNull();
+
+    const documented = [...(block?.[1] ?? '').matchAll(/\.(\w+),/g)]
+      .map(m => m[1])
+      // TypeScript enum member name -> its SCREAMING_SNAKE value.
+      .map(name => name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase())
+      .sort();
+
+    expect(contractRetryableCodes().sort()).toEqual(documented);
+  });
+});
+
+describe('classifyError — version conflict', () => {
+  // Reachable from ONE device: hooks capture `version` when the person taps and
+  // nothing refreshes it before the replay, so two offline edits to the same
+  // row send the same version twice. This used to classify permanent, which
+  // evicted the row and showed a generic "couldn't be saved" toast.
+  it('is its own category on the result-union channel', () => {
+    const queueError = classifyError(
+      new ReplayRejectedError('ConflictError', 'stale', 'VERSION_CONFLICT'),
+    );
+
+    expect(queueError.type).toBe('conflict');
+    expect(queueError.retryable).toBe(false);
+  });
+
+  it('is its own category on the thrown channel too', () => {
+    // The two channels spell the same condition differently.
+    const queueError = classifyError(
+      new CombinedGraphQLErrors({
+        data: null,
+        errors: [
+          {
+            message: 'stale',
+            extensions: { code: 'RESOURCE_VERSION_CONFLICT' },
+          },
+        ],
+      }),
+    );
+
+    expect(queueError.type).toBe('conflict');
+  });
+
+  it('leaves an idempotent replay converging, not conflicting', () => {
+    // The safe-replay signal must never be mistaken for a real conflict.
+    expect(
+      classifyReplayResult({
+        __typename: 'ConflictError',
+        code: 'IDEMPOTENT_REPLAY',
+      }),
+    ).toBe('converged');
+  });
+
+  it('keeps a plain CONFLICT permanently rejected', () => {
+    // A duplicate name or an overlapping date is a refusal on the merits, not
+    // a statement about the version carried.
+    const queueError = classifyError(
+      new ReplayRejectedError('ConflictError', 'duplicate', 'CONFLICT'),
+    );
+
+    expect(queueError.type).toBe('unknown');
   });
 });

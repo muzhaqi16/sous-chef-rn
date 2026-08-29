@@ -141,6 +141,43 @@ function readStatusCode(error: unknown): number | undefined {
 }
 
 /**
+ * The codes the API contract designates safe to retry with backoff.
+ *
+ * Transcribed from `RETRYABLE_ERRORS` in the API's `docs/api/errors.md`
+ * § Retryable Errors, and pinned to it by
+ * `queueErrorPolicy.test.ts` — a code the contract calls retryable that this
+ * set omits is classified permanent, and a queued write is reverted over a
+ * condition that would have cleared on its own. Three of these were missing,
+ * which is exactly what that cost.
+ *
+ * The two channels are deliberately mixed. `DEADLOCK` arrives as a
+ * `ConflictError` member INSIDE `data` on the mutation's result union, while
+ * the rest arrive as top-level `extensions.code` — so a classifier that reads
+ * only one channel cannot see the other. Both reach this set: the resolved-
+ * payload path through {@link ReplayRejectedError.payloadCode}, the thrown path
+ * through {@link readErrorCode}.
+ */
+const CONTRACT_RETRYABLE_CODES: ReadonlySet<string> = new Set<string>([
+  TopLevelErrorCode.ServiceUnavailable,
+  TopLevelErrorCode.RateLimitExceeded,
+  TopLevelErrorCode.OperationRateLimited,
+  TopLevelErrorCode.SubscriptionError,
+  ErrorCode.Deadlock,
+]);
+
+/** Whether the API contract designates `code` safe to retry with backoff. */
+export function isContractRetryableCode(
+  code: string | null | undefined,
+): boolean {
+  return code != null && CONTRACT_RETRYABLE_CODES.has(code);
+}
+
+/** The contract-retryable set, for the test that pins it to the API docs. */
+export function contractRetryableCodes(): string[] {
+  return [...CONTRACT_RETRYABLE_CODES];
+}
+
+/**
  * Classify a replay error into the queue's policy categories. Pure — the result
  * drives whether the queue retries (`auth` after token refresh; `network` /
  * `server` deferred for the next drain) or fails permanently (`unknown`: client /
@@ -152,16 +189,33 @@ export function classifyError(error: unknown): QueueError {
   // message — the message is server-authored free text and must not hit the
   // string heuristics below.
   if (error instanceof ReplayRejectedError) {
-    // DEADLOCK is the one ConflictError code the API documents as a transient
-    // lock conflict ("safe to retry"): defer like a server error so the entry
-    // stays queued for the next drain instead of being reverted + dequeued.
-    if (error.payloadCode === ErrorCode.Deadlock) {
+    // A refusal the contract designates retryable — DEADLOCK on this channel,
+    // and the service-availability / rate-limit codes where a resolver surfaces
+    // one as a payload member. Defer like a server error so the entry stays
+    // queued for the next drain instead of being reverted + dequeued.
+    if (isContractRetryableCode(error.payloadCode)) {
       return {
         type: 'server',
         message: error.message,
-        code: ErrorCode.Deadlock,
+        code: error.payloadCode ?? undefined,
         timestamp: Date.now(),
         retryable: true,
+      };
+    }
+    // The entity moved on since this write was made. That is a statement about
+    // the version the write CARRIED — captured when the person acted and never
+    // refreshed since — not a judgement on the write itself. Classified apart
+    // from a permanent refusal, which would withdraw work the server never
+    // judged, and apart from a retryable failure, which would re-send the same
+    // stale version forever. Reachable from ONE device: nothing refreshes the
+    // cached version between two offline edits to the same row.
+    if (error.payloadCode === ErrorCode.VersionConflict) {
+      return {
+        type: 'conflict',
+        message: error.message,
+        code: ErrorCode.VersionConflict,
+        timestamp: Date.now(),
+        retryable: false,
       };
     }
     return {
@@ -187,6 +241,34 @@ export function classifyError(error: unknown): QueueError {
   if (code === TopLevelErrorCode.ClientUpgradeRequired) {
     return {
       type: 'server',
+      message,
+      code,
+      timestamp: Date.now(),
+      retryable: false,
+    };
+  }
+
+  // Every other code the contract calls retryable: the service is shedding
+  // load, or a rate limit was reached. The condition clears on its own, so the
+  // entry stays queued rather than being reverted — losing a user's write over
+  // a 503 is the inverse of what the queue exists for.
+  if (isContractRetryableCode(code)) {
+    return {
+      type: 'server',
+      message,
+      code,
+      timestamp: Date.now(),
+      retryable: true,
+    };
+  }
+
+  // The same condition arriving as a thrown top-level error rather than as a
+  // result-union member. The two channels spell it differently
+  // (RESOURCE_VERSION_CONFLICT vs VERSION_CONFLICT); both mean the entity moved
+  // on, and both must reach the conflict path rather than the permanent one.
+  if (code === TopLevelErrorCode.ResourceVersionConflict) {
+    return {
+      type: 'conflict',
       message,
       code,
       timestamp: Date.now(),

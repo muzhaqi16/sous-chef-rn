@@ -481,9 +481,12 @@ input AddRecipeToFavoritesInput {
 
 type AddRecipeToFavoritesPayload {
   """
-  True when this call CONVERGED on a pre-existing favorite (the recipe was
-  already favorited) — it did NOT create one. Either way savedRecipe is the
-  canonical server record. The canonical, API-wide replay flag.
+  True when this call CONVERGED on a pre-existing state: the recipe was already favorited, so no favorite was created. Either
+  way savedRecipe is the canonical server record.
+  
+  The canonical, API-wide replay flag — it reports that this call changed
+  nothing, because the state it asked for was already there. A field reporting
+  anything else does not take this name.
   """
   converged: Boolean!
   recipe: Recipe
@@ -614,6 +617,16 @@ Creates an ADJUSTMENT usage record for audit trail.
 """
 input AdjustPantryItemQuantityInput {
   id: ID!
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
   idempotencyKey: ID
   """The actual quantity from physical count"""
   newQuantity: Float!
@@ -650,6 +663,16 @@ Recalculates remainingNetWeight proportionally and derives new quantity.
 """
 input AdjustPantryItemWeightInput {
   id: ID!
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
   idempotencyKey: ID
   """The corrected net weight per unit (e.g., 12.5 for 12.5 oz per jar)"""
   netWeight: Float!
@@ -825,18 +848,21 @@ input BatchAddShoppingListItemInput {
   """
   id: ID
   """
-  Optional client-minted CUID2 that makes this add idempotent.
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
   
-  An add that resolves to an existing row applies a quantity increment, which
-  is atomic but not idempotent: the row carries nothing distinguishing a
-  replay from a genuine second addition. The key is claimed in the same
-  transaction as the increment, so a replay is refused with IDEMPOTENT_REPLAY
-  instead of merging twice.
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
   
-  Precedence: this key when sent, otherwise the id field above. Sending
-  neither leaves the add non-idempotent. Send an explicit key when one batch
-  adds the same item more than once, where row identity cannot tell the
-  entries apart.
+  Guards the MERGE branch specifically: an add that resolves to an existing
+  row applies a quantity increment, which is atomic but not idempotent — the
+  row carries nothing telling a replay from a genuine second addition.
+  Precedence: this key when sent, otherwise the id field above; neither leaves
+  the add unguarded. Send an explicit key when one batch adds the same item
+  more than once, where row identity cannot tell the entries apart.
   """
   idempotencyKey: ID
   item: ItemRefInput!
@@ -1561,9 +1587,12 @@ type ConfirmRecipeConsumptionPayload {
   """Pantry usages recorded for the consumed ingredients."""
   consumedItems: [PantryItemUsage!]!
   """
-  True when this call CONVERGED on a pre-existing cooking log (a client-provided
-  id matched an existing log) — it did NOT re-consume. On a converge,
-  consumedItems is empty. The canonical, API-wide replay flag.
+  True when this call CONVERGED on a pre-existing state: a client-provided id matched an existing cooking log, so nothing
+  was re-consumed and consumedItems is empty.
+  
+  The canonical, API-wide replay flag — it reports that this call changed
+  nothing, because the state it asked for was already there. A field reporting
+  anything else does not take this name.
   """
   converged: Boolean!
   """The cooking log entry recorded for this consumption, if any."""
@@ -1656,6 +1685,16 @@ enum ConversionType {
 }
 
 input ConvertExpiredBatchesToWasteInput {
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
   idempotencyKey: ID
   pantryItemId: ID!
 }
@@ -1673,6 +1712,16 @@ Always include a __typename so the variant can be discriminated.
 union ConvertExpiredBatchesToWasteResult = ConflictError | ConvertExpiredBatchesToWastePayload | ForbiddenError | NotFoundError | ValidationError
 
 input ConvertExpiredToWasteInput {
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
   idempotencyKey: ID
   pantryItemId: ID!
 }
@@ -2065,11 +2114,13 @@ input CreateMealPlanItemInput {
 
 type CreateMealPlanItemPayload {
   """
-  True when this call CONVERGED on a pre-existing meal-plan item (an idempotent
-  replay, or a second device) rather than creating a new one — recipe meals
-  converge on the natural key (mealPlanId, date, mealType, recipeId), custom
-  meals on the client-minted id. The canonical, API-wide replay flag; clients
-  treat converged=true as already-synced.
+  True when this call CONVERGED on a pre-existing state: the meal-plan item already existed and no new one was created.
+  Recipe meals converge on the natural key (mealPlanId, date, mealType,
+  recipeId), custom meals on the client-minted id.
+  
+  The canonical, API-wide replay flag — it reports that this call changed
+  nothing, because the state it asked for was already there. A field reporting
+  anything else does not take this name.
   """
   converged: Boolean!
   mealPlan: MealPlan
@@ -2207,6 +2258,11 @@ input CreatePantryItemInput {
   re-synced create resolves to the same row (idempotent) instead of duplicating.
   When omitted, the server generates one via @default(cuid(2)). Must match the
   CUID2 format; invalid formats are rejected by ID validation.
+  
+  This id IS the dedup token for the create — there is no idempotencyKey here,
+  and unlike one it never expires. A replay answers ConflictError with code
+  IDEMPOTENT_REPLAY, including when the same logical item has been stocked by
+  another path in the meantime.
   """
   id: ID
   item: InlineItemInput
@@ -2236,6 +2292,16 @@ union CreatePantryItemResult = ConflictError | CreatePantryItemPayload | Duplica
 
 input CreatePantryItemUsageInput {
   cookingLogId: ID
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
   idempotencyKey: ID
   isComposted: Boolean
   isRecycled: Boolean
@@ -3033,8 +3099,21 @@ input DeletePantryItemInput {
 }
 
 type DeletePantryItemPayload {
+  """
+  True when this call CONVERGED on a pre-existing state: the item was already deleted and was not re-deleted.
+  
+  The canonical, API-wide replay flag — it reports that this call changed
+  nothing, because the state it asked for was already there. A field reporting
+  anything else does not take this name.
+  """
+  converged: Boolean!
   pantry: Pantry
-  pantryItem: PantryItem!
+  """
+  The deleted pantry item, or null when it was already deleted — an
+  idempotent replay (or second device) that converged as success. See
+  converged.
+  """
+  pantryItem: PantryItem
 }
 
 """
@@ -3046,9 +3125,12 @@ union DeletePantryItemResult = ConflictError | DeletePantryItemPayload | Forbidd
 
 type DeletePantryPayload {
   """
-  True when this call CONVERGED on a pre-existing state (the pantry was
-  already deleted) — a no-op success that did NOT re-delete or re-publish.
-  The canonical, API-wide replay flag.
+  True when this call CONVERGED on a pre-existing state: the pantry was already deleted, and was neither re-deleted nor
+  re-published.
+  
+  The canonical, API-wide replay flag — it reports that this call changed
+  nothing, because the state it asked for was already there. A field reporting
+  anything else does not take this name.
   """
   converged: Boolean!
   home: Home
@@ -3089,9 +3171,12 @@ input DeleteRecipeFolderInput {
 
 type DeleteRecipeFolderPayload {
   """
-  True when this call CONVERGED on a pre-existing state — no saved recipe
-  carried the label, so the folder did not exist and nothing moved. A no-op
-  success. The canonical, API-wide replay flag.
+  True when this call CONVERGED on a pre-existing state: no saved recipe carried the label, so the folder did not exist
+  and nothing moved.
+  
+  The canonical, API-wide replay flag — it reports that this call changed
+  nothing, because the state it asked for was already there. A field reporting
+  anything else does not take this name.
   """
   converged: Boolean!
   """The deleted folder label (folders are string labels, not entities)."""
@@ -3192,9 +3277,11 @@ input DeleteStorageLocationInput {
 
 type DeleteStorageLocationPayload {
   """
-  True when this call CONVERGED on a pre-existing state (the location was
-  already deleted) — a no-op success that did NOT re-delete. The canonical,
-  API-wide replay flag.
+  True when this call CONVERGED on a pre-existing state: the location was already deleted and was not re-deleted.
+  
+  The canonical, API-wide replay flag — it reports that this call changed
+  nothing, because the state it asked for was already there. A field reporting
+  anything else does not take this name.
   """
   converged: Boolean!
   home: Home
@@ -5963,6 +6050,17 @@ union MarkPantryAsDefaultResult = ConflictError | ForbiddenError | MarkPantryAsD
 input MarkPantryItemExpiredInput {
   id: ID!
   """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
+  idempotencyKey: ID
+  """
   Optimistic concurrency control. REQUIRED: the caller is updating a row it
   already holds, so it has the version — and an update that silently skipped
   the check when the field was omitted is one that reports success while
@@ -6018,9 +6116,12 @@ input MarkRecipeAsCookedInput {
 
 type MarkRecipeAsCookedPayload {
   """
-  True when this call CONVERGED on a pre-existing cooking log (a client-provided
-  id matched an existing log) — it did NOT re-log or re-deduct the pantry. The
-  canonical, API-wide replay flag; clients treat converged=true as already-synced.
+  True when this call CONVERGED on a pre-existing state: a client-provided id matched an existing cooking log, so nothing
+  was re-logged and the pantry was not re-deducted.
+  
+  The canonical, API-wide replay flag — it reports that this call changed
+  nothing, because the state it asked for was already there. A field reporting
+  anything else does not take this name.
   """
   converged: Boolean!
   cookingLog: CookingLog!
@@ -6651,6 +6752,16 @@ input MoveShoppingItemToPantryInput {
   actualUnitId: ID
   """Expiration date (optional)"""
   expiresAt: DateTime
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
   idempotencyKey: ID
   """Additional notes"""
   notes: String
@@ -6718,6 +6829,18 @@ Same create-branch-only semantics as MoveShoppingItemToPantryInput.pantryItemId:
 a line that restocks an existing stack returns that stack's id instead.
 """
 input MoveToPantryIdHintInput {
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  
+  Scoped to this line's move.
+  """
   idempotencyKey: ID
   """
   Client-generated permanent ID (CUID2) for the pantry row that line creates.
@@ -7240,35 +7363,54 @@ type Mutation {
   shareShoppingList(input: ShareShoppingListInput!): ShareShoppingListResult!
   """
   Offline-sync twin of deletePantryItem — idempotent by a client-minted id.
+  
+  Accepts a version and never passes it to the delete.
   """
-  syncDeletePantryItem(input: SyncDeletePantryItemInput!): SyncDeletePantryItemResult!
+  syncDeletePantryItem(input: SyncDeletePantryItemInput!): SyncDeletePantryItemResult! @deprecated(reason: "Use deletePantryItem, which converges on an already-deleted row and reports it as converged: true.")
   """
   Offline-sync twin of removeItemFromShoppingList — idempotent by a
   client-minted id.
+  
+  Accepts a version and never passes it to the delete.
   """
-  syncDeleteShoppingListItem(input: SyncDeleteShoppingListItemInput!): SyncDeleteShoppingListItemResult!
+  syncDeleteShoppingListItem(input: SyncDeleteShoppingListItemInput!): SyncDeleteShoppingListItemResult! @deprecated(reason: "Use removeItemFromShoppingList, which converges on an already-removed row and reports it as converged: true.")
   """
   Offline-sync twin of moveShoppingListItem (reorder) — idempotent by a
   client-minted id.
+  
+  Accepts a version and never passes it to the move.
   """
-  syncMoveShoppingListItem(input: SyncMoveShoppingListItemInput!): SyncMoveShoppingListItemResult!
+  syncMoveShoppingListItem(input: SyncMoveShoppingListItemInput!): SyncMoveShoppingListItemResult! @deprecated(reason: "Use moveShoppingListItem. Note the field names differ (afterItemId/beforeItemId, not afterId/beforeId), and that a reorder is relative to its neighbours rather than an absolute position: a queued move whose neighbour is purchased, removed or itself reordered before the queue drains lands somewhere other than where the user put it. Neither mutation detects that.")
   """
   Offline-sync twin of createPantryItem/updatePantryItem — idempotent by a
   client-minted id (the primary key for creates, idempotencyKey for
-  cumulative deltas). Use the online mutations directly when not syncing
-  offline edits. See docs/api/graphql-operation-conventions.md (§5 variants).
+  cumulative deltas).
+  
+  Weaker than the mutations it stands in for: version is optional here and the
+  server substitutes the row's current one when it is absent, which applies the
+  write with no effective check; and a version conflict is returned as a
+  SUCCESS payload carrying conflict rather than as a ConflictError.
   """
-  syncPantryItem(input: SyncPantryItemInput!): SyncPantryItemResult!
+  syncPantryItem(input: SyncPantryItemInput!): SyncPantryItemResult! @deprecated(reason: "Use createPantryItem (idempotent by its client-minted id) or updatePantryItem (idempotent by idempotencyKey, claimed before the version check). Both keep the optimistic-lock guarantee this twin drops.")
   """
   Offline-sync twin of addItemsToShoppingList/updateShoppingListItem —
-  idempotent by a client-minted id (the primary key or idempotencyKey). Use
-  the online mutations directly when not syncing offline edits. See
-  docs/api/graphql-operation-conventions.md (§5).
+  idempotent by a client-minted id (the primary key or idempotencyKey).
+  
+  Weaker than the mutations it stands in for: version is optional here and the
+  server substitutes the row's current one when it is absent, which applies the
+  write with no effective check; and a version conflict is returned as a
+  SUCCESS payload carrying conflict rather than as a ConflictError.
   """
-  syncShoppingListItem(input: SyncShoppingListItemInput!): SyncShoppingListItemResult!
+  syncShoppingListItem(input: SyncShoppingListItemInput!): SyncShoppingListItemResult! @deprecated(reason: "Use addItemsToShoppingList (idempotent by its client-minted id or idempotencyKey) or updateShoppingListItem (idempotent by idempotencyKey, claimed before the version check). Both keep the optimistic-lock guarantee this twin drops.")
   """Toggle a helpful vote on a recipe review."""
   toggleReviewHelpful(input: ToggleReviewHelpfulInput!): ToggleReviewHelpfulResult!
-  """Toggle the purchased state of a shopping list item."""
+  """
+  Toggle the purchased state of a shopping list item.
+  
+  Replay-safe without a version or an idempotencyKey: the state asked for is
+  absolute, an item already in it is returned unchanged, and the Purchase
+  record is written only on the transition.
+  """
   toggleShoppingListItemPurchased(input: ToggleShoppingListItemPurchasedInput!): ToggleShoppingListItemPurchasedResult!
   """Transfer ownership of a home to another member."""
   transferHomeOwnership(input: TransferHomeOwnershipInput!): TransferHomeOwnershipResult!
@@ -8095,9 +8237,36 @@ enum NutritionSource {
   PARTIAL
 }
 
+"""
+Server-side constants an offline-capable client needs in order to decide how
+long a queued write stays replayable.
+"""
+type OfflineWritePolicy {
+  """
+  Days a spent idempotencyKey is remembered. Within this window a replayed
+  keyed write is refused as an already-applied no-op; past it the dedup record
+  is gone and the write would apply a second time, so a client stops replaying
+  a queued write older than this and discards it instead.
+  
+  Creates are not bound by it: their client-minted primary key is the dedup
+  token and never expires.
+  """
+  replayHorizonDays: Int!
+}
+
 """Input for opening a specific batch"""
 input OpenPantryItemBatchInput {
   batchId: ID!
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
   idempotencyKey: ID
 }
 
@@ -8115,6 +8284,16 @@ union OpenPantryItemBatchResult = ConflictError | ForbiddenError | NotFoundError
 
 input OpenPantryItemInput {
   id: ID!
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
   idempotencyKey: ID
   """
   Optimistic concurrency control. REQUIRED: the caller is updating a row it
@@ -9253,6 +9432,12 @@ type Query {
   """Fetch notification statistics with optional filtering."""
   notificationStats(filters: NotificationFilters): NotificationStats!
   """
+  The offline write policy this server enforces. Read it rather than holding a
+  copy — two constants that must agree, with nothing comparing them, drift
+  into a double-apply.
+  """
+  offlineWritePolicy: OfflineWritePolicy!
+  """
   Get pantries for a specific home. Requires homeId.
   Replaces: defaultPantry (use filters: { isDefault: true })
   """
@@ -9920,6 +10105,16 @@ Always include a __typename so the variant can be discriminated.
 union RecordPriceObservationResult = ConflictError | ForbiddenError | NotFoundError | RecordPriceObservationPayload | ValidationError
 
 input RecordRecipeCookedInput {
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
   idempotencyKey: ID
   recipeId: ID!
 }
@@ -10051,8 +10246,20 @@ input RemoveItemFromShoppingListInput {
 }
 
 type RemoveItemFromShoppingListPayload {
+  """
+  True when this call CONVERGED on a pre-existing state: the item was already removed and was not re-removed.
+  
+  The canonical, API-wide replay flag — it reports that this call changed
+  nothing, because the state it asked for was already there. A field reporting
+  anything else does not take this name.
+  """
+  converged: Boolean!
   shoppingList: ShoppingList
-  shoppingListItem: ShoppingListItem!
+  """
+  The removed item, or null when it was already removed — an idempotent
+  replay (or second device) that converged as success. See converged.
+  """
+  shoppingListItem: ShoppingListItem
 }
 
 """
@@ -10137,8 +10344,11 @@ input RemoveRecipeFromFavoritesInput {
 
 type RemoveRecipeFromFavoritesPayload {
   """
-  True when this call CONVERGED on a pre-existing state (the recipe was already
-  not favorited) — a no-op success. The canonical, API-wide replay flag.
+  True when this call CONVERGED on a pre-existing state: the recipe was already not favorited.
+  
+  The canonical, API-wide replay flag — it reports that this call changed
+  nothing, because the state it asked for was already there. A field reporting
+  anything else does not take this name.
   """
   converged: Boolean!
   recipe: Recipe
@@ -10194,9 +10404,11 @@ input RemoveTemplateItemInput {
 
 type RemoveTemplateItemPayload {
   """
-  True when this call CONVERGED on a pre-existing state (the item was already
-  removed) — a no-op success that did NOT re-remove. The canonical, API-wide
-  replay flag.
+  True when this call CONVERGED on a pre-existing state: the item was already removed and was not re-removed.
+  
+  The canonical, API-wide replay flag — it reports that this call changed
+  nothing, because the state it asked for was already there. A field reporting
+  anything else does not take this name.
   """
   converged: Boolean!
   mealTemplate: MealTemplate
@@ -10310,6 +10522,16 @@ input RestockPantryItemInput {
   costPerUnit: Float
   expiresAt: DateTime
   id: ID!
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
   idempotencyKey: ID
   notes: String
   quantity: Float!
@@ -11821,9 +12043,14 @@ type SyncPantryItemPayload {
   clientId: ID!
   conflict: SyncConflictInfo
   """
-  True when this sync CONVERGED on a pre-existing row (the client id matched,
-  so it was an update/replay rather than a fresh create). The canonical,
-  API-wide replay flag.
+  True when this sync resolved to a row that already existed — the client id
+  matched, so the call took the update branch rather than creating.
+  
+  NOT the API-wide convergence flag, despite the name: it is also true of an
+  ordinary successful update that changed the row. Only a payload whose
+  description says the call changed nothing carries that meaning. Retired with
+  this mutation; the canonical mutations report a replay as ConflictError with
+  code IDEMPOTENT_REPLAY.
   """
   converged: Boolean!
   item: PantryItem
@@ -11848,10 +12075,18 @@ input SyncShoppingListItemFieldsInput {
   brand: BrandReferenceInput
   category: String
   """
-  Optional client-minted CUID2 making a sync that MERGES into an existing row
-  idempotent. Defaults to the enclosing clientId, which already identifies the
-  queued operation — supply this only to key the merge on something other than
-  the row id. Same semantics as BatchAddShoppingListItemInput.idempotencyKey.
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  
+  Guards a sync that MERGES into an existing row. Supply it only to key the
+  merge on something other than the row id; the update branch claims it as
+  sent, and claims nothing when it is absent.
   """
   idempotencyKey: ID
   """
@@ -11901,9 +12136,14 @@ type SyncShoppingListItemPayload {
   """Conflict information if version mismatch occurred"""
   conflict: SyncConflictInfo
   """
-  True when this sync CONVERGED on a pre-existing row (the client id matched,
-  so it was an update/replay rather than a fresh create). The canonical,
-  API-wide replay flag.
+  True when this sync resolved to a row that already existed — the client id
+  matched, so the call took the update branch rather than creating.
+  
+  NOT the API-wide convergence flag, despite the name: it is also true of an
+  ordinary successful update that changed the row. Only a payload whose
+  description says the call changed nothing carries that meaning. Retired with
+  this mutation; the canonical mutations report a replay as ConflictError with
+  code IDEMPOTENT_REPLAY.
   """
   converged: Boolean!
   """The synced shopping list item (null for delete operations)"""
@@ -11984,7 +12224,6 @@ union ToggleReviewHelpfulResult = ConflictError | ForbiddenError | NotFoundError
 input ToggleShoppingListItemPurchasedInput {
   id: ID!
   purchased: Boolean!
-  version: Int
 }
 
 type ToggleShoppingListItemPurchasedPayload {
@@ -12599,6 +12838,17 @@ input UpdateHomeInput {
   currency: String
   description: String
   id: ID!
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
+  idempotencyKey: ID
   isPublic: Boolean
   maxMembers: Int
   name: String
@@ -12890,6 +13140,17 @@ input UpdatePantryItemInput {
   expirationAlert: Boolean
   expiresAt: DateTime
   id: ID!
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
+  idempotencyKey: ID
   isComposted: Boolean
   isRecycled: Boolean
   itemName: String
@@ -12913,6 +13174,17 @@ input UpdatePantryItemInput {
 
 input UpdatePantryItemLocationInput {
   id: ID!
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
+  idempotencyKey: ID
   storageLocationId: String!
   """
   Optimistic concurrency control. REQUIRED: the caller is updating a row it
@@ -12942,6 +13214,17 @@ type UpdatePantryItemPayload {
 
 """Input for updating pantry item quantity"""
 input UpdatePantryItemQuantityInput {
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
+  idempotencyKey: ID
   pantryItemId: ID!
   quantity: String!
   unitId: ID
@@ -13137,6 +13420,17 @@ union UpdateSettingsResult = ConflictError | ForbiddenError | NotFoundError | Up
 input UpdateShoppingListInput {
   description: String
   id: ID!
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
+  idempotencyKey: ID
   isDefault: Boolean
   name: String
   planning: ShoppingListPlanningInput
@@ -13167,6 +13461,17 @@ input UpdateShoppingListItemInput {
   brand: BrandReferenceInput
   category: String
   id: ID!
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
+  idempotencyKey: ID
   itemName: String
   """
   Package size for this item. Omit to leave it alone; send netWeight: null (or
@@ -13199,6 +13504,17 @@ type UpdateShoppingListItemPayload {
 
 """Input for updating shopping list item quantity"""
 input UpdateShoppingListItemQuantityInput {
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
+  idempotencyKey: ID
   itemId: ID!
   quantity: String!
   unitId: ID
@@ -14013,6 +14329,16 @@ type WasteByReason {
 """Input for wasting a specific batch"""
 input WastePantryItemBatchInput {
   batchId: ID!
+  """
+  Client-minted CUID2 that makes this operation replay-safe. The key is
+  claimed in the same transaction as the effect, so re-sending it applies the
+  effect at most once: a replay is answered with ConflictError carrying code
+  IDEMPOTENT_REPLAY, which a client treats as success.
+  
+  Omit it and the operation is not replay-safe. A spent key is remembered for
+  the window Query.offlineWritePolicy reports, after which a very late replay
+  would apply again.
+  """
   idempotencyKey: ID
   isComposted: Boolean
   isRecycled: Boolean

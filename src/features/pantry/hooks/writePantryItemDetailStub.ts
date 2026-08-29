@@ -20,6 +20,7 @@
  */
 
 import { type ApolloCache } from '@apollo/client';
+import { releaseEntity } from '#/apollo/utils/cacheUpdaters';
 import type {
   AcquisitionMethod,
   ItemCondition,
@@ -143,6 +144,17 @@ export function writePantryItemDetailStub(
       'writePantryItemDetailStub_itemCatalog',
       { ...NEUTRAL_ITEM_CATALOG, id: itemId },
     );
+
+    // The synthesised `local-item-*` row is a throwaway: the server's create
+    // response re-points `PantryItem.item` at the real catalog entity, leaving
+    // this one unreferenced. Un-pin it so `cache.gc()` can actually collect it
+    // then — each `writeFragment` above retained it as a GC root, which is why
+    // it survived every `gc()` and rode out to disk on every launch, against
+    // what the comment on `resolveItemId` promises. Releasing does not remove
+    // it; it only stops it being a root.
+    if (!fields.itemId) {
+      releaseEntity(cache, itemCacheId);
+    }
 
     // Normalizing write: converts the embedded four-field `item` stub that
     // `addToPantryItemsCache` left behind into a reference to the entity topped

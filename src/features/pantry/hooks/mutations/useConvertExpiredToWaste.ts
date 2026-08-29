@@ -4,44 +4,37 @@
  *
  * Converts an expired pantry item to waste in one step: sets `condition` to
  * SPOILED, creates a WASTE usage record with wasteReason=EXPIRED, and sets
- * `quantity` to 0. The cached item is set to quantity 0 + SPOILED PERMANENTLY
- * before firing so it reads as discarded instantly and survives an
- * offline/queued conversion. Because the server writes a waste ledger row, a
- * naive replay would double-count — so the canonical mutation carries a
- * client-minted `input.idempotencyKey`; the server records it in the same
- * transaction as the conversion, so a queued replay applies it exactly once (it
- * returns ConflictError(IDEMPOTENT_REPLAY), which the queue converges). A real
- * rejection restores the pre-convert quantity + condition.
+ * `quantity` to 0. The local change is declared once as a `WriteIntent` — the
+ * kit applies it permanently before firing (so it reads as discarded instantly
+ * and survives an offline/queued conversion), derives what undoes it from what
+ * the cache actually held, and carries that to the queue so a withdrawal after
+ * a restart still restores the item.
+ *
+ * Because the server writes a waste ledger row, a naive replay would
+ * double-count — so the canonical mutation carries a client-minted
+ * `input.idempotencyKey`; the server records it in the same transaction as the
+ * conversion, so a queued replay applies it exactly once (it returns
+ * ConflictError(IDEMPOTENT_REPLAY), which the queue converges).
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { gql } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
 import { ConvertExpiredToWasteDocument } from '#features/pantry/graphql/pantry.generated';
 import { ItemCondition } from '#/graphql/generated/schemaTypes';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { handleMutationError } from '#/utils/errorHandlers';
+import { useWrite } from '#/apollo/write/useWrite';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { t } from '#/i18n';
-import { errorService } from '#/services/errorService';
 
 interface UseConvertExpiredToWasteOptions {
   onSuccess?: () => void;
 }
 
-const CONVERT_STATE_FRAGMENT = gql`
-  fragment useConvertExpiredToWaste_state on PantryItem {
-    id
-    quantity
-    condition
-  }
-`;
-
 export function useConvertExpiredToWaste({
   onSuccess,
 }: UseConvertExpiredToWasteOptions = {}) {
-  const client = useApolloClient();
+  const { apply } = useWrite();
   const [convertMutation, { loading }] = useMutation(
     ConvertExpiredToWasteDocument,
     {
@@ -54,82 +47,39 @@ export function useConvertExpiredToWaste({
   const convertExpiredToWaste = async (
     pantryItemId: string,
   ): Promise<boolean> => {
-    const itemCacheId = client.cache.identify({
-      __typename: 'PantryItem',
-      id: pantryItemId,
+    // Discarding sets a final state — quantity 0, SPOILED — rather than moving
+    // either by an amount, so a version conflict is resolved by re-sending
+    // against a fresh version. The waste ledger row that makes a re-send
+    // dangerous is deduped server-side on `idempotencyKey`, not by holding the
+    // write back.
+    const { context, revert } = apply({
+      target: { __typename: 'PantryItem', id: pantryItemId },
+      patch: { quantity: 0, condition: ItemCondition.Spoiled },
+      convergence: 'absolute',
     });
-    const snapshot = client.cache.readFragment<{
-      quantity: number;
-      condition: ItemCondition;
-    }>({
-      id: itemCacheId,
-      fragment: CONVERT_STATE_FRAGMENT,
-      fragmentName: 'useConvertExpiredToWaste_state',
-    });
-
-    const writeState = (quantity: number, condition: ItemCondition) =>
-      client.cache.modify({
-        id: itemCacheId,
-        fields: { quantity: () => quantity, condition: () => condition },
-      });
-
-    // Permanent optimistic write before firing — survives an offline/queued convert.
-    const clearQuantityPersistence = optimisticDataPersistence.track(
-      'PantryItem',
-      pantryItemId,
-      'quantity',
-      0,
-    );
-    const clearConditionPersistence = optimisticDataPersistence.track(
-      'PantryItem',
-      pantryItemId,
-      'condition',
-      ItemCondition.Spoiled,
-    );
-    const clearPersistence = () => {
-      clearQuantityPersistence();
-      clearConditionPersistence();
-    };
-    try {
-      writeState(0, ItemCondition.Spoiled);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Convert Expired To Waste (optimistic)',
-      });
-    }
 
     const result = await convertMutation({
       variables: {
         input: { pantryItemId, idempotencyKey: generateEntityId() },
       },
-      context: { localFirst: true },
+      context,
     });
 
-    const outcome = classifyCreateResult(result);
-
-    if (outcome === 'rejected') {
-      // Only revert from a real snapshot — falling back to 0/SPOILED would
-      // re-apply the optimistic write instead of restoring the item.
-      if (snapshot) {
-        try {
-          writeState(snapshot.quantity, snapshot.condition);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert rejected expired-to-waste convert',
-          });
-        }
-      }
-      clearPersistence();
-      // onError covers transport errors; a non-success union payload has none.
+    // `classifyCreateResult` folds BOTH refusal channels into `'rejected'` — a
+    // non-success union payload (HTTP 200, no `error`) and a resolved transport
+    // error — so one branch undoes both. Refused on the spot means it never
+    // entered the queue and the queue's withdrawal will never see it; a queued
+    // write refused on a later replay is undone from its persisted intent.
+    if (classifyCreateResult(result) === 'rejected') {
+      revert();
+      // Suppresses itself when `result.error` is set, where the mutation's
+      // `onError` is the one reporter.
       alertRejectedMutation(result, t('errors.discardExpiredFailed'));
       return false;
     }
 
     // created (response normalized the authoritative item) or queued (replays
     // the canonical mutation, deduped by its idempotencyKey).
-    if (outcome === 'created') {
-      clearPersistence();
-    }
     onSuccess?.();
     return true;
   };

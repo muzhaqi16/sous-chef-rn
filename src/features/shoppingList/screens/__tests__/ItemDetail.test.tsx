@@ -3,7 +3,7 @@
 import React from 'react';
 import { screen, waitFor } from '@testing-library/react-native';
 import type { MockLink } from '@apollo/client/testing';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import { ShoppingListItemDetail } from '../ItemDetail';
 import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
@@ -302,6 +302,24 @@ describe('ShoppingListItemDetail', () => {
       operationMocks: [],
     });
     expect(screen.getByText('Loading...')).toBeTruthy();
+  });
+
+  it('renders from the cache with no query result at all', async () => {
+    // The offline case, and the one that made this screen sit on "Loading"
+    // forever: after a cold start with the API down there is no query result,
+    // only the persisted row. Gating the render on the query's returned ref
+    // rather than on the cache key is what broke it.
+    const cache = seedCache([buildShoppingListItem()]);
+
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      cache,
+      operationMocks: [],
+    });
+
+    await waitFor(() =>
+      expect(screen.getAllByText('Bread').length).toBeGreaterThan(0),
+    );
+    expect(screen.queryByText('Loading...')).toBeNull();
   });
 
   it('shows added-by info', async () => {

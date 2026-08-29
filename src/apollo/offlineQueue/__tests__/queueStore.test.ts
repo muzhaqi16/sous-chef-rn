@@ -937,7 +937,9 @@ describe('QueueStore', () => {
 
       const expired = store.expireStalePending('user-1');
 
-      expect(expired).toBe(1);
+      // The entries themselves come back, not a count: each records a local
+      // change the caller now has to withdraw.
+      expect(expired.map(m => m.id)).toEqual(['stale-1']);
       expect(store.getPendingMutationsForUser('user-1')).toEqual([]);
       const failed = store.getMutation('stale-1');
       expect(failed?.status).toBe(QueueStatus.FAILED);
@@ -956,7 +958,7 @@ describe('QueueStore', () => {
 
       const expired = store.expireStalePending('user-1');
 
-      expect(expired).toBe(0);
+      expect(expired).toEqual([]);
       expect(store.getPendingMutationsForUser('user-1')).toHaveLength(2);
     });
 
@@ -978,9 +980,135 @@ describe('QueueStore', () => {
 
       const expired = store.expireStalePending('user-1');
 
-      expect(expired).toBe(0);
+      expect(expired).toEqual([]);
       expect(store.getMutation('other-user')?.status).toBe(QueueStatus.PENDING);
       expect(store.getMutation('already-failed')?.lastError).toBeUndefined();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Capacity eviction reporting
+  // -------------------------------------------------------------------------
+  describe('reporting an eviction whose local change still stands', () => {
+    const fill = (status: QueueStatus, count: number) => {
+      for (let i = 0; i < count; i++) {
+        store.addMutation(makeMutation({ id: `${status}-${i}`, status }));
+      }
+    };
+
+    it('reports an auth-parked entry evicted to make room', () => {
+      // Auth-parked means the server never saw the write, so its change has
+      // been on screen since it was made. Dropping it here is the moment the
+      // queue gives up, and the person has to be told.
+      store.addMutation(
+        makeMutation({ id: 'parked', status: QueueStatus.AUTH_ERROR }),
+      );
+      fill(QueueStatus.PENDING, 99);
+
+      const evicted = store.addMutation(makeMutation({ id: 'newest' }));
+
+      expect(evicted?.id).toBe('parked');
+    });
+
+    it('reports nothing when the evicted entry was already reconciled', () => {
+      // SUCCESS replayed and FAILED was withdrawn at the time — neither has a
+      // local change left to withdraw, so reporting one would double-toast.
+      store.addMutation(
+        makeMutation({ id: 'done', status: QueueStatus.SUCCESS }),
+      );
+      fill(QueueStatus.PENDING, 99);
+
+      expect(store.addMutation(makeMutation({ id: 'newest' }))).toBeNull();
+    });
+
+    it('reports nothing on an ordinary add', () => {
+      expect(store.addMutation(makeMutation({ id: 'solo' }))).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Durability across a session end
+  // -------------------------------------------------------------------------
+  describe('the replay horizon comes from the server', () => {
+    // Two constants that must agree, with nothing checking them, is the drift
+    // that surfaces as a double-apply — the API publishes the number now, so
+    // the client stops restating it.
+    const daysAgo = (n: number) => Date.now() - n * 24 * 60 * 60 * 1000;
+
+    it('falls back to 90 days before any policy has been read', () => {
+      store.addMutation(makeMutation({ id: 'old', createdAt: daysAgo(91) }));
+      store.addMutation(makeMutation({ id: 'fresh', createdAt: daysAgo(89) }));
+
+      expect(store.expireStalePending('user-1').map(m => m.id)).toEqual([
+        'old',
+      ]);
+    });
+
+    it('adopts a shorter horizon the server publishes', () => {
+      store.setReplayHorizonDays(30);
+      store.addMutation(
+        makeMutation({ id: 'past-30', createdAt: daysAgo(31) }),
+      );
+      store.addMutation(makeMutation({ id: 'within', createdAt: daysAgo(29) }));
+
+      expect(store.expireStalePending('user-1').map(m => m.id)).toEqual([
+        'past-30',
+      ]);
+    });
+
+    it('ignores a nonsense horizon rather than expiring everything', () => {
+      // A zero would expire every queued write on the next drain — worse than
+      // the drift this replaces.
+      store.setReplayHorizonDays(0);
+      store.setReplayHorizonDays(-5);
+      store.addMutation(makeMutation({ id: 'recent', createdAt: daysAgo(1) }));
+
+      expect(store.expireStalePending('user-1')).toEqual([]);
+    });
+  });
+
+  describe('surviving a session end', () => {
+    it('entries written before a session end are readable on the next launch', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(makeMutation({ id: 'queued-offline' }));
+
+      // A session end drops the in-RAM mirror. Nothing else about the queue's
+      // storage is touched, so a subsequent launch reads the entries back.
+      store.invalidateCache();
+      const nextLaunch = new QueueStore();
+
+      expect(nextLaunch.getMutation('queued-offline')).not.toBeNull();
+      expect(
+        nextLaunch.getPendingMutationsForUser('user-1').map(m => m.id),
+      ).toEqual(['queued-offline']);
+    });
+
+    it('survives a session end that lands before anything has read the queue', () => {
+      // The highest-probability shape: writes made offline, app killed, and on
+      // the next launch the stored refresh token is rejected during auto-login
+      // — before any connection merge or offline pill has caused a read. The
+      // mirror is empty at that moment, so a wipe here would be total and
+      // immediate rather than survivable in RAM.
+      store.setCurrentUserId('user-1');
+      store.addMutation(makeMutation({ id: 'made-offline' }));
+
+      const coldStart = new QueueStore();
+      coldStart.invalidateCache(); // teardown runs first, before any loadQueue()
+
+      expect(coldStart.getMutation('made-offline')?.id).toBe('made-offline');
+    });
+
+    it('a deliberate sign-out deletes only that user, through the store', () => {
+      store.addMutation(makeMutation({ id: 'mine', userId: 'user-1' }));
+      store.addMutation(makeMutation({ id: 'theirs', userId: 'user-2' }));
+
+      store.clearQueueForUser('user-1');
+
+      // Going through the store keeps the mirror and the blob consistent, and
+      // leaves the other account's unsynced work on a shared device.
+      expect(store.getMutation('mine')).toBeNull();
+      expect(store.getMutation('theirs')).not.toBeNull();
+      expect(new QueueStore().getMutation('theirs')).not.toBeNull();
     });
   });
 });
