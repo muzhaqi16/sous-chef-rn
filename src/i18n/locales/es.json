@@ -159,7 +159,8 @@
       "quantity": "Esa cantidad no es válida. Prueba con un número como 2, 0,5 o 1 1/2.",
       "newQuantity": "Esa cantidad no es válida. Prueba con un número como 2, 0,5 o 1 1/2.",
       "itemName": "Introduce un nombre para este artículo.",
-      "batchId": "Ese lote ya no está disponible. Actualiza e inténtalo de nuevo."
+      "batchId": "Ese lote ya no está disponible. Actualiza e inténtalo de nuevo.",
+      "pantryId": "No tienes permiso para añadir artículos a esta despensa."
     }
   },
   "success": {

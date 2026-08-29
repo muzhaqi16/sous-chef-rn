@@ -231,6 +231,16 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     if (field === 'pantryNetWeight' || field === 'pantryNetWeightUnitId') {
       void trigger(['pantryNetWeightUnit', 'pantryNetWeight']);
     }
+    // Same shape one level down, for the package-details per-container weight.
+    // Toggling the section off has to re-run them too — both rules are scoped
+    // to `showPackageDetails`, so collapsing it must clear a standing message.
+    if (
+      field === 'itemNetWeight' ||
+      field === 'weightUnitId' ||
+      field === 'showPackageDetails'
+    ) {
+      void trigger(['weightUnit', 'itemNetWeight']);
+    }
   };
 
   // Setter-shaped adapters, so the four page components keep their existing

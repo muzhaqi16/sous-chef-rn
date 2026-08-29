@@ -159,7 +159,8 @@
       "quantity": "Ajo sasi nuk është e vlefshme. Provo një numër si 2, 0.5 ose 1 1/2.",
       "newQuantity": "Ajo sasi nuk është e vlefshme. Provo një numër si 2, 0.5 ose 1 1/2.",
       "itemName": "Vendos një emër për këtë artikull.",
-      "batchId": "Ai grup nuk është më i disponueshëm. Rifresko dhe provo përsëri."
+      "batchId": "Ai grup nuk është më i disponueshëm. Rifresko dhe provo përsëri.",
+      "pantryId": "Nuk ke leje të shtosh artikuj në këtë qilar."
     }
   },
   "success": {

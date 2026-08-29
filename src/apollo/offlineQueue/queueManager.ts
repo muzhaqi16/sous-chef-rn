@@ -13,6 +13,7 @@ import {
   type FailureHandler,
 } from './types';
 import { convertToSyncMutation } from './convertToSyncMutation';
+import { reconcileReplaySuccess } from './queueReplayReconcilers';
 import { proactiveTokenRefresh } from '../links/refreshToken';
 import {
   classifyError,
@@ -360,6 +361,13 @@ export class QueueManager {
         operation: mutation.operationName,
       });
     }
+
+    // The replay above ran through `client.mutate` with no `update` callback,
+    // so it got normalization and nothing else. An operation whose server
+    // answer may name a DIFFERENT row than the one written locally has to be
+    // settled here — the foreground path's own reconciliation returned long
+    // ago, when the call classified as `'queued'`.
+    reconcileReplaySuccess(mutation.operationName, syncVariables, result.data);
 
     return result.data;
   }

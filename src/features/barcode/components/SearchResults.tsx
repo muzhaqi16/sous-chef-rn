@@ -34,6 +34,7 @@ import {
 } from '#/apollo/utils/pantryCacheUpdaters';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import {
   getPantryItemDuplicateFromResult,
   promptPantryDuplicate,
@@ -214,30 +215,45 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             },
             client.cache,
           );
-          try {
-            addToPantryItemsCache(client.cache, pantryId, optimisticPantryItem);
-            // Detail-shape the same row so tapping it renders from cache
-            // instead of querying an id the server does not have yet. A
-            // scanned add always carries a catalog item, so `item` resolves to
-            // the real entity rather than a locally-minted one.
-            writePantryItemDetailStub(client.cache, id, {
-              itemId: item.id,
-              itemName: item.name,
-              acquisitionMethod: AcquisitionMethod.BarcodeScan,
-              quantity,
-            });
-            // The connection updater moves the LIST; the header's "N items"
-            // reads `Pantry.stats.totalItems`, which only the mutation's
-            // `update:` callback touched — and that never runs when the create
-            // is queued offline. Same defect as the add sheet had, on the third
-            // create path. It sits beside the optimistic row so both move
-            // together whether or not the create reaches the server.
-            adjustPantryItemCount(client.cache, pantryId, 1);
-          } catch (cacheError) {
-            errorService.reportError(cacheError, {
-              operation: 'Add Pantry Item (optimistic)',
-            });
-          }
+          // Publishing and withdrawing the optimistic row are a pair, and the
+          // force-add retry below has to do both again after the duplicate
+          // branch has withdrawn it. Named so the halves cannot drift.
+          const applyOptimisticPantryItem = () => {
+            try {
+              addToPantryItemsCache(
+                client.cache,
+                pantryId,
+                optimisticPantryItem,
+              );
+              // Detail-shape the same row so tapping it renders from cache
+              // instead of querying an id the server does not have yet. A
+              // scanned add always carries a catalog item, so `item` resolves to
+              // the real entity rather than a locally-minted one.
+              writePantryItemDetailStub(client.cache, id, {
+                itemId: item.id,
+                itemName: item.name,
+                acquisitionMethod: AcquisitionMethod.BarcodeScan,
+                quantity,
+              });
+              // The connection updater moves the LIST; the header's "N items"
+              // reads `Pantry.stats.totalItems`, which only the mutation's
+              // `update:` callback touched — and that never runs when the create
+              // is queued offline. Same defect as the add sheet had, on the third
+              // create path. It sits beside the optimistic row so both move
+              // together whether or not the create reaches the server.
+              adjustPantryItemCount(client.cache, pantryId, 1);
+            } catch (cacheError) {
+              errorService.reportError(cacheError, {
+                operation: 'Add Pantry Item (optimistic)',
+              });
+            }
+          };
+          const revertOptimisticPantryItem = () => {
+            safeEvict(client.cache, 'PantryItem', id);
+            adjustPantryItemCount(client.cache, pantryId, -1);
+          };
+
+          applyOptimisticPantryItem();
 
           // Released on every outcome — including a THROW. `confirm` sitting
           // after a bare `await` was released on the paths that return, and on
@@ -273,8 +289,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             setIsLoading(false);
             // Already in the pantry → the server keeps the existing row, not
             // our optimistic item. Discard the one we wrote, count included.
-            safeEvict(client.cache, 'PantryItem', id);
-            adjustPantryItemCount(client.cache, pantryId, -1);
+            revertOptimisticPantryItem();
             promptPantryDuplicate({
               onRestock: () => {
                 executeWithLoadingState(
@@ -308,24 +323,40 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               onAddAnyway: () => {
                 executeWithLoadingState(
                   async () => {
+                    // The duplicate branch withdrew the optimistic row; put it
+                    // back before firing, or a force-add that queues offline
+                    // leaves nothing on screen until the replay lands. Reusing
+                    // the id is deliberate — the duplicate was a refusal, so it
+                    // committed no row, and the id is what makes the replay
+                    // idempotent.
+                    applyOptimisticPantryItem();
                     const retryResult = await addToPantry({
                       variables: {
                         input: { ...mutationInput, forceAdd: true },
                       },
+                      // Same local-first contract as the first attempt: without
+                      // it the force-add is the one add here that cannot queue.
+                      context: { localFirst: true },
                     });
+                    // `alertIfRejected`, not a payload-typename check: a retry
+                    // reusing this id after the first attempt did commit (a lost
+                    // response) returns ConflictError(IDEMPOTENT_REPLAY), which
+                    // the contract says to treat as a successful no-op. It also
+                    // keeps the row when the create was queued rather than
+                    // answered, and routes a ValidationError's `field` to
+                    // localized copy.
                     if (
-                      retryResult.data?.createPantryItem?.__typename ===
-                      'CreatePantryItemPayload'
-                    ) {
-                      setIsAdded(true);
-                      setPendingPantryScrollToTop(true);
-                      onScanAnother();
-                    } else {
-                      alertService.alert(
-                        t('labels.error'),
+                      alertIfRejected(
+                        retryResult,
                         t('errors.addItemFailedRetry'),
-                      );
+                      )
+                    ) {
+                      revertOptimisticPantryItem();
+                      return;
                     }
+                    setIsAdded(true);
+                    setPendingPantryScrollToTop(true);
+                    onScanAnother();
                   },
                   setIsLoading,
                   () => {
@@ -344,12 +375,12 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           if (outcome === 'rejected') {
             // The server refused the create — discard the item we wrote,
             // count included.
-            safeEvict(client.cache, 'PantryItem', id);
-            adjustPantryItemCount(client.cache, pantryId, -1);
-            alertService.alert(
-              t('labels.error'),
-              t('errors.addItemFailedRetry'),
-            );
+            revertOptimisticPantryItem();
+            // The document selects `... on ValidationError { field }`, so route
+            // the refusal to its localized `errors.field.*` copy instead of a
+            // fixed string. `alertIfRejected` because this mutation has no
+            // `onError` — the resolved-`error` case needs telling too.
+            alertIfRejected(result, t('errors.addItemFailedRetry'));
           } else {
             // 'created' or 'queued' — the item stays (and replays if it was
             // queued offline); confirm and move on.

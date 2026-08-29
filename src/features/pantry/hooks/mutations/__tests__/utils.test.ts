@@ -353,6 +353,67 @@ describe('pantry mutations utils', () => {
       expect(result).toEqual({ netWeight: { netWeightUnitId: null } });
     });
 
+    /**
+     * The one `UnitSpecInput` the pantry update path builds, and it was the
+     * only branch here with no test.
+     *
+     * It is deliberately id-less: the caller reaches it exactly when the typed
+     * unit could NOT be resolved to a catalog id. Since 2026-08-22 the server
+     * resolves a bare `unitSymbol` to a real unit and repoints `unitId` with
+     * it, so this is a tracking-unit CHANGE — subject to the batch and
+     * conversion guards, whose refusal arrives as
+     * `ValidationError(field: "unit")` and routes to `errors.field.unit`. It is
+     * no longer the caption write it once was, and pinning the shape here is
+     * what stops it drifting back into one.
+     */
+    describe('unit handling', () => {
+      it('sends the typed symbol with no unitId when the unit is dirty', () => {
+        const result = buildDirtyUpdateInput(
+          baseFormData,
+          { unit: true },
+          null,
+          null,
+          'cans',
+        );
+        expect(result).toEqual({ unit: { unitSymbol: 'cans' } });
+      });
+
+      it('trims the symbol', () => {
+        const result = buildDirtyUpdateInput(
+          baseFormData,
+          { unit: true },
+          null,
+          null,
+          '  cans  ',
+        );
+        expect(result).toEqual({ unit: { unitSymbol: 'cans' } });
+      });
+
+      it('sends no unit when the field is dirty but the symbol is blank', () => {
+        // Nothing to resolve — sending `{ unitSymbol: '' }` would ask the
+        // server to find-or-create a unit with no name.
+        const result = buildDirtyUpdateInput(
+          baseFormData,
+          { unit: true },
+          null,
+          null,
+          '   ',
+        );
+        expect(result).toEqual({});
+      });
+
+      it('sends no unit when the field is not dirty', () => {
+        const result = buildDirtyUpdateInput(
+          baseFormData,
+          {},
+          null,
+          null,
+          'cans',
+        );
+        expect(result).toEqual({});
+      });
+    });
+
     describe('brand handling', () => {
       it('uses brandId when brand is dirty and brandId provided', () => {
         const result = buildDirtyUpdateInput(

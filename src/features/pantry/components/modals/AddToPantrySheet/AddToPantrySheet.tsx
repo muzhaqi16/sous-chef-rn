@@ -24,6 +24,7 @@ import {
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
 import { extractNodes } from '#/utils/connectionUtils';
 import { getPantryItemDuplicateFromResult } from '#/utils/errors/pantryItemDuplicate';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { addToPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { safeEvict, adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
@@ -290,9 +291,16 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
           return;
         }
         pendingItemIds.current.delete(item.id);
-        if (result.error) {
-          // Real (non-network) error → revert the optimistic item.
+        // Every business failure is a member of the result union, and under
+        // `errorPolicy: 'all'` it RESOLVES with no `error` — so reading
+        // `result.error` alone reports a ForbiddenError (no add-items access)
+        // or a ValidationError as success and strands the optimistic row.
+        // `classifyCreateResult` reads the payload's `__typename`, and keeps
+        // the row for a queued create and for IDEMPOTENT_REPLAY.
+        if (classifyCreateResult(result) === 'rejected') {
           safeEvict(client.cache, 'PantryItem', id);
+          // The success toast has already fired; correct it.
+          toastService.error(t('errors.addItemFailedRetry'));
         } else {
           onItemAdded?.();
         }
@@ -402,11 +410,15 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
           return;
         }
         pendingItemIds.current.delete(pantryItem.itemId);
-        if (result.error) {
-          // Real (non-network) error → revert the optimistic item + restore the
-          // suggestion (undo the exit animation).
+        // A refusal is a resolved union member carrying no `error` (see the
+        // search-suggestion handler above), so classify the payload rather
+        // than reading `result.error`. Rejected → revert the optimistic item
+        // and restore the suggestion (undo the exit animation).
+        if (classifyCreateResult(result) === 'rejected') {
           safeEvict(client.cache, 'PantryItem', id);
           state.completeExitAnimation(pantryItem.itemId);
+          // The success toast has already fired; correct it.
+          toastService.error(t('errors.addItemFailed'));
         } else {
           onItemAdded?.();
         }

@@ -69,6 +69,9 @@ export const FIELD_PAGE: Partial<Record<keyof AddPantryItemFormData, number>> =
     quantityInput: 1,
     pantryNetWeight: 1,
     pantryNetWeightUnit: 1,
+    // Package details live on the Details page too.
+    itemNetWeight: 1,
+    weightUnit: 1,
   };
 
 export const addPantryItemDefaults = (
@@ -155,6 +158,32 @@ export const addPantryItemSchema = object({
       return Boolean(context.parent.pantryNetWeightUnitId);
     },
   ),
+  // The package-details per-container weight is the SAME all-or-nothing rule,
+  // one level down: it feeds `item.netWeight` + `item.displayUnitId` inline,
+  // and (times the package size) the pantry-level `NetWeightInput`. Without
+  // this, a weight typed with no unit was dropped from the pantry input by the
+  // both-or-neither guard in the submit path and sent inline as a unitless
+  // Float — the value vanished with nothing reported. Scoped to
+  // `showPackageDetails` so a collapsed section can never block Save.
+  itemNetWeight: string().test(
+    'item-net-weight-needs-value',
+    msg('errors.field.netWeight'),
+    (value, context) => {
+      if (!context.parent.showPackageDetails) return true;
+      if ((value ?? '').trim()) return true;
+      return !context.parent.weightUnitId;
+    },
+  ),
+  weightUnit: string().test(
+    'item-net-weight-needs-unit',
+    msg('labels.pleaseSelectAUnitForTheNetWeight'),
+    (_value, context) => {
+      if (!context.parent.showPackageDetails) return true;
+      const weight = (context.parent.itemNetWeight ?? '').trim();
+      if (!weight) return true;
+      return Boolean(context.parent.weightUnitId);
+    },
+  ),
   // Everything else is free-form; the mutation input builder handles shaping.
   brand: string(),
   category: string(),
@@ -167,8 +196,6 @@ export const addPantryItemSchema = object({
   packageSize: string(),
   contentUnit: string(),
   contentUnitId: string().nullable(),
-  itemNetWeight: string(),
-  weightUnit: string(),
   weightUnitId: string().nullable(),
   storageLocation: string(),
   selectedStorageLocationId: string().nullable(),

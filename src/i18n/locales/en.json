@@ -159,7 +159,8 @@
       "quantity": "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.",
       "newQuantity": "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.",
       "itemName": "Enter a name for this item.",
-      "batchId": "That batch is no longer available. Refresh and try again."
+      "batchId": "That batch is no longer available. Refresh and try again.",
+      "pantryId": "You don't have permission to add items to this pantry."
     }
   },
   "success": {

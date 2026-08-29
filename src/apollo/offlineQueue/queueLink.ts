@@ -52,7 +52,7 @@ const NEVER_QUEUE_OPERATIONS = [
  *   replay allowlist as the offline path (`context.localFirst` opt-ins or
  *   `Sync*`-mapped idempotent operations). Un-migrated mutations keep their
  *   current behavior (blocking alert + revert). Creates are safe to queue because
- *   each carries a client-generated permanent id (CUID v1) as its primary key, so
+ *   each carries a client-generated permanent id (CUID2) as its primary key, so
  *   a re-sent create resolves to the same row server-side (find-by-id → update)
  *   rather than duplicating — see docs/local-first-architecture.md.
  * - **Online + success / GraphQL (non-network) error**: pass through normally so
