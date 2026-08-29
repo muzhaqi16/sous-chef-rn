@@ -11,12 +11,18 @@ mutation MovePurchasedItemsToPantry($input: MovePurchasedItemsToPantryInput!) {
       movedItems {
         shoppingListItemId
       }
-      # Lines the batch could not move. `reason` is a server string and is
-      # NOT displayed — the count and the item names are what reach the user.
+      # Lines the batch could not move. Only `itemName` reaches the user — the
+      # rest is for telemetry, so a failure is diagnosable without asking the
+      # user to reproduce it.
+      #
+      # `reason` is deliberately NOT selected: it is a server string, we never
+      # display it, and the schema's own guidance is to branch on `code`
+      # instead. `errorId` names the log entry holding the real error when the
+      # reason was masked, which is what support looks it up by.
       failedItems {
-        shoppingListItemId
         itemName
-        reason
+        code
+        errorId
       }
       summary {
         total

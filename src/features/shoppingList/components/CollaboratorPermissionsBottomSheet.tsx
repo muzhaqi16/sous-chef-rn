@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
-import { errorMessageOr } from '#/services/errorService';
+import { localizedErrorMessage } from '#/services/errorService';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { Icon } from '#utils/iconUtils';
@@ -179,7 +179,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
       (error: unknown) => {
         alertService.alert(
           t('labels.error'),
-          errorMessageOr(error, t('errors.codes.genericRetry')),
+          localizedErrorMessage(error, t('errors.codes.genericRetry')),
         );
       },
     );

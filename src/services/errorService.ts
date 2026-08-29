@@ -582,7 +582,18 @@ export const errorService = new ErrorService();
  * `fallback` must itself be localized: it is the caller's own copy for what
  * failed ("Couldn't update the home name"), which is more useful than a generic
  * sentence wherever the site knows what it was doing.
+ *
+ * A TRANSPORT failure yields to that fallback rather than overriding it. The
+ * copy for `NETWORK_ERROR` and `CIRCUIT_OPEN` is written for a READ — "You're
+ * currently offline. Showing cached data when available." — and on a write it
+ * is not merely vague but untrue: nothing is being shown, the change did not
+ * land. The code tells the caller only that the request did not arrive, which
+ * the caller already knew; what failed is the part only the caller knows. With
+ * no fallback the transport sentence still stands, since a generic message in
+ * the reader's language beats none.
  */
+const TRANSPORT_CODES = new Set(['NETWORK_ERROR', 'CIRCUIT_OPEN']);
+
 export const localizedErrorMessage = (
   error: unknown,
   fallback?: string,
@@ -590,20 +601,8 @@ export const localizedErrorMessage = (
   const result = errorService.parseApolloError(error, { logError: false });
   const code = result.error?.code;
   if (!code) return fallback ?? t('errors.codes.unexpected');
+  if (fallback && TRANSPORT_CODES.has(code)) return fallback;
   return errorService.getUserFriendlyMessage(code, fallback);
-};
-
-/**
- * Pure extraction of a raw error message from an `unknown` value, with a
- * caller-supplied fallback. Unlike `localizedErrorMessage`, this does NOT map a
- * code to user-facing copy or emit telemetry — use it at logging/handler sites
- * that already have their own fallback copy and just need the raw message
- * (replaces the repeated `(error as any)?.message || fallback` pattern).
- */
-export const errorMessageOr = (error: unknown, fallback: string): string => {
-  if (error instanceof Error && error.message) return error.message;
-  if (typeof error === 'string' && error) return error;
-  return fallback;
 };
 
 // Export hook for use in components

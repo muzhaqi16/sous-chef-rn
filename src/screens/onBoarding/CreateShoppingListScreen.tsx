@@ -17,7 +17,7 @@ import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigati
 import { createShoppingListSchema } from '#utils/validation/onboarding';
 import { logValidationErrors } from '#utils/validation/common';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { errorService, errorMessageOr } from '#/services/errorService';
+import { errorService, localizedErrorMessage } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/mutations/useCreateShoppingList';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
@@ -137,7 +137,7 @@ export const CreateShoppingListScreen = () => {
           operation: 'CreateShoppingList.submit',
         });
         setGraphqlError(
-          errorMessageOr(error, t('onBoarding.createShoppingListError')),
+          localizedErrorMessage(error, t('onBoarding.createShoppingListError')),
         );
       },
     );

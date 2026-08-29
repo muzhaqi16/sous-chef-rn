@@ -216,8 +216,8 @@ export function useBatchMoveToPantry({
     }
 
     // Reported separately so a partial success still says what did not land.
-    // `reason` is a server string and is never displayed; the item names are
-    // the user's own words.
+    // The item names are the user's own words; nothing else from the failure
+    // reaches the screen.
     if (failedCount > 0) {
       const names = payload.failedItems
         .map(item => item.itemName)
@@ -236,6 +236,18 @@ export function useBatchMoveToPantry({
       moved_count: movedCount,
       already_in_pantry_count: alreadyThereCount,
       failed_count: failedCount,
+      // A count alone cannot tell a validation refusal from a database fault,
+      // and the user is shown neither. Distinct codes keep this bounded; the
+      // ids are capped like the names above, and are how support finds the
+      // server-side log for a failure nobody can reproduce.
+      failed_codes: [...new Set(payload.failedItems.map(item => item.code))]
+        .sort()
+        .join(','),
+      failed_error_ids: payload.failedItems
+        .map(item => item.errorId)
+        .filter((id): id is string => !!id)
+        .slice(0, 3)
+        .join(','),
     });
 
     onSuccess?.();

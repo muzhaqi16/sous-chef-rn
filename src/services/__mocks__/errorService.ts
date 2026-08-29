@@ -59,11 +59,6 @@ export const errorService: ErrorServiceModule['errorService'] = Object.assign(
 
 export const localizedErrorMessage = jest.fn((): string => GENERIC);
 
-export const errorMessageOr = jest.fn(
-  (error: unknown, fallback: string): string =>
-    error instanceof Error && error.message ? error.message : fallback,
-);
-
 export const useErrorService = jest.fn(() => ({
   ...generated.useErrorService(),
   getUserFriendlyMessage: errorService.getUserFriendlyMessage,

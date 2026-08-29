@@ -722,9 +722,20 @@ the build path itself, not just in pre-push.
   matrix and PR guidance: `docs/development.md` § Git hooks +
   `CONTRIBUTING.md`.
 - The API repo (`sous-chef-api`) is read-only from here: align the client to
-  it, read it to verify contract constants, never edit it. After every
-  codegen, read `sous-chef-api/docs/api/breaking-changes.md` — BEHAVIOUR
-  entries have no SDL diff.
+  it, read it to verify contract constants, never edit it.
+- **After every codegen, diff `src/graphql/generated/schema.graphql`.** It is
+  tracked, `npm run codegen` re-pulls the live SDL, and the pre-push check
+  refuses a stale one — so a server change lands in YOUR branch, mixed into
+  whatever you were doing. Read it before committing and give it its own
+  commit; a removed field or a narrowed meaning is the client's problem to
+  find. This instruction used to name `sous-chef-api/docs/api/breaking-changes.md`
+  as the place to check instead. That file is GONE — the API deleted the log,
+  its `.schema-breaking-allow` and the `schema-breaking-changes.mjs` linter
+  together — so there is no longer a published record of BEHAVIOUR changes,
+  the ones that never show up as an SDL diff at all. The doc comments in the
+  SDL are what remain: they are prose, they do change, and a diff that looks
+  like documentation can be a contract change (`summary.skipped` was
+  redefined that way on 2026-08-29 with no signature change).
 - Parallel sessions may share this checkout — touch only the files your task
   edits; no whole-tree git commands (`stash`, `reset --hard`, `checkout .`).
 

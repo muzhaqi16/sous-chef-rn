@@ -12,7 +12,7 @@ import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { Icon } from '#/utils/iconUtils';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { errorMessageOr } from '#/services/errorService';
+import { localizedErrorMessage } from '#/services/errorService';
 import type { Translate } from '#/i18n/types';
 
 interface InviteUserModalProps {
@@ -176,14 +176,9 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
       },
       setIsSubmitting,
       (err: unknown) => {
-        // Extract the actual error message from the API (errorMessageOr reads
+        // Extract the actual error message from the API (localizedErrorMessage reads
         // Error.message / string and falls back to the localized default).
-        setError(
-          errorMessageOr(err, t('inviteUser.sendFailed')).replace(
-            'ApolloError: ',
-            '',
-          ),
-        );
+        setError(localizedErrorMessage(err, t('inviteUser.sendFailed')));
       },
     );
   };

@@ -32,7 +32,10 @@ import {
   localizedErrorMessage,
   useErrorService,
 } from '../errorService';
-import { GraphQLDomainError } from '#/utils/errors/graphqlErrors';
+import {
+  GraphQLDomainError,
+  GraphQLNetworkError,
+} from '#/utils/errors/graphqlErrors';
 import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
 import {
@@ -727,7 +730,7 @@ describe('localizedErrorMessage', () => {
     });
 
     // The server's text is unlocalizable English by construction — it belongs
-    // in the log (via `errorMessageOr`), never in front of a user.
+    // in the log, never in front of a user.
     expect(message).not.toBe(serverText);
   });
 
@@ -753,6 +756,31 @@ describe('localizedErrorMessage', () => {
   it('returns localized copy when the error carries no code at all', () => {
     const message = localizedErrorMessage(new Error('boom'));
     expect(message).not.toBe('boom');
+    expect(message.length).toBeGreaterThan(0);
+  });
+
+  it("prefers the caller's copy over the read-oriented transport sentence", () => {
+    const fallback = 'Something went wrong setting up your home.';
+    const message = localizedErrorMessage(
+      new GraphQLNetworkError('socket hang up'),
+      fallback,
+    );
+
+    // `NETWORK_ERROR` resolves to "You're currently offline. Showing cached
+    // data when available." — written for a READ. On a failed write that is
+    // not merely vague but untrue: nothing is being shown and the change did
+    // not land. The code says only that the request never arrived, which the
+    // caller already knew; what failed is the half only the caller knows.
+    expect(message).toBe(fallback);
+  });
+
+  it('still gives a transport failure a message when the caller has none', () => {
+    const message = localizedErrorMessage(
+      new GraphQLNetworkError('socket hang up'),
+    );
+
+    // A generic sentence in the reader's language beats no sentence.
+    expect(message).not.toBe('socket hang up');
     expect(message.length).toBeGreaterThan(0);
   });
 });

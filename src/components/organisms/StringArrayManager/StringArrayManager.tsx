@@ -11,7 +11,7 @@ const ThemedSheetTextInput = withUnistyles(BottomSheetTextInput, theme => ({
   placeholderTextColor: theme.colors.inputPlaceholder,
 }));
 import { Icon } from '#/utils/iconUtils';
-import { errorMessageOr } from '#/services/errorService';
+import { localizedErrorMessage } from '#/services/errorService';
 import { commonStyles } from '#/styles/commonStyles';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -209,7 +209,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
       },
       setLoading,
       (err: unknown) => {
-        setError(errorMessageOr(err, t('errors.generic')));
+        setError(localizedErrorMessage(err, t('errors.generic')));
       },
     );
   };

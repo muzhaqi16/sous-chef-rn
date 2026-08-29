@@ -43,9 +43,9 @@ function moveMock(payload: {
   movedItemIds: string[];
   /** Lines that errored — `summary.failed`, itemised in `failedItems`. */
   failedItems?: {
-    shoppingListItemId: string;
     itemName: string;
-    reason: string;
+    code: string;
+    errorId?: string | null;
   }[];
 }) {
   return recordMock(MovePurchasedItemsToPantryDocument, {
@@ -66,6 +66,7 @@ function moveMock(payload: {
         ],
         failedItems: (payload.failedItems ?? []).map(item => ({
           __typename: 'FailedMoveInfo',
+          errorId: null,
           ...item,
         })),
         summary: {
@@ -252,9 +253,7 @@ describe('useBatchMoveToPantry', () => {
       skippedCount: 0,
       targetPantryName: 'My Pantry',
       movedItemIds: [],
-      failedItems: [
-        { shoppingListItemId: 'i1', itemName: 'bread', reason: 'nope' },
-      ],
+      failedItems: [{ itemName: 'bread', code: 'VALIDATION_FAILED' }],
     });
 
     const { result } = renderHookWithApollo(
@@ -280,9 +279,9 @@ describe('useBatchMoveToPantry', () => {
       movedItemIds: ['item-1'],
       failedItems: [
         {
-          shoppingListItemId: 'item-9',
           itemName: 'bread',
-          reason: 'Shopping list item needs a name before it can be moved',
+          code: 'VALIDATION_FAILED',
+          errorId: 'log-42',
         },
       ],
     });
@@ -359,6 +358,44 @@ describe('useBatchMoveToPantry', () => {
         moved_count: 2,
         already_in_pantry_count: 1,
         failed_count: 0,
+      }),
+    );
+  });
+
+  it('records WHY lines failed, which the user is never shown', async () => {
+    const { Telemetry } = require('#/services/telemetry');
+    const move = moveMock({
+      movedCount: 1,
+      skippedCount: 0,
+      targetPantryName: 'My Pantry',
+      movedItemIds: ['item-1'],
+      failedItems: [
+        { itemName: 'bread', code: 'VALIDATION_FAILED', errorId: 'log-42' },
+        { itemName: 'milk', code: 'INTERNAL_ERROR', errorId: 'log-43' },
+        { itemName: 'eggs', code: 'VALIDATION_FAILED', errorId: null },
+      ],
+    });
+
+    const { result } = renderHookWithApollo(
+      () =>
+        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
+      { operationMocks: [move.mock] },
+    );
+
+    await act(async () => {
+      await result.current.batchMoveToPantry();
+    });
+
+    // A count cannot tell a refusal from a database fault, and the screen shows
+    // neither — so without this the only record of a failed move is a number.
+    expect(Telemetry.trackEvent).toHaveBeenCalledWith(
+      'batch_move_purchased_to_pantry',
+      expect.objectContaining({
+        failed_count: 3,
+        // Distinct and sorted: three failures, two causes.
+        failed_codes: 'INTERNAL_ERROR,VALIDATION_FAILED',
+        // Only the ids that exist, so a null cannot become an empty slot.
+        failed_error_ids: 'log-42,log-43',
       }),
     );
   });
