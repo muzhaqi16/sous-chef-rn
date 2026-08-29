@@ -65,11 +65,22 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
   );
 };
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create(theme => ({
   itemContainer: {
     flex: 1,
   },
   touchable: {
     // flex: 1 removed to prevent blocking swipe action buttons
+
+    // Matches the card's own radius (`BaseItemCard.container`) so the Android
+    // ripple is masked to the row's rounded shape. `android_ripple` with
+    // `borderless: false` is clipped to the pressed view's background shape,
+    // and this view had none — so every press painted a square-cornered grey
+    // rectangle behind a rounded card, out past its corners.
+    //
+    // Radius only, deliberately no `overflow: 'hidden'`: the card draws a soft
+    // drop shadow that extends past its bounds, and clipping here would cut it
+    // to a hard rectangle — the same reason `childrenContainer` stays visible.
+    borderRadius: theme.radii.xl,
   },
 }));

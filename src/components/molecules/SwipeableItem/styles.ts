@@ -11,9 +11,22 @@ import { StyleSheet } from 'react-native-unistyles';
 // - Action containers: use matching radius on their exposed (outer) edges only
 // Adding backgroundColor to swipeableContainer or borderRadius to childrenContainer causes
 // a "double border" artifact where the parent's radius clips/bleeds against the card's.
+//
+// The action containers overhang HORIZONTALLY only (negative marginLeft/Right),
+// so the card covers the overhang while closed. They must NOT overhang
+// vertically: nothing covers that, so a `marginVertical: -xs` painted a dark
+// line above and below every row from the first pixel of a swipe. The corner
+// notches those margins were meant to fill are at the card's left and right
+// rounded corners, which the horizontal overhang already fills.
 export const styles = StyleSheet.create(theme => {
-  // Shared border radius for swipeable + action containers
-  const SWIPEABLE_RADIUS = theme.radii.lg;
+  // Shared border radius for swipeable + action containers.
+  //
+  // MUST match the card's own radius (`BaseItemCard.container`, `radii.xl`).
+  // This was `radii.lg` — 12 against the card's 16 — so the dark action
+  // container's corners were TIGHTER than the card's and poked out around them
+  // instead of tucking under, drawing a square-ish dark edge down the side of a
+  // rounded row the moment a swipe began.
+  const SWIPEABLE_RADIUS = theme.radii.xl;
 
   return {
     // Container style for Swipeable component (shadow shape only, no visible background)
@@ -42,8 +55,6 @@ export const styles = StyleSheet.create(theme => {
       justifyContent: 'center',
       marginLeft: -theme.spacing['3'], // Extend under card edge to cover rounded corners
       paddingLeft: theme.spacing['3'], // Compensate for margin to maintain button positioning
-      marginVertical: -theme.spacing.xs, // Extend beyond swipeable bounds to cover card border/corners
-      paddingVertical: theme.spacing.xs, // Compensate to keep buttons centered
       borderTopLeftRadius: 0, // Square edge where it meets the card
       borderBottomLeftRadius: 0,
       borderTopRightRadius: SWIPEABLE_RADIUS, // Rounded outer edge
@@ -57,8 +68,6 @@ export const styles = StyleSheet.create(theme => {
       gap: theme.spacing.xs,
       marginRight: -theme.spacing['3'], // Extend under card edge to cover rounded corners
       paddingRight: theme.spacing['3'], // Compensate for margin to maintain button positioning
-      marginVertical: -theme.spacing.xs, // Extend beyond swipeable bounds to cover card border/corners
-      paddingVertical: theme.spacing.xs, // Compensate to keep buttons centered
       borderTopRightRadius: 0, // Square edge where it meets the card
       borderBottomRightRadius: 0,
       borderTopLeftRadius: SWIPEABLE_RADIUS, // Rounded outer edge
