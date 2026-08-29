@@ -2,6 +2,13 @@ mutation MovePurchasedItemsToPantry($input: MovePurchasedItemsToPantryInput!) {
   movePurchasedItemsToPantry(input: $input) {
     __typename
     ... on MovePurchasedItemsToPantryPayload {
+      # The lines that are now in the pantry, so the rows can be shown as
+      # stocked without waiting for a refetch. `alreadyInPantry` separates the
+      # ones this call moved from the ones it found already there.
+      movedItems {
+        shoppingListItemId
+        alreadyInPantry
+      }
       # Lines the batch could not move. `reason` is a server string and is
       # NOT displayed — the count and the item names are what reach the user.
       failedItems {
@@ -20,5 +27,16 @@ mutation MovePurchasedItemsToPantry($input: MovePurchasedItemsToPantryInput!) {
       code
       message
     }
+  }
+}
+
+# The one field the batch writes back locally. Uses the flag-plus-stocked shape
+# that `purchaseInfoCompleteness` documents: `isPurchased` is unchanged by this
+# write, so the merge keeps the rest of the purchase record intact.
+fragment BatchMoveStocked on ShoppingListItem {
+  id
+  purchaseInfo {
+    isPurchased
+    movedToPantryAt
   }
 }

@@ -22,6 +22,7 @@ const makeItem = (
   sortOrder: '1',
   purchaseInfo: {
     __typename: 'ShoppingListItemPurchaseInfo',
+    movedToPantryAt: null,
     isPurchased: false,
   },
   unit: { __typename: 'Unit', id: 'u1', name: 'Liter', symbol: 'L' },

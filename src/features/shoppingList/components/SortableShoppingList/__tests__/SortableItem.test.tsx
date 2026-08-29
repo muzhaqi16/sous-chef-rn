@@ -450,6 +450,88 @@ describe('SwipeableListItem (SortableItem)', () => {
     });
   });
 
+  describe('a line already stocked in the pantry', () => {
+    const setMoveAction = () => {
+      (useSortableListActions as jest.Mock).mockReturnValue({
+        actions: {
+          onItemPress: jest.fn(),
+          itemSwipeActions: jest.fn(),
+          onTogglePurchase: jest.fn(),
+          onMoveToPantry: jest.fn(),
+          onQuantityPress: jest.fn(),
+          onSwipeableWillOpen: jest.fn(),
+          onSwipeableClose: jest.fn(),
+        },
+        permissions: {
+          canRemoveItems: true,
+          canEditItems: true,
+          canMarkPurchased: true,
+        },
+        permissionsRef: {
+          current: {
+            canRemoveItems: true,
+            canEditItems: true,
+            canMarkPurchased: true,
+          },
+        },
+      });
+    };
+
+    beforeEach(setMoveAction);
+
+    it('offers move-to-pantry on a purchased line that has not been moved', () => {
+      const entry = seedItem({
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: true,
+          movedToPantryAt: null,
+        },
+      });
+      renderWithApollo(
+        <SwipeableListItem
+          item={rowItem(entry, true)}
+          index={0}
+          target="Cell"
+        />,
+        { cache: seedCache([entry]) },
+      );
+
+      expect(
+        screen.getByTestId(`shopping-list-item-${entry.id}-move-to-pantry`),
+      ).toBeTruthy();
+      expect(
+        screen.queryByTestId(`shopping-list-item-${entry.id}-stocked`),
+      ).toBeNull();
+    });
+
+    it('shows it as stocked instead once the line carries the stamp', () => {
+      const entry = seedItem({
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: true,
+          movedToPantryAt: '2026-08-28T10:00:00.000Z',
+        },
+      });
+      renderWithApollo(
+        <SwipeableListItem
+          item={rowItem(entry, true)}
+          index={0}
+          target="Cell"
+        />,
+        { cache: seedCache([entry]) },
+      );
+
+      // The bulk move filters its working set on this same stamp, so offering
+      // the action would promise something that does nothing.
+      expect(
+        screen.getByTestId(`shopping-list-item-${entry.id}-stocked`),
+      ).toBeTruthy();
+      expect(
+        screen.queryByTestId(`shopping-list-item-${entry.id}-move-to-pantry`),
+      ).toBeNull();
+    });
+  });
+
   describe('tutorial rect cleanup', () => {
     // registerRect only ever sets a value — nothing else clears a rect once
     // its owning row stops being the tutorial's target (item purchased/

@@ -263,5 +263,8 @@
   "listTemplate": {
     "loading": "Loading...",
     "loadingItems": "Loading your items"
+  },
+  "shoppingList": {
+    "alreadyInPantry": "Already in your pantry"
   }
 }

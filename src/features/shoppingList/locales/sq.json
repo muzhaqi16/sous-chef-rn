@@ -263,5 +263,8 @@
   "listTemplate": {
     "loading": "Po ngarkohet...",
     "loadingItems": "Po ngarkohen artikujt e tu"
+  },
+  "shoppingList": {
+    "alreadyInPantry": "Tashmë te qilari yt"
   }
 }

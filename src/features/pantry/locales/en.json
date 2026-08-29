@@ -232,7 +232,8 @@
     "allAlreadyThere_one": "That item is already in your pantry",
     "allAlreadyThere_other": "Those {{count}} items are already in your pantry",
     "failedItems_one": "Couldn't move {{names}}",
-    "failedItems_other": "Couldn't move {{count}} items, including {{names}}"
+    "failedItems_other": "Couldn't move {{count}} items, including {{names}}",
+    "nothingLeftToMove": "Everything purchased is already in your pantry"
   },
   "pantryAction": {
     "useByDefault": "Use by",

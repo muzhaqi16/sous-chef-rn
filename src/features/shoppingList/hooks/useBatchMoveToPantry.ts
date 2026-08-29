@@ -1,5 +1,9 @@
-import { useMutation } from '@apollo/client/react';
-import { MovePurchasedItemsToPantryDocument } from './useBatchMoveToPantry.generated';
+import { useApolloClient, useMutation } from '@apollo/client/react';
+import type { ApolloCache } from '@apollo/client';
+import {
+  BatchMoveStockedFragmentDoc,
+  MovePurchasedItemsToPantryDocument,
+} from './useBatchMoveToPantry.generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { handleMutationError } from '#/utils/errorHandlers';
@@ -9,6 +13,41 @@ import { getI18n } from '#/i18n/config';
 import { errorService } from '#/services/errorService';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { generateEntityId } from '#/utils/generateEntityId';
+
+/**
+ * Mark the moved lines as stocked, so their rows stop offering an action that
+ * would now do nothing.
+ *
+ * The server keeps the lines and stamps them; without this the rows keep the
+ * move-to-pantry button until the next fetch. Safe against the
+ * `ShoppingListItemPurchaseInfo` merge, which clears omitted fields only when
+ * `isPurchased` CHANGES — these lines are purchased before and after, so the
+ * write takes the `mergeObjects` path and touches nothing else.
+ *
+ * The timestamp is a local placeholder: the field is read as "is this stocked",
+ * and the server's own value replaces it on the next fetch.
+ */
+function markMovedLinesStocked(cache: ApolloCache, ids: string[]): void {
+  const stampedAt = new Date().toISOString();
+  for (const id of ids) {
+    const cacheId = cache.identify({ __typename: 'ShoppingListItem', id });
+    if (!cacheId) continue;
+    cache.writeFragment({
+      id: cacheId,
+      fragment: BatchMoveStockedFragmentDoc,
+      fragmentName: 'BatchMoveStocked',
+      data: {
+        __typename: 'ShoppingListItem',
+        id,
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: true,
+          movedToPantryAt: stampedAt,
+        },
+      },
+    });
+  }
+}
 
 interface UseBatchMoveToPantryOptions {
   currentListId: string | undefined;
@@ -35,6 +74,7 @@ export function useBatchMoveToPantry({
   purchasedItems,
   onSuccess,
 }: UseBatchMoveToPantryOptions): UseBatchMoveToPantryReturn {
+  const client = useApolloClient();
   const [movePurchasedMutation, { loading }] = useMutation(
     MovePurchasedItemsToPantryDocument,
     {
@@ -128,6 +168,19 @@ export function useBatchMoveToPantry({
     //   failed    — lines that errored, itemised in `failedItems`
     // A repeat call on an unchanged list reports `succeeded: 0`, which is the
     // honest answer rather than the same count forever.
+    // Every line the payload lists is now in the pantry — the ones this call
+    // moved and the ones it found already there.
+    try {
+      markMovedLinesStocked(
+        client.cache,
+        payload.movedItems.map(item => item.shoppingListItemId),
+      );
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Mark moved shopping lines as stocked',
+      });
+    }
+
     const movedCount = payload.summary.succeeded;
     const alreadyThereCount = payload.summary.skipped;
     const failedCount = payload.summary.failed;
@@ -146,13 +199,18 @@ export function useBatchMoveToPantry({
         }),
       );
     } else if (alreadyThereCount > 0) {
-      // Nothing moved because everything was already stocked. That is a success
-      // for the user, not the "nothing could be moved" message.
+      // Nothing moved because the pantry already held these lines. That is a
+      // success for the user, not the "nothing could be moved" message.
       toastService.info(
         getI18n().t('moveToPantry.allAlreadyThere', {
           count: alreadyThereCount,
         }),
       );
+    } else if (failedCount === 0) {
+      // Every bucket empty. Since the move began stamping the lines it moves,
+      // this is the ordinary steady state — a second press with nothing new
+      // purchased — not a failure, so it must not read like one.
+      toastService.info(t('moveToPantry.nothingLeftToMove'));
     } else {
       toastService.info(t('moveToPantry.noItemsMoved'));
     }

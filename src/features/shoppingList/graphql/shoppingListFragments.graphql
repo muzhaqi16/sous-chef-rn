@@ -21,6 +21,9 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   displayFormat
   purchaseInfo {
     isPurchased
+    # The row renders a stocked line differently, and a field the write omits
+    # is a field the cache does not hold — so the writers carry it too.
+    movedToPantryAt
   }
   version
   updatedAt
@@ -107,6 +110,10 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
 # selection that does not spread this.
 fragment ShoppingListItemPurchaseInfoFragment on ShoppingListItemPurchaseInfo {
   isPurchased
+  # When this line's purchase reached the pantry. Part of the purchase record
+  # rather than beside it: the server clears it on the same transition the
+  # cache merge clears the rest on — the line re-entering an unpurchased state.
+  movedToPantryAt
   purchasedQuantity
   purchasedPrice
   purchaseDate
@@ -152,6 +159,9 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
   displayFormat
   purchaseInfo {
     isPurchased
+    # The row renders a stocked line differently, and a field the write omits
+    # is a field the cache does not hold — so the writers carry it too.
+    movedToPantryAt
   }
   version
   updatedAt

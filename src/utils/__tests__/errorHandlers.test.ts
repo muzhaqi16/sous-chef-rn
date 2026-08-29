@@ -12,10 +12,15 @@ jest.mock('../errors/versionConflict', () => ({
 
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
+  // The raw server text — for logs and reports only.
   getErrorMessage: jest.fn(
     (err: unknown) =>
       (err instanceof Error ? err.message : '') || 'Unknown error',
   ),
+  // What a user is shown. Stands in for the real code -> `errors.codes.*`
+  // lookup, and deliberately returns something that is NOT the error's own
+  // message so a leak of that message is visible in the assertions below.
+  localizedErrorMessage: jest.fn(() => 'Something went wrong. Please retry.'),
 }));
 
 const { handleVersionConflict } = require('../errors/versionConflict');
@@ -70,9 +75,21 @@ describe('handleVersionConflictAlert', () => {
 });
 
 describe('handleMutationErrorAlert', () => {
-  it('shows alert and reports error', () => {
+  it("shows localized copy, never the error's own message", () => {
     handleMutationErrorAlert(new Error('boom'), { operation: 'Test' });
-    expect(alertService.alert).toHaveBeenCalledWith('Error', 'boom');
+
+    // 'boom' stands for the server's message. It used to reach the alert
+    // verbatim: an Albanian-locale user saw a "Gabim" title over the English
+    // "An unexpected database error occurred".
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Something went wrong. Please retry.',
+    );
+    expect(alertService.alert).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'boom',
+    );
+    // The precise text still goes to the report, where English is correct.
     expect(errorService.reportError).toHaveBeenCalled();
   });
 

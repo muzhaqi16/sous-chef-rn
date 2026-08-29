@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 // RNGH's Pressable (not AppPressable/RN) for the archive button: it's nested in
 // the row's RNGH Swipeable, so RNGH's native button captures the tap and it
@@ -93,6 +94,8 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     duration: TIMING.MODERATE,
   });
 
+  const { t } = useTranslation();
+
   // Get actions and permissions from context (stable references)
   const { actions, permissions } = useSortableListActions();
   const {
@@ -124,6 +127,13 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   const isPurchased = rowItem?.isPurchased ?? false;
   const itemId = rowItem?.id ?? '';
   const swipeActions = itemSwipeActions?.(itemId);
+
+  // This line's purchase already reached the pantry. The bulk move filters its
+  // working set on the same stamp, so offering "move to pantry" here would
+  // promise an action that does nothing — the row is shown as stocked instead.
+  // Cleared server-side when the line re-enters an unpurchased state, so a
+  // re-added item becomes actionable again on its own.
+  const isStocked = !!data?.purchaseInfo?.movedToPantryAt;
 
   // Derive display data from the fragment. On cache miss before first paint
   // we fall back to safe defaults instead of returning null so the cell still
@@ -260,7 +270,19 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
 
   // Create rightElement: quantity badge + optional archive action
   const rightElement = (() => {
-    const archiveIcon = isPurchased && !!onMoveToPantry && (
+    const stockedIndicator = isPurchased && isStocked && (
+      <View
+        style={styles.moveToPantryButton}
+        accessibilityLabel={t('shoppingList.alreadyInPantry')}
+        testID={`shopping-list-item-${itemId}-stocked`}
+      >
+        {/* Colour comes from the list's single theme read, like every other
+            icon in this row — `tone=` would make each cell subscribe. */}
+        <Icon name="archive" size={24} color={themeColors?.textSecondary} />
+      </View>
+    );
+
+    const archiveIcon = isPurchased && !isStocked && !!onMoveToPantry && (
       <View
         ref={isTutorialArchiveTarget ? archiveIconRef : undefined}
         collapsable={false}
@@ -273,6 +295,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           }}
           style={styles.moveToPantryButton}
           hitSlop={HIT_SLOP}
+          testID={`shopping-list-item-${itemId}-move-to-pantry`}
         >
           <Icon name="archive-outline" size={24} color={themeColors?.primary} />
         </Pressable>
@@ -296,6 +319,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           themeColors={themeColors}
         />
         {archiveIcon}
+        {stockedIndicator}
       </View>
     );
   })();

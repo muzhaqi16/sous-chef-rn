@@ -232,7 +232,8 @@
     "allAlreadyThere_one": "Ese artículo ya está en tu despensa",
     "allAlreadyThere_other": "Esos {{count}} artículos ya están en tu despensa",
     "failedItems_one": "No se pudo mover {{names}}",
-    "failedItems_other": "No se pudieron mover {{count}} artículos, incluidos {{names}}"
+    "failedItems_other": "No se pudieron mover {{count}} artículos, incluidos {{names}}",
+    "nothingLeftToMove": "Todo lo comprado ya está en tu despensa"
   },
   "pantryAction": {
     "useByDefault": "Consumir antes de",

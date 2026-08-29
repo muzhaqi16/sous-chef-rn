@@ -7,6 +7,9 @@ import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { useAdjustPantryItemQuantity } from '../useAdjustPantryItemQuantity';
 
 jest.mock('#/services/errorService', () => ({
+  // User-facing copy, resolved from the error's code. Present so a suite
+  // reaching the alert path does not fail on a missing export.
+  localizedErrorMessage: jest.fn(() => 'Something went wrong.'),
   errorService: { reportError: jest.fn() },
   getErrorMessage: jest.fn(() => 'Network error'),
 }));
@@ -230,7 +233,12 @@ describe('useAdjustPantryItemQuantity', () => {
 
     expect(success).toBe(false);
     await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith('Error', 'Network error'),
+      // Localized copy, not the error's own text. The raw message is
+      // unlocalizable English and belongs in the report, not the alert.
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Something went wrong.',
+      ),
     );
   });
 

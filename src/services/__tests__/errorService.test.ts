@@ -30,6 +30,7 @@ jest.mock('@apollo/client/errors', () => ({
 import {
   errorService,
   getErrorMessage,
+  localizedErrorMessage,
   useErrorService,
 } from '../errorService';
 import { Telemetry } from '#/services/telemetry';
@@ -719,5 +720,57 @@ describe('errorService', () => {
       expect(service.shouldRetry('SERVICE_TIMEOUT')).toBe(true);
       expect(service.isAuthError('AUTH_TOKEN_INVALID')).toBe(true);
     });
+  });
+});
+
+describe('localizedErrorMessage', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (isQueryComplexityError as jest.Mock).mockReturnValue(false);
+    (isVersionConflictError as jest.Mock).mockReturnValue(false);
+    mockCombinedGraphQLErrorsIs.mockReturnValue(false);
+  });
+
+  it("never returns the server's own message", () => {
+    mockCombinedGraphQLErrorsIs.mockReturnValue(true);
+    const serverText = 'An unexpected database error occurred';
+    const message = localizedErrorMessage({
+      errors: [
+        {
+          message: serverText,
+          extensions: { code: 'RESOURCE_NOT_FOUND' },
+        },
+      ],
+    });
+
+    // The server's text is unlocalizable English by construction. It belongs in
+    // the log, which `getErrorMessage` still serves, not in front of a user.
+    expect(message).not.toBe(serverText);
+    expect(getErrorMessage).not.toBe(localizedErrorMessage);
+  });
+
+  it('falls back to localized copy for an unmapped code, not the raw text', () => {
+    mockCombinedGraphQLErrorsIs.mockReturnValue(true);
+    const serverText = 'Some brand new server condition';
+    const message = localizedErrorMessage({
+      errors: [
+        {
+          message: serverText,
+          extensions: { code: 'A_CODE_THE_CLIENT_HAS_NEVER_SEEN' },
+        },
+      ],
+    });
+
+    // A vaguer sentence in the right language beats a precise one in the wrong
+    // language — and the precise one is in the report either way.
+    expect(message).not.toBe(serverText);
+    expect(typeof message).toBe('string');
+    expect(message.length).toBeGreaterThan(0);
+  });
+
+  it('returns localized copy when the error carries no code at all', () => {
+    const message = localizedErrorMessage(new Error('boom'));
+    expect(message).not.toBe('boom');
+    expect(message.length).toBeGreaterThan(0);
   });
 });

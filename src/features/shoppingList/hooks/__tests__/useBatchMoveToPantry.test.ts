@@ -52,6 +52,20 @@ function moveMock(payload: {
     data: {
       movePurchasedItemsToPantry: {
         __typename: 'MovePurchasedItemsToPantryPayload',
+        // Every line now in the pantry: the ones this call moved, plus the
+        // already-stocked ones the server reports as skipped.
+        movedItems: [
+          ...payload.movedItemIds.map(id => ({
+            __typename: 'MovedItemInfo',
+            shoppingListItemId: id,
+            alreadyInPantry: false,
+          })),
+          ...Array.from({ length: payload.skippedCount }, (_, i) => ({
+            __typename: 'MovedItemInfo',
+            shoppingListItemId: `already-${i}`,
+            alreadyInPantry: true,
+          })),
+        ],
         failedItems: (payload.failedItems ?? []).map(item => ({
           __typename: 'FailedMoveInfo',
           ...item,
@@ -208,12 +222,41 @@ describe('useBatchMoveToPantry', () => {
     );
   });
 
-  it('still says nothing moved when there was genuinely nothing', async () => {
+  // Since the move began stamping the lines it moves, a second press with
+  // nothing newly purchased reports every bucket empty. That is the ordinary
+  // steady state, not a failure, and must not read like one.
+  it('says everything purchased is already stocked when every bucket is empty', async () => {
     const move = moveMock({
       movedCount: 0,
       skippedCount: 0,
       targetPantryName: 'My Pantry',
       movedItemIds: [],
+    });
+
+    const { result } = renderHookWithApollo(
+      () =>
+        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
+      { operationMocks: [move.mock] },
+    );
+
+    await act(async () => {
+      await result.current.batchMoveToPantry();
+    });
+
+    expect(mockToastInfo).toHaveBeenCalledWith(
+      'Everything purchased is already in your pantry',
+    );
+  });
+
+  it('still says nothing moved when lines failed and none moved', async () => {
+    const move = moveMock({
+      movedCount: 0,
+      skippedCount: 0,
+      targetPantryName: 'My Pantry',
+      movedItemIds: [],
+      failedItems: [
+        { shoppingListItemId: 'i1', itemName: 'bread', reason: 'nope' },
+      ],
     });
 
     const { result } = renderHookWithApollo(
@@ -568,5 +611,103 @@ describe('counters are adjusted exactly once', () => {
     expect(readCounts(cache)).toEqual(
       expect.objectContaining({ totalItems: 10, completedItems: 4 }),
     );
+  });
+});
+
+describe('moved lines are marked stocked in the cache', () => {
+  const { gql } = require('@apollo/client');
+  const STOCKED = gql`
+    fragment StockedProbe on ShoppingListItem {
+      id
+      purchaseInfo {
+        isPurchased
+        movedToPantryAt
+        purchasedQuantity
+      }
+    }
+  `;
+
+  function seededCache() {
+    const { makeCache } = require('#/apollo/cache');
+    const cache = makeCache();
+    cache.writeFragment({
+      id: 'ShoppingListItem:item-1',
+      fragment: STOCKED,
+      data: {
+        __typename: 'ShoppingListItem',
+        id: 'item-1',
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: true,
+          movedToPantryAt: null,
+          // Present so the merge's clearing behaviour is observable below.
+          purchasedQuantity: 3,
+        },
+      },
+    });
+    return cache;
+  }
+
+  const read = (cache: { readFragment: Function }) =>
+    cache.readFragment({
+      id: 'ShoppingListItem:item-1',
+      fragment: STOCKED,
+    }) as {
+      purchaseInfo: {
+        movedToPantryAt: string | null;
+        purchasedQuantity: number | null;
+      };
+    } | null;
+
+  it('stamps the moved line so its row stops offering the action', async () => {
+    const cache = seededCache();
+    const move = moveMock({
+      movedCount: 1,
+      skippedCount: 0,
+      targetPantryName: 'My Pantry',
+      movedItemIds: ['item-1'],
+    });
+
+    const { result } = renderHookWithApollo(
+      () =>
+        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
+      { operationMocks: [move.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.batchMoveToPantry();
+    });
+
+    // Without this the row keeps its move-to-pantry button until a refetch,
+    // promising an action the server will no longer act on.
+    expect(read(cache)?.purchaseInfo.movedToPantryAt).toEqual(
+      expect.any(String),
+    );
+  });
+
+  it('leaves the rest of the purchase record alone', async () => {
+    const cache = seededCache();
+    const move = moveMock({
+      movedCount: 1,
+      skippedCount: 0,
+      targetPantryName: 'My Pantry',
+      movedItemIds: ['item-1'],
+    });
+
+    const { result } = renderHookWithApollo(
+      () =>
+        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
+      { operationMocks: [move.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.batchMoveToPantry();
+    });
+
+    // `ShoppingListItemPurchaseInfo` clears every omitted field when
+    // `isPurchased` CHANGES. This write keeps it true, so the merge takes the
+    // mergeObjects path and the amounts survive — the property that makes
+    // writing one field of this record safe at all.
+    expect(read(cache)?.purchaseInfo.purchasedQuantity).toBe(3);
   });
 });

@@ -9,6 +9,9 @@ import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { useCorrectPantryItemWeight } from '../useCorrectPantryItemWeight';
 
 jest.mock('#/services/errorService', () => ({
+  // User-facing copy, resolved from the error's code. Present so a suite
+  // reaching the alert path does not fail on a missing export.
+  localizedErrorMessage: jest.fn(() => 'Something went wrong.'),
   errorService: { reportError: jest.fn() },
   getErrorMessage: jest.fn(() => 'Test error'),
 }));
@@ -197,7 +200,11 @@ describe('useCorrectPantryItemWeight', () => {
 
     expect(success).toBe(false);
     await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith('Error', 'Test error'),
+      // Localized copy, not the error's own text.
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Something went wrong.',
+      ),
     );
   });
 

@@ -79,6 +79,7 @@ function seedItem(cache: InMemoryCache, isPurchased: boolean) {
     displayFormat: DisplayFormat.Decimal,
     purchaseInfo: {
       __typename: 'ShoppingListItemPurchaseInfo',
+      movedToPantryAt: null,
       isPurchased,
     },
     version: 1,
@@ -127,6 +128,7 @@ function buildSettledServerResponse(
         // owns rather than just the flag that changed.
         purchaseInfo: {
           __typename: 'ShoppingListItemPurchaseInfo',
+          movedToPantryAt: null,
           isPurchased: newPurchased,
           purchasedQuantity: newPurchased ? 1 : null,
           purchasedPrice: newPurchased ? 2.5 : null,

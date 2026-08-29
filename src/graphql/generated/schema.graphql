@@ -7178,13 +7178,19 @@ type Mutation {
   
   Bulk form of moveShoppingItemToPantry, with one difference: it never removes
   the lines it moves. They stay in the purchased section — clearing that is
-  deleteShoppingListItems(purchased: true), a separate act the user confirms —
-  so a second call re-reads the same lines and finds them already stocked.
+  deleteShoppingListItems(purchased: true) — and each is stamped with
+  ShoppingListItem.purchaseInfo.movedToPantryAt, which is what takes it out of
+  this mutation's working set. A repeat call over an unchanged list therefore
+  acts on nothing and reports total: 0. Read that stamp to render a purchased
+  row as already stocked; it is available on any read, not only here.
   
-  Read the summary accordingly: succeeded = lines this call moved, skipped =
-  lines an earlier call had already moved (movedItems carries them too, with
-  alreadyInPantry: true), failed = lines that errored, each in failedItems
-  with its reason. A repeat call on an unchanged list reports succeeded: 0.
+  Read the summary accordingly: succeeded = lines this call moved; failed =
+  lines that errored, each in failedItems with its reason; skipped = a line
+  the pantry already holds that had lost its stamp. Re-adding, unmarking or
+  restoring a line starts a new purchase cycle and clears the stamp, so it
+  returns to the working set — and if the pantry still holds what the previous
+  cycle put there, the move reports it as skipped instead of double-stocking.
+  movedItems carries the moved and the skipped, tagged with alreadyInPantry.
   
   A line whose catalog item was deleted is re-resolved from the name it still
   carries rather than skipped; only a line with neither fails.
@@ -10920,6 +10926,16 @@ input ShoppingListItemOrderBy {
 type ShoppingListItemPurchaseInfo {
   """Whether the item has been purchased"""
   isPurchased: Boolean!
+  """
+  When this line's purchase reached the pantry, or null if it has not.
+  
+  Read this to render a purchased row as already stocked — it is the same
+  state movePurchasedItemsToPantry filters its working set on, so a line with
+  a value here is one that move will not act on again. It is cleared when the
+  line re-enters an unpurchased state (re-added, unmarked, restored), which
+  starts a new purchase cycle and returns the line to that working set.
+  """
+  movedToPantryAt: DateTime
   """When the item was purchased"""
   purchaseDate: DateTime
   """Who purchased the item"""

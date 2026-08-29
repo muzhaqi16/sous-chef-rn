@@ -1052,6 +1052,7 @@ describe('createOptimisticShoppingListItem', () => {
     expect(entity.purchaseInfo).toEqual({
       __typename: 'ShoppingListItemPurchaseInfo',
       isPurchased: false,
+      movedToPantryAt: null,
     });
     expect(entity.item).toBeNull();
     expect(entity.unit).toBeNull();

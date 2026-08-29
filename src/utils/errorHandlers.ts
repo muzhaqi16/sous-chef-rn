@@ -18,7 +18,7 @@ import {
   isInvalidUnitError,
   getInvalidUnitMessage,
 } from './errors/invalidUnit';
-import { errorService, getErrorMessage } from '#/services/errorService';
+import { errorService, localizedErrorMessage } from '#/services/errorService';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { storeApi } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
@@ -149,7 +149,9 @@ export const handleMutationErrorAlert = (
 ): void => {
   const { operation, customMessage, showAlert = true } = config;
 
-  const errorMessage = customMessage || getErrorMessage(error);
+  // Localized copy resolved from the error's CODE — never the server's message,
+  // which is unlocalizable English and used to reach the alert verbatim.
+  const errorMessage = customMessage || localizedErrorMessage(error);
 
   if (showAlert) {
     alertService.alert(t('labels.error'), errorMessage);

@@ -232,7 +232,8 @@
     "allAlreadyThere_one": "Ai artikull është tashmë te qilari yt",
     "allAlreadyThere_other": "Ata {{count}} artikuj janë tashmë te qilari yt",
     "failedItems_one": "Nuk u zhvendos dot {{names}}",
-    "failedItems_other": "Nuk u zhvendosën dot {{count}} artikuj, përfshirë {{names}}"
+    "failedItems_other": "Nuk u zhvendosën dot {{count}} artikuj, përfshirë {{names}}",
+    "nothingLeftToMove": "Gjithçka e blerë është tashmë te qilari yt"
   },
   "pantryAction": {
     "useByDefault": "Përdor deri më",

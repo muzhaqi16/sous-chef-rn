@@ -509,10 +509,37 @@ export class ErrorService {
 // Export singleton instance
 export const errorService = new ErrorService();
 
-// Utility function for getting error messages (replaces getErrorMessage from errorHandling.ts)
+/**
+ * The raw message an error carries, for LOGS and reports.
+ *
+ * This is the server's own English by construction — `parseApolloError` copies
+ * `graphQLError.message` straight through. That is exactly what a log wants and
+ * exactly what a user must not be shown, so anything user-facing takes
+ * {@link localizedErrorMessage} instead.
+ */
 export const getErrorMessage = (error: unknown): string => {
   const result = errorService.parseApolloError(error, { logError: false });
   return result.error?.message || 'An unexpected error occurred';
+};
+
+/**
+ * What to SHOW a user when a mutation fails.
+ *
+ * Resolved from the error's CODE through `errors.codes.*`, never from the
+ * server's message. The server's text is unlocalizable English by construction,
+ * and it reaches users verbatim otherwise: an Albanian-locale user pressing
+ * "move to pantry" against an unmigrated database saw a "Gabim" alert whose
+ * body read "An unexpected database error occurred".
+ *
+ * An unmapped code lands on `errors.codes.unexpected` rather than falling back
+ * to that text — a vaguer sentence in the right language beats a precise one in
+ * the wrong one, and the precise version is in the log either way.
+ */
+export const localizedErrorMessage = (error: unknown): string => {
+  const result = errorService.parseApolloError(error, { logError: false });
+  const code = result.error?.code;
+  if (!code) return t('errors.codes.unexpected');
+  return errorService.getUserFriendlyMessage(code);
 };
 
 /**

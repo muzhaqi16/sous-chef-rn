@@ -88,6 +88,10 @@ export function createOptimisticShoppingListItem(
       purchaseInfo: {
         __typename: 'ShoppingListItemPurchaseInfo',
         isPurchased: false,
+        // A line that was just created has not been purchased, so it cannot
+        // have reached the pantry. Present rather than omitted because the row
+        // reads it, and one absent field makes the whole list read incomplete.
+        movedToPantryAt: null,
       },
       item: fields.itemId
         ? { __typename: 'Item', id: fields.itemId, imageUrl: null, images: [] }

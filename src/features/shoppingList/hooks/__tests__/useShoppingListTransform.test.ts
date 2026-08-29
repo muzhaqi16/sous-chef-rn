@@ -26,6 +26,7 @@ function node(overrides: NodeOverrides = {}): ShoppingListItemNode {
     sortOrder: 'aaa',
     purchaseInfo: {
       __typename: 'ShoppingListItemPurchaseInfo',
+      movedToPantryAt: null,
       isPurchased: false,
     },
     ...overrides,
@@ -55,6 +56,7 @@ describe('useShoppingListTransformMulti', () => {
             id: '1',
             purchaseInfo: {
               __typename: 'ShoppingListItemPurchaseInfo',
+              movedToPantryAt: null,
               isPurchased: true,
             },
           }),
@@ -75,6 +77,7 @@ describe('useShoppingListTransformMulti', () => {
             id: '1',
             purchaseInfo: {
               __typename: 'ShoppingListItemPurchaseInfo',
+              movedToPantryAt: null,
               isPurchased: false,
             },
           }),

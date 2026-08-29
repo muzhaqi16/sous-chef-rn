@@ -232,7 +232,8 @@
     "allAlreadyThere_one": "Quell’articolo è già in dispensa",
     "allAlreadyThere_other": "Quei {{count}} articoli sono già in dispensa",
     "failedItems_one": "Impossibile spostare {{names}}",
-    "failedItems_other": "Impossibile spostare {{count}} articoli, tra cui {{names}}"
+    "failedItems_other": "Impossibile spostare {{count}} articoli, tra cui {{names}}",
+    "nothingLeftToMove": "Tutto ciò che hai comprato è già in dispensa"
   },
   "pantryAction": {
     "useByDefault": "Da consumare entro",

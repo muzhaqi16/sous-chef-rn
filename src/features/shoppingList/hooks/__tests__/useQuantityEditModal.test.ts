@@ -62,6 +62,7 @@ function createItem(
     sortOrder: 'aaa',
     purchaseInfo: {
       __typename: 'ShoppingListItemPurchaseInfo',
+      movedToPantryAt: null,
       isPurchased: false,
     },
     unit: { __typename: 'Unit', id: 'unit-1', name: 'gallon', symbol: 'gal' },

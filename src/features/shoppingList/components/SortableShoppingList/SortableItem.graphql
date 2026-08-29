@@ -11,6 +11,11 @@ fragment SortableItem_item on ShoppingListItem {
   }
   purchaseInfo {
     isPurchased
+    # Set once this line's purchase reached the pantry. Read to render a
+    # purchased row as already stocked — it is the same state the bulk move
+    # filters its working set on, so a stamped line is one that move will not
+    # act on again. Cleared when the line re-enters an unpurchased state.
+    movedToPantryAt
   }
   item {
     id

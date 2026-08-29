@@ -13,7 +13,7 @@
  * purchaser. Nothing in the type system or in codegen can see that, because
  * every one of those fields is nullable and the query is perfectly valid.
  *
- * So exactly two shapes are allowed:
+ * So exactly three shapes are allowed:
  *
  *   - `...ShoppingListItemPurchaseInfoFragment` — the whole record. Used by
  *     every writer: the two purchase mutations, the offline-queue replay, and
@@ -21,6 +21,10 @@
  *   - `{ isPurchased }` alone — a reader that only needs the flag. The clear is
  *     correct there: all the response knows is that the state changed, and the
  *     detail screen is allowed to show nothing for a value it does not have.
+ *   - `{ isPurchased movedToPantryAt }` — a row that also renders whether the
+ *     line is already stocked. Allowed for that ONE extra field because the
+ *     server clears the stamp on the same transition the merge clears on, so a
+ *     writer that omits it agrees with the server; see FLAG_PLUS_STOCKED.
  *
  * Anything between the two fails here, naming the document.
  *
@@ -41,11 +45,24 @@ const SRC = resolve(ROOT, 'src');
 const SHARED_FRAGMENT = 'ShoppingListItemPurchaseInfoFragment';
 const COMPLETE_RECORD = [
   'isPurchased',
+  'movedToPantryAt',
   'purchasedQuantity',
   'purchasedPrice',
   'purchaseDate',
   'purchasedBy',
 ];
+
+/**
+ * The one selection between the two shapes that is allowed, and why.
+ *
+ * `movedToPantryAt` says whether this line's purchase reached the pantry. A row
+ * needs it to render as stocked, and it is safe to let the merge clear: the
+ * server clears the stamp on exactly the transition the merge clears on — the
+ * line re-entering an unpurchased state. So a writer that omits it and thereby
+ * blanks it locally agrees with what the server will say, which is not true of
+ * the amounts, the date or the purchaser.
+ */
+const FLAG_PLUS_STOCKED = ['isPurchased', 'movedToPantryAt'];
 
 function collectGraphqlFiles(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
@@ -71,7 +88,12 @@ function isAllowedShape(spreads: string[], fields: string[]): boolean {
   const isShared = spreads.includes(SHARED_FRAGMENT);
   const isFlagOnly = fields.length === 1 && fields[0] === 'isPurchased';
   const isCompleteInline = COMPLETE_RECORD.every(f => fields.includes(f));
-  return isShared || isFlagOnly || isCompleteInline;
+  // The documented third shape — see FLAG_PLUS_STOCKED. Exact, not a subset:
+  // adding any OTHER field to the flag is still the destructive middle.
+  const isFlagPlusStocked =
+    fields.length === FLAG_PLUS_STOCKED.length &&
+    FLAG_PLUS_STOCKED.every(f => fields.includes(f));
+  return isShared || isFlagOnly || isCompleteInline || isFlagPlusStocked;
 }
 
 /** Every `purchaseInfo` selection in the tree, with what it selects. */

@@ -56,6 +56,7 @@ const fullItem: Unmasked<ItemDetail_ShoppingListItemFragment> = {
   },
   purchaseInfo: {
     __typename: 'ShoppingListItemPurchaseInfo',
+    movedToPantryAt: null,
     isPurchased: true,
     purchasedQuantity: 2,
     purchasedPrice: 3.5,
