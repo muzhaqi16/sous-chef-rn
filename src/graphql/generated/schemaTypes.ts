@@ -3783,7 +3783,26 @@ export type FailedIpStat = {
  */
 export type FailedMoveInfo = {
   __typename: 'FailedMoveInfo';
+  /**
+   * The registered error code for this line's failure — the same code the
+   * single-line moveShoppingItemToPantry would carry in its error extensions.
+   * Branch on this, not on the reason text.
+   */
+  code: Scalars['String']['output'];
+  /**
+   * Present only when the reason was masked. Names the log entry holding the
+   * real error, so support can look it up.
+   */
+  errorId: Maybe<Scalars['String']['output']>;
   itemName: Scalars['String']['output'];
+  /**
+   * Client-safe explanation. A failure the client can act on (not found, a
+   * conflict, a validation refusal) states itself. Anything else — a database
+   * fault, a timeout, an unexpected error — reports a generic message and an
+   * errorId instead: this field is payload DATA and so does not pass through the
+   * response error masking, and returning the underlying text here would leak
+   * what that masking exists to withhold.
+   */
   reason: Scalars['String']['output'];
   shoppingListItemId: Scalars['ID']['output'];
 };
@@ -6589,11 +6608,11 @@ export type MovePurchasedItemsToPantryInput = {
 
 export type MovePurchasedItemsToPantryPayload = {
   __typename: 'MovePurchasedItemsToPantryPayload';
-  /** Purchased lines that could not be moved, each with its reason. Counted in summary.failed. */
+  /** Purchased lines that could not be moved, each with a registered code and a client-safe reason. Counted in summary.failed. Was always empty before failures were reported per line. */
   failedItems: Array<FailedMoveInfo>;
-  /** Purchased lines that are now in the pantry — both the ones this call moved and the ones an earlier call had already moved (see alreadyInPantry). */
+  /** Purchased lines that are now in the pantry — both the ones this call moved and the ones an earlier call in the SAME purchase cycle had already moved (see alreadyInPantry). Not a count of what this call stocked: read summary.succeeded for that. */
   movedItems: Array<MovedItemInfo>;
-  /** summary.succeeded = lines moved by THIS call; summary.skipped = lines already in the pantry; summary.failed = lines that errored. */
+  /** summary.succeeded = lines moved by THIS call; summary.skipped = lines this purchase had already put in the pantry; summary.failed = lines that errored. All three changed meaning without changing name or type — failed was previously always 0, and skipped previously meant a line that could not be moved. */
   summary: BulkSummary;
 };
 
@@ -6651,6 +6670,14 @@ export type MoveShoppingItemToPantryInput = {
 
 export type MoveShoppingItemToPantryPayload = {
   __typename: 'MoveShoppingItemToPantryPayload';
+  /**
+   * True when this line's purchase was already in the pantry and the call
+   * wrote nothing — a replay, or a move retargeted at a different pantry.
+   * Same meaning as MovedItemInfo.alreadyInPantry in the batch form, so a
+   * client does not have to call the batch to learn whether its single call
+   * did anything.
+   */
+  alreadyInPantry: Scalars['Boolean']['output'];
   pantry: Maybe<Pantry>;
   pantryItem: PantryItem;
 };
@@ -7136,12 +7163,24 @@ export type Mutation = {
    * row as already stocked; it is available on any read, not only here.
    *
    * Read the summary accordingly: succeeded = lines this call moved; failed =
-   * lines that errored, each in failedItems with its reason; skipped = a line
-   * the pantry already holds that had lost its stamp. Re-adding, unmarking or
-   * restoring a line starts a new purchase cycle and clears the stamp, so it
-   * returns to the working set — and if the pantry still holds what the previous
-   * cycle put there, the move reports it as skipped instead of double-stocking.
-   * movedItems carries the moved and the skipped, tagged with alreadyInPantry.
+   * lines that errored, each in failedItems with its code and reason; skipped =
+   * a line THIS purchase had already put in the pantry and that had lost its
+   * stamp. movedItems carries the moved and the skipped together, told apart by
+   * alreadyInPantry — so movedItems.length is not "lines stocked by this call",
+   * summary.succeeded is.
+   *
+   * Re-adding, unmarking or restoring a line starts a new purchase CYCLE: the
+   * stamp clears, the line returns to the working set, and its next purchase is
+   * stocked in its own right even while the previous cycle's pantry entry is
+   * still there. Buying the same item every week therefore stocks the pantry
+   * every week. Only a replay WITHIN one purchase converges as skipped.
+   *
+   * THESE THREE COUNTERS CHANGED MEANING without changing name or type.
+   * Previously: failed was always 0 (nothing was reported as failing), skipped
+   * meant "could not be moved", and movedItems held only lines this call moved.
+   * A client that gates an error banner on failed > 0, surfaces skipped as
+   * "needs attention", or renders movedItems.length as "N items stocked" needs
+   * updating. See docs/api/graphql-operation-conventions.md.
    *
    * A line whose catalog item was deleted is re-resolved from the name it still
    * carries rather than skipped; only a line with neither fails.
