@@ -60,6 +60,11 @@ const ENUM_DEFAULTS = {
   // The server-side defaults a recipe created without metadata lands on.
   'Recipe.difficulty': 'EASY',
   'Recipe.category': 'MAIN_COURSE',
+  // The unit top-up only ever fills fields the cache is MISSING, and every
+  // path that reaches it wrote `type` already (the list fragment selects it),
+  // so this value is not observed in practice. COUNT is the resting kind — a
+  // bare "each" — and is the safest thing to be wrong with if it ever is.
+  'Unit.type': 'COUNT',
 };
 
 /** Fragments to generate a neutral base for: [file, fragmentName, outName]. */
@@ -104,6 +109,10 @@ const TARGETS = [
       writePantryItemDetailStub_itemCatalog: [
         'NEUTRAL_ITEM_CATALOG',
         'WritePantryItemDetailStub_ItemCatalogFragment',
+      ],
+      writePantryItemDetailStub_unit: [
+        'NEUTRAL_UNIT',
+        'WritePantryItemDetailStub_UnitFragment',
       ],
     },
   },

@@ -12,6 +12,7 @@ import { type UpdateStorageLocationInput } from '#/graphql/generated/schemaTypes
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 import {
   createAddToQueryConnectionUpdater,
+  skipUnmatchedArgVariants,
   createAddToParentConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
@@ -24,21 +25,30 @@ import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
 import { useBlocksCacheMissQueries } from '#hooks/app/useBlocksCacheMissQueries';
 import { t } from '#/i18n';
+import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 import { errorService } from '#/services/errorService';
 
 /**
- * Toast the message from a resolved errors-as-data member. A non-success union
- * payload (`ForbiddenError`/`ValidationError`/…) resolves without throwing under
- * `errorPolicy:'all'`, so call this on the non-success branch to surface it.
+ * Toast a resolved errors-as-data member in the user's own language. A
+ * non-success union payload (`ForbiddenError`/`ValidationError`/…) resolves
+ * without throwing under `errorPolicy:'all'`, so call this on the non-success
+ * branch to surface it.
+ *
+ * It resolves field → code → localized generic. It used to display
+ * `payload.message`, which is the server's English by construction — the client
+ * sends no `Accept-Language` and the token carries no locale — so deleting a
+ * non-empty location told an es/it/sq user "Location has items", and a test
+ * asserted that string verbatim.
  */
 function toastResolvedError(
-  payload: { __typename?: string; message?: string } | null | undefined,
+  payload:
+    | { __typename?: string; code?: string | null; field?: string | null }
+    | null
+    | undefined,
 ): void {
-  const message =
-    payload && typeof payload.message === 'string' && payload.message
-      ? payload.message
-      : t('errors.codes.genericRetry');
-  toastService.error(message);
+  toastService.error(
+    localizedRefusalMessage(payload, t('errors.codes.genericRetry')),
+  );
 }
 
 /** Flat storage-location node as returned by `GetStorageLocations`. */
@@ -91,8 +101,16 @@ function restoreLocationToCaches(
   cache: ApolloCache,
   location: FlatStorageLocation,
   pantryId: string | undefined,
+  homeId: string | undefined,
 ): void {
-  addToStorageLocationsQuery(cache, location, { position: 'end' });
+  // `cache.modify` runs for EVERY cached `storageLocations(homeId:…)` variant,
+  // so without this scope a refused delete in home A also appended the row into
+  // home B's list. The field is keyed on a plain argument rather than a
+  // `filters` object, which is why this uses the arg matcher.
+  addToStorageLocationsQuery(cache, location, {
+    position: 'end',
+    skipStoreField: homeId ? skipUnmatchedArgVariants({ homeId }) : undefined,
+  });
   if (pantryId)
     addToPantryLocations(cache, pantryId, location, { position: 'end' });
 }
@@ -333,7 +351,7 @@ export function useStorageLocationManagement(
     if (classifyCreateResult(result) === 'rejected') {
       if (removed) {
         try {
-          restoreLocationToCaches(client.cache, removed, pantryId);
+          restoreLocationToCaches(client.cache, removed, pantryId, homeId);
         } catch (cacheError) {
           errorService.reportError(cacheError, {
             operation: 'Revert rejected storage-location delete',

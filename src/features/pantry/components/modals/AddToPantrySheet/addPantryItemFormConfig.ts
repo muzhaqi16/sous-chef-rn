@@ -1,5 +1,6 @@
 import { object, string, boolean, date } from 'yup';
 import { t } from '#/i18n';
+import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   StorageState,
   ItemCondition,
@@ -108,20 +109,18 @@ export const addPantryItemDefaults = (
  * A quantity may be fractional ("1/2", "1 1/4") — parsing lives in
  * `parseFractionalInput`, so the schema only asserts it is present and
  * resolves to a positive number.
+ *
+ * It defers to the parser rather than restating its grammar. The regex that
+ * stood here mirrored the accepted forms by hand and matched only `.` as the
+ * decimal separator, so `2,5` failed validation on exactly the devices whose
+ * `decimal-pad` offers no `.` at all — fractional quantities were unreachable
+ * in es, it and sq. Validation and parsing have to agree, and the only way to
+ * guarantee that is to ask the parser.
  */
 const isPositiveQuantity = (value: string | undefined): boolean => {
   if (!value?.trim()) return false;
-  // Mirrors parseFractionalInput's accepted forms without importing it into a
-  // module-scope schema: whole, decimal, "a/b", or "a b/c".
-  const match = value
-    .trim()
-    .match(/^(\d+(?:\.\d+)?)$|^(\d+)\/(\d+)$|^(\d+)\s+(\d+)\/(\d+)$/);
-  if (!match) return false;
-  const [, plain, num, den, whole, wnum, wden] = match;
-  if (plain !== undefined) return Number(plain) > 0;
-  if (num !== undefined)
-    return Number(den) !== 0 && Number(num) / Number(den) > 0;
-  return Number(whole) + Number(wnum) / Number(wden) > 0;
+  const parsed = parseFractionalInput(value);
+  return parsed !== null && parsed > 0;
 };
 
 export const addPantryItemSchema = object({

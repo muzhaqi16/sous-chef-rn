@@ -101,6 +101,40 @@ describe('SwipeableItem', () => {
     expect(screen.getByText('Basic item')).toBeTruthy();
   });
 
+  it('refuses the same action key on both edges', () => {
+    // `key` doubles as the accessibility action NAME, and dispatch is a `find`
+    // — so a duplicate publishes two `accessibilityActions` with one name and
+    // VoiceOver/TalkBack always reaches the LEFT one, silently doing the wrong
+    // thing. `key` became free-form when the named verbs were replaced by
+    // descriptors, which is what made this reachable.
+    expect(() =>
+      render(
+        <SwipeableItem
+          leftActions={[action('archive')]}
+          rightActions={[action('archive')]}
+        >
+          <Text>Row</Text>
+        </SwipeableItem>,
+      ),
+    ).toThrow(/duplicate action key/i);
+  });
+
+  it('allows the same key on different rows', () => {
+    // The uniqueness is per ROW, not global — every row has an `edit`.
+    expect(() =>
+      render(
+        <>
+          <SwipeableItem rightActions={[action('edit')]}>
+            <Text>Row A</Text>
+          </SwipeableItem>
+          <SwipeableItem rightActions={[action('edit')]}>
+            <Text>Row B</Text>
+          </SwipeableItem>
+        </>,
+      ),
+    ).not.toThrow();
+  });
+
   it('renders with a single left action', () => {
     render(
       <SwipeableItem leftActions={[action('togglePurchase')]}>

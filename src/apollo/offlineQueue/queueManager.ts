@@ -684,6 +684,7 @@ export class QueueManager {
       operationName: mutation.operationName,
       entityType,
       entityId,
+      variables: mutation.variables,
       error,
     };
 

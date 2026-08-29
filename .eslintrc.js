@@ -1118,6 +1118,24 @@ module.exports = {
         message:
           'Untranslated string passed to a user-facing toast/alert. Add a key to src/i18n/locales/en.json and pass t(...) — the module-level `t` from #/i18n works outside components.',
       },
+      // A server-supplied `message` reaching the user directly. The client
+      // sends no `Accept-Language` and the token carries no locale, so that
+      // string is English by construction — displaying it puts English in front
+      // of every es/it/sq user and skips every i18n guard the app applies to its
+      // own copy. Four sites did it, and one had a test asserting the English
+      // verbatim. Same sink-shaped reasoning as the two rules above.
+      //
+      // Scoped to `toastService` on purpose. The same selector against
+      // `alertService` reports 7 more sites, all CLIENT-side errors carrying
+      // hardcoded English (`imageValidation.ts` throws 'Only JPEG, PNG, and WebP
+      // images are allowed' and friends) — a real i18n defect, but a different
+      // one, and localizing it needs new copy in four locales.
+      {
+        selector:
+          "CallExpression[callee.object.name='toastService'] MemberExpression[property.name='message']",
+        message:
+          "Never display a server `message`. Use `localizedRefusalMessage(payload, fallback)` from '#/apollo/utils/alertRejectedMutation' — it resolves the refused field, then the error code, then your localized fallback.",
+      },
       {
         selector:
           'CallExpression[callee.object.name=/^(toastService|alertService)$/] > TemplateLiteral',

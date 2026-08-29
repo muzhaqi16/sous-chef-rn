@@ -19,16 +19,17 @@ import type { BaseItemCardProps, CardVariant } from './types';
  *   title/subtitle/badge list row that needs the standard slide-off-screen
  *   exit animation on delete/consume/waste handled automatically.
  *
+ * Row actions are DESCRIPTORS (`leftActions` / `rightActions`), not named
+ * verbs. The examples below documented `onConsume` / `onWaste` / `onRestock` /
+ * `onEdit` / `onDelete` props for months after they were replaced, which is
+ * worse than no example: it reads as the supported API.
+ *
  * @example
  * // Pantry item
  * <BaseItemCard
  *   variant="warning"
  *   onPress={handlePress}
- *   onConsume={handleConsume}
- *   onWaste={handleWaste}
- *   onRestock={handleRestock}
- *   onEdit={handleEdit}
- *   onDelete={handleDelete}
+ *   rightActions={pantrySwipeActions({ onEdit, onDelete })}
  * >
  *   <CardLeftSlot type="emoji" emoji="🥬" variant="warning" />
  *   <CardContent title="Spinach" subtitle="Expires in 2 days" />
@@ -40,8 +41,8 @@ import type { BaseItemCardProps, CardVariant } from './types';
  *   variant={isPurchased ? 'dimmed' : 'normal'}
  *   isPurchased={isPurchased}
  *   onTogglePurchase={handleToggle}
- *   onEdit={handleEdit}
- *   onDelete={handleDelete}
+ *   leftActions={[togglePurchaseAction]}
+ *   rightActions={[editAction, deleteAction]}
  * >
  *   <CardLeftSlot type="image" imageUrl={imageUrl} dimmed={isPurchased} />
  *   <CardContent title="Milk" subtitle="Dairy" isPurchased={isPurchased} />

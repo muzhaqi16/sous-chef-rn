@@ -71,7 +71,7 @@ fragment writePantryItemDetailStub_itemRef on PantryItem {
   }
 }
 
-# Per-group top-ups for the catalog `Item`. `topUpItemGroup` reads each group
+# Per-group top-ups for the catalog `Item`. `topUpEntityGroup` reads each group
 # tolerating partial data and writes only the fields genuinely absent, so a
 # value another query already fetched is never replaced by a neutral default.
 # The grouping is for readability; correctness does not depend on it, because
@@ -121,3 +121,40 @@ fragment writePantryItemDetailStub_itemCatalog on Item {
     }
   }
 }
+
+# Which Unit the row was just written with.
+#
+# Read off the cache rather than taken as an argument: the optimistic builder
+# has already run by the time this helper is called, so the reference is there,
+# and a new create site cannot forget to pass something it never has to know
+# about.
+fragment writePantryItemDetailStub_unitRef on PantryItem {
+  id
+  unit {
+    id
+  }
+}
+
+# The tracking `Unit`, topped up the same way the catalog `Item` is.
+#
+# `buildOptimisticPantryItem` embeds the unit through `toReference(unit, true)`
+# with the five fields the LIST query selects, while
+# `PantryItemDetail_pantryItem` selects eleven — so a create carrying a unitId
+# left `GetPantryItem` reading INCOMPLETE ("Can't find field 'isMetric' on
+# object { __typename: Unit, … }"), and the detail screen was blank offline for
+# the rest of the session. It bit precisely when the Unit was WELL cached, which
+# is why no test with a bare create ever saw it.
+fragment writePantryItemDetailStub_unit on Unit {
+  id
+  name
+  symbol
+  type
+  isMetric
+  baseUnitId
+  conversionFactor
+  isCommon
+  displayAsFraction
+  minPrecision
+  autoConvertThreshold
+}
+

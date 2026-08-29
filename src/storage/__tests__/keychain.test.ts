@@ -5,6 +5,7 @@ import {
   getSupportedBiometryType,
   setInternetCredentials,
   getInternetCredentials,
+  resetInternetCredentials,
   SECURITY_LEVEL,
 } from 'react-native-keychain';
 import {
@@ -35,6 +36,7 @@ const mockResetGenericPassword = resetGenericPassword as jest.Mock;
 const mockGetSupportedBiometryType = getSupportedBiometryType as jest.Mock;
 const mockSetInternetCredentials = setInternetCredentials as jest.Mock;
 const mockGetInternetCredentials = getInternetCredentials as jest.Mock;
+const mockResetInternetCredentials = resetInternetCredentials as jest.Mock;
 
 describe('keychain storage', () => {
   beforeEach(() => {
@@ -231,6 +233,46 @@ describe('keychain storage', () => {
       mockResetGenericPassword.mockResolvedValue(true);
 
       await clearCredentials('user@test.com');
+      expect(mockResetGenericPassword).toHaveBeenCalledTimes(2);
+    });
+
+    it('forgets the stored identity hint when it names this account', async () => {
+      // The login screen has no logged-in user: it reads this hint to decide
+      // WHICH account the biometric button unlocks, and the hint carries no
+      // access control at all. Clearing only the two per-account services left
+      // it naming an account whose credentials were gone — so the button still
+      // appeared for the previous user, and a deleted account's address stayed
+      // on the device forever.
+      mockResetGenericPassword.mockResolvedValue(true);
+      mockGetInternetCredentials.mockResolvedValue({
+        username: 'user@test.com',
+        password: 'user@test.com',
+      });
+
+      await clearCredentials('user@test.com');
+
+      expect(mockResetInternetCredentials).toHaveBeenCalled();
+    });
+
+    it('leaves another account’s identity hint alone', async () => {
+      // A different account may have enrolled since. Taking its hint away
+      // would silently disable a biometric login that still works.
+      mockResetGenericPassword.mockResolvedValue(true);
+      mockGetInternetCredentials.mockResolvedValue({
+        username: 'someone-else@test.com',
+        password: 'someone-else@test.com',
+      });
+
+      await clearCredentials('user@test.com');
+
+      expect(mockResetInternetCredentials).not.toHaveBeenCalled();
+    });
+
+    it('still clears the credentials when the hint cannot be read', async () => {
+      mockResetGenericPassword.mockResolvedValue(true);
+      mockGetInternetCredentials.mockRejectedValue(new Error('locked'));
+
+      await expect(clearCredentials('user@test.com')).resolves.toBeUndefined();
       expect(mockResetGenericPassword).toHaveBeenCalledTimes(2);
     });
 

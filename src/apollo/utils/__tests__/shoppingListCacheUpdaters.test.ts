@@ -6,6 +6,7 @@ import {
   moveShoppingListItemToUnpurchased,
   addNewItemToShoppingListCache,
   removeItemFromShoppingListForMoveToPantry,
+  restoreItemToShoppingListAfterMoveToPantry,
   createOptimisticShoppingListItem,
   adoptServerShoppingListItemId,
   revertOptimisticShoppingListItem,
@@ -27,6 +28,7 @@ type MockedCache = ApolloCache & {
   evict: jest.Mock;
   gc: jest.Mock;
   identify: jest.Mock;
+  readFragment: jest.Mock;
 };
 
 /** A cache ref or normalized object the field helpers read from. */
@@ -48,7 +50,8 @@ function createMockCache(): MockedCache {
       (obj: { __typename: string; id: string }) =>
         `${obj.__typename}:${obj.id}`,
     ),
-  } as MockedCache;
+    readFragment: jest.fn(),
+  } as unknown as MockedCache;
 }
 
 /**
@@ -822,6 +825,117 @@ describe('addNewItemToShoppingListCache', () => {
       ),
       expect.any(Error),
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The eager unlink and its withdrawal
+// ---------------------------------------------------------------------------
+
+describe('move-to-pantry unlink and restore', () => {
+  beforeEach(jest.clearAllMocks);
+
+  it('evicts the entity on the confirmed path', () => {
+    const cache = createMockCache();
+
+    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', false);
+
+    expect(cache.evict).toHaveBeenCalled();
+  });
+
+  it('keeps the entity when the removal is only eager', () => {
+    // Offline the row is unlinked before the server has agreed. Evicting here
+    // is what made a permanently-refused replay lose the item from BOTH lists:
+    // the queue withdrew the PantryItem it created, and there was nothing left
+    // to put back on the shopping side.
+    const cache = createMockCache();
+
+    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', false, {
+      evictEntity: false,
+    });
+
+    expect(cache.modify).toHaveBeenCalled();
+    expect(cache.evict).not.toHaveBeenCalled();
+  });
+
+  it('re-adds the edge and the counters on withdrawal', () => {
+    const cache = createMockCache();
+    cache.readFragment.mockReturnValue({
+      id: 'sli-1',
+      purchaseInfo: { isPurchased: false },
+      shoppingList: { id: 'sl-1' },
+    });
+
+    restoreItemToShoppingListAfterMoveToPantry(cache, 'sli-1');
+
+    const helpers = createFieldHelpers({
+      storeFieldName: 'itemsConnection:{"isPurchased":false}',
+    });
+    helpers.readField.mockReturnValue('sli-9');
+    helpers.toReference.mockReturnValue({ __ref: 'ShoppingListItem:sli-1' });
+
+    const result = invokeFieldModifier(
+      cache,
+      'itemsConnection',
+      { edges: [{ node: { __ref: 'ShoppingListItem:sli-9' } }], totalCount: 1 },
+      helpers,
+    );
+
+    expect(result.edges).toHaveLength(2);
+    expect(result.totalCount).toBe(2);
+  });
+
+  it('restores into the variant the row actually belongs to', () => {
+    const cache = createMockCache();
+    cache.readFragment.mockReturnValue({
+      id: 'sli-1',
+      purchaseInfo: { isPurchased: true },
+      shoppingList: { id: 'sl-1' },
+    });
+
+    restoreItemToShoppingListAfterMoveToPantry(cache, 'sli-1');
+
+    const helpers = createFieldHelpers({
+      storeFieldName: 'itemsConnection:{"isPurchased":false}',
+    });
+    const existing = { edges: [], totalCount: 0 };
+
+    expect(
+      invokeFieldModifier(cache, 'itemsConnection', existing, helpers),
+    ).toBe(existing);
+  });
+
+  it('is idempotent — a second withdrawal does not duplicate the row', () => {
+    const cache = createMockCache();
+    cache.readFragment.mockReturnValue({
+      id: 'sli-1',
+      purchaseInfo: { isPurchased: false },
+      shoppingList: { id: 'sl-1' },
+    });
+
+    restoreItemToShoppingListAfterMoveToPantry(cache, 'sli-1');
+
+    const helpers = createFieldHelpers({
+      storeFieldName: 'itemsConnection:{"isPurchased":false}',
+    });
+    helpers.readField.mockReturnValue('sli-1');
+    const existing = {
+      edges: [{ node: { __ref: 'ShoppingListItem:sli-1' } }],
+      totalCount: 1,
+    };
+
+    expect(
+      invokeFieldModifier(cache, 'itemsConnection', existing, helpers),
+    ).toBe(existing);
+  });
+
+  it('does nothing when the entity is gone', () => {
+    const cache = createMockCache();
+    cache.readFragment.mockReturnValue(null);
+
+    restoreItemToShoppingListAfterMoveToPantry(cache, 'sli-1');
+
+    expect(cache.modify).not.toHaveBeenCalled();
   });
 });
 

@@ -919,6 +919,34 @@ export function makeCache(): InMemoryCache {
           storageLocations: {
             // Different homes have different storage locations - cache separately
             keyArgs: ['homeId'],
+            // `StorageLocationConnection`, not a list — so Apollo's default
+            // broken-reference filtering (which handles plain arrays of refs)
+            // never reaches `edge.node`. Without this read, an optimistic
+            // delete's evict left a dangling node behind: `GetStorageLocations`
+            // went incomplete, `cache-first` went to the network, offline the
+            // request was refused and swallowed by `errorPolicy: 'ignore'`, and
+            // `usePreservedNodes` handed back the PRE-delete connection —
+            // freezing the list, deleted row and all, for the rest of the
+            // session. Same self-healing read as the connection policies above.
+            read(
+              existing: CachedConnection | undefined,
+              { canRead }: FieldFunctionOptions,
+            ) {
+              if (!existing?.edges?.length) return existing;
+              const validEdges = existing.edges.filter((edge: CachedEdge) =>
+                edge?.node ? canRead(edge.node) : false,
+              );
+              if (validEdges.length === existing.edges.length) return existing;
+              const dropped = existing.edges.length - validEdges.length;
+              return {
+                ...existing,
+                edges: validEdges,
+                totalCount:
+                  typeof existing.totalCount === 'number'
+                    ? Math.max(0, existing.totalCount - dropped)
+                    : existing.totalCount,
+              };
+            },
             merge(existing = [], incoming) {
               if (incoming == null) {
                 return existing;

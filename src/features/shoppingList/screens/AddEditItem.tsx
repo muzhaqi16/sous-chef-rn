@@ -476,6 +476,10 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           label={t('labels.netWeight')}
           value={netWeight}
           onChangeText={text => setFieldValue('netWeight', text)}
+          // The all-or-nothing rule reports on BOTH halves of the pair. Only
+          // the unit half was rendered, so picking a unit with no weight left
+          // Save refusing with nothing on screen to explain it.
+          error={errors.netWeight?.message}
           placeholder={t('shoppingListScreens.netWeightPlaceholder')}
           keyboardType="decimal-pad"
           testID={

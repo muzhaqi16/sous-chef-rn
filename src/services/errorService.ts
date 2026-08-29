@@ -20,6 +20,10 @@ import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import {
+  GraphQLDomainError,
+  GraphQLNetworkError,
+} from '#/utils/errors/graphqlErrors';
+import {
   CombinedGraphQLErrors,
   CombinedProtocolErrors,
   ServerError,
@@ -172,6 +176,44 @@ export class ErrorService {
 
     // Version Control Errors
     VERSION_CONFLICT: 'versionConflict',
+
+    // Schema-declared codes that had no mapping.
+    //
+    // Every member of `ErrorCode` and `TopLevelErrorCode` must appear in this
+    // table — `__tests__/i18n/errorCodeCoverage.test.ts` enumerates the
+    // generated enums and fails on a gap, in the direction that matters. A
+    // missing member fell through to `errors.codes.unexpected`, so a user who
+    // hit a not-found, a conflict, a quota or a duplicate read "An unexpected
+    // error occurred" while localized copy for exactly that case already
+    // shipped, unreachable.
+    //
+    // (The table is deliberately WIDER than the two enums: `NETWORK_ERROR`,
+    // `CIRCUIT_OPEN`, the `BUSINESS_*` and `RATE_LIMIT_*` families and the
+    // client's own `SERVICE_TIMEOUT` are raised on this side and have no SDL
+    // to be declared in. Only the missing direction is an error.)
+    NOT_FOUND: 'resourceNotFound',
+    CONFLICT: 'resourceConflict',
+    UNIT_INVALID: 'unitInvalid',
+    EMAIL_ALREADY_VERIFIED: 'emailAlreadyVerified',
+    UNAUTHENTICATED: 'signInRequired',
+    BAD_REQUEST: 'validationFailed',
+    CLIENT_UPGRADE_REQUIRED: 'clientUpgradeRequired',
+    HOME_NOT_A_MEMBER: 'homeAccessDenied',
+    OPERATION_RATE_LIMITED: 'rateLimitExceeded',
+    RESOURCE_VERSION_CONFLICT: 'versionConflict',
+    WS_OPERATION_NOT_ALLOWED: 'operationNotAllowed',
+    INTERNAL_SERVER_ERROR: 'genericLater',
+    // Transient server-side conditions: the same request is worth retrying.
+    DEADLOCK: 'genericRetry',
+    DB_CONSTRAINT_VIOLATION: 'genericRetry',
+    PAGINATION_FANOUT_EXCEEDED: 'genericRetry',
+    SUBSCRIPTION_ERROR: 'genericRetry',
+    SUBSCRIPTION_FILTER_ERROR: 'genericRetry',
+    SUBSCRIPTION_LIMIT_EXCEEDED: 'genericRetry',
+    // Should never be DISPLAYED — both classifiers treat it as converged, so
+    // reaching a message means something upstream stopped doing that. Mapped so
+    // the table stays total rather than because the string is expected.
+    IDEMPOTENT_REPLAY: 'genericRetry',
 
     // Pantry Errors
     PANTRY_ITEM_ALREADY_EXISTS: 'pantryItemAlreadyExists',
@@ -379,6 +421,20 @@ export class ErrorService {
       } else if (CombinedProtocolErrors.is(error)) {
         errorCode = 'NETWORK_ERROR';
         errorMessage = error.message || 'Unable to connect.';
+      }
+      // A refusal that `unwrapPayload` turned into a throw. It carries the
+      // server's own `code`, and this branch is what keeps it: without it the
+      // error fell through to the plain `instanceof Error` arm below, `errorCode`
+      // stayed at its 'UNKNOWN_ERROR' initializer, and every domain refusal
+      // reaching a caller by throw — a quota, a duplicate, a version conflict —
+      // resolved to "An unexpected error occurred". It must be tested BEFORE
+      // `instanceof Error`, which it also satisfies.
+      else if (error instanceof GraphQLDomainError) {
+        errorCode = error.code;
+        errorMessage = error.message;
+      } else if (error instanceof GraphQLNetworkError) {
+        errorCode = 'NETWORK_ERROR';
+        errorMessage = error.message;
       } else if (error instanceof Error) {
         errorMessage = error.message;
       } else if (typeof error === 'string') {

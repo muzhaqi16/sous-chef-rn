@@ -89,7 +89,7 @@ describe('authService.register — verification-first', () => {
     expect(mockToastError).not.toHaveBeenCalled();
   });
 
-  it('toasts the message and does not authenticate on an error union member', async () => {
+  it('toasts the app’s own copy and does not authenticate on an error union member', async () => {
     mockMutate.mockResolvedValueOnce({
       data: {
         register: {
@@ -104,7 +104,12 @@ describe('authService.register — verification-first', () => {
     const ok = await authService.register(INPUT);
 
     expect(ok).toBe(false);
-    expect(mockToastError).toHaveBeenCalledWith('Email is invalid.');
+    // Never the server's sentence: it is English by construction (no
+    // `Accept-Language` is sent and the token carries no locale). The refusal
+    // resolves through the field it names, then its code, then the app's
+    // localized generic.
+    expect(mockToastError).not.toHaveBeenCalledWith('Email is invalid.');
+    expect(mockToastError).toHaveBeenCalledTimes(1);
     expect(mockStoreSpies.setAuth).not.toHaveBeenCalled();
     expect(mockStoreSpies.setRegistrationPassword).not.toHaveBeenCalled();
   });

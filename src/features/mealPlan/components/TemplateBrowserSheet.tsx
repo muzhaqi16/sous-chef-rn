@@ -7,10 +7,7 @@ import {
   ThemedBottomSheetTextInput,
 } from '#components/atoms/themedComponents';
 import { FlashList } from '@shopify/flash-list';
-import {
-  BottomSheetView,
-  useBottomSheetScrollableCreator,
-} from '@gorhom/bottom-sheet';
+import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -117,7 +114,13 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetView style={[styles.container, contentContainerStyle]}>
+      {/*
+        A plain View, NOT `BottomSheetView`: gorhom's own container style is
+        absolutely positioned with no bottom and no height, and it composes
+        AFTER the caller's — so a `flex: 1` here loses and the FlashList below
+        is never height-bounded.
+      */}
+      <View style={[styles.container, contentContainerStyle]}>
         {/* Header */}
         <View style={styles.header}>
           <Text size="lg" weight="semibold">
@@ -181,7 +184,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
             />
           </TemplateBrowserProvider>
         )}
-      </BottomSheetView>
+      </View>
     </BottomSheetModal>
   );
 };

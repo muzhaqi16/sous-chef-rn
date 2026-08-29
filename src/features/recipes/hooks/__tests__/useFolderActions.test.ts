@@ -117,7 +117,12 @@ describe('useFolderActions', () => {
       });
 
       expect(success).toBe(false);
-      expect(mockToastError).toHaveBeenCalledWith('Folder not found');
+      // The app's own copy for the code the server sent — never the server's
+      // `message`, which is English by construction.
+      expect(mockToastError).not.toHaveBeenCalledWith('Folder not found');
+      expect(mockToastError).toHaveBeenCalledWith(
+        'The requested item was not found',
+      );
     });
   });
 
@@ -182,7 +187,12 @@ describe('useFolderActions', () => {
 
       // Production code returns false on non-Success union members.
       expect(success).toBe(false);
-      expect(mockToastError).toHaveBeenCalledWith('Folder not found');
+      // The app's own copy for the code the server sent — never the server's
+      // `message`, which is English by construction.
+      expect(mockToastError).not.toHaveBeenCalledWith('Folder not found');
+      expect(mockToastError).toHaveBeenCalledWith(
+        'The requested item was not found',
+      );
     });
   });
 

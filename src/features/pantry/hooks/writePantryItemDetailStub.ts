@@ -32,6 +32,7 @@ import {
   NEUTRAL_ITEM_MEDIA,
   NEUTRAL_ITEM_PHOTOS,
   NEUTRAL_ITEM_CATALOG,
+  NEUTRAL_UNIT,
 } from './pantryItemDetailNeutral.generated';
 import {
   WritePantryItemDetailStub_PantryItemFragmentDoc,
@@ -40,6 +41,8 @@ import {
   WritePantryItemDetailStub_ItemMediaFragmentDoc,
   WritePantryItemDetailStub_ItemPhotosFragmentDoc,
   WritePantryItemDetailStub_ItemCatalogFragmentDoc,
+  WritePantryItemDetailStub_UnitFragmentDoc,
+  WritePantryItemDetailStub_UnitRefFragmentDoc,
 } from './writePantryItemDetailStub.generated';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 
@@ -82,31 +85,42 @@ export interface PantryItemDetailStubFields {
  * returns) because it is the parameter type `cache.writeFragment` declares; the
  * alternative is the erasure this helper exists to remove.
  */
-function topUpItemGroup<TFragment extends { __typename: 'Item'; id: string }>(
+function topUpEntityGroup<TFragment extends { __typename: string; id: string }>(
   cache: ApolloCache,
-  itemCacheId: string,
+  entityCacheId: string,
   fragment: TypedDocumentNode<TFragment, unknown>,
   fragmentName: string,
   data: Unmasked<TFragment>,
 ): void {
+  // The completeness test is the all-or-nothing read itself, not a scan of
+  // top-level keys. A key-presence check sees only the surface: an `Item` whose
+  // `categories` were cached by a narrower selection (no `isPrimary`) has the
+  // key, so the group read as complete and the partially-cached nested object
+  // was written straight back — leaving the read incomplete forever. Asking the
+  // cache whether the whole selection resolves answers for every level.
+  const complete = cache.readFragment({
+    id: entityCacheId,
+    fragment,
+    fragmentName,
+  });
+  if (complete) return;
+
   const existing = cache.readFragment({
-    id: itemCacheId,
+    id: entityCacheId,
     fragment,
     fragmentName,
     returnPartialData: true,
   });
 
   // What the cache actually holds. `undefined` means the field is not cached;
-  // `null` is a real value the server supplied and must be kept.
+  // `null` is a real value the server supplied and must be kept. A nested value
+  // is kept only when it is itself whole — an object with a missing leaf is the
+  // thing that made the read incomplete, so preferring it would preserve the
+  // defect.
   const cached = definedFields(existing);
-  const hasAbsentField = Object.keys(data).some(key => !(key in cached));
-
-  // Every field already present: nothing to supply, and writing would only risk
-  // re-normalizing what is already correct.
-  if (!hasAbsentField) return;
 
   cache.writeFragment({
-    id: itemCacheId,
+    id: entityCacheId,
     fragment,
     fragmentName,
     // Neutral values first, so anything already cached wins.
@@ -126,8 +140,26 @@ function definedFields<T extends object>(
 ): Partial<T> {
   if (!source) return {};
   return Object.fromEntries(
-    Object.entries(source).filter(([, value]) => value !== undefined),
+    Object.entries(source).filter(([, value]) => isWholeValue(value)),
   ) as Partial<T>;
+}
+
+/**
+ * Whether a cached value can be written back as-is.
+ *
+ * A scalar is whole when it is not `undefined`. An object or array is whole
+ * only when nothing inside it is `undefined` either: `returnPartialData` leaves
+ * a hole exactly where the cache is missing a field, and writing that shape
+ * back re-states the incompleteness instead of repairing it.
+ */
+function isWholeValue(value: unknown): boolean {
+  if (value === undefined) return false;
+  if (value === null) return true;
+  if (Array.isArray(value)) return value.every(isWholeValue);
+  if (typeof value === 'object') {
+    return Object.values(value as Record<string, unknown>).every(isWholeValue);
+  }
+  return true;
 }
 
 /**
@@ -141,6 +173,24 @@ const resolveItemId = (
   pantryItemId: string,
   itemId: string | null | undefined,
 ): string => itemId || `local-item-${pantryItemId}`;
+
+/**
+ * The id of the Unit the optimistic builder just linked, or null when the row
+ * has none. Tolerates partial data — the row is mid-materialization here, so an
+ * all-or-nothing read would report "no unit" for every one of them.
+ */
+function readWrittenUnitId(
+  cache: ApolloCache,
+  pantryItemCacheId: string,
+): string | null {
+  const row = cache.readFragment<{ unit?: { id?: string } | null }>({
+    id: pantryItemCacheId,
+    fragment: WritePantryItemDetailStub_UnitRefFragmentDoc,
+    fragmentName: 'writePantryItemDetailStub_unitRef',
+    returnPartialData: true,
+  });
+  return row?.unit?.id ?? null;
+}
 
 export function writePantryItemDetailStub(
   cache: ApolloCache,
@@ -157,7 +207,7 @@ export function writePantryItemDetailStub(
   const itemCacheId = cache.identify({ __typename: 'Item', id: itemId });
 
   if (itemCacheId) {
-    topUpItemGroup(
+    topUpEntityGroup(
       cache,
       itemCacheId,
       WritePantryItemDetailStub_ItemIdentityFragmentDoc,
@@ -166,21 +216,21 @@ export function writePantryItemDetailStub(
       // says `false`, which only hides the photo viewer's "set as main photo".
       { ...NEUTRAL_ITEM_IDENTITY, id: itemId, name: fields.itemName },
     );
-    topUpItemGroup(
+    topUpEntityGroup(
       cache,
       itemCacheId,
       WritePantryItemDetailStub_ItemMediaFragmentDoc,
       'writePantryItemDetailStub_itemMedia',
       { ...NEUTRAL_ITEM_MEDIA, id: itemId },
     );
-    topUpItemGroup(
+    topUpEntityGroup(
       cache,
       itemCacheId,
       WritePantryItemDetailStub_ItemPhotosFragmentDoc,
       'writePantryItemDetailStub_itemPhotos',
       { ...NEUTRAL_ITEM_PHOTOS, id: itemId },
     );
-    topUpItemGroup(
+    topUpEntityGroup(
       cache,
       itemCacheId,
       WritePantryItemDetailStub_ItemCatalogFragmentDoc,
@@ -199,6 +249,43 @@ export function writePantryItemDetailStub(
         __typename: 'PantryItem',
         id: pantryItemId,
         item: { __typename: 'Item', id: itemId },
+      },
+    });
+  }
+
+  // The tracking Unit gets the same treatment as the catalog Item. The
+  // optimistic builder embeds it with the five fields the LIST query selects
+  // while the detail selects eleven — and an incomplete NESTED entity makes the
+  // whole `GetPantryItem` read incomplete, so a create carrying a unit left the
+  // detail screen blank offline for the rest of the session. It bit precisely
+  // when the Unit was well cached, which is why no bare-create test saw it.
+  const unitId = readWrittenUnitId(cache, pantryItemCacheId);
+  const unitCacheId = unitId
+    ? cache.identify({ __typename: 'Unit', id: unitId })
+    : null;
+  if (unitCacheId && unitId) {
+    topUpEntityGroup(
+      cache,
+      unitCacheId,
+      WritePantryItemDetailStub_UnitFragmentDoc,
+      'writePantryItemDetailStub_unit',
+      { ...NEUTRAL_UNIT, id: unitId },
+    );
+
+    // Topping up `Unit:<id>` is only half of it. `toReference(item, true)`
+    // normalizes the top-level PantryItem and leaves nested objects EMBEDDED,
+    // so the detail read resolves `unit` off the row's own five-field copy and
+    // never reaches the entity just repaired. This normalizing write converts
+    // the embedded object into a reference — the same move
+    // `writePantryItemDetailStub_itemRef` makes for `item`.
+    cache.writeFragment({
+      id: pantryItemCacheId,
+      fragment: WritePantryItemDetailStub_UnitRefFragmentDoc,
+      fragmentName: 'writePantryItemDetailStub_unitRef',
+      data: {
+        __typename: 'PantryItem',
+        id: pantryItemId,
+        unit: { __typename: 'Unit', id: unitId },
       },
     });
   }

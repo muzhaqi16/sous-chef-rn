@@ -93,7 +93,7 @@ describe('authService.login — LoginResult union', () => {
     expect(mockToastError).toHaveBeenCalledWith('Invalid email or password');
   });
 
-  it('falls back to the server message for a code with no mapped copy', async () => {
+  it('falls back to the app’s generic copy for a code with no mapped copy', async () => {
     mockMutate.mockResolvedValueOnce({
       data: {
         login: {
@@ -108,7 +108,13 @@ describe('authService.login — LoginResult union', () => {
     const ok = await authService.login(INPUT);
 
     expect(ok).toBe(false);
-    expect(mockToastError).toHaveBeenCalledWith('Email is invalid.');
+    // This asserted the SERVER's message as the fallback, which is the leak
+    // itself: an unmapped code is exactly when the English would have shown.
+    // The fallback is the app's own generic sentence.
+    expect(mockToastError).not.toHaveBeenCalledWith('Email is invalid.');
+    expect(mockToastError).toHaveBeenCalledWith(
+      'Something went wrong. Please try again.',
+    );
   });
 });
 

@@ -12,6 +12,7 @@ import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { t } from '#/i18n';
 import { getI18n } from '#/i18n/config';
 import { errorService } from '#/services/errorService';
+import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 
 const addToShoppingLists = createAddToQueryConnectionUpdater(
   'shoppingLists',
@@ -107,8 +108,10 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
       // Result-union error member (ValidationError for an empty plan,
       // Forbidden/NotFound/Conflict). `message` comes from the `Error`
       // interface selected in the mutation document.
+      // The member's `message` is the server's English by construction; the
+      // field it names (or its code) is what the app has copy for.
       toastService.error(
-        data.message ?? t('generateShoppingList.generateFailed'),
+        localizedRefusalMessage(data, t('generateShoppingList.generateFailed')),
       );
     }
     return data ?? null;

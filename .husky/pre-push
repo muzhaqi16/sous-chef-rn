@@ -52,11 +52,22 @@ fi
 
 npm run codegen || exit 1
 
-if ! git diff --quiet HEAD -- src/graphql/generated/ '*.generated.ts'; then
+# Every file `npm run codegen` writes. `persisted-query-manifest.json` and the
+# derived neutral fillers were missing from this pathspec, so a stale manifest —
+# which is what the server matches an operation against — pushed clean.
+codegen_outputs="src/graphql/generated/ *.generated.ts persisted-query-manifest.json"
+
+# shellcheck disable=SC2086
+if ! git diff --quiet HEAD -- $codegen_outputs; then
   echo "" >&2
   echo "codegen produced changes — your committed generated files are stale." >&2
   echo "Run 'npm run codegen', commit the changes, and push again." >&2
   echo "" >&2
-  git diff --stat HEAD -- src/graphql/generated/ '*.generated.ts' >&2
+  # shellcheck disable=SC2086
+  git diff --stat HEAD -- $codegen_outputs >&2
   exit 1
 fi
+
+# The optimistic fillers are generated from the same .graphql documents but by a
+# separate script, so `--check` is how a stale one is caught.
+npm run check:fillers || exit 1

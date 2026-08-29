@@ -334,6 +334,67 @@ describe('optimistic entity completeness', () => {
         expect(diff.complete).toBe(true);
       });
 
+      it('keeps GetPantryItem complete for a row carrying a unit', async () => {
+        // The regression this case exists for. `buildOptimisticPantryItem`
+        // embeds the unit through `toReference(unit, true)` with the five
+        // fields the LIST selects, while `PantryItemDetail_pantryItem` selects
+        // eleven — so `cache.diff` came back
+        // `Can't find field 'isMetric' on object { __typename: Unit, … }` and
+        // the detail screen was blank offline for the rest of the session.
+        //
+        // It bites precisely when the Unit IS well cached, which is why every
+        // case above — none of which passes a `unitId` — stayed green.
+        const cache = await seedPantryCache();
+        cache.writeFragment({
+          id: 'Unit:unit-1',
+          fragment: gql`
+            fragment _SeedListShapedUnit on Unit {
+              id
+              name
+              symbol
+              type
+              displayAsFraction
+            }
+          `,
+          data: {
+            __typename: 'Unit',
+            id: 'unit-1',
+            name: 'gram',
+            symbol: 'g',
+            type: 'WEIGHT',
+            displayAsFraction: false,
+          },
+        });
+
+        addToPantryItemsCache(
+          cache,
+          'pantry-1',
+          buildOptimisticPantryItem(
+            'client-cuid-unit',
+            {
+              pantryId: 'pantry-1',
+              itemName: 'Offline Flour',
+              quantity: 2,
+              unitId: 'unit-1',
+            },
+            cache,
+          ),
+        );
+        writePantryItemDetailStub(cache, 'client-cuid-unit', {
+          itemName: 'Offline Flour',
+          quantity: 2,
+        });
+
+        const diff = cache.diff({
+          query: GetPantryItemDocument,
+          variables: { id: 'client-cuid-unit' },
+          optimistic: true,
+          returnPartialData: true,
+        });
+        expect(describeMissing(diff.missing)).toBe('none');
+        expect(diff.complete).toBe(true);
+      });
+
       it('keeps GetPantryItemBatches complete after an optimistic add', async () => {
         const cache = await seedPantryCache();
         addToPantryItemsCache(

@@ -35,6 +35,7 @@ import {
   skipUnmatchedFilterVariants,
 } from '#/apollo/utils/cacheUpdaters';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { alertService } from '#/services/alertService';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { updateEntityFieldsLocalFirst } from '#/apollo/utils/localFirstFields';
@@ -43,6 +44,7 @@ import {
   addTemplateItemToCache,
   removeTemplateItemFromCache,
   readTemplateItem,
+  toRestorableTemplateItem,
   readRecipeRef,
 } from '#features/mealPlan/utils/optimisticTemplateItem';
 import { useUser } from '#store/useAppStore';
@@ -380,9 +382,25 @@ export function useMealTemplateEditor() {
     templateId: string,
   ): Promise<boolean> => {
     // Snapshot before evicting: a refusal has to put the row back, and once the
-    // entity is gone the cache can no longer describe it.
-    const removed = readTemplateItem(client.cache, itemId);
+    // entity is gone the cache can no longer describe it. The snapshot is
+    // partial (the editor's query selects no `recipe`), so it is completed here
+    // rather than trusted whole.
+    const removed = toRestorableTemplateItem(
+      readTemplateItem(client.cache, itemId),
+      itemId,
+    );
     const parentTemplateId = templateId;
+
+    // No snapshot means no revert. Evicting anyway is how a refused remove left
+    // the row gone under a message saying it had failed — refuse the remove
+    // instead, so the row the user can still see is the row that still exists.
+    if (!removed) {
+      alertService.alert(
+        t('labels.error'),
+        t('mealTemplateBuilder.failedToRemoveItem'),
+      );
+      return false;
+    }
 
     if (parentTemplateId) {
       try {
@@ -407,7 +425,7 @@ export function useMealTemplateEditor() {
     }
 
     if (classifyCreateResult(result) === 'rejected') {
-      if (removed && parentTemplateId) {
+      if (parentTemplateId) {
         try {
           addTemplateItemToCache(client.cache, parentTemplateId, removed);
         } catch (cacheError) {

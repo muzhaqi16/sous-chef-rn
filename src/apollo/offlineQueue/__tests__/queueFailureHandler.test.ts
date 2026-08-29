@@ -5,12 +5,16 @@ import {
 import { queueManager } from '../queueManager';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { restoreItemToShoppingListAfterMoveToPantry } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { toastService } from '#/services/toastService';
 import { queueStore } from '../queueStore';
 import type { FailedMutationInfo } from '../types';
 
 jest.mock('#/apollo/client', () => ({ client: { cache: {} } }));
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({ safeEvict: jest.fn() }));
+jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
+  restoreItemToShoppingListAfterMoveToPantry: jest.fn(),
+}));
 jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: { clearEntity: jest.fn() },
 }));
@@ -28,6 +32,7 @@ const failure = (
   operationName: 'UpdatePantryItem',
   entityType: 'PantryItem',
   entityId: 'item-1',
+  variables: {},
   error: {
     type: 'server',
     message: 'UpdatePantryItem rejected: ValidationError on field quantity',
@@ -67,6 +72,59 @@ describe('queue failure handler', () => {
       'PantryItem',
       'item-1',
     );
+  });
+
+  describe('withdrawing an unlink', () => {
+    const movedItem = failure({
+      operationName: 'MoveShoppingItemToPantry',
+      entityType: 'PantryItem',
+      entityId: 'pantry-1',
+      variables: {
+        input: { shoppingListItemId: 'sli-1', removeFromList: true },
+      },
+    });
+
+    it('puts the shopping row back when a move is permanently refused', () => {
+      // The evict withdraws the pantry row the move CREATED. Nothing else can
+      // restore the shopping row it UNLINKED, and without this the item is in
+      // neither list — observed on device on a move that timed out, retried and
+      // came back NotFound.
+      handleQueueFailure(movedItem);
+
+      expect(restoreItemToShoppingListAfterMoveToPantry).toHaveBeenCalledWith(
+        expect.anything(),
+        'sli-1',
+      );
+    });
+
+    it('leaves the list alone when the move never unlinked anything', () => {
+      handleQueueFailure(
+        failure({
+          operationName: 'MoveShoppingItemToPantry',
+          variables: {
+            input: { shoppingListItemId: 'sli-1', removeFromList: false },
+          },
+        }),
+      );
+
+      expect(restoreItemToShoppingListAfterMoveToPantry).not.toHaveBeenCalled();
+    });
+
+    it('has no unlink to withdraw for an ordinary create', () => {
+      handleQueueFailure(failure());
+      expect(restoreItemToShoppingListAfterMoveToPantry).not.toHaveBeenCalled();
+    });
+
+    it('still tells the person when the withdrawal throws', () => {
+      (
+        restoreItemToShoppingListAfterMoveToPantry as jest.Mock
+      ).mockImplementationOnce(() => {
+        throw new Error('cache gone');
+      });
+
+      expect(() => handleQueueFailure(movedItem)).not.toThrow();
+      expect(toastService.error).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('tells the person', () => {

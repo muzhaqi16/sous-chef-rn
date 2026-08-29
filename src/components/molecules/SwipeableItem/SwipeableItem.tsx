@@ -30,15 +30,26 @@ const DEFAULT_DRAG_OFFSET = 16;
 // Reserves the tray's width before the real one mounts, so the card cannot open
 // past its own action background during the placeholder→actual swap. The margin
 // mirrors the -12 in the action container styles.
-const placeholderStyle = (
-  count: number,
-  side: 'left' | 'right',
-): ViewStyle => ({
-  width: swipeTrayWidth(count),
-  ...(side === 'left'
-    ? { marginRight: -CARD_EDGE_EXTENSION }
-    : { marginLeft: -CARD_EDGE_EXTENSION }),
-});
+//
+// Memoized per (count, side): the style object is a prop on a view that renders
+// on every swipe frame, and a fresh object each time defeats the identity check
+// downstream. The pair of frozen lookup tables this replaced did the same job;
+// the cache keeps that property without enumerating the counts by hand.
+const placeholderStyles = new Map<string, ViewStyle>();
+const placeholderStyle = (count: number, side: 'left' | 'right'): ViewStyle => {
+  const cacheKey = `${side}:${count}`;
+  const cached = placeholderStyles.get(cacheKey);
+  if (cached) return cached;
+
+  const style: ViewStyle = {
+    width: swipeTrayWidth(count),
+    ...(side === 'left'
+      ? { marginRight: -CARD_EDGE_EXTENSION }
+      : { marginLeft: -CARD_EDGE_EXTENSION }),
+  };
+  placeholderStyles.set(cacheKey, style);
+  return style;
+};
 
 /**
  * Module-level so an omitted action list keeps ONE identity for the life of the
@@ -128,6 +139,26 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   // a parallel one — the two used to be separate `if` chains, and an action
   // added to one could silently miss the other.
   const allActions = [...leftActions, ...rightActions];
+
+  // `key` doubles as the accessibility action NAME, and dispatch is a `find` —
+  // so the same key on both edges publishes duplicate `accessibilityActions`
+  // and VoiceOver/TalkBack always reaches the left one, silently. `key` became
+  // free-form when the named verbs were replaced by descriptors, which is what
+  // made this reachable at all.
+  if (__DEV__) {
+    const seen = new Set<string>();
+    const duplicate = allActions.find(action => {
+      if (seen.has(action.key)) return true;
+      seen.add(action.key);
+      return false;
+    });
+    if (duplicate) {
+      throw new Error(
+        `SwipeableItem: duplicate action key "${duplicate.key}". Keys are accessibility action names and must be unique within a row.`,
+      );
+    }
+  }
+
   const accessibilityActions: AccessibilityActionInfo[] = allActions.map(
     action => ({ name: action.key, label: t(action.labelKey) }),
   );

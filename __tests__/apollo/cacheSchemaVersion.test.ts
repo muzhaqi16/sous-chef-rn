@@ -26,13 +26,18 @@ import { createHash } from 'crypto';
  * Re-record with:
  *   sha256sum src/apollo/cache.ts | cut -c1-16
  */
-// Re-recorded 2026-08-28: added the `Query.pantryItem` read redirect, so an
-// offline-created pantry item's detail screen resolves to the normalized
-// entity instead of the wire. ADDING a redirect leaves an old blob safe —
-// there is no `ROOT_QUERY.pantryItem(...)` field in it to misread, and an
-// entity that is incomplete for the detail selection is a cache miss and a
-// refetch exactly as before. No `CURRENT_CACHE_VERSION` bump.
-const REVIEWED_CACHE_POLICY_HASH = '25dd290fa1a4c501';
+// Re-recorded 2026-08-29: added a self-healing `read` to
+// `Query.storageLocations`. The field is a CONNECTION keyed on a plain
+// `homeId` argument, so Apollo's default broken-reference filtering — which
+// handles plain arrays of refs — never reached `edge.node`, and an optimistic
+// delete's evict left the connection incomplete. Offline that made
+// `usePreservedNodes` hand back the pre-delete snapshot and freeze the list.
+//
+// An old blob stays safe: the read only DROPS edges whose node can no longer
+// be read, which is a narrowing at read time over data that was already
+// written in this shape. Nothing is interpreted differently, so no
+// `CURRENT_CACHE_VERSION` bump.
+const REVIEWED_CACHE_POLICY_HASH = '62f31bd221f594fb';
 
 it('cache.ts has not changed without the persisted-shape decision being made', () => {
   const actual = createHash('sha256')

@@ -50,12 +50,15 @@ import { NetWeightSection } from './NetWeightSection';
 import { usePantryItemFormSubmit } from './usePantryItemFormSubmit';
 import { logValidationErrors } from '#utils/validation/common';
 import {
-  type PageName,
-  PAGES,
   TAB_FIELDS,
   INVENTORY_ADVANCED_FIELDS,
   editItemSchema,
 } from './pantryItemFormConfig';
+import {
+  PAGES,
+  PAGE_LABEL_KEYS,
+  type PageName,
+} from '#features/catalog/ui/AddItemForm/fields';
 import { formatNumberForInput } from '#/utils/formatters/number';
 
 export interface PantryItemFormData {
@@ -465,8 +468,11 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const inventoryAdvancedHasError =
     INVENTORY_ADVANCED_FIELDS.some(fieldHasError);
   const showTags = tagsExpanded || inventoryAdvancedHasError;
+  // `page` is the identifier, not the copy. Passing it straight through as the
+  // label put "Basics / Product / Storage / Inventory" in the tab bar in every
+  // language.
   const indicatorPages = PAGES.map(page => ({
-    label: page,
+    label: t(PAGE_LABEL_KEYS[page]),
     hasError: tabHasError(page),
   }));
 

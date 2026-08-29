@@ -722,6 +722,23 @@ export function adoptServerShoppingListItemId(
 }
 
 /**
+ * The row's own record of where it belongs, read at withdrawal time by
+ * {@link restoreItemToShoppingListAfterMoveToPantry}. Selects only what the
+ * restore needs — which list, and which filtered variant of its connection.
+ */
+const RESTORE_MOVED_ITEM_FRAGMENT = gql`
+  fragment RestoreMovedShoppingListItem on ShoppingListItem {
+    id
+    purchaseInfo {
+      isPurchased
+    }
+    shoppingList {
+      id
+    }
+  }
+`;
+
+/**
  * Remove a single item from ShoppingList cache when moving to pantry.
  *
  * Unlike the generic `createRemoveFromParentConnectionUpdater`, this only
@@ -736,6 +753,7 @@ export function removeItemFromShoppingListForMoveToPantry(
   listId: string,
   itemId: string,
   wasPurchased: boolean,
+  options: { evictEntity?: boolean } = {},
 ): void {
   try {
     const parentCacheId = cache.identify({
@@ -777,11 +795,114 @@ export function removeItemFromShoppingListForMoveToPantry(
       },
     });
 
-    // Evict the item entity from cache
-    safeEvict(cache, 'ShoppingListItem', itemId);
+    // Evicting is for the CONFIRMED move: once the server has the row, the
+    // local entity is dead weight. The eager (pre-fire) call keeps it, because
+    // a permanently-refused replay has to put the row back and there is no
+    // snapshot to rebuild it from — see
+    // {@link restoreItemToShoppingListAfterMoveToPantry}.
+    if (options.evictEntity !== false) {
+      safeEvict(cache, 'ShoppingListItem', itemId);
+    }
   } catch (error) {
     logger.warn(
       'Failed to remove item from ShoppingList for move to pantry:',
+      error,
+    );
+  }
+}
+
+/**
+ * Put a shopping row back after a move to the pantry was permanently refused.
+ *
+ * The mirror of {@link removeItemFromShoppingListForMoveToPantry}'s non-evicting
+ * form. The row is unlinked from its list connection before the mutation fires,
+ * so the move is visible with no network; if the queue then gives up on the
+ * write, the pantry side is withdrawn by the generic evict and this restores the
+ * shopping side. Without it the item would be in neither list — observed on
+ * device on a move that timed out, retried, and came back NotFound.
+ *
+ * Reads the list id and purchase state from the still-cached entity rather than
+ * taking them as arguments: the withdrawal runs long after the call site is
+ * gone, and the entity is the only surviving record of where the row belongs.
+ * A no-op when the entity is gone (already evicted, or never written).
+ */
+export function restoreItemToShoppingListAfterMoveToPantry(
+  cache: ApolloCache,
+  itemId: string,
+): void {
+  try {
+    const itemCacheId = cache.identify({
+      __typename: 'ShoppingListItem',
+      id: itemId,
+    });
+    if (!itemCacheId) return;
+
+    const row = cache.readFragment<{
+      id: string;
+      purchaseInfo: { isPurchased: boolean } | null;
+      shoppingList: { id: string } | null;
+    }>({
+      id: itemCacheId,
+      fragment: RESTORE_MOVED_ITEM_FRAGMENT,
+    });
+
+    const listId = row?.shoppingList?.id;
+    if (!row || !listId) return;
+
+    const wasPurchased = Boolean(row.purchaseInfo?.isPurchased);
+    const parentCacheId = cache.identify({
+      __typename: 'ShoppingList',
+      id: listId,
+    });
+    if (!parentCacheId) return;
+
+    cache.modify({
+      id: parentCacheId,
+      fields: {
+        itemsConnection(
+          existing: ConnectionData | undefined,
+          { readField, storeFieldName, toReference },
+        ) {
+          if (
+            !matchesFilter(storeFieldName, 'isPurchased', wasPurchased) ||
+            !existing?.edges
+          )
+            return existing;
+
+          // Idempotent: a withdrawal that runs twice must not duplicate the row.
+          const alreadyThere = existing.edges.some(
+            edge => readField<string>('id', edge?.node) === itemId,
+          );
+          if (alreadyThere) return existing;
+
+          const node = toReference({
+            __typename: 'ShoppingListItem',
+            id: itemId,
+          });
+          if (!node) return existing;
+
+          return {
+            ...existing,
+            edges: [
+              ...existing.edges,
+              { __typename: 'ShoppingListItemEdge', cursor: itemId, node },
+            ],
+            totalCount: (existing.totalCount || 0) + 1,
+          };
+        },
+        ...(wasPurchased && {
+          completedItems(existing: number = 0) {
+            return existing + 1;
+          },
+        }),
+        totalItems(existing: number = 0) {
+          return existing + 1;
+        },
+      },
+    });
+  } catch (error) {
+    logger.warn(
+      'Failed to restore item to ShoppingList after refused move to pantry:',
       error,
     );
   }

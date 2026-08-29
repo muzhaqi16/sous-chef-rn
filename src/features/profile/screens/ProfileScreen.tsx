@@ -88,16 +88,14 @@ export const ProfileScreen = () => {
     toProfilePhotoUpload();
   };
 
-  const handleLogout = () => {
+  // Takes the row's OWN handler rather than looking the row up again. The
+  // lookup this replaces matched the logout section by a `key` that a settings
+  // refactor renamed from the title to the section id, which left the button
+  // firing telemetry and nothing else. There is only one binding now, and it is
+  // the item the renderer already has in hand.
+  const handleLogout = (performLogout: (() => void) | undefined) => {
     Telemetry.trackEvent('logout_clicked', { source: 'ProfileScreen' });
-    // Find and execute logout action — match the section by its stable `key`,
-    // not the translated `title` (which differs per locale).
-    const logoutSection = sections.find(s => s.key === '');
-    const logoutItem = logoutSection?.items.find(i => i.key === 'logout');
-
-    if (logoutItem?.onPress) {
-      logoutItem.onPress();
-    }
+    performLogout?.();
   };
 
   const handleMorePress = () => {
@@ -184,12 +182,13 @@ export const ProfileScreen = () => {
               key={`section-${index}`}
               title={section.title}
               items={section.items.map(item => {
-                // Override logout handler to include navigation
+                // Wrap the row's own handler so the tap is recorded; the
+                // handler itself stays the one the settings config built.
                 if (item.key === 'logout') {
                   return {
                     ...item,
                     testID: 'profile-logout-button',
-                    onPress: handleLogout,
+                    onPress: () => handleLogout(item.onPress),
                   };
                 }
                 // Handle navigation items

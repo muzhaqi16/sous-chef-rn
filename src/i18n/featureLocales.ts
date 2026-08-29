@@ -14,8 +14,17 @@ import type { SupportedLanguage } from './config';
  * ## Adding a feature
  *
  * Add `src/features/<name>/locales/{en,es,it,sq}.json` and one entry below.
- * `scripts/check-i18n.mjs` walks this file, so a locale missing from a feature
- * fails there rather than at runtime in that language.
+ *
+ * The gates read the FILESYSTEM (`scripts/check-i18n.mjs` and
+ * `__tests__/helpers/mergedLocales.ts` both read the locales directory of every
+ * feature under `src/features`),
+ * while the app reads the map below. Those are two different sources, and this
+ * comment used to claim they were one — so adding the files and forgetting the
+ * entry left every gate green while the feature rendered raw dotted keys in all
+ * four languages at runtime.
+ *
+ * `__tests__/i18n/featureLocaleRegistration.test.ts` asserts the two agree in
+ * both directions, which is what makes the sentence above true.
  */
 import pantryEn from '#features/pantry/locales/en.json';
 import pantryEs from '#features/pantry/locales/es.json';
@@ -81,14 +90,42 @@ export const FEATURE_LOCALES: Record<
   barcode: { en: barcodeEn, es: barcodeEs, it: barcodeIt, sq: barcodeSq },
 };
 
+/**
+ * Merge two locale trees, combining namespaces instead of replacing them.
+ *
+ * `Object.assign` at the top level is what this replaces: a feature declaring a
+ * namespace the core tree also declares — `labels`, `errors`, `empty` — REPLACED
+ * core's subtree wholesale, taking every key in it with it. The checkers
+ * repeated the same shallow merge, so parity still reported clean while the app
+ * had lost the strings.
+ *
+ * Arrays and scalars are replaced, not merged: a locale value is either a
+ * namespace or a string, never something to concatenate.
+ */
+const deepMergeLocale = (
+  base: LocaleTree,
+  incoming: LocaleTree,
+): LocaleTree => {
+  const merged: LocaleTree = { ...base };
+  for (const [key, value] of Object.entries(incoming)) {
+    const existing = merged[key];
+    const bothAreNamespaces = isNamespace(existing) && isNamespace(value);
+    merged[key] = bothAreNamespaces ? deepMergeLocale(existing, value) : value;
+  }
+  return merged;
+};
+
+const isNamespace = (value: unknown): value is LocaleTree =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
 /** Core copy plus every feature's, for one locale. */
 export const mergeFeatureLocales = (
   locale: SupportedLanguage,
   core: LocaleTree,
 ): LocaleTree => {
-  const merged: LocaleTree = { ...core };
+  let merged: LocaleTree = { ...core };
   for (const byLocale of Object.values(FEATURE_LOCALES)) {
-    Object.assign(merged, byLocale[locale]);
+    merged = deepMergeLocale(merged, byLocale[locale]);
   }
   return merged;
 };

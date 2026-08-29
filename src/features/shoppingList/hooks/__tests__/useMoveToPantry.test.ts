@@ -7,6 +7,10 @@ import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
+import {
+  removeItemFromShoppingListForMoveToPantry,
+  restoreItemToShoppingListAfterMoveToPantry,
+} from '#/apollo/utils/shoppingListCacheUpdaters';
 import { useStore } from '#store';
 import { useMoveToPantry } from '../useMoveToPantry';
 
@@ -30,6 +34,7 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   ...jest.requireActual('#/apollo/utils/shoppingListCacheUpdaters'),
   removeItemFromShoppingListForMoveToPantry: jest.fn(),
+  restoreItemToShoppingListAfterMoveToPantry: jest.fn(),
 }));
 
 jest.mock('#/utils/finallyHelpers');
@@ -258,6 +263,55 @@ describe('useMoveToPantry', () => {
       expect(input.idempotencyKey).toEqual(expect.any(String));
     });
 
+    it('unlinks the shopping row eagerly, without evicting it', async () => {
+      // Offline neither the mutation's `update` callback nor the replay runs
+      // one, so a removal left to `update` never happened: the server deleted
+      // the line while the client kept rendering it in the list and in both
+      // counters until a full refetch. It has to be unlinked here — and NOT
+      // evicted, because a permanently-refused replay has to put it back.
+      useStore.setState({ apiReachable: false });
+      const move = moveMock();
+      const { result } = renderHookWithApollo(
+        () => useMoveToPantry({ currentListId: 'list-1' }),
+        { operationMocks: [move.mock] },
+      );
+
+      await act(async () => {
+        await result.current.moveToPantry(createItem(), {
+          pantryId: 'pantry-1',
+          actualQuantity: 2,
+          removeFromList: true,
+        });
+      });
+
+      expect(removeItemFromShoppingListForMoveToPantry).toHaveBeenCalledWith(
+        expect.anything(),
+        'list-1',
+        'item-1',
+        expect.any(Boolean),
+        { evictEntity: false },
+      );
+    });
+
+    it('leaves the row alone when the move keeps it on the list', async () => {
+      useStore.setState({ apiReachable: false });
+      const move = moveMock();
+      const { result } = renderHookWithApollo(
+        () => useMoveToPantry({ currentListId: 'list-1' }),
+        { operationMocks: [move.mock] },
+      );
+
+      await act(async () => {
+        await result.current.moveToPantry(createItem(), {
+          pantryId: 'pantry-1',
+          actualQuantity: 2,
+          removeFromList: false,
+        });
+      });
+
+      expect(removeItemFromShoppingListForMoveToPantry).not.toHaveBeenCalled();
+    });
+
     it('fires the mutation normally when online', async () => {
       const move = moveMock();
       const { result } = renderHookWithApollo(
@@ -384,6 +438,39 @@ describe('useMoveToPantry pantry item count', () => {
     });
 
     expect(readTotal(cache)).toBe(63);
+  });
+
+  it('puts the shopping row back when the move is refused', async () => {
+    // Both sides were written before firing, so both are undone. The row was
+    // unlinked rather than evicted, which is what leaves an entity to re-link.
+    const cache = seededCache();
+    const rejected = recordMock(MoveShoppingItemToPantryDocument, {
+      data: {
+        moveShoppingItemToPantry: {
+          __typename: 'ValidationError',
+          message: 'nope',
+          field: 'shoppingListItemId',
+        },
+      },
+    });
+
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [rejected.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 2,
+        removeFromList: true,
+      });
+    });
+
+    expect(restoreItemToShoppingListAfterMoveToPantry).toHaveBeenCalledWith(
+      expect.anything(),
+      'item-1',
+    );
   });
 
   it('withdraws the count when the server supersedes the optimistic row', async () => {

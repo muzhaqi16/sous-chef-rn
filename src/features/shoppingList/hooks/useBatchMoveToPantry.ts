@@ -9,7 +9,6 @@ import { Telemetry } from '#/services/telemetry';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { t } from '#/i18n';
-import { getI18n } from '#/i18n/config';
 import { errorService } from '#/services/errorService';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -148,7 +147,7 @@ export function useBatchMoveToPantry({
     // slice on screen. Say the move is pending rather than reporting a count
     // that is right only when the whole list happens to be loaded.
     if (classifyCreateResult(result) === 'queued') {
-      toastService.success(getI18n().t('moveToPantry.queued'));
+      toastService.success(t('moveToPantry.queued'));
       onSuccess?.();
       return;
     }
@@ -188,12 +187,12 @@ export function useBatchMoveToPantry({
     if (movedCount > 0) {
       const alreadyThere =
         alreadyThereCount > 0
-          ? getI18n().t('moveToPantry.alreadyThereSuffix', {
+          ? t('moveToPantry.alreadyThereSuffix', {
               count: alreadyThereCount,
             })
           : '';
       toastService.success(
-        getI18n().t('moveToPantry.movedItems', {
+        t('moveToPantry.movedItems', {
           count: movedCount,
           skipped: alreadyThere,
         }),
@@ -202,7 +201,7 @@ export function useBatchMoveToPantry({
       // Nothing moved because the pantry already held these lines. That is a
       // success for the user, not the "nothing could be moved" message.
       toastService.info(
-        getI18n().t('moveToPantry.allAlreadyThere', {
+        t('moveToPantry.allAlreadyThere', {
           count: alreadyThereCount,
         }),
       );
@@ -224,7 +223,7 @@ export function useBatchMoveToPantry({
         .slice(0, 3)
         .join(', ');
       toastService.error(
-        getI18n().t('moveToPantry.failedItems', {
+        t('moveToPantry.failedItems', {
           count: failedCount,
           names,
         }),

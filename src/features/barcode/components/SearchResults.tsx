@@ -43,7 +43,10 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
 import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import {
+  executeAsyncWithCleanup,
+  executeWithLoadingState,
+} from '#/utils/finallyHelpers';
 import type { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
 import type { BarcodeSource } from '#/types/navigation';
 import { ScrollView } from 'react-native';
@@ -236,13 +239,28 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             });
           }
 
-          const result = await addToPantry({
-            variables: { input: mutationInput },
-            context: { localFirst: true },
-          });
-          // Released on every outcome; a queued create is tracked by the
-          // offline queue's pending set from here on.
-          unconfirmedCreates.confirm(id);
+          // Released on every outcome — including a THROW. `confirm` sitting
+          // after a bare `await` was released on the paths that return, and on
+          // none of the paths that don't: a transport throw left the id marked
+          // unconfirmed for the rest of the session, which suppresses the
+          // detail query for a row the user can see. The helper is how a
+          // finalizer is written here at all — a bare `try/finally` bails the
+          // React Compiler out of the whole component.
+          let result!: Awaited<ReturnType<typeof addToPantry>>;
+          await executeAsyncWithCleanup(
+            async () => {
+              result = await addToPantry({
+                variables: { input: mutationInput },
+                context: { localFirst: true },
+              });
+            },
+            () => unconfirmedCreates.confirm(id),
+            // Rethrow so the outer handler still reports it; the cleanup above
+            // has already run by then.
+            error => {
+              throw error;
+            },
+          );
 
           // Handle duplicate pantry item — the server reports it as a typed
           // DuplicatePantryItemError member in `data` (or the legacy

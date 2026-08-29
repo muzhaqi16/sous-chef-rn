@@ -18,6 +18,7 @@ export interface DetailsPageProps {
   /** Validation message for the quantity field. */
   quantityError?: string;
   /** Validation message for the net-weight UNIT picker (net weight is all-or-nothing). */
+  pantryNetWeightError?: string;
   pantryNetWeightUnitError?: string;
   unit: string;
   setUnit: (value: string) => void;
@@ -49,6 +50,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
   quantityInput,
   setQuantityInput,
   quantityError,
+  pantryNetWeightError,
   pantryNetWeightUnitError,
   unit,
   setUnit,
@@ -114,6 +116,10 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
             label={t('labels.netWeight')}
             value={pantryNetWeight}
             onChangeText={setPantryNetWeight}
+            // The all-or-nothing rule reports on BOTH halves of the pair; only
+            // the unit half was rendered, and FIELD_PAGE navigates here for a
+            // message that had nowhere to appear.
+            error={pantryNetWeightError}
             placeholder={localizeNumericHint(t('labels.eG145'))}
             keyboardType="decimal-pad"
             useBottomSheetInput

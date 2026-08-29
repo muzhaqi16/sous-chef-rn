@@ -84,7 +84,7 @@ export function useRecipeSavedMetadata({
   const applyMetadataUpdate = async (
     updates: Partial<SavedDetailsRef>,
     input: Record<string, unknown>,
-  ): Promise<void> => {
+  ): Promise<boolean> => {
     const saved = readSavedDetails(client.cache, recipeId);
     const previous = Object.fromEntries(
       Object.keys(updates).map(key => [
@@ -93,7 +93,11 @@ export function useRecipeSavedMetadata({
       ]),
     );
 
-    await updateEntityFieldsLocalFirst({
+    // `persisted` is false only for a REFUSAL — a queued write keeps its cache
+    // change and counts as persisted. Returned rather than swallowed: the
+    // helper has already reverted the cache by then, so a caller that toasts
+    // success regardless tells the user the opposite of what it just did.
+    const { persisted } = await updateEntityFieldsLocalFirst({
       cache: client.cache,
       entity: saved ? { __typename: 'SavedRecipe', id: saved.id } : undefined,
       updates,
@@ -105,6 +109,7 @@ export function useRecipeSavedMetadata({
           context: { localFirst: true },
         }),
     });
+    return persisted;
   };
   const [showFolderPicker, setShowFolderPicker] = useState(false);
   const [updatingFolderTags, setUpdatingFolderTags] = useState(false);
@@ -162,9 +167,12 @@ export function useRecipeSavedMetadata({
           },
         );
       },
+      // Reports, never displays. `err.message` is the server's own English —
+      // unlocalizable by construction — and every caller of
+      // `applyMetadataUpdate` now surfaces its own localized refusal, so a
+      // toast here would also be the second one for a single failure.
       onError: err => {
         errorService.reportError(err, { operation: 'updateFavoriteRecipe' });
-        toastService.error(err.message || t('labels.failedToUpdateRecipe'));
       },
     },
   );
@@ -183,7 +191,17 @@ export function useRecipeSavedMetadata({
 
     setShowFolderPicker(false);
     return executeWithLoadingState(async () => {
-      await applyMetadataUpdate({ folder }, { folder: folder ?? undefined });
+      // `folder` explicitly, NOT `folder ?? undefined`: an undefined value is
+      // dropped when the variables are serialized, and an absent key means
+      // "leave unchanged" to the server. Clearing a folder wrote null into the
+      // cache, sent nothing, and the mutation's own `update` then wrote the
+      // server's unchanged folder back over the row — so it snapped back
+      // seconds later under a success toast, and offline never converged.
+      const persisted = await applyMetadataUpdate({ folder }, { folder });
+      if (!persisted) {
+        toastService.error(t('recipes.updateRecipeFailed'));
+        return;
+      }
       toastService.success(
         folder
           ? t('recipes.movedToFolder', { folder })
@@ -196,7 +214,11 @@ export function useRecipeSavedMetadata({
     if (!recipeId) return Promise.resolve();
 
     return executeWithLoadingState(async () => {
-      await applyMetadataUpdate({ tags }, { tags });
+      const persisted = await applyMetadataUpdate({ tags }, { tags });
+      if (!persisted) {
+        toastService.error(t('recipes.updateRecipeFailed'));
+        return;
+      }
       toastService.success(t('recipes.tagsUpdated'));
     }, setUpdatingFolderTags);
   };
@@ -205,7 +227,16 @@ export function useRecipeSavedMetadata({
     if (!recipeId) return Promise.resolve();
 
     return executeWithLoadingState(async () => {
-      await applyMetadataUpdate({ notes }, { notes: notes || undefined });
+      // Same as the folder above: emptied notes must travel as an explicit
+      // value, or the server keeps the old text.
+      const persisted = await applyMetadataUpdate(
+        { notes },
+        { notes: notes || null },
+      );
+      if (!persisted) {
+        toastService.error(t('recipes.updateRecipeFailed'));
+        return;
+      }
       toastService.success(t('recipes.notesUpdated'));
     }, setUpdatingFolderTags);
   };
@@ -214,10 +245,14 @@ export function useRecipeSavedMetadata({
     if (!recipeId) return Promise.resolve();
 
     return executeWithLoadingState(async () => {
-      await applyMetadataUpdate(
+      const persisted = await applyMetadataUpdate(
         { personalRating: rating },
         { personalRating: rating },
       );
+      if (!persisted) {
+        toastService.error(t('recipes.updateRecipeFailed'));
+        return;
+      }
       toastService.success(
         rating
           ? t('recipes.ratedValue', { rating })

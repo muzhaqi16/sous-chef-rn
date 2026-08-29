@@ -67,12 +67,14 @@ jest.mock('#/hooks/utils/useCrudOperations', () => ({
   })),
 }));
 
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
-  createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
-  createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
-  createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
-}));
+// Spread the real module. Stubbing every factory to `jest.fn()` meant the
+// optimistic remove and its revert — the whole local-first half of this hook —
+// executed nothing, so the suite was green on writes that never happened. The
+// factories are spied on top of the real implementations instead, which keeps
+// the call assertions AND exercises the cache.
+jest.mock('#/apollo/utils/cacheUpdaters', () =>
+  jest.requireActual('#/apollo/utils/cacheUpdaters'),
+);
 
 jest.mock('#/utils/finallyHelpers');
 
@@ -181,6 +183,7 @@ function buildUpdateLocationMock(): MockedResponse {
 function buildDeleteLocationMock(
   success: boolean = true,
   message: string = 'OK',
+  refusal: { code?: string; field?: string } = {},
 ): MockedResponse {
   return {
     request: {
@@ -201,6 +204,8 @@ function buildDeleteLocationMock(
           : {
               __typename: 'ValidationError',
               message,
+              code: refusal.code ?? 'VALIDATION_FAILED',
+              field: refusal.field ?? null,
             },
       },
     },
@@ -381,7 +386,36 @@ describe('useStorageLocationManagement', () => {
       await result.current.deleteLocation('loc-1');
     });
 
-    expect(mockToastError).toHaveBeenCalledWith('Location has items');
+    // The app's own words, never the server's. `message` is English by
+    // construction (no `Accept-Language` is sent and the token carries no
+    // locale), so asserting it here pinned the leak in place — one commit after
+    // "fix(shopping-list): … stop leaking server English".
+    expect(mockToastError).not.toHaveBeenCalledWith('Location has items');
+    expect(mockToastError).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the copy for the field the server named', async () => {
+    const { result } = renderHookWithApollo(
+      () => useStorageLocationManagement('home-1', 'pantry-1'),
+      {
+        operationMocks: [
+          buildGetLocationsMock(),
+          buildDeleteLocationMock(false, 'Location has items', {
+            field: 'storageLocation',
+          }),
+        ],
+      },
+    );
+
+    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+    await act(async () => {
+      await result.current.deleteLocation('loc-1');
+    });
+
+    const [shown] = mockToastError.mock.calls[0] as [string];
+    expect(shown).not.toBe('Location has items');
+    expect(typeof shown).toBe('string');
+    expect(shown.length).toBeGreaterThan(0);
   });
 
   describe('editing works offline', () => {

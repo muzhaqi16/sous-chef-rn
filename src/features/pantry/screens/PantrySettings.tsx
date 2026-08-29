@@ -42,6 +42,7 @@ import {
   addPantryToHomeCache,
   buildOptimisticPantry,
   removeOptimisticPantry,
+  restorePantryToHomeCache,
   writeOptimisticPantry,
 } from '#features/pantry/utils/optimisticPantry';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
@@ -382,13 +383,56 @@ export const PantrySettings: React.FC<
 
             executeAsyncWithCleanup(
               async () => {
+                // Local-first means the cache is written HERE, before firing.
+                // `buildDeletePantryUpdater` runs only for a real
+                // `DeletePantryPayload`, and offline there is none — the queue
+                // completes with a null result and the replay carries no
+                // `update` at all — so the caller returned to a home that still
+                // listed the pantry it had just deleted, with none selected.
+                //
+                // Unlinks without evicting: the entity has to survive a refusal
+                // so `restorePantryToHomeCache` can put the row back.
+                if (selectedHomeId) {
+                  try {
+                    removeOptimisticPantry(
+                      apolloClient.cache,
+                      selectedHomeId,
+                      pantryId,
+                      { evictEntity: false },
+                    );
+                  } catch (cacheError) {
+                    errorService.reportError(cacheError, {
+                      operation: 'Delete Pantry (optimistic)',
+                    });
+                  }
+                }
+
                 // Queued when offline: the delete converges server-side on
                 // replay (`converged: true` for an already-deleted row), so
                 // re-sending it is safe rather than a permanent failure.
-                await deletePantry({
+                const result = await deletePantry({
                   variables: { input: { id: pantryId } },
                   context: { localFirst: true },
                 });
+
+                if (classifyCreateResult(result) === 'rejected') {
+                  if (selectedHomeId) {
+                    try {
+                      restorePantryToHomeCache(
+                        apolloClient.cache,
+                        selectedHomeId,
+                        pantryId,
+                      );
+                    } catch (cacheError) {
+                      errorService.reportError(cacheError, {
+                        operation: 'Revert rejected Pantry delete',
+                      });
+                    }
+                  }
+                  alertRejectedMutation(result, t('errors.deletePantryFailed'));
+                  return;
+                }
+
                 setSelectedPantryId(null);
                 goBack();
               },

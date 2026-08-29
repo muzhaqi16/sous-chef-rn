@@ -37,7 +37,17 @@
       "#styles": ["./src/styles"],
       "#types": ["./src/types"],
       "#utils": ["./src/utils"],
-      "#utils/*": ["./src/utils/*"]
+      "#utils/*": ["./src/utils/*"],
+      "#apollo": ["./src/apollo"],
+      "#apollo/*": ["./src/apollo/*"],
+      "#app": ["./src/app"],
+      "#app/*": ["./src/app/*"],
+      "#i18n": ["./src/i18n"],
+      "#i18n/*": ["./src/i18n/*"],
+      "#native": ["./src/native"],
+      "#native/*": ["./src/native/*"],
+      "#theme": ["./src/theme"],
+      "#theme/*": ["./src/theme/*"]
     }
   }
 }

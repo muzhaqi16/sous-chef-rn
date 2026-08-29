@@ -45,7 +45,7 @@ interface ItemListActionsProviderProps {
  *
  * @example
  * ```tsx
- * <ItemListActionsProvider actions={{ onItemPress, onItemEdit, onItemDelete }}>
+ * <ItemListActionsProvider actions={{ onItemPress, itemSwipeActions }}>
  *   <FlashList ... />
  * </ItemListActionsProvider>
  * ```

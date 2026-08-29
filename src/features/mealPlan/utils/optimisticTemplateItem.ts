@@ -142,19 +142,63 @@ export function removeTemplateItemFromCache(
   if (cacheId) cache.evict({ id: cacheId });
 }
 
-/** Read an item back, so a rejected remove can put it where it was. */
+/**
+ * Complete a {@link readTemplateItem} snapshot into something the cache can be
+ * given back, or null when there is nothing to restore.
+ *
+ * The snapshot is partial by contract — the editor's query does not select
+ * `recipe`, so a row loaded there has no recipe in the cache to snapshot. The
+ * absent keys become explicit nulls rather than being left undefined: the row
+ * has to be a complete entity to go back into `items`, and null is the honest
+ * value for a field the cache never held. The next fetch repairs it.
+ *
+ * Returns null when the snapshot carries no id, which is the one case where a
+ * restore would write a row that identifies as nothing.
+ */
+export function toRestorableTemplateItem(
+  snapshot: Partial<MealTemplateItemFragment> | null,
+  itemId: string,
+): MealTemplateItemFragment | null {
+  if (!snapshot || (snapshot.id ?? itemId) !== itemId) return null;
+  return {
+    __typename: 'MealTemplateItem',
+    id: itemId,
+    dayOffset: snapshot.dayOffset ?? 0,
+    mealType: snapshot.mealType as MealTemplateItemFragment['mealType'],
+    customMealName: snapshot.customMealName ?? null,
+    servings: snapshot.servings ?? null,
+    notes: snapshot.notes ?? null,
+    recipe: snapshot.recipe ?? null,
+  };
+}
+
+/**
+ * Read an item back, so a rejected update or remove can put it where it was.
+ *
+ * `returnPartialData` is load-bearing, not defensive. `MealTemplateItemFragment`
+ * selects `recipe { … }` and the editor's own query, `GetMealTemplateForEdit`,
+ * selects no `recipe` at all — and `readFragment` is all-or-nothing, so without
+ * this it returned null for EVERY row the editor had loaded. That made the
+ * local-first writes and their reverts silent no-ops: an offline edit reset the
+ * form and left the old values on screen with no error, and a refused remove
+ * left the row gone under a message saying it had failed.
+ *
+ * The result is therefore partial by contract. Callers must treat a missing key
+ * as "the cache never knew this", not as "the value is empty".
+ */
 export function readTemplateItem(
   cache: ApolloCache,
   itemId: string,
-): MealTemplateItemFragment | null {
+): Partial<MealTemplateItemFragment> | null {
   const cacheId = cache.identify({
     __typename: 'MealTemplateItem',
     id: itemId,
   });
   if (!cacheId) return null;
-  return cache.readFragment<MealTemplateItemFragment>({
+  return cache.readFragment<Partial<MealTemplateItemFragment>>({
     id: cacheId,
     fragment: MealTemplateItemFragmentDoc,
     fragmentName: 'MealTemplateItemFragment',
+    returnPartialData: true,
   });
 }

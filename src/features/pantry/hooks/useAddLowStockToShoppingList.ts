@@ -1,6 +1,7 @@
 import { useMutation } from '@apollo/client/react';
 import { AddLowStockItemsToShoppingListDocument } from '#features/pantry/graphql/pantry.generated';
 import { toastService } from '#/services/toastService';
+import { localizedErrorMessage } from '#/services/errorService';
 import { Telemetry } from '#/services/telemetry';
 import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { handleMutationError } from '#/utils/errorHandlers';
@@ -37,10 +38,10 @@ export function useAddLowStockToShoppingList({
       response = await addLowStockMutation({
         variables: { input: { homeId } },
       });
-    } catch (error: unknown) {
-      toastService.error(
-        error instanceof Error ? error.message : t('errors.addLowStockFailed'),
-      );
+    } catch {
+      // A transport throw. Its `message` is developer text — operation names
+      // and identifiers — not something to put on screen.
+      toastService.error(t('errors.addLowStockFailed'));
     }
 
     const payload = response?.data?.addLowStockItemsToShoppingList;
@@ -52,11 +53,9 @@ export function useAddLowStockToShoppingList({
           t('errors.addLowStockFailed'),
         );
       } catch (error: unknown) {
-        toastService.error(
-          error instanceof Error
-            ? error.message
-            : t('errors.addLowStockFailed'),
-        );
+        // `unwrapPayload` throws a GraphQLDomainError carrying the refusal's
+        // own code; `localizedErrorMessage` resolves that to the app's copy.
+        toastService.error(localizedErrorMessage(error));
       }
     }
     if (!result) return;

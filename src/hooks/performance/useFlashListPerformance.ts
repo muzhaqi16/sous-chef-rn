@@ -40,6 +40,7 @@ import {
 } from '#/services/performance/types';
 import {
   createMountedCellRenderer,
+  PlainAnimatedCellRenderer,
   MountedCellRegistry,
   type MountedCellRenderer,
 } from './mountedCellRenderer';
@@ -131,6 +132,30 @@ const noopRisk: BlankRiskAssessment = {
 // Throttle interval for coverage ratio reporting (ms)
 const COVERAGE_REPORT_INTERVAL = 2000;
 
+/**
+ * The per-cell instrumentation sampling decision, taken ONCE per session.
+ *
+ * Module scope is what makes it per-session: every list in the app reads the
+ * same answer, and a remount cannot re-roll it. Lazily evaluated rather than
+ * computed at import so a test can reason about it, and so the cost is not paid
+ * by a session that never mounts an instrumented list.
+ */
+let cellInstrumentationDecision: boolean | undefined;
+const shouldInstrumentCellsThisSession = (): boolean => {
+  cellInstrumentationDecision ??=
+    Math.random() <
+    DEFAULT_PERFORMANCE_CONFIG.flashListInstrumentationSampleRate;
+  return cellInstrumentationDecision;
+};
+
+/**
+ * Reset the session-wide sampling decision. Tests only — the app takes the
+ * decision once and keeps it for the life of the session.
+ */
+export const __resetCellInstrumentationSamplingForTests = (): void => {
+  cellInstrumentationDecision = undefined;
+};
+
 export function useFlashListPerformance<T>(
   flashListRef: React.RefObject<FlashListRef<T> | null>,
   options: UseFlashListPerformanceOptions,
@@ -161,39 +186,87 @@ export function useFlashListPerformance<T>(
 
   // First layout commit with real content: state drives the owner's overlay,
   // the ref guards the callback (read only inside the commit callback, never
-  // during render). One-shot per mount — FlashList warns that un-guarded
+  // during render). One-shot per MOUNT CYCLE — FlashList warns that un-guarded
   // setState in `onCommitLayoutEffect` can loop.
-  const [hasContentLayout, setHasContentLayout] = useState(false);
-  const hasContentLayoutRef = useRef(false);
+  //
+  // "Mount cycle", not "mount", is the whole point. `hasRealContent`
+  // legitimately goes true -> false -> true (switching pantry tabs re-arms
+  // skeletons), and the latch used to be set once and never reset — so from the
+  // SECOND tab switch on, `hasContentLayout` was already true while the data
+  // flag re-armed, and `PantryContent`'s
+  // `overlayVisible = initialSkeletons || !hasContentLayout` collapsed to the
+  // data flag alone. The cover then came down the moment the data flag cleared,
+  // before FlashList's progressive first layout released its cells from
+  // `opacity: 0` — the 300ms+ blank frame it exists to hide, on every switch
+  // after the first. CLAUDE.md: "A skeleton over a mounting FlashList releases
+  // on `hasContentLayout`, never on data-loading flags."
+  // The latch is a CYCLE NUMBER rather than a boolean, which is what lets it
+  // re-arm without a reset written anywhere: the cycle advances when real
+  // content goes away, and `hasContentLayout` is simply "the cycle that has
+  // laid out is the current one".
+  //
+  // The advance happens during RENDER — the adjusting-state-during-render
+  // pattern — not in an effect. An effect would be a synchronous setState
+  // inside one (which the React rules forbid, and which costs a cascading
+  // render), and a ref written during render bails the whole hook out of the
+  // React Compiler.
+  //
+  // `markFullyDrawn` keeps its own separate one-shot latch below: the startup
+  // metric must NOT re-arm, only the overlay.
+  const [contentCycle, setContentCycle] = useState(0);
+  const [laidOutCycle, setLaidOutCycle] = useState(-1);
+  const [hadRealContent, setHadRealContent] = useState(options.hasRealContent);
+  if (hadRealContent !== options.hasRealContent) {
+    setHadRealContent(options.hasRealContent);
+    if (!options.hasRealContent) setContentCycle(cycle => cycle + 1);
+  }
+  const hasContentLayout = laidOutCycle === contentCycle;
+
+  // The ref guards only against the callback firing twice within one cycle
+  // before a re-render can be observed — FlashList warns that un-guarded
+  // setState in `onCommitLayoutEffect` can loop. Read and written ONLY inside
+  // the callback, never during render.
+  const firedForCycleRef = useRef(-1);
   const onCommitLayoutEffect = () => {
-    if (hasContentLayoutRef.current || !options.hasRealContent) return;
-    hasContentLayoutRef.current = true;
-    setHasContentLayout(true);
+    if (!options.hasRealContent) return;
+    if (firedForCycleRef.current === contentCycle) return;
+    firedForCycleRef.current = contentCycle;
+    setLaidOutCycle(contentCycle);
     options.onFirstContentLayout?.();
   };
 
   // Per-SESSION sampling of the per-cell instrumentation: the cell wrapper is
   // a Reanimated `Animated.View` + a layout effect around EVERY cell, and on
   // the initial paint path that costs real mount time (~30-60 ms of a ~320 ms
-  // first-layout window on device — perf-blank-window-2026-08-26.md). Decided
-  // once at mount so the cell tree shape never flips mid-session. Unsampled
-  // sessions hand FlashList `CellRendererComponent: undefined`, falling back
-  // to its own plain-View cell container, and skip blank-state evaluation
-  // (which would otherwise read every visible cell as blank). `onLoad`,
-  // session duration, and the first-content-layout latch stay unsampled.
-  const [instrumentCells] = useState(
-    () =>
-      Math.random() <
-      DEFAULT_PERFORMANCE_CONFIG.flashListInstrumentationSampleRate,
-  );
+  // first-layout window on device — perf-blank-window-2026-08-26.md).
+  // Unsampled sessions hand FlashList `CellRendererComponent: undefined`,
+  // falling back to its own plain-View cell container, and skip blank-state
+  // evaluation (which would otherwise read every visible cell as blank).
+  // `onLoad`, session duration, and the first-content-layout latch stay
+  // unsampled.
+  //
+  // Read from the module-scope decision, NOT re-rolled here. `useState(() =>
+  // Math.random() < rate)` samples per hook INSTANCE — seven lists in this app
+  // — and re-rolls on every remount, so at a 5% release rate a session could
+  // report one list and not another, and the same list differently before and
+  // after a tab switch. That makes `sum(...) by (screen)` across a session
+  // meaningless, which is exactly the cross-session aggregation CLAUDE.md warns
+  // is untrustworthy. One decision, taken once, applied everywhere.
+  const instrumentCells = shouldInstrumentCellsThisSession();
 
   // Which indices currently have a committed cell. Written only by the cell
   // renderer's layout effects, read only from event handlers and effects. The
   // renderer is created once; it reaches the current blank check through
   // `cellRegistry.onChange`, re-pointed in an effect below.
   const [cellRegistry] = useState(() => new MountedCellRegistry());
+  // ALWAYS a cell renderer, sampled or not. Only the registry and its per-cell
+  // layout effect are worth sampling; the `Animated.View` both renderers wrap
+  // the cell in is what keeps Reanimated cell layout animations working, and
+  // handing FlashList `undefined` dropped it in ~95% of release sessions.
   const [CellRendererComponent] = useState(() =>
-    instrumentCells ? createMountedCellRenderer(cellRegistry) : undefined,
+    instrumentCells
+      ? createMountedCellRenderer(cellRegistry)
+      : PlainAnimatedCellRenderer,
   );
 
   // DEV-only diagnostics instance

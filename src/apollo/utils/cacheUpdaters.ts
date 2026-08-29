@@ -116,6 +116,44 @@ export interface RemoveFromArrayOptions {
  *   skipStoreField: skipUnmatchedFilterVariants({ category: template.category }),
  * });
  */
+/**
+ * Skip cached variants whose TOP-LEVEL arguments do not match.
+ *
+ * The sibling {@link skipUnmatchedFilterVariants} reads a nested `filters`
+ * object, which is the shape most of this app's connections are keyed by. A
+ * field keyed on a plain argument — `storageLocations(homeId:)` — puts that
+ * argument at the top level instead, so the filters matcher finds nothing to
+ * compare and lets every variant through: a location restored after a refused
+ * delete in home A reappeared in home B's list too.
+ *
+ * A variant carrying none of the named arguments is left alone: it cannot be
+ * proven not to match, and the safe direction is to leave it for the next read.
+ */
+export function skipUnmatchedArgVariants(
+  equals: Record<string, unknown>,
+): (storeFieldName: string) => boolean {
+  return storeFieldName => {
+    const argsStart = storeFieldName.indexOf('(');
+    if (argsStart === -1) return false;
+
+    const args = storeFieldName.slice(argsStart + 1, -1);
+    if (!args) return false;
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(args);
+    } catch {
+      return true;
+    }
+    if (!parsed || typeof parsed !== 'object') return false;
+
+    const actual = parsed as Record<string, unknown>;
+    return Object.entries(equals).some(
+      ([key, value]) => key in actual && actual[key] !== value,
+    );
+  };
+}
+
 export function skipUnmatchedFilterVariants(
   equals: Record<string, unknown>,
 ): (storeFieldName: string) => boolean {

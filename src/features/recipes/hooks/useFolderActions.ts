@@ -10,6 +10,7 @@ import {
 } from '#features/recipes/graphql/recipe.generated';
 import { toastService } from '#/services/toastService';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 
 /**
  * Read / write the folder list. Module-level so each caller's try body stays a
@@ -141,10 +142,17 @@ export function useFolderActions() {
     if (classifyCreateResult(result) === 'rejected') {
       if (previousFolders) writeFolders(client.cache, previousFolders);
       restoreSavedRecipeFolders(client.cache, movedRecipes, oldName);
-      const rejected = result?.data?.deleteRecipeFolder;
-      const reason =
-        rejected && 'message' in rejected ? rejected.message : null;
-      toastService.error(reason ?? t('recipes.renameFolderFailedRetry'));
+      // The app's own words. `message` is the server's English by construction
+      // — the client sends no `Accept-Language` and the token carries no locale
+      // — so this displayed untranslated text to every es/it/sq user. The
+      // mutation already selects `... on ValidationError { field }`, which is
+      // the actionable half anyway.
+      toastService.error(
+        localizedRefusalMessage(
+          result?.data?.deleteRecipeFolder,
+          t('recipes.renameFolderFailedRetry'),
+        ),
+      );
       return false;
     }
 
@@ -190,10 +198,12 @@ export function useFolderActions() {
     if (classifyCreateResult(result) === 'rejected') {
       if (previousFolders) writeFolders(client.cache, previousFolders);
       restoreSavedRecipeFolders(client.cache, unfoldered, folderName);
-      const rejected = result?.data?.deleteRecipeFolder;
-      const reason =
-        rejected && 'message' in rejected ? rejected.message : null;
-      toastService.error(reason ?? t('recipes.deleteFolderFailed'));
+      toastService.error(
+        localizedRefusalMessage(
+          result?.data?.deleteRecipeFolder,
+          t('recipes.deleteFolderFailed'),
+        ),
+      );
       return false;
     }
 

@@ -1,4 +1,5 @@
 import { ValidationError } from 'yup';
+import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   addPantryItemSchema,
   addPantryItemDefaults,
@@ -67,6 +68,52 @@ describe('addPantryItemSchema', () => {
       expect(
         await messageFor({ ...valid, quantityInput: input }, 'quantityInput'),
       ).toBeUndefined();
+    });
+
+    // The keypad on an es/it/sq device offers a comma and no point at all, so
+    // a rule that accepts only `.` makes fractional quantities unenterable in
+    // three of the four shipped locales.
+    it.each(['2,5', '0,5', '.5', '1,25'])(
+      'accepts %p from a comma-decimal keypad',
+      async input => {
+        expect(
+          await messageFor({ ...valid, quantityInput: input }, 'quantityInput'),
+        ).toBeUndefined();
+      },
+    );
+
+    // Validation and parsing have to agree. The schema decides whether Add is
+    // allowed; `parseFractionalInput` is what converts what the user typed. A
+    // regex that restated the parser's grammar by hand is what let them drift.
+    it.each([
+      '1',
+      '2.5',
+      '2,5',
+      '0,5',
+      '.5',
+      '1/2',
+      '1 1/4',
+      '10',
+      '0',
+      '0.0',
+      '0,0',
+      '0/4',
+      '-1',
+      '-2,5',
+      'abc',
+      '',
+      '   ',
+      '1..2',
+      '1/0',
+    ])('agrees with parseFractionalInput on %p', async input => {
+      const parsed = parseFractionalInput(input);
+      const accepted =
+        (await messageFor(
+          { ...valid, quantityInput: input },
+          'quantityInput',
+        )) === undefined;
+
+      expect(accepted).toBe(parsed !== null && parsed > 0);
     });
   });
 

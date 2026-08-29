@@ -1,6 +1,7 @@
 import { alertService } from '#/services/alertService';
 import { classifyCreateResult } from './classifyCreateResult';
 import { validationFieldName } from '#/utils/errors/mutationPayload';
+import { errorService } from '#/services/errorService';
 import { t } from '#/i18n';
 
 /**
@@ -34,6 +35,32 @@ const rejectionMessage = (result: { data?: unknown }, fallback: string) => {
   // and never renders a raw key.
   return t(`errors.field.${field}`, { defaultValue: fallback });
 };
+
+/**
+ * The same resolution, for a refusal PAYLOAD held directly rather than a
+ * mutation result — the shape a toast-based caller has.
+ *
+ * Field first (the actionable part), then the error code, then the caller's
+ * localized fallback. The payload's own `message` is never a candidate, for the
+ * reasons above: it is unlocalizable English by construction.
+ */
+export function localizedRefusalMessage(
+  payload:
+    | { __typename?: string; code?: string | null; field?: string | null }
+    | null
+    | undefined,
+  fallback: string,
+): string {
+  const field =
+    payload?.__typename === 'ValidationError' && payload.field
+      ? payload.field.split('.').pop()
+      : null;
+  if (field) return t(`errors.field.${field}`, { defaultValue: fallback });
+
+  return payload?.code
+    ? errorService.getUserFriendlyMessage(payload.code, fallback)
+    : fallback;
+}
 
 /**
  * Surface a user-facing alert when a local-first mutation is classified as

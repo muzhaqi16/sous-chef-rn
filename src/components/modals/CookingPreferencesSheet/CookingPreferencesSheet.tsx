@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -166,7 +166,13 @@ export const CookingPreferencesSheet: React.FC<
 
   return (
     <BottomSheetModal ref={bottomSheetRef} {...modalProps}>
-      <BottomSheetScrollView
+      {/*
+        The form variant, not the raw one. A sheet on
+        `BottomSheetScrollView` gets no `bottomOffset` and no input context,
+        so its three `FormInput`s resolved to the plain RN `TextInput` and the
+        sheet was blind to the keyboard.
+      */}
+      <BottomSheetFormScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.contentContainer,
@@ -256,7 +262,7 @@ export const CookingPreferencesSheet: React.FC<
             useBottomSheetInput
           />
         </View>
-      </BottomSheetScrollView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 };

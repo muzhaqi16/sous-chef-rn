@@ -39,6 +39,45 @@ describe('SettingsSection', () => {
     expect(screen.getByText('Preferences')).toBeTruthy();
   });
 
+  it('keeps the inset variant’s own title scale', () => {
+    // Folding the inset header into this component took its titles from
+    // 13px/bold to the card variant's 12px/semibold, under a refactor described
+    // as visually neutral. The two variants are allowed to differ; what is not
+    // allowed is for one to change without anyone deciding.
+    render(
+      <SettingsSection
+        title="Preferences"
+        items={defaultItems}
+        variant="inset"
+      />,
+    );
+
+    // Unistyles resolves variants natively, so under Jest the style prop still
+    // carries the variant TABLE rather than the resolved values. Assert the
+    // declaration — which is the decision this test is pinning.
+    const title = screen.getByText('Preferences');
+    const insetTitle = [title.props.style]
+      .flat(Infinity)
+      .filter(Boolean)
+      .map(
+        style =>
+          (
+            style as {
+              variants?: {
+                variant?: {
+                  inset?: { fontSize?: number; fontWeight?: string };
+                };
+              };
+            }
+          ).variants?.variant?.inset,
+      )
+      .find(inset => inset?.fontSize !== undefined);
+
+    expect(insetTitle).toEqual(
+      expect.objectContaining({ fontSize: 13, fontWeight: '700' }),
+    );
+  });
+
   it('renders all setting items', () => {
     render(<SettingsSection title="Preferences" items={defaultItems} />);
     expect(screen.getByText('Theme')).toBeTruthy();

@@ -253,6 +253,9 @@ export const ShoppingListDetailsStep: React.FC<
             label={t('labels.netWeight')}
             value={netWeight}
             onChangeText={text => setFieldValue('netWeight', text)}
+            // The all-or-nothing rule reports on BOTH halves of the pair; only
+            // the unit half was rendered here.
+            error={errors.netWeight?.message}
             placeholder={t('shoppingListScreens.netWeightPlaceholder')}
             keyboardType="decimal-pad"
             useBottomSheetInput

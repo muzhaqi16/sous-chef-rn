@@ -77,6 +77,8 @@ export class SubscriptionService {
 
   // Recent reorder tracking (for ignoring subscription echoes)
   private recentReorders = new Map<string, number>(); // itemId -> timestamp
+  /** Expiry timers for {@link recentReorders}, so a session end can cancel them. */
+  private reorderTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   // Pending delete tracking (to handle subscription race conditions)
   // When we optimistically delete an item, Apollo's auto-normalization may re-add it
@@ -98,6 +100,8 @@ export class SubscriptionService {
   // When deleting a parent entity, subscriptions may still be active and receiving
   // messages. We track pending parent deletes to skip subscription processing.
   private pendingParentDeletes = new Set<string>();
+  /** Expiry timers for {@link pendingParentDeletes}, cancelled by `cleanup()`. */
+  private parentDeleteTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   // Statistics
   private stats = {
@@ -202,14 +206,35 @@ export class SubscriptionService {
    */
   registerParentDeletion(entityId: string): void {
     this.pendingParentDeletes.add(entityId);
-    // Auto-cleanup after 10s to prevent memory leaks
-    setTimeout(() => this.pendingParentDeletes.delete(entityId), 10000);
+    // Tracked, so `cleanup()` can cancel it. `pendingDeletes` sixty lines above
+    // already keeps its timer handle for exactly this reason; these two did not,
+    // so a session end cleared the SET while leaving callbacks scheduled against
+    // it — they then fired against post-teardown state, and in a test they keep
+    // the fake-timer queue alive past the assertions.
+    this.clearParentDeletionTimer(entityId);
+    this.parentDeleteTimers.set(
+      entityId,
+      setTimeout(() => {
+        this.parentDeleteTimers.delete(entityId);
+        this.pendingParentDeletes.delete(entityId);
+      }, 10000),
+    );
+  }
+
+  /** Cancel a pending parent-deletion expiry, if one is scheduled. */
+  private clearParentDeletionTimer(entityId: string): void {
+    const timer = this.parentDeleteTimers.get(entityId);
+    if (timer) {
+      clearTimeout(timer);
+      this.parentDeleteTimers.delete(entityId);
+    }
   }
 
   /**
    * Unregister a parent entity deletion (called after navigation completes)
    */
   unregisterParentDeletion(entityId: string): void {
+    this.clearParentDeletionTimer(entityId);
     this.pendingParentDeletes.delete(entityId);
   }
 
@@ -506,8 +531,16 @@ export class SubscriptionService {
    */
   markItemReordered(itemId: string): void {
     this.recentReorders.set(itemId, Date.now());
-    // Clean up after 200ms
-    setTimeout(() => this.recentReorders.delete(itemId), 200);
+    // Clean up after 200ms — tracked so `cleanup()` can cancel it.
+    const existing = this.reorderTimers.get(itemId);
+    if (existing) clearTimeout(existing);
+    this.reorderTimers.set(
+      itemId,
+      setTimeout(() => {
+        this.reorderTimers.delete(itemId);
+        this.recentReorders.delete(itemId);
+      }, 200),
+    );
   }
 
   /**
@@ -986,7 +1019,11 @@ export class SubscriptionService {
     this.recentReorders.clear();
     this.pendingDeletes.forEach(pending => clearTimeout(pending.timer));
     this.pendingDeletes.clear();
+    this.parentDeleteTimers.forEach(clearTimeout);
+    this.parentDeleteTimers.clear();
     this.pendingParentDeletes.clear();
+    this.reorderTimers.forEach(clearTimeout);
+    this.reorderTimers.clear();
     this.stats = {
       totalUpdates: 0,
       totalErrors: 0,

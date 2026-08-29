@@ -51,7 +51,9 @@ async function performDeleteAccount(
   // The account is gone, so its keychain slot goes with it. Every other
   // sign-out path deliberately leaves biometric credentials in place — see
   // `LogoutOptions` in authService.
-  authService.logout({ forgetDevice: true });
+  // Nothing to pass: a sign-out clears the account's biometric credentials by
+  // default now, and a deleted account most certainly keeps none.
+  authService.logout();
 }
 
 export const DeleteAccountScreen: React.FC = () => {

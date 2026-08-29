@@ -22,7 +22,7 @@ import { AlertProvider } from '#/components/providers/AlertProvider';
 import { DataProvider } from '#/app/providers/DataProvider';
 import { FieldRendererProvider } from '#components/molecules/fieldRenderers';
 import { catalogFieldRenderers } from '#features/catalog/ui/catalogFieldRenderers';
-import { SubscriptionProvider } from '#/components/providers/SubscriptionProvider';
+import { SubscriptionProvider } from '#/app/providers/SubscriptionProvider';
 import {
   OverlayBackdropProvider,
   GlobalBackdrop,

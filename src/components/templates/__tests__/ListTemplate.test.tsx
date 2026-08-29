@@ -10,6 +10,9 @@ type ListSlotComponent =
   | React.ReactElement
   | null;
 
+/** Captures what the template forwarded, so the wiring can be asserted. */
+const mockItemListProps = jest.fn();
+
 jest.mock('../../organisms/ItemList', () => {
   const { View, Text: RNText } = require('react-native');
   return {
@@ -19,42 +22,47 @@ jest.mock('../../organisms/ItemList', () => {
       testIDPrefix,
       ListHeaderComponent,
       ListFooterComponent,
+      ...rest
     }: {
       items: TestItem[];
       emptyState?: TestEmptyState;
       testIDPrefix?: string;
       ListHeaderComponent?: ListSlotComponent;
       ListFooterComponent?: ListSlotComponent;
-    }) => (
-      <View testID="item-list">
-        {ListHeaderComponent ? (
-          typeof ListHeaderComponent === 'function' ? (
-            <ListHeaderComponent />
+      [key: string]: unknown;
+    }) => {
+      mockItemListProps(rest);
+      return (
+        <View testID="item-list">
+          {ListHeaderComponent ? (
+            typeof ListHeaderComponent === 'function' ? (
+              <ListHeaderComponent />
+            ) : (
+              ListHeaderComponent
+            )
+          ) : null}
+          {items.length === 0 && emptyState ? (
+            <RNText testID="empty-state">{emptyState.title}</RNText>
           ) : (
-            ListHeaderComponent
-          )
-        ) : null}
-        {items.length === 0 && emptyState ? (
-          <RNText testID="empty-state">{emptyState.title}</RNText>
-        ) : (
-          items.map((item, index: number) => (
-            <RNText
-              key={item.id}
-              testID={testIDPrefix ? `${testIDPrefix}-${index}` : undefined}
-            >
-              {item.title || item.id}
-            </RNText>
-          ))
-        )}
-        {ListFooterComponent ? (
-          typeof ListFooterComponent === 'function' ? (
-            <ListFooterComponent />
-          ) : (
-            ListFooterComponent
-          )
-        ) : null}
-      </View>
-    ),
+            items.map((item, index: number) => (
+              <RNText
+                key={item.id}
+                testID={testIDPrefix ? `${testIDPrefix}-${index}` : undefined}
+              >
+                {item.title || item.id}
+              </RNText>
+            ))
+          )}
+          {ListFooterComponent ? (
+            typeof ListFooterComponent === 'function' ? (
+              <ListFooterComponent />
+            ) : (
+              ListFooterComponent
+            )
+          ) : null}
+        </View>
+      );
+    },
   };
 });
 
@@ -142,5 +150,49 @@ describe('ListTemplate', () => {
       <ListTemplate items={items} ListHeaderComponent={<Text>Header</Text>} />,
     );
     expect(screen.getByText('Header')).toBeTruthy();
+  });
+
+  it('forwards onBeforeItemRemoved to the list', () => {
+    // `ItemList` pairs it with `prepareForLayoutAnimationRender()` for every
+    // action flagged `removesRow`. The template never forwarded it, so that
+    // whole path was unreachable from a screen.
+    const onBeforeItemRemoved = jest.fn();
+
+    render(
+      <ListTemplate items={items} onBeforeItemRemoved={onBeforeItemRemoved} />,
+    );
+
+    expect(mockItemListProps).toHaveBeenCalledWith(
+      expect.objectContaining({ onBeforeItemRemoved }),
+    );
+  });
+
+  it('does not let customListProps override the template’s own wiring', () => {
+    // The spread used to come LAST, so a colliding key silently replaced the
+    // wiring the template exists to guarantee.
+    const templateHandler = jest.fn();
+    const callerHandler = jest.fn();
+    const seen: Array<(id: string) => void> = [];
+    const CustomList = ({
+      onItemPress,
+    }: {
+      onItemPress: (id: string) => void;
+    }) => {
+      seen.push(onItemPress);
+      return <Text>custom</Text>;
+    };
+
+    render(
+      <ListTemplate
+        items={items}
+        onItemPress={templateHandler}
+        customListComponent={CustomList}
+        customListProps={{ onItemPress: callerHandler }}
+      />,
+    );
+
+    seen[0]?.('1');
+    expect(templateHandler).toHaveBeenCalledWith('1');
+    expect(callerHandler).not.toHaveBeenCalled();
   });
 });

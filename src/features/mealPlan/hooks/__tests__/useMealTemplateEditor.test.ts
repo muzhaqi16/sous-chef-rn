@@ -1,4 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
+import type { TypedDocumentNode } from '@apollo/client';
 import {
   renderHookWithApollo,
   seedCache,
@@ -283,5 +284,107 @@ describe('updateItem maps the @oneOf meal ref onto BOTH fields', () => {
     // Without this the row has neither a name nor a recipe.
     expect(item?.recipe?.id).toBe('recipe-1');
     expect(item?.recipe?.name).toBe('Carbonara');
+  });
+});
+
+describe("a row loaded by the editor's own query", () => {
+  const {
+    UpdateTemplateItemDocument,
+    RemoveTemplateItemDocument,
+  } = require('#features/mealPlan/graphql/mealTemplate.generated');
+
+  /**
+   * `GetMealTemplateForEdit` selects no `recipe`, so this is what the cache
+   * actually holds for a row the editor loaded. `readFragment` is
+   * all-or-nothing against `MealTemplateItemFragment`, which DOES select
+   * `recipe` — so the snapshot read came back null for every one of these rows,
+   * and both the local write and its revert silently did nothing.
+   */
+  const EDITOR_LOADED_ITEM = {
+    __typename: 'MealTemplateItem',
+    id: 'item-9',
+    dayOffset: 1,
+    mealType: MealType.Lunch,
+    customMealName: 'Soup',
+    servings: 2,
+    notes: null,
+  };
+
+  const TEMPLATE_WITH_ITEM = {
+    __typename: 'MealTemplate',
+    id: 'tpl-9',
+    name: 'Week',
+    description: null,
+    category: TemplateCategory.Custom,
+    defaultServings: 2,
+    tags: [],
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    items: [EDITOR_LOADED_ITEM],
+  };
+
+  const queued = (document: TypedDocumentNode, field: string) => ({
+    request: { query: document, variables: () => true },
+    result: { data: { [field]: null } },
+    maxUsageCount: Number.POSITIVE_INFINITY,
+  });
+
+  it('applies an offline edit instead of silently doing nothing', async () => {
+    const cache = seedCache([EDITOR_LOADED_ITEM]);
+    const { result } = renderHookWithApollo(() => useMealTemplateEditor(), {
+      cache,
+      operationMocks: [
+        queued(UpdateTemplateItemDocument, 'updateTemplateItem'),
+      ],
+    });
+
+    await act(async () => {
+      await result.current.updateItem({ id: 'item-9', servings: 6 });
+    });
+
+    const item = cache.readFragment<{ servings: number }>({
+      id: 'MealTemplateItem:item-9',
+      fragment:
+        require('#features/mealPlan/graphql/mealPlanFragments.generated')
+          .MealTemplateItemFragmentDoc,
+      fragmentName: 'MealTemplateItemFragment',
+      returnPartialData: true,
+    });
+
+    expect(item?.servings).toBe(6);
+  });
+
+  it('puts a refused removal back', async () => {
+    const cache = seedCache([EDITOR_LOADED_ITEM, TEMPLATE_WITH_ITEM]);
+    const { result } = renderHookWithApollo(() => useMealTemplateEditor(), {
+      cache,
+      operationMocks: [
+        {
+          request: {
+            query: RemoveTemplateItemDocument,
+            variables: () => true,
+          },
+          error: new Error('refused'),
+          maxUsageCount: Number.POSITIVE_INFINITY,
+        },
+      ],
+    });
+
+    let removed: boolean | undefined;
+    await act(async () => {
+      removed = await result.current.removeItem('item-9', 'tpl-9');
+    });
+
+    expect(removed).toBe(false);
+    // The row the user can still see must be the row that still exists.
+    const restored = cache.readFragment<{ id: string; servings: number }>({
+      id: 'MealTemplateItem:item-9',
+      fragment:
+        require('#features/mealPlan/graphql/mealPlanFragments.generated')
+          .MealTemplateItemFragmentDoc,
+      fragmentName: 'MealTemplateItemFragment',
+      returnPartialData: true,
+    });
+    expect(restored?.id).toBe('item-9');
+    expect(restored?.servings).toBe(2);
   });
 });

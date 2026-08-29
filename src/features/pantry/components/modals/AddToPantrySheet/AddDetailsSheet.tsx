@@ -405,6 +405,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
           quantityInput={quantityInput}
           setQuantityInput={setQuantityInput}
           quantityError={errors.quantityInput?.message}
+          pantryNetWeightError={errors.pantryNetWeight?.message}
           pantryNetWeightUnitError={errors.pantryNetWeightUnit?.message}
           unit={unit}
           setUnit={setUnit}
