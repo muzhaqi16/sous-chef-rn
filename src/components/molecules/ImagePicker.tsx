@@ -14,6 +14,7 @@ import {
 } from 'react-native-image-picker';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { imageErrorMessage } from '#hooks/useImageUpload';
 import {
   validateImageFile,
   ImageValidationError,
@@ -119,7 +120,12 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
         onImageSelected(imageFile);
       } else {
         onError?.(result.error);
-        alertService.alert(t('labels.invalidImage'), result.error.message);
+        // The error's own message is English by construction and belongs in the
+        // report `onError` makes, not on screen. The code is what maps to copy.
+        alertService.alert(
+          t('labels.invalidImage'),
+          imageErrorMessage(t, result.error, isProfile),
+        );
       }
     }
   };

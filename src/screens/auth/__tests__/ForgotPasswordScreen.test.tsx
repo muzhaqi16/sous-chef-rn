@@ -21,16 +21,7 @@ jest.mock('#/hooks/useToast', () => ({
   useToast: () => mockToast,
 }));
 
-jest.mock('#/services/errorService', () => ({
-  // User-facing copy, resolved from the error's code. Present so a suite
-  // reaching the alert path does not fail on a missing export.
-  localizedErrorMessage: jest.fn(() => 'Something went wrong.'),
-  errorService: {
-    reportError: jest.fn(),
-    getUserFriendlyMessage: (code: string, fallback?: string) =>
-      fallback ?? code,
-  },
-}));
+jest.mock('#/services/errorService');
 
 // A real (permissive) schema, not `{}` — yupResolver has to be able to run it,
 // or handleSubmit routes every press to the validation-error branch and the

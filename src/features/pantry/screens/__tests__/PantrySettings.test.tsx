@@ -41,15 +41,7 @@ jest.mock('#store/useAppStore', () => {
   };
 });
 
-jest.mock('#/services/errorService', () => ({
-  // User-facing copy, resolved from the error's code. Present so a suite
-  // reaching the alert path does not fail on a missing export.
-  localizedErrorMessage: jest.fn(() => 'Something went wrong.'),
-  useErrorService: () => ({
-    handleApolloError: jest.fn(() => ({ message: 'error' })),
-  }),
-  errorService: { reportError: jest.fn() },
-}));
+jest.mock('#/services/errorService');
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     registerParentDeletion: jest.fn(),

@@ -29,7 +29,6 @@ jest.mock('@apollo/client/errors', () => ({
 
 import {
   errorService,
-  getErrorMessage,
   localizedErrorMessage,
   useErrorService,
 } from '../errorService';
@@ -677,44 +676,6 @@ describe('errorService', () => {
   });
 
   // -----------------------------------------------------------------------
-  // getErrorMessage (exported utility)
-  // -----------------------------------------------------------------------
-  describe('getErrorMessage', () => {
-    it('returns a user-friendly message for an error', () => {
-      (isQueryComplexityError as jest.Mock).mockReturnValue(false);
-      (isVersionConflictError as jest.Mock).mockReturnValue(false);
-      mockCombinedGraphQLErrorsIs.mockReturnValue(false);
-      mockServerErrorIs.mockReturnValue(false);
-      mockServerParseErrorIs.mockReturnValue(false);
-      mockCombinedProtocolErrorsIs.mockReturnValue(false);
-
-      const message = getErrorMessage(new Error('user facing'));
-      expect(message).toBe('user facing');
-    });
-
-    it('suppresses logger.error calls', () => {
-      (isQueryComplexityError as jest.Mock).mockReturnValue(false);
-      (isVersionConflictError as jest.Mock).mockReturnValue(false);
-      mockCombinedGraphQLErrorsIs.mockReturnValue(false);
-      mockServerErrorIs.mockReturnValue(false);
-      mockServerParseErrorIs.mockReturnValue(false);
-      mockCombinedProtocolErrorsIs.mockReturnValue(false);
-
-      getErrorMessage(new Error('silent'));
-      expect(logger.error).not.toHaveBeenCalled();
-    });
-
-    it('returns default message when error has no message', () => {
-      (isQueryComplexityError as jest.Mock).mockImplementation(() => {
-        throw new Error('force catch');
-      });
-
-      const message = getErrorMessage(null);
-      expect(message).toBe('Something went wrong. Please try again.');
-    });
-  });
-
-  // -----------------------------------------------------------------------
   // useErrorService
   // -----------------------------------------------------------------------
   describe('useErrorService', () => {
@@ -730,7 +691,6 @@ describe('errorService', () => {
       expect(typeof service.shouldRetry).toBe('function');
       expect(typeof service.isAuthError).toBe('function');
       expect(typeof service.reportError).toBe('function');
-      expect(typeof service.getErrorMessage).toBe('function');
     });
 
     it('bound methods work correctly', () => {
@@ -766,10 +726,9 @@ describe('localizedErrorMessage', () => {
       ],
     });
 
-    // The server's text is unlocalizable English by construction. It belongs in
-    // the log, which `getErrorMessage` still serves, not in front of a user.
+    // The server's text is unlocalizable English by construction — it belongs
+    // in the log (via `errorMessageOr`), never in front of a user.
     expect(message).not.toBe(serverText);
-    expect(getErrorMessage).not.toBe(localizedErrorMessage);
   });
 
   it('falls back to localized copy for an unmapped code, not the raw text', () => {

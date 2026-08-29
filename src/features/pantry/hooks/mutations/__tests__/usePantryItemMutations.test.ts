@@ -24,14 +24,7 @@ interface MockUpdateConfig {
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
-jest.mock('#/services/errorService', () => ({
-  // User-facing copy, resolved from the error's code. Present so a suite
-  // reaching the alert path does not fail on a missing export.
-  localizedErrorMessage: jest.fn(() => 'Something went wrong.'),
-  useErrorService: () => ({
-    handleApolloError: jest.fn().mockReturnValue({ message: 'Error' }),
-  }),
-}));
+jest.mock('#/services/errorService');
 
 jest.mock('#/utils/generateId', () => ({
   generateId: () => 'mock-id',

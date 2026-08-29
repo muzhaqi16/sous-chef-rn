@@ -1,3 +1,183 @@
+/**
+ * The `no-restricted-syntax` selectors, shared rather than duplicated.
+ *
+ * ESLint REPLACES a rule's config in an `overrides` block instead of merging
+ * it, so the `src/**\/*.tsx` override — which adds the module-level-`t` rule —
+ * was silently switching every selector below OFF for every component and
+ * screen in the app. That is the half of the tree where user-facing text lives,
+ * so the i18n sink guards were absent exactly where they were needed; the
+ * `scheduleOnRN` worklet rules (whose crashes are Android-only and native) and
+ * the `as any` ban went with them. Spreading this list into both places is what
+ * keeps a rule added here from applying to `.ts` alone.
+ */
+const RESTRICTED_SYNTAX = [
+  // `parseFloat` truncates at the first character it cannot read, so on a
+  // keyboard offering `,` it turns 4,99 into 4 and writes that to the
+  // server — no error, no validation message, just a wrong number. This has
+  // now been fixed twice: the first sweep missed a dozen sites because the
+  // search output was truncated and never re-checked. A lint rule does not
+  // truncate.
+  //
+  // `parseDecimalInput` is the replacement. Where a value genuinely comes
+  // from machine data rather than a person, the two agree anyway, so
+  // reaching for the escape hatch should be rare and argued.
+  {
+    selector: "CallExpression[callee.name='parseFloat']",
+    message:
+      'Use parseDecimalInput from #/utils/parseDecimalInput instead of parseFloat. parseFloat reads "4,99" as 4 on any device whose keyboard offers a comma, silently saving a wrong number. If this value is machine-generated and never typed, both behave identically — so prefer parseDecimalInput regardless, or add a justified eslint-disable explaining why.',
+  },
+  {
+    selector: 'TSImportType',
+    message:
+      'Avoid inline import() types. Import the type at the top of the file instead.',
+  },
+  // --- Untranslated copy reaching a user-facing sink -------------------
+  //
+  // The i18next rule above covers the JSX surface (text + copy-carrying
+  // attributes). It cannot see these, because a toast or alert is an
+  // ordinary function call in a .ts hook or service.
+  //
+  // This is deliberately sink-shaped rather than shape-shaped. Scanning
+  // for "English-looking literals" was tried repeatedly and each new
+  // detector found a fresh batch the previous ones missed — the set of
+  // SHAPES a string can take is open-ended, but the set of SINKS that put
+  // text on screen is small and enumerable. Naming the sink is what makes
+  // the check finite.
+  //
+  // The `{3}` guard skips single letters and symbol arguments (toast
+  // positions, '✕') without needing a word allowlist.
+  {
+    selector:
+      'CallExpression[callee.object.name=/^(toastService|alertService)$/] > Literal[value=/[A-Za-z]{3}/]',
+    message:
+      'Untranslated string passed to a user-facing toast/alert. Add a key to src/i18n/locales/en.json and pass t(...) — the module-level `t` from #/i18n works outside components.',
+  },
+  // A server-supplied `message` reaching the user directly. The client
+  // sends no `Accept-Language` and the token carries no locale, so that
+  // string is English by construction — displaying it puts English in front
+  // of every es/it/sq user and skips every i18n guard the app applies to its
+  // own copy. Four sites did it, and one had a test asserting the English
+  // verbatim. Same sink-shaped reasoning as the two rules above.
+  //
+  // Covers `alertService` too. It was scoped to `toastService` while nine
+  // alert sites still displayed a raw `message` — some the server's, some
+  // client-side English thrown by `imageValidation.ts` ('Only JPEG, PNG,
+  // and WebP images are allowed' and friends) — on the reasoning that
+  // localizing them needed new copy in four locales. It did not:
+  // `imageUpload.*` already carried every string and `imageErrorMessage`
+  // already mapped the codes onto them. Nobody had looked, because the rule
+  // that would have said so was the rule being narrowed.
+  {
+    selector:
+      "CallExpression[callee.object.name=/^(toastService|alertService)$/] MemberExpression[property.name='message']",
+    message:
+      "Never display a server `message`. Use `localizedRefusalMessage(payload, fallback)` from '#/apollo/utils/alertRejectedMutation' — it resolves the refused field, then the error code, then your localized fallback.",
+  },
+  {
+    selector:
+      'CallExpression[callee.object.name=/^(toastService|alertService)$/] > TemplateLiteral',
+    message:
+      'Template literal passed to a user-facing toast/alert. Interpolate through i18next instead — t(key, { name }) — so the sentence stays reorderable, and use _one/_other keys for counts rather than appending an "s".',
+  },
+  {
+    selector:
+      'CallExpression[callee.name="scheduleOnRN"] > :matches(ArrowFunctionExpression, FunctionExpression)',
+    message:
+      'Do not pass inline functions to scheduleOnRN — define the callback in RN runtime scope first. Inline functions inside worklets cause native crashes on Android.',
+  },
+  {
+    selector: 'CallExpression[callee.name="scheduleOnRN"][arguments.2]',
+    message:
+      'scheduleOnRN should have at most 2 arguments (function + one primitive). Functions cannot be serialized across the worklet boundary — capture them via RN-scope closure instead.',
+  },
+  {
+    // Interactive controls rendered lexically inside an RNGH Swipeable must
+    // use RNGH's Pressable, never AppPressable/PressableScale/Touchable* (all
+    // RN-based). RN touchables live in a separate gesture system from RNGH,
+    // so they block the swipe pan or double-fire the row's onPress. RN's own
+    // `Pressable` is already banned app-wide (see no-restricted-imports); this
+    // covers the RN-based atoms/touchables that name-alias around that ban.
+    selector:
+      'JSXElement[openingElement.name.name=/^(SwipeableItem|ReanimatedSwipeable)$/] JSXElement[openingElement.name.name=/^(AppPressable|PressableScale|TouchableOpacity|TouchableHighlight|TouchableWithoutFeedback|TouchableNativeFeedback)$/]',
+    message:
+      "Interactive controls inside a Swipeable must use RNGH's Pressable (`import { Pressable } from 'react-native-gesture-handler'`), not AppPressable/PressableScale/Touchable*. RN touchables don't coordinate with RNGH's gesture arena — they block the swipe or double-fire the row's onPress. See CLAUDE.md \"Pressable & Modal Convention\".",
+  },
+  {
+    selector:
+      ':matches(Property[key.name="shadowColor"], Property[key.name="shadowOffset"], Property[key.name="shadowOpacity"], Property[key.name="shadowRadius"])',
+    message:
+      'Use CSS boxShadow syntax instead of individual shadow properties. See src/styles/listStyles.ts for the correct pattern.',
+  },
+  {
+    selector:
+      'AssignmentExpression[left.type="MemberExpression"][left.property.name="value"]',
+    message:
+      'Use .set() instead of .value assignment for SharedValues (React Compiler compatibility). If this is not a SharedValue, refactor to avoid .value mutation.',
+  },
+  {
+    selector:
+      'TSAsExpression[typeAnnotation.type="TSTypeReference"][typeAnnotation.typeName.name="const"]',
+    message:
+      'Avoid `as const` — let TypeScript infer literal types naturally. Use `as const` only for union type derivation or discriminated unions.',
+  },
+  {
+    selector:
+      'ExpressionStatement > CallExpression[callee.name="useUnistyles"]',
+    message:
+      'useUnistyles() called without using its return value has no effect. Destructure what you need: `const { theme } = useUnistyles()`.',
+  },
+  {
+    selector:
+      'ArrayExpression > MemberExpression[object.name="styles"] ~ MemberExpression[object.name="styles"]',
+    message:
+      "Avoid combining multiple `styles.*` on the same element — Unistyles v3 proxies break when spread by reanimated's StyleSheet.flatten(). Use `styles.useVariants()` instead.",
+  },
+  {
+    selector:
+      "JSXSpreadAttribute[argument.name='modalProps'] ~ JSXAttribute[name.name=/^(onChange|animatedIndex)$/]",
+    message:
+      "Do not override `onChange` or `animatedIndex` after `{...modalProps}` — useStandardBottomSheet supplies both: a composed onChange (drives the global backdrop claim) and the animatedIndex SharedValue (drives backdrop opacity in lockstep with the sheet). Overriding either silently breaks the dim layer. Forward via the hook's options API: `useStandardBottomSheet({ ..., onChange: handler })`. (Other props like `snapPoints`, `keyboardBlurBehavior`, `onDismiss` can be overridden safely.)",
+  },
+  {
+    selector:
+      'CallExpression[callee.object.name="jest"][callee.property.name="mock"][arguments.0.value="@apollo/client/react"]',
+    message:
+      'Use renderHookWithApollo / renderWithApollo from __tests__/helpers/apolloMockProvider.tsx instead. Direct jest.mock of @apollo/client/react couples tests to operation names, bypasses the real cache, and breaks under refactors. See CLAUDE.md "Apollo Test Patterns" for the migration recipe + 7 gotchas.',
+  },
+  {
+    // Catches the hand-rolled optimisticResponse anti-pattern:
+    //   pantryItem: { __typename: 'PantryItem', id } as DeleteFooMutation['...']
+    // With dataMasking enabled, casting a partial `{ __typename, id }` literal
+    // hides that the real mutation return type expects more fields, and the
+    // partial entity gets written to cache — useFragment Pattern A consumers
+    // then resolve `complete: false` and render null, producing phantom rows
+    // until the real network response arrives. Build optimistic responses
+    // from cache (cache.readFragment + spread) and annotate the callback
+    // return type as `Unmasked<TData>` instead. See CLAUDE.md "Apollo
+    // Mutation Patterns" + "Apollo: Fragment composition + useFragment".
+    selector:
+      'Property[key.name="optimisticResponse"] TSAsExpression > ObjectExpression:has(Property[key.name="__typename"])',
+    message:
+      "Hand-rolled `{ __typename, id, ... } as TData['field']` shapes inside `optimisticResponse` write partial entities to the cache and break data-masking watchers (useFragment returns `complete: false` → phantom rows in lists). Read the current entity via `client.cache.readFragment(...)` (returning IGNORE when absent) and annotate the callback's return type as `Unmasked<TData>` so no cast is needed. See CLAUDE.md \"Apollo Mutation Patterns\" + `usePantryItemMutations.ts:updateItemMutation` for the pattern.",
+  },
+  {
+    selector: 'TSAsExpression[typeAnnotation.type="TSAnyKeyword"]',
+    message:
+      'Do not cast with `as any` — it hides real type errors. Type the value properly: generics (`readFragment<T>`, `extractNodes<T>`), narrow with `instanceof`, or assert a specific shape (`as { id?: string }`). `: any` annotations are tolerated where a value is genuinely untypeable, but `as any` casts are not. For library/platform boundaries with no clean type, use a narrow typed cast or a justified `// eslint-disable-next-line no-restricted-syntax -- <reason>`.',
+  },
+  {
+    selector:
+      'TSAsExpression[typeAnnotation.type="TSArrayType"][typeAnnotation.elementType.type="TSAnyKeyword"]',
+    message:
+      'Do not cast with `as any[]` — it hides real type errors. Supply the element type via a generic (`extractNodes<T>(...)`) or assert the concrete element shape.',
+  },
+  {
+    selector: 'TSAsExpression[typeAnnotation.type="TSUnknownKeyword"]',
+    message:
+      'Do not use `as unknown` (typically the `x as unknown as T` double-cast) — it fully defeats type checking and hides real errors. Fix the data flow or use a single honest assertion.',
+  },
+];
+
 module.exports = {
   root: true,
   extends: ['@react-native', 'plugin:react-hooks/recommended-latest'],
@@ -283,6 +463,7 @@ module.exports = {
         // deliberate form this rule exists to steer people toward.
         'no-restricted-syntax': [
           'error',
+          ...RESTRICTED_SYNTAX,
           {
             selector:
               "ImportDeclaration[source.value='#/i18n'] > ImportSpecifier[imported.name='t'][local.name='t']",
@@ -1075,170 +1256,6 @@ module.exports = {
 
     // Prevent inline import() types — use top-level imports instead
     // Prevent inline functions passed to scheduleOnRN — causes native crashes on Android
-    'no-restricted-syntax': [
-      'error',
-      // `parseFloat` truncates at the first character it cannot read, so on a
-      // keyboard offering `,` it turns 4,99 into 4 and writes that to the
-      // server — no error, no validation message, just a wrong number. This has
-      // now been fixed twice: the first sweep missed a dozen sites because the
-      // search output was truncated and never re-checked. A lint rule does not
-      // truncate.
-      //
-      // `parseDecimalInput` is the replacement. Where a value genuinely comes
-      // from machine data rather than a person, the two agree anyway, so
-      // reaching for the escape hatch should be rare and argued.
-      {
-        selector: "CallExpression[callee.name='parseFloat']",
-        message:
-          'Use parseDecimalInput from #/utils/parseDecimalInput instead of parseFloat. parseFloat reads "4,99" as 4 on any device whose keyboard offers a comma, silently saving a wrong number. If this value is machine-generated and never typed, both behave identically — so prefer parseDecimalInput regardless, or add a justified eslint-disable explaining why.',
-      },
-      {
-        selector: 'TSImportType',
-        message:
-          'Avoid inline import() types. Import the type at the top of the file instead.',
-      },
-      // --- Untranslated copy reaching a user-facing sink -------------------
-      //
-      // The i18next rule above covers the JSX surface (text + copy-carrying
-      // attributes). It cannot see these, because a toast or alert is an
-      // ordinary function call in a .ts hook or service.
-      //
-      // This is deliberately sink-shaped rather than shape-shaped. Scanning
-      // for "English-looking literals" was tried repeatedly and each new
-      // detector found a fresh batch the previous ones missed — the set of
-      // SHAPES a string can take is open-ended, but the set of SINKS that put
-      // text on screen is small and enumerable. Naming the sink is what makes
-      // the check finite.
-      //
-      // The `{3}` guard skips single letters and symbol arguments (toast
-      // positions, '✕') without needing a word allowlist.
-      {
-        selector:
-          'CallExpression[callee.object.name=/^(toastService|alertService)$/] > Literal[value=/[A-Za-z]{3}/]',
-        message:
-          'Untranslated string passed to a user-facing toast/alert. Add a key to src/i18n/locales/en.json and pass t(...) — the module-level `t` from #/i18n works outside components.',
-      },
-      // A server-supplied `message` reaching the user directly. The client
-      // sends no `Accept-Language` and the token carries no locale, so that
-      // string is English by construction — displaying it puts English in front
-      // of every es/it/sq user and skips every i18n guard the app applies to its
-      // own copy. Four sites did it, and one had a test asserting the English
-      // verbatim. Same sink-shaped reasoning as the two rules above.
-      //
-      // Scoped to `toastService` on purpose. The same selector against
-      // `alertService` reports 7 more sites, all CLIENT-side errors carrying
-      // hardcoded English (`imageValidation.ts` throws 'Only JPEG, PNG, and WebP
-      // images are allowed' and friends) — a real i18n defect, but a different
-      // one, and localizing it needs new copy in four locales.
-      {
-        selector:
-          "CallExpression[callee.object.name='toastService'] MemberExpression[property.name='message']",
-        message:
-          "Never display a server `message`. Use `localizedRefusalMessage(payload, fallback)` from '#/apollo/utils/alertRejectedMutation' — it resolves the refused field, then the error code, then your localized fallback.",
-      },
-      {
-        selector:
-          'CallExpression[callee.object.name=/^(toastService|alertService)$/] > TemplateLiteral',
-        message:
-          'Template literal passed to a user-facing toast/alert. Interpolate through i18next instead — t(key, { name }) — so the sentence stays reorderable, and use _one/_other keys for counts rather than appending an "s".',
-      },
-      {
-        selector:
-          'CallExpression[callee.name="scheduleOnRN"] > :matches(ArrowFunctionExpression, FunctionExpression)',
-        message:
-          'Do not pass inline functions to scheduleOnRN — define the callback in RN runtime scope first. Inline functions inside worklets cause native crashes on Android.',
-      },
-      {
-        selector: 'CallExpression[callee.name="scheduleOnRN"][arguments.2]',
-        message:
-          'scheduleOnRN should have at most 2 arguments (function + one primitive). Functions cannot be serialized across the worklet boundary — capture them via RN-scope closure instead.',
-      },
-      {
-        // Interactive controls rendered lexically inside an RNGH Swipeable must
-        // use RNGH's Pressable, never AppPressable/PressableScale/Touchable* (all
-        // RN-based). RN touchables live in a separate gesture system from RNGH,
-        // so they block the swipe pan or double-fire the row's onPress. RN's own
-        // `Pressable` is already banned app-wide (see no-restricted-imports); this
-        // covers the RN-based atoms/touchables that name-alias around that ban.
-        selector:
-          'JSXElement[openingElement.name.name=/^(SwipeableItem|ReanimatedSwipeable)$/] JSXElement[openingElement.name.name=/^(AppPressable|PressableScale|TouchableOpacity|TouchableHighlight|TouchableWithoutFeedback|TouchableNativeFeedback)$/]',
-        message:
-          "Interactive controls inside a Swipeable must use RNGH's Pressable (`import { Pressable } from 'react-native-gesture-handler'`), not AppPressable/PressableScale/Touchable*. RN touchables don't coordinate with RNGH's gesture arena — they block the swipe or double-fire the row's onPress. See CLAUDE.md \"Pressable & Modal Convention\".",
-      },
-      {
-        selector:
-          ':matches(Property[key.name="shadowColor"], Property[key.name="shadowOffset"], Property[key.name="shadowOpacity"], Property[key.name="shadowRadius"])',
-        message:
-          'Use CSS boxShadow syntax instead of individual shadow properties. See src/styles/listStyles.ts for the correct pattern.',
-      },
-      {
-        selector:
-          'AssignmentExpression[left.type="MemberExpression"][left.property.name="value"]',
-        message:
-          'Use .set() instead of .value assignment for SharedValues (React Compiler compatibility). If this is not a SharedValue, refactor to avoid .value mutation.',
-      },
-      {
-        selector:
-          'TSAsExpression[typeAnnotation.type="TSTypeReference"][typeAnnotation.typeName.name="const"]',
-        message:
-          'Avoid `as const` — let TypeScript infer literal types naturally. Use `as const` only for union type derivation or discriminated unions.',
-      },
-      {
-        selector:
-          'ExpressionStatement > CallExpression[callee.name="useUnistyles"]',
-        message:
-          'useUnistyles() called without using its return value has no effect. Destructure what you need: `const { theme } = useUnistyles()`.',
-      },
-      {
-        selector:
-          'ArrayExpression > MemberExpression[object.name="styles"] ~ MemberExpression[object.name="styles"]',
-        message:
-          "Avoid combining multiple `styles.*` on the same element — Unistyles v3 proxies break when spread by reanimated's StyleSheet.flatten(). Use `styles.useVariants()` instead.",
-      },
-      {
-        selector:
-          "JSXSpreadAttribute[argument.name='modalProps'] ~ JSXAttribute[name.name=/^(onChange|animatedIndex)$/]",
-        message:
-          "Do not override `onChange` or `animatedIndex` after `{...modalProps}` — useStandardBottomSheet supplies both: a composed onChange (drives the global backdrop claim) and the animatedIndex SharedValue (drives backdrop opacity in lockstep with the sheet). Overriding either silently breaks the dim layer. Forward via the hook's options API: `useStandardBottomSheet({ ..., onChange: handler })`. (Other props like `snapPoints`, `keyboardBlurBehavior`, `onDismiss` can be overridden safely.)",
-      },
-      {
-        selector:
-          'CallExpression[callee.object.name="jest"][callee.property.name="mock"][arguments.0.value="@apollo/client/react"]',
-        message:
-          'Use renderHookWithApollo / renderWithApollo from __tests__/helpers/apolloMockProvider.tsx instead. Direct jest.mock of @apollo/client/react couples tests to operation names, bypasses the real cache, and breaks under refactors. See CLAUDE.md "Apollo Test Patterns" for the migration recipe + 7 gotchas.',
-      },
-      {
-        // Catches the hand-rolled optimisticResponse anti-pattern:
-        //   pantryItem: { __typename: 'PantryItem', id } as DeleteFooMutation['...']
-        // With dataMasking enabled, casting a partial `{ __typename, id }` literal
-        // hides that the real mutation return type expects more fields, and the
-        // partial entity gets written to cache — useFragment Pattern A consumers
-        // then resolve `complete: false` and render null, producing phantom rows
-        // until the real network response arrives. Build optimistic responses
-        // from cache (cache.readFragment + spread) and annotate the callback
-        // return type as `Unmasked<TData>` instead. See CLAUDE.md "Apollo
-        // Mutation Patterns" + "Apollo: Fragment composition + useFragment".
-        selector:
-          'Property[key.name="optimisticResponse"] TSAsExpression > ObjectExpression:has(Property[key.name="__typename"])',
-        message:
-          "Hand-rolled `{ __typename, id, ... } as TData['field']` shapes inside `optimisticResponse` write partial entities to the cache and break data-masking watchers (useFragment returns `complete: false` → phantom rows in lists). Read the current entity via `client.cache.readFragment(...)` (returning IGNORE when absent) and annotate the callback's return type as `Unmasked<TData>` so no cast is needed. See CLAUDE.md \"Apollo Mutation Patterns\" + `usePantryItemMutations.ts:updateItemMutation` for the pattern.",
-      },
-      {
-        selector: 'TSAsExpression[typeAnnotation.type="TSAnyKeyword"]',
-        message:
-          'Do not cast with `as any` — it hides real type errors. Type the value properly: generics (`readFragment<T>`, `extractNodes<T>`), narrow with `instanceof`, or assert a specific shape (`as { id?: string }`). `: any` annotations are tolerated where a value is genuinely untypeable, but `as any` casts are not. For library/platform boundaries with no clean type, use a narrow typed cast or a justified `// eslint-disable-next-line no-restricted-syntax -- <reason>`.',
-      },
-      {
-        selector:
-          'TSAsExpression[typeAnnotation.type="TSArrayType"][typeAnnotation.elementType.type="TSAnyKeyword"]',
-        message:
-          'Do not cast with `as any[]` — it hides real type errors. Supply the element type via a generic (`extractNodes<T>(...)`) or assert the concrete element shape.',
-      },
-      {
-        selector: 'TSAsExpression[typeAnnotation.type="TSUnknownKeyword"]',
-        message:
-          'Do not use `as unknown` (typically the `x as unknown as T` double-cast) — it fully defeats type checking and hides real errors. Fix the data flow or use a single honest assertion.',
-      },
-    ],
+    'no-restricted-syntax': ['error', ...RESTRICTED_SYNTAX],
   },
 };

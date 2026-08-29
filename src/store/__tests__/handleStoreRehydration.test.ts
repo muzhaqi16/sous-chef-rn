@@ -1,12 +1,7 @@
 import { handleStoreRehydration, useStore } from '../index';
 import { errorService } from '#/services/errorService';
 
-jest.mock('#/services/errorService', () => ({
-  // User-facing copy, resolved from the error's code. Present so a suite
-  // reaching the alert path does not fail on a missing export.
-  localizedErrorMessage: jest.fn(() => 'Something went wrong.'),
-  errorService: { reportError: jest.fn() },
-}));
+jest.mock('#/services/errorService');
 
 describe('handleStoreRehydration', () => {
   it('recovers isHydrated and reports to telemetry when rehydration fails', async () => {

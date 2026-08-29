@@ -85,7 +85,7 @@ describe('useMarkPrimaryItemImage', () => {
 
   // The server refuses a size rendition or a non-APPROVED photo. It authors the
   // most specific copy available, so the alert body is its message.
-  it('surfaces the server message on ValidationError', async () => {
+  it("routes a refusal to localized copy, never the server's text", async () => {
     const { mock } = recordMock(MarkPrimaryItemImageDocument, {
       data: {
         markPrimaryItemImage: {
@@ -102,6 +102,16 @@ describe('useMarkPrimaryItemImage', () => {
 
     expect(succeeded).toBe(false);
     expect(alertService.alert).toHaveBeenCalledWith(
+      expect.any(String),
+      // Not 'That photo is not approved.' — the server's text is English by
+      // construction (no `Accept-Language`, no locale on the token), so
+      // displaying it puts English in front of every es/it/sq reader. With no
+      // `errors.field.imageId` to resolve, this falls back to the caller's own
+      // copy: vaguer, but in the reader's language, and the precise sentence is
+      // still in the log.
+      'Something went wrong updating the main photo. Please try again.',
+    );
+    expect(alertService.alert).not.toHaveBeenCalledWith(
       expect.any(String),
       'That photo is not approved.',
     );

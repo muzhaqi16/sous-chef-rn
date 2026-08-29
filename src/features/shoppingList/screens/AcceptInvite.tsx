@@ -26,7 +26,7 @@ import {
   type AcceptInvite_ShoppingListInviteFragment,
   type AcceptInvite_HomeInviteFragment,
 } from './AcceptInvite.generated';
-import { errorService, getErrorMessage } from '#/services/errorService';
+import { errorService, localizedErrorMessage } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
@@ -156,7 +156,9 @@ export const AcceptInvite: React.FC = () => {
         errorService.reportError(error, {
           operation: 'AcceptInvite.acceptInvitation',
         });
-        alertService.alert(t('labels.error'), getErrorMessage(error));
+        // Code-resolved copy: the server's message is unlocalizable English,
+        // and the precise version is in the report above either way.
+        alertService.alert(t('labels.error'), localizedErrorMessage(error));
       },
     );
   };

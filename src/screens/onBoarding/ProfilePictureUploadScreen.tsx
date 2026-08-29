@@ -33,7 +33,7 @@ import {
   validateImageFile,
   ImageValidationError,
 } from '#utils/imageValidation';
-import { useImageUpload } from '#hooks/useImageUpload';
+import { imageErrorMessage, useImageUpload } from '#hooks/useImageUpload';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { ImageFile } from '#components/molecules/ImagePicker';
@@ -148,7 +148,11 @@ export const ProfilePictureUploadScreen = () => {
       setCroppedImage(null); // Reset cropped image when new image is selected
     } catch (error) {
       const validationError = error as ImageValidationError;
-      alertService.alert(t('labels.invalidImage'), validationError.message);
+      // Its `message` is English by construction — for the log, never the user.
+      alertService.alert(
+        t('labels.invalidImage'),
+        imageErrorMessage(t, validationError, true),
+      );
     }
   };
 
@@ -200,11 +204,12 @@ export const ProfilePictureUploadScreen = () => {
         const imageUrl = await uploadProfileImage(
           imageToUpload,
           ImageUploadPurpose.ProfileAvatar,
-          {
-            onError: (error: Error) => {
-              alertService.alert(t('errors.uploadFailedTitle'), error.message);
-            },
-          },
+          // No `onError`: `uploadProfileImage` already alerts, with copy it
+          // resolved from the error's code. A second alert here showed the
+          // same failure twice, and showed it from an Error whose message the
+          // hook had already localized — so this could only repeat or regress
+          // it.
+          {},
         );
 
         if (imageUrl) {

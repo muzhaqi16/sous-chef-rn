@@ -10,18 +10,14 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
-jest.mock('#/services/errorService', () => ({
-  // User-facing copy, resolved from the error's code. Present so a suite
-  // reaching the alert path does not fail on a missing export.
-  localizedErrorMessage: jest.fn(() => 'Something went wrong.'),
-  errorService: {
-    reportError: jest.fn(),
-    getUserFriendlyMessage: jest.fn((code: string) => `mapped:${code}`),
-  },
-  getErrorMessage: jest.fn((e: unknown) =>
-    e instanceof Error ? e.message : 'An error occurred',
-  ),
-}));
+jest.mock('#/services/errorService');
+import { errorService as mockedErrorService } from '#/services/errorService';
+
+// These two tests assert WHICH code was looked up, so the lookup has to be
+// visible in its result rather than collapsing to the shared default.
+jest
+  .mocked(mockedErrorService.getUserFriendlyMessage)
+  .mockImplementation((code: string) => `mapped:${code}`);
 
 jest.mock('#/utils/finallyHelpers');
 

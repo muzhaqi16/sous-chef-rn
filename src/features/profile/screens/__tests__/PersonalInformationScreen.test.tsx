@@ -36,14 +36,7 @@ jest.mock('#store/useAppStore', () => ({
   useUser: () => ({ email: 'john@example.com' }),
 }));
 
-jest.mock('#/services/errorService', () => ({
-  // User-facing copy, resolved from the error's code. Present so a suite
-  // reaching the alert path does not fail on a missing export.
-  localizedErrorMessage: jest.fn(() => 'Something went wrong.'),
-  errorService: {
-    reportError: jest.fn(),
-  },
-}));
+jest.mock('#/services/errorService');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },

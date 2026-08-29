@@ -204,12 +204,12 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
           setError('');
           setIsAddingModal(false);
         } else {
-          setError('Failed to add item');
+          setError(t('errors.addItemFailed'));
         }
       },
       setLoading,
       (err: unknown) => {
-        setError(errorMessageOr(err, 'An error occurred'));
+        setError(errorMessageOr(err, t('errors.generic')));
       },
     );
   };

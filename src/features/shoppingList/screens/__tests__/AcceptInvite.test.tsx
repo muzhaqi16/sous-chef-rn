@@ -43,15 +43,7 @@ jest.mock('@react-navigation/native', () => ({
   })),
 }));
 
-jest.mock('#/services/errorService', () => ({
-  // User-facing copy, resolved from the error's code. Present so a suite
-  // reaching the alert path does not fail on a missing export.
-  localizedErrorMessage: jest.fn(() => 'Something went wrong.'),
-  errorService: { reportError: jest.fn() },
-  getErrorMessage: jest.fn((e: unknown) =>
-    e instanceof Error ? e.message : 'Unknown error',
-  ),
-}));
+jest.mock('#/services/errorService');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -586,7 +578,7 @@ describe('AcceptInvite', () => {
         _setLoading: (value: boolean) => void,
         onError: (error: unknown) => void,
       ) => {
-        onError(new Error('Network error'));
+        onError(new Error('An unexpected database error occurred'));
       },
     );
     const tree = renderWithApollo(<AcceptInvite />, {
@@ -600,10 +592,14 @@ describe('AcceptInvite', () => {
     });
     await waitFor(() => expect(tree.getByText('Accept')).toBeTruthy());
     await user.press(tree.getByText('Accept'));
+    // The server's own text is unlocalizable English by construction — the
+    // client sends no `Accept-Language` and the token carries no locale — so it
+    // must not be what the alert body says. `expect.any(String)` is what let it
+    // through here.
     await waitFor(() => {
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
-        expect.any(String),
+        'Something went wrong.',
       );
     });
   });

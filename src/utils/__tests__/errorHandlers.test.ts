@@ -10,18 +10,7 @@ jest.mock('../errors/versionConflict', () => ({
   getVersionConflictMessage: jest.fn(() => 'Version conflict message'),
 }));
 
-jest.mock('#/services/errorService', () => ({
-  errorService: { reportError: jest.fn() },
-  // The raw server text — for logs and reports only.
-  getErrorMessage: jest.fn(
-    (err: unknown) =>
-      (err instanceof Error ? err.message : '') || 'Unknown error',
-  ),
-  // What a user is shown. Stands in for the real code -> `errors.codes.*`
-  // lookup, and deliberately returns something that is NOT the error's own
-  // message so a leak of that message is visible in the assertions below.
-  localizedErrorMessage: jest.fn(() => 'Something went wrong. Please retry.'),
-}));
+jest.mock('#/services/errorService');
 
 const { handleVersionConflict } = require('../errors/versionConflict');
 const { errorService } = require('#/services/errorService');
@@ -83,7 +72,7 @@ describe('handleMutationErrorAlert', () => {
     // "An unexpected database error occurred".
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
-      'Something went wrong. Please retry.',
+      'Something went wrong.',
     );
     expect(alertService.alert).not.toHaveBeenCalledWith(
       expect.anything(),

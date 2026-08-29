@@ -566,19 +566,6 @@ export class ErrorService {
 export const errorService = new ErrorService();
 
 /**
- * The raw message an error carries, for LOGS and reports.
- *
- * This is the server's own English by construction — `parseApolloError` copies
- * `graphQLError.message` straight through. That is exactly what a log wants and
- * exactly what a user must not be shown, so anything user-facing takes
- * {@link localizedErrorMessage} instead.
- */
-export const getErrorMessage = (error: unknown): string => {
-  const result = errorService.parseApolloError(error, { logError: false });
-  return result.error?.message || 'An unexpected error occurred';
-};
-
-/**
  * What to SHOW a user when a mutation fails.
  *
  * Resolved from the error's CODE through `errors.codes.*`, never from the
@@ -587,21 +574,29 @@ export const getErrorMessage = (error: unknown): string => {
  * "move to pantry" against an unmigrated database saw a "Gabim" alert whose
  * body read "An unexpected database error occurred".
  *
- * An unmapped code lands on `errors.codes.unexpected` rather than falling back
- * to that text — a vaguer sentence in the right language beats a precise one in
- * the wrong one, and the precise version is in the log either way.
+ * An unmapped code lands on the caller's `fallback` — or on
+ * `errors.codes.unexpected` when there is none — rather than on that text. A
+ * vaguer sentence in the right language beats a precise one in the wrong one,
+ * and the precise version is in the log either way.
+ *
+ * `fallback` must itself be localized: it is the caller's own copy for what
+ * failed ("Couldn't update the home name"), which is more useful than a generic
+ * sentence wherever the site knows what it was doing.
  */
-export const localizedErrorMessage = (error: unknown): string => {
+export const localizedErrorMessage = (
+  error: unknown,
+  fallback?: string,
+): string => {
   const result = errorService.parseApolloError(error, { logError: false });
   const code = result.error?.code;
-  if (!code) return t('errors.codes.unexpected');
-  return errorService.getUserFriendlyMessage(code);
+  if (!code) return fallback ?? t('errors.codes.unexpected');
+  return errorService.getUserFriendlyMessage(code, fallback);
 };
 
 /**
  * Pure extraction of a raw error message from an `unknown` value, with a
- * caller-supplied fallback. Unlike `getErrorMessage`, this does NOT map to a
- * user-friendly message or emit telemetry — use it at display/handler sites
+ * caller-supplied fallback. Unlike `localizedErrorMessage`, this does NOT map a
+ * code to user-facing copy or emit telemetry — use it at logging/handler sites
  * that already have their own fallback copy and just need the raw message
  * (replaces the repeated `(error as any)?.message || fallback` pattern).
  */
@@ -626,6 +621,5 @@ export const useErrorService = () => {
     shouldRetry: errorService.shouldRetry.bind(errorService),
     isAuthError: errorService.isAuthError.bind(errorService),
     reportError: errorService.reportError.bind(errorService),
-    getErrorMessage,
   };
 };

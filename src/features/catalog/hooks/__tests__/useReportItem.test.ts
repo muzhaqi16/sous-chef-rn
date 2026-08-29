@@ -73,7 +73,7 @@ describe('useReportItem', () => {
     );
   });
 
-  it('surfaces the server message on a validation failure', async () => {
+  it("routes a refusal to localized copy, never the server's text", async () => {
     const { mock } = recordMock(MarkItemForReviewDocument, {
       data: {
         markItemForReview: {
@@ -91,6 +91,16 @@ describe('useReportItem', () => {
     expect(succeeded).toBe(false);
     expect(alertService.alert).toHaveBeenCalledWith(
       "Couldn't send that",
+      // Not 'Reason is too long' — the server's text is English by
+      // construction (no `Accept-Language`, no locale on the token), so
+      // displaying it puts English in front of every es/it/sq reader. With no
+      // `errors.field.reason` to resolve, this falls back to the caller's own
+      // copy: vaguer, but in the reader's language, and the precise sentence is
+      // still in the log.
+      'Something went wrong sending your report. Please try again.',
+    );
+    expect(alertService.alert).not.toHaveBeenCalledWith(
+      expect.any(String),
       'Reason is too long',
     );
   });

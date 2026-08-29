@@ -5,7 +5,6 @@ import {
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import type { errorService } from '#/services/errorService';
 import { removeFromPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
@@ -29,16 +28,7 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
-const mockReportError = jest.fn();
-jest.mock('#/services/errorService', () => ({
-  // User-facing copy, resolved from the error's code. Present so a suite
-  // reaching the alert path does not fail on a missing export.
-  localizedErrorMessage: jest.fn(() => 'Something went wrong.'),
-  errorService: {
-    reportError: (...args: Parameters<typeof errorService.reportError>) =>
-      mockReportError(...args),
-  },
-}));
+jest.mock('#/services/errorService');
 
 jest.mock('#/apollo/utils/pantryCacheUpdaters', () => ({
   removeFromPantryItemsCache: jest.fn(),

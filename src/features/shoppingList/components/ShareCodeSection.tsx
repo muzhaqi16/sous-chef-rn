@@ -13,6 +13,7 @@ import { ShareShoppingListDocument } from '#features/shoppingList/graphql/shoppi
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { alertService } from '#/services/alertService';
+import { localizedErrorMessage } from '#/services/errorService';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { getFormAnimationPreset } from '#/constants/animations';
 import { buildJoinListUrl, shareUrl } from '#/utils/deepLinkUrls';
@@ -78,9 +79,12 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
       error => {
         alertService.alert(
           t('labels.error'),
-          error instanceof Error
-            ? error.message
-            : t('shoppingListScreens.failedToUpdateShareSettings'),
+          // Resolved from the error's CODE. `error.message` is the server's
+          // English, which reaches an es/it/sq user verbatim.
+          localizedErrorMessage(
+            error,
+            t('shoppingListScreens.failedToUpdateShareSettings'),
+          ),
         );
       },
     );

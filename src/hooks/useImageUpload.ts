@@ -56,8 +56,13 @@ class UserFacingUploadError extends Error {
  * images are allowed'. Only the 'file size' test ever matched, and it caught
  * UNKNOWN_ERROR ("couldn't determine the size") while claiming the image was
  * "too large or corrupted".
+ *
+ * Exported because the same three codes are raised BEFORE any upload starts, by
+ * `validateImageFile` at pick time, and the pickers that call it were showing
+ * `error.message` verbatim — the English above, under a translated title. There
+ * is one mapping from these codes to copy, and this is it.
  */
-const uploadErrorMessage = (
+export const imageErrorMessage = (
   t: Translate,
   error: unknown,
   isProfileImage: boolean,
@@ -376,7 +381,7 @@ export const useImageUpload = () => {
       );
     } catch (error) {
       logger.error('Profile image upload failed:', error);
-      const userErrorMessage = uploadErrorMessage(t, error, true);
+      const userErrorMessage = imageErrorMessage(t, error, true);
       options.onError?.(new Error(userErrorMessage));
       alertService.alert(t('errors.uploadFailedTitle'), userErrorMessage);
     }
@@ -414,7 +419,7 @@ export const useImageUpload = () => {
       );
     } catch (error) {
       logger.error('Item image upload failed:', error);
-      const errorMessage = uploadErrorMessage(t, error, false);
+      const errorMessage = imageErrorMessage(t, error, false);
       // Forward the original when it is already user-facing: `uploadItemImages`
       // needs to tell a rate limit (retry later, stop now) apart from one bad
       // file (skip it, keep going).

@@ -66,14 +66,7 @@ const mockGetDeviceTimezone = jest.requireMock(
   '#/utils/notifications/quietHours',
 ).getDeviceTimezone as jest.Mock;
 
-jest.mock('#/services/errorService', () => ({
-  // User-facing copy, resolved from the error's code. Present so a suite
-  // reaching the alert path does not fail on a missing export.
-  localizedErrorMessage: jest.fn(() => 'Something went wrong.'),
-  useErrorService: () => ({
-    handleApolloError: jest.fn().mockReturnValue({ message: 'Error' }),
-  }),
-}));
+jest.mock('#/services/errorService');
 
 jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),

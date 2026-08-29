@@ -14,6 +14,7 @@ import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { ROLE_PERMISSIONS, INVITE_ROLES } from '#/constants/collaboratorRoles';
 import { alertService } from '#/services/alertService';
+import { localizedErrorMessage } from '#/services/errorService';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import type { Translate } from '#/i18n/types';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
@@ -104,7 +105,9 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
       error => {
         alertService.alert(
           t('labels.error'),
-          error instanceof Error ? error.message : t('errors.sendInviteFailed'),
+          // Resolved from the error's CODE. `error.message` is the server's
+          // English, which reaches an es/it/sq user verbatim.
+          localizedErrorMessage(error, t('errors.sendInviteFailed')),
         );
       },
     );
