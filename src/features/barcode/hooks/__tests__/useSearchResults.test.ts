@@ -76,18 +76,22 @@ beforeEach(() => {
 
 // --- Mock builders ---
 
-function upcMock(items: MockItemNode[]): MockedResponse {
+function upcMock(
+  items: MockItemNode[],
+  options: { partial?: boolean } = {},
+): MockedResponse {
   return recordMock(ItemByUpcFilterDocument, {
     data: {
       items: {
-        __typename: 'ItemConnection',
+        __typename: 'ItemConnection' as const,
         edges: items.map((node, i) => ({
-          __typename: 'ItemEdge',
+          __typename: 'ItemEdge' as const,
           cursor: `c${i}`,
-          node: { __typename: 'Item', ...node },
+          node: { __typename: 'Item' as const, ...node },
         })),
       },
     },
+    partial: options.partial,
   }).mock;
 }
 
@@ -95,11 +99,11 @@ function skuMock(items: MockItemNode[]): MockedResponse {
   return recordMock(ItemBySkuFilterDocument, {
     data: {
       items: {
-        __typename: 'ItemConnection',
+        __typename: 'ItemConnection' as const,
         edges: items.map((node, i) => ({
-          __typename: 'ItemEdge',
+          __typename: 'ItemEdge' as const,
           cursor: `c${i}`,
-          node: { __typename: 'Item', ...node },
+          node: { __typename: 'Item' as const, ...node },
         })),
       },
     },
@@ -119,14 +123,21 @@ const SAMPLE_UPC_ITEM = {
   imageUrl: 'http://img.com/1.jpg',
   primaryUpc: '1234567890',
   netWeight: 500,
-  displayUnit: { __typename: 'Unit', id: 'unit-1', name: 'grams', symbol: 'g' },
+  displayUnit: {
+    __typename: 'Unit' as const,
+    id: 'unit-1',
+    name: 'grams',
+    symbol: 'g',
+  },
   brands: [
     {
-      __typename: 'ItemBrand',
-      brand: { __typename: 'Brand', id: 'brand-1', name: 'TestBrand' },
+      __typename: 'ItemBrand' as const,
+      brand: { __typename: 'Brand' as const, id: 'brand-1', name: 'TestBrand' },
     },
   ],
-  units: [{ __typename: 'ItemUnit', unitId: 'unit-1', isDefault: true }],
+  units: [
+    { __typename: 'ItemUnit' as const, unitId: 'unit-1', isDefault: true },
+  ],
   variationBrand: null,
   matchedVariation: null,
 };
@@ -214,7 +225,11 @@ describe('useSearchResults', () => {
 
     it('leaves the write-path flags undefined when the API omits them', async () => {
       renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
-        operationMocks: [upcMock([SAMPLE_UPC_ITEM])],
+        // The omission IS the subject: schema completion would supply the
+        // flags this test asserts are absent. Marking THIS mock partial
+        // excuses exactly the fields it leaves out — the old whole-test flag
+        // switched the missing-field guard off for everything.
+        operationMocks: [upcMock([SAMPLE_UPC_ITEM], { partial: true })],
       });
 
       await waitFor(() =>
@@ -240,8 +255,8 @@ describe('useSearchResults', () => {
         displayUnit: null,
         brands: [],
         units: [],
-        variationBrand: null,
-        matchedVariation: null,
+        // `variationBrand` / `matchedVariation` are selected by
+        // `ItemByUpcFilter` only — the SKU query cannot return them.
       };
 
       renderHookWithApollo(() => useSearchResults('SKU123'), {
@@ -296,7 +311,7 @@ describe('useSearchResults', () => {
   describe('format mapping', () => {
     it('maps ean-13 → EAN_13 and fires UPC query with that variable', async () => {
       const upc = recordMock(ItemByUpcFilterDocument, {
-        data: { items: { __typename: 'ItemConnection', edges: [] } },
+        data: { items: { __typename: 'ItemConnection' as const, edges: [] } },
       });
 
       renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
@@ -313,7 +328,7 @@ describe('useSearchResults', () => {
 
     it('maps upc-a → UPC_A', async () => {
       const upc = recordMock(ItemByUpcFilterDocument, {
-        data: { items: { __typename: 'ItemConnection', edges: [] } },
+        data: { items: { __typename: 'ItemConnection' as const, edges: [] } },
       });
 
       renderHookWithApollo(() => useSearchResults('1234567890', 'upc-a'), {
@@ -330,7 +345,7 @@ describe('useSearchResults', () => {
 
     it('passes undefined upcFormat for unknown formats', async () => {
       const upc = recordMock(ItemByUpcFilterDocument, {
-        data: { items: { __typename: 'ItemConnection', edges: [] } },
+        data: { items: { __typename: 'ItemConnection' as const, edges: [] } },
       });
 
       renderHookWithApollo(
@@ -352,11 +367,8 @@ describe('useSearchResults', () => {
       return recordMock(CreateItemDocument, {
         data: {
           createItem: {
-            __typename: 'ItemPayload',
-            success: true,
-            message: '',
-            code: 'SUCCESS',
-            item: { __typename: 'Item', id: 'new-item' },
+            __typename: 'CreateItemPayload' as const,
+            item: { __typename: 'Item' as const, id: 'new-item' },
           },
         },
       }).mock;

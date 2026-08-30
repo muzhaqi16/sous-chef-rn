@@ -1,4 +1,5 @@
 import React from 'react';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import {
   recordMock,
@@ -87,7 +88,7 @@ describe('ReportItemForm', () => {
       data: {
         markItemForReview: {
           __typename: 'ValidationError',
-          code: 'VALIDATION_ERROR',
+          code: ErrorCode.ValidationFailed,
           message: 'Reason too short',
           field: 'reason',
         },

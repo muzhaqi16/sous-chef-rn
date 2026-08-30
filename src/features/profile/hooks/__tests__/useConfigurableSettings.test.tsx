@@ -1,6 +1,7 @@
 'use no memo';
 
 import { act } from '@testing-library/react-native';
+import { AppTheme, UnitSystem } from '#/graphql/generated/schemaTypes';
 import { alertService, type AlertButton } from '#/services/alertService';
 import type { SettingItem } from '#components/molecules/SettingRow';
 import {
@@ -162,13 +163,10 @@ function buildMocks() {
     data: {
       updateSettings: {
         __typename: 'UpdateSettingsPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
         userSettings: {
           __typename: 'UserSettings',
           id: 'settings-1',
-          theme: 'LIGHT',
+          theme: AppTheme.Light,
           compactMode: false,
           showTutorials: true,
           autoSync: true,
@@ -176,7 +174,7 @@ function buildMocks() {
           shareUsageData: false,
           shareWithPartners: false,
           personalizedAds: false,
-          preferredUnitSystem: 'METRIC',
+          preferredUnitSystem: UnitSystem.Metric,
           language: 'en',
           timezone: 'UTC',
           preferredCurrency: 'USD',

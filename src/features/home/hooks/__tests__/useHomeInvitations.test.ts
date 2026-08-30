@@ -75,8 +75,8 @@ function buildInviteMock(
     result: {
       data: {
         inviteToHome: {
+          // The payload's only selection is `homeInvite`.
           __typename: 'InviteToHomePayload',
-          home: { __typename: 'Home', id: input.homeId, name: 'Home' },
           homeInvite: {
             __typename: 'HomeInvite',
             id: homeInviteId,
@@ -113,12 +113,10 @@ function buildJoinByCodeMock(
       data: {
         joinHomeByCode: membershipFields
           ? {
+              // The payload's only selection is `membership`, shaped by
+              // `HomeMemberCard_member` — which carries neither `displayName`
+              // nor the user's `profile`.
               __typename: 'JoinHomeByCodePayload',
-              home: {
-                __typename: 'Home',
-                id: membershipFields.homeId,
-                name: 'Home',
-              },
               membership: {
                 __typename: 'Membership',
                 id: 'mem-1',
@@ -126,7 +124,6 @@ function buildJoinByCodeMock(
                 userId: 'u-1',
                 role: membershipFields.role,
                 status: 'ACTIVE',
-                displayName: null,
                 canManageHome: false,
                 canViewPantry: true,
                 canEditPantry: false,
@@ -137,12 +134,6 @@ function buildJoinByCodeMock(
                   __typename: 'User',
                   id: 'u-1',
                   email: 'me@test.com',
-                  profile: {
-                    __typename: 'UserProfile',
-                    id: 'p-1',
-                    displayName: 'Me',
-                    avatar: null,
-                  },
                 },
               },
             }
@@ -168,20 +159,15 @@ function buildHomeByJoinCodeMock(
       data: {
         homeByJoinCode: home
           ? {
+              // The query selects id, name, isDefault, the members count and
+              // the pantries page — not the home's own version/updatedAt, its
+              // invites, its member edges, or the viewer's membership.
               __typename: 'Home',
               id: home.id,
               name: home.name,
-              version: 1,
-              updatedAt: '2025-01-01T00:00:00.000Z',
               isDefault: false,
               membersConnection: {
                 __typename: 'MembershipConnection',
-                edges: [],
-                totalCount: 0,
-              },
-              invitesConnection: {
-                __typename: 'HomeInviteConnection',
-                edges: [],
                 totalCount: 0,
               },
               pantriesConnection: {
@@ -189,7 +175,6 @@ function buildHomeByJoinCodeMock(
                 edges: [],
                 totalCount: 0,
               },
-              myMembership: null,
             }
           : null,
       },

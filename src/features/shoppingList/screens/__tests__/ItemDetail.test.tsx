@@ -104,7 +104,6 @@ function buildShoppingListItem(overrides: Record<string, unknown> = {}) {
     version: 1,
     createdAt: '2024-06-01T00:00:00Z',
     updatedAt: '2024-06-02T00:00:00Z',
-    sortOrder: 0,
     item: null,
     priceEstimate: {
       __typename: 'PriceEstimate',

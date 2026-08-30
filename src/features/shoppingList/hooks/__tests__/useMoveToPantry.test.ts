@@ -2,6 +2,7 @@ import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
+  seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
@@ -47,13 +48,23 @@ function createItem(
   overrides: Partial<ShoppingListItemDisplayFragment> = {},
 ): ShoppingListItemDisplayFragment {
   return {
-    __typename: 'ShoppingListItem',
+    __typename: 'ShoppingListItem' as const,
     id: 'item-1',
     itemName: 'Milk',
     quantity: 2,
+    // Complete, because production is: the list query caches the whole
+    // purchase record, and `writePurchaseInfo` carries forward exactly what
+    // the cache holds. Seeding only `isPurchased` makes the carry-forward
+    // write a partial record no server response could produce.
     purchaseInfo: {
-      __typename: 'ShoppingListItemPurchaseInfo',
+      __typename: 'ShoppingListItemPurchaseInfo' as const,
       isPurchased: true,
+      movedToPantryAt: null,
+      purchaseDate: null,
+      purchasedById: null,
+      purchasedPrice: null,
+      purchasedQuantity: null,
+      purchasedBy: null,
     },
     version: 1,
     ...overrides,
@@ -64,8 +75,8 @@ function moveMock() {
   return recordMock(MoveShoppingItemToPantryDocument, {
     data: {
       moveShoppingItemToPantry: {
-        __typename: 'MoveShoppingItemToPantryPayload',
-        pantryItem: { __typename: 'PantryItem', id: 'pantry-item-1' },
+        __typename: 'MoveShoppingItemToPantryPayload' as const,
+        pantryItem: { __typename: 'PantryItem' as const, id: 'pantry-item-1' },
       },
     },
   });
@@ -119,7 +130,11 @@ describe('useMoveToPantry', () => {
     const move = moveMock();
     const { result } = renderHookWithApollo(
       () => useMoveToPantry({ currentListId: 'list-1' }),
-      { operationMocks: [move.mock] },
+      // Seeded because the row being moved is one the list query already
+      // cached; `writePurchaseInfo` carries the cached record forward, so an
+      // unseeded cache makes it write a purchase record with three of its
+      // eight fields.
+      { operationMocks: [move.mock], cache: seedCache([createItem()]) },
     );
 
     await act(async () => {
@@ -298,7 +313,7 @@ describe('useMoveToPantry', () => {
       const move = moveMock();
       const { result } = renderHookWithApollo(
         () => useMoveToPantry({ currentListId: 'list-1' }),
-        { operationMocks: [move.mock] },
+        { operationMocks: [move.mock], cache: seedCache([createItem()]) },
       );
 
       await act(async () => {
@@ -357,9 +372,9 @@ describe('useMoveToPantry pantry item count', () => {
       id: 'Pantry:pantry-1',
       fragment: STATS_FRAGMENT,
       data: {
-        __typename: 'Pantry',
+        __typename: 'Pantry' as const,
         id: 'pantry-1',
-        stats: { __typename: 'PantryStats', totalItems: 63 },
+        stats: { __typename: 'PantryStats' as const, totalItems: 63 },
       },
     });
     return cache;
@@ -384,9 +399,9 @@ describe('useMoveToPantry pantry item count', () => {
     return recordMock(MoveShoppingItemToPantryDocument, {
       data: (vars: Record<string, unknown>) => ({
         moveShoppingItemToPantry: {
-          __typename: 'MoveShoppingItemToPantryPayload',
+          __typename: 'MoveShoppingItemToPantryPayload' as const,
           pantryItem: {
-            __typename: 'PantryItem',
+            __typename: 'PantryItem' as const,
             id: (vars.input as { pantryItemId: string }).pantryItemId,
           },
         },
@@ -418,7 +433,7 @@ describe('useMoveToPantry pantry item count', () => {
     const rejected = recordMock(MoveShoppingItemToPantryDocument, {
       data: {
         moveShoppingItemToPantry: {
-          __typename: 'ValidationError',
+          __typename: 'ValidationError' as const,
           message: 'nope',
         },
       },
@@ -447,7 +462,7 @@ describe('useMoveToPantry pantry item count', () => {
     const rejected = recordMock(MoveShoppingItemToPantryDocument, {
       data: {
         moveShoppingItemToPantry: {
-          __typename: 'ValidationError',
+          __typename: 'ValidationError' as const,
           message: 'nope',
           field: 'shoppingListItemId',
         },

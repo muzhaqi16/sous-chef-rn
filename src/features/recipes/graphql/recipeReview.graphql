@@ -64,6 +64,9 @@ mutation DeleteRecipeReview($input: DeleteRecipeReviewInput!) {
       resource
       resourceId
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 

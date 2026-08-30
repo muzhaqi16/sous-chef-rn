@@ -5,17 +5,14 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { DisplayFormat } from '#/graphql/generated/schemaTypes';
+import { DisplayFormat, ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useQuantityEditModal } from '../useQuantityEditModal';
 
 function updateMock() {
   return recordMock(UpdateShoppingListItemQuantityDocument, {
     data: {
       updateShoppingListItemQuantity: {
-        __typename: 'ShoppingListItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
+        __typename: 'UpdateShoppingListItemQuantityPayload',
         shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
       },
     },
@@ -293,7 +290,7 @@ describe('useQuantityEditModal', () => {
       data: {
         updateShoppingListItemQuantity: {
           __typename: 'ValidationError',
-          code: 'VALIDATION_FAILED',
+          code: ErrorCode.ValidationFailed,
           message: 'Invalid fraction format',
           field: 'quantity',
         },

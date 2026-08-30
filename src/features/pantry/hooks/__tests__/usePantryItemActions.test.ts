@@ -36,10 +36,10 @@ jest.mock('#/services/errorService');
 const seedPantryItems = (ids: string[] = ['item-1', 'item-2'], quantity = 5) =>
   seedCache(
     ids.map(id => ({
-      __typename: 'PantryItem',
+      __typename: 'PantryItem' as const,
       id,
       quantity,
-      unit: { __typename: 'Unit', id: 'unit-1', symbol: 'ea' },
+      unit: { __typename: 'Unit' as const, id: 'unit-1', symbol: 'ea' },
     })),
   );
 
@@ -52,23 +52,23 @@ const createOptions = () => ({
 
 function consumeMock(payload?: Record<string, unknown>) {
   const defaultPayload = {
-    __typename: 'CreatePantryItemUsagePayload',
+    __typename: 'CreatePantryItemUsagePayload' as const,
     pantryItemUsage: {
-      __typename: 'PantryItemUsage',
+      __typename: 'PantryItemUsage' as const,
       id: 'usage-1',
       quantityUsed: 1,
       usageUnitId: null,
       usageUnit: null,
       usedAt: '2026-01-01T00:00:00.000Z',
-      purpose: 'COOK',
+      purpose: UsagePurpose.Cooking,
       notes: null,
       wasteReason: null,
       isComposted: null,
       isRecycled: null,
       pantryItem: {
-        __typename: 'PantryItem',
+        __typename: 'PantryItem' as const,
         id: 'item-1',
-        quantity: '4',
+        quantity: 4,
         version: 2,
         lastUsedAt: '2026-01-01T00:00:00.000Z',
         remainingNetWeight: null,
@@ -87,20 +87,20 @@ function consumeMock(payload?: Record<string, unknown>) {
 
 function restockMock(payload?: Record<string, unknown>) {
   const defaultPayload = {
-    __typename: 'RestockPantryItemPayload',
+    __typename: 'RestockPantryItemPayload' as const,
     pantryItemUsage: {
-      __typename: 'PantryItemUsage',
+      __typename: 'PantryItemUsage' as const,
       id: 'usage-1',
       quantityUsed: 1,
-      purpose: 'RESTOCK',
+      purpose: UsagePurpose.Restock,
       costPerUnit: null,
       totalCost: null,
       pantryItem: {
-        __typename: 'PantryItem',
+        __typename: 'PantryItem' as const,
         id: 'item-1',
         version: 2,
         updatedAt: '2026-01-01T00:00:00.000Z',
-        quantity: '6',
+        quantity: 6,
         netWeight: null,
         remainingNetWeight: null,
         expiresAt: null,
@@ -266,7 +266,7 @@ describe('usePantryItemActions', () => {
         await result.current.handleConfirmConsume(
           2,
           '2',
-          'COOK' as UsagePurpose,
+          UsagePurpose.Cooking,
           'For dinner',
         );
       });
@@ -275,7 +275,7 @@ describe('usePantryItemActions', () => {
         input: {
           pantryItemId: 'item-1',
           quantityUsed: 2,
-          purpose: 'COOK',
+          purpose: UsagePurpose.Cooking,
           notes: 'For dinner',
           usageUnitId: undefined,
           idempotencyKey: expect.any(String),
@@ -296,7 +296,7 @@ describe('usePantryItemActions', () => {
         await result.current.handleConfirmConsume(
           1,
           '1',
-          'COOK' as UsagePurpose,
+          UsagePurpose.Cooking,
           '',
         );
       });
@@ -324,7 +324,7 @@ describe('usePantryItemActions', () => {
         await result.current.handleConfirmConsume(
           2,
           '2',
-          'COOK' as UsagePurpose,
+          UsagePurpose.Cooking,
           '',
         );
       });
@@ -365,7 +365,7 @@ describe('usePantryItemActions', () => {
         input: {
           pantryItemId: 'item-1',
           quantityUsed: 1,
-          purpose: 'WASTE',
+          purpose: UsagePurpose.Waste,
           notes: 'Past date',
           usageUnitId: undefined,
           wasteReason: 'EXPIRED',
@@ -446,7 +446,7 @@ describe('usePantryItemActions', () => {
   describe('payload error handling', () => {
     it('shows invalid unit alert on consume payload UNIT_INVALID', async () => {
       const m = consumeMock({
-        __typename: 'ValidationError',
+        __typename: 'ValidationError' as const,
         code: 'UNIT_INVALID',
         message: "Cannot consume in 'jar'",
         field: 'usageUnitId',
@@ -464,7 +464,7 @@ describe('usePantryItemActions', () => {
         await result.current.handleConfirmConsume(
           2,
           '2',
-          'COOK' as UsagePurpose,
+          UsagePurpose.Cooking,
           '',
         );
       });
@@ -479,7 +479,7 @@ describe('usePantryItemActions', () => {
 
     it('shows invalid unit alert on waste payload UNIT_INVALID', async () => {
       const m = consumeMock({
-        __typename: 'ValidationError',
+        __typename: 'ValidationError' as const,
         code: 'UNIT_INVALID',
         message: "Cannot waste in 'jar'",
         field: 'usageUnitId',
@@ -512,7 +512,7 @@ describe('usePantryItemActions', () => {
 
     it('shows version conflict alert on consume payload CONFLICT', async () => {
       const m = consumeMock({
-        __typename: 'ConflictError',
+        __typename: 'ConflictError' as const,
         code: 'CONFLICT',
         message: 'Version conflict: expected 3, found 4',
       });
@@ -529,7 +529,7 @@ describe('usePantryItemActions', () => {
         await result.current.handleConfirmConsume(
           1,
           '1',
-          'COOK' as UsagePurpose,
+          UsagePurpose.Cooking,
           '',
         );
       });
@@ -544,7 +544,7 @@ describe('usePantryItemActions', () => {
       // The API emits VERSION_CONFLICT (not CONFLICT) for optimistic-lock
       // failures — this used to fall through to the generic Error alert.
       const m = consumeMock({
-        __typename: 'ConflictError',
+        __typename: 'ConflictError' as const,
         code: 'VERSION_CONFLICT',
         message: 'Item was updated by another device',
       });
@@ -561,7 +561,7 @@ describe('usePantryItemActions', () => {
         await result.current.handleConfirmConsume(
           1,
           '1',
-          'COOK' as UsagePurpose,
+          UsagePurpose.Cooking,
           '',
         );
       });
@@ -574,7 +574,7 @@ describe('usePantryItemActions', () => {
 
     it('shows invalid unit alert on restock payload UNIT_INVALID', async () => {
       const m = restockMock({
-        __typename: 'ValidationError',
+        __typename: 'ValidationError' as const,
         code: 'UNIT_INVALID',
         message: "Cannot restock in 'slice'",
         field: 'unitId',
@@ -601,7 +601,7 @@ describe('usePantryItemActions', () => {
 
     it('shows alert on restock payload error', async () => {
       const m = restockMock({
-        __typename: 'ValidationError',
+        __typename: 'ValidationError' as const,
         code: 'UNIT_INVALID',
         message: 'Invalid unit',
         field: 'unitId',
@@ -627,7 +627,7 @@ describe('usePantryItemActions', () => {
 
     it('shows generic error for unknown payload failure codes', async () => {
       const m = consumeMock({
-        __typename: 'ValidationError',
+        __typename: 'ValidationError' as const,
         code: 'VALIDATION_ERROR',
         message: 'Cannot use more than available quantity',
         field: 'quantityUsed',
@@ -645,7 +645,7 @@ describe('usePantryItemActions', () => {
         await result.current.handleConfirmConsume(
           100,
           '100',
-          'COOK' as UsagePurpose,
+          UsagePurpose.Cooking,
           '',
         );
       });

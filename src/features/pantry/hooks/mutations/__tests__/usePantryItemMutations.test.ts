@@ -16,8 +16,10 @@ import { usePantryItemMutations } from '../usePantryItemMutations';
 /** Minimal config shape the mocked CRUD operation reads at call time. */
 interface MockUpdateConfig {
   itemId: string;
+  // `{ input }` only — the real `createUpdateOperation` carries the id inside
+  // the input (useCrudOperations.ts:190-196).
   mutation: (options: {
-    variables: { id: string; input: PantryItemUpdate };
+    variables: { input: PantryItemUpdate & { id: string } };
   }) => Promise<unknown>;
 }
 
@@ -63,10 +65,15 @@ jest.mock('#/utils/errors/versionConflict', () => ({
 
 jest.mock('#/hooks/utils/useCrudOperations', () => ({
   useCrudOperations: () => ({
+    // The real `createUpdateOperation` builds
+    // `{ input: { id: itemId, ...transformedInput } }` — `id` FIRST, so an id
+    // carried in the update itself wins. Spreading the other way round made
+    // `config.itemId` win instead, which passes wherever the two agree and
+    // hides the case worth testing.
     createUpdateOperation: jest.fn(
       (config: MockUpdateConfig) => async (updates: PantryItemUpdate) => {
         await config.mutation({
-          variables: { id: config.itemId, input: updates },
+          variables: { input: { id: config.itemId, ...updates } },
         });
       },
     ),
@@ -105,10 +112,7 @@ function updateMock() {
   return recordMock(UpdatePantryItemDocument, {
     data: {
       updatePantryItem: {
-        __typename: 'PantryItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
+        __typename: 'UpdatePantryItemPayload' as const,
         pantryItem: { __typename: 'PantryItem', id: 'item-1' },
       },
     },
@@ -119,10 +123,7 @@ function deleteMock() {
   return recordMock(DeletePantryItemDocument, {
     data: {
       deletePantryItem: {
-        __typename: 'PantryItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
+        __typename: 'DeletePantryItemPayload' as const,
         pantryItem: { __typename: 'PantryItem', id: 'item-1' },
       },
     },

@@ -1,6 +1,7 @@
 'use no memo';
 
 import React from 'react';
+import { makeCache } from '#/apollo/cache';
 import { InMemoryCache } from '@apollo/client';
 import { screen, userEvent } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
@@ -8,7 +9,6 @@ import { GetHomeDocument } from '#operations/home/home.generated';
 import {
   GetPantryDocument,
   GetPantryItemDocument,
-  type GetPantryItemQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import { homeNode } from '#/test-utils/fixtures/homeFixtures';
 import { pantryData } from '#/test-utils/fixtures/pantryFixtures';
@@ -221,7 +221,7 @@ function buildCache(opts: {
   itemId?: string;
   itemFixture?: Parameters<typeof pantryItemData>[0];
 }): InMemoryCache {
-  const cache = new InMemoryCache();
+  const cache = makeCache();
 
   cache.writeQuery({
     query: GetHomeDocument,
@@ -311,7 +311,7 @@ describe('PantryItemForm — edit mode', () => {
     renderWithApollo(<PantryItemForm itemId="missing" />, {
       cache: buildCache({}),
       operationMocks: [
-        recordMock<GetPantryItemQuery>(GetPantryItemDocument, {
+        recordMock(GetPantryItemDocument, {
           data: { __typename: 'Query', pantryItem: null },
         }).mock,
       ],

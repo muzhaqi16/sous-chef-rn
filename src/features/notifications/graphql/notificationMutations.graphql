@@ -19,6 +19,9 @@ mutation MarkNotificationAsRead($input: MarkNotificationAsReadInput!) {
       resource
       resourceId
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -38,6 +41,9 @@ mutation MarkNotificationUnread($input: MarkNotificationUnreadInput!) {
     ... on NotFoundError {
       resource
       resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -59,6 +65,9 @@ mutation SendTestNotification($input: SendTestNotificationInput!) {
       code
       message
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -77,6 +86,9 @@ mutation DeleteNotification($input: DeleteNotificationInput!) {
     ... on NotFoundError {
       resource
       resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

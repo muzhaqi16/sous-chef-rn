@@ -5,12 +5,12 @@
  * so what these pin is which events are worth a read-back and which are not.
  */
 import { act } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { MutationType, PantrySubtype } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
 import { usePantrySubscriptions } from '#features/pantry/hooks/usePantrySubscriptions';
-import { InMemoryCache } from '@apollo/client';
 import { PantryEventsDocument } from '#features/pantry/graphql/pantry.generated';
 
 type CapturedOnData = (data: unknown, client: unknown) => void;
@@ -332,7 +332,7 @@ describe('usePantrySubscriptions: event envelope and the cache', () => {
     // incomplete result — once per delete. `fetchPolicy: 'no-cache'` is what
     // stops the write; `__tests__/apollo/subscriptionEnvelopeWrite.test.ts`
     // shows the damage the write does.
-    const cache = new InMemoryCache();
+    const cache = makeCache();
     renderHookWithApollo(() => usePantrySubscriptions('user-1'), {
       cache,
       operationMocks: [

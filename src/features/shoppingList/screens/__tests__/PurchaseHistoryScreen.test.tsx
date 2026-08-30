@@ -1,8 +1,8 @@
 'use no memo';
 import React from 'react';
+import { makeCache } from '#/apollo/cache';
 import { screen, waitFor } from '@testing-library/react-native';
 import { GraphQLError } from 'graphql';
-import { InMemoryCache } from '@apollo/client';
 import {
   renderWithApollo,
   type MockedResponse,
@@ -215,7 +215,7 @@ describe('PurchaseHistoryScreen', () => {
   // screen still mounted underneath that the item does not exist, and it
   // persists to MMKV, so the item stays missing across a restart.
   it('does not write its failure over the item every other screen reads', async () => {
-    const cache = new InMemoryCache();
+    const cache = makeCache();
 
     renderWithApollo(<PurchaseHistoryScreen route={route} />, {
       operationMocks: [failingMock],

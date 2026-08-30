@@ -683,15 +683,26 @@ arguments).
 Full patterns and examples: `docs/development.md` § Testing.
 
 - **Always `renderHookWithApollo` / `renderWithApollo` from
-  `#/test-utils/apolloMockProvider`** — a schema-backed cache with type-safe
-  mocks. `jest.mock('@apollo/client/react', …)` is lint-banned: it couples
-  tests to operation names and bypasses the cache integration the tests exist
-  to catch. Import `MockedResponse` from the helper, not
-  `@apollo/client/testing`.
+  `#/test-utils/apolloMockProvider`** — the PRODUCTION cache (`makeCache()`,
+  so type policies and `possibleTypes` are loaded) plus schema-driven network
+  mocks and type-safe mocks. `jest.mock('@apollo/client/react', …)` is
+  lint-banned: it couples tests to operation names and bypasses the cache
+  integration the tests exist to catch. Import `MockedResponse` from the
+  helper, not `@apollo/client/testing`.
 - For mutation tests, assert on the **cache** after the mutation, not on the
   mock function.
 - A failing mutation RESOLVES (`errorPolicy: 'all'`) — drive failures with an
   operation mock carrying an `error`, never by stubbing a helper to throw.
+- **Pick ONE mocking strategy**: `operationMocks` OR `mocks`/`resolvers`, never
+  both — they are mutually exclusive by type, and combining them used to
+  discard the second silently. `operationMocks: []` means "no per-operation
+  mocks", not "answer everything from the schema".
+- A per-operation mock's `data` is COMPLETED from the real SDL before it is
+  served, so state only what you assert on. A field you write as `undefined` is
+  served ABSENT, and a field the operation does not select is an error — a
+  fixture the schema cannot produce is a test of a system that does not exist.
+  The one opt-out is `partial: true` on the mock, which excuses exactly the
+  fields that payload omits.
 - `variables: () => true` for complex transformed inputs;
   `waitFor(() => expect(result.current.loading).toBe(false))` as the settling
   primitive; schema-driven `mocks` for deep fragment selections; `__typename`

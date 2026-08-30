@@ -1,6 +1,8 @@
 'use no memo';
 
 import { act, waitFor } from '@testing-library/react-native';
+import { DisplayFormat } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#/apollo/cache';
 import { InMemoryCache } from '@apollo/client';
 import {
   recordMock,
@@ -122,9 +124,9 @@ function createItem(overrides: Record<string, unknown> = {}) {
 function seedShoppingListItem(
   overrides: Record<string, unknown> = {},
 ): InMemoryCache {
-  const cache = new InMemoryCache();
+  const cache = makeCache();
   const data: UseShoppingListActions_ItemFragment = {
-    __typename: 'ShoppingListItem',
+    __typename: 'ShoppingListItem' as const,
     id: 'item-1',
     quantity: 2,
     version: 1,
@@ -139,32 +141,29 @@ function seedShoppingListItem(
   return cache;
 }
 
+/**
+ * The response shape `UpdateShoppingListItemQuantity` can actually return.
+ *
+ * Its `useShoppingListActions_updateQuantityResult` fragment is narrow on
+ * purpose — the mutation changes quantity, unit and version, so those are what
+ * it selects. A fixture stating `itemName`, `purchaseInfo`, `category`, `notes`,
+ * `sortOrder`, `updatedAt` and `item` beside them described a response the
+ * server cannot send: the schema-backed mock link drops every one before the
+ * result reaches Apollo, so the assertions never saw them either.
+ */
 function buildUpdateMockResponse(quantity: number, version: number) {
   return {
     updateShoppingListItemQuantity: {
-      __typename: 'ShoppingListItemPayload',
-      success: true,
-      message: '',
-      code: 'SUCCESS',
+      __typename: 'UpdateShoppingListItemQuantityPayload' as const,
       shoppingListItem: {
-        __typename: 'ShoppingListItem',
+        __typename: 'ShoppingListItem' as const,
         id: 'item-1',
-        itemName: 'Milk',
         quantity,
         quantityInput: String(quantity),
-        displayFormat: String(quantity),
-        purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo',
-          isPurchased: false,
-        },
-        version,
-        updatedAt: '2025-01-01T00:00:00.000Z',
-        category: null,
-        notes: null,
+        displayFormat: DisplayFormat.Auto,
         unitName: null,
         unit: null,
-        sortOrder: 0,
-        item: null,
+        version,
       },
     },
   };

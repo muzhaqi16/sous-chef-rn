@@ -1,4 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
@@ -63,7 +64,7 @@ function cookedMock(outcome: { kind: 'success' } | { kind: 'rejected' }) {
         : {
             markRecipeAsCooked: {
               __typename: 'ValidationError',
-              code: 'VALIDATION',
+              code: ErrorCode.ValidationFailed,
               message: 'bad',
               field: 'servings',
             },
@@ -186,6 +187,16 @@ describe('useRecipeCookingActions', () => {
           deductFromPantry: true,
         }),
       }),
+    );
+    // The mutation's own success path, and the point the write has settled.
+    // The shared teardown in `__tests__/setup/globals.js` flushes pending work
+    // before the missing-field guard reads, so a late write is attributed
+    // rather than lost — but the toast is this test's subject, so it is
+    // asserted here rather than left to the flush.
+    await waitFor(() =>
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Recipe marked as cooked! Ingredients deducted from pantry.',
+      ),
     );
   });
 });

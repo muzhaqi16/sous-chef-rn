@@ -9,7 +9,7 @@ import {
 import { PersonalInformationScreen } from '../PersonalInformationScreen';
 import type { SettingsSectionProps } from '#components/organisms/SettingsSection';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
-import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, ProfileVisibility } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 
 jest.mock('#features/profile/hooks/useProfileData', () => ({
@@ -277,7 +277,7 @@ describe('PersonalInformationScreen', () => {
         data: {
           updateProfile: {
             __typename: 'ValidationError',
-            code: 'VALIDATION_ERROR',
+            code: ErrorCode.ValidationFailed,
             message: 'Invalid visibility',
             field: 'profileVisibility',
           },

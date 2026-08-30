@@ -1,9 +1,9 @@
 'use no memo';
 
 import { act } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useShoppingListSubscriptions } from '#features/shoppingList/hooks/useShoppingListSubscriptions';
-import { InMemoryCache } from '@apollo/client';
 import { MyShoppingListsEventsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   MutationType,
@@ -384,7 +384,7 @@ describe('useShoppingListSubscriptions: event envelope and the cache', () => {
     // row is already evicted. A cacheable subscription would normalise
     // `node { id }` into a bare ShoppingListItem and leave the list query
     // incomplete — see `__tests__/apollo/subscriptionEnvelopeWrite.test.ts`.
-    const cache = new InMemoryCache();
+    const cache = makeCache();
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'), {
       cache,
       operationMocks: [

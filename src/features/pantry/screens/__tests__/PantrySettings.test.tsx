@@ -1,6 +1,7 @@
 'use no memo';
 
 import React from 'react';
+import { makeCache } from '#/apollo/cache';
 import { InMemoryCache } from '@apollo/client';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
@@ -125,7 +126,7 @@ jest.mock('#/styles/commonStyles', () => ({
 }));
 
 function cacheWithPantry(pantry: PantryFixture): InMemoryCache {
-  const cache = new InMemoryCache();
+  const cache = makeCache();
   cache.writeQuery({
     query: GetPantryDocument,
     variables: { id: pantry.id, itemsFirst: 25, storageLocationsFirst: 15 },
@@ -159,7 +160,7 @@ describe('PantrySettings', () => {
 
   it('renders create title when creating', () => {
     renderWithApollo(<PantrySettings route={createRoute} />, {
-      cache: new InMemoryCache(),
+      cache: makeCache(),
     });
     expect(screen.getByText('Create New Pantry')).toBeTruthy();
   });
@@ -196,7 +197,7 @@ describe('PantrySettings', () => {
 
   it('hides danger zone when creating', () => {
     renderWithApollo(<PantrySettings route={createRoute} />, {
-      cache: new InMemoryCache(),
+      cache: makeCache(),
     });
     expect(screen.queryByText('Danger Zone')).toBeNull();
     expect(screen.queryByText('Delete Pantry')).toBeNull();
@@ -211,14 +212,14 @@ describe('PantrySettings', () => {
 
   it('shows Create button text when creating new pantry', () => {
     renderWithApollo(<PantrySettings route={createRoute} />, {
-      cache: new InMemoryCache(),
+      cache: makeCache(),
     });
     expect(screen.getByText('Create')).toBeTruthy();
   });
 
   it('hides information section when creating', () => {
     renderWithApollo(<PantrySettings route={createRoute} />, {
-      cache: new InMemoryCache(),
+      cache: makeCache(),
     });
     expect(screen.queryByText('Information')).toBeNull();
   });
@@ -323,7 +324,7 @@ describe('PantrySettings', () => {
 
   it('toggles default pantry switch without mutation for new pantry', () => {
     renderWithApollo(<PantrySettings route={createRoute} />, {
-      cache: new InMemoryCache(),
+      cache: makeCache(),
     });
     expect(screen.getByText('Default Pantry')).toBeTruthy();
   });
@@ -368,7 +369,7 @@ describe('PantrySettings', () => {
     jest.spyOn(storeModule, 'useSelectedHomeId').mockReturnValue(null);
 
     renderWithApollo(<PantrySettings route={createRoute} />, {
-      cache: new InMemoryCache(),
+      cache: makeCache(),
     });
 
     const nameInput = screen.getByPlaceholderText(

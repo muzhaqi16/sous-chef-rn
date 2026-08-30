@@ -1,7 +1,10 @@
 import { act } from '@testing-library/react-native';
+import { gql } from '@apollo/client';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
+  seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { MovePurchasedItemsToPantryDocument } from '../useBatchMoveToPantry.generated';
 import { useBatchMoveToPantry } from '../useBatchMoveToPantry';
@@ -51,26 +54,26 @@ function moveMock(payload: {
   return recordMock(MovePurchasedItemsToPantryDocument, {
     data: {
       movePurchasedItemsToPantry: {
-        __typename: 'MovePurchasedItemsToPantryPayload',
+        __typename: 'MovePurchasedItemsToPantryPayload' as const,
         // Every line now in the pantry: the ones this call moved, plus the
         // already-stocked ones the server reports as skipped.
         movedItems: [
           ...payload.movedItemIds.map(id => ({
-            __typename: 'MovedItemInfo',
+            __typename: 'MovedItemInfo' as const,
             shoppingListItemId: id,
           })),
           ...Array.from({ length: payload.skippedCount }, (_, i) => ({
-            __typename: 'MovedItemInfo',
+            __typename: 'MovedItemInfo' as const,
             shoppingListItemId: `already-${i}`,
           })),
         ],
         failedItems: (payload.failedItems ?? []).map(item => ({
-          __typename: 'FailedMoveInfo',
+          __typename: 'FailedMoveInfo' as const,
           errorId: null,
           ...item,
         })),
         summary: {
-          __typename: 'BulkSummary',
+          __typename: 'BulkSummary' as const,
           total:
             payload.movedCount +
             payload.skippedCount +
@@ -82,6 +85,58 @@ function moveMock(payload: {
       },
     },
   });
+}
+
+/** The purchase record as a reading operation would have cached it. */
+const PURCHASED_ROW_SEED = gql`
+  fragment PurchasedRowSeed on ShoppingListItem {
+    id
+    purchaseInfo {
+      isPurchased
+      movedToPantryAt
+      purchaseDate
+      purchasedById
+      purchasedPrice
+      purchasedQuantity
+      purchasedBy {
+        id
+      }
+    }
+  }
+`;
+
+/**
+ * The rows the server reports as moved, cached the way the list query would
+ * have cached them. `writePurchaseInfo` carries the CACHED record forward, so
+ * a row the test never cached gets written back with three of its eight fields
+ * — a purchase record no server response could produce.
+ */
+function cacheWithPurchasedRows(
+  ids: string[] = ['item-1', 'item-2', 'item-3'],
+) {
+  return seedCache(
+    ids.map(id => ({
+      // The seed is checked against a REAL selection rather than one
+      // synthesized from the fixture's own keys — a derived selection can
+      // never be incomplete, so it cannot hold the seed to anything.
+      fragment: PURCHASED_ROW_SEED,
+      fragmentName: 'PurchasedRowSeed',
+      data: {
+        __typename: 'ShoppingListItem' as const,
+        id,
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo' as const,
+          isPurchased: true,
+          movedToPantryAt: null,
+          purchaseDate: null,
+          purchasedById: null,
+          purchasedPrice: null,
+          purchasedQuantity: null,
+          purchasedBy: null,
+        },
+      },
+    })),
+  );
 }
 
 describe('useBatchMoveToPantry', () => {
@@ -117,7 +172,7 @@ describe('useBatchMoveToPantry', () => {
     const { result } = renderHookWithApollo(
       () =>
         useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock] },
+      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
     );
 
     await act(async () => {
@@ -138,7 +193,7 @@ describe('useBatchMoveToPantry', () => {
     const { result } = renderHookWithApollo(
       () =>
         useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock] },
+      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
     );
 
     await act(async () => {
@@ -159,7 +214,7 @@ describe('useBatchMoveToPantry', () => {
     const { result } = renderHookWithApollo(
       () =>
         useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock] },
+      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
     );
 
     await act(async () => {
@@ -183,7 +238,7 @@ describe('useBatchMoveToPantry', () => {
     const { result } = renderHookWithApollo(
       () =>
         useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock] },
+      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
     );
 
     await act(async () => {
@@ -209,7 +264,7 @@ describe('useBatchMoveToPantry', () => {
     const { result } = renderHookWithApollo(
       () =>
         useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock] },
+      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
     );
 
     await act(async () => {
@@ -235,7 +290,7 @@ describe('useBatchMoveToPantry', () => {
     const { result } = renderHookWithApollo(
       () =>
         useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock] },
+      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
     );
 
     await act(async () => {
@@ -259,7 +314,7 @@ describe('useBatchMoveToPantry', () => {
     const { result } = renderHookWithApollo(
       () =>
         useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock] },
+      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
     );
 
     await act(async () => {
@@ -289,7 +344,7 @@ describe('useBatchMoveToPantry', () => {
     const { result } = renderHookWithApollo(
       () =>
         useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock] },
+      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
     );
 
     await act(async () => {
@@ -322,7 +377,7 @@ describe('useBatchMoveToPantry', () => {
           purchasedItems: [],
           onSuccess: mockOnSuccess,
         }),
-      { operationMocks: [move.mock] },
+      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
     );
 
     await act(async () => {
@@ -344,7 +399,7 @@ describe('useBatchMoveToPantry', () => {
     const { result } = renderHookWithApollo(
       () =>
         useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock] },
+      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
     );
 
     await act(async () => {
@@ -379,7 +434,7 @@ describe('useBatchMoveToPantry', () => {
     const { result } = renderHookWithApollo(
       () =>
         useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock] },
+      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
     );
 
     await act(async () => {
@@ -405,8 +460,8 @@ describe('useBatchMoveToPantry', () => {
     const move = recordMock(MovePurchasedItemsToPantryDocument, {
       data: {
         movePurchasedItemsToPantry: {
-          __typename: 'ForbiddenError',
-          code: 'FORBIDDEN',
+          __typename: 'ForbiddenError' as const,
+          code: ErrorCode.Forbidden,
           message: 'Not allowed',
         },
       },
@@ -419,7 +474,7 @@ describe('useBatchMoveToPantry', () => {
           purchasedItems: [],
           onSuccess: mockOnSuccess,
         }),
-      { operationMocks: [move.mock] },
+      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
     );
 
     await act(async () => {
@@ -450,7 +505,7 @@ describe('useBatchMoveToPantry', () => {
           purchasedItems: [{ id: 'item-1' }],
           onSuccess: mockOnSuccess,
         }),
-      { operationMocks: [move.mock] },
+      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
     );
 
     await act(async () => {
@@ -490,7 +545,7 @@ describe('useBatchMoveToPantry', () => {
             currentListId: 'list-1',
             purchasedItems: [{ id: 'item-1' }],
           }),
-        { operationMocks: [move.mock] },
+        { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
       );
 
       await act(async () => {
@@ -515,7 +570,7 @@ describe('useBatchMoveToPantry', () => {
             currentListId: 'list-1',
             purchasedItems: [{ id: 'item-1' }, { id: 'item-2' }],
           }),
-        { operationMocks: [move.mock] },
+        { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
       );
 
       await act(async () => {
@@ -547,7 +602,6 @@ describe('counters are adjusted exactly once', () => {
    * `update` callback remove them again on the response. Filtering edges twice
    * is idempotent; subtracting the count twice is not.
    */
-  const { gql } = require('@apollo/client');
   const COUNTS = gql`
     fragment ShoppingListCounts on ShoppingList {
       id
@@ -563,7 +617,7 @@ describe('counters are adjusted exactly once', () => {
       id: 'ShoppingList:list-1',
       fragment: COUNTS,
       data: {
-        __typename: 'ShoppingList',
+        __typename: 'ShoppingList' as const,
         id: 'list-1',
         totalItems: 10,
         completedItems: 4,
@@ -622,7 +676,7 @@ describe('counters are adjusted exactly once', () => {
     const refused = recordMock(MovePurchasedItemsToPantryDocument, {
       data: {
         movePurchasedItemsToPantry: {
-          __typename: 'ValidationError',
+          __typename: 'ValidationError' as const,
           message: 'nope',
         },
       },
@@ -650,14 +704,19 @@ describe('counters are adjusted exactly once', () => {
 });
 
 describe('moved lines are marked stocked in the cache', () => {
-  const { gql } = require('@apollo/client');
   const STOCKED = gql`
     fragment StockedProbe on ShoppingListItem {
       id
       purchaseInfo {
         isPurchased
         movedToPantryAt
+        purchaseDate
+        purchasedById
+        purchasedPrice
         purchasedQuantity
+        purchasedBy {
+          id
+        }
       }
     }
   `;
@@ -669,14 +728,18 @@ describe('moved lines are marked stocked in the cache', () => {
       id: 'ShoppingListItem:item-1',
       fragment: STOCKED,
       data: {
-        __typename: 'ShoppingListItem',
+        __typename: 'ShoppingListItem' as const,
         id: 'item-1',
         purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo',
+          __typename: 'ShoppingListItemPurchaseInfo' as const,
           isPurchased: true,
           movedToPantryAt: null,
           // Present so the merge's clearing behaviour is observable below.
           purchasedQuantity: 3,
+          purchasedPrice: null,
+          purchaseDate: null,
+          purchasedById: null,
+          purchasedBy: null,
         },
       },
     });
@@ -727,13 +790,17 @@ describe('moved lines are marked stocked in the cache', () => {
       id: 'ShoppingListItem:item-1',
       fragment: STOCKED,
       data: {
-        __typename: 'ShoppingListItem',
+        __typename: 'ShoppingListItem' as const,
         id: 'item-1',
         purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo',
+          __typename: 'ShoppingListItemPurchaseInfo' as const,
           isPurchased: true,
           movedToPantryAt: SERVER_STAMP,
           purchasedQuantity: 3,
+          purchasedPrice: null,
+          purchaseDate: null,
+          purchasedById: null,
+          purchasedBy: null,
         },
       },
     });
@@ -790,15 +857,19 @@ describe('moved lines are marked stocked in the cache', () => {
 });
 
 describe('the write-back cannot clear the purchase record', () => {
-  const { gql } = require('@apollo/client');
   const RECORD = gql`
     fragment BatchRecordProbe on ShoppingListItem {
       id
       purchaseInfo {
         isPurchased
         movedToPantryAt
-        purchasedQuantity
+        purchaseDate
+        purchasedById
         purchasedPrice
+        purchasedQuantity
+        purchasedBy {
+          id
+        }
       }
     }
   `;
@@ -815,14 +886,17 @@ describe('the write-back cannot clear the purchase record', () => {
       id: 'ShoppingListItem:item-1',
       fragment: RECORD,
       data: {
-        __typename: 'ShoppingListItem',
+        __typename: 'ShoppingListItem' as const,
         id: 'item-1',
         purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo',
+          __typename: 'ShoppingListItemPurchaseInfo' as const,
           isPurchased: false,
           movedToPantryAt: null,
           purchasedQuantity: 7,
           purchasedPrice: 4.5,
+          purchaseDate: null,
+          purchasedById: null,
+          purchasedBy: null,
         },
       },
     });

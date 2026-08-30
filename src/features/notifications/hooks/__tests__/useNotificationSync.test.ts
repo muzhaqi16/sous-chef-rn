@@ -12,7 +12,10 @@ import {
   DeleteNotificationDocument,
 } from '#features/notifications/graphql/notificationMutations.generated';
 import { MarkAllNotificationsAsReadDocument } from '#features/notifications/graphql/bulkNotificationMutations.generated';
-import { NotificationStatus } from '#/graphql/generated/schemaTypes';
+import {
+  NotificationStatus,
+  NotificationType,
+} from '#/graphql/generated/schemaTypes';
 import { readNotificationStatus } from '#features/notifications/utils/notificationCacheWrites';
 import { useNotificationSync } from '../useNotificationSync';
 
@@ -65,10 +68,30 @@ const seedFeed = (
       unreadNotificationCount,
       hasUrgentNotifications,
     },
+    // Complete, because `captureNotification` snapshots the cached row and
+    // `restoreNotifications` writes that snapshot back through the FULL
+    // `useNotificationsOnLaunch_notification` fragment. Seeding two fields
+    // makes the restore write two fields, so the row the test asserts was
+    // restored reads back incomplete.
     ...rows.map(r => ({
       __typename: 'Notification',
       id: r.id,
       status: r.status,
+      title: 'Seeded',
+      message: 'Seeded message',
+      // `SYSTEM` is a `NotificationCategory`, not a `NotificationType` — the
+      // type enum has no such member, so the seed described a notification the
+      // schema cannot produce.
+      type: NotificationType.ListUpdated,
+      category: 'SYSTEM',
+      priority: 'NORMAL',
+      payload: null,
+      actionUrl: null,
+      sourceId: null,
+      sourceType: null,
+      sentAt: '2026-01-01T00:00:00.000Z',
+      readAt: null,
+      expiresAt: null,
     })),
   ]);
 

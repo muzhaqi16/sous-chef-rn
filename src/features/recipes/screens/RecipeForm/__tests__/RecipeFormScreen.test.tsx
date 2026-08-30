@@ -120,7 +120,6 @@ describe('RecipeFormScreen', () => {
       data: {
         createRecipe: {
           __typename: 'CreateRecipePayload',
-          success: true,
         },
       },
     });

@@ -1,10 +1,15 @@
 'use no memo';
 import React from 'react';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { SearchResults, type SearchResultsProps } from '../SearchResults';
-import { renderWithProviders } from '#/test-utils/renderWithProviders';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { recordMock } from '#/test-utils/apolloMockProvider';
 import { BarcodeCreatePantryItemDocument } from '../SearchResults.generated';
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -144,17 +149,17 @@ describe('SearchResults', () => {
   });
 
   it('renders item name', () => {
-    renderWithProviders(<SearchResults {...defaultProps} />);
+    renderWithApollo(<SearchResults {...defaultProps} />);
     expect(screen.getByText('Organic Milk')).toBeTruthy();
   });
 
   it('renders Add to Pantry button for pantry source', () => {
-    renderWithProviders(<SearchResults {...defaultProps} />);
+    renderWithApollo(<SearchResults {...defaultProps} />);
     expect(screen.getByText('Add to Pantry')).toBeTruthy();
   });
 
   it('renders Add to Shopping List button for shopping list source', () => {
-    renderWithProviders(
+    renderWithApollo(
       <SearchResults
         {...defaultProps}
         source="shoppingList"
@@ -165,7 +170,7 @@ describe('SearchResults', () => {
   });
 
   it('renders Scan Another button', () => {
-    renderWithProviders(<SearchResults {...defaultProps} />);
+    renderWithApollo(<SearchResults {...defaultProps} />);
     expect(screen.getByText('Scan Another')).toBeTruthy();
   });
 
@@ -174,7 +179,7 @@ describe('SearchResults', () => {
   // user here with no destination. Offering a button that silently no-ops (its
   // handler returns early on `!source`) is worse than offering none.
   it('offers no add action when there is no source to add to', () => {
-    renderWithProviders(<SearchResults {...defaultProps} source={undefined} />);
+    renderWithApollo(<SearchResults {...defaultProps} source={undefined} />);
     expect(screen.queryByTestId('primary-btn')).toBeNull();
     // The card and the escape hatch still render.
     expect(screen.getByText('Scan Another')).toBeTruthy();
@@ -193,7 +198,7 @@ describe('SearchResults', () => {
       },
     });
 
-    renderWithProviders(
+    renderWithApollo(
       <SearchResults
         {...defaultProps}
         item={{
@@ -202,7 +207,7 @@ describe('SearchResults', () => {
           displayUnit: { id: 'unit-litre', name: 'litre', symbol: 'L' },
         }}
       />,
-      { apolloProps: { mocks: [rec.mock] } },
+      { operationMocks: [rec.mock] },
     );
 
     fireEvent.press(screen.getByTestId('primary-btn'));
@@ -242,8 +247,8 @@ describe('SearchResults', () => {
         },
       });
 
-      renderWithProviders(<SearchResults {...defaultProps} />, {
-        apolloProps: { mocks: [rec.mock] },
+      renderWithApollo(<SearchResults {...defaultProps} />, {
+        operationMocks: [rec.mock],
       });
       fireEvent.press(screen.getByTestId('primary-btn'));
 
@@ -261,15 +266,15 @@ describe('SearchResults', () => {
         data: {
           createPantryItem: {
             __typename: 'ValidationError',
-            code: 'VALIDATION_ERROR',
+            code: ErrorCode.ValidationFailed,
             message: 'nope',
             field: 'quantity',
           },
         },
       });
 
-      renderWithProviders(<SearchResults {...defaultProps} />, {
-        apolloProps: { mocks: [rec.mock] },
+      renderWithApollo(<SearchResults {...defaultProps} />, {
+        operationMocks: [rec.mock],
       });
       fireEvent.press(screen.getByTestId('primary-btn'));
 
@@ -278,6 +283,20 @@ describe('SearchResults', () => {
           expect.anything(),
           defaultProps.pantryId,
           -1,
+        ),
+      );
+
+      // And the refusal names the input it refused. Under a bare cache this
+      // could not be asserted: without `possibleTypes` the
+      // `... on ValidationError` inline fragment did not match, `field` was
+      // dropped before anything read it, and every refusal of this mutation
+      // fell back to the generic retry line — which a test could assert
+      // successfully while a real user never saw it.
+      const { alertService } = jest.requireMock('#/services/alertService');
+      await waitFor(() =>
+        expect(alertService.alert).toHaveBeenCalledWith(
+          expect.anything(),
+          "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.",
         ),
       );
     });

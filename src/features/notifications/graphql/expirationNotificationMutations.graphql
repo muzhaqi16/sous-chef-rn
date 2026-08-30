@@ -44,5 +44,8 @@ mutation MarkExpirationNotificationAsRead($input: MarkExpirationNotificationAsRe
       resource
       resourceId
     }
+    ... on ValidationError {
+      field
+    }
   }
 }

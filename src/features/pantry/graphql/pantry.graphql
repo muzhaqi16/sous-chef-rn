@@ -554,6 +554,9 @@ mutation DeletePantry($input: DeletePantryInput!) {
       resource
       resourceId
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -575,6 +578,9 @@ mutation MarkPantryAsDefault($input: MarkPantryAsDefaultInput!) {
     ... on NotFoundError {
       resource
       resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -758,6 +764,9 @@ mutation DeletePantryItem($input: DeletePantryItemInput!) {
     ... on NotFoundError {
       resource
       resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -964,6 +973,9 @@ mutation ConvertExpiredToWaste($input: ConvertExpiredToWasteInput!) {
       resource
       resourceId
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -1052,6 +1064,9 @@ mutation ConvertExpiredBatchesToWaste($input: ConvertExpiredBatchesToWasteInput!
       resource
       resourceId
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -1085,6 +1100,9 @@ mutation SyncPantryItem($input: SyncPantryItemInput!) {
       code
       message
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -1109,6 +1127,9 @@ mutation SyncDeletePantryItem($input: SyncDeletePantryItemInput!) {
     ... on Error {
       code
       message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

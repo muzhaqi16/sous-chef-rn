@@ -238,6 +238,9 @@ mutation RemoveDietaryRestriction($input: RemoveRestrictionInput!) {
       resource
       resourceId
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 

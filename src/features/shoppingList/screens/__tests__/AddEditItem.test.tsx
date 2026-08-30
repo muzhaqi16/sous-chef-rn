@@ -268,27 +268,67 @@ jest.mock('#components/molecules/FieldRow', () => ({
   },
 }));
 
-// Must include every field selected by `ShoppingListItemFragment` (which
-// composes `ShoppingListItemDisplayFragment` + `ShoppingListItemCore`).
-// `useFragment` returns `complete: true` only when the cached entity has the
-// full field set, so the populate-form effect won't run with a sparse fixture.
-function buildShoppingListItem(id: string) {
+/**
+ * The three operations this screen fires return three different shapes, so
+ * there are three fixtures.
+ *
+ * There was one, stating the union of all three plus `purchasesConnection`,
+ * which none of them selects. A fixture is executed against the real schema, so
+ * every field the operation does not select is dropped before the result
+ * reaches Apollo: the add mock was describing `priority`, `addedBy` and a
+ * purchase connection that its response could never carry, and each test read
+ * as though it had asserted on them.
+ *
+ * What each one may state:
+ *   add    — `AddedShoppingListItemFields`
+ *   update — the same, plus the brand / net-weight fields `UpdateShoppingListItem`
+ *            selects inline beside the fragment
+ *   get    — `ItemDetail_shoppingListItem` + `useShoppingListItemForm_item`,
+ *            which carry the detail fields but NOT `sortOrder`
+ *
+ * `useFragment` still reports `complete: true` for the form's populate effect:
+ * the schema-backed mock link fills whatever a fixture leaves out, so a fixture
+ * states what the test asserts on rather than the whole selection.
+ */
+const SHOPPING_LIST_ITEM_CORE = {
+  __typename: 'ShoppingListItem',
+  itemName: 'Milk',
+  quantity: '1',
+  quantityInput: '1',
+  displayFormat: 'COMPACT',
+  purchaseInfo: {
+    __typename: 'ShoppingListItemPurchaseInfo',
+    isPurchased: false,
+  },
+  version: 1,
+  updatedAt: '2025-01-01T00:00:00.000Z',
+  category: null,
+  notes: null,
+  unitName: null,
+  unit: null,
+  item: null,
+};
+
+/** The shape `AddItemToShoppingList` returns on `results.item`. */
+function buildAddedShoppingListItem(id: string) {
+  return { ...SHOPPING_LIST_ITEM_CORE, id, sortOrder: 0 };
+}
+
+/** The added shape plus what `UpdateShoppingListItem` selects beside it. */
+function buildUpdatedShoppingListItem(id: string) {
   return {
-    __typename: 'ShoppingListItem',
+    ...buildAddedShoppingListItem(id),
+    brand: null,
+    netWeight: null,
+    netWeightUnit: null,
+  };
+}
+
+/** The shape `GetShoppingListItem` returns — detail fields, no `sortOrder`. */
+function buildDetailShoppingListItem(id: string) {
+  return {
+    ...SHOPPING_LIST_ITEM_CORE,
     id,
-    itemName: 'Milk',
-    quantity: '1',
-    quantityInput: '1',
-    displayFormat: 'COMPACT',
-    purchaseInfo: { __typename: 'PurchaseInfo', isPurchased: false },
-    version: 1,
-    updatedAt: '2025-01-01T00:00:00.000Z',
-    category: null,
-    notes: null,
-    unitName: null,
-    unit: null,
-    sortOrder: 0,
-    item: null,
     priceEstimate: null,
     source: {
       __typename: 'ShoppingListItemSource',
@@ -306,11 +346,6 @@ function buildShoppingListItem(id: string) {
     netWeightUnit: null,
     createdAt: '2025-01-01T00:00:00.000Z',
     addedBy: null,
-    purchasesConnection: {
-      __typename: 'PurchaseConnection',
-      edges: [],
-      totalCount: 0,
-    },
   };
 }
 
@@ -329,7 +364,7 @@ function buildAddItemMock(): MockedResponse {
               success: true,
               quantityIncremented: false,
               error: null,
-              item: buildShoppingListItem('new-item'),
+              item: buildAddedShoppingListItem('new-item'),
             },
           ],
         },
@@ -355,10 +390,11 @@ function buildAddItemNullMock(): MockedResponse {
   };
 }
 
-function buildAddItemNoDataMock(): MockedResponse {
+/** What `queueLink` emits for a queued mutation: the field present but null. */
+function buildAddItemQueuedMock(): MockedResponse {
   return {
     request: { query: AddItemToShoppingListDocument, variables: () => true },
-    result: { data: null },
+    result: { data: { addItemsToShoppingList: null } },
     maxUsageCount: 10,
   };
 }
@@ -378,7 +414,7 @@ function buildUpdateItemMock(): MockedResponse {
       data: {
         updateShoppingListItem: {
           __typename: 'UpdateShoppingListItemPayload',
-          shoppingListItem: buildShoppingListItem('item1'),
+          shoppingListItem: buildUpdatedShoppingListItem('item1'),
         },
       },
     },
@@ -426,7 +462,7 @@ function buildGetShoppingListItemMock(itemId: string): MockedResponse {
       variables: { id: itemId },
     },
     result: {
-      data: { shoppingListItem: buildShoppingListItem(itemId) },
+      data: { shoppingListItem: buildDetailShoppingListItem(itemId) },
     },
     maxUsageCount: 10,
   };
@@ -827,7 +863,7 @@ describe('AddEditItem', () => {
       );
 
     renderWithApollo(<AddEditItem route={addRoute} />, {
-      operationMocks: [buildAddItemNoDataMock()],
+      operationMocks: [buildAddItemQueuedMock()],
     });
     await user.press(screen.getByTestId('add-item-submit-button'));
 

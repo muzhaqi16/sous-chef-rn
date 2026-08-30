@@ -198,6 +198,9 @@ mutation UpsertExternalRecipe($input: CreateRecipeInput!) {
       code
       message
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -294,6 +297,9 @@ mutation DeleteRecipe($input: DeleteRecipeInput!) {
       resource
       resourceId
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -349,6 +355,9 @@ mutation RemoveRecipeFromFavorites($input: RemoveRecipeFromFavoritesInput!) {
       resource
       resourceId
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -366,6 +375,9 @@ mutation DeleteRecipeFolder($input: DeleteRecipeFolderInput!) {
     ... on NotFoundError {
       resource
       resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -440,6 +452,9 @@ mutation CreateShoppingListItemsFromRecipe(
     ... on Error {
       code
       message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -537,6 +552,9 @@ mutation ConfirmRecipeConsumption(
     ... on Error {
       code
       message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

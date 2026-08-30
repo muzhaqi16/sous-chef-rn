@@ -12,6 +12,7 @@
  */
 
 import { gql, isReference, type ApolloCache } from '@apollo/client';
+import { Kind, type DocumentNode, type FragmentDefinitionNode } from 'graphql';
 import {
   ShoppingListItemDisplayFragmentDoc,
   type ShoppingListItemDisplayFragment,
@@ -295,28 +296,31 @@ export function writePurchaseInfo(
     restoring: options.restoring === true,
   });
 
+  const purchaseInfo = {
+    ...carriedForward(cached),
+    __typename: 'ShoppingListItemPurchaseInfo',
+    isPurchased: nextPurchased,
+    movedToPantryAt: stamp,
+  };
+
+  // The fragment is narrowed to what is being written, not to what the type
+  // has — see {@link purchaseInfoWriteFragment}.
+  const written = purchaseInfoWriteFragment(
+    Object.keys(purchaseInfo),
+    options.updatedAt !== undefined,
+  );
+
   cache.writeFragment({
     id: cacheId,
-    fragment:
-      options.updatedAt === undefined
-        ? PURCHASE_INFO_FRAGMENT
-        : PURCHASE_INFO_WITH_UPDATED_AT_FRAGMENT,
-    fragmentName:
-      options.updatedAt === undefined
-        ? '_WritePurchaseInfo'
-        : '_WritePurchaseInfoWithUpdatedAt',
+    fragment: written.doc,
+    fragmentName: written.name,
     data: {
       __typename: 'ShoppingListItem',
       id: itemId,
       ...(options.updatedAt === undefined
         ? {}
         : { updatedAt: options.updatedAt }),
-      purchaseInfo: {
-        ...carriedForward(cached),
-        __typename: 'ShoppingListItemPurchaseInfo',
-        isPurchased: nextPurchased,
-        movedToPantryAt: stamp,
-      },
+      purchaseInfo,
     },
   });
 }
@@ -340,6 +344,105 @@ function carriedForward(
     carried[field] = value;
   }
   return carried;
+}
+
+/**
+ * The write fragment narrowed to exactly the fields a write supplies.
+ *
+ * `writeFragment` reports every field its fragment SELECTS and the data OMITS.
+ * Normally that is a defect: an operation asked for a field the payload does
+ * not carry, and the read it feeds goes incomplete. Here it was neither. The
+ * record's cached shape is whatever the READING operation selected,
+ * {@link carriedForward} passes exactly that through, and the store ends up
+ * right. What was wrong was the assertion — the writer named the whole type
+ * while supplying the part of it the cache holds, so every toggle from the list
+ * screen reported five missing fields. That screen's
+ * `ShoppingListItemDisplayFragment` caches `isPurchased` and `movedToPantryAt`
+ * and nothing else, which is the correct thing for it to cache.
+ *
+ * The console noise was the cheap half. The expensive half was that the
+ * suite-wide missing-field guard had to be taught to ignore those five pairs,
+ * and a hole cut in a guard is open to whatever else falls through it.
+ *
+ * So the fragment narrows to the write instead. The store outcome is unchanged,
+ * the type policy included: Apollo drops a field the data lacks BEFORE the
+ * merge runs, so `incoming` — which is what the clear-on-flip loop in
+ * `cache.ts` tests with `field in incoming` — is identical either way.
+ *
+ * Built by filtering the read fragment's AST rather than from a second field
+ * list, so the two cannot drift. Each field set gets its own fragment NAME:
+ * Apollo caches a parsed document by name, and two documents sharing one would
+ * serve each other's selections. Memoized, since a toggle rebuilds this on
+ * every tap and there are two shapes in practice.
+ */
+const purchaseInfoWriteDocs = new Map<
+  string,
+  { doc: DocumentNode; name: string }
+>();
+
+function purchaseInfoWriteFragment(
+  fields: readonly string[],
+  withUpdatedAt: boolean,
+): { doc: DocumentNode; name: string } {
+  const baseName = withUpdatedAt
+    ? '_WritePurchaseInfoWithUpdatedAt'
+    : '_WritePurchaseInfo';
+  const kept = new Set(fields);
+  const name = `${baseName}_${fields
+    .filter(field => field !== '__typename')
+    .sort()
+    .join('_')}`;
+
+  const memo = purchaseInfoWriteDocs.get(name);
+  if (memo) return memo;
+
+  const source = withUpdatedAt
+    ? PURCHASE_INFO_WITH_UPDATED_AT_FRAGMENT
+    : PURCHASE_INFO_FRAGMENT;
+  const definition = source.definitions.find(
+    (node): node is FragmentDefinitionNode =>
+      node.kind === Kind.FRAGMENT_DEFINITION && node.name.value === baseName,
+  );
+  // The read fragment is a module-scope literal, so this cannot miss. Falling
+  // back to it whole rather than throwing keeps a write correct if it ever did.
+  if (!definition) return { doc: source, name: baseName };
+
+  const built = {
+    name,
+    doc: {
+      ...source,
+      definitions: [
+        {
+          ...definition,
+          name: { ...definition.name, value: name },
+          selectionSet: {
+            ...definition.selectionSet,
+            selections: definition.selectionSet.selections.map(selection =>
+              selection.kind === Kind.FIELD &&
+              selection.name.value === 'purchaseInfo' &&
+              selection.selectionSet
+                ? {
+                    ...selection,
+                    selectionSet: {
+                      ...selection.selectionSet,
+                      selections: selection.selectionSet.selections.filter(
+                        sub =>
+                          sub.kind === Kind.FIELD &&
+                          (sub.name.value === '__typename' ||
+                            kept.has(sub.name.value)),
+                      ),
+                    },
+                  }
+                : selection,
+            ),
+          },
+        },
+      ],
+    },
+  };
+
+  purchaseInfoWriteDocs.set(name, built);
+  return built;
 }
 
 /**

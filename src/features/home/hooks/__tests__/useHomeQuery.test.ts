@@ -34,13 +34,13 @@ type HomeFixture = {
 
 function homeNode(h: HomeFixture) {
   return {
-    __typename: 'Home',
+    __typename: 'Home' as const,
     id: h.id,
     name: h.name ?? `Home ${h.id}`,
     isDefault: h.isDefault ?? false,
     version: h.version ?? 1,
     myMembership: {
-      __typename: 'Membership',
+      __typename: 'Membership' as const,
       id: `mm-${h.id}`,
       role: MembershipRole.Owner,
       canManageHome: true,
@@ -51,12 +51,12 @@ function homeNode(h: HomeFixture) {
       canInviteOthers: true,
     },
     pantriesConnection: {
-      __typename: 'PantryConnection',
+      __typename: 'PantryConnection' as const,
       totalCount: h.pantriesTotalCount ?? h.pantries?.length ?? 0,
       edges: (h.pantries ?? []).map(p => ({
-        __typename: 'PantryEdge',
+        __typename: 'PantryEdge' as const,
         node: {
-          __typename: 'Pantry',
+          __typename: 'Pantry' as const,
           id: p.id,
           name: p.name ?? `Pantry ${p.id}`,
           isDefault: p.isDefault ?? false,
@@ -64,12 +64,12 @@ function homeNode(h: HomeFixture) {
       })),
     },
     membersConnection: {
-      __typename: 'MembershipConnection',
+      __typename: 'MembershipConnection' as const,
       totalCount: h.membersTotalCount ?? 0,
       edges: [],
     },
     invitesConnection: {
-      __typename: 'HomeInviteConnection',
+      __typename: 'HomeInviteConnection' as const,
       totalCount: 0,
       edges: [],
     },
@@ -81,14 +81,14 @@ function homesMock(homes: HomeFixture[] | null): MockedResponse {
     data: {
       homes: homes
         ? {
-            __typename: 'HomeConnection',
+            __typename: 'HomeConnection' as const,
             edges: homes.map((h, i) => ({
-              __typename: 'HomeEdge',
+              __typename: 'HomeEdge' as const,
               cursor: `c${i}`,
               node: homeNode(h),
             })),
             pageInfo: {
-              __typename: 'PageInfo',
+              __typename: 'PageInfo' as const,
               hasNextPage: false,
               endCursor: null,
             },

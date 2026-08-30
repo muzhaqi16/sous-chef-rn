@@ -1,4 +1,6 @@
 import { act, waitFor } from '@testing-library/react-native';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#/apollo/cache';
 import { InMemoryCache } from '@apollo/client';
 import {
   renderHookWithApollo,
@@ -158,7 +160,7 @@ const addItemsMock = (
               }
             : {
                 __typename: 'ValidationError',
-                code: 'VALIDATION',
+                code: ErrorCode.ValidationFailed,
                 message: 'bad',
               },
       },
@@ -223,7 +225,7 @@ describe('useRecipeShoppingList — handleAddSingleIngredient (external branch)'
     // the shopping list stayed empty until reconnect. The row is now written
     // before the mutation fires, keyed by the client-minted id so the eventual
     // replay merges onto it rather than duplicating.
-    const cache = new InMemoryCache();
+    const cache = makeCache();
 
     const { result } = await renderForSingleAdd({
       isBackendRecipe: true,
@@ -257,11 +259,11 @@ const addRecipeIngredientMock = (
       createShoppingListItemFromRecipeIngredient:
         member.kind === 'error-union'
           ? {
+              // `resource`/`resourceId` are selected on `NotFoundError`, not on
+              // this member — a ValidationError response cannot carry them.
               __typename: 'ValidationError',
-              code: 'VALIDATION',
+              code: ErrorCode.ValidationFailed,
               message: 'bad',
-              resource: null,
-              resourceId: null,
             }
           : // No payload + no error → the offline queue emits the field as null.
             null,

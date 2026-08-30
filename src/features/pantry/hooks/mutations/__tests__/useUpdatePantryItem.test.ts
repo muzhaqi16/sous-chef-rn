@@ -35,11 +35,23 @@ jest.mock('../utils', () => ({
       return input;
     },
   ),
+  // Mirrors the real `buildOptimisticUnit` (mutations/utils.ts) field for
+  // field. A double that returns fewer fields than the function it stands in
+  // for writes an incomplete Unit into the cache, which makes every read that
+  // selects one come back empty — the opposite of what the real builder does.
   buildOptimisticUnit: jest.fn(() => ({
     __typename: 'Unit',
     id: 'new-unit-id',
     symbol: 'kg',
     name: 'Kilogram',
+    type: 'WEIGHT',
+    isMetric: false,
+    baseUnitId: null,
+    conversionFactor: 1,
+    isCommon: false,
+    displayAsFraction: false,
+    minPrecision: 0,
+    autoConvertThreshold: null,
   })),
   stateToCountKey: jest.fn(() => 'ambient'),
 }));

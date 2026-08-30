@@ -1,5 +1,5 @@
 import React from 'react';
-import { InMemoryCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import { screen, userEvent } from '@testing-library/react-native';
 import {
   renderWithApollo,
@@ -129,7 +129,7 @@ function buildHome(
 }
 
 function buildCache(home: HomeCard_HomeFragment) {
-  const cache = new InMemoryCache();
+  const cache = makeCache();
   cache.writeFragment({
     id:
       cache.identify({ __typename: home.__typename, id: home.id }) ??

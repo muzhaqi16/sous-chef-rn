@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { InMemoryCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import { screen, act, fireEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryContent } from '../PantryContent';
@@ -22,7 +22,7 @@ function renderContent(
   ui: React.ReactElement,
   items: Array<{ __typename: string; id: string } & Record<string, unknown>>,
 ) {
-  const cache = new InMemoryCache();
+  const cache = makeCache();
   for (const item of items) {
     cache.writeFragment({
       id:
@@ -121,6 +121,7 @@ function createMockPantryItem(
     tags: [],
     photos: [],
     sourceShoppingListItemId: null,
+    activeBatchCount: 0,
     pantry: { __typename: 'Pantry', id: 'pantry-1' },
     pantryId: 'pantry-1',
     version: 1,
@@ -847,7 +848,7 @@ describe('PantryContent', () => {
         id: '1',
         itemName: 'Flour',
         quantity: 500,
-        unit: { symbol: 'g' },
+        unit: { __typename: 'Unit', id: 'unit-g', symbol: 'g' },
       }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);

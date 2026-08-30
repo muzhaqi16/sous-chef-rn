@@ -402,6 +402,9 @@ mutation MarkSuggestionDismissed($input: MarkSuggestionDismissedInput!) {
       code
       message
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -416,6 +419,9 @@ mutation MarkSuggestionActive($input: MarkSuggestionActiveInput!) {
     ... on Error {
       code
       message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

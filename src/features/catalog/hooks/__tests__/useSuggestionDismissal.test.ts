@@ -7,7 +7,7 @@ import {
   MarkSuggestionDismissedDocument,
   MarkSuggestionActiveDocument,
 } from '#operations/item/item.generated';
-import { SuggestionSurface } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, SuggestionSurface } from '#/graphql/generated/schemaTypes';
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
 
 jest.mock('#/services/toastService', () => ({
@@ -65,7 +65,7 @@ describe('useSuggestionDismissal', () => {
       data: {
         markSuggestionDismissed: {
           __typename: 'NotFoundError',
-          code: 'NOT_FOUND',
+          code: ErrorCode.NotFound,
           message: 'unknown item',
         },
       },
@@ -147,7 +147,7 @@ describe('useSuggestionDismissal', () => {
       data: {
         markSuggestionActive: {
           __typename: 'NotFoundError',
-          code: 'NOT_FOUND',
+          code: ErrorCode.NotFound,
           message: 'Suggestion not found',
         },
       },

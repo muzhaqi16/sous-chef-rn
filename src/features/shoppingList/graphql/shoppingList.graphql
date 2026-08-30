@@ -752,6 +752,9 @@ mutation DeleteShoppingList($input: DeleteShoppingListInput!) {
       resource
       resourceId
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -796,6 +799,9 @@ mutation RemoveCollaborator($input: RemoveShoppingListCollaboratorInput!) {
     ... on NotFoundError {
       resource
       resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -908,6 +914,9 @@ mutation RemoveItemFromShoppingList($input: RemoveItemFromShoppingListInput!) {
     ... on NotFoundError {
       resource
       resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -1108,6 +1117,14 @@ mutation RemoveItemsFromShoppingList(
       code
       message
     }
+    # `alertIfRejected` routes a refusal that names a field to `errors.field.*`
+    # and shows the server's unlocalizable English only as a last resort. It
+    # reads `field` off the payload, so not selecting it here made that branch
+    # unreachable: every rejection of this mutation fell back to the generic
+    # copy no matter which input the server actually refused.
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -1135,6 +1152,9 @@ mutation AddItemsToShoppingList($input: AddItemsToShoppingListInput!) {
     ... on Error {
       code
       message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -1223,6 +1243,9 @@ mutation SyncShoppingListItem($input: SyncShoppingListItemInput!) {
       code
       message
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -1247,6 +1270,9 @@ mutation SyncDeleteShoppingListItem($input: SyncDeleteShoppingListItemInput!) {
     ... on Error {
       code
       message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -1277,6 +1303,9 @@ mutation SyncMoveShoppingListItem($input: SyncMoveShoppingListItemInput!) {
     ... on Error {
       code
       message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

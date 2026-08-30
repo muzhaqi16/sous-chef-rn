@@ -28,6 +28,7 @@ import {
   DuplicateTemplateDocument,
 } from '#features/mealPlan/graphql/mealTemplate.generated';
 import { useMealTemplateActions } from '../useMealTemplateActions';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { useStore } from '#store';
@@ -153,7 +154,7 @@ describe('useMealTemplateActions', () => {
       data: {
         deleteMealTemplate: {
           __typename: 'NotFoundError',
-          code: 'NOT_FOUND',
+          code: ErrorCode.NotFound,
           message: 'Template not found',
         },
       },

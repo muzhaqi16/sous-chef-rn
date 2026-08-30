@@ -35,5 +35,8 @@ mutation MovePurchasedItemsToPantry($input: MovePurchasedItemsToPantryInput!) {
       code
       message
     }
+    ... on ValidationError {
+      field
+    }
   }
 }

@@ -90,6 +90,9 @@ mutation RequestPasswordReset($input: RequestPasswordResetInput!) {
       code
       message
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -106,6 +109,9 @@ mutation ValidatePasswordResetToken($input: ValidatePasswordResetTokenInput!) {
     ... on Error {
       code
       message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

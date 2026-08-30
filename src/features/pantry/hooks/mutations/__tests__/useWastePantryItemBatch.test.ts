@@ -5,7 +5,7 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { WastePantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
-import { BatchStatus } from '#/graphql/generated/schemaTypes';
+import { BatchStatus, ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { useWastePantryItemBatch } from '../useWastePantryItemBatch';
 
@@ -80,7 +80,7 @@ describe('useWastePantryItemBatch (local-first)', () => {
             data: {
               wastePantryItemBatch: {
                 __typename: 'ValidationError',
-                code: 'VALIDATION',
+                code: ErrorCode.ValidationFailed,
                 message: 'bad batch',
                 field: 'batchId',
               },

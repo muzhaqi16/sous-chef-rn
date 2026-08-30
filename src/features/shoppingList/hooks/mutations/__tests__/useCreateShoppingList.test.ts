@@ -114,8 +114,10 @@ describe('useCreateShoppingList', () => {
 
     // ...written into the cache BEFORE the mutation fired.
     expect(addOptimisticShoppingList).toHaveBeenCalledTimes(1);
-    // Online success returns the server entity.
-    expect(created).toEqual({
+    // Online success returns the server entity. The rest of the selection set
+    // is filled from the SDL, so this pins the identity the assertion is about
+    // rather than the exhaustive shape.
+    expect(created).toMatchObject({
       __typename: 'ShoppingList',
       id: 'srv-echo',
       name: 'Weekly',
@@ -128,7 +130,13 @@ describe('useCreateShoppingList', () => {
     // error — that's the queued signature classifyCreateResult keys on.
     const { result } = renderHookWithApollo(
       () => useCreateShoppingList('Failed to create list'),
-      { operationMocks: [createMock({ result: { data: null } })] },
+      {
+        // What `queueLink` emits for a queued mutation: the field present
+        // but null. A bare `null` is not a shape production produces.
+        operationMocks: [
+          createMock({ result: { data: { createShoppingList: null } } }),
+        ],
+      },
     );
 
     let created: { id: string; name: string } | undefined;

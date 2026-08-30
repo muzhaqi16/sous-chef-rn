@@ -47,7 +47,7 @@ function buildReviewNode(
   viewerHasVotedHelpful: boolean = false,
 ) {
   return {
-    __typename: 'RecipeReview',
+    __typename: 'RecipeReview' as const,
     id,
     rating,
     comment: id === 'rev-1' ? 'Great!' : 'Good',
@@ -56,11 +56,11 @@ function buildReviewNode(
     createdAt,
     updatedAt: createdAt,
     user: {
-      __typename: 'User',
+      __typename: 'User' as const,
       id: user.id,
       email: `${user.id}@test.com`,
       profile: {
-        __typename: 'UserProfile',
+        __typename: 'UserProfile' as const,
         id: `${user.id}-profile`,
         displayName: user.id,
         avatar: null,
@@ -96,13 +96,13 @@ function buildGetRecipeReviewsMock(
     result: {
       data: {
         recipe: {
-          __typename: 'Recipe',
+          __typename: 'Recipe' as const,
           id: recipeId,
           reviews: {
-            __typename: 'RecipeReviewConnection',
+            __typename: 'RecipeReviewConnection' as const,
             totalCount: nodes.length,
             edges: nodes.map(node => ({
-              __typename: 'RecipeReviewEdge',
+              __typename: 'RecipeReviewEdge' as const,
               node,
             })),
           },
@@ -137,10 +137,10 @@ function buildCreateReviewMock(): MockedResponse {
     result: {
       data: {
         createRecipeReview: {
-          __typename: 'CreateRecipeReviewPayload',
-          success: true,
-          message: 'OK',
-          code: 'OK',
+          // `CreateRecipeReviewPayload` has two fields — `recipe` and
+          // `recipeReview`. `code`/`message` are selected on the ERROR members
+          // of the union, and `success` is on none of them.
+          __typename: 'CreateRecipeReviewPayload' as const,
           recipeReview: buildReviewNode(
             'rev-new',
             5,
@@ -163,9 +163,9 @@ function buildDeleteReviewMock(): MockedResponse {
     result: {
       data: {
         deleteRecipeReview: {
-          __typename: 'DeleteRecipeReviewPayload',
+          __typename: 'DeleteRecipeReviewPayload' as const,
           recipeReview: {
-            __typename: 'RecipeReview',
+            __typename: 'RecipeReview' as const,
             id: 'rev-2',
           },
         },
@@ -177,7 +177,7 @@ function buildDeleteReviewMock(): MockedResponse {
 const makeBackendRecipe = (
   overrides?: Partial<MaterializedRecipe>,
 ): MaterializedRecipe => ({
-  __typename: 'Recipe',
+  __typename: 'Recipe' as const,
   id: 'recipe-1',
   name: 'Test Recipe',
   description: null,
@@ -200,7 +200,7 @@ const makeBackendRecipe = (
   instructions: null,
   savedDetails: null,
   ingredientsConnection: {
-    __typename: 'RecipeIngredientConnection',
+    __typename: 'RecipeIngredientConnection' as const,
     edges: [],
   },
   totalReviews: 3,
@@ -210,7 +210,11 @@ const makeBackendRecipe = (
   rating3Count: 1,
   rating4Count: 1,
   rating5Count: 1,
-  createdBy: { __typename: 'User', id: 'other-user', email: 'other@test.com' },
+  createdBy: {
+    __typename: 'User' as const,
+    id: 'other-user',
+    email: 'other@test.com',
+  },
   ...overrides,
 });
 
@@ -276,7 +280,7 @@ describe('useRecipeReviews', () => {
           recipeId: 'recipe-1',
           backendRecipe: makeBackendRecipe({
             createdBy: {
-              __typename: 'User',
+              __typename: 'User' as const,
               id: 'user-1',
               email: 'user-1@test.com',
             },
@@ -346,11 +350,11 @@ describe('useRecipeReviews', () => {
             result: {
               data: {
                 toggleReviewHelpful: {
-                  __typename: 'ToggleReviewHelpfulPayload',
+                  __typename: 'ToggleReviewHelpfulPayload' as const,
                   reviewHelpful: {
-                    __typename: 'ReviewHelpful',
+                    __typename: 'ReviewHelpful' as const,
                     id: 'vote-1',
-                    user: { __typename: 'User', id: 'user-1' },
+                    user: { __typename: 'User' as const, id: 'user-1' },
                   },
                 },
               },
@@ -405,10 +409,7 @@ describe('useRecipeReviews', () => {
     const { mock, fired } = recordMock(CreateRecipeReviewDocument, {
       data: {
         createRecipeReview: {
-          __typename: 'CreateRecipeReviewPayload',
-          success: true,
-          message: 'OK',
-          code: 'OK',
+          __typename: 'CreateRecipeReviewPayload' as const,
           recipeReview: buildReviewNode(
             'rev-new',
             5,

@@ -9,7 +9,10 @@ import {
   GetNotificationPreferencesDocument,
   UpdateNotificationPreferencesDocument,
 } from '#operations/user/user.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  ExpirationFrequency,
+} from '#/graphql/generated/schemaTypes';
 import { useNotificationSettings } from '../useNotificationSettings';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -28,13 +31,13 @@ jest.mock('#store/useAppStore', () => {
 });
 
 const mockPreferencesData = {
-  __typename: 'NotificationPreferences',
+  __typename: 'NotificationPreferences' as const,
   id: 'pref-1',
   emailEnabled: true,
   pushEnabled: true,
   smsEnabled: false,
   expirationNotifications: true,
-  expirationNotificationFrequency: 'DAILY_MORNING',
+  expirationNotificationFrequency: ExpirationFrequency.DailyMorning,
   expirationDaysThreshold: 5,
   lowStockAlerts: true,
   pantryChanges: true,
@@ -81,17 +84,32 @@ beforeEach(() => {
   mockGetDeviceTimezone.mockReturnValue('America/New_York');
 });
 
+/**
+ * The preferences query, as a PER-OPERATION mock — the form that composes.
+ *
+ * This used to be a schema-driven `mocks` map, which four tests then spread
+ * alongside `operationMocks`. The wrapper discarded it: the query went
+ * unanswered, the hook ran on its defaults, and all sixteen tests still passed.
+ * `showWarnings={false}` hid the unanswered operation and `errorPolicy: 'all'`
+ * routed the failure into an `error` field nothing read. The two strategies are
+ * mutually exclusive by type now, so the mistake cannot be made again.
+ */
 function withPrefs(prefs: typeof mockPreferencesData | null) {
   return {
-    mocks: {
-      Query: () => ({
-        me: {
-          __typename: 'User',
-          id: 'user-1',
-          notificationPreferences: prefs,
-        },
-      }),
-    },
+    operationMocks: [
+      prefs === null
+        ? recordMock(GetNotificationPreferencesDocument, {
+            data: {
+              me: {
+                __typename: 'User' as const,
+                id: 'user-1',
+                notificationPreferences: null,
+              },
+            },
+            maxUsageCount: Number.POSITIVE_INFINITY,
+          }).mock
+        : prefsQueryMock(prefs),
+    ],
   };
 }
 
@@ -109,7 +127,7 @@ function prefsQueryMock(patch: Partial<typeof mockPreferencesData> = {}) {
   return recordMock(GetNotificationPreferencesDocument, {
     data: {
       me: {
-        __typename: 'User',
+        __typename: 'User' as const,
         id: 'user-1',
         notificationPreferences: {
           ...mockPreferencesData,
@@ -125,7 +143,7 @@ function prefsQueryMock(patch: Partial<typeof mockPreferencesData> = {}) {
 function updatedPrefs(patch: Partial<typeof mockPreferencesData>) {
   return {
     updateNotificationPreferences: {
-      __typename: 'UpdateNotificationPreferencesPayload',
+      __typename: 'UpdateNotificationPreferencesPayload' as const,
       notificationPreferences: {
         ...mockPreferencesData,
         userId: 'user-1',
@@ -177,8 +195,10 @@ describe('useNotificationSettings', () => {
     });
 
     const { result } = renderHookWithApollo(() => useNotificationSettings(), {
-      ...withPrefs(mockPreferencesData),
-      operationMocks: [update.mock],
+      operationMocks: [
+        ...withPrefs(mockPreferencesData).operationMocks,
+        update.mock,
+      ],
     });
 
     let success: boolean = false;
@@ -244,7 +264,7 @@ describe('useNotificationSettings', () => {
     const update = recordMock(UpdateNotificationPreferencesDocument, {
       data: {
         updateNotificationPreferences: {
-          __typename: 'ForbiddenError',
+          __typename: 'ForbiddenError' as const,
           code: ErrorCode.Forbidden,
           message: 'Push requires a registered device',
         },
@@ -277,8 +297,10 @@ describe('useNotificationSettings', () => {
     });
 
     const { result } = renderHookWithApollo(() => useNotificationSettings(), {
-      ...withPrefs(mockPreferencesData),
-      operationMocks: [update.mock],
+      operationMocks: [
+        ...withPrefs(mockPreferencesData).operationMocks,
+        update.mock,
+      ],
     });
 
     await act(async () => {
@@ -296,8 +318,10 @@ describe('useNotificationSettings', () => {
     });
 
     const { result } = renderHookWithApollo(() => useNotificationSettings(), {
-      ...withPrefs(mockPreferencesData),
-      operationMocks: [update.mock],
+      operationMocks: [
+        ...withPrefs(mockPreferencesData).operationMocks,
+        update.mock,
+      ],
     });
 
     await act(async () => {
@@ -318,8 +342,10 @@ describe('useNotificationSettings', () => {
     });
 
     const { result } = renderHookWithApollo(() => useNotificationSettings(), {
-      ...withPrefs(mockPreferencesData),
-      operationMocks: [update.mock],
+      operationMocks: [
+        ...withPrefs(mockPreferencesData).operationMocks,
+        update.mock,
+      ],
     });
 
     let success: boolean = false;
@@ -340,8 +366,10 @@ describe('useNotificationSettings', () => {
     });
 
     const { result } = renderHookWithApollo(() => useNotificationSettings(), {
-      ...withPrefs(mockPreferencesData),
-      operationMocks: [update.mock],
+      operationMocks: [
+        ...withPrefs(mockPreferencesData).operationMocks,
+        update.mock,
+      ],
     });
 
     await act(async () => {

@@ -7,11 +7,6 @@ import {
   SavedRecipeCard_SavedRecipeFragmentDoc,
   type SavedRecipeCard_SavedRecipeFragment,
 } from '#features/recipes/components/SavedRecipeCard.generated';
-import {
-  Difficulty,
-  RecipeCategory,
-  RecipeStatus,
-} from '#/graphql/generated/schemaTypes';
 import { useSavedRecipes } from '../useSavedRecipes';
 
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
@@ -30,6 +25,10 @@ function buildRecipe(
   name: string,
   overrides: Record<string, unknown> = {},
 ) {
+  // Exactly what `MySavedRecipes` selects on the nested recipe: `id`, `name`
+  // and `description` at the parent, plus the four card fields from
+  // `SavedRecipeCard_savedRecipe`. The recipe's own category, status, external
+  // provenance and timestamps are not on this query's wire at all.
   return {
     __typename: 'Recipe',
     id,
@@ -40,18 +39,6 @@ function buildRecipe(
     prepTimeMinutes: null,
     cookTimeMinutes: null,
     totalTimeMinutes: null,
-    difficulty: Difficulty.Easy,
-    category: RecipeCategory.MainCourse,
-    cuisine: null,
-    status: RecipeStatus.Published,
-    isExternal: false,
-    externalSource: null,
-    externalId: null,
-    primarySource: null,
-    caloriesPerServing: null,
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-    savedDetails: null,
     ...overrides,
   };
 }

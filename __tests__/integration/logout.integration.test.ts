@@ -6,7 +6,7 @@
  * cannot read previously-cached entities and is no longer authenticated."
  *
  * Both halves are exercised with real implementations:
- *  - Apollo: a real `ApolloClient` + `InMemoryCache` (no MockedProvider here
+ *  - Apollo: a real `ApolloClient` + the production `makeCache()` (no MockedProvider here
  *    because the test needs direct cache access via `client.cache.extract()`).
  *  - Zustand: a real store built via `createTestStore` (mirrors the production
  *    middleware stack except for `persist`, which is irrelevant to logout
@@ -25,7 +25,8 @@
 jest.mock('../../src/apollo/links/tokenScheduler');
 jest.mock('../../src/apollo/links/refreshToken');
 
-import { ApolloClient, ApolloLink, InMemoryCache, Observable, gql } from '@apollo/client';
+import { ApolloClient, ApolloLink, Observable, gql } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { createTestStore } from '#/test-utils/createTestStore';
 
@@ -57,11 +58,12 @@ const seededUser = {
 };
 
 function makeAuthenticatedSetup() {
-  // Real Apollo client with a real InMemoryCache. No link is needed — the
-  // test writes data directly via `cache.writeQuery`, which models the state
-  // the cache reaches after a successful query. `clearStore()` is the
-  // production logout path and is exercised end-to-end.
-  const cache = new InMemoryCache();
+  // Real Apollo client with the PRODUCTION cache. No link is needed — the test
+  // writes data directly via `cache.writeQuery`, which models the state the
+  // cache reaches after a successful query. `clearStore()` is the production
+  // logout path and is exercised end-to-end, and what it has to clear is
+  // whatever the production type policies left behind.
+  const cache = makeCache();
   const client = new ApolloClient({
     cache,
     link: noopLink,
