@@ -12,13 +12,10 @@ import { ResolveShareLinkDocument } from '#features/home/screens/JoinByLinkScree
 import { ShareLinkTargetType } from '#/graphql/generated/schemaTypes';
 
 /**
- * Generic anyone-with-link entry point (`join/:code`). Resolves a code whose
- * type isn't known up front via `resolveShareLink`, then `replace`s itself with
- * the matching per-type join screen — which owns the preview/confirm, auth gate,
- * and join mutation. One screen, both link types.
- *
- * `resolveShareLink` is `@optionalAuth`, so this works while logged out; the
- * join screen it routes to handles the sign-in-then-resume flow.
+ * Entry point for a link whose type is unknown up front (`join/:code`):
+ * `resolveShareLink` identifies it, then this `replace`s itself with the
+ * matching join screen, which owns preview, auth gate and mutation.
+ * `resolveShareLink` is `@optionalAuth`, so it works while logged out.
  */
 export const JoinByLinkScreen: React.FC<
   StaticScreenProps<{ code?: string }>

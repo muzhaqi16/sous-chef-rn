@@ -618,14 +618,15 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
 
 ## React Compiler
 
-- **Default to NOT writing `useMemo` / `useCallback` / `React.memo`** — the
-  compiler memoizes. A default, not an absolute; manual memoization is right
-  for: a value feeding a **dependency array**, and a prop read by something the
-  compiler did not compile (a third-party `===` check). The bailout baseline
+- **Never write `useMemo` / `useCallback` / `React.memo`** — the compiler
+  memoizes, the lint rule is an error, and there is no way to opt out:
+  `eslint-comments/no-use` bans every `eslint-disable` directive repo-wide, so a
+  disable comment is itself an error. The bailout baseline
   (`scripts/check-compiler-bailouts.baseline.json`) is empty — a file appearing
-  there is a regression to fix, not a licence to memoize. The
-  lint rule is an error so the exception is written down:
-  `// eslint-disable-next-line no-restricted-imports` + the reason.
+  there is a regression to fix, not a licence to memoize.
+  Where a stable reference is genuinely needed for a **dependency array**, hoist
+  the function to module scope and pass what it needs as arguments — see
+  `syncAsAccountDefault` in `src/features/home/hooks/useDefaultHome.ts`.
 - **Never add `'use no memo'`.** The `noMemoOptOuts` list in
   `scripts/check-compiler-bailouts.baseline.json` is EMPTY and the ratchet only
   lets it shrink, so a new one fails the check. Needing one means the Babel

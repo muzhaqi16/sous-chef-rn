@@ -18,10 +18,10 @@
  * fits in one to three lines. Rationale belongs in the PR or `docs/`, and what
  * the code USED to do belongs in git.
  *
- * The history rule is here rather than in ESLint's `no-warning-comments`
- * because 286 files trip it today; a rule with no baseline would fail `lint`
- * and block every commit. Move it to ESLint once this ratchet reaches zero —
- * the editor is a better place to catch it than a pre-commit hook.
+ * The history rule lives here rather than in ESLint's `no-warning-comments`
+ * because that rule has no baseline, and the ~50 test files still carrying the
+ * vocabulary would fail `lint` outright. Production `src/` is clean, so the
+ * rule can move to ESLint once tests are too.
  *
  * ## What counts
  * A run of consecutive whole-line comments — `//`, `/* … *\/`, or a JSX
@@ -48,8 +48,10 @@
  * A blank line splits a run, so a long rationale cannot be smuggled past this by
  * spacing it out — that reads as separate notes, which is the point.
  *
- * The baseline is a debt list that may only SHRINK. It starts non-empty because
- * the sweep is incremental; an entry that clears is re-recorded with --update.
+ * The baseline is EMPTY, which makes it an invariant rather than a worklist: no
+ * file is exempt, and a new entry is a regression to fix rather than a tally to
+ * accept. `--update` deliberately refuses to write an empty baseline over a
+ * non-empty one, so reaching zero is a one-time deliberate edit.
  *
  *   node scripts/check-comment-budget.mjs             # check
  *   node scripts/check-comment-budget.mjs --list      # print every finding

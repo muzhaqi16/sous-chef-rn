@@ -35,16 +35,9 @@ interface HomeInviteCardProps {
 }
 
 /**
- * HomeInviteCard - Displays individual invite with status badge.
- *
- * Subscribes to its HomeInvite cache entry via `useFragment` so it re-renders
- * independently when invite status changes (e.g. after a revoke mutation).
- */
-/**
  * The two `status`-variant surfaces, each owning its own `useVariants` call.
- *
- * Extracted so `HomeInviteCard` keeps compiling — Unistyles' variant transform
- * makes the React Compiler bail out of the containing function, and this card
+ * Extracted so `HomeInviteCard` keeps compiling: Unistyles' variant transform
+ * bails the React Compiler out of the containing function, and this card
  * renders once per pending invite.
  */
 const InviteSurface: React.FC<{
@@ -69,6 +62,10 @@ const InviteStatusBadge: React.FC<{
   );
 };
 
+/**
+ * Subscribes to its own HomeInvite cache entry via `useFragment`, so a status
+ * change (a revoke, say) re-renders this card alone.
+ */
 export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
   inviteRef,
   displayName,

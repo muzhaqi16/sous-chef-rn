@@ -26,18 +26,7 @@ interface UseHomeMutationsOptions {
   setSelectedPantryId: (pantryId: string | null) => void;
 }
 
-/**
- * Hook for home CRUD operations
- *
- * @example
- * ```tsx
- * const { createHome, deleteHome, creating, deleting } = useHomeMutations({
- *   refetch,
- *   setDefaultHome,
- *   setSelectedPantryId,
- * });
- * ```
- */
+/** Home create/delete mutations. */
 export function useHomeMutations({
   refetch,
   setDefaultHome,

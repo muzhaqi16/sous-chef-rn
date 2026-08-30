@@ -19,12 +19,14 @@ const RESTRICTED_SYNTAX = [
   // truncate.
   //
   // `parseDecimalInput` is the replacement. Where a value genuinely comes
-  // from machine data rather than a person, the two agree anyway, so
-  // reaching for the escape hatch should be rare and argued.
+  // from machine data rather than a person, the two agree anyway, so there is
+  // no case for reaching past it. `Number.parseFloat` is matched too: it is the
+  // same function, and the bare-callee selector alone left it as a way in.
   {
-    selector: "CallExpression[callee.name='parseFloat']",
+    selector:
+      "CallExpression[callee.name='parseFloat'], CallExpression[callee.property.name='parseFloat']",
     message:
-      'Use parseDecimalInput from #/utils/parseDecimalInput instead of parseFloat. parseFloat reads "4,99" as 4 on any device whose keyboard offers a comma, silently saving a wrong number. If this value is machine-generated and never typed, both behave identically — so prefer parseDecimalInput regardless, or add a justified eslint-disable explaining why.',
+      'Use parseDecimalInput from #/utils/parseDecimalInput instead of parseFloat. parseFloat reads "4,99" as 4 on any device whose keyboard offers a comma, silently saving a wrong number. If this value is machine-generated and never typed, both behave identically — so use parseDecimalInput regardless.',
   },
   {
     selector: 'TSImportType',

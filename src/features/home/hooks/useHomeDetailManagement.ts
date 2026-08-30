@@ -121,12 +121,10 @@ export function useHomeDetailManagement(homeId: string) {
     useMutation(TransferHomeOwnershipDocument);
 
   // No update callback: the response spreads HomeMemberCard_member, so Apollo
-  // normalizes role and the can* permission fields by Membership id. A manual
-  // cache.modify here would also run for permission-only toggles, where
-  // variables.input.role is undefined — and a modify writing undefined deletes
-  // the field, blanking the member card.
-  // Error/rejection handling lives in handleRoleSelect so a resolved
-  // ForbiddenError member is surfaced (it doesn't throw under errorPolicy:'all').
+  // normalizes by Membership id. A manual `cache.modify` would also run for
+  // permission-only toggles, where `role` is undefined — and writing undefined
+  // DELETES the field, blanking the card. Rejections surface in
+  // `handleRoleSelect`, since they resolve rather than throw.
   const [updateMembershipMutation] = useMutation(UpdateMembershipDocument);
 
   const [removeMemberMutation] = useMutation(RemoveMemberDocument, {
@@ -253,16 +251,11 @@ export function useHomeDetailManagement(homeId: string) {
       // (above) runs only on the success payload.
     });
 
-  // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error.
-  // Then unmask via useFragment so consumers (and this hook) see the full
-  // HomeDetailScreen_home shape — fields, members/invite edges, myMembership.
-  //
-  // useFragment reads from `{ __typename, id }` rather than the masked
-  // `data?.home` ref so it always resolves the cache entry by key. When the
-  // fragment isn't fully in cache yet, `complete` is false and we fall back
-  // to null so the screen shows the loader instead of rendering with
-  // partial data (which would, e.g., make the owner look like a non-owner
-  // because `myMembership.role` isn't populated yet).
+  // Preserve the last good data, since `errorPolicy: 'ignore'` yields undefined
+  // on error, then unmask. `useFragment` reads from `{ __typename, id }` rather
+  // than the masked ref so it resolves by key; on `!complete` we fall back to
+  // null and show the loader, because partial data would render an owner as a
+  // non-owner while `myMembership.role` is still absent.
   const homeRef = usePreservedQueryData(data?.home, null);
   const { data: unmaskedData, complete: unmaskedComplete } = useFragment({
     fragment: HomeDetailScreen_HomeFragmentDoc,

@@ -25,11 +25,9 @@ import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { unwrapPayload } from '#/utils/errors/mutationPayload';
 
 /**
- * Join a home/pantry via a share link (`join-home/:joinCode`) or by typing a
- * join code manually. Mirrors {@link JoinByShareCodeScreen} for shopping lists
- * but adds a preview-then-confirm step: `GetHomeByJoinCode` resolves the home
- * name + member/pantry counts so the user sees what they're joining before
- * committing with `JoinHomeByCode`.
+ * Join a home via share link or a typed code. Mirrors
+ * {@link JoinByShareCodeScreen} but adds a preview-then-confirm step, so the
+ * user sees the home name and counts before committing.
  */
 export const JoinHomeByCodeScreen: React.FC<
   StaticScreenProps<{ joinCode?: string }>

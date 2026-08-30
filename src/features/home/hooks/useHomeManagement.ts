@@ -1,22 +1,8 @@
 /**
- * useHomeManagement - Composition hook for all home operations
- *
- * This maintains backward compatibility with the original hook.
- * For new code, prefer using individual hooks directly:
- * - useHomeQuery: For data fetching
- * - useHomeSelection: For default home logic
- * - useHomeMutations: For CRUD operations
- * - useHomeInvitations: For invites and join by code
- *
- * @example
- * ```tsx
- * // Backward compatible usage
- * const { homes, createHome, setDefaultHome, inviteUserToHome } = useHomeManagement();
- *
- * // Preferred: Use individual hooks
- * const { homes, stats } = useHomeQuery();
- * const { setDefaultHome } = useHomeSelection({ homes, remoteDefaultHomeId });
- * ```
+ * Composes the four home hooks — `useHomeQuery`, `useHomeSelection`,
+ * `useHomeMutations`, `useHomeInvitations` — into one surface. Prefer the
+ * individual hooks in new code; a consumer that needs one of them should not
+ * mount all four.
  */
 
 import { useHomeQuery } from './useHomeQuery';

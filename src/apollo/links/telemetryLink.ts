@@ -20,7 +20,10 @@ interface GraphQLTiming {
 // unparseable value must not silently discard production telemetry. Clamped to
 // (0, 1] because `sampleWeight` divides by it.
 const parseSampleRate = (raw: string | undefined): number => {
-  const parsed = Number.parseFloat(raw ?? '');
+  // `Number`, not a decimal parser: this is build-env config, so it must not
+  // depend on the device's separator, and a partly-numeric value is a
+  // misconfiguration rather than something to salvage.
+  const parsed = Number(raw ?? '');
   if (!Number.isFinite(parsed) || parsed <= 0) return 1;
   return Math.min(parsed, 1);
 };

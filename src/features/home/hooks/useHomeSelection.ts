@@ -1,11 +1,7 @@
 /**
- * Switching which home is active.
- *
- * The selection (`selectedHomeId`, device-local) and the account default
- * (`Home.isDefault`, shared across devices, surfaced as `remoteDefaultHomeId`)
- * are different things and are allowed to differ. `setDefaultHome` moves both.
- *
- * Auto-selecting a first home lives in `useDefaultHome`.
+ * Switching which home is active. The device-local selection and the account
+ * default (`Home.isDefault`) are different things and may differ;
+ * `setDefaultHome` moves both. Auto-selection lives in `useDefaultHome`.
  */
 
 import { alertService } from '#/services/alertService';
@@ -39,15 +35,6 @@ interface UseHomeSelectionOptions {
   remoteDefaultHomeId: string | null;
 }
 
-/**
- * @example
- * ```tsx
- * const { selectedHomeId, setDefaultHome } = useHomeSelection({
- *   homes,
- *   remoteDefaultHomeId,
- * });
- * ```
- */
 export function useHomeSelection({
   homes,
   remoteDefaultHomeId,

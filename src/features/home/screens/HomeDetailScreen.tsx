@@ -123,7 +123,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     );
   };
 
-  // Rotating the code invalidates any previously-shared link — confirm first.
+  // Rotating the code invalidates every link already shared — confirm first.
   const handleRotateJoinCode = () => {
     alertService.alert(
       t('homeDetail.rotateJoinCodeTitle'),

@@ -250,18 +250,11 @@ export const useDefaultHome = () => {
     return homesList.some(h => h.id === selectedHomeId);
   })();
 
-  // The selected PANTRY must belong to the selected HOME.
-  //
-  // `selectedPantryId` is persisted alongside `selectedHomeId`, so a cold start
-  // can restore a pantry from a home the user has since left, been removed
-  // from, or deleted. `needsClearing` above only validates the home, and the
-  // ready flag below flips on a valid home alone — which opens `usePantryQuery`'s
-  // gate on the stale id and sends `GetPantry` for a pantry the user cannot
-  // read ("Access denied to this pantry"). `useCurrentPantry` repoints it, but
-  // one render too late: the request is already in flight.
-  //
-  // Judged only against a connection known to be complete: an empty list means
-  // "not loaded", and a page means "not on this page".
+  // The selected PANTRY must belong to the selected HOME. Both are persisted,
+  // so a cold start can restore a pantry from a home the user has left — and
+  // the ready flag opens `usePantryQuery`'s gate on a valid HOME alone, sending
+  // `GetPantry` for a pantry the account cannot read. Judged only against a
+  // connection known complete: empty means "not loaded", not "absent".
   const selectedHome = homesList?.find(h => h.id === selectedHomeId) as
     | HomeNode
     | undefined;
@@ -277,7 +270,7 @@ export const useDefaultHome = () => {
     !selectedHomePantries.some(p => p.id === selectedPantryId)
   );
 
-  // Derived boolean: true when selected home no longer exists and needs clearing
+  // True when the selected home is absent from a list that can convict it.
   const needsClearing = !!(
     selectedHomeId &&
     homesList &&
@@ -340,14 +333,11 @@ export const useDefaultHome = () => {
     setIsHomeSelectionReady,
   ]);
 
-  // Complementary case to `needsClearing` above: a home is selected but the
-  // list came back EMPTY, so there is nothing to validate it against. That
-  // happens when the single fetch above ran before the home existed —
-  // onboarding creates the home after it, and no other screen refills this
-  // connection — leaving every consumer that resolves the home from the cached
-  // list (PantryMain's header, pantry permissions) on its "no home" fallback
-  // for the rest of the session. Refetch once per selected home; a list that is
-  // genuinely empty stays empty without re-triggering.
+  // The complement of `needsClearing`: a home is selected but the list came
+  // back EMPTY, so nothing can validate it — which happens when the fetch above
+  // ran before onboarding created the home, stranding every consumer on its
+  // "no home" fallback. Refetch once per selected home; a genuinely empty list
+  // stays empty without re-triggering.
   const hasSelectionButNoHomes = !!(
     called &&
     !loading &&
@@ -501,8 +491,8 @@ export const useDefaultHome = () => {
     if (isSelectedPantryStale) return;
 
     // Case 1: no homes. `errorPolicy: 'ignore'` makes "no homes" and "the list
-    // failed to load" the same empty array, so a selection that this list
-    // cannot convict waits for the refetch below to settle — and no longer.
+    // failed to load" the same empty array, so a selection this list cannot
+    // convict waits only until the refetch below settles.
     if (!homesList || homesList.length === 0) {
       // Nothing can validate a pantry with no home, and `usePantryQuery` gates
       // on this flag alone.
