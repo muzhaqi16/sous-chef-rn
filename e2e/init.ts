@@ -19,7 +19,7 @@ function setupAdbReverseForLocalTesting() {
       execSync('adb reverse tcp:4000 tcp:4000', { stdio: 'pipe' });
       console.log('✅ ADB reverse setup complete (ports 8081, 4000)');
     }
-  } catch (error) {
+  } catch {
     console.log('⚠️ Could not setup ADB reverse (this is expected for iOS or if no emulator is connected)');
   }
 }
@@ -38,7 +38,9 @@ const isTruthyEnv = (value: string | undefined): boolean =>
  * stays off for the whole run — see the note at the end of this function.
  * @see https://github.com/wix/Detox/issues/4506
  */
-export async function launchAppWithFabricWorkaround(options: any = {}) {
+export async function launchAppWithFabricWorkaround(
+  options: Detox.DeviceLaunchAppConfig = {},
+) {
   await device.launchApp({
     ...options,
     launchArgs: {

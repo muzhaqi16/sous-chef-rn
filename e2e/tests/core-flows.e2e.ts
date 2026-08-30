@@ -5,7 +5,9 @@
 
 import { relaunchToHomeTab } from '../helpers/flows';
 import { bootstrapAuthenticatedSession } from '../helpers/auth';
-import { PantryScreen, ShoppingListScreen, RecipesScreen } from '../screens';
+import { PantryScreen } from '../screens/PantryScreen';
+import { RecipesScreen } from '../screens/RecipesScreen';
+import { ShoppingListScreen } from '../screens/ShoppingListScreen';
 
 describe('Core app flows', () => {
   const pantryScreen = new PantryScreen();

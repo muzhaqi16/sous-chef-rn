@@ -7,25 +7,15 @@
 
 import { element, by, waitFor } from 'detox';
 import { launchAppWithFabricWorkaround } from '../../init';
-import {
-  LandingAuthScreen,
-  LoginScreen,
-  ShoppingListScreen,
-  PantryScreen,
-} from '../../screens';
-import {
-  waitForScreen,
-  waitForNetworkIdle,
-  dismissBiometricPromptIfPresent,
-  TIMEOUTS,
-} from '../../helpers';
+import { LandingAuthScreen } from '../../screens/LandingAuthScreen';
+import { LoginScreen } from '../../screens/LoginScreen';
+import { dismissBiometricPromptIfPresent } from '../../helpers/auth';
+import { TIMEOUTS, waitForNetworkIdle } from '../../helpers/waitFor';
 import { TEST_USER } from '../../fixtures/testData';
 
 describe('Login', () => {
   const landingScreen = new LandingAuthScreen();
   const loginScreen = new LoginScreen();
-  const shoppingListScreen = new ShoppingListScreen();
-  const pantryScreen = new PantryScreen();
 
   // `delete: true` is required — auth tokens persist in MMKV, not the keychain.
   async function launchAndNavigateToLogin() {

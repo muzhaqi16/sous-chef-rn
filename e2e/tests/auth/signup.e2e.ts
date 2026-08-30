@@ -4,13 +4,11 @@
 
 import { element, by, waitFor } from 'detox';
 import { launchAppWithFabricWorkaround } from '../../init';
-import { LandingAuthScreen, LoginScreen, SignUpScreen } from '../../screens';
-import {
-  waitForScreen,
-  waitForNetworkIdle,
-  dismissBiometricPromptIfPresent,
-  TIMEOUTS,
-} from '../../helpers';
+import { LandingAuthScreen } from '../../screens/LandingAuthScreen';
+import { LoginScreen } from '../../screens/LoginScreen';
+import { SignUpScreen } from '../../screens/SignUpScreen';
+import { dismissBiometricPromptIfPresent } from '../../helpers/auth';
+import { TIMEOUTS, waitForNetworkIdle, waitForScreen } from '../../helpers/waitFor';
 import { generateTestEmail } from '../../helpers/data';
 
 describe('Sign Up', () => {

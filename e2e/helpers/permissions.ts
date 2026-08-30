@@ -66,12 +66,10 @@ export async function grantLimitedPhotoPermission(): Promise<void> {
 }
 
 export async function setPermissions(
-  permissions: Partial<Record<PermissionType, PermissionStatus>>,
+  permissions: Detox.DevicePermissions,
 ): Promise<void> {
   console.log('🔐 Setting permissions:', permissions);
-  await device.launchApp({
-    permissions: permissions as any,
-  });
+  await device.launchApp({ permissions });
 }
 
 /** Reinstalls the app (`delete: true`) to reset permissions. */

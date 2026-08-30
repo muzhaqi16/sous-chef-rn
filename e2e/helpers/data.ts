@@ -1,6 +1,6 @@
 /** Seeds pantry and shopping-list rows through the real UI. */
 
-import { element, by, waitFor, device } from 'detox';
+import { element, by, waitFor } from 'detox';
 import { delay, TIMEOUTS, waitForScreen } from './waitFor';
 import { tapByID } from './actions';
 

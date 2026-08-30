@@ -3,14 +3,12 @@
  * and navigation.
  */
 
-import { element, by, waitFor } from 'detox';
+import { element, by } from 'detox';
 import { launchAppWithFabricWorkaround } from '../../init';
-import {
-  LandingAuthScreen,
-  LoginScreen,
-  ForgotPasswordScreen,
-} from '../../screens';
-import { waitForNetworkIdle, TIMEOUTS } from '../../helpers';
+import { ForgotPasswordScreen } from '../../screens/ForgotPasswordScreen';
+import { LandingAuthScreen } from '../../screens/LandingAuthScreen';
+import { LoginScreen } from '../../screens/LoginScreen';
+import { TIMEOUTS, waitForNetworkIdle } from '../../helpers/waitFor';
 import { TEST_USER } from '../../fixtures/testData';
 
 describe('Password Reset', () => {

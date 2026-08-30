@@ -1,14 +1,9 @@
 import { element, by, waitFor, device } from 'detox';
 import { launchAppWithFabricWorkaround } from '../init';
-import {
-  LandingAuthScreen,
-  LoginScreen,
-  PantryScreen,
-  CreateHomeScreen,
-  CreateShoppingListScreen,
-  SelectPantryItemsScreen,
-  BiometricSetupScreen,
-} from '../screens';
+import { LandingAuthScreen } from '../screens/LandingAuthScreen';
+import { LoginScreen } from '../screens/LoginScreen';
+import { BiometricSetupScreen, CreateHomeScreen, CreateShoppingListScreen, SelectPantryItemsScreen } from '../screens/OnboardingScreens';
+import { PantryScreen } from '../screens/PantryScreen';
 import { dismissBiometricPromptIfPresent, isLoggedIn } from './auth';
 import { delay } from './waitFor';
 import { getAuthTokens } from './tokenProvider';

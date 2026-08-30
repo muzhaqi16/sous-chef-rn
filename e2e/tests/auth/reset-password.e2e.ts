@@ -5,7 +5,7 @@
  * Run: npx detox test -c android.att.debug e2e/tests/auth/reset-password.e2e.ts
  */
 import { device, element, by, expect as detoxExpect } from 'detox';
-import { ResetPasswordScreen } from '../../screens';
+import { ResetPasswordScreen } from '../../screens/ResetPasswordScreen';
 
 // Long enough to clear the screen's client-side format check (>= 10 chars),
 // so we land on the form rather than the "Invalid Reset Link" view.

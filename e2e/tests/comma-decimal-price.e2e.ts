@@ -5,8 +5,8 @@
  * a rejection the user can see. Drives keystroke → form → mutation for real.
  */
 import { element, by, waitFor } from 'detox';
-import { ShoppingListScreen } from '../screens';
-import { bootstrapAuthenticatedSession } from '../helpers';
+import { ShoppingListScreen } from '../screens/ShoppingListScreen';
+import { bootstrapAuthenticatedSession } from '../helpers/auth';
 import { TIMEOUTS } from '../helpers/waitFor';
 
 // `fetch` fails inside Detox's jest environment, so this spec does UI only.

@@ -2,12 +2,10 @@
  * Shopping list CRUD: adding, editing, and deleting items.
  */
 
-import { element, by, waitFor, expect } from 'detox';
-import { ShoppingListScreen } from '../../screens';
-import {
-  bootstrapAuthenticatedSession,
-  relaunchToHomeTab,
-} from '../../helpers';
+import { element, by, waitFor } from 'detox';
+import { ShoppingListScreen } from '../../screens/ShoppingListScreen';
+import { bootstrapAuthenticatedSession } from '../../helpers/auth';
+import { relaunchToHomeTab } from '../../helpers/flows';
 import { generateItemName } from '../../helpers/data';
 import { TIMEOUTS } from '../../helpers/waitFor';
 import { tapByID } from '../../helpers/actions';

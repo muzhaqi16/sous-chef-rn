@@ -6,11 +6,9 @@
  */
 
 import { element, by, waitFor, expect } from 'detox';
-import { PantryScreen } from '../../screens';
-import {
-  bootstrapAuthenticatedSession,
-  relaunchToHomeTab,
-} from '../../helpers';
+import { PantryScreen } from '../../screens/PantryScreen';
+import { bootstrapAuthenticatedSession } from '../../helpers/auth';
+import { relaunchToHomeTab } from '../../helpers/flows';
 import { generateItemName } from '../../helpers/data';
 import { TIMEOUTS } from '../../helpers/waitFor';
 

@@ -5,7 +5,7 @@
  * suite fails if that cannot be established. Never branch on the screen shown.
  */
 import { element, by, waitFor, expect } from 'detox';
-import { bootstrapAuthenticatedSession } from '../helpers';
+import { bootstrapAuthenticatedSession } from '../helpers/auth';
 import { TIMEOUTS } from '../helpers/waitFor';
 
 /** Tab id → the screen that tab must render. Both sides are real testIDs in

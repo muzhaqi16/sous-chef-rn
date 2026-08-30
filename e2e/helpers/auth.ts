@@ -7,9 +7,6 @@
 import { element, by, waitFor, system, device } from 'detox';
 import {
   waitForScreen,
-  waitForModalReady,
-  waitForModalClosed,
-  waitForElementAndTap,
   waitIfPresent,
   waitForNetworkIdle,
   tapFirstAvailable,

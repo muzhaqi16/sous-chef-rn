@@ -6,7 +6,8 @@
  */
 
 import { by, element, waitFor } from 'detox';
-import { bootstrapAuthenticatedSession, relaunchToHomeTab } from '../../helpers';
+import { bootstrapAuthenticatedSession } from '../../helpers/auth';
+import { relaunchToHomeTab } from '../../helpers/flows';
 import {
   dismissSavePasswordPrompt,
   tapByID,

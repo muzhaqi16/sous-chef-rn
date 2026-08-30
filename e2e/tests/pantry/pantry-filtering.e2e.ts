@@ -2,12 +2,10 @@
  * Pantry search, storage-location filtering, sort, and their combinations.
  */
 
-import { element, by, waitFor, expect } from 'detox';
-import { PantryScreen } from '../../screens';
-import {
-  bootstrapAuthenticatedSession,
-  relaunchToHomeTab,
-} from '../../helpers';
+import { element, by, waitFor } from 'detox';
+import { PantryScreen } from '../../screens/PantryScreen';
+import { bootstrapAuthenticatedSession } from '../../helpers/auth';
+import { relaunchToHomeTab } from '../../helpers/flows';
 import { TIMEOUTS } from '../../helpers/waitFor';
 
 describe('Pantry Filtering', () => {

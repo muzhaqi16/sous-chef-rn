@@ -170,7 +170,7 @@ export async function getAuthTokens(): Promise<AuthTokens> {
 
   if (json.errors) {
     throw new Error(
-      `GraphQL login error: ${json.errors.map((e: any) => e.message).join(', ')}`,
+      `GraphQL login error: ${json.errors.map((e: { message?: string }) => e.message).join(', ')}`,
     );
   }
 
