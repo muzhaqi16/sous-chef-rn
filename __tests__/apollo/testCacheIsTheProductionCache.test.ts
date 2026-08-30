@@ -1,12 +1,17 @@
 /**
  * The cache a test gets by default is the cache the app ships.
  *
+ * **The migration is done.** Every user of the helper now gets the production
+ * cache; the last test in this file is what keeps it that way. The history
+ * below is why the guard exists, not work outstanding.
+ *
  * `apolloMockProvider` used to hand out a bare `InMemoryCache`. Production
- * builds `makeCache()` — 16 `typePolicies`, 17 merge functions, 9 read
- * functions and the generated `possibleTypes`. 143 of the 154 files using the
- * helper therefore exercised an engine the app does not run, and a rule that is
- * not loaded cannot be tested: the suite stayed green through defects the
- * policies would have caught, and through at least one case where it learned
+ * builds `makeCache()` — 1014 lines: 16 `typePolicies` carrying 15 merge
+ * functions, 6 read functions, 9 `merge: true` / `merge: false` directives, and
+ * the generated `possibleTypes`. None of that loads in a bare instance, and a
+ * rule that is not loaded cannot be tested — so 143 of the 154 files using the
+ * helper ran an engine the app does not ship. The suite stayed green through
+ * defects the policies would have caught, and through one case where it learned
  * the WRONG behaviour from the substitute.
  *
  * That case is the second test below. Without `possibleTypes`, an

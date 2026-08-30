@@ -196,9 +196,9 @@ export function createApolloTestWrapper(options: ApolloTestOptions = {}) {
     cache: providedCache,
   } = options;
   // The PRODUCTION cache, not a bare one. `makeCache()` carries 16
-  // `typePolicies`, 17 merge functions, 9 read functions and the generated
-  // `possibleTypes` — and those decide what a write leaves behind and what a
-  // read returns. A bare `InMemoryCache` was the default here for a long time,
+  // `typePolicies` — 15 merge functions, 6 read functions, 9 merge directives
+  // and the generated `possibleTypes` — and those decide what a write leaves
+  // behind and what a read returns. A bare `InMemoryCache` was the default here for a long time,
   // so 143 files tested the app against an engine it does not run: rules that
   // were not loaded could not be tested, and one screen test learned the wrong
   // behaviour outright (no `possibleTypes` meant `... on Error` did not match,
