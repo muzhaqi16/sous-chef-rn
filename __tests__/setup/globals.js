@@ -46,7 +46,13 @@ const { loadDevMessages, loadErrorMessages } = require('@apollo/client/dev');
 loadDevMessages();
 loadErrorMessages();
 
-const APOLLO_MISSING_FIELD = /Missing field '[^']+' while writing result/;
+// The missing-field guard lives in its own module so that what it suppresses
+// and what it still reports can be asserted on — see
+// `__tests__/setup/apolloCacheWriteGuard.js` and the breadth test it names.
+const {
+  collectCacheWriteError,
+  reportCollectedCacheWriteErrors,
+} = require('./apolloCacheWriteGuard');
 
 // Silence module-import-time console output too. The `beforeEach` spies below
 // only cover code that runs inside a test; logs emitted while a test file's
@@ -58,62 +64,39 @@ const APOLLO_MISSING_FIELD = /Missing field '[^']+' while writing result/;
 jest.spyOn(console, 'log').mockImplementation(() => {});
 jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-// Collected during the test, reported in `afterEach`. Throwing from inside the
-// `console.error` spy instead would abort Apollo's write mid-flight: the
-// mutation never settles, and the test fails as a 5s `waitFor` timeout naming
-// the wrong thing. Collecting keeps Apollo's control flow intact so the test
-// fails on the real reason.
-const apolloCacheWriteErrors = [];
+// Captured before any suite can install fake timers, so the flush below still
+// yields to the macrotask queue in a suite running `jest.useFakeTimers()`.
+const realSetImmediate = globalThis.setImmediate;
+const settlePendingWork = () =>
+  new Promise(resolve => realSetImmediate(resolve));
 
 beforeEach(() => {
-  apolloCacheWriteErrors.length = 0;
-  globalThis.__apolloPartialMocksInUse = false;
+  // Filled by `apolloMockProvider` when a mock is marked `partial`: the exact
+  // `Type.field` pairs that mock's payload leaves out, and nothing else.
+  globalThis.__apolloPartialFieldExemptions = new Set();
   jest.spyOn(console, 'error').mockImplementation((...args) => {
-    const first = args[0];
-    if (typeof first === 'string' && APOLLO_MISSING_FIELD.test(first)) {
-      // An EMPTY result is not an incomplete entity — it is no data at all,
-      // which is what a local-first write gets when `queueLink` resolves the
-      // queued mutation with a null result. The cache was already written
-      // permanently before the mutation fired, so nothing is missing; flagging
-      // it would make the offline path unreportable.
-      const formatted = require('node:util').format(...args);
-      if (/while writing result \{\}\s*$/.test(formatted)) {
-        return;
-      }
-      // `writePurchaseInfo` writes the WHOLE purchase-record fragment while
-      // supplying only the fields the cache actually holds — deliberately, so
-      // it never invents a value the record's merge policy would then clear
-      // (see `carriedForward` in apollo/utils/shoppingListCacheUpdaters.ts).
-      // `ShoppingListItemDisplayFragment` caches two of the eight fields on
-      // purpose, so this writer reports missing fields in production too. It is
-      // a documented design, not an incomplete mock.
-      if (/ShoppingListItemPurchaseInfo/.test(formatted)) {
-        return;
-      }
-      // Apollo hands the template and its substitutions separately —
-      // `console.error("Missing field '%s' while writing result %o", name, obj)`
-      // — so the raw `args[0]` names neither the field nor the payload.
-      apolloCacheWriteErrors.push(require('node:util').format(...args));
-    }
+    collectCacheWriteError(args, {
+      exemptions: globalThis.__apolloPartialFieldExemptions,
+    });
   });
   jest.spyOn(console, 'warn').mockImplementation(() => {});
   jest.spyOn(console, 'log').mockImplementation(() => {});
 });
 
-afterEach(() => {
-  if (apolloCacheWriteErrors.length === 0) return;
-  // The test asked for partial data (see `partial` / `partialMocks` in
-  // `apolloMockProvider`), so an incomplete write is the subject, not a defect.
-  if (globalThis.__apolloPartialMocksInUse) {
-    apolloCacheWriteErrors.length = 0;
-    return;
-  }
-  const seen = [...new Set(apolloCacheWriteErrors)];
-  apolloCacheWriteErrors.length = 0;
-  throw new Error(
-    'Apollo cache write error — a mock is missing a field its operation ' +
-      'selects. The whole cache read goes incomplete, so this hides real ' +
-      'behaviour rather than just adding noise. Add the field to the mock:\n\n' +
-      seen.map(m => `  - ${m}`).join('\n'),
-  );
+afterEach(async () => {
+  // Let work already in flight finish before the guard reads. A cache write
+  // that settles after the assertion point is the case the collection above
+  // cannot otherwise attribute, and 32 suites `await act(async …)` with no
+  // `waitFor` anywhere in the file — structurally in that position, and
+  // reporting zero. The flush belongs here rather than in whichever test
+  // someone noticed.
+  await settlePendingWork();
+  await settlePendingWork();
+  reportCollectedCacheWriteErrors('afterEach');
+});
+
+afterAll(() => {
+  // Anything arriving after the file's last test has no `afterEach` left to
+  // read it. Without this it is simply dropped, which reads as a pass.
+  reportCollectedCacheWriteErrors('afterAll');
 });
