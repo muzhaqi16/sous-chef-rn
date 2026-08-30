@@ -1195,7 +1195,7 @@ describe('CreateHomeScreen', () => {
     });
   });
 
-  it('shows default error message when createHome fails without message', async () => {
+  it('shows the code’s own copy when the refusal carries no message', async () => {
     const user = userEvent.setup();
     mockCreateHomeResponse = {
       createHome: {
@@ -1208,8 +1208,35 @@ describe('CreateHomeScreen', () => {
     const { findByTestId, findByText } = renderScreen();
     await user.press(await findByTestId('submit-button'));
 
-    // This screen's OWN copy, never the refusal's `message` — that text is
-    // English by construction, and it used to be rendered verbatim.
+    // Never the refusal's `message` — that text is English by construction, and
+    // it used to be rendered verbatim. The CODE is what selects the copy, so an
+    // empty message changes nothing while a code is present.
+    //
+    // This asserted the generic fallback until the test cache started loading
+    // the production `possibleTypes`. Without them `... on Error { code }` did
+    // not match, `code` was dropped, `unwrapPayload` substituted `'UNKNOWN'`,
+    // and the screen fell back — so the assertion described the mock rather
+    // than the app.
+    expect(
+      await findByText("You don't have permission to perform this action"),
+    ).toBeTruthy();
+  });
+
+  it('falls back to this screen’s copy when the code has none', async () => {
+    const user = userEvent.setup();
+    mockCreateHomeResponse = {
+      createHome: {
+        __typename: 'ForbiddenError',
+        code: 'NOT_A_MAPPED_CODE',
+        message: '',
+      },
+    };
+
+    const { findByTestId, findByText } = renderScreen();
+    await user.press(await findByTestId('submit-button'));
+
+    // The path the test above was NAMED for and never reached: the caller's
+    // fallback is used only when the code resolves to no copy of its own.
     expect(await findByText('An error occurred during setup')).toBeTruthy();
   });
 

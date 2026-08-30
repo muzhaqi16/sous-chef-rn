@@ -683,11 +683,12 @@ arguments).
 Full patterns and examples: `docs/development.md` § Testing.
 
 - **Always `renderHookWithApollo` / `renderWithApollo` from
-  `#/test-utils/apolloMockProvider`** — a schema-backed cache with type-safe
-  mocks. `jest.mock('@apollo/client/react', …)` is lint-banned: it couples
-  tests to operation names and bypasses the cache integration the tests exist
-  to catch. Import `MockedResponse` from the helper, not
-  `@apollo/client/testing`.
+  `#/test-utils/apolloMockProvider`** — the PRODUCTION cache (`makeCache()`,
+  so type policies and `possibleTypes` are loaded) plus schema-driven network
+  mocks and type-safe mocks. `jest.mock('@apollo/client/react', …)` is
+  lint-banned: it couples tests to operation names and bypasses the cache
+  integration the tests exist to catch. Import `MockedResponse` from the
+  helper, not `@apollo/client/testing`.
 - For mutation tests, assert on the **cache** after the mutation, not on the
   mock function.
 - A failing mutation RESOLVES (`errorPolicy: 'all'`) — drive failures with an

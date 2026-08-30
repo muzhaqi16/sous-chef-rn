@@ -6,6 +6,7 @@ import {
   type RenderOptions,
 } from '@testing-library/react-native';
 import { gql, InMemoryCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import { SchemaLink } from '@apollo/client/link/schema';
 import { MockedProvider } from '@apollo/client/testing/react';
 import { MockLink } from '@apollo/client/testing';
@@ -134,7 +135,19 @@ const TEST_DEFAULT_OPTIONS = APOLLO_DEFAULT_OPTIONS;
 
 export function createApolloTestWrapper(options: ApolloTestOptions = {}) {
   const { operationMocks, mocks, resolvers, cache: providedCache } = options;
-  const cache = providedCache ?? new InMemoryCache();
+  // The PRODUCTION cache, not a bare one. `makeCache()` carries 16
+  // `typePolicies`, 17 merge functions, 9 read functions and the generated
+  // `possibleTypes` — and those decide what a write leaves behind and what a
+  // read returns. A bare `InMemoryCache` was the default here for a long time,
+  // so 143 files tested the app against an engine it does not run: rules that
+  // were not loaded could not be tested, and one screen test learned the wrong
+  // behaviour outright (no `possibleTypes` meant `... on Error` did not match,
+  // `code` was dropped, and the test asserted generic copy a user never sees).
+  //
+  // A suite that genuinely wants a reduced cache passes its own through
+  // `cache` — the escape hatch is the parameter, not the default.
+  // Guarded by `__tests__/apollo/testCacheIsTheProductionCache.test.ts`.
+  const cache = providedCache ?? makeCache();
 
   if (operationMocks && operationMocks.length > 0) {
     return function Wrapper({ children }: { children: ReactNode }) {
@@ -312,7 +325,9 @@ export function recordMock<TData = Record<string, unknown>>(
 export function seedCache(
   entries: Array<Record<string, unknown> & { __typename: string; id: string }>,
 ): InMemoryCache {
-  const cache = new InMemoryCache();
+  // Production cache, for the reason on the default above — `seedCache` is the
+  // other route to the same substitution and feeds 32 files.
+  const cache = makeCache();
   for (const entry of entries) {
     const identified = cache.identify(entry as Parameters<InMemoryCache['identify']>[0]);
     cache.writeFragment({
