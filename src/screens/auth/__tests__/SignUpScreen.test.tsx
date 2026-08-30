@@ -63,6 +63,11 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
       footerLinkText,
       footerLinkTestID,
       onFooterLinkPress,
+      linkText,
+      linkTestID,
+      onLinkPress,
+      linkDisabled,
+      linkCountdown,
     }: {
       title?: string;
       subtitle?: string;
@@ -76,6 +81,11 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
       footerLinkText?: string;
       footerLinkTestID?: string;
       onFooterLinkPress?: () => void;
+      linkText?: string;
+      linkTestID?: string;
+      onLinkPress?: () => void;
+      linkDisabled?: boolean;
+      linkCountdown?: number;
     }) => (
       <View testID="auth-form-template">
         <Text>{title}</Text>
@@ -97,6 +107,20 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
               : submitText}
           </Text>
         </Pressable>
+        {linkText ? (
+          <Pressable
+            testID={linkTestID}
+            onPress={onLinkPress}
+            disabled={linkDisabled}
+            accessibilityState={{ disabled: !!linkDisabled }}
+          >
+            <Text>
+              {linkCountdown && linkCountdown > 0
+                ? `${linkText} (${linkCountdown}s)`
+                : linkText}
+            </Text>
+          </Pressable>
+        ) : null}
         {footerText ? <Text>{footerText}</Text> : null}
         {footerLinkText ? (
           <Pressable testID={footerLinkTestID} onPress={onFooterLinkPress}>
@@ -243,7 +267,10 @@ describe('SignUpScreen', () => {
       expect(screen.getByTestId('code-verification-screen')).toBeTruthy();
     });
 
-    await user.press(screen.getByText('Resend code'));
+    // Resend sits in the link slot on this context and opens inside the first
+    // cooldown, so the tap cannot fire a duplicate send.
+    expect(screen.getByTestId('resend-code')).toBeDisabled();
+    await user.press(screen.getByTestId('resend-code'));
 
     expect(recordedVariables).toHaveLength(0);
   });

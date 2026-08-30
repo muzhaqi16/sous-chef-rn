@@ -529,6 +529,7 @@
     "signupTitle": "Krijo llogari",
     "signupSubtitle": "Bashkohu me {{appName}} sot",
     "resendVerificationSent": "Email-i i verifikimit u dërgua.",
+    "alreadyVerified": "Tashmë e verifikuar?",
     "name": "Emri",
     "namePlaceholder": "Shkruani emrin tuaj",
     "creatingAccount": "Po krijohet llogaria…",

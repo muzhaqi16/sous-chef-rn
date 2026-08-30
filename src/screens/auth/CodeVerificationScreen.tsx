@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useTranslation } from '#/i18n';
@@ -78,7 +78,9 @@ function interpretVerifyEmailResponse(
   { onVerified, toast, reportCodeError, t }: VerificationResponseDeps,
 ): void {
   const payload = (response.data as { verifyEmail?: unknown } | undefined)
-    ?.verifyEmail as { __typename?: string } | undefined;
+    ?.verifyEmail as
+    | { __typename?: string; code?: string | null; field?: string | null }
+    | undefined;
   if (payload?.__typename === 'VerifyEmailPayload') {
     onVerified();
     return;
@@ -97,16 +99,19 @@ function interpretVerifyEmailResponse(
     });
   } else if (payload) {
     // The payload's own `message` is never displayed — it is unlocalizable
-    // English by construction. There is deliberately no `errors.field.code`
-    // key: `code` is a field name the join-code and share-code screens use
-    // too, so a generic entry there would leak this screen's sentence into
-    // theirs. With none present the caller's copy wins, which is what we want.
+    // English by construction.
     //
-    // The server collapses "wrong code", "already spent" and "expired" into a
-    // single ValidationError, so this one sentence has to be true of all three
-    // and name the recovery.
+    // A ValidationError takes this screen's own sentence rather than the code
+    // map's. The only ValidationError `verifyEmail` can return IS a bad code,
+    // and the map sends its `VALIDATION_FAILED` to the generic "check your
+    // input and try again" — which tells someone staring at six digits nothing
+    // and never mentions the resend. The server collapses "wrong code",
+    // "already spent" and "expired" into that one error, so the sentence has
+    // to be true of all three and name the recovery.
     reportCodeError(
-      localizedRefusalMessage(payload, t('auth.codeInvalidOrExpired')),
+      payload.__typename === 'ValidationError'
+        ? t('auth.codeInvalidOrExpired')
+        : localizedRefusalMessage(payload, t('auth.codeInvalidOrExpired')),
     );
   }
 }
@@ -167,11 +172,16 @@ export function CodeVerificationScreen({
     context === 'signup' ? 1 : 0,
   );
 
+  // Held here rather than in `setError`: this runs inside `handleSubmit`'s
+  // onValid callback, and RHF publishes the form state it captured BEFORE that
+  // callback when the submit settles — wiping an error set inside it. The
+  // refusal simply never appeared. Verified on device 2026-08-29.
+  const [refusal, setRefusal] = useState<string | null>(null);
+
   const {
     control,
     handleSubmit,
     setValue,
-    setError,
     formState: { errors },
   } = useForm({
     resolver: yupResolver(getEmailVerificationValidationSchema()),
@@ -214,13 +224,20 @@ export function CodeVerificationScreen({
   };
 
   const reportCodeError = (message: string) => {
-    // Clear first, then set: `setValue` after `setError` would wipe the message
-    // it just wrote. Blanking the cells also readies them for the retype.
+    // Blanking the cells readies them for the retype.
     setValue('code', '');
-    setError('code', { message });
+    setRefusal(message);
   };
 
+  // A server refusal is displayed exactly like a schema error, so the field
+  // renders it in the same place with no special casing downstream.
+  const fieldErrors = refusal
+    ? { ...errors, code: { type: 'server', message: refusal } }
+    : errors;
+
   const onVerifyCode = async (data: CodeVerificationValues) => {
+    // Last attempt's refusal is stale the moment a new one is in flight.
+    setRefusal(null);
     try {
       // The server picks the code index over the token index by testing
       // `length === 6`, so a stray separator or space silently becomes a token
@@ -320,28 +337,19 @@ export function CodeVerificationScreen({
   const onBackPress =
     context === 'gate' ? onSignOut : context === 'inApp' ? goBack : undefined;
 
-  // The link slot carries whatever this context's secondary action is.
-  //
-  // `gate`   — skip. Offered only here: it writes a per-user flag, so it
-  //            no-ops without a session, and pushed over the app backing out
-  //            already IS deferring.
-  // `signup` — sign in, for the user who tapped the link in the mail instead
-  //            of typing the code and now just needs a way on.
-  // `inApp`  — nothing; back is the secondary action.
-  const linkText =
-    context === 'gate'
-      ? t('auth.skipVerification')
-      : context === 'signup'
-      ? t('auth.signIn')
-      : undefined;
-  const onLinkPress =
-    context === 'gate'
-      ? onSkip
-      : context === 'signup'
-      ? navigateToLogin
-      : undefined;
-  const linkTestID =
-    context === 'gate' ? 'skip-verification' : 'code-verification-sign-in';
+  // Sign-up has no back button and no skip — the account exists, and skipping
+  // writes a per-user flag that no-ops without a session. So "Already verified?
+  // Sign In" is the ONLY way off this screen for someone who followed the link
+  // in the mail instead of typing the code, and it gets the footer, where the
+  // eye already goes. Resend moves up to the link slot, which is where
+  // "Forgot password?" sits on the sign-in screen.
+  const isSignup = context === 'signup';
+
+  const canResendNow = !!targetEmail;
+  const resendSlot = {
+    text: canResendNow ? t('auth.resendCode') : undefined,
+    onPress: canResendNow ? onResend : undefined,
+  };
 
   return (
     <AuthWrapper testID="code-verification-screen">
@@ -369,18 +377,48 @@ export function CodeVerificationScreen({
           },
         ]}
         control={control}
-        errors={errors}
-        linkText={linkText}
-        onLinkPress={onLinkPress}
-        linkTestID={linkTestID}
+        errors={fieldErrors}
+        linkText={
+          isSignup
+            ? resendSlot.text
+            : context === 'gate'
+            ? t('auth.skipVerification')
+            : undefined
+        }
+        onLinkPress={
+          isSignup
+            ? resendSlot.onPress
+            : context === 'gate'
+            ? onSkip
+            : undefined
+        }
+        linkTestID={isSignup ? 'resend-code' : 'skip-verification'}
+        linkDisabled={isSignup ? !canResend : undefined}
+        linkCountdown={isSignup ? countdown : undefined}
         submitText={t('labels.submit')}
         onSubmit={handleSubmit(onVerifyCode, logValidationErrors)}
-        footerText={targetEmail ? t('auth.didntGetEmail') : undefined}
-        footerLinkText={targetEmail ? t('auth.resendCode') : undefined}
-        footerLinkTestID="resend-code"
-        onFooterLinkPress={targetEmail ? onResend : undefined}
-        footerLinkDisabled={!canResend}
-        footerLinkCountdown={countdown}
+        footerText={
+          isSignup
+            ? t('auth.alreadyVerified')
+            : targetEmail
+            ? t('auth.didntGetEmail')
+            : undefined
+        }
+        footerLinkText={
+          isSignup
+            ? t('auth.signIn')
+            : targetEmail
+            ? t('auth.resendCode')
+            : undefined
+        }
+        footerLinkTestID={
+          isSignup ? 'code-verification-sign-in' : 'resend-code'
+        }
+        onFooterLinkPress={
+          isSignup ? navigateToLogin : targetEmail ? onResend : undefined
+        }
+        footerLinkDisabled={isSignup ? false : !canResend}
+        footerLinkCountdown={isSignup ? 0 : countdown}
       />
     </AuthWrapper>
   );

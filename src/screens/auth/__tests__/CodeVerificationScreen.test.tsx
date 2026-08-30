@@ -36,6 +36,9 @@ type MockAuthFormTemplateProps = {
   onFooterLinkPress?: () => void;
   footerLinkDisabled?: boolean;
   footerLinkCountdown?: number;
+  footerLinkTestID?: string;
+  linkDisabled?: boolean;
+  linkCountdown?: number;
 };
 
 jest.mock('#store/useAppStore', () => {
@@ -117,6 +120,9 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
       onFooterLinkPress,
       footerLinkDisabled,
       footerLinkCountdown,
+      footerLinkTestID,
+      linkDisabled,
+      linkCountdown,
     }: MockAuthFormTemplateProps) => (
       <View testID="auth-form-template">
         {onBackPress ? (
@@ -131,8 +137,15 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
           <View testID="subtitle-container">{subtitle}</View>
         )}
         {linkText ? (
-          <Pressable testID={linkTestID} onPress={onLinkPress}>
+          <Pressable
+            testID={linkTestID}
+            onPress={onLinkPress}
+            disabled={linkDisabled}
+          >
             <Text>{linkText}</Text>
+            {(linkCountdown ?? 0) > 0 ? (
+              <Text testID="link-countdown">{linkCountdown}</Text>
+            ) : null}
           </Pressable>
         ) : null}
         <Pressable testID="submit-button" onPress={onSubmit}>
@@ -141,7 +154,7 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
         {footerText ? <Text>{footerText}</Text> : null}
         {footerLinkText ? (
           <Pressable
-            testID="footer-link"
+            testID={footerLinkTestID ?? 'footer-link'}
             onPress={onFooterLinkPress}
             disabled={footerLinkDisabled}
           >
@@ -253,7 +266,7 @@ describe('CodeVerificationScreen', () => {
     renderWithApollo(<CodeVerificationScreen context="gate" />, {
       operationMocks: [buildResendMock(recordedVariables), buildVerifyMock()],
     });
-    await user.press(screen.getByTestId('footer-link'));
+    await user.press(screen.getByTestId('resend-code'));
     await waitFor(() => {
       expect(recordedVariables).toContainEqual({
         input: { email: 'test@example.com' },
@@ -376,7 +389,7 @@ describe('CodeVerificationScreen', () => {
       expect(screen.getByText('new@example.com')).toBeTruthy();
     });
 
-    it('resends to the address it was handed', async () => {
+    it('opens mid-cooldown so the first tap cannot resend', async () => {
       mockStoreUser(null);
       const user = userEvent.setup();
       const recordedVariables: Record<string, unknown>[] = [];
@@ -390,12 +403,14 @@ describe('CodeVerificationScreen', () => {
         },
       );
 
-      // Registration has just sent one, so the screen opens mid-cooldown and
-      // the link is disabled until it runs out.
-      expect(screen.getByTestId('footer-link')).toBeDisabled();
+      // Registration has just sent one, so the screen opens inside the first
+      // cooldown. Resend sits in the LINK slot here — the footer carries the
+      // way out to sign-in, which is the only exit this context has.
+      expect(screen.getByTestId('resend-code')).toBeDisabled();
+      expect(screen.getByTestId('link-countdown')).toBeTruthy();
       expect(recordedVariables).toHaveLength(0);
 
-      await user.press(screen.getByTestId('footer-link'));
+      await user.press(screen.getByTestId('resend-code'));
       expect(recordedVariables).toHaveLength(0);
     });
 
@@ -407,6 +422,8 @@ describe('CodeVerificationScreen', () => {
       );
 
       expect(screen.queryByTestId('skip-verification')).toBeNull();
+      // In the FOOTER, not the small right-aligned link slot: with no back
+      // button and no skip, it is the only way off this screen.
       await user.press(screen.getByTestId('code-verification-sign-in'));
 
       expect(mockNavigateToLogin).toHaveBeenCalledTimes(1);
@@ -434,7 +451,7 @@ describe('CodeVerificationScreen', () => {
         },
       );
 
-      await user.press(screen.getByTestId('footer-link'));
+      await user.press(screen.getByTestId('resend-code'));
 
       await waitFor(() => {
         expect(recordedVariables).toContainEqual({

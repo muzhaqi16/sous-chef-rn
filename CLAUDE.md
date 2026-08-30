@@ -18,7 +18,9 @@ npm start / npm run ios / npm run android    # dev loop
 npm run codegen      # re-pull schema + regenerate types (run before lint if schema is stale)
 npm run typecheck    # app AND test tsconfig — run after every code change
 npm run lint         # ESLint, incl. every .graphql operation vs the pulled schema
-npm test             # full Jest suite (~15s) — always run unfiltered
+npm test             # full Jest suite — 668 files, 8060 tests, ~80s, ~3.3GB peak
+                     # Workers are capped in jest.config.js; uncapped, nine of
+                     # them exhaust 16GB of RAM. Run it unfiltered.
 node scripts/check-compiler-bailouts.mjs         # also in pre-push
 node scripts/check-unistyles-variant-staleness.mjs   # also in pre-push
 node scripts/check-layer-purity.mjs              # also in pre-commit

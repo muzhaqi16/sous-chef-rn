@@ -529,6 +529,7 @@
     "signupTitle": "Create account",
     "signupSubtitle": "Join {{appName}} today",
     "resendVerificationSent": "Verification email sent.",
+    "alreadyVerified": "Already verified?",
     "name": "Name",
     "namePlaceholder": "Enter your name",
     "creatingAccount": "Creating account…",

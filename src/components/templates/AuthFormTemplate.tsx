@@ -35,6 +35,9 @@ interface Props<T extends FieldValues> {
   onLinkPress?: () => void;
   linkText?: string;
   linkTestID?: string;
+  linkDisabled?: boolean;
+  /** Seconds left on a cooldown, appended to the link label while > 0. */
+  linkCountdown?: number;
   isLoading?: boolean;
   /** Return key moves down the fields instead of just closing the keyboard. */
   focusChaining?: boolean;
@@ -60,6 +63,8 @@ export function AuthFormTemplate<T extends FieldValues>({
   linkText,
   linkTestID,
   onLinkPress,
+  linkDisabled,
+  linkCountdown,
   isLoading = false,
   focusChaining = false,
 }: Props<T>) {
@@ -100,8 +105,14 @@ export function AuthFormTemplate<T extends FieldValues>({
 
       {!!linkText && !!onLinkPress && (
         <View style={styles.linkRow}>
-          <Link onPress={onLinkPress} testID={linkTestID}>
-            {linkText}
+          <Link
+            onPress={onLinkPress}
+            testID={linkTestID}
+            disabled={linkDisabled}
+          >
+            {linkCountdown && linkCountdown > 0
+              ? `${linkText} (${linkCountdown}s)`
+              : linkText}
           </Link>
         </View>
       )}
