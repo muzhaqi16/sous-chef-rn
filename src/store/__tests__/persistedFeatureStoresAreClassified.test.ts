@@ -2,9 +2,9 @@
  * Every persisted feature store is classified: cleared at session end, or named
  * as deliberately kept.
  *
- * This replaces a scan of the source text, which asked the wrong question. It
- * looked for `name: '...'` inside `src/features/<f>/store/*.ts`, so it was blind
- * to three shapes that all persist perfectly well at runtime:
+ * A scan of the source text asks the wrong question. Looking for `name: '...'`
+ * inside `src/features/<f>/store/*.ts` is blind to three shapes that all persist
+ * perfectly well at runtime:
  *
  *  - a store one directory deeper (`store/scanner/history.ts`) — the walk was
  *    one level and did not recurse;
@@ -12,7 +12,7 @@
  *  - a key imported from another module — the constant lookup was a regex for
  *    an assignment in the SAME file.
  *
- * Each was reported as "no persisted key here", which reads identically to a
+ * Each is reported as "no persisted key here", which reads identically to a
  * store that is genuinely classified. A guard whose failure mode is silence is
  * the same guard the leak got past in the first place.
  *

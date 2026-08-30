@@ -115,11 +115,11 @@ describe('useStartupInit — the shared JS-entry origin', () => {
   });
 
   it('leaves __APP_START_TIMESTAMP readable for later consumers', () => {
-    // This hook reports `app_startup_duration_ms` at hydration and used to
-    // clear the global afterwards as an HMR guard. But the same global is the
-    // origin for `store/index.ts` and for
+    // This hook reports `app_startup_duration_ms` at hydration and must leave
+    // the global alone afterwards, tempting as clearing it is as an HMR guard.
+    // The same global is the origin for `store/index.ts` and for
     // `NativePerformanceService.markFullyDrawn()`, which fires when the first
-    // list finishes loading — seconds later. Clearing it made
+    // list finishes loading — seconds later. Clearing it makes
     // `app_fully_drawn_ms` silently emit nothing on device.
     (
       globalThis as { __APP_START_TIMESTAMP?: number }

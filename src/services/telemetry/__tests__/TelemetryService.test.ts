@@ -470,9 +470,9 @@ describe('TelemetryService', () => {
     });
 
     it('labels metrics with the app version, so a build is attributable', async () => {
-      // Nothing on a metric used to say which build produced it. The only
-      // version-bearing dimension was `service.instance.id`, and every Grafana
-      // startup panel collapsed it with `sum(...) by (le)`.
+      // Without this label nothing on a metric says which build produced it:
+      // the only other version-bearing dimension is `service.instance.id`, and
+      // every Grafana startup panel collapses it with `sum(...) by (le)`.
       const service = new TelemetryService({
         enabled: true,
         enableMetrics: true,

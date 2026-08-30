@@ -71,9 +71,9 @@ jest.mock('#/utils/generateId', () => ({
 }));
 
 // Telemetry uses the shared mock from `src/services/telemetry/__mocks__/`
-// (applied globally in jest.setup.js). A partial factory here used to list only
-// the four methods the manager reached for, so adding a fifth broke this suite
-// with "Telemetry.debug is not a function".
+// (applied globally in jest.setup.js). A partial factory here would list only
+// the handful of methods the manager reaches for today, so adding one more
+// breaks this suite with "Telemetry.debug is not a function".
 
 // Mock the token refresh used on auth errors (dynamically imported by the
 // manager). Default: refresh fails (returns undefined) — individual tests
@@ -1643,9 +1643,9 @@ describe('QueueManager', () => {
     // --- Integration: auth failure invokes failure handler ---
     describe('an auth failure parks the write instead of withdrawing it', () => {
       // The server never saw the write, so nothing about it was rejected — we
-      // just could not authenticate. Withdrawing here used to destroy the local
-      // change AND leave an entry no drain would look at again, under a toast
-      // saying the change had been rejected. Both were wrong.
+      // just could not authenticate. Withdrawing here destroys the local change
+      // AND leaves an entry no drain will look at again, under a toast saying
+      // the change was rejected. Both are wrong.
       it('does not withdraw the local change when token refresh fails', async () => {
         const { proactiveTokenRefresh } = require('../../links/refreshToken');
         (proactiveTokenRefresh as jest.Mock).mockResolvedValue(null);

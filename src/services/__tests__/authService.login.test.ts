@@ -1,7 +1,7 @@
 // Unit tests for `authService.login` / `authService.autoLogin` against the
 // `LoginResult` union.
 //
-// `login` no longer returns a bare `AuthPayload`: a refusal arrives 200 as an
+// `login` does not return a bare `AuthPayload`: a refusal arrives 200 as an
 // error union member (`AuthenticationError`, `ValidationError`, …) with no
 // transport error, so the success branch must key off `__typename` rather than
 // mere presence of `data.login`. `login` uses the singleton Apollo client, so we

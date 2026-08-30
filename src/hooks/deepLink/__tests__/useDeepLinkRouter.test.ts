@@ -141,8 +141,8 @@ describe('useDeepLinkRouter', () => {
     });
 
     // Asserts the localized copy, and that the internal validation reason is
-    // no longer interpolated into it — that detail belongs in the log line,
-    // not on screen.
+    // not interpolated into it — that detail belongs in the log line, not on
+    // screen.
     expect(toastService.error).toHaveBeenCalledWith(
       getI18n().t('toasts.verificationLinkInvalid'),
     );
@@ -269,8 +269,8 @@ describe('useDeepLinkRouter', () => {
     });
 
     // Asserts the localized copy, and that the internal validation reason is
-    // no longer interpolated into it — that detail belongs in the log line,
-    // not on screen.
+    // not interpolated into it — that detail belongs in the log line, not on
+    // screen.
     expect(toastService.error).toHaveBeenCalledWith(
       getI18n().t('toasts.verificationLinkInvalid'),
     );

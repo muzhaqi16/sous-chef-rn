@@ -95,6 +95,9 @@ const seedFeed = (
     })),
   ]);
 
+// The enum has no `UNREAD` member: an unread notification is `SENT` (or
+// `PENDING`). A mock spelling it `'UNREAD'` writes a status the schema cannot
+// produce, and the row only reads back correctly until the result lands.
 const UNREAD = NotificationStatus.Sent;
 const READ = NotificationStatus.Read;
 
@@ -117,7 +120,7 @@ const markReadMock = (
               notification: {
                 __typename: 'Notification',
                 id: 'n1',
-                status: 'READ',
+                status: READ,
               },
             }
           : {
@@ -140,7 +143,7 @@ const markUnreadMock = (): MockedResponse => ({
         notification: {
           __typename: 'Notification',
           id: 'n1',
-          status: 'UNREAD',
+          status: UNREAD,
         },
       },
     },

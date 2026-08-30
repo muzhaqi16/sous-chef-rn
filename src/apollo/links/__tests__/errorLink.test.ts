@@ -76,7 +76,7 @@ describe('errorLink helpers', () => {
         def.kind === 'OperationDefinition' && def.operation === 'subscription',
     );
 
-  // The refresh trigger is no longer a local predicate — it delegates to
+  // The refresh trigger is not a local predicate — it delegates to
   // isRefreshableAuthCode, tested against the real implementation in
   // src/utils/__tests__/authErrorCodes.test.ts. What matters here is that the
   // link asks by code only, so the cases below pin the message as irrelevant.
@@ -88,14 +88,15 @@ describe('errorLink helpers', () => {
       },
     );
 
-    // Used to match no term at all — "token is malformed or invalid" contains
-    // neither "invalid token" nor any other, so it never earned a refresh.
+    // Message matching cannot answer this — "token is malformed or invalid"
+    // contains neither "invalid token" nor any other term, so it earns no
+    // refresh. The code is what does.
     it('returns true for AUTH_TOKEN_INVALID', () => {
       expect(isRefreshableAuthCode('AUTH_TOKEN_INVALID')).toBe(true);
     });
 
     // The message is never consulted, so prose that merely sounds auth-shaped
-    // no longer buys a refresh. This is what let an API key refused for want of
+    // buys no refresh. Consulting it is what let an API key refused for want of
     // a permission ("Unauthorized: …") spin the refresh path.
     it.each([
       'Token has expired',

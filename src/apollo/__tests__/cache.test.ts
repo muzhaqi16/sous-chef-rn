@@ -559,8 +559,8 @@ describe('cache', () => {
         { id: 'server-1', name: 'Groceries' },
         { id: 'gone-1', name: 'Deleted elsewhere' },
       ]);
-      // First-page refetch no longer includes gone-1; with no pending op for it,
-      // the incoming page stays authoritative → it is dropped.
+      // First-page refetch omits gone-1; with no pending op for it, the incoming
+      // page stays authoritative → it is dropped.
       writeFirstPage(cache, [{ id: 'server-1', name: 'Groceries' }]);
 
       expect(readIds(cache)).toEqual(['server-1']);
@@ -733,8 +733,8 @@ describe('cache', () => {
         { id: 'server-1', name: 'Eggs' },
         { id: 'gone-1', name: 'Deleted elsewhere' },
       ]);
-      // Authoritative refetch no longer has gone-1 (e.g. a collaborator deleted
-      // it). With no pending op for it, the page stays authoritative → dropped.
+      // Authoritative refetch omits gone-1 (e.g. a collaborator deleted it).
+      // With no pending op for it, the page stays authoritative → dropped.
       writeSinglePage(cache, [{ id: 'server-1', name: 'Eggs' }]);
 
       expect(readIds(cache)).toEqual(['server-1']);

@@ -67,9 +67,9 @@ describe('setupBadgeSync', () => {
 
   afterEach(() => teardown());
 
-  // This replaces the old `isHydrated` gate. A cold start reads an empty cache,
-  // which is distinguishable from a real 0 — so there is no window where a
-  // default value could stomp a badge the server set on delivery.
+  // No hydration gate is needed. A cold start reads an empty cache, which is
+  // distinguishable from a real 0 — so there is no window where a default value
+  // could stomp a badge the server set on delivery.
   it('applies nothing while the count is unknown', () => {
     teardown = setupBadgeSync();
 

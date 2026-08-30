@@ -33,7 +33,7 @@ let shouldRetry: (errOrCloseEvent: unknown) => boolean;
 // Every dial goes through `url()`, which is where the backoff and the offline
 // gate live — `retryWait` is skipped entirely for a close of 1000, so it cannot
 // hold the pacing (see wsCloseCodes.library.test.ts). Tests await the gate
-// directly rather than advancing a timer this module no longer owns.
+// directly rather than advancing a timer this module does not own.
 let dialGate: () => Promise<string>;
 
 beforeAll(() => {
@@ -128,9 +128,9 @@ describe('wsLink', () => {
     });
 
     // Asserted on `lastReconnectTime`, which only moves for a call that was not
-    // dropped. This used to read `isWebSocketReconnecting()` — a flag set and
-    // cleared inside one synchronous block, so it was `false` whether or not
-    // the debounce worked and the assertion could not fail.
+    // dropped. `isWebSocketReconnecting()` cannot stand in for it — that flag is
+    // set and cleared inside one synchronous block, so it reads `false` whether
+    // or not the debounce works and the assertion could not fail.
     it('debounces rapid reconnection attempts', () => {
       jest.useFakeTimers();
       try {

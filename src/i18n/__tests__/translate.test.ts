@@ -56,10 +56,10 @@ describe('t()', () => {
   it('reports the mistake when a key names an object node', () => {
     // 'errors' is a parent node, not a leaf string — passing it is a bug at the
     // call site. i18next says so in the returned string, and `defaultValue`
-    // does NOT override that. The helper used to return the bare key here,
-    // which took a hand-rolled resource resolver plus a hand-rolled
-    // `fallbackLng` chain to achieve. Both render visibly-wrong text; only one
-    // of them names the problem, and it is not the hand-rolled one.
+    // does NOT override that. Returning the bare key here instead takes a
+    // hand-rolled resource resolver plus a hand-rolled `fallbackLng` chain to
+    // achieve. Both render visibly-wrong text; only one of them names the
+    // problem, and it is not the hand-rolled one.
     expect(t('errors')).toContain('returned an object instead of string');
     expect(t('errors', 'fallback value')).toContain(
       'returned an object instead of string',

@@ -6,7 +6,7 @@ import { useBiometricPrompting } from '../useBiometricPrompting';
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
-// The hook no longer touches the keychain — only the session-token stubs are
+// The hook does not touch the keychain — only the session-token stubs are
 // needed to keep the import chain from reaching native code.
 jest.mock('#/storage/keychain', () => ({
   loadSessionTokens: jest.fn(() => Promise.resolve(null)),

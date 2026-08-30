@@ -1,6 +1,6 @@
 // Unit tests for the verification-first `authService.register` behavior.
 //
-// Registration no longer authenticates: a `RegisterPayload` result issues NO
+// Registration does not authenticate: a `RegisterPayload` result issues NO
 // tokens (the user activates via an emailed link, then logs in), so `register`
 // must NOT call `store.setAuth`. Error union members surface a toast and keep
 // the user on the sign-up screen. `register` uses the singleton Apollo client,

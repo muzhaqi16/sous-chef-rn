@@ -357,24 +357,29 @@ module.exports = {
       // then lies. A repo-wide sweep found 36 wrong ones, including a block
       // that described the exact bug the fix beneath it had already removed.
       //
-      // Scoped to production `src` .ts/.tsx — the same set
-      // `scripts/check-comment-budget.mjs` holds to a length budget, and the
-      // only set that is clean today. Everywhere else has genuine false
-      // positives: `device.graphql`'s "used to push notifications" means "used
-      // FOR", and `check-comment-budget.mjs` has to quote these very terms to
-      // document the ban. Tests are a known backlog (~67 files), not an
-      // endorsement. `no-warning-comments` matches plain substrings, so a term
-      // cannot be made precise enough to include them.
+      // Covers app code AND tests. `scripts/`, the root config files and
+      // `.graphql` stay out: each has a genuine false positive the rule cannot
+      // express, since `no-warning-comments` matches plain substrings —
+      // `device.graphql`'s "used to push notifications" means "used FOR", and
+      // `check-comment-budget.mjs` has to quote these very terms to document
+      // the ban.
+      //
+      // `no longer` is the blunt one, and deliberately kept: clearing it from
+      // tests took 26 rewords that were not history at all, mostly a test
+      // narrating its own state ("the refetch no longer includes gone-1").
+      // Every one of those rewrites still read better, because defining the
+      // present by reference to a past state is worse than saying it directly
+      // — but drop the term from this list if the friction outweighs that.
       //
       // Its own block: no other override declares this rule, so nothing
       // replaces it — see the note at the top of this file for why that is
       // worth stating.
-      files: ['src/**/*.ts', 'src/**/*.tsx'],
-      excludedFiles: [
-        'src/**/__tests__/**',
-        'src/**/__mocks__/**',
-        'src/**/*.test.ts',
-        'src/**/*.test.tsx',
+      files: [
+        'src/**/*.ts',
+        'src/**/*.tsx',
+        '__tests__/**/*.ts',
+        '__tests__/**/*.tsx',
+        '__tests__/**/*.js',
       ],
       rules: {
         'no-warning-comments': [

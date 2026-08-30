@@ -583,7 +583,7 @@ describe('keychain storage', () => {
         }),
       );
 
-      // The cleared pair is no longer confirmed — saving it again writes.
+      // The cleared pair is unconfirmed — saving it again writes.
       await expect(saveSessionTokens(tokens)).resolves.toBe(true);
       expect(mockSetGenericPassword).toHaveBeenCalledTimes(2);
 

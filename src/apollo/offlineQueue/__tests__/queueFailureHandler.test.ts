@@ -180,9 +180,10 @@ describe('queue failure handler — dequeue and sole ownership', () => {
   });
 
   it('is the only thing in the app that registers a failure handler', () => {
-    // `setFailureHandler` is last-write-wins. App.tsx used to register a second
-    // handler at module scope; effects run after imports, so this module always
-    // won and App.tsx's read as live while being dead. One owner, asserted.
+    // `setFailureHandler` is last-write-wins. A second registration at module
+    // scope in App.tsx loses silently: effects run after imports, so this module
+    // always wins and App.tsx's handler reads as live while being dead. One
+    // owner, asserted.
     const { execSync } = require('child_process');
     const hits = execSync(
       "grep -rn '\\.setFailureHandler(' src App.tsx --include='*.ts' --include='*.tsx' " +

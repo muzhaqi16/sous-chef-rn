@@ -61,10 +61,10 @@ const findAuthResetCall = (mockSet: jest.Mock) =>
 // require cycle. Jest here runs without --experimental-vm-modules and the RN
 // babel preset does not down-level `import()`, so that call always rejects with
 // "A dynamic import callback was invoked without --experimental-vm-modules" and
-// `clearStore` is unreachable from any test — which is why the cache assertions
-// in this file used to assert only that the failure was logged. The persisted
-// blob is now cleared before that import and in its own try, so it IS covered:
-// it is also the half that matters most, being the copy that survives a restart.
+// `clearStore` is unreachable from any test, so no assertion here can cover it
+// beyond checking that the failure is logged. The persisted blob is cleared
+// before that import and in its own try, so it IS covered: it is also the half
+// that matters most, being the copy that survives a restart.
 const expectPersistedCacheCleared = () => {
   expect(apolloCachePersistence.clear).toHaveBeenCalled();
   expect(logger.error).not.toHaveBeenCalledWith(

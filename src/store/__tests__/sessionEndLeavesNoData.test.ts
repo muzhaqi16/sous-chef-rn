@@ -161,7 +161,7 @@ describe('a session end leaves no data belonging to the previous person', () => 
     // above so a regression reads as what it is, rather than as an unclassified
     // new key.
     useStore.setState({
-      // The notification FEED is no longer store state — it lives in the
+      // The notification FEED is not store state — it lives in the
       // Apollo cache, which this same reset clears (`clearApolloCache: true` on
       // the logout path). What the store still holds for notifications is the
       // expiration buffer, and it is just as personal: it names a pantry item.

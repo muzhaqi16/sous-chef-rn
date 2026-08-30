@@ -74,7 +74,7 @@ describe('persistedQueryLink ↔ manifest identity', () => {
   // which is why the documents are deliberately plain `DocumentNode`s here.
   // `variables` is typed rather than inferred so the three entries widen at the
   // definition site instead of forming a union: under Apollo 4.2's modern
-  // signatures a union of variables no longer satisfies `client.query`.
+  // signatures a union of variables does not satisfy `client.query`.
   const CASES: Array<{
     operationName: string;
     document: import('graphql').DocumentNode;

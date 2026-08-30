@@ -448,7 +448,7 @@ describe('useImageUpload', () => {
 
   // `errorPolicy: 'all'` means a failed mutation RESOLVES with `error` set
   // rather than rejecting, so this drives the path the app actually takes
-  // instead of stubbing the wrapper that used to catch a throw.
+  // instead of stubbing a wrapper to catch a throw.
   it('updateProfileAvatarUrl reports and returns null when the mutation fails', async () => {
     const { result } = renderHookWithApollo(() => useImageUpload(), {
       operationMocks: [

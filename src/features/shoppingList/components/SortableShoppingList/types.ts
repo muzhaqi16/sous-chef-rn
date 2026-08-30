@@ -35,7 +35,7 @@ export interface SortableShoppingListProps
   extends Omit<ScrollViewProps, 'data' | 'renderItem' | 'keyExtractor'> {
   items: ShoppingListRowItem[];
   onItemPress: (id: string) => void;
-  /** Swipe actions for one row — see `SortableListActions.itemSwipeActions`. */
+  /** Swipe actions for one row, published via `ItemSwipeActionsProvider`. */
   itemSwipeActions?: (id: string) =>
     | {
         left?: SwipeAction[];
