@@ -7224,12 +7224,11 @@ type Mutation {
   still there. Buying the same item every week therefore stocks the pantry
   every week. Only a replay WITHIN one purchase converges as skipped.
   
-  THESE THREE COUNTERS CHANGED MEANING without changing name or type.
-  Previously: failed was always 0 (nothing was reported as failing), skipped
-  meant "could not be moved", and movedItems held only lines this call moved.
-  A client that gates an error banner on failed > 0, surfaces skipped as
-  "needs attention", or renders movedItems.length as "N items stocked" needs
-  updating. See docs/api/graphql-operation-conventions.md.
+  Three counters carry meanings a client cannot infer from their names, so
+  read them as defined above rather than by analogy with other bulk payloads:
+  failed can be non-zero, skipped is "already stocked" rather than "could not
+  be moved", and movedItems.length is not a count of what this call stocked.
+  docs/api/graphql-operation-conventions.md records what changed and when.
   
   A line whose catalog item was deleted is re-resolved from the name it still
   carries rather than skipped; only a line with neither fails.
@@ -7239,6 +7238,17 @@ type Mutation {
   Move a shopping list item to the pantry after purchase.
   Creates a PantryItem with full traceability back to the shopping list item.
   Optionally removes the item from the shopping list.
+  
+  The target pantry must belong to the same home as the shopping list. A
+  pantry in another home is refused as a validation error naming the mismatch,
+  even where the caller has permission to add items to it; a PERSONAL list
+  (one with no home) may target any pantry the caller can add to.
+  
+  Stocking is once PER PURCHASE, keyed on the line and its purchase cycle: a
+  replay within one purchase returns the existing pantry item with
+  alreadyInPantry true, while the line's next purchase stocks the pantry in
+  its own right. If that existing entry sits in a pantry the caller cannot
+  read, the call is refused rather than disclosing it.
   """
   moveShoppingItemToPantry(input: MoveShoppingItemToPantryInput!): MoveShoppingItemToPantryResult!
   """Reorder a shopping list item relative to other items."""
