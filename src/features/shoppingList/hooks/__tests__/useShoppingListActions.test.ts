@@ -141,6 +141,16 @@ function seedShoppingListItem(
   return cache;
 }
 
+/**
+ * The response shape `UpdateShoppingListItemQuantity` can actually return.
+ *
+ * Its `useShoppingListActions_updateQuantityResult` fragment is narrow on
+ * purpose — the mutation changes quantity, unit and version, so those are what
+ * it selects. A fixture stating `itemName`, `purchaseInfo`, `category`, `notes`,
+ * `sortOrder`, `updatedAt` and `item` beside them described a response the
+ * server cannot send: the schema-backed mock link drops every one before the
+ * result reaches Apollo, so the assertions never saw them either.
+ */
 function buildUpdateMockResponse(quantity: number, version: number) {
   return {
     updateShoppingListItemQuantity: {
@@ -148,22 +158,12 @@ function buildUpdateMockResponse(quantity: number, version: number) {
       shoppingListItem: {
         __typename: 'ShoppingListItem' as const,
         id: 'item-1',
-        itemName: 'Milk',
         quantity,
         quantityInput: String(quantity),
         displayFormat: DisplayFormat.Auto,
-        purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo' as const,
-          isPurchased: false,
-        },
-        version,
-        updatedAt: '2025-01-01T00:00:00.000Z',
-        category: null,
-        notes: null,
         unitName: null,
         unit: null,
-        sortOrder: 0,
-        item: null,
+        version,
       },
     },
   };
