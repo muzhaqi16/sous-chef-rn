@@ -29,7 +29,6 @@ import {
   useCanAccessDevTools,
   useHasUnverifiedEmail,
 } from '#store/useAppStore';
-import { useEmailVerificationActions } from '#hooks/auth/useEmailVerification';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { Text } from '#components/atoms/Text';
 
@@ -43,7 +42,6 @@ export const ProfileScreen = () => {
   useScreenTransition('ProfileScreen');
   const canAccessDevTools = useCanAccessDevTools();
   const hasUnverifiedEmail = useHasUnverifiedEmail();
-  const { resumeVerification } = useEmailVerificationActions();
   const {
     toProfilePhotoUpload,
     toDeleteAccount,
@@ -55,6 +53,7 @@ export const ProfileScreen = () => {
     toDebugInfo,
     toPerformanceDashboard,
     toChangePassword,
+    toVerifyEmail,
     goBack,
   } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
@@ -158,7 +157,7 @@ export const ProfileScreen = () => {
             icon="mail-unread-outline"
             iconLibrary="Ionicons"
             variant="warning"
-            onPress={resumeVerification}
+            onPress={toVerifyEmail}
             testID="verify-email-banner"
           />
         )}

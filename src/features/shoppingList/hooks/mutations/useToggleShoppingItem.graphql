@@ -1,7 +1,7 @@
-# Narrow fragment for useToggleShoppingItem's optimistic-response shape.
-# Mirrors what the ToggleShoppingListItemPurchased mutation selects on
-# `shoppingListItem` — keep them in sync. The hook spreads this entire shape
-# into the optimistic response (`...item, purchaseInfo, updatedAt`).
+# The snapshot useToggleShoppingItem reverts from, and the shape
+# ToggleShoppingListItemPurchased selects on `shoppingListItem` — keep them in
+# sync. Every field here is one a refusal has to be able to put back, so a field
+# the flip CLEARS must be selected or the revert cannot restore it.
 fragment useToggleShoppingItem_item on ShoppingListItem {
   id
   itemName
@@ -10,6 +10,11 @@ fragment useToggleShoppingItem_item on ShoppingListItem {
   displayFormat
   purchaseInfo {
     isPurchased
+    # The revert restores this. A flip CLEARS the stamp (the server does the
+    # same on that transition), so a snapshot that does not carry it has
+    # nothing to put back when the server refuses — and the row then re-offers
+    # move-to-pantry for a line the bulk move will act on.
+    movedToPantryAt
   }
   version
   updatedAt

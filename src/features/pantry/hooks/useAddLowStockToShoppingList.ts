@@ -55,7 +55,9 @@ export function useAddLowStockToShoppingList({
       } catch (error: unknown) {
         // `unwrapPayload` throws a GraphQLDomainError carrying the refusal's
         // own code; `localizedErrorMessage` resolves that to the app's copy.
-        toastService.error(localizedErrorMessage(error));
+        toastService.error(
+          localizedErrorMessage(error, t('errors.addLowStockFailed')),
+        );
       }
     }
     if (!result) return;

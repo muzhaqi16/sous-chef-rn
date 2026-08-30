@@ -148,7 +148,6 @@ export function AuthFormTemplate<T extends FieldValues>({
 const styles = StyleSheet.create(theme => ({
   formContainer: {
     flex: 1,
-    justifyContent: 'space-around',
   },
   headerAction: {
     width: theme.sizes.button.md,
@@ -169,10 +168,15 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'flex-end',
   },
   action: {
-    marginVertical: theme.spacing.xl,
+    // Absorbs the leftover height so the button and footer anchor to the
+    // bottom while the header stays at the top. The padding keeps the gap
+    // above the button when there IS no leftover — a short screen, or the
+    // keyboard up.
+    marginTop: 'auto',
+    paddingTop: theme.spacing.xl,
+    marginBottom: theme.spacing.xl,
   },
   footer: {
-    marginTop: 'auto',
     paddingVertical: theme.spacing.xl,
   },
   footerDisabled: {

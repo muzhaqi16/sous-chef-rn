@@ -40,8 +40,28 @@ export const addItemSchema = object({
   unit: string(), // Tracking unit
   minQuantity: string(),
   restockQuantity: string(),
-  netWeight: string(),
-  netWeightUnit: string(),
+  // The same all-or-nothing net-weight pair the add sheet enforces, against the
+  // same create contract. `usePantryItemSubmission` drops the weight unless BOTH
+  // a value and a resolved unit id are present, so a form that does not refuse
+  // the half-filled pair discards what the user typed with nothing reported —
+  // and `TAB_FIELDS.Product` already declares these two as carrying a message.
+  netWeight: string().test(
+    'net-weight-needs-value',
+    msg('errors.field.netWeight'),
+    (value, context) => {
+      if ((value ?? '').trim()) return true;
+      return !context.parent.netWeightUnitId;
+    },
+  ),
+  netWeightUnit: string().test(
+    'net-weight-needs-unit',
+    msg('labels.pleaseSelectAUnitForTheNetWeight'),
+    (_value, context) => {
+      const weight = (context.parent.netWeight ?? '').trim();
+      if (!weight) return true;
+      return Boolean(context.parent.netWeightUnitId);
+    },
+  ),
   netWeightUnitId: string(),
   storageState: string().oneOf(Object.values(StorageState)),
   condition: string().oneOf(Object.values(ItemCondition)),
@@ -58,8 +78,28 @@ export const editItemSchema = object({
   unit: string(), // Tracking unit
   minQuantity: string(),
   restockQuantity: string(),
-  netWeight: string(),
-  netWeightUnit: string(),
+  // The same all-or-nothing net-weight pair the add sheet enforces, against the
+  // same create contract. `usePantryItemSubmission` drops the weight unless BOTH
+  // a value and a resolved unit id are present, so a form that does not refuse
+  // the half-filled pair discards what the user typed with nothing reported —
+  // and `TAB_FIELDS.Product` already declares these two as carrying a message.
+  netWeight: string().test(
+    'net-weight-needs-value',
+    msg('errors.field.netWeight'),
+    (value, context) => {
+      if ((value ?? '').trim()) return true;
+      return !context.parent.netWeightUnitId;
+    },
+  ),
+  netWeightUnit: string().test(
+    'net-weight-needs-unit',
+    msg('labels.pleaseSelectAUnitForTheNetWeight'),
+    (_value, context) => {
+      const weight = (context.parent.netWeight ?? '').trim();
+      if (!weight) return true;
+      return Boolean(context.parent.netWeightUnitId);
+    },
+  ),
   netWeightUnitId: string(),
   storageState: string().oneOf(Object.values(StorageState)),
   condition: string().oneOf(Object.values(ItemCondition)),

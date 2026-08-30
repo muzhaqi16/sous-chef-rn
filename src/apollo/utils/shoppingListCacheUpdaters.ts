@@ -174,6 +174,53 @@ export function readMovedToPantryAt(
 }
 
 /**
+ * Every field of `ShoppingListItemPurchaseInfo`.
+ *
+ * Must stay complete against the SDL type, which
+ * `__tests__/graphql/purchaseInfoWriterCoversType.test.ts` enforces — a field
+ * missing here is a field a local write silently drops, for the reason in
+ * {@link writePurchaseInfo}.
+ */
+const PURCHASE_INFO_FIELDS = `
+      __typename
+      isPurchased
+      movedToPantryAt
+      purchaseDate
+      purchasedById
+      purchasedPrice
+      purchasedQuantity
+      purchasedBy {
+        __typename
+        id
+      }`;
+
+/** The row's purchase record as this module reads and writes it. */
+const PURCHASE_INFO_FRAGMENT = gql`
+  fragment _WritePurchaseInfo on ShoppingListItem {
+    __typename
+    id
+    purchaseInfo {${PURCHASE_INFO_FIELDS}
+    }
+  }
+`;
+
+const PURCHASE_INFO_WITH_UPDATED_AT_FRAGMENT = gql`
+  fragment _WritePurchaseInfoWithUpdatedAt on ShoppingListItem {
+    __typename
+    id
+    updatedAt
+    purchaseInfo {${PURCHASE_INFO_FIELDS}
+    }
+  }
+`;
+
+/** The purchase record's own fields, as read from the cache. */
+type CachedPurchaseInfo = Record<string, unknown> & {
+  isPurchased?: boolean;
+  movedToPantryAt?: string | null;
+};
+
+/**
  * The only writer of `ShoppingListItem.purchaseInfo`.
  *
  * The record has two properties no call site should have to remember.
@@ -193,12 +240,26 @@ export function readMovedToPantryAt(
  *
  * Both rules live here so a sixth writer cannot drift from them. Callers say
  * what they are changing; they do not restate the rules.
+ *
+ * **Goes through `writeFragment`, not `cache.modify`.** `cache.modify` does not
+ * run type-policy merges and cannot introduce a field the cached record does
+ * not already carry, so the rules above were being asserted by a mechanism that
+ * could not enforce either of them. `writeFragment` runs the policy.
+ *
+ * **And it carries the cached record forward.** The policy's clearing exists for
+ * a narrow SERVER response, which describes a different purchase and must not
+ * inherit the last one's amounts. A LOCAL flip is not that: the SDL documents a
+ * clearing contract for `movedToPantryAt` alone, and the amounts belong to the
+ * purchase the server recorded and are not this write's to discard. So every
+ * field the record already holds is written back explicitly, leaving the policy
+ * nothing to clear — the mechanism is honest, and the outcome is the one the
+ * schema describes.
  */
 export function writePurchaseInfo(
   cache: ApolloCache,
   itemId: string,
   patch: PurchaseInfoPatch,
-  options: { updatedAt?: string } = {},
+  options: { updatedAt?: string; restoring?: boolean } = {},
 ): void {
   const cacheId = cache.identify({
     __typename: 'ShoppingListItem',
@@ -206,48 +267,108 @@ export function writePurchaseInfo(
   });
   if (!cacheId) return;
 
-  cache.modify<{
-    purchaseInfo: {
-      isPurchased?: boolean;
-      movedToPantryAt?: string | null;
-    };
-    updatedAt: string;
+  const existing = cache.readFragment<{
+    purchaseInfo?: CachedPurchaseInfo | null;
   }>({
     id: cacheId,
-    fields: {
-      purchaseInfo(existing) {
-        // A value object with no key fields is never stored as a reference, but
-        // the modifier's type admits one and spreading it would write `__ref`
-        // over the record. Same guard the type policy uses.
-        if (isReference(existing)) return existing;
+    fragment: PURCHASE_INFO_FRAGMENT,
+    fragmentName: '_WritePurchaseInfo',
+    returnPartialData: true,
+  })?.purchaseInfo;
 
-        const wasPurchased = existing?.isPurchased ?? false;
-        // Only a caller that names the flag may change it. Everything else
-        // leaves it exactly as cached, which is what keeps the type policy on
-        // its non-clearing path.
-        const nextPurchased = patch.isPurchased ?? wasPurchased;
-        const flipped = nextPurchased !== wasPurchased;
+  // A value object with no key fields is never stored as a reference, but the
+  // read's type admits one and spreading it would write `__ref` over the record.
+  const cached: CachedPurchaseInfo | undefined = isReference(existing)
+    ? undefined
+    : existing ?? undefined;
 
-        let stamp: string | null;
-        if (flipped) {
-          stamp = null;
-        } else if (patch.movedToPantryAt !== undefined) {
-          stamp = patch.movedToPantryAt;
-        } else {
-          stamp = existing?.movedToPantryAt ?? null;
-        }
+  const wasPurchased = cached?.isPurchased ?? false;
+  // Only a caller that names the flag may change it. Everything else leaves it
+  // exactly as cached.
+  const nextPurchased = patch.isPurchased ?? wasPurchased;
+  const flipped = nextPurchased !== wasPurchased;
 
-        return {
-          ...existing,
-          isPurchased: nextPurchased,
-          movedToPantryAt: stamp,
-        };
-      },
+  const stamp = resolveStamp({
+    patch,
+    cached: cached?.movedToPantryAt ?? null,
+    flipped,
+    restoring: options.restoring === true,
+  });
+
+  cache.writeFragment({
+    id: cacheId,
+    fragment:
+      options.updatedAt === undefined
+        ? PURCHASE_INFO_FRAGMENT
+        : PURCHASE_INFO_WITH_UPDATED_AT_FRAGMENT,
+    fragmentName:
+      options.updatedAt === undefined
+        ? '_WritePurchaseInfo'
+        : '_WritePurchaseInfoWithUpdatedAt',
+    data: {
+      __typename: 'ShoppingListItem',
+      id: itemId,
       ...(options.updatedAt === undefined
         ? {}
-        : { updatedAt: () => options.updatedAt }),
+        : { updatedAt: options.updatedAt }),
+      purchaseInfo: {
+        ...carriedForward(cached),
+        __typename: 'ShoppingListItemPurchaseInfo',
+        isPurchased: nextPurchased,
+        movedToPantryAt: stamp,
+      },
     },
   });
+}
+
+/**
+ * The record's other fields, exactly as cached.
+ *
+ * A field the cache does not hold is left OUT rather than written as null: the
+ * write must not invent a value, and a key absent from both sides is one the
+ * policy has nothing to clear either.
+ */
+function carriedForward(
+  cached: CachedPurchaseInfo | undefined,
+): Record<string, unknown> {
+  if (!cached) return {};
+  const carried: Record<string, unknown> = {};
+  for (const [field, value] of Object.entries(cached)) {
+    if (field === '__typename') continue;
+    if (field === 'isPurchased' || field === 'movedToPantryAt') continue;
+    if (value === undefined) continue;
+    carried[field] = value;
+  }
+  return carried;
+}
+
+/**
+ * The stamp a write should leave behind.
+ *
+ * Restoring is not flipping. A revert re-asserts the flag the row had before
+ * the user touched it, which looks like a flip from the cache's side and is
+ * not one: the server never saw the change, so it still holds the stamp. Left
+ * as a flip, the revert cleared a stamp the snapshot had no way to restore —
+ * the row then re-offered move-to-pantry and a bulk move sent the line to the
+ * pantry a second time.
+ */
+function resolveStamp({
+  patch,
+  cached,
+  flipped,
+  restoring,
+}: {
+  patch: PurchaseInfoPatch;
+  cached: string | null;
+  flipped: boolean;
+  restoring: boolean;
+}): string | null {
+  if (restoring) {
+    return patch.movedToPantryAt !== undefined ? patch.movedToPantryAt : cached;
+  }
+  if (flipped) return null;
+  if (patch.movedToPantryAt !== undefined) return patch.movedToPantryAt;
+  return cached;
 }
 
 export function matchesFilter(
@@ -880,6 +1001,15 @@ export function removeItemFromShoppingListForMoveToPantry(
 
     if (!parentCacheId) return;
 
+    // The edge operation first, on its own, recording whether it changed
+    // anything. The counters follow from that rather than assuming it — this
+    // helper runs TWICE for one online move (the eager pre-fire unlink, then
+    // the mutation's update callback), and `edges.filter` is idempotent while
+    // `-1` is not. Two passes because `cache.modify` visits an entity's fields
+    // in the STORE's order, so a flag set by one modifier cannot be read by
+    // another in the same call.
+    let removed = false;
+
     cache.modify({
       id: parentCacheId,
       fields: {
@@ -893,24 +1023,36 @@ export function removeItemFromShoppingListForMoveToPantry(
           )
             return existing;
 
+          const edges = existing.edges.filter(
+            edge => readField<string>('id', edge?.node) !== itemId,
+          );
+          if (edges.length === existing.edges.length) return existing;
+
+          removed = true;
           return {
             ...existing,
-            edges: existing.edges.filter(
-              edge => readField<string>('id', edge?.node) !== itemId,
-            ),
+            edges,
             totalCount: Math.max(0, (existing.totalCount || 0) - 1),
           };
         },
-        ...(wasPurchased && {
-          completedItems(existing: number = 0) {
-            return Math.max(0, existing - 1);
-          },
-        }),
-        totalItems(existing: number = 0) {
-          return Math.max(0, existing - 1);
-        },
       },
     });
+
+    if (removed) {
+      cache.modify({
+        id: parentCacheId,
+        fields: {
+          ...(wasPurchased && {
+            completedItems(existing: number = 0) {
+              return Math.max(0, existing - 1);
+            },
+          }),
+          totalItems(existing: number = 0) {
+            return Math.max(0, existing - 1);
+          },
+        },
+      });
+    }
 
     // Evicting is for the CONFIRMED move: once the server has the row, the
     // local entity is dead weight. The eager (pre-fire) call keeps it, because
@@ -973,6 +1115,12 @@ export function restoreItemToShoppingListAfterMoveToPantry(
     });
     if (!parentCacheId) return;
 
+    // Same two-pass shape as the remove: the counters follow the edge insert
+    // rather than assuming it. This runs from the queue's withdrawal AND from
+    // the call site's own revert, and guarding only the insert made it
+    // idempotent in the one effect a test could see.
+    let restored = false;
+
     cache.modify({
       id: parentCacheId,
       fields: {
@@ -998,6 +1146,7 @@ export function restoreItemToShoppingListAfterMoveToPantry(
           });
           if (!node) return existing;
 
+          restored = true;
           return {
             ...existing,
             edges: [
@@ -1007,16 +1156,24 @@ export function restoreItemToShoppingListAfterMoveToPantry(
             totalCount: (existing.totalCount || 0) + 1,
           };
         },
-        ...(wasPurchased && {
-          completedItems(existing: number = 0) {
-            return existing + 1;
-          },
-        }),
-        totalItems(existing: number = 0) {
-          return existing + 1;
-        },
       },
     });
+
+    if (restored) {
+      cache.modify({
+        id: parentCacheId,
+        fields: {
+          ...(wasPurchased && {
+            completedItems(existing: number = 0) {
+              return existing + 1;
+            },
+          }),
+          totalItems(existing: number = 0) {
+            return existing + 1;
+          },
+        },
+      });
+    }
   } catch (error) {
     logger.warn(
       'Failed to restore item to ShoppingList after refused move to pantry:',

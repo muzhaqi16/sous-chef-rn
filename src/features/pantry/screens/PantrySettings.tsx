@@ -13,7 +13,10 @@ import { ScreenHeader } from '#components/molecules/ScreenHeader';
 import { LoadingInline } from '#components/atoms/Loading';
 import { InfoRow } from '#components/molecules/InfoRow';
 import { useApolloClient, useQuery, useMutation } from '@apollo/client/react';
-import { updateEntityFieldsLocalFirst } from '#/apollo/utils/localFirstFields';
+import {
+  snapshotFields,
+  updateEntityFieldsLocalFirst,
+} from '#/apollo/utils/localFirstFields';
 import type { ApolloCache } from '@apollo/client';
 import {
   GetPantryDocument,
@@ -341,10 +344,11 @@ export const PantrySettings: React.FC<
             cache: apolloClient.cache,
             entity: { __typename: 'Pantry', id: pantryId },
             updates,
-            previous: {
-              name: pantry?.name ?? '',
-              description: pantry?.description ?? '',
-            },
+            // Not `pantry?.name ?? ''`: `pantry` is optional here, so that
+            // coercion wrote an EMPTY NAME over the real one whenever a refusal
+            // landed before the query had resolved. A key the read did not
+            // carry is omitted instead, and the revert leaves it alone.
+            previous: snapshotFields(pantry, updates),
             logLabel: 'PantrySettings.updatePantry',
             mutate: () =>
               updatePantry({

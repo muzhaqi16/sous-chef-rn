@@ -3,6 +3,7 @@ import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { removePantryItemLocally } from '#/apollo/utils/pantryCacheUpdaters';
 import { restoreItemToShoppingListAfterMoveToPantry } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
@@ -61,6 +62,40 @@ const UNLINK_WITHDRAWALS: Record<
   },
 };
 
+/**
+ * Aggregates the eager write moved that the generic evict does not put back.
+ *
+ * A local-first pantry write adjusts `Pantry.stats.totalItems` when it
+ * publishes its row, because the mutation's `update` callback never runs while
+ * the write is queued. Every FOREGROUND rejection path pairs that with a
+ * withdrawal; this path — the REPLAY refused permanently — did not, so the row
+ * disappeared and the header went on counting it, with no response coming to
+ * correct it offline.
+ *
+ * Runs BEFORE the evict, so the paired helper can still see the edge it is
+ * uncounting and stays idempotent on a re-run.
+ */
+const COUNT_WITHDRAWALS: Record<
+  string,
+  (variables: OperationVariables, entityId: string | null) => void
+> = {
+  CreatePantryItem: (variables, entityId) => {
+    const pantryId = (variables.input as { pantryId?: string } | undefined)
+      ?.pantryId;
+    if (!pantryId || !entityId) return;
+    removePantryItemLocally(client.cache, pantryId, entityId);
+  },
+  MoveShoppingItemToPantry: (variables, entityId) => {
+    const input = variables.input as
+      | { pantryId?: string; pantryItemId?: string }
+      | undefined;
+    const pantryId = input?.pantryId;
+    const rowId = input?.pantryItemId ?? entityId;
+    if (!pantryId || !rowId) return;
+    removePantryItemLocally(client.cache, pantryId, rowId);
+  },
+};
+
 export function handleQueueFailure(info: FailedMutationInfo): void {
   const { mutationId, entityType, entityId, operationName, error } = info;
 
@@ -68,6 +103,18 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
     `Queue: withdrawing locally-applied ${operationName} after permanent failure`,
     { entityType, entityId, code: error.code, type: error.type },
   );
+
+  const withdrawCount = COUNT_WITHDRAWALS[operationName];
+  if (withdrawCount) {
+    try {
+      withdrawCount(info.variables, entityId);
+    } catch (countError) {
+      logger.warn(
+        `Queue: could not withdraw ${operationName}'s count`,
+        countError,
+      );
+    }
+  }
 
   if (entityType && entityId) {
     safeEvict(client.cache, entityType, entityId);

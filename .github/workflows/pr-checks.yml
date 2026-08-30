@@ -218,6 +218,14 @@ jobs:
       - name: Startup origin position
         run: node scripts/check-startup-origin.mjs
 
+      # The build-path invocations read ALLOW_LAUNCH_ARG_AUTH from the
+      # environment, which CI does not set — so both returned "off, nothing to
+      # check" and exited 0 whatever they were handed. The self-test runs the
+      # refusal logic against inputs that must be refused, which is the part
+      # worth asserting away from a build machine.
+      - name: Launch-argument auth — the gate can refuse
+        run: node scripts/check-launch-arg-auth.mjs --self-test
+
       - name: Launch-argument auth — Android release artifact
         run: node scripts/check-launch-arg-auth.mjs --platform android --variant release
 

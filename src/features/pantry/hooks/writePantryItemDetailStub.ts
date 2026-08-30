@@ -20,6 +20,7 @@
  */
 
 import { type ApolloCache } from '@apollo/client';
+import { Kind, type DocumentNode, type FragmentDefinitionNode } from 'graphql';
 import type { TypedDocumentNode } from '@graphql-typed-document-node/core';
 import type { Unmasked } from '@apollo/client/masking';
 import type {
@@ -75,8 +76,8 @@ export interface PantryItemDetailStubFields {
  * them was overwritten with a neutral one. Offline that never heals.
  *
  * Grouping the fragments narrows that blast radius; it cannot remove it, because
- * the boundary just moves to the group. Reading with partial data tolerated and
- * letting every present field win removes it.
+ * the boundary just moves to the group. Asking the cache, field by field, which
+ * fields it can satisfy IN FULL removes it — see {@link completeFields}.
  *
  * Types come from the generated fragment docs — `TypedDocumentNode<TFragment>`
  * carries the shape, so `data`, the read and the write are all checked against
@@ -105,19 +106,9 @@ function topUpEntityGroup<TFragment extends { __typename: string; id: string }>(
   });
   if (complete) return;
 
-  const existing = cache.readFragment({
-    id: entityCacheId,
-    fragment,
-    fragmentName,
-    returnPartialData: true,
-  });
-
-  // What the cache actually holds. `undefined` means the field is not cached;
-  // `null` is a real value the server supplied and must be kept. A nested value
-  // is kept only when it is itself whole — an object with a missing leaf is the
-  // thing that made the read incomplete, so preferring it would preserve the
-  // defect.
-  const cached = definedFields(existing);
+  // What the cache actually holds, judged one field at a time by the cache
+  // itself. Anything it can satisfy in full wins over the neutral default.
+  const cached = completeFields(cache, entityCacheId, fragment, fragmentName);
 
   cache.writeFragment({
     id: entityCacheId,
@@ -129,37 +120,135 @@ function topUpEntityGroup<TFragment extends { __typename: string; id: string }>(
 }
 
 /**
- * The fields of a partially-read fragment that the cache actually holds.
+ * The fields of `fragment` the cache can satisfy IN FULL, read one at a time.
  *
- * `Object.fromEntries` has no way to preserve the key/value relationship, so
- * the assertion below is where that is restated — the runtime filter keeps only
- * keys of `T`, and their values are `T`'s.
+ * Completeness has to be asked of the cache, not computed from the values it
+ * returns. A `returnPartialData` read OMITS the key it cannot satisfy rather
+ * than setting it `undefined`, so a filter written as `value !== undefined`
+ * judges every partially-cached nested object whole — and writing one back
+ * re-states the incompleteness instead of repairing it, which is the exact case
+ * the comment above says this fixed. Verified against the installed Apollo:
+ * `node scripts/probe-apollo-cache-shapes.mjs`.
+ *
+ * A strict `readFragment` of ONE field answers for every level beneath it,
+ * because all-or-nothing is what the later read will apply too. `null` still
+ * reads complete, so a genuinely-null value the server supplied is kept as a
+ * value rather than mistaken for a hole.
+ *
+ * The trade, deliberately: a nested value the cache holds only partially is
+ * dropped in favour of the neutral default. It is the one value that cannot be
+ * written back — keeping it leaves EVERY read of this entity failing, which
+ * offline means a permanently blank detail screen, against losing one field
+ * that the create response will supply. Preserving it instead would mean
+ * completing it, which needs a neutral for the nested element and so a change
+ * to `scripts/generate-optimistic-fillers.mjs`.
  */
-function definedFields<T extends object>(
-  source: T | null | undefined,
-): Partial<T> {
-  if (!source) return {};
-  return Object.fromEntries(
-    Object.entries(source).filter(([, value]) => isWholeValue(value)),
-  ) as Partial<T>;
+function completeFields<TFragment extends { __typename: string; id: string }>(
+  cache: ApolloCache,
+  entityCacheId: string,
+  fragment: TypedDocumentNode<TFragment, unknown>,
+  fragmentName: string,
+): Partial<Unmasked<TFragment>> {
+  const out: Record<string, unknown> = {};
+
+  for (const responseKey of topLevelResponseKeys(fragment, fragmentName)) {
+    const narrowed = singleFieldFragment(fragment, fragmentName, responseKey);
+    if (!narrowed) continue;
+
+    const read = cache.readFragment<Record<string, unknown>>({
+      id: entityCacheId,
+      fragment: narrowed.doc,
+      fragmentName: narrowed.name,
+    });
+    if (read && responseKey in read) out[responseKey] = read[responseKey];
+  }
+
+  return out as Partial<Unmasked<TFragment>>;
+}
+
+/** Response keys (alias, else field name) of `fragmentName`'s own selections. */
+function topLevelResponseKeys(
+  fragment: DocumentNode,
+  fragmentName: string,
+): string[] {
+  const definition = findFragmentDefinition(fragment, fragmentName);
+  if (!definition) return [];
+  const keys: string[] = [];
+  for (const selection of definition.selectionSet.selections) {
+    if (selection.kind !== Kind.FIELD) continue;
+    const key = selection.alias?.value ?? selection.name.value;
+    if (key !== '__typename') keys.push(key);
+  }
+  return keys;
+}
+
+function findFragmentDefinition(
+  fragment: DocumentNode,
+  fragmentName: string,
+): FragmentDefinitionNode | undefined {
+  return fragment.definitions.find(
+    (definition): definition is FragmentDefinitionNode =>
+      definition.kind === Kind.FRAGMENT_DEFINITION &&
+      definition.name.value === fragmentName,
+  );
 }
 
 /**
- * Whether a cached value can be written back as-is.
+ * `fragment` narrowed to a single field, for a per-field completeness read.
  *
- * A scalar is whole when it is not `undefined`. An object or array is whole
- * only when nothing inside it is `undefined` either: `returnPartialData` leaves
- * a hole exactly where the cache is missing a field, and writing that shape
- * back re-states the incompleteness instead of repairing it.
+ * Built by filtering the already-parsed AST rather than by re-parsing source,
+ * so no document is registered under a name it shares with different content —
+ * see `writeEntityFields` for the same constraint. Memoized: these are fixed at
+ * module scope, so each (group, field) pair is built once per process.
  */
-function isWholeValue(value: unknown): boolean {
-  if (value === undefined) return false;
-  if (value === null) return true;
-  if (Array.isArray(value)) return value.every(isWholeValue);
-  if (typeof value === 'object') {
-    return Object.values(value as Record<string, unknown>).every(isWholeValue);
+const singleFieldDocs = new Map<
+  string,
+  { doc: DocumentNode; name: string } | null
+>();
+
+function singleFieldFragment(
+  fragment: DocumentNode,
+  fragmentName: string,
+  responseKey: string,
+): { doc: DocumentNode; name: string } | null {
+  const memoKey = `${fragmentName}.${responseKey}`;
+  const memo = singleFieldDocs.get(memoKey);
+  if (memo !== undefined) return memo;
+
+  const definition = findFragmentDefinition(fragment, fragmentName);
+  const selection = definition?.selectionSet.selections.find(
+    sel =>
+      sel.kind === Kind.FIELD &&
+      (sel.alias?.value ?? sel.name.value) === responseKey,
+  );
+
+  let built: { doc: DocumentNode; name: string } | null = null;
+  if (definition && selection) {
+    const name = `${fragmentName}__${responseKey}`;
+    built = {
+      name,
+      doc: {
+        ...fragment,
+        definitions: [
+          // Any sibling definitions stay, so a spread inside the kept field
+          // still resolves. These fragments are flat today; this does not
+          // depend on that.
+          ...fragment.definitions.filter(d => d !== definition),
+          {
+            ...definition,
+            name: { ...definition.name, value: name },
+            selectionSet: {
+              ...definition.selectionSet,
+              selections: [selection],
+            },
+          },
+        ],
+      },
+    };
   }
-  return true;
+
+  singleFieldDocs.set(memoKey, built);
+  return built;
 }
 
 /**

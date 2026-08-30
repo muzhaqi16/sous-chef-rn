@@ -338,7 +338,10 @@ export const ShoppingListMainContent: React.FC<
     onMoveToPantry: moveToPantry.openForItem,
     onQuantityPress: quantityEdit.openForItem,
     onSortOrderUpdate: handleSortOrderUpdate,
-    onRefresh: handleRefresh,
+    // `onRefresh` is NOT here: the template injects it from its own prop, which
+    // this screen already sets to the same handler. Passing it twice collided
+    // with the template's wiring — harmless while the values matched, and the
+    // kind of thing the type now refuses outright.
     onClearAllPurchased: handleClearAllPurchased,
     onClearAllShopping: handleClearAllShopping,
     onSwipeableWillOpen: handleSwipeableWillOpen,

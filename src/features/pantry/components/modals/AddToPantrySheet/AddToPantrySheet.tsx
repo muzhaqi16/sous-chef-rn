@@ -25,7 +25,10 @@ import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDis
 import { extractNodes } from '#/utils/connectionUtils';
 import { getPantryItemDuplicateFromResult } from '#/utils/errors/pantryItemDuplicate';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { addToPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
+import {
+  addPantryItemLocally,
+  addToPantryItemsCache,
+} from '#/apollo/utils/pantryCacheUpdaters';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { safeEvict, adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -106,6 +109,8 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       const clientId = variables?.input?.id;
 
       try {
+        // NOT the counting helper: the eager write above already counted this
+        // row. This re-add reconciles the server's entity into the same edge.
         addToPantryItemsCache(cache, pantryId, pantryItem);
         // The re-add dedupes BY ID, so a server-resolved id divergence
         // would leave the client cuid as a second, permanently unresolvable
@@ -231,7 +236,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     // stays if the create is queued offline (the queue replays it later, keyed by
     // this id).
     try {
-      addToPantryItemsCache(
+      // Publishes the row AND counts it. They were two calls here and only
+      // the first was made, so the header stayed behind the list — and offline
+      // no response arrives to correct it.
+      addPantryItemLocally(
         client.cache,
         pantryId,
         buildOptimisticPantryItem(
@@ -352,7 +360,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     // stays if the create is queued offline (the queue replays it later, keyed by
     // this id).
     try {
-      addToPantryItemsCache(
+      // Publishes the row AND counts it. They were two calls here and only
+      // the first was made, so the header stayed behind the list — and offline
+      // no response arrives to correct it.
+      addPantryItemLocally(
         client.cache,
         pantryId,
         buildOptimisticPantryItem(

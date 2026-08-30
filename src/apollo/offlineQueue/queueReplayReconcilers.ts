@@ -1,7 +1,7 @@
 import { client } from '#/apollo/client';
 import {
-  adjustPantryItemCount,
-  removeFromPantryItemsCache,
+  addPantryItemLocally,
+  removePantryItemLocally,
 } from '#/apollo/utils/pantryCacheUpdaters';
 import { extractMutationPayload } from '#/utils/errors/mutationPayload';
 import { errorService } from '#/services/errorService';
@@ -55,10 +55,18 @@ const REPLAY_RECONCILERS: Record<
     // nothing to compare — leave the row for the failure handler or a refetch.
     if (!serverId || serverId === mintedId) return;
 
-    // The server restocked a different row. Withdraw the ghost. Both helpers
-    // no-op on a row that is already gone, so a re-drain is harmless.
-    removeFromPantryItemsCache(client.cache, pantryId, mintedId);
-    adjustPantryItemCount(client.cache, pantryId, -1);
+    // The server restocked a different row. Withdraw the ghost AND link the row
+    // the server actually returned — the foreground path does both (it adds the
+    // response's `pantryItem` to the connection), and withdrawing without
+    // adding leaves the user with neither: the row the client minted is gone
+    // and the row the server created was never linked.
+    //
+    // Both helpers are membership-gated, so a re-drain changes nothing.
+    removePantryItemLocally(client.cache, pantryId, mintedId);
+    addPantryItemLocally(client.cache, pantryId, {
+      __typename: 'PantryItem',
+      id: serverId,
+    });
   },
 };
 

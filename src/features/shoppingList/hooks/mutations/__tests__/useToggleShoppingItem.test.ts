@@ -171,6 +171,9 @@ function seedShoppingItem() {
       purchaseInfo: {
         __typename: 'ShoppingListItemPurchaseInfo',
         isPurchased: false,
+        // The snapshot fragment selects it, so a fixture without it makes the
+        // strict read incomplete and the hook refuse the toggle.
+        movedToPantryAt: null,
       },
       version: 3,
       updatedAt: '2026-01-01T00:00:00.000Z',
@@ -471,6 +474,23 @@ describe('the stocked stamp follows the purchased flag', () => {
     maxUsageCount: Number.POSITIVE_INFINITY,
   };
 
+  /**
+   * The same for the TOGGLE mutation, which `toggleItem` actually fires.
+   *
+   * Without it the operation is unmatched, resolves as an error, and the hook
+   * REVERTS — so every assertion below described the post-revert state while
+   * claiming to describe the flip. They passed only because the revert used to
+   * clear the stamp too, which is the defect they were written to catch.
+   */
+  const toggleQueued: MockedResponse = {
+    request: {
+      query: ToggleShoppingListItemPurchasedDocument,
+      variables: () => true,
+    },
+    result: { data: { toggleShoppingListItemPurchased: null } },
+    maxUsageCount: Number.POSITIVE_INFINITY,
+  };
+
   /** A line that was purchased AND already moved into the pantry. */
   function seedStockedItem() {
     const cache = seedShoppingItem();
@@ -504,7 +524,7 @@ describe('the stocked stamp follows the purchased flag', () => {
     const cache = seedStockedItem();
     const { result } = renderHookWithApollo(
       () => useToggleShoppingItem({ listId: 'list-1', refetch: jest.fn() }),
-      { cache, operationMocks: [queued] },
+      { cache, operationMocks: [queued, toggleQueued] },
     );
 
     await act(async () => {
@@ -522,7 +542,7 @@ describe('the stocked stamp follows the purchased flag', () => {
     const cache = seedStockedItem();
     const { result } = renderHookWithApollo(
       () => useToggleShoppingItem({ listId: 'list-1', refetch: jest.fn() }),
-      { cache, operationMocks: [queued] },
+      { cache, operationMocks: [queued, toggleQueued] },
     );
 
     await act(async () => {
@@ -540,7 +560,7 @@ describe('the stocked stamp follows the purchased flag', () => {
     const cache = seedStockedItem();
     const { result } = renderHookWithApollo(
       () => useToggleShoppingItem({ listId: 'list-1', refetch: jest.fn() }),
-      { cache, operationMocks: [queued] },
+      { cache, operationMocks: [queued, toggleQueued] },
     );
 
     await act(async () => {

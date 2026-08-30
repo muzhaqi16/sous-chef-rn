@@ -153,6 +153,7 @@ const AlertCard: React.FC<AlertCardProps> = ({
             >
               <Text
                 size="base"
+                align="center"
                 style={[
                   styles.buttonText,
                   isCancel && styles.cancelButtonText,

@@ -148,14 +148,6 @@ const shouldInstrumentCellsThisSession = (): boolean => {
   return cellInstrumentationDecision;
 };
 
-/**
- * Reset the session-wide sampling decision. Tests only — the app takes the
- * decision once and keeps it for the life of the session.
- */
-export const __resetCellInstrumentationSamplingForTests = (): void => {
-  cellInstrumentationDecision = undefined;
-};
-
 export function useFlashListPerformance<T>(
   flashListRef: React.RefObject<FlashListRef<T> | null>,
   options: UseFlashListPerformanceOptions,

@@ -329,6 +329,13 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                     // the id is deliberate — the duplicate was a refusal, so it
                     // committed no row, and the id is what makes the replay
                     // idempotent.
+                    //
+                    // Re-marked, because the first attempt's cleanup already
+                    // confirmed this id. The row is tappable again from the line
+                    // below, and the server does not have it — so without the
+                    // mark, opening it fetches an id that 404s and parks the
+                    // detail screen in an error state that never retries.
+                    unconfirmedCreates.mark(id);
                     applyOptimisticPantryItem();
                     const retryResult = await addToPantry({
                       variables: {
@@ -365,6 +372,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                       t('errors.addItemFailedRetry'),
                     );
                   },
+                  // Released on EVERY outcome of the retry, a throw included —
+                  // a mark left standing suppresses the detail query for a row
+                  // the user can see, for the rest of the session.
+                  () => unconfirmedCreates.confirm(id),
                 );
               },
             });

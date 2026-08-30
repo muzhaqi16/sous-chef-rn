@@ -21,6 +21,7 @@
  */
 
 import { gql, type ApolloCache, type StoreObject } from '@apollo/client';
+import type { DocumentNode } from 'graphql';
 import { classifyCreateResult } from './classifyCreateResult';
 import { errorService } from '#/services/errorService';
 
@@ -118,14 +119,92 @@ export function writeEntityFields<TFields extends object>(
 
   cache.writeFragment({
     id: cacheId,
-    fragment: gql`
-      fragment LocalFirstFields on ${entity.__typename} {
+    fragment: localFirstFragment(entity.__typename, selections),
+    data: { __typename: entity.__typename, ...Object.fromEntries(written) },
+  });
+}
+
+/**
+ * The runtime fragment for one (type, field-shape) pair, built at most once.
+ *
+ * The fragment is generated from the update's keys, so its content differs per
+ * call site and per partial update. Under a FIXED name, graphql-tag is handed
+ * different content under one name every time: it warns once per distinct
+ * shape, and it keeps each document in a module-scope cache that then grows for
+ * the life of the process without ever serving a hit.
+ *
+ * The name is derived from the content instead, and the built document is
+ * memoized here — so a repeated write of the same shape reuses one document and
+ * two different shapes never collide. `writePantryItemDetailStub` satisfies the
+ * same constraint by filtering an already-parsed AST rather than re-parsing.
+ */
+const localFirstFragments = new Map<string, DocumentNode>();
+
+function localFirstFragment(
+  typename: string,
+  selections: string,
+): DocumentNode {
+  const shapeKey = `${typename}:${selections}`;
+  const memo = localFirstFragments.get(shapeKey);
+  if (memo) return memo;
+
+  const built = gql`
+      fragment LocalFirstFields_${typename}_${shapeHash(
+    shapeKey,
+  )} on ${typename} {
         __typename
         ${selections}
       }
-    `,
-    data: { __typename: entity.__typename, ...Object.fromEntries(written) },
-  });
+    `;
+  localFirstFragments.set(shapeKey, built);
+  return built;
+}
+
+/**
+ * A short, stable, alphanumeric digest of a field shape.
+ *
+ * Only needs to make a GraphQL-legal name unique per shape within one process —
+ * not to resist collision by an adversary — so djb2 over the shape key is
+ * enough, rendered base-36 so the result is always name-safe.
+ */
+function shapeHash(input: string): string {
+  let hash = 5381;
+  for (let i = 0; i < input.length; i++) {
+    hash = ((hash << 5) + hash + input.charCodeAt(i)) | 0;
+  }
+  return (hash >>> 0).toString(36);
+}
+
+/**
+ * The pre-write values for exactly the keys an update will write.
+ *
+ * A key the source does not CARRY is omitted rather than recorded as null.
+ * `writeEntityFields` skips `undefined`, so an omitted key is a field the
+ * revert leaves alone — which is the only correct treatment for a field the
+ * snapshot's read never selected. Coercing that absence to `null` writes
+ * emptiness over a value the snapshot never saw, and on the local-first path
+ * there is no next fetch to repair it: an incomplete read that would have
+ * refetched becomes a definite null that will not.
+ *
+ * A key the source carries as `null` IS recorded, so a genuinely-empty field is
+ * still restored as empty. That is the distinction — absent from the read is not
+ * the same fact as empty in the store, and one `??` collapses them.
+ */
+export function snapshotFields<TFields extends object>(
+  // `object` rather than `Record<string, unknown>`: an interface without an
+  // index signature is not assignable to that, and forcing one at every call
+  // site would mean a double cast at each. The read's shape is whatever the
+  // query carried, which is exactly the fact this inspects.
+  source: object | null | undefined,
+  updates: Partial<TFields>,
+): Partial<TFields> {
+  if (!source) return {};
+  const held = source as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(updates)) {
+    if (key in source) out[key] = held[key];
+  }
+  return out as Partial<TFields>;
 }
 
 export interface LocalFirstFieldsOptions<TFields extends object> {

@@ -20,6 +20,7 @@ import {
 import {
   updateEntityFieldsLocalFirst,
   writeEntityFields,
+  snapshotFields,
 } from '#/apollo/utils/localFirstFields';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
@@ -268,15 +269,19 @@ export function useStorageLocationManagement(
         : { parentLocation: nextParent ? locationRef(nextParent.id) : null }),
     };
 
-    // Snapshot the fields being changed, INCLUDING ones the cached entity does
-    // not carry — a key filtered out here is a key a refusal cannot restore.
+    // Snapshot the fields being changed. A key the read did not CARRY is
+    // omitted, so a refusal leaves that field alone rather than blanking a
+    // value the snapshot never saw; a key it carries as null is recorded, so a
+    // genuinely-empty field is still restored as empty. Every key here comes
+    // from the edit form and is one this screen's own query selects, so nothing
+    // is omitted in practice — the helper is what keeps that true if that ever
+    // stops being so.
+    //
+    // `current` being undefined is separately harmless: `entity` below is then
+    // undefined too, and both the optimistic write and its revert go through
+    // `writeEntityFields`, which is a no-op without one.
     const previous = {
-      ...Object.fromEntries(
-        Object.keys(updates).map(key => [
-          key,
-          (current as Record<string, unknown> | undefined)?.[key] ?? null,
-        ]),
-      ),
+      ...snapshotFields(current, updates),
       // `current` is a query READ, so its `parentLocation` is denormalized.
       // Snapshotting it verbatim would make a refusal restore the very copy
       // this write exists to avoid.

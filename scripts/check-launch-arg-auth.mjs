@@ -28,6 +28,8 @@
  * variant not signed with the debug key is refused.
  */
 import { readFileSync, existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { readGeneratedValue } from './generate-env.js';
 import { parseFlags } from './lib/tooling.mjs';
 
@@ -42,6 +44,7 @@ const flags = parseFlags({
   platform: { type: 'string' },
   variant: { type: 'string' },
   sdk: { type: 'string' },
+  'self-test': { type: 'boolean' },
 });
 
 const platform = flags.platform;
@@ -86,6 +89,79 @@ function refuse(reasons, artifact) {
       `  written into a committed env file, and CI must not set it.`,
   );
   process.exit(1);
+}
+
+// ---------------------------------------------------------------------------
+// Self-test: prove the gate can REFUSE.
+// ---------------------------------------------------------------------------
+//
+// The build-path invocations below judge the artifact about to be produced, and
+// they read `ALLOW_LAUNCH_ARG_AUTH` from the environment. CI does not set it, so
+// in CI both of them return "off, nothing to check" and exit 0 — whatever
+// `--variant` or `--sdk` they are handed. They cannot fail there, which makes a
+// green step no evidence at all: it reports the same result whether the rule
+// holds or the check is broken.
+//
+// This mode runs the refusal logic in-process against inputs that MUST be
+// refused, so the CI step exercises the one thing worth asserting away from a
+// build machine. Same pattern as `check-bundled-secrets.mjs --self-test`.
+if (flags['self-test']) {
+  const cases = [
+    ['ios', ['--platform', 'ios', '--sdk', 'iphoneos']],
+    ['android release', ['--platform', 'android', '--variant', 'release']],
+  ];
+
+  const failures = [];
+  for (const [label, args] of cases) {
+    const result = spawnSync(
+      process.execPath,
+      [fileURLToPath(import.meta.url), ...args],
+      {
+        env: { ...process.env, ALLOW_LAUNCH_ARG_AUTH: 'true' },
+        encoding: 'utf8',
+      },
+    );
+    if (result.status === 0) {
+      failures.push(
+        `${label}: exited 0 with ALLOW_LAUNCH_ARG_AUTH=true on a distributable artifact`,
+      );
+    }
+  }
+
+  // And the inverse, so the check is not merely "always refuses".
+  const permitted = spawnSync(
+    process.execPath,
+    [
+      fileURLToPath(import.meta.url),
+      '--platform',
+      'ios',
+      '--sdk',
+      'iphonesimulator',
+    ],
+    {
+      env: { ...process.env, ALLOW_LAUNCH_ARG_AUTH: 'true' },
+      encoding: 'utf8',
+    },
+  );
+  if (permitted.status !== 0) {
+    failures.push(
+      'iphonesimulator: refused the one destination the capability is allowed on',
+    );
+  }
+
+  if (failures.length) {
+    console.error(
+      '\n\u2717 check-launch-arg-auth self-test failed:\n\n' +
+        failures.map(f => `  ${f}`).join('\n'),
+    );
+    process.exit(1);
+  }
+
+  console.log(
+    '\u2713 check-launch-arg-auth refuses a distributable artifact with the flag on,\n' +
+      '  and permits the simulator destination that is allowed.',
+  );
+  process.exit(0);
 }
 
 // ---------------------------------------------------------------------------

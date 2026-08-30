@@ -38,7 +38,10 @@ import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { alertService } from '#/services/alertService';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { updateEntityFieldsLocalFirst } from '#/apollo/utils/localFirstFields';
+import {
+  snapshotFields,
+  updateEntityFieldsLocalFirst,
+} from '#/apollo/utils/localFirstFields';
 import {
   buildOptimisticTemplateItem,
   addTemplateItemToCache,
@@ -352,16 +355,13 @@ export function useMealTemplateEditor() {
       cache: client.cache,
       entity: previousItem ? { __typename: 'MealTemplateItem', id } : undefined,
       updates,
-      // `?? null` because `readTemplateItem` is partial BY CONTRACT: a row the
-      // editor's own query loaded carries no `recipe` key at all. Snapshotting
-      // that absence as `undefined` makes the revert skip the one field the edit
-      // changed, so a refused recipe pick keeps the recipe the server rejected.
-      previous: Object.fromEntries(
-        Object.keys(updates).map(key => [
-          key,
-          (previousItem as Record<string, unknown> | null)?.[key] ?? null,
-        ]),
-      ),
+      // A key the read did not CARRY is omitted, not recorded as null — the
+      // revert then leaves that field alone instead of blanking a value the
+      // snapshot never saw. `GetMealTemplateForEdit` now selects every field
+      // these updates write, so in practice nothing is omitted here; the
+      // helper is what keeps that true if a field is ever added to the write
+      // and not to the query.
+      previous: snapshotFields(previousItem, updates),
       logLabel: 'Update Template Item',
       mutate: () =>
         updateItemMutation({

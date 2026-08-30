@@ -204,6 +204,21 @@ Defaults:
   `errors.field.<field>` with the caller's copy as fallback; never branch on
   `message` text. Reasoning: `docs/apollo-client-patterns.md` § Localizing
   refusals.
+- **Pass the caller's copy INTO `localizedErrorMessage`, never after it.**
+  `localizedErrorMessage(err) || t('…')` type-checks and reads as a fallback,
+  and is unreachable: the resolver is total. It also disables the resolver's own
+  escape hatch, which yields to the caller's copy on a TRANSPORT code — so a
+  write that never left the device got reported with the read-oriented offline
+  sentence. Guarded by
+  `__tests__/i18n/callerFallbackReachesResolver.test.ts`.
+- **A field with a write-time invariant is written through the ONE path that
+  runs it.** `cache.modify` does not run type-policy merges and cannot introduce
+  a field the cached record lacks, so a record whose rules live in a merge policy
+  (`ShoppingListItem.purchaseInfo`) must go through `cache.writeFragment` —
+  `writePurchaseInfo` is the worked example, and it carries the cached record
+  forward so the policy's clear-on-flip has nothing to clear on a LOCAL write.
+  A second writer of such a field (the offline restoration pass) routes through
+  `src/apollo/utils/fieldWriters.ts` rather than merging blind.
 - **Never pair `optimisticResponse` with `context: { localFirst: true }`** —
   Apollo tears the optimistic layer down when the mutation completes, and
   offline that completion is `queueLink`'s null result, so the change reverts

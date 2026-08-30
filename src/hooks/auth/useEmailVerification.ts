@@ -5,37 +5,38 @@ import {
   useHasUnverifiedEmail,
 } from '#store/useAppStore';
 import { alertService } from '#/services/alertService';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 
 /**
- * Deferring and resuming email verification.
+ * Deferring email verification.
  *
- * Verification is a conditional group at the root navigator holding a single
- * headerless screen, so an account that never receives its code has no way out.
- * `skipVerification` sets the per-user flag that `resolveNavTarget` reads,
- * letting the account through to the rest of the app; `resumeVerification`
- * clears it and routes back. Because the target is derived from the same flag,
- * clearing it on the way in is what keeps the navigator from immediately
- * bouncing the user back out.
+ * The post-login gate is a conditional group at the root navigator holding a
+ * single headerless screen, so an account that never receives its code has no
+ * way out. `skipVerification` sets the per-user flag that `resolveNavTarget`
+ * reads, letting the account through to the rest of the app.
+ *
+ * There is deliberately no `resumeVerification` counterpart. Re-opening
+ * verification from inside the app used to clear the flag and set the
+ * navigation state back to `verification`, which swapped the whole navigator
+ * group — so the user landed on the sign-in GATE: its back button signed them
+ * out, and verifying successfully remounted the MainApp group at its initial
+ * route, dropping them on Home instead of the screen they came from. A user
+ * who is already inside the app has a session and somewhere to return to, so
+ * verification there is a pushed screen (`toVerifyEmail`) and the flag is
+ * never touched.
  */
 export function useEmailVerificationActions() {
   const userId = useUserId();
   const setUserNavigationState = useAppStore(
     state => state.setUserNavigationState,
   );
-  const setNavigationState = useAppStore(state => state.setNavigationState);
 
   const skipVerification = () => {
     if (!userId) return;
     setUserNavigationState(userId, { verificationSkipped: true });
   };
 
-  const resumeVerification = () => {
-    if (!userId) return;
-    setUserNavigationState(userId, { verificationSkipped: false });
-    setNavigationState('verification');
-  };
-
-  return { skipVerification, resumeVerification };
+  return { skipVerification };
 }
 
 /**
@@ -50,7 +51,7 @@ export function useEmailVerificationActions() {
 export function useVerifiedEmailGate() {
   const { t } = useTranslation();
   const hasUnverifiedEmail = useHasUnverifiedEmail();
-  const { resumeVerification } = useEmailVerificationActions();
+  const { toVerifyEmail } = useAppNavigation();
 
   const requireVerifiedEmail = (): boolean => {
     if (!hasUnverifiedEmail) return true;
@@ -60,7 +61,7 @@ export function useVerifiedEmailGate() {
       t('auth.verifyToCollaborateMessage'),
       [
         { text: t('labels.cancel'), style: 'cancel' },
-        { text: t('auth.verifyNow'), onPress: resumeVerification },
+        { text: t('auth.verifyNow'), onPress: toVerifyEmail },
       ],
     );
     return false;

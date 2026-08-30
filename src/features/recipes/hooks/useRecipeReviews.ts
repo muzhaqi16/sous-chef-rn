@@ -108,10 +108,13 @@ export function useRecipeReviews({
       },
       // `err.message` is the server's English (or a transport error's
       // developer text). `localizedErrorMessage` resolves the error's CODE to
-      // the app's own copy and falls back to the caller's.
+      // the app's own copy and falls back to the caller's — which has to be
+      // PASSED to it: the resolver is total, so applying copy to its result is
+      // unreachable, and a transport failure on a write then reports the
+      // read-oriented offline sentence instead of what did not save.
       onError: err => {
         toastService.error(
-          localizedErrorMessage(err) || t('recipes.submitReviewFailed'),
+          localizedErrorMessage(err, t('recipes.submitReviewFailed')),
         );
       },
     },
@@ -122,7 +125,7 @@ export function useRecipeReviews({
     {
       onError: err => {
         toastService.error(
-          localizedErrorMessage(err) || t('recipes.updateReviewFailed'),
+          localizedErrorMessage(err, t('recipes.updateReviewFailed')),
         );
       },
     },
@@ -143,7 +146,7 @@ export function useRecipeReviews({
       },
       onError: err => {
         toastService.error(
-          localizedErrorMessage(err) || t('recipes.deleteReviewFailed'),
+          localizedErrorMessage(err, t('recipes.deleteReviewFailed')),
         );
       },
     },
@@ -179,7 +182,7 @@ export function useRecipeReviews({
     },
     onError: err => {
       toastService.error(
-        localizedErrorMessage(err) || t('recipes.helpfulVoteFailed'),
+        localizedErrorMessage(err, t('recipes.helpfulVoteFailed')),
       );
     },
   });

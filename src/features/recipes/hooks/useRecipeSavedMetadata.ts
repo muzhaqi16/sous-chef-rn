@@ -3,7 +3,10 @@ import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { gql, type ApolloCache } from '@apollo/client';
-import { updateEntityFieldsLocalFirst } from '#/apollo/utils/localFirstFields';
+import {
+  snapshotFields,
+  updateEntityFieldsLocalFirst,
+} from '#/apollo/utils/localFirstFields';
 import {
   UpdateFavoriteRecipeDocument,
   RemoveRecipeFromFavoritesDocument,
@@ -86,12 +89,7 @@ export function useRecipeSavedMetadata({
     input: Record<string, unknown>,
   ): Promise<boolean> => {
     const saved = readSavedDetails(client.cache, recipeId);
-    const previous = Object.fromEntries(
-      Object.keys(updates).map(key => [
-        key,
-        saved?.[key as keyof SavedDetailsRef],
-      ]),
-    );
+    const previous = snapshotFields(saved, updates);
 
     // `persisted` is false only for a REFUSAL — a queued write keeps its cache
     // change and counts as persisted. Returned rather than swallowed: the

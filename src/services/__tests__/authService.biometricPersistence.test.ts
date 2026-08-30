@@ -133,4 +133,34 @@ describe('logout and biometric credentials', () => {
       expect.stringContaining('could not be removed'),
     );
   });
+  /**
+   * The other half of the same rule, from the opposite direction: a failure
+   * that does NOT establish the credentials are dead must leave them alone.
+   *
+   * `autoLogin` cleared on any `result.error` and again in its catch, so a
+   * single network blip on launch silently un-enrolled the device — the next
+   * launch offered no biometric button, with nothing said. The payload branch
+   * beside it already got this right via `isDeadCredentialCode`; these two did
+   * not.
+   */
+  it('keeps stored credentials when auto-login fails on transport', async () => {
+    mockClearCredentials.mockClear();
+    mockMutate.mockRejectedValueOnce(new Error('Network request failed'));
+
+    await authService.autoLogin();
+
+    expect(mockClearCredentials).not.toHaveBeenCalled();
+  });
+
+  it('keeps them when auto-login resolves with a transport error', async () => {
+    mockClearCredentials.mockClear();
+    mockMutate.mockResolvedValueOnce({
+      data: { login: null },
+      error: new Error('Network request failed'),
+    });
+
+    await authService.autoLogin();
+
+    expect(mockClearCredentials).not.toHaveBeenCalled();
+  });
 });

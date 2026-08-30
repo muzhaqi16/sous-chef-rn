@@ -1,6 +1,7 @@
 import { useEffect, startTransition } from 'react';
 import { client } from '#/apollo/client';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { fieldWriterFor } from '#/apollo/utils/fieldWriters';
 import { useUser } from '#store/useAppStore';
 
 /**
@@ -81,7 +82,17 @@ export function useOptimisticDataRestorationMultiple(
               // write these fields onto the query root instead of the entity.
               if (!cacheId) return;
 
-              const fieldUpdates = Object.keys(fields).reduce((acc, field) => {
+              // A field whose rules live in a dedicated writer is restored
+              // THROUGH that writer. Re-applying its patch with the blind merge
+              // below makes this a second writer of the field, with none of the
+              // invariants — and one no foreground test can reach, since it only
+              // runs after the app was killed while offline.
+              const merged = Object.keys(fields).reduce((acc, field) => {
+                const owner = fieldWriterFor(entityType, field);
+                if (owner) {
+                  owner(cache, entityId, fields[field]);
+                  return acc;
+                }
                 const value = fields[field];
                 acc[field] = isPartialObject(value)
                   ? (existing: unknown) =>
@@ -92,9 +103,11 @@ export function useOptimisticDataRestorationMultiple(
                 return acc;
               }, {} as Record<string, (existing: unknown) => unknown>);
 
+              if (Object.keys(merged).length === 0) return;
+
               cache.modify({
                 id: cacheId,
-                fields: fieldUpdates,
+                fields: merged,
               });
             });
           });

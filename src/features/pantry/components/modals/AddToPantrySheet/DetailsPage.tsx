@@ -20,6 +20,9 @@ export interface DetailsPageProps {
   /** Validation message for the net-weight UNIT picker (net weight is all-or-nothing). */
   pantryNetWeightError?: string;
   pantryNetWeightUnitError?: string;
+  /** Package-details pair: a per-container weight needs its unit, and vice versa. */
+  itemNetWeightError?: string;
+  weightUnitError?: string;
   unit: string;
   setUnit: (value: string) => void;
   handleUnitSelected: (id: string | null, name: string | null) => void;
@@ -52,6 +55,8 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
   quantityError,
   pantryNetWeightError,
   pantryNetWeightUnitError,
+  itemNetWeightError,
+  weightUnitError,
   unit,
   setUnit,
   handleUnitSelected,
@@ -189,6 +194,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
                   onChangeText={setItemNetWeight}
                   placeholder={t('addToPantry.weightPerUnitPlaceholder')}
                   keyboardType="decimal-pad"
+                  error={itemNetWeightError}
                   useBottomSheetInput
                 />
                 <UnitAutocompleteField
@@ -198,6 +204,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
                   onChangeText={setWeightUnit}
                   onUnitSelected={handleWeightUnitSelected}
                   placeholder={t('addToPantry.contentWeightUnitPlaceholder')}
+                  error={weightUnitError}
                 />
               </FieldRow>
             </View>

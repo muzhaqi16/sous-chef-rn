@@ -677,6 +677,69 @@ absent fields and normalizes a nested `__typename` + `id` into a reference.
 Guarded by `src/apollo/utils/__tests__/localFirstFields.test.ts`.
 
 `cache.modify` remains the right tool where the field is known to exist and the
-write must NOT normalize — connection edges, counts, and the `purchaseInfo`
-record (`src/apollo/utils/shoppingListCacheUpdaters.ts`), which deliberately
-bypasses the merge policy that clears omitted fields.
+write must NOT normalize — connection edges and counts.
+
+It is NOT the right tool for the `purchaseInfo` record, which used to be written
+that way. Two rules are documented on `writePurchaseInfo` and neither could run
+through `cache.modify`: the type policy's clear-on-flip never fires (no merge
+runs), and a field the cached record does not already carry cannot be
+introduced. The writer now goes through `cache.writeFragment` and carries the
+cached record forward explicitly, so the policy has nothing to clear on a local
+flip — which is what the SDL describes, since it documents a clearing contract
+for `movedToPantryAt` alone and says nothing about the amounts. The policy still
+governs the narrow SERVER responses it was written for.
+
+### Apollo storeFieldName has two serialized forms
+
+Verified 2026-08-29 vs `@apollo/client@4.2.12` — re-check:
+`node scripts/probe-apollo-cache-shapes.mjs`.
+
+A `cache.modify` modifier receives the field's store key, and Apollo writes it
+two different ways depending on how the field is keyed:
+
+```
+storageLocations:{"homeId":"A"}        keyArgs: ['homeId']   COLON form
+things({"filters":{"category":"x"}})   no keyArgs            PAREN form
+```
+
+A guard that locates the arguments by searching for `(` therefore sees nothing
+at all on an array-`keyArgs` field. `skipUnmatchedArgVariants` was written that
+way, so it returned "do not skip" for every variant and the cross-home leak it
+exists to prevent — a storage location restored after a refused delete in home A
+appearing in home B's list — was still live under a passing suite.
+
+Parse by whichever delimiter comes FIRST: the paren form also contains a `:`
+inside its JSON (at index 17 in the sample above), so testing for `:` alone
+mis-parses it.
+
+The probe also checks whether Apollo exports a parser that would remove the
+need to do this by hand. On 4.2.12 it does **not**:
+`@apollo/client/utilities` exports no `fieldNameFromStoreName`,
+`argumentsObjectFromField` or `storeKeyNameFromField`. If a later version does,
+prefer it over the hand-rolled split.
+
+### Apollo partial reads omit missing keys rather than undefining them
+
+Verified 2026-08-29 vs `@apollo/client@4.2.12` — re-check:
+`node scripts/probe-apollo-cache-shapes.mjs`.
+
+`readFragment` with `returnPartialData: true` leaves the key **out** of the
+result where the cache cannot satisfy it. It does not set it to `undefined`:
+
+```
+strict readFragment           -> null (incomplete)
+partial read keys on the link -> ["__typename","category"]
+'isPrimary' in link           -> false
+link.isPrimary === undefined  -> true
+```
+
+Both of the last two lines are true, which is what makes the mistake easy: a
+completeness test written as `value !== undefined` reads the same as one written
+as `'key' in value` on a whole object, and diverges only on the partial one it
+exists to catch. `writePantryItemDetailStub` tested for `undefined` and so
+judged every partially-cached nested object whole, wrote it straight back, and
+left the read incomplete — the exact case its own comment says it fixed.
+
+Ask the cache instead of walking the value: a strict `readFragment` of the
+selection returns `null` when the cache cannot satisfy it, which is Apollo's own
+notion of completeness and therefore the one the later read will use.

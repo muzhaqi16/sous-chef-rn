@@ -7,6 +7,7 @@ import {
   createRemoveFromParentConnectionUpdater,
   createRemoveFromParentArrayUpdater,
   skipUnmatchedFilterVariants,
+  skipUnmatchedArgVariants,
 } from '../cacheUpdaters';
 import { logger } from '#/utils/environment';
 
@@ -1050,5 +1051,56 @@ describe('skipUnmatchedFilterVariants', () => {
 
   it('skips when the args cannot be parsed', () => {
     expect(skip('mealTemplates({not json)')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// skipUnmatchedArgVariants
+// ---------------------------------------------------------------------------
+
+/**
+ * The sibling matcher for a field keyed on a PLAIN argument rather than a
+ * nested `filters` object. Apollo serializes those two shapes differently —
+ * `storageLocations:{"homeId":"A"}` against `things({"filters":…})` — and a
+ * guard that locates the arguments by searching for `(` sees nothing at all on
+ * the colon form. See
+ * `docs/verified-library-behaviour.md#apollo-storefieldname-has-two-serialized-forms`;
+ * re-derive with `node scripts/probe-apollo-cache-shapes.mjs`.
+ */
+describe('skipUnmatchedArgVariants', () => {
+  const skip = (storeFieldName: string) =>
+    skipUnmatchedArgVariants({ homeId: 'A' })(storeFieldName);
+
+  it('skips a colon-form variant belonging to another home', () => {
+    expect(skip('storageLocations:{"homeId":"B"}')).toBe(true);
+  });
+
+  it('does not skip the colon-form variant it is scoped to', () => {
+    expect(skip('storageLocations:{"homeId":"A"}')).toBe(false);
+  });
+
+  it('skips a paren-form variant belonging to another home', () => {
+    expect(skip('storageLocations({"homeId":"B"})')).toBe(true);
+  });
+
+  it('does not skip the paren-form variant it is scoped to', () => {
+    expect(skip('storageLocations({"homeId":"A"})')).toBe(false);
+  });
+
+  // The paren form carries a `:` inside its JSON, so a guard that splits on the
+  // first `:` mis-parses it. Whichever delimiter comes first wins.
+  it('parses the paren form even though its JSON also contains a colon', () => {
+    expect(skip('things({"filters":{"homeId":"B"}})')).toBe(false);
+    expect(skip('things({"homeId":"B","other":{"a":1}})')).toBe(true);
+  });
+
+  it('leaves a variant carrying none of the named arguments alone', () => {
+    expect(skip('storageLocations:{"other":"x"}')).toBe(false);
+    expect(skip('storageLocations')).toBe(false);
+  });
+
+  it('skips when the args cannot be parsed', () => {
+    expect(skip('storageLocations:{not json')).toBe(true);
+    expect(skip('storageLocations({not json)')).toBe(true);
   });
 });

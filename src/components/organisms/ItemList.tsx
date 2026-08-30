@@ -125,7 +125,6 @@ interface ItemListProps {
     right?: SwipeAction[];
   };
   /** Called before a row-removing action runs, to prepare the layout animation. */
-  onBeforeItemRemoved?: () => void;
   onRefresh?: () => Promise<void>;
   onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   onEndReached?: () => void;
@@ -161,7 +160,6 @@ export const ItemList: React.FC<ItemListProps> = ({
   items,
   onItemPress,
   itemSwipeActions,
-  onBeforeItemRemoved,
   onRefresh,
   onSwipeableWillOpen,
   onEndReached,
@@ -245,7 +243,6 @@ export const ItemList: React.FC<ItemListProps> = ({
     // row-removing action, and the list is what knows how to prepare itself.
     onBeforeRowRemoved: () => {
       flashListRef.current?.prepareForLayoutAnimationRender();
-      onBeforeItemRemoved?.();
     },
   };
 

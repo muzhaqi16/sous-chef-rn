@@ -957,20 +957,33 @@ async function autoLogin(): Promise<boolean> {
     }
 
     if (result.error) {
-      logger.warn('Auto-login failed, clearing stored credentials');
-      await removeCredentials(email);
+      // Same rule as the payload branch above, which this used to contradict:
+      // credentials are dropped only when the failure establishes they will
+      // never authenticate. A transport failure says the request did not
+      // ARRIVE — it says nothing about the password — and clearing on one meant
+      // a single blip on launch silently un-enrolled the device, with the next
+      // launch offering no biometric button and no explanation.
+      const parsed = errorService.parseApolloError(result.error, {
+        logError: false,
+      });
+      const code = parsed.error?.code;
+      if (code && isDeadCredentialCode(code)) {
+        logger.warn(
+          `Auto-login rejected (${code}), clearing stored credentials`,
+        );
+        await removeCredentials(email);
+      } else {
+        logger.warn('Auto-login failed; stored credentials kept');
+      }
       handleAuthError(result.error, 'Auto-login');
     }
 
     return false;
   } catch (error) {
+    // Deliberately does NOT clear. A throw here is a transport or client fault,
+    // never the server saying these credentials are dead — and the branches
+    // above already handle the one case that is.
     logger.error('Auto-login error:', error);
-    try {
-      const email = await getLastBiometricEmail();
-      if (email) await removeCredentials(email);
-    } catch {
-      logger.error('Failed to cleanup credentials after auto-login error');
-    }
     return false;
   }
 }

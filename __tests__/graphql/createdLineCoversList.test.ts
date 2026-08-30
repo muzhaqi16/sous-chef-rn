@@ -13,7 +13,7 @@
  * `optimisticEntityCompleteness` covered the feature's own optimistic builder,
  * and nothing covered another feature's mutation.
  */
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { resolve } from 'path';
 import { parse, Kind, type SelectionSetNode, type DocumentNode } from 'graphql';
 
@@ -21,10 +21,60 @@ const ROOT = resolve(__dirname, '..', '..');
 
 const read = (p: string) => parse(readFileSync(resolve(ROOT, p), 'utf8'));
 
-/** Dotted field paths of a selection set, ignoring fragment spreads. */
+/**
+ * Every fragment definition reachable from the shopping-list documents.
+ *
+ * Built once so {@link fieldPaths} can follow a spread. Without it the walk
+ * skipped every non-FIELD selection, which made this gate blind through
+ * `...SortableItem_item` and friends — it happened to be latent only because
+ * the created-line fragment already carried the fields those spreads add.
+ */
+const FRAGMENTS: Map<string, SelectionSetNode> = (() => {
+  const map = new Map<string, SelectionSetNode>();
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = resolve(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith('.graphql')) {
+        for (const def of parse(readFileSync(full, 'utf8')).definitions) {
+          if (def.kind === Kind.FRAGMENT_DEFINITION) {
+            map.set(def.name.value, def.selectionSet);
+          }
+        }
+      }
+    }
+  };
+  // Derived from the tree, not a list: a fragment moved or added must not make
+  // this gate quietly stop seeing through the spread that references it.
+  walk(resolve(ROOT, 'src'));
+  return map;
+})();
+
+/**
+ * Dotted field paths of a selection set, FOLLOWING fragment spreads.
+ *
+ * A spread this cannot resolve throws rather than being skipped: a structural
+ * check that silently ignores a construct is blind wherever that construct is
+ * used, and its coverage then depends on authors happening not to use it.
+ */
 function fieldPaths(set: SelectionSetNode, prefix = ''): string[] {
   const out: string[] = [];
   for (const sel of set.selections) {
+    if (sel.kind === Kind.FRAGMENT_SPREAD) {
+      const target = FRAGMENTS.get(sel.name.value);
+      if (!target) {
+        throw new Error(
+          `fragment ${sel.name.value} is spread but not resolvable — ` +
+            'add its file to FRAGMENTS so this gate can see through it',
+        );
+      }
+      out.push(...fieldPaths(target, prefix));
+      continue;
+    }
+    if (sel.kind === Kind.INLINE_FRAGMENT) {
+      out.push(...fieldPaths(sel.selectionSet, prefix));
+      continue;
+    }
     if (sel.kind !== Kind.FIELD) continue;
     const path = prefix ? `${prefix}.${sel.name.value}` : sel.name.value;
     if (sel.selectionSet) out.push(...fieldPaths(sel.selectionSet, path));
@@ -69,6 +119,71 @@ function listNodeSelection(): SelectionSetNode {
   if (!found) throw new Error('GetShoppingListItemsFiltered node not found');
   return found;
 }
+
+/**
+ * The gate's own coverage, demonstrated rather than assumed.
+ *
+ * `fieldPaths` used to skip every non-FIELD selection, so a field reached
+ * through `...SomeFragment` counted as absent on BOTH sides — the comparison
+ * then agreed for the wrong reason and the gate was blind wherever a spread was
+ * used. These assert it sees through one, in each direction.
+ */
+describe('the coverage check sees through a fragment spread', () => {
+  const parseSet = (source: string): SelectionSetNode => {
+    const doc = parse(source);
+    for (const def of doc.definitions) {
+      if (def.kind === Kind.FRAGMENT_DEFINITION && def.name.value === 'Probe') {
+        return def.selectionSet;
+      }
+    }
+    throw new Error('Probe fragment not found');
+  };
+
+  it('counts a field a spread contributes', () => {
+    // `AddedShoppingListItemFields` is a real fragment in the registry, so the
+    // spread resolves and its fields must appear in the walk.
+    const viaSpread = fieldPaths(
+      parseSet(
+        'fragment Probe on ShoppingListItem { ...AddedShoppingListItemFields }',
+      ),
+    );
+
+    expect(viaSpread.length).toBeGreaterThan(10);
+    expect(viaSpread).toContain('id');
+  });
+
+  it('refuses a spread it cannot resolve rather than skipping it silently', () => {
+    expect(() =>
+      fieldPaths(
+        parseSet('fragment Probe on ShoppingListItem { ...NoSuchFragment }'),
+      ),
+    ).toThrow(/not resolvable/);
+  });
+
+  it('would fail a violation expressed only through a spread', () => {
+    // The shape the gate exists to catch: the list needs a field, and the
+    // creating side carries it only inside a spread. Skipping spreads made both
+    // sides read as missing it, so the comparison passed.
+    const needed = new Set(
+      fieldPaths(parseSet('fragment Probe on ShoppingListItem { id itemName }')),
+    );
+    const carriedWithoutSpread = new Set(
+      fieldPaths(parseSet('fragment Probe on ShoppingListItem { id }')),
+    );
+    const carriedWithSpread = new Set(
+      fieldPaths(
+        parseSet(
+          'fragment Probe on ShoppingListItem { ...AddedShoppingListItemFields }',
+        ),
+      ),
+    );
+
+    expect([...needed].filter(f => !carriedWithoutSpread.has(f))).toEqual([
+      'itemName',
+    ]);
+    expect([...needed].filter(f => !carriedWithSpread.has(f))).toEqual([]);
+  });
+});
 
 describe('a created shopping-list line covers what the list reads', () => {
   const CREATED_FRAGMENT = 'AddedShoppingListItemFields';

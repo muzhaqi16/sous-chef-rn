@@ -64,6 +64,26 @@ async function failingPaths(
   return [...paths];
 }
 
+/**
+ * Whether `field` is rendered through a `Controller` that surfaces its own
+ * `fieldState.error`.
+ *
+ * The `errors.<field>` accessor is one convention; a `Controller` whose render
+ * reads `fieldState.error?.message` is the other, and it names the field only in
+ * the `name` prop. Scoped to the render body that follows the name so a
+ * `fieldState` elsewhere in the file cannot vouch for an unrendered field.
+ */
+function renderedThroughController(source: string, field: string): boolean {
+  const marker = new RegExp(`name="${field}"(?![A-Za-z0-9_])`, 'gu');
+  for (const match of source.matchAll(marker)) {
+    const start = match.index ?? 0;
+    if (source.slice(start, start + 800).includes('fieldState.error')) {
+      return true;
+    }
+  }
+  return false;
+}
+
 const pantryBase = addPantryItemDefaults('');
 
 const CASES = [
@@ -91,19 +111,47 @@ const CASES = [
         quantityInput: '1',
         pantryNetWeightUnitId: 'unit-1',
       },
+      // The package-details pair. Every case above leaves `showPackageDetails`
+      // at its default of `false`, and both rules return early on that — so the
+      // suite could not see two blocking rules with no consumer at all.
+      {
+        ...pantryBase,
+        itemName: 'Milk',
+        quantityInput: '1',
+        showPackageDetails: true,
+        itemNetWeight: '500',
+      },
+      {
+        ...pantryBase,
+        itemName: 'Milk',
+        quantityInput: '1',
+        showPackageDetails: true,
+        weightUnitId: 'unit-1',
+      },
     ],
   },
   {
     name: 'addItemSchema',
     schema: addItemSchema as unknown as AnySchema,
     feature: 'pantry',
-    inputs: [{}],
+    // The same all-or-nothing net-weight pair the add sheet enforces. The submit
+    // path drops a weight with no resolved unit id, so a form that does not
+    // refuse it discards what the user typed with nothing reported.
+    inputs: [
+      {},
+      { quantityInput: '1', netWeight: '500' },
+      { quantityInput: '1', netWeightUnitId: 'unit-1' },
+    ],
   },
   {
     name: 'editItemSchema',
     schema: editItemSchema as unknown as AnySchema,
     feature: 'pantry',
-    inputs: [{}],
+    inputs: [
+      {},
+      { quantityInput: '1', netWeight: '500' },
+      { quantityInput: '1', netWeightUnitId: 'unit-1' },
+    ],
   },
 ] as const;
 
@@ -121,11 +169,17 @@ describe('validation messages have a rendering consumer', () => {
 
     const source = sources.get(testCase.feature) ?? '';
     for (const field of paths) {
+      // Two ways a form reports a field, and the guard has to see both. It used
+      // to know only the first, so a field rendered the idiomatic
+      // `Controller`/`fieldState` way read as having no consumer at all.
+      //
       // `errors.netWeight` must not be satisfied by `errors.netWeightUnit`.
-      const rendered = new RegExp(
+      const viaErrorsObject = new RegExp(
         `errors\\.${field}(?![A-Za-z0-9_])`,
         'u',
       ).test(source);
+      const viaFieldState = renderedThroughController(source, field);
+      const rendered = viaErrorsObject || viaFieldState;
 
       expect(
         rendered

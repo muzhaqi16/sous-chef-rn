@@ -158,7 +158,10 @@ export const AcceptInvite: React.FC = () => {
         });
         // Code-resolved copy: the server's message is unlocalizable English,
         // and the precise version is in the report above either way.
-        alertService.alert(t('labels.error'), localizedErrorMessage(error));
+        alertService.alert(
+          t('labels.error'),
+          localizedErrorMessage(error, t('errors.acceptInviteFailed')),
+        );
       },
     );
   };

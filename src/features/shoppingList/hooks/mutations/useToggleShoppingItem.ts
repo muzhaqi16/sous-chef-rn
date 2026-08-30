@@ -80,6 +80,11 @@ export function useToggleShoppingItem({
     const previousIsPurchased = snapshot.purchaseInfo?.isPurchased ?? false;
     const newStatus = !previousIsPurchased;
     const previousUpdatedAt = snapshot.updatedAt;
+    // The flip clears this, so the snapshot is the only record of it once the
+    // write lands. A refusal that cannot put it back leaves the row offering
+    // move-to-pantry for a line the server still considers stocked.
+    const previousMovedToPantryAt =
+      snapshot.purchaseInfo?.movedToPantryAt ?? null;
 
     // 1. Flip purchaseInfo + bump updatedAt on the entity
     writePurchaseInfo(
@@ -113,8 +118,14 @@ export function useToggleShoppingItem({
       writePurchaseInfo(
         client.cache,
         itemId,
-        { isPurchased: previousIsPurchased },
-        { updatedAt: previousUpdatedAt },
+        {
+          isPurchased: previousIsPurchased,
+          movedToPantryAt: previousMovedToPantryAt,
+        },
+        // Restoring, not flipping: the server never saw the change, so it still
+        // holds the stamp. Treated as a flip, the revert cleared it a second
+        // time and the snapshot's value was discarded.
+        { updatedAt: previousUpdatedAt, restoring: true },
       );
       if (previousIsPurchased) {
         moveShoppingListItemToPurchased(client.cache, listId, { id: itemId });
@@ -241,6 +252,8 @@ export function useToggleShoppingItem({
 
     const previousIsPurchased = snapshot.purchaseInfo?.isPurchased ?? false;
     const previousUpdatedAt = snapshot.updatedAt;
+    const previousMovedToPantryAt =
+      snapshot.purchaseInfo?.movedToPantryAt ?? null;
     const now = new Date().toISOString();
 
     // 1. Optimistically mark purchased (same as toggleItem). The entered amounts
@@ -264,8 +277,11 @@ export function useToggleShoppingItem({
       writePurchaseInfo(
         client.cache,
         itemId,
-        { isPurchased: previousIsPurchased },
-        { updatedAt: previousUpdatedAt },
+        {
+          isPurchased: previousIsPurchased,
+          movedToPantryAt: previousMovedToPantryAt,
+        },
+        { updatedAt: previousUpdatedAt, restoring: true },
       );
       if (!previousIsPurchased) {
         moveShoppingListItemToUnpurchased(client.cache, listId, { id: itemId });

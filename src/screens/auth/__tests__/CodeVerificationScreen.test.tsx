@@ -74,8 +74,19 @@ const mockSkipVerification = jest.fn();
 jest.mock('#hooks/auth/useEmailVerification', () => ({
   useEmailVerificationActions: () => ({
     skipVerification: mockSkipVerification,
-    resumeVerification: jest.fn(),
   }),
+}));
+
+jest.mock('#hooks/navigation/useAppNavigation');
+const mockNav = (
+  jest.requireMock('#hooks/navigation/useAppNavigation') as {
+    useAppNavigation: jest.Mock;
+  }
+).useAppNavigation();
+
+const mockNavigateToLogin = jest.fn();
+jest.mock('#hooks/navigation/useAuthNavigation', () => ({
+  useAuthNavigation: () => ({ navigateToLogin: mockNavigateToLogin }),
 }));
 
 jest.mock('#/utils/finallyHelpers');
@@ -195,28 +206,43 @@ function buildVerifyMock(): MockedResponse {
   };
 }
 
+/** Point the store's user hooks at `user` for one test. */
+function mockStoreUser(user: Record<string, unknown> | null) {
+  jest.spyOn(storeModule, 'useAppStore').mockImplementation(
+    <T,>(selector: (state: RootState) => T): T =>
+      selector({
+        user,
+        updateUser: mockUpdateUser,
+      } as Partial<RootState> as RootState),
+  );
+  jest.spyOn(storeModule, 'useUser').mockReturnValue(user as never);
+}
+
 describe('CodeVerificationScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // `clearAllMocks` resets calls but NOT a spy's implementation, so a seeded
+    // store would leak into every test after it.
+    jest.restoreAllMocks();
   });
 
   it('renders the enter code title', () => {
-    renderWithApollo(<CodeVerificationScreen />);
+    renderWithApollo(<CodeVerificationScreen context="gate" />);
     expect(screen.getByText('Enter Code')).toBeTruthy();
   });
 
   it('renders the user email in the subtitle', () => {
-    renderWithApollo(<CodeVerificationScreen />);
+    renderWithApollo(<CodeVerificationScreen context="gate" />);
     expect(screen.getByText('test@example.com')).toBeTruthy();
   });
 
   it('renders the submit button', () => {
-    renderWithApollo(<CodeVerificationScreen />);
+    renderWithApollo(<CodeVerificationScreen context="gate" />);
     expect(screen.getByText('Submit')).toBeTruthy();
   });
 
   it('renders the resend code footer', () => {
-    renderWithApollo(<CodeVerificationScreen />);
+    renderWithApollo(<CodeVerificationScreen context="gate" />);
     expect(screen.getByText("Didn't get the email?")).toBeTruthy();
     expect(screen.getByText('Resend code')).toBeTruthy();
   });
@@ -224,7 +250,7 @@ describe('CodeVerificationScreen', () => {
   it('fires resend when footer link is pressed', async () => {
     const user = userEvent.setup();
     const recordedVariables: Record<string, unknown>[] = [];
-    renderWithApollo(<CodeVerificationScreen />, {
+    renderWithApollo(<CodeVerificationScreen context="gate" />, {
       operationMocks: [buildResendMock(recordedVariables), buildVerifyMock()],
     });
     await user.press(screen.getByTestId('footer-link'));
@@ -237,7 +263,7 @@ describe('CodeVerificationScreen', () => {
 
   it('offers a way back to sign in', async () => {
     const user = userEvent.setup();
-    renderWithApollo(<CodeVerificationScreen />);
+    renderWithApollo(<CodeVerificationScreen context="gate" />);
 
     await user.press(screen.getByTestId('back-button'));
 
@@ -254,7 +280,7 @@ describe('CodeVerificationScreen', () => {
 
   it('logs out once the sign-out confirmation is accepted', async () => {
     const user = userEvent.setup();
-    renderWithApollo(<CodeVerificationScreen />);
+    renderWithApollo(<CodeVerificationScreen context="gate" />);
 
     await user.press(screen.getByTestId('back-button'));
 
@@ -269,7 +295,7 @@ describe('CodeVerificationScreen', () => {
 
   it('warns about the collaboration limits before skipping', async () => {
     const user = userEvent.setup();
-    renderWithApollo(<CodeVerificationScreen />);
+    renderWithApollo(<CodeVerificationScreen context="gate" />);
 
     await user.press(screen.getByTestId('skip-verification'));
 
@@ -283,7 +309,7 @@ describe('CodeVerificationScreen', () => {
 
   it('defers verification once the skip is confirmed', async () => {
     const user = userEvent.setup();
-    renderWithApollo(<CodeVerificationScreen />);
+    renderWithApollo(<CodeVerificationScreen context="gate" />);
 
     await user.press(screen.getByTestId('skip-verification'));
 
@@ -297,36 +323,124 @@ describe('CodeVerificationScreen', () => {
   });
 
   it('returns null when user is already verified', () => {
-    const verifiedUser = {
+    mockStoreUser({
       id: '1',
       email: 'test@example.com',
       emailVerified: true,
       onBoarded: true,
-    };
-    jest.spyOn(storeModule, 'useAppStore').mockImplementation(
-      <T,>(selector: (state: RootState) => T): T =>
-        selector({
-          user: verifiedUser,
-          updateUser: mockUpdateUser,
-        } as Partial<RootState> as RootState),
-    );
-    jest.spyOn(storeModule, 'useUser').mockReturnValue(verifiedUser);
+    });
 
-    const { toJSON } = renderWithApollo(<CodeVerificationScreen />);
+    const { toJSON } = renderWithApollo(
+      <CodeVerificationScreen context="gate" />,
+    );
     expect(toJSON()).toBeNull();
   });
 
-  it('returns null when there is no user', () => {
-    jest.spyOn(storeModule, 'useAppStore').mockImplementation(
-      <T,>(selector: (state: RootState) => T): T =>
-        selector({
-          user: null,
-          updateUser: mockUpdateUser,
-        } as Partial<RootState> as RootState),
-    );
-    jest.spyOn(storeModule, 'useUser').mockReturnValue(null);
+  it('returns null on the gate when there is no user', () => {
+    mockStoreUser(null);
 
-    const { toJSON } = renderWithApollo(<CodeVerificationScreen />);
+    const { toJSON } = renderWithApollo(
+      <CodeVerificationScreen context="gate" />,
+    );
     expect(toJSON()).toBeNull();
+  });
+
+  describe('opened from inside the app', () => {
+    it('goes back instead of signing the user out', async () => {
+      const user = userEvent.setup();
+      renderWithApollo(<CodeVerificationScreen context="inApp" />);
+
+      await user.press(screen.getByTestId('back-button'));
+
+      // The whole point of the pushed screen: changing your mind costs nothing.
+      expect(alertService.alert).not.toHaveBeenCalled();
+      expect(authService.logout).not.toHaveBeenCalled();
+      expect(mockNav.goBack).toHaveBeenCalledTimes(1);
+    });
+
+    it('offers no skip link — backing out is the skip', () => {
+      renderWithApollo(<CodeVerificationScreen context="inApp" />);
+      expect(screen.queryByTestId('skip-verification')).toBeNull();
+    });
+  });
+
+  describe('rendered from sign-up, with no session', () => {
+    it('renders and takes the address it was handed', () => {
+      mockStoreUser(null);
+
+      renderWithApollo(
+        <CodeVerificationScreen context="signup" email="new@example.com" />,
+      );
+
+      expect(screen.getByText('Enter Code')).toBeTruthy();
+      expect(screen.getByText('new@example.com')).toBeTruthy();
+    });
+
+    it('resends to the address it was handed', async () => {
+      mockStoreUser(null);
+      const user = userEvent.setup();
+      const recordedVariables: Record<string, unknown>[] = [];
+      renderWithApollo(
+        <CodeVerificationScreen context="signup" email="new@example.com" />,
+        {
+          operationMocks: [
+            buildResendMock(recordedVariables),
+            buildVerifyMock(),
+          ],
+        },
+      );
+
+      // Registration has just sent one, so the screen opens mid-cooldown and
+      // the link is disabled until it runs out.
+      expect(screen.getByTestId('footer-link')).toBeDisabled();
+      expect(recordedVariables).toHaveLength(0);
+
+      await user.press(screen.getByTestId('footer-link'));
+      expect(recordedVariables).toHaveLength(0);
+    });
+
+    it('sends the user to sign in rather than skipping', async () => {
+      mockStoreUser(null);
+      const user = userEvent.setup();
+      renderWithApollo(
+        <CodeVerificationScreen context="signup" email="new@example.com" />,
+      );
+
+      expect(screen.queryByTestId('skip-verification')).toBeNull();
+      await user.press(screen.getByTestId('code-verification-sign-in'));
+
+      expect(mockNavigateToLogin).toHaveBeenCalledTimes(1);
+    });
+
+    it('has no back button — the account already exists', () => {
+      mockStoreUser(null);
+      renderWithApollo(
+        <CodeVerificationScreen context="signup" email="new@example.com" />,
+      );
+      expect(screen.queryByTestId('back-button')).toBeNull();
+    });
+
+    it('prefers the signed-in address over the one it was handed', async () => {
+      const user = userEvent.setup();
+      const recordedVariables: Record<string, unknown>[] = [];
+      // A session exists, so a stale hand-off must not redirect the resend.
+      renderWithApollo(
+        <CodeVerificationScreen context="inApp" email="stale@example.com" />,
+        {
+          operationMocks: [
+            buildResendMock(recordedVariables),
+            buildVerifyMock(),
+          ],
+        },
+      );
+
+      await user.press(screen.getByTestId('footer-link'));
+
+      await waitFor(() => {
+        expect(recordedVariables).toContainEqual({
+          input: { email: 'test@example.com' },
+        });
+      });
+    });
   });
 });

@@ -1070,46 +1070,20 @@ describe('removeItemFromShoppingListForMoveToPantry', () => {
     expect(result).toBe(existing);
   });
 
-  it('decrements completedItems when wasPurchased=true', () => {
-    const cache = createMockCache();
-
-    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', true);
-
-    const result = invokeFieldModifier(cache, 'completedItems', 3, {});
-
-    expect(result).toBe(2);
-  });
-
-  it('does NOT have completedItems modifier when wasPurchased=false', () => {
-    const cache = createMockCache();
-
-    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', false);
-
-    const modifyCall = cache.modify.mock.calls[0];
-    const fields = modifyCall[0].fields;
-
-    expect(fields.completedItems).toBeUndefined();
-  });
-
-  it('decrements totalItems', () => {
-    const cache = createMockCache();
-
-    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', true);
-
-    const result = invokeFieldModifier(cache, 'totalItems', 5, {});
-
-    expect(result).toBe(4);
-  });
-
-  it('clamps totalItems to 0', () => {
-    const cache = createMockCache();
-
-    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', true);
-
-    const result = invokeFieldModifier(cache, 'totalItems', 0, {});
-
-    expect(result).toBe(0);
-  });
+  /**
+   * The counters moved OUT of this suite.
+   *
+   * They live in a second `cache.modify` that only runs when the edge was
+   * actually removed — this helper is called twice for one online move, and
+   * `edges.filter` is idempotent while `-1` is not. `createMockCache().modify`
+   * is a `jest.fn` that never invokes a modifier, so nothing here can make that
+   * condition true, and a counter assertion in this suite could only ever
+   * answer "does the modifier subtract?", which was never in doubt. That is how
+   * the double-decrement shipped under a green suite.
+   *
+   * `moveToPantryCounters.test.ts` covers them against the real cache, where
+   * the two passes and their cumulative result are observable.
+   */
 
   it('evicts item entity and calls gc', () => {
     const cache = createMockCache();

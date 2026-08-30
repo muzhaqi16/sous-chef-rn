@@ -60,6 +60,33 @@ const gqlPartialItem = gql`
   }
 `;
 
+/**
+ * The shape `mutation CreateItem` normalizes: `categories` WITHOUT `isPrimary`.
+ * The nested link therefore has the key absent, not undefined — see
+ * `docs/verified-library-behaviour.md#apollo-partial-reads-omit-missing-keys-rather-than-undefining-them`.
+ */
+const gqlCreateItemShape = gql`
+  fragment CreateItemShape on Item {
+    id
+    name
+    shelfLifeDays
+    categories {
+      category {
+        id
+        name
+      }
+    }
+  }
+`;
+
+const gqlNullShelfLife = gql`
+  fragment NullShelfLife on Item {
+    id
+    shelfLifeDays
+    shelfLifeOpenedDays
+  }
+`;
+
 describe('writePantryItemDetailStub', () => {
   it('does not clobber catalog fields already cached by a narrower query', () => {
     const cache = makeCache();
@@ -93,6 +120,153 @@ describe('writePantryItemDetailStub', () => {
     expect(catalog?.shelfLifeOpenedDays).toBe(5);
     expect(catalog?.categories).toHaveLength(1);
   });
+
+  it('completes the catalog group when a nested value was cached partially', () => {
+    const cache = makeCache();
+    const itemId = 'item-created-1';
+
+    // The selection `mutation CreateItem` really uses: `categories { category
+    // { id name } }`, with NO `isPrimary`. Every free-text and barcode pantry
+    // add that mints a catalog Item leaves the entity in exactly this state.
+    cache.writeFragment({
+      id: `Item:${itemId}`,
+      fragment: gqlCreateItemShape,
+      data: {
+        __typename: 'Item',
+        id: itemId,
+        name: 'Milk',
+        // A COMPLETE sibling scalar, to prove completeness is judged per field
+        // rather than per group.
+        shelfLifeDays: 14,
+        categories: [
+          {
+            __typename: 'ItemCategoryLink',
+            category: { __typename: 'Category', id: 'cat-1', name: 'Dairy' },
+          },
+        ],
+      },
+    });
+
+    writePantryItemDetailStub(cache, 'pantry-item-local-3', {
+      itemId,
+      itemName: 'Milk',
+    });
+
+    // The STRICT read — the one `GetPantryItem` performs. A partially cached
+    // `categories` written straight back leaves this null, and with
+    // `returnPartialData: false` the detail screen then goes to the network for
+    // an id the server does not have. Offline it blanks.
+    const catalog = cache.readFragment({
+      id: `Item:${itemId}`,
+      fragment: WritePantryItemDetailStub_ItemCatalogFragmentDoc,
+      fragmentName: 'writePantryItemDetailStub_itemCatalog',
+    });
+    expect(catalog).not.toBeNull();
+
+    // The complete sibling survives — that is the preservation rule doing its
+    // job at field granularity.
+    expect(catalog?.shelfLifeDays).toBe(14);
+    // The INCOMPLETE nested value yields to the neutral. It is the one value
+    // that cannot be written back, so the choice is between completing the read
+    // and keeping a shape that makes every read of this entity fail. See the
+    // trade recorded on `completeFields`.
+    expect(catalog?.categories).toEqual([]);
+  });
+
+  it('keeps a genuinely null cached value rather than treating it as absent', () => {
+    const cache = makeCache();
+    const itemId = 'item-null-shelf-life';
+
+    // `shelfLifeDays: null` is a value the server supplied, not a hole.
+    cache.writeFragment({
+      id: `Item:${itemId}`,
+      fragment: gqlNullShelfLife,
+      data: {
+        __typename: 'Item',
+        id: itemId,
+        shelfLifeDays: null,
+        shelfLifeOpenedDays: 9,
+      },
+    });
+
+    writePantryItemDetailStub(cache, 'pantry-item-local-4', {
+      itemId,
+      itemName: 'Salt',
+    });
+
+    const catalog = cache.readFragment({
+      id: `Item:${itemId}`,
+      fragment: WritePantryItemDetailStub_ItemCatalogFragmentDoc,
+      fragmentName: 'writePantryItemDetailStub_itemCatalog',
+    });
+    expect(catalog).not.toBeNull();
+    expect(catalog?.shelfLifeDays).toBeNull();
+    expect(catalog?.shelfLifeOpenedDays).toBe(9);
+  });
+
+  it.each([
+    ['a free-text create (no catalog id)', undefined],
+    ['a barcode create (catalog id minted by CreateItem)', 'item-scanned-new'],
+  ])(
+    'leaves GetPantryItem readable after %s',
+    (_label, itemId: string | undefined) => {
+      const cache = makeCache();
+      const pantryItemId = 'pantry-item-local-5';
+
+      if (itemId) {
+        // The create response's own selection — the state the entity is left in
+        // when the server mints a new catalog Item for a scan.
+        cache.writeFragment({
+          id: `Item:${itemId}`,
+          fragment: gqlCreateItemShape,
+          data: {
+            __typename: 'Item',
+            id: itemId,
+            name: 'Scanned Item',
+            shelfLifeDays: null,
+            categories: [
+              {
+                __typename: 'ItemCategoryLink',
+                category: {
+                  __typename: 'Category',
+                  id: 'cat-2',
+                  name: 'Pantry',
+                },
+              },
+            ],
+          },
+        });
+      }
+
+      writePantryItemDetailStub(cache, pantryItemId, {
+        itemId,
+        itemName: 'Scanned Item',
+      });
+
+      // Every catalog group the detail screen reads must resolve strictly. One
+      // group short and `GetPantryItem` returns nothing and goes to the network
+      // for an id the server does not have.
+      const resolvedItemId = itemId ?? `local-item-${pantryItemId}`;
+      for (const [fragment, fragmentName] of [
+        [
+          WritePantryItemDetailStub_ItemCatalogFragmentDoc,
+          'writePantryItemDetailStub_itemCatalog',
+        ],
+        [
+          WritePantryItemDetailStub_ItemMediaFragmentDoc,
+          'writePantryItemDetailStub_itemMedia',
+        ],
+      ] as const) {
+        expect(
+          cache.readFragment({
+            id: `Item:${resolvedItemId}`,
+            fragment,
+            fragmentName,
+          }),
+        ).not.toBeNull();
+      }
+    },
+  );
 
   it('still supplies neutral values for an item the cache has never seen', () => {
     const cache = makeCache();

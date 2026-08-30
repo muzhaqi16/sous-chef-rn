@@ -53,6 +53,13 @@ function rewriteSavedRecipeFolders(
 ): string[] {
   // `extract()` is typed as `unknown` on the base ApolloCache; the normalized
   // store is a flat map keyed by `TypeName:id`, which is what the loop needs.
+  //
+  // It serializes the WHOLE store, which is the cost of the only correct
+  // question here: which `SavedRecipe` entities carry this folder, whichever
+  // query happened to load them. Reading a specific list instead would miss the
+  // ones another query cached, and leave exactly the stale-folder rows this
+  // function exists to rewrite. Bounded to a rename or delete — a rare,
+  // user-initiated action, not a render path.
   const snapshot = cache.extract() as Record<
     string,
     { folder?: string | null } | undefined

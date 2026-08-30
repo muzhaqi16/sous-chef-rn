@@ -14,6 +14,7 @@ const mockNavigateTo = {
 const mockNavigation = {
   navigate: jest.fn(),
   goBack: jest.fn(),
+  toVerifyEmail: jest.fn(),
   toShareList: jest.fn(),
   toHomeDetail: jest.fn(),
   navigation: {

@@ -7,7 +7,6 @@ import { LandingAuthScreen } from '#screens/auth/LandingAuthScreen';
 import { LoginScreen } from '#screens/auth/LoginScreen';
 import { SignUpScreen } from '#screens/auth/SignUpScreen';
 import { ForgotPasswordScreen } from '#screens/auth/ForgotPasswordScreen';
-import { CodeVerificationScreen } from '#screens/auth/CodeVerificationScreen';
 import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 
 export const AuthStack = createNativeStackNavigator({
@@ -37,10 +36,6 @@ export const AuthStack = createNativeStackNavigator({
     ForgotPassword: createNativeStackScreen({
       screen: ForgotPasswordScreen,
       linking: 'forgot-password',
-    }),
-    CodeVerification: createNativeStackScreen({
-      screen: CodeVerificationScreen,
-      linking: 'auth/verify/:email?',
     }),
   },
 });

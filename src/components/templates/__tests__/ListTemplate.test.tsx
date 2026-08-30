@@ -2,6 +2,10 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
 import { ListTemplate } from '../ListTemplate';
+import {
+  ItemSwipeActionsProvider,
+  useItemSwipeActions,
+} from '#components/organisms/itemSwipeActionsContext';
 
 type TestItem = { id: string; title?: string };
 type TestEmptyState = { title: string };
@@ -152,21 +156,6 @@ describe('ListTemplate', () => {
     expect(screen.getByText('Header')).toBeTruthy();
   });
 
-  it('forwards onBeforeItemRemoved to the list', () => {
-    // `ItemList` pairs it with `prepareForLayoutAnimationRender()` for every
-    // action flagged `removesRow`. The template never forwarded it, so that
-    // whole path was unreachable from a screen.
-    const onBeforeItemRemoved = jest.fn();
-
-    render(
-      <ListTemplate items={items} onBeforeItemRemoved={onBeforeItemRemoved} />,
-    );
-
-    expect(mockItemListProps).toHaveBeenCalledWith(
-      expect.objectContaining({ onBeforeItemRemoved }),
-    );
-  });
-
   it('does not let customListProps override the template’s own wiring', () => {
     // The spread used to come LAST, so a colliding key silently replaced the
     // wiring the template exists to guarantee.
@@ -187,6 +176,10 @@ describe('ListTemplate', () => {
         items={items}
         onItemPress={templateHandler}
         customListComponent={CustomList}
+        // The type refuses a colliding key now; this asserts the RUNTIME
+        // backstop still holds if one ever gets through (a cast, a spread of a
+        // wider object).
+        // @ts-expect-error deliberate collision — the guard must reject it
         customListProps={{ onItemPress: callerHandler }}
       />,
     );
@@ -194,5 +187,84 @@ describe('ListTemplate', () => {
     seen[0]?.('1');
     expect(templateHandler).toHaveBeenCalledWith('1');
     expect(callerHandler).not.toHaveBeenCalled();
+  });
+  /**
+   * The supplier-to-consumer hop, rendered rather than asserted on props.
+   *
+   * The screen supplies the factory, the template injects it into whatever list
+   * it was given, and the row reads it from context. Every prop along that path
+   * is optional, so a layer that stops forwarding type-checks — which is how
+   * every shopping-list row lost its swipe actions under a green suite. This
+   * renders the real template into a custom list component that CONSUMES the
+   * context, so a break anywhere between the two fails here.
+   */
+  it('delivers the supplied swipe actions to a custom list that reads context', () => {
+    // Mirrors the production shape: the template injects the factory as a PROP,
+    // the custom list publishes it, and the row reads it from context.
+    const Row = () => {
+      const factory = useItemSwipeActions();
+      const built = factory?.('row-1');
+      return <Text>{built?.left?.[0]?.key ?? 'no-actions'}</Text>;
+    };
+    const Consumer = ({
+      itemSwipeActions,
+    }: {
+      itemSwipeActions?: Parameters<
+        typeof ItemSwipeActionsProvider
+      >[0]['value'];
+    }) => (
+      <ItemSwipeActionsProvider value={itemSwipeActions}>
+        <Row />
+      </ItemSwipeActionsProvider>
+    );
+
+    render(
+      <ListTemplate
+        items={items}
+        customListComponent={Consumer}
+        itemSwipeActions={id => ({
+          left: [
+            {
+              key: `edit-${id}`,
+              icon: 'pencil-outline',
+              labelKey: 'labels.edit',
+              onPress: () => undefined,
+            },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText('edit-row-1')).toBeTruthy();
+  });
+
+  it('withholds the actions from the default list while it is loading', () => {
+    render(<ListTemplate items={[]} loading itemSwipeActions={() => ({})} />);
+
+    // A row cannot act on a list that has not loaded. This applies to the
+    // DEFAULT list only: `isLoading` is false whenever a custom list component
+    // is present, because that component owns its own loading state.
+    expect(mockItemListProps).toHaveBeenCalledWith(
+      expect.objectContaining({ itemSwipeActions: undefined }),
+    );
+  });
+
+  it('does not withhold them from a custom list, which owns its loading', () => {
+    const seen: Array<unknown> = [];
+    const Consumer = ({ itemSwipeActions }: { itemSwipeActions?: unknown }) => {
+      seen.push(itemSwipeActions);
+      return <Text>custom</Text>;
+    };
+
+    render(
+      <ListTemplate
+        items={[]}
+        loading
+        customListComponent={Consumer}
+        itemSwipeActions={() => ({})}
+      />,
+    );
+
+    expect(seen[0]).toEqual(expect.any(Function));
   });
 });

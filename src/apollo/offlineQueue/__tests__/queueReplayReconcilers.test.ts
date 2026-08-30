@@ -1,13 +1,13 @@
 import { reconcileReplaySuccess } from '../queueReplayReconcilers';
 import {
-  adjustPantryItemCount,
-  removeFromPantryItemsCache,
+  addPantryItemLocally,
+  removePantryItemLocally,
 } from '#/apollo/utils/pantryCacheUpdaters';
 
 jest.mock('#/apollo/client', () => ({ client: { cache: {} } }));
 jest.mock('#/apollo/utils/pantryCacheUpdaters', () => ({
-  adjustPantryItemCount: jest.fn(),
-  removeFromPantryItemsCache: jest.fn(),
+  addPantryItemLocally: jest.fn(),
+  removePantryItemLocally: jest.fn(),
 }));
 
 /**
@@ -44,12 +44,17 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
       payloadWith('existing-99'),
     );
 
-    expect(removeFromPantryItemsCache).toHaveBeenCalledWith(
+    expect(removePantryItemLocally).toHaveBeenCalledWith(
       {},
       'pantry-1',
       'minted-1',
     );
-    expect(adjustPantryItemCount).toHaveBeenCalledWith({}, 'pantry-1', -1);
+    // Withdrawing the ghost is only half of it. The foreground path also links
+    // the row the server returned; without this the user is left with neither.
+    expect(addPantryItemLocally).toHaveBeenCalledWith({}, 'pantry-1', {
+      __typename: 'PantryItem',
+      id: 'existing-99',
+    });
   });
 
   it('leaves the row alone when the server used the minted id', () => {
@@ -59,8 +64,8 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
       payloadWith('minted-1'),
     );
 
-    expect(removeFromPantryItemsCache).not.toHaveBeenCalled();
-    expect(adjustPantryItemCount).not.toHaveBeenCalled();
+    expect(removePantryItemLocally).not.toHaveBeenCalled();
+    expect(addPantryItemLocally).not.toHaveBeenCalled();
   });
 
   it('does nothing when the payload carries no pantry item', () => {
@@ -73,7 +78,7 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
       },
     });
 
-    expect(removeFromPantryItemsCache).not.toHaveBeenCalled();
+    expect(removePantryItemLocally).not.toHaveBeenCalled();
   });
 
   it('does nothing when the move minted no id', () => {
@@ -83,20 +88,20 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
       payloadWith('existing-99'),
     );
 
-    expect(removeFromPantryItemsCache).not.toHaveBeenCalled();
+    expect(removePantryItemLocally).not.toHaveBeenCalled();
   });
 
   it('has no reconciler for an ordinary replayed operation', () => {
     reconcileReplaySuccess('CreatePantryItem', variables, payloadWith('x'));
 
-    expect(removeFromPantryItemsCache).not.toHaveBeenCalled();
-    expect(adjustPantryItemCount).not.toHaveBeenCalled();
+    expect(removePantryItemLocally).not.toHaveBeenCalled();
+    expect(addPantryItemLocally).not.toHaveBeenCalled();
   });
 
   it('never lets a reconciliation failure escape into the replay', () => {
     // A throw here would be classified as a queue failure, and the failure
     // handler would then WITHDRAW a change the server had accepted.
-    (removeFromPantryItemsCache as jest.Mock).mockImplementation(() => {
+    (removePantryItemLocally as jest.Mock).mockImplementation(() => {
       throw new Error('cache exploded');
     });
 

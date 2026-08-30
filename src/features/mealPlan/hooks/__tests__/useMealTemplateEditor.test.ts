@@ -300,6 +300,10 @@ describe("a row loaded by the editor's own query", () => {
    * `recipe` — so the snapshot read came back null for every one of these rows,
    * and both the local write and its revert silently did nothing.
    */
+  // `GetMealTemplateForEdit` selects `recipe`, so a row the editor loaded
+  // CARRIES the key — null when the row has none. That selection is what lets a
+  // revert tell "this row has no recipe" from "this query never asked", which
+  // is the distinction `snapshotFields` reads.
   const EDITOR_LOADED_ITEM = {
     __typename: 'MealTemplateItem',
     id: 'item-9',
@@ -308,6 +312,7 @@ describe("a row loaded by the editor's own query", () => {
     customMealName: 'Soup',
     servings: 2,
     notes: null,
+    recipe: null,
   };
 
   const TEMPLATE_WITH_ITEM = {
@@ -353,7 +358,7 @@ describe("a row loaded by the editor's own query", () => {
     expect(item?.servings).toBe(6);
   });
 
-  it('reverts a refused edit whose previous value the cache never held', async () => {
+  it('clears a refused recipe pick on a row that had none', async () => {
     const RECIPE = {
       __typename: 'Recipe',
       id: 'recipe-1',
@@ -386,10 +391,8 @@ describe("a row loaded by the editor's own query", () => {
     });
     expect(saved).toBe(false);
 
-    // `readTemplateItem` is partial by contract, so a row the editor's own query
-    // loaded has no `recipe` key at all. Snapshotting that as `undefined` makes
-    // the revert a no-op for exactly the field the edit changed — the row keeps
-    // the recipe the server just refused.
+    // The row carried `recipe: null`, so the snapshot RECORDS null and the
+    // revert writes it back — the recipe the server refused does not stay.
     const item = cache.readFragment<{
       customMealName: string | null;
       recipe: { id: string } | null;
@@ -404,6 +407,68 @@ describe("a row loaded by the editor's own query", () => {
 
     expect(item?.customMealName).toBe('Soup');
     expect(item?.recipe ?? null).toBeNull();
+  });
+
+  it('restores the recipe a refused custom-name edit replaced', async () => {
+    // Finding 13's case, and the mirror of the test above. The row IS
+    // recipe-backed; renaming it to a custom name writes `recipe: null`
+    // locally, and a refusal has to put the link back. It can only do that
+    // because the editor's query selects `recipe`, so the snapshot carries it —
+    // while it did not, the revert wrote null over a link it had never read and
+    // there was no next fetch to repair it.
+    const RECIPE = {
+      __typename: 'Recipe',
+      id: 'recipe-1',
+      name: 'Carbonara',
+      imageUrl: null,
+      servings: 4,
+      totalTimeMinutes: 25,
+    };
+    const cache = seedCache([
+      RECIPE,
+      {
+        ...EDITOR_LOADED_ITEM,
+        customMealName: null,
+        recipe: { __typename: 'Recipe', id: 'recipe-1' },
+      },
+    ]);
+    const { result } = renderHookWithApollo(() => useMealTemplateEditor(), {
+      cache,
+      operationMocks: [
+        {
+          request: {
+            query: UpdateTemplateItemDocument,
+            variables: () => true,
+          },
+          error: new Error('refused'),
+          maxUsageCount: Number.POSITIVE_INFINITY,
+        },
+      ],
+    });
+
+    let saved: boolean | undefined;
+    await act(async () => {
+      saved = await result.current.updateItem({
+        id: 'item-9',
+        meal: { customMealName: 'Leftovers' },
+      });
+    });
+    expect(saved).toBe(false);
+
+    const item = cache.readFragment<{
+      customMealName: string | null;
+      recipe: { id: string } | null;
+    }>({
+      id: 'MealTemplateItem:item-9',
+      fragment:
+        require('#features/mealPlan/graphql/mealPlanFragments.generated')
+          .MealTemplateItemFragmentDoc,
+      fragmentName: 'MealTemplateItemFragment',
+      returnPartialData: true,
+    });
+
+    expect(item?.customMealName ?? null).toBeNull();
+    expect(item?.recipe?.id).toBe('recipe-1');
   });
 
   it('puts a refused removal back', async () => {

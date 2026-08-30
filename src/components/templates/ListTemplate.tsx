@@ -46,25 +46,20 @@ interface ListTemplateProps<TItem extends { id: string } = { id: string }> {
   // Test IDs
   testIDPrefix?: string;
 
-  /**
-   * Called before a row-removing swipe action runs, so a caller can prepare its
-   * own layout animation. Forwarded to `ItemList`, which pairs it with
-   * `prepareForLayoutAnimationRender()`.
-   */
-  onBeforeItemRemoved?: () => void;
-
   customListComponent?: React.ComponentType<CustomListComponentProps<TItem>>;
   /**
    * Extra props for a `customListComponent`, spread BEFORE the template's own
    * injections so a caller cannot override them. It used to be spread last: a
    * key colliding with `onItemPress`, `itemSwipeActions` or `testIDPrefix`
-   * silently replaced the wiring the template exists to guarantee, and the
-   * `Record<string, unknown>` type meant nothing flagged it.
+   * silently replaced the wiring the template exists to guarantee.
+   *
+   * The type rejects such a key too. It used to be written as an `Omit` over an
+   * index-signature type, which removes nothing — an open record has no known
+   * keys to omit — so it read as a guard and permitted every collision it
+   * named. Mapping the injected keys to `never` is what actually refuses them.
    */
-  customListProps?: Omit<
-    Record<string, unknown>,
-    keyof CustomListComponentProps<TItem>
-  >;
+  customListProps?: Record<string, unknown> &
+    Partial<Record<keyof CustomListComponentProps<TItem>, never>>;
 }
 
 /** Props the template injects into a `customListComponent`. */
@@ -114,7 +109,6 @@ export const ListTemplate = <TItem extends { id: string } = { id: string }>({
 
   testIDPrefix,
 
-  onBeforeItemRemoved,
   customListComponent: CustomListComponent,
   customListProps = {},
 }: ListTemplateProps<TItem>) => {
@@ -159,10 +153,6 @@ export const ListTemplate = <TItem extends { id: string } = { id: string }>({
           }
           onItemPress={isLoading ? () => {} : onItemPress}
           itemSwipeActions={isLoading ? undefined : itemSwipeActions}
-          // Forwarded, so the `removesRow` preparation `ItemList` performs is
-          // reachable from a screen. Without this the whole
-          // `prepareForLayoutAnimationRender` wrapper was dead in production.
-          onBeforeItemRemoved={onBeforeItemRemoved}
           onRefresh={onRefresh}
           ListHeaderComponent={ListHeaderComponent}
           ListFooterComponent={ListFooterComponent}

@@ -32,11 +32,23 @@ export interface ResendBackoff {
  *
  * Callers should `registerAttempt()` after every attempt, successful or not, so
  * a failing send can't be retried in a tight loop.
+ *
+ * `initialAttempts` counts sends that happened before this hook mounted — the
+ * activation mail that registration itself dispatches, for one. Without it the
+ * verification screen opens with an open window and the first tap can burn one
+ * of the three resends an hour the server allows, seconds after the first mail
+ * went out.
  */
-export function useResendBackoff(): ResendBackoff {
-  const [attempts, setAttempts] = useState(0);
-  const [cooldownUntil, setCooldownUntil] = useState(0);
-  const [now, setNow] = useState(0);
+export function useResendBackoff(initialAttempts = 0): ResendBackoff {
+  const [attempts, setAttempts] = useState(initialAttempts);
+  // Lazy initializers: the deadline has to exist on the FIRST render, or the
+  // countdown reads zero for a frame and the link renders enabled.
+  const [cooldownUntil, setCooldownUntil] = useState(() =>
+    initialAttempts > 0
+      ? Date.now() + delayForAttempt(initialAttempts) * 1000
+      : 0,
+  );
+  const [now, setNow] = useState(() => (initialAttempts > 0 ? Date.now() : 0));
 
   useEffect(() => {
     if (cooldownUntil === 0) return;

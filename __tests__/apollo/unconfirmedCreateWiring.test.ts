@@ -125,6 +125,36 @@ describe('unconfirmed-create wiring (pantry items)', () => {
     },
   );
 
+  /**
+   * File-level `toContain` cannot see a SECOND publish path inside a file that
+   * already marks somewhere. The force-add retry is exactly that: it republishes
+   * the same client-minted row after a duplicate refusal, by which point the
+   * first attempt's cleanup has already confirmed the id — so the row is
+   * tappable, the server does not have it, and the detail screen parks in a
+   * `RESOURCE_NOT_FOUND` that never retries.
+   *
+   * Scoped to the retry block rather than the file, which is the granularity the
+   * defect lives at.
+   */
+  const retryPaths = creators.filter(file =>
+    stripComments(readFileSync(join(process.cwd(), file), 'utf8')).includes(
+      'forceAdd: true',
+    ),
+  );
+
+  it('finds the force-add retries, so the check below is not vacuous', () => {
+    expect(retryPaths.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it.each(retryPaths)('%s re-claims the id on its force-add retry', file => {
+    const code = stripComments(readFileSync(join(process.cwd(), file), 'utf8'));
+    const start = code.indexOf('onAddAnyway');
+    const end = code.indexOf('forceAdd: true', start);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    expect(code.slice(start, end)).toContain('unconfirmedCreates.mark(');
+  });
+
   // The other half of the contract: the screens that read by that id.
   it.each([
     'src/features/pantry/screens/PantryItemDetail.tsx',

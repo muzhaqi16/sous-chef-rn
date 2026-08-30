@@ -17,7 +17,31 @@ const context = createValueContext<ItemSwipeActionsFactory | undefined>(
   'ItemSwipeActionsProvider',
 );
 
-export const ItemSwipeActionsProvider = context.Provider;
+/**
+ * Publishes a factory to the rows below, and PASSES THROUGH when given none.
+ *
+ * The lists render this for their own optional prop and sit inside the one the
+ * screen renders, so a plain context provider had the inner publish `undefined`
+ * and shadow the outer — every shopping-list row lost swipe-to-edit and
+ * swipe-to-delete, with nothing to catch it: each prop along the way is
+ * optional, so a layer that forwards nothing type-checks.
+ *
+ * Passing through is the right reading of "no factory": a list that supplies
+ * none is not asserting there are none, it simply has no opinion. A list that
+ * genuinely wants different actions supplies its own, which still wins.
+ */
+export const ItemSwipeActionsProvider = ({
+  value,
+  children,
+}: {
+  value: ItemSwipeActionsFactory | undefined;
+  children: React.ReactNode;
+}) =>
+  value === undefined ? (
+    <>{children}</>
+  ) : (
+    <context.Provider value={value}>{children}</context.Provider>
+  );
 
 /** `undefined` when no screen supplied a factory, or outside a provider. */
 export const useItemSwipeActions = (): ItemSwipeActionsFactory | undefined =>
