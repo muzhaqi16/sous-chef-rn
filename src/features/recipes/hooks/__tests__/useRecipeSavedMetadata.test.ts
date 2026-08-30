@@ -142,7 +142,6 @@ describe('useRecipeSavedMetadata — clearing an optional field', () => {
         updateFavoriteRecipe: {
           __typename: 'UpdateFavoriteRecipePayload',
           savedRecipe: { __typename: 'SavedRecipe', id: 'sr1' },
-          recipe: { __typename: 'Recipe', id: 'r1' },
         },
       },
     });

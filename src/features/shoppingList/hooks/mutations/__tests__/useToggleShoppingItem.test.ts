@@ -172,8 +172,15 @@ function seedShoppingItem() {
         __typename: 'ShoppingListItemPurchaseInfo',
         isPurchased: false,
         // The snapshot fragment selects it, so a fixture without it makes the
-        // strict read incomplete and the hook refuse the toggle.
+        // strict read incomplete and the hook refuse the toggle. The rest are
+        // here for the same reason: `writePurchaseInfo` carries the cached
+        // record forward, so whatever the fixture omits it writes back partial.
         movedToPantryAt: null,
+        purchaseDate: null,
+        purchasedById: null,
+        purchasedPrice: null,
+        purchasedQuantity: null,
+        purchasedBy: null,
       },
       version: 3,
       updatedAt: '2026-01-01T00:00:00.000Z',

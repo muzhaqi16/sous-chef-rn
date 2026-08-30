@@ -1,5 +1,6 @@
 'use no memo';
 import React from 'react';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { SearchResults, type SearchResultsProps } from '../SearchResults';
 import { renderWithProviders } from '#/test-utils/renderWithProviders';
@@ -261,7 +262,7 @@ describe('SearchResults', () => {
         data: {
           createPantryItem: {
             __typename: 'ValidationError',
-            code: 'VALIDATION_ERROR',
+            code: ErrorCode.ValidationFailed,
             message: 'nope',
             field: 'quantity',
           },

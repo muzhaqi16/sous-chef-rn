@@ -7,9 +7,10 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
-  StorageState,
-  ItemCondition,
   AcquisitionMethod,
+  ErrorCode,
+  ItemCondition,
+  StorageState,
 } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { usePantryItemSubmission } from '../usePantryItemSubmission';
@@ -113,10 +114,10 @@ function createMock(success = true) {
             pantryId: 'pantry-1',
             itemId: null,
             itemName: 'Milk',
-            quantity: '1',
+            quantity: 1,
             version: 1,
             updatedAt: '2026-01-01T00:00:00.000Z',
-            storageState: 'PANTRY',
+            storageState: StorageState.Ambient,
             expiresAt: null,
             lowStockAlert: false,
             isLowStock: false,
@@ -149,7 +150,7 @@ function createMock(success = true) {
     data: {
       createPantryItem: {
         __typename: 'ValidationError',
-        code: 'VALIDATION_ERROR',
+        code: ErrorCode.ValidationFailed,
         message: 'Validation failed',
         field: 'itemName',
       },

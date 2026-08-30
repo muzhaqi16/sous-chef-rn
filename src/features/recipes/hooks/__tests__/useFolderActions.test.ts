@@ -1,20 +1,19 @@
 import { act } from '@testing-library/react-native';
-import { InMemoryCache } from '@apollo/client';
+import type { InMemoryCache } from '@apollo/client';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { DeleteRecipeFolderDocument } from '#features/recipes/graphql/recipe.generated';
 import { useFolderActions } from '../useFolderActions';
-import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
 
 // Inline fragments on the Error interface require possibleTypes for the
 // cache to keep `code`/`message` when the concrete return is a NotFoundError /
 // ConflictError. The default test cache omits possibleTypes.
 function makeCacheWithPossibleTypes() {
-  return new InMemoryCache({
-    possibleTypes: fragmentMatcherData.possibleTypes,
-  });
+  return makeCache();
 }
 
 const mockToastSuccess = jest.fn();
@@ -72,7 +71,6 @@ describe('useFolderActions', () => {
         data: {
           deleteRecipeFolder: {
             __typename: 'DeleteRecipeFolderPayload',
-            success: true,
           },
         },
       });
@@ -100,7 +98,7 @@ describe('useFolderActions', () => {
         data: {
           deleteRecipeFolder: {
             __typename: 'NotFoundError',
-            code: 'NOT_FOUND',
+            code: ErrorCode.NotFound,
             message: 'Folder not found',
           },
         },
@@ -143,7 +141,6 @@ describe('useFolderActions', () => {
         data: {
           deleteRecipeFolder: {
             __typename: 'DeleteRecipeFolderPayload',
-            success: true,
           },
         },
       });
@@ -169,7 +166,7 @@ describe('useFolderActions', () => {
         data: {
           deleteRecipeFolder: {
             __typename: 'NotFoundError',
-            code: 'NOT_FOUND',
+            code: ErrorCode.NotFound,
             message: 'Folder not found',
           },
         },
@@ -300,7 +297,7 @@ describe('folder actions move the recipes, not just the folder list', () => {
         deleteRecipeFolder: {
           __typename: 'ValidationError',
           message: 'nope',
-          code: 'VALIDATION_ERROR',
+          code: ErrorCode.ValidationFailed,
         },
       },
     });

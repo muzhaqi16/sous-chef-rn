@@ -1,4 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { ApolloClient } from '@apollo/client';
 import {
   recordMock,
@@ -176,7 +177,6 @@ describe('usePantryItemDetailActions', () => {
         data: {
           deletePantryItem: {
             __typename: 'DeletePantryItemPayload',
-            pantry: null,
             pantryItem: { __typename: 'PantryItem', id: 'item-1' },
           },
         },
@@ -235,7 +235,6 @@ describe('usePantryItemDetailActions', () => {
         data: {
           deletePantryItem: {
             __typename: 'DeletePantryItemPayload',
-            pantry: null,
             pantryItem: { __typename: 'PantryItem', id: 'item-1' },
           },
         },
@@ -281,7 +280,6 @@ describe('usePantryItemDetailActions', () => {
         data: {
           deletePantryItem: {
             __typename: 'DeletePantryItemPayload',
-            pantry: null,
             pantryItem: { __typename: 'PantryItem', id: 'item-1' },
           },
         },
@@ -348,7 +346,7 @@ describe('usePantryItemDetailActions', () => {
         data: {
           deletePantryItem: {
             __typename: 'NotFoundError',
-            code: 'NOT_FOUND',
+            code: ErrorCode.NotFound,
             message: 'Item is referenced by an active meal plan',
             resource: 'PantryItem',
             resourceId: 'item-1',
@@ -378,7 +376,7 @@ describe('usePantryItemDetailActions', () => {
         data: {
           deletePantryItem: {
             __typename: 'ForbiddenError',
-            code: 'FORBIDDEN',
+            code: ErrorCode.Forbidden,
             message: 'You do not have permission to delete this item',
           },
         },

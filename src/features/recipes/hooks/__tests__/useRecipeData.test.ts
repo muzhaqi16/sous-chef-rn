@@ -1,5 +1,10 @@
 import { waitFor } from '@testing-library/react-native';
 import {
+  Difficulty,
+  RecipeCategory,
+  RecipeStatus,
+} from '#/graphql/generated/schemaTypes';
+import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
@@ -44,14 +49,10 @@ function backendRecipeMock(
         prepTimeMinutes: null,
         cookTimeMinutes: null,
         totalTimeMinutes: recipe.totalTimeMinutes ?? null,
-        difficulty: 'EASY',
-        category: 'DINNER',
+        difficulty: Difficulty.Easy,
+        category: RecipeCategory.Dinner,
         cuisine: null,
-        status: 'PUBLISHED',
-        isExternal: false,
-        externalSource: null,
-        externalId: null,
-        primarySource: null,
+        status: RecipeStatus.Published,
         caloriesPerServing: null,
         nutritionData: null,
         publishedAt: null,
@@ -60,8 +61,6 @@ function backendRecipeMock(
         originalAuthor: null,
         tips: null,
         tags: [],
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-01-01T00:00:00Z',
         savedDetails: recipe.savedDetails ?? null,
         instructions: [],
         notes: null,

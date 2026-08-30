@@ -77,6 +77,9 @@ function seedItem(cache: InMemoryCache, isPurchased: boolean) {
     quantity: 1,
     quantityInput: '1',
     displayFormat: DisplayFormat.Decimal,
+    // Two fields, because that is all `ShoppingListItemDisplayFragment`
+    // selects — the seed cannot hold more than the fragment it is written
+    // through.
     purchaseInfo: {
       __typename: 'ShoppingListItemPurchaseInfo',
       movedToPantryAt: null,

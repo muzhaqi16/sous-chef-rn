@@ -4,6 +4,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { MarkItemForReviewDocument } from '#operations/item/item.generated';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useReportItem } from '#features/catalog/hooks/useReportItem';
 import { alertService } from '#/services/alertService';
 
@@ -57,7 +58,7 @@ describe('useReportItem', () => {
       data: {
         markItemForReview: {
           __typename: 'ConflictError',
-          code: 'CONFLICT',
+          code: ErrorCode.Conflict,
           message: 'Item already flagged',
         },
       },
@@ -78,7 +79,7 @@ describe('useReportItem', () => {
       data: {
         markItemForReview: {
           __typename: 'ValidationError',
-          code: 'VALIDATION_FAILED',
+          code: ErrorCode.ValidationFailed,
           message: 'Reason is too long',
           field: 'reason',
         },
@@ -110,7 +111,7 @@ describe('useReportItem', () => {
       data: {
         markItemForReview: {
           __typename: 'NotFoundError',
-          code: 'NOT_FOUND',
+          code: ErrorCode.NotFound,
           message: 'No such item',
         },
       },
@@ -158,7 +159,7 @@ describe('useReportItem', () => {
       data: {
         markItemForReview: {
           __typename: 'ForbiddenError',
-          code: 'FORBIDDEN',
+          code: ErrorCode.Forbidden,
           message: 'Not allowed',
         },
       },

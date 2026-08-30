@@ -1,4 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
+import { Difficulty, RecipeCategory } from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
@@ -19,7 +20,7 @@ function seedRecipeCache(
 ) {
   return seedCache(
     recipes.map(r => ({
-      __typename: 'Recipe',
+      __typename: 'Recipe' as const,
       id: r.id,
       name: `Recipe ${r.id}`,
       description: null,
@@ -28,8 +29,8 @@ function seedRecipeCache(
       prepTimeMinutes: null,
       cookTimeMinutes: null,
       totalTimeMinutes: null,
-      difficulty: 'EASY',
-      category: 'DINNER',
+      difficulty: Difficulty.Easy,
+      category: RecipeCategory.Dinner,
       cuisine: null,
       status: 'PUBLISHED',
       isExternal: true,
@@ -41,7 +42,7 @@ function seedRecipeCache(
       updatedAt: '2025-01-01T00:00:00Z',
       savedDetails: r.folder
         ? {
-            __typename: 'SavedRecipe',
+            __typename: 'SavedRecipe' as const,
             id: `sd-${r.id}`,
             folder: r.folder,
             tags: [],
@@ -88,12 +89,12 @@ function myRecipesMock(
   return recordMock(MyRecipesDocument, {
     data: {
       recipes: {
-        __typename: 'RecipeConnection',
+        __typename: 'RecipeConnection' as const,
         edges: recipes.map((r, i) => ({
-          __typename: 'RecipeEdge',
+          __typename: 'RecipeEdge' as const,
           cursor: `c${i}`,
           node: {
-            __typename: 'Recipe',
+            __typename: 'Recipe' as const,
             id: r.id,
             name: `Recipe ${r.id}`,
             description: null,
@@ -102,8 +103,8 @@ function myRecipesMock(
             prepTimeMinutes: null,
             cookTimeMinutes: null,
             totalTimeMinutes: null,
-            difficulty: 'EASY',
-            category: 'DINNER',
+            difficulty: Difficulty.Easy,
+            category: RecipeCategory.Dinner,
             cuisine: null,
             status: 'PUBLISHED',
             isExternal: true,
@@ -115,7 +116,7 @@ function myRecipesMock(
             updatedAt: '2025-01-01T00:00:00Z',
             savedDetails: r.folder
               ? {
-                  __typename: 'SavedRecipe',
+                  __typename: 'SavedRecipe' as const,
                   id: `sd-${r.id}`,
                   folder: r.folder,
                   tags: [],
@@ -127,7 +128,7 @@ function myRecipesMock(
           },
         })),
         pageInfo: {
-          __typename: 'PageInfo',
+          __typename: 'PageInfo' as const,
           hasNextPage: false,
           endCursor: null,
         },

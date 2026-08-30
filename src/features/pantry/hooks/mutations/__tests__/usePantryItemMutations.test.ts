@@ -16,8 +16,10 @@ import { usePantryItemMutations } from '../usePantryItemMutations';
 /** Minimal config shape the mocked CRUD operation reads at call time. */
 interface MockUpdateConfig {
   itemId: string;
+  // `{ input }` only — the real `createUpdateOperation` carries the id inside
+  // the input (useCrudOperations.ts:190-196).
   mutation: (options: {
-    variables: { id: string; input: PantryItemUpdate };
+    variables: { input: PantryItemUpdate & { id: string } };
   }) => Promise<unknown>;
 }
 
@@ -63,10 +65,15 @@ jest.mock('#/utils/errors/versionConflict', () => ({
 
 jest.mock('#/hooks/utils/useCrudOperations', () => ({
   useCrudOperations: () => ({
+    // Matches the real `createUpdateOperation`, which calls
+    // `mutation({ variables: { input } })` with the id INSIDE the input
+    // (useCrudOperations.ts:190-196). The old shape put `id` at the top level,
+    // so the hook's `optimisticResponse` read `variables.input.id` as
+    // undefined, found no cached item, and wrote a pantry item with one field.
     createUpdateOperation: jest.fn(
       (config: MockUpdateConfig) => async (updates: PantryItemUpdate) => {
         await config.mutation({
-          variables: { id: config.itemId, input: updates },
+          variables: { input: { ...updates, id: config.itemId } },
         });
       },
     ),
@@ -105,10 +112,7 @@ function updateMock() {
   return recordMock(UpdatePantryItemDocument, {
     data: {
       updatePantryItem: {
-        __typename: 'PantryItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
+        __typename: 'UpdatePantryItemPayload' as const,
         pantryItem: { __typename: 'PantryItem', id: 'item-1' },
       },
     },
@@ -119,10 +123,7 @@ function deleteMock() {
   return recordMock(DeletePantryItemDocument, {
     data: {
       deletePantryItem: {
-        __typename: 'PantryItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
+        __typename: 'DeletePantryItemPayload' as const,
         pantryItem: { __typename: 'PantryItem', id: 'item-1' },
       },
     },

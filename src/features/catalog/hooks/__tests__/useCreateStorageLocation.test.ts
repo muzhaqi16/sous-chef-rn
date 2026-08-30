@@ -22,9 +22,9 @@ function successMock() {
       const input = vars.input as { id: string; name: string };
       return {
         createStorageLocation: {
-          __typename: 'CreateStorageLocationPayload',
+          __typename: 'CreateStorageLocationPayload' as const,
           storageLocation: {
-            __typename: 'StorageLocation',
+            __typename: 'StorageLocation' as const,
             id: input.id,
             name: input.name,
             type: StorageType.PantryShelf,

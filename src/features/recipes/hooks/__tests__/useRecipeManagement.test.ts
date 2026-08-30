@@ -10,7 +10,7 @@ import {
   type MyRecipeCard_RecipeFragment,
 } from '#features/recipes/components/MyRecipeCard.generated';
 import { useRecipeManagement } from '../useRecipeManagement';
-import { RecipeCategory, Difficulty } from '#/graphql/generated/schemaTypes';
+import { Difficulty, RecipeCategory } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
   useIsLoggedOut: () => false,
@@ -33,11 +33,11 @@ beforeEach(() => {
 function buildRecipeNode(
   id: string,
   name: string,
-  category: string,
-  difficulty: string,
+  category: RecipeCategory,
+  difficulty: Difficulty,
 ) {
   return {
-    __typename: 'Recipe',
+    __typename: 'Recipe' as const,
     id,
     name,
     category,
@@ -55,26 +55,41 @@ function recipesMock() {
   return recordMock(MyRecipesDocument, {
     data: {
       recipes: {
-        __typename: 'RecipeConnection',
+        __typename: 'RecipeConnection' as const,
         edges: [
           {
-            __typename: 'RecipeEdge',
+            __typename: 'RecipeEdge' as const,
             cursor: 'c1',
-            node: buildRecipeNode('r1', 'Pasta', 'MAIN_COURSE', 'EASY'),
+            node: buildRecipeNode(
+              'r1',
+              'Pasta',
+              RecipeCategory.MainCourse,
+              Difficulty.Easy,
+            ),
           },
           {
-            __typename: 'RecipeEdge',
+            __typename: 'RecipeEdge' as const,
             cursor: 'c2',
-            node: buildRecipeNode('r2', 'Salad', 'APPETIZER', 'EASY'),
+            node: buildRecipeNode(
+              'r2',
+              'Salad',
+              RecipeCategory.Appetizer,
+              Difficulty.Easy,
+            ),
           },
           {
-            __typename: 'RecipeEdge',
+            __typename: 'RecipeEdge' as const,
             cursor: 'c3',
-            node: buildRecipeNode('r3', 'Soup', 'APPETIZER', 'HARD'),
+            node: buildRecipeNode(
+              'r3',
+              'Soup',
+              RecipeCategory.Appetizer,
+              Difficulty.Hard,
+            ),
           },
         ],
         pageInfo: {
-          __typename: 'PageInfo',
+          __typename: 'PageInfo' as const,
           hasNextPage: false,
           endCursor: null,
         },

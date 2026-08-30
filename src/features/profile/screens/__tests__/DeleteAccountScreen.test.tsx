@@ -80,7 +80,7 @@ function canDeleteBlocked(): MockedResponse {
         canDelete: false,
         blockers: [
           {
-            __typename: 'AccountDeletionBlocker',
+            __typename: 'DeletionBlocker',
             resourceId: 'home-1',
             resourceName: 'My Home',
             message: 'You are the sole owner',

@@ -1,4 +1,5 @@
 import { act } from '@testing-library/react-native';
+import { ErrorCode, ExternalSource } from '#/graphql/generated/schemaTypes';
 import { gql, InMemoryCache } from '@apollo/client';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import {
@@ -128,7 +129,7 @@ function buildUpsertMock(
             id: recipe.id,
             name: recipe.name,
             imageUrl: recipe.imageUrl ?? null,
-            externalSource: 'SPOONACULAR',
+            externalSource: ExternalSource.Spoonacular,
             externalId: '123',
             servings: 4,
             prepTimeMinutes: 10,
@@ -157,7 +158,7 @@ function recordUpsertMock() {
           id: 'backend-1',
           name: 'Test Recipe',
           imageUrl: null,
-          externalSource: 'SPOONACULAR',
+          externalSource: ExternalSource.Spoonacular,
           externalId: '123',
           servings: 4,
           prepTimeMinutes: 10,
@@ -291,7 +292,7 @@ describe('useRecipePreload', () => {
     const source = sent.input.ingredients[0].externalSources[0];
     expect(source).toEqual(
       expect.objectContaining({
-        source: 'SPOONACULAR',
+        source: ExternalSource.Spoonacular,
         externalId: '1',
         isPrimary: true,
       }),
@@ -504,7 +505,7 @@ const SAVED_RECIPE_FRAGMENT = gql`
  * resolves) and an empty MySavedRecipes connection (so updateQuery can prepend
  * the optimistic edge).
  */
-function seedFavoriteCache(cache: InMemoryCache = new InMemoryCache()) {
+function seedFavoriteCache(cache: InMemoryCache = makeCache()) {
   cache.writeQuery<MySavedRecipesQuery>({
     query: MySavedRecipesDocument,
     data: {
@@ -598,7 +599,7 @@ const favoriteMock = (
             }
           : {
               __typename: 'ValidationError',
-              code: 'VALIDATION',
+              code: ErrorCode.ValidationFailed,
               message: 'bad',
               field: 'recipeId',
             },

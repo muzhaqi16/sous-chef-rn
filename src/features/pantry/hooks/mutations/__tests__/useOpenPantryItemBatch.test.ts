@@ -1,4 +1,5 @@
 import { act } from '@testing-library/react-native';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { gql } from '@apollo/client';
 import {
   renderHookWithApollo,
@@ -81,7 +82,7 @@ describe('useOpenPantryItemBatch (local-first)', () => {
             data: {
               openPantryItemBatch: {
                 __typename: 'ValidationError',
-                code: 'VALIDATION',
+                code: ErrorCode.ValidationFailed,
                 message: 'bad batch',
                 field: 'batchId',
               },

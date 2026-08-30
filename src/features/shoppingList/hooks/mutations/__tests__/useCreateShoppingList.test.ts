@@ -114,8 +114,10 @@ describe('useCreateShoppingList', () => {
 
     // ...written into the cache BEFORE the mutation fired.
     expect(addOptimisticShoppingList).toHaveBeenCalledTimes(1);
-    // Online success returns the server entity.
-    expect(created).toEqual({
+    // Online success returns the server entity. The rest of the selection set
+    // is filled from the SDL, so this pins the identity the assertion is about
+    // rather than the exhaustive shape.
+    expect(created).toMatchObject({
       __typename: 'ShoppingList',
       id: 'srv-echo',
       name: 'Weekly',

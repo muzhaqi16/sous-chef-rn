@@ -1,4 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
@@ -63,7 +64,7 @@ function cookedMock(outcome: { kind: 'success' } | { kind: 'rejected' }) {
         : {
             markRecipeAsCooked: {
               __typename: 'ValidationError',
-              code: 'VALIDATION',
+              code: ErrorCode.ValidationFailed,
               message: 'bad',
               field: 'servings',
             },
@@ -186,6 +187,13 @@ describe('useRecipeCookingActions', () => {
           deductFromPantry: true,
         }),
       }),
+    );
+    // Settle the mutation before the test ends: leaving it in flight lets its
+    // cache write land after teardown, where console.error is no longer spied.
+    await waitFor(() =>
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Recipe marked as cooked! Ingredients deducted from pantry.',
+      ),
     );
   });
 });

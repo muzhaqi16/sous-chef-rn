@@ -136,9 +136,12 @@ describe('usePantryAnalytics', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(result.current.usageData).toEqual(usageData);
-    expect(result.current.wasteData).toEqual(wasteData);
-    expect(result.current.ledgerData).toEqual(ledgerData);
+    // Fixtures state the fields under test; the rest of each selection set is
+    // filled from the SDL, so this checks the hook routes each query to the
+    // right output rather than that the fixtures were exhaustive.
+    expect(result.current.usageData).toMatchObject(usageData);
+    expect(result.current.wasteData).toMatchObject(wasteData);
+    expect(result.current.ledgerData).toMatchObject(ledgerData);
   });
 
   it('returns null data when pantryId is empty (queries skipped)', () => {

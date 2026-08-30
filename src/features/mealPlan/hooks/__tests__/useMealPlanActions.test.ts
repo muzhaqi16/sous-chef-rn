@@ -1,4 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
@@ -30,12 +31,12 @@ describe('useMealPlanActions', () => {
 
   it('createMealPlan calls mutation and returns data', async () => {
     const expectedPlan = {
-      __typename: 'MealPlan',
+      __typename: 'MealPlan' as const,
       id: 'plan-1',
       name: 'Week Plan',
     };
     const successPayload = {
-      __typename: 'CreateMealPlanPayload',
+      __typename: 'CreateMealPlanPayload' as const,
       mealPlan: expectedPlan,
     };
     const create = recordMock(CreateMealPlanDocument, {
@@ -57,7 +58,7 @@ describe('useMealPlanActions', () => {
     });
 
     expect(created).toMatchObject({
-      __typename: 'CreateMealPlanPayload',
+      __typename: 'CreateMealPlanPayload' as const,
       mealPlan: { id: 'plan-1', name: 'Week Plan' },
     });
     // Local-first: the hook mints a permanent cuid id into the input.
@@ -75,8 +76,12 @@ describe('useMealPlanActions', () => {
     const create = recordMock(CreateMealPlanDocument, {
       data: {
         createMealPlan: {
-          __typename: 'CreateMealPlanPayload',
-          mealPlan: { __typename: 'MealPlan', id: 'plan-1', name: 'Camping' },
+          __typename: 'CreateMealPlanPayload' as const,
+          mealPlan: {
+            __typename: 'MealPlan' as const,
+            id: 'plan-1',
+            name: 'Camping',
+          },
         },
       },
       // Must comfortably exceed testing-library's waitFor poll interval (50ms).
@@ -141,9 +146,9 @@ describe('useMealPlanActions', () => {
     const update = recordMock(UpdateMealPlanDocument, {
       data: {
         updateMealPlan: {
-          __typename: 'UpdateMealPlanPayload',
+          __typename: 'UpdateMealPlanPayload' as const,
           mealPlan: {
-            __typename: 'MealPlan',
+            __typename: 'MealPlan' as const,
             id: 'plan-1',
             name: 'Updated',
           },
@@ -164,7 +169,7 @@ describe('useMealPlanActions', () => {
     });
 
     expect(updated).toMatchObject({
-      __typename: 'UpdateMealPlanPayload',
+      __typename: 'UpdateMealPlanPayload' as const,
       mealPlan: { id: 'plan-1', name: 'Updated' },
     });
     expect(update.fired).toContainEqual({
@@ -176,8 +181,8 @@ describe('useMealPlanActions', () => {
     const del = recordMock(DeleteMealPlanDocument, {
       data: {
         deleteMealPlan: {
-          __typename: 'DeleteMealPlanPayload',
-          mealPlan: { __typename: 'MealPlan', id: 'plan-1' },
+          __typename: 'DeleteMealPlanPayload' as const,
+          mealPlan: { __typename: 'MealPlan' as const, id: 'plan-1' },
         },
       },
     });
@@ -199,8 +204,8 @@ describe('useMealPlanActions', () => {
     const del = recordMock(DeleteMealPlanDocument, {
       data: {
         deleteMealPlan: {
-          __typename: 'NotFoundError',
-          code: 'NOT_FOUND',
+          __typename: 'NotFoundError' as const,
+          code: ErrorCode.NotFound,
           message: 'Meal plan not found',
         },
       },

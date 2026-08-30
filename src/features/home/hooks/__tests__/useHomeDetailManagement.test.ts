@@ -1,4 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
@@ -354,7 +355,7 @@ describe('useHomeDetailManagement', () => {
         data: {
           transferHomeOwnership: {
             __typename: 'ForbiddenError',
-            code: 'FORBIDDEN',
+            code: ErrorCode.Forbidden,
             message: 'not owner',
           },
         },
@@ -384,7 +385,7 @@ describe('useHomeDetailManagement', () => {
         data: {
           updateMembership: {
             __typename: 'ForbiddenError',
-            code: 'FORBIDDEN',
+            code: ErrorCode.Forbidden,
             message: 'nope',
           },
         },

@@ -4,7 +4,7 @@ import {
   seedCache,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import { ItemImageStatus } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, ItemImageStatus } from '#/graphql/generated/schemaTypes';
 import { MarkPrimaryItemImageDocument } from '#features/catalog/hooks/useMarkPrimaryItemImage.generated';
 import { useMarkPrimaryItemImage } from '#features/catalog/hooks/useMarkPrimaryItemImage';
 import { alertService } from '#/services/alertService';
@@ -70,7 +70,7 @@ describe('useMarkPrimaryItemImage', () => {
       data: {
         markPrimaryItemImage: {
           __typename: 'ForbiddenError',
-          code: 'FORBIDDEN',
+          code: ErrorCode.Forbidden,
           message: 'You cannot edit this item.',
         },
       },
@@ -90,7 +90,7 @@ describe('useMarkPrimaryItemImage', () => {
       data: {
         markPrimaryItemImage: {
           __typename: 'ValidationError',
-          code: 'VALIDATION_ERROR',
+          code: ErrorCode.ValidationFailed,
           message: 'That photo is not approved.',
           field: 'imageId',
         },

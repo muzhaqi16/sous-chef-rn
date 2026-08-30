@@ -1,4 +1,8 @@
 import React from 'react';
+import {
+  ErrorCode,
+  PasswordActionStatus,
+} from '#/graphql/generated/schemaTypes';
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo, recordMock } from '#/test-utils/apolloMockProvider';
 import { RequestPasswordResetDocument } from '#operations/auth/auth.generated';
@@ -111,8 +115,8 @@ jest.mock('#components/atoms/EmailInput', () => ({
 
 const sentPayload = {
   requestPasswordReset: {
-    __typename: 'RequestPasswordResetPayload',
-    status: 'SENT',
+    __typename: 'RequestPasswordResetPayload' as const,
+    status: PasswordActionStatus.Sent,
   },
 };
 
@@ -182,8 +186,8 @@ describe('ForgotPasswordScreen', () => {
     const { mock } = recordMock(RequestPasswordResetDocument, {
       data: {
         requestPasswordReset: {
-          __typename: 'ValidationError',
-          code: 'VALIDATION',
+          __typename: 'ValidationError' as const,
+          code: ErrorCode.ValidationFailed,
           message: 'Email is invalid.',
         },
       },

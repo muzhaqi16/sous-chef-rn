@@ -1,5 +1,11 @@
 'use no memo';
 import React from 'react';
+import {
+  CollaboratorRole,
+  CollaboratorStatus,
+  ErrorCode,
+  MembershipRole,
+} from '#/graphql/generated/schemaTypes';
 import { screen, userEvent, act, waitFor } from '@testing-library/react-native';
 import {
   InvitationAcceptanceModal,
@@ -156,7 +162,7 @@ function acceptHomeOk(opts: { hasMembership?: boolean } = {}) {
       data: {
         acceptHomeInvite: {
           __typename: 'ConflictError',
-          code: 'CONFLICT',
+          code: ErrorCode.Conflict,
           message: 'Already accepted',
         },
       },
@@ -170,7 +176,7 @@ function acceptHomeOk(opts: { hasMembership?: boolean } = {}) {
           __typename: 'Membership',
           id: 'm1',
           homeId: 'home-1',
-          role: 'MEMBER',
+          role: MembershipRole.Member,
           canManageHome: false,
           canViewPantry: true,
           canEditPantry: true,
@@ -186,7 +192,7 @@ function acceptHomeOk(opts: { hasMembership?: boolean } = {}) {
             myMembership: {
               __typename: 'Membership',
               id: 'm1',
-              role: 'MEMBER',
+              role: MembershipRole.Member,
               canManageHome: false,
               canViewPantry: true,
               canEditPantry: true,
@@ -225,7 +231,7 @@ function acceptShoppingListOk(opts: { success?: boolean } = {}) {
         data: {
           acceptShoppingListInvite: {
             __typename: 'ConflictError',
-            code: 'CONFLICT',
+            code: ErrorCode.Conflict,
             message: 'Could not accept',
           },
         },
@@ -240,8 +246,8 @@ function acceptShoppingListOk(opts: { success?: boolean } = {}) {
           __typename: 'ShoppingListCollaborator',
           id: 'c1',
           email: 'a@b.com',
-          role: 'EDITOR',
-          status: 'ACTIVE',
+          role: CollaboratorRole.Editor,
+          status: CollaboratorStatus.Active,
           collaboratorId: 'u1',
           canAddItems: true,
           canRemoveItems: true,

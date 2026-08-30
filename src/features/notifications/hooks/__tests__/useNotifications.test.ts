@@ -131,7 +131,7 @@ function buildNotificationSubscriptionMock(
     result: {
       data: {
         notificationEvents: {
-          __typename: 'NotificationEvent',
+          __typename: 'NotificationEvent' as const,
           subtype: isCreated
             ? NotificationSubtype.Created
             : NotificationSubtype.Updated,
@@ -140,7 +140,7 @@ function buildNotificationSubscriptionMock(
           timestamp: '2024-01-01T00:00:00Z',
           affectedCount: null,
           node: {
-            __typename: 'Notification',
+            __typename: 'Notification' as const,
             id: notification.id,
             type: notification.type,
             status: NotificationStatus.Pending,
@@ -177,7 +177,7 @@ function buildTransitionEventMock(
     result: {
       data: {
         notificationEvents: {
-          __typename: 'NotificationEvent',
+          __typename: 'NotificationEvent' as const,
           subtype,
           mutation: MutationType.Updated,
           timestamp: '2024-01-01T00:00:00Z',
@@ -186,7 +186,7 @@ function buildTransitionEventMock(
             nodeId === null
               ? null
               : {
-                  __typename: 'Notification',
+                  __typename: 'Notification' as const,
                   id: nodeId,
                   type: NotificationType.LowStock,
                   status: NotificationStatus.Read,
@@ -210,15 +210,15 @@ function buildTransitionEventMock(
 
 const unreadFeedData = {
   me: {
-    __typename: 'User',
+    __typename: 'User' as const,
     id: 'user-1',
     unreadNotificationCount: 0,
     hasUrgentNotifications: false,
     notificationsConnection: {
-      __typename: 'NotificationConnection',
+      __typename: 'NotificationConnection' as const,
       edges: [],
       pageInfo: {
-        __typename: 'PageInfo',
+        __typename: 'PageInfo' as const,
         hasNextPage: false,
         endCursor: null,
       },
@@ -241,9 +241,9 @@ const seededCache = (
   cache.writeQuery({
     query: GetUnreadNotificationsDocument,
     data: {
-      __typename: 'Query',
+      __typename: 'Query' as const,
       me: {
-        __typename: 'User',
+        __typename: 'User' as const,
         id: 'user-1',
         unreadNotificationCount: rows.filter(r =>
           [NotificationStatus.Pending, NotificationStatus.Sent].includes(
@@ -252,7 +252,7 @@ const seededCache = (
         ).length,
         hasUrgentNotifications: false,
         notificationsConnection: {
-          __typename: 'NotificationConnection',
+          __typename: 'NotificationConnection' as const,
           edges: rows.map(r => ({
             __typename: 'NotificationEdge' as const,
             node: {
@@ -274,7 +274,7 @@ const seededCache = (
             },
           })),
           pageInfo: {
-            __typename: 'PageInfo',
+            __typename: 'PageInfo' as const,
             hasNextPage: false,
             endCursor: null,
           },

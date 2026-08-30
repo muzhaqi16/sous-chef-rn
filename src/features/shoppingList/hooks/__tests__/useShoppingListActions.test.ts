@@ -1,6 +1,8 @@
 'use no memo';
 
 import { act, waitFor } from '@testing-library/react-native';
+import { DisplayFormat } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#/apollo/cache';
 import { InMemoryCache } from '@apollo/client';
 import {
   recordMock,
@@ -122,9 +124,9 @@ function createItem(overrides: Record<string, unknown> = {}) {
 function seedShoppingListItem(
   overrides: Record<string, unknown> = {},
 ): InMemoryCache {
-  const cache = new InMemoryCache();
+  const cache = makeCache();
   const data: UseShoppingListActions_ItemFragment = {
-    __typename: 'ShoppingListItem',
+    __typename: 'ShoppingListItem' as const,
     id: 'item-1',
     quantity: 2,
     version: 1,
@@ -142,19 +144,16 @@ function seedShoppingListItem(
 function buildUpdateMockResponse(quantity: number, version: number) {
   return {
     updateShoppingListItemQuantity: {
-      __typename: 'ShoppingListItemPayload',
-      success: true,
-      message: '',
-      code: 'SUCCESS',
+      __typename: 'UpdateShoppingListItemQuantityPayload' as const,
       shoppingListItem: {
-        __typename: 'ShoppingListItem',
+        __typename: 'ShoppingListItem' as const,
         id: 'item-1',
         itemName: 'Milk',
         quantity,
         quantityInput: String(quantity),
-        displayFormat: String(quantity),
+        displayFormat: DisplayFormat.Auto,
         purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo',
+          __typename: 'ShoppingListItemPurchaseInfo' as const,
           isPurchased: false,
         },
         version,

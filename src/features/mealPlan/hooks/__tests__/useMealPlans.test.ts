@@ -15,7 +15,7 @@ function seedPlanCache(
 ) {
   return seedCache(
     plans.map(p => ({
-      __typename: 'MealPlan',
+      __typename: 'MealPlan' as const,
       id: p.id,
       name: `Plan ${p.id}`,
       description: null,
@@ -31,7 +31,7 @@ function seedPlanCache(
       budgetAmount: null,
       homeId: 'h1',
       home: null,
-      user: { __typename: 'User', id: `u-${p.id}` },
+      user: { __typename: 'User' as const, id: `u-${p.id}` },
       createdBy: null,
       version: 1,
       createdAt: '2025-01-01T00:00:00Z',
@@ -74,18 +74,18 @@ function planData(
   return recordMock(GetMealPlansDocument, {
     data: {
       mealPlans: {
-        __typename: 'MealPlanConnection',
+        __typename: 'MealPlanConnection' as const,
         edges: plans.map(p => ({
-          __typename: 'MealPlanEdge',
+          __typename: 'MealPlanEdge' as const,
           cursor: p.id,
           node: {
-            __typename: 'MealPlan',
+            __typename: 'MealPlan' as const,
             ...p,
           },
         })),
         totalCount: plans.length,
         pageInfo: {
-          __typename: 'PageInfo',
+          __typename: 'PageInfo' as const,
           hasNextPage: false,
           endCursor: null,
         },

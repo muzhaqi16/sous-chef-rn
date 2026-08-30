@@ -1,4 +1,5 @@
 import { act } from '@testing-library/react-native';
+import { StorageState } from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
@@ -116,21 +117,16 @@ describe('useHybridPantrySearch', () => {
                     __typename: 'PantryItem',
                     id: 'server-1',
                     itemName: 'Server Milk',
-                    pantryId: 'p1',
                     itemId: null,
                     quantity: 1,
-                    version: 1,
                     updatedAt: '2026-01-01',
-                    storageState: 'AMBIENT',
+                    storageState: StorageState.Ambient,
                     expiresAt: null,
-                    lowStockAlert: false,
                     isLowStock: false,
-                    minQuantity: null,
                     lastUsedAt: null,
                     netWeight: null,
                     remainingNetWeight: null,
                     activeBatchCount: 0,
-                    earliestBatchExpiration: null,
                     item: null,
                     unit: null,
                     netWeightUnit: null,

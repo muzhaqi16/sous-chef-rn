@@ -1,6 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
-import { InMemoryCache } from '@apollo/client';
-import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
+import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -12,6 +11,7 @@ import {
   DeleteMealPlanItemDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
+  ErrorCode,
   MealType,
   type CreateMealPlanItemInput,
   type UpdateMealPlanItemInput,
@@ -22,7 +22,7 @@ import { useMealPlanItemActions } from '../useMealPlanItemActions';
 const seedToggleItem = (overrides: Record<string, unknown> = {}) =>
   seedCache([
     {
-      __typename: 'MealPlanItem',
+      __typename: 'MealPlanItem' as const,
       id: 'mpi-1',
       isCompleted: false,
       completedAt: null,
@@ -34,7 +34,7 @@ const seedToggleItem = (overrides: Record<string, unknown> = {}) =>
       mealType: 'DINNER',
       date: '2025-06-15',
       recipe: {
-        __typename: 'Recipe',
+        __typename: 'Recipe' as const,
         id: 'r-1',
         name: 'Pasta',
         servings: 1,
@@ -84,8 +84,8 @@ describe('useMealPlanItemActions', () => {
   describe('createItem', () => {
     it('returns payload on success', async () => {
       const payload = {
-        __typename: 'CreateMealPlanItemPayload',
-        mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
+        __typename: 'CreateMealPlanItemPayload' as const,
+        mealPlanItem: { __typename: 'MealPlanItem' as const, id: 'mpi-1' },
       };
       const create = recordMock(CreateMealPlanItemDocument, {
         data: { createMealPlanItem: payload },
@@ -106,15 +106,18 @@ describe('useMealPlanItemActions', () => {
         } satisfies CreateMealPlanItemInput);
       });
 
-      expect(created).toEqual(payload);
+      // The served payload is completed from the SDL, so it carries every
+      // field the mutation selects; this asserts the hook returns THAT payload,
+      // not that the fixture happened to be exhaustive.
+      expect(created).toMatchObject(payload);
     });
 
     it('shows error toast and returns null on failure', async () => {
       const create = recordMock(CreateMealPlanItemDocument, {
         data: {
           createMealPlanItem: {
-            __typename: 'ConflictError',
-            code: 'CONFLICT',
+            __typename: 'ConflictError' as const,
+            code: ErrorCode.Conflict,
             message: 'Conflict',
           },
         },
@@ -123,9 +126,7 @@ describe('useMealPlanItemActions', () => {
       // Inline fragments on the Error interface require possibleTypes for the
       // cache to keep `code`/`message` when the concrete return is a
       // ConflictError. The default test cache omits possibleTypes.
-      const cache = new InMemoryCache({
-        possibleTypes: fragmentMatcherData.possibleTypes,
-      });
+      const cache = makeCache();
       const { result } = renderHookWithApollo(
         () => useMealPlanItemActions('plan-1'),
         { operationMocks: [create.mock], cache },
@@ -149,8 +150,8 @@ describe('useMealPlanItemActions', () => {
   describe('updateItem', () => {
     it('returns payload on success', async () => {
       const payload = {
-        __typename: 'UpdateMealPlanItemPayload',
-        mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
+        __typename: 'UpdateMealPlanItemPayload' as const,
+        mealPlanItem: { __typename: 'MealPlanItem' as const, id: 'mpi-1' },
       };
       const update = recordMock(UpdateMealPlanItemDocument, {
         data: { updateMealPlanItem: payload },
@@ -168,7 +169,7 @@ describe('useMealPlanItemActions', () => {
         } satisfies Omit<UpdateMealPlanItemInput, 'id'>);
       });
 
-      expect(updated).toEqual(payload);
+      expect(updated).toMatchObject(payload);
     });
   });
 
@@ -177,9 +178,9 @@ describe('useMealPlanItemActions', () => {
       const update = recordMock(UpdateMealPlanItemDocument, {
         data: {
           updateMealPlanItem: {
-            __typename: 'UpdateMealPlanItemPayload',
+            __typename: 'UpdateMealPlanItemPayload' as const,
             mealPlanItem: {
-              __typename: 'MealPlanItem',
+              __typename: 'MealPlanItem' as const,
               id: 'mpi-1',
               isCompleted: true,
             },
@@ -212,9 +213,9 @@ describe('useMealPlanItemActions', () => {
       const update = recordMock(UpdateMealPlanItemDocument, {
         data: {
           updateMealPlanItem: {
-            __typename: 'UpdateMealPlanItemPayload',
+            __typename: 'UpdateMealPlanItemPayload' as const,
             mealPlanItem: {
-              __typename: 'MealPlanItem',
+              __typename: 'MealPlanItem' as const,
               id: 'mpi-1',
               isCompleted: true,
             },
@@ -243,9 +244,9 @@ describe('useMealPlanItemActions', () => {
       const update = recordMock(UpdateMealPlanItemDocument, {
         data: {
           updateMealPlanItem: {
-            __typename: 'UpdateMealPlanItemPayload',
+            __typename: 'UpdateMealPlanItemPayload' as const,
             mealPlanItem: {
-              __typename: 'MealPlanItem',
+              __typename: 'MealPlanItem' as const,
               id: 'mpi-1',
               isCompleted: false,
             },
@@ -275,8 +276,8 @@ describe('useMealPlanItemActions', () => {
       const del = recordMock(DeleteMealPlanItemDocument, {
         data: {
           deleteMealPlanItem: {
-            __typename: 'DeleteMealPlanItemPayload',
-            mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
+            __typename: 'DeleteMealPlanItemPayload' as const,
+            mealPlanItem: { __typename: 'MealPlanItem' as const, id: 'mpi-1' },
           },
         },
         delay: 20,
@@ -308,8 +309,8 @@ describe('useMealPlanItemActions', () => {
       const del = recordMock(DeleteMealPlanItemDocument, {
         data: {
           deleteMealPlanItem: {
-            __typename: 'DeleteMealPlanItemPayload',
-            mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
+            __typename: 'DeleteMealPlanItemPayload' as const,
+            mealPlanItem: { __typename: 'MealPlanItem' as const, id: 'mpi-1' },
           },
         },
       });
@@ -331,8 +332,8 @@ describe('useMealPlanItemActions', () => {
       const del = recordMock(DeleteMealPlanItemDocument, {
         data: {
           deleteMealPlanItem: {
-            __typename: 'NotFoundError',
-            code: 'NOT_FOUND',
+            __typename: 'NotFoundError' as const,
+            code: ErrorCode.NotFound,
             message: 'Meal plan item not found',
           },
         },

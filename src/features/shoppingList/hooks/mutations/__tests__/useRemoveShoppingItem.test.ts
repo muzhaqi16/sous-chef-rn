@@ -12,7 +12,6 @@ const removeMock = () =>
     data: {
       removeItemFromShoppingList: {
         __typename: 'RemoveItemFromShoppingListPayload',
-        success: true,
       },
     },
   });

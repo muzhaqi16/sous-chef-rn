@@ -9,7 +9,12 @@ import {
   UpdateItemDocument,
 } from '#features/catalog/hooks/useSuggestItemEdit.generated';
 import { useSuggestItemEdit } from '#features/catalog/hooks/useSuggestItemEdit';
-import { ItemType, StorageState } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  ItemSuggestionStatus,
+  ItemType,
+  StorageState,
+} from '#/graphql/generated/schemaTypes';
 import type { EditableItemSnapshot } from '#utils/items/suggestItemChanges';
 import type { AddItemSubmitPayload } from '#features/catalog/ui/AddItemForm/AddItemForm';
 import { alertService } from '#/services/alertService';
@@ -75,7 +80,7 @@ const suggestionPayload = (note: string) => ({
     suggestion: {
       __typename: 'ItemEditSuggestion' as const,
       id: 'sug-1',
-      status: 'PENDING',
+      status: ItemSuggestionStatus.Pending,
       note,
     },
   },
@@ -187,7 +192,7 @@ describe('useSuggestItemEdit', () => {
       data: {
         createItemSuggestion: {
           __typename: 'ConflictError',
-          code: 'CONFLICT',
+          code: ErrorCode.Conflict,
           message: 'Too many pending',
         },
       },
@@ -210,7 +215,7 @@ describe('useSuggestItemEdit', () => {
       data: {
         createItemSuggestion: {
           __typename: 'ValidationError',
-          code: 'VALIDATION_FAILED',
+          code: ErrorCode.ValidationFailed,
           message: 'Item is not public',
           field: 'itemId',
         },
@@ -350,7 +355,7 @@ describe('useSuggestItemEdit', () => {
         data: {
           updateItem: {
             __typename: 'ForbiddenError',
-            code: 'FORBIDDEN',
+            code: ErrorCode.Forbidden,
             message: 'Use createItemSuggestion',
           },
         },
@@ -400,7 +405,7 @@ describe('useSuggestItemEdit', () => {
         data: {
           updateItem: {
             __typename: 'ForbiddenError',
-            code: 'FORBIDDEN',
+            code: ErrorCode.Forbidden,
             message: 'Not yours',
           },
         },
