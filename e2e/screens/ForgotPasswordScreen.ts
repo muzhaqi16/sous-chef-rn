@@ -6,6 +6,7 @@ export class ForgotPasswordScreen extends BaseScreen {
   private readonly emailInput = 'forgot-password-email-input';
   private readonly submitButton = 'forgot-password-submit-button';
   private readonly loginLink = 'forgot-password-login-link';
+  private readonly sentView = 'forgot-password-sent';
 
   async requestPasswordReset(email: string) {
     await this.waitForScreen();
@@ -35,7 +36,12 @@ export class ForgotPasswordScreen extends BaseScreen {
     await this.expectVisible(this.submitButton);
   }
 
+  /**
+   * The sent-confirmation view. Asserted by testID, not by copy: the screen
+   * renders `resetLinkSentTitle` + prefix/suffix, and `by.text` is exact, so
+   * no substring of that copy can be matched.
+   */
   async expectSuccessMessage() {
-    await this.expectTextVisible('reset link');
+    await this.expectVisible(this.sentView);
   }
 }

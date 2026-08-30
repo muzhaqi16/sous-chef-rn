@@ -172,12 +172,6 @@ export async function scrollToBottom(scrollViewID: string = 'scroll-view') {
   await delay(300); // Wait for scroll animation
 }
 
-export async function tapAtPoint(testID: string, x: number, y: number) {
-  const targetElement = element(by.id(testID));
-  await waitFor(targetElement).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-  await targetElement.tapAtPoint({ x, y });
-}
-
 export async function multiTap(testID: string, times: number) {
   const targetElement = element(by.id(testID));
   await waitFor(targetElement).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
@@ -186,15 +180,12 @@ export async function multiTap(testID: string, times: number) {
 
 export async function dismissKeyboardAction() {
   if (device.getPlatform() === 'ios') {
-    // Tap the keyboard's own layout view first, then outside it.
+    // The keyboard's own layout view. There is no app-wide root testID to tap
+    // as a fallback, so a screen that needs one taps its own container.
     try {
       await element(by.type('_UIKeyboardLayoutView')).tap();
     } catch {
-      try {
-        await tapAtPoint('root-view', 50, 50);
-      } catch {
-        console.warn('Could not dismiss keyboard using standard methods');
-      }
+      console.warn('Could not dismiss keyboard: no keyboard layout view');
     }
   } else {
     try {
@@ -307,8 +298,8 @@ export async function tapSystemAlertButton(buttonLabel: string) {
 
 /**
  * Read a switch's own value. iOS reports `'1'` / `'0'`; Android reports the
- * toggle state on `value` too. Used to assert that a single tap actually
- * changed a control, rather than that a tap was delivered.
+ * toggle state on `value` too. Lets a test assert that a tap actually changed
+ * a control, rather than only that a tap was delivered.
  */
 export async function getToggleValue(
   testID: string,

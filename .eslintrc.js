@@ -185,7 +185,6 @@ module.exports = {
   extends: ['@react-native', 'plugin:react-hooks/recommended-latest'],
   plugins: ['no-barrel-files', 'import'],
   ignorePatterns: [
-    'e2e/**/*',
     'src/graphql/generated/**/*',
     'src/**/*.generated.ts',
     'coverage/**/*',
@@ -357,8 +356,8 @@ module.exports = {
       // then lies. A repo-wide sweep found 36 wrong ones, including a block
       // that described the exact bug the fix beneath it had already removed.
       //
-      // Covers app code AND tests. `scripts/`, the root config files and
-      // `.graphql` stay out: each has a genuine false positive the rule cannot
+      // Covers app code, tests and the Detox suite. `scripts/`, the root config
+      // files and `.graphql` stay out: each has a genuine false positive it cannot
       // express, since `no-warning-comments` matches plain substrings —
       // `device.graphql`'s "used to push notifications" means "used FOR", and
       // `check-comment-budget.mjs` has to quote these very terms to document
@@ -380,6 +379,7 @@ module.exports = {
         '__tests__/**/*.ts',
         '__tests__/**/*.tsx',
         '__tests__/**/*.js',
+        'e2e/**/*.ts',
       ],
       rules: {
         'no-warning-comments': [
@@ -403,6 +403,15 @@ module.exports = {
             location: 'anywhere',
           },
         ],
+      },
+    },
+    {
+      // The Detox suite. The root `tsconfig.json` EXCLUDES `e2e`, so its
+      // type-checked rules have to run against `__tests__/tsconfig.json` —
+      // the only config that compiles `../e2e/**/*.ts`.
+      files: ['e2e/**/*.ts'],
+      parserOptions: {
+        project: './__tests__/tsconfig.json',
       },
     },
     {

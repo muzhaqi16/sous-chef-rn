@@ -114,7 +114,7 @@ export function ForgotPasswordScreen() {
 
   if (sentTo !== null) {
     return (
-      <AuthWrapper testID="forgot-password-screen">
+      <AuthWrapper testID="forgot-password-sent">
         <AuthFormTemplate<ForgotPasswordValues>
           title={t('auth.resetLinkSentTitle')}
           // Existence-blind by contract: the API returns SENT whether or not the
