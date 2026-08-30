@@ -171,9 +171,14 @@ npx jest --findRelatedTests path/to/File.ts # what a specific file affects
 ```
 
 Apollo-touching tests must use `renderHookWithApollo` / `renderWithApollo` from
-`__tests__/helpers/apolloMockProvider.tsx` — a schema-backed cache with
-type-safe mocks. Mocking `@apollo/client/react` directly is banned by lint: it
-couples tests to operation names and bypasses the very cache integration the
+`__tests__/helpers/apolloMockProvider.tsx`. Two layers, and a description has
+to say which is which — crediting one's fidelity to the other is how a bare
+cache went unnoticed under 143 files. The NETWORK is schema-driven: an
+executable schema built from the real SDL, mocked by `addMocksToSchema`. The
+CACHE is the production one — `makeCache()`, so type policies, merge and read
+functions and `possibleTypes` are all loaded, and a test reads through the same
+rules the app does. Mocking `@apollo/client/react` directly is banned by lint:
+it couples tests to operation names and bypasses the very cache integration the
 tests exist to catch. Helper shortcuts: `recordMock()` to capture the variables
 Apollo actually observed, `seedCache()` to pre-write entities that hooks read
 with `cache.readFragment`.
@@ -187,7 +192,7 @@ override per-suite with `mockReturnValue` rather than replacing the module.
 The rules are summarized in CLAUDE.md § Testing; this is the full pattern set.
 
 ```ts
-// ✅ Correct — schema-backed cache, type-safe mocks
+// ✅ Correct — production cache + schema-driven network mocks, type-safe
 //
 // Import `MockedResponse` from the helper, NOT from '@apollo/client/testing'
 // (the flat import there is deprecated; the helper re-exports the canonical
@@ -292,8 +297,10 @@ code relies on.
   into `operationMocks`; `fired` is an array of every variables payload Apollo
   observed for that operation, in order. Assert via
   `expect(fired).toContainEqual({ … })`.
-- **`seedCache(entries)`** — pre-writes entities into a fresh `InMemoryCache`
-  so hooks that call `useApolloClient().cache.readFragment(…)` find them. Each
+- **`seedCache(entries)`** — pre-writes entities into a fresh PRODUCTION cache
+  (`makeCache()`, not a bare `InMemoryCache`) so hooks that call
+  `useApolloClient().cache.readFragment(…)` find them, and find them through the
+  same policies the app reads with. Each
   entry needs `__typename` + `id` and any fields the hook reads. Pass the
   returned cache as `{ cache }` to `renderHookWithApollo`.
 

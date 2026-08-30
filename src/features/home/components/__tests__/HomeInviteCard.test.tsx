@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { InMemoryCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import { screen } from '@testing-library/react-native';
 import {
   renderWithApollo,
@@ -47,7 +47,7 @@ function buildInvite(
  * The card's `useFragment` then reads back complete data and renders.
  */
 function buildCache(invite: HomeInviteCard_InviteFragment) {
-  const cache = new InMemoryCache();
+  const cache = makeCache();
   cache.writeFragment({
     id:
       cache.identify({ __typename: invite.__typename, id: invite.id }) ??

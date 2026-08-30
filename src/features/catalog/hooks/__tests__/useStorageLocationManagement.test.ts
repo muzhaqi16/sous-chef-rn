@@ -19,7 +19,7 @@ globalThis.cancelIdleCallback = (handle: number): void => {
   }
 };
 
-import { InMemoryCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import { act, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
@@ -565,7 +565,7 @@ describe('updateLocation writes what consumers read', () => {
   it('keeps the parent link live when the parent is later renamed', async () => {
     // Own the cache so the test can rename the parent the way any other write
     // would.
-    const cache = new InMemoryCache();
+    const cache = makeCache();
     const { result } = renderHookWithApollo(
       () => useStorageLocationManagement('home-1'),
       {
@@ -709,7 +709,7 @@ describe('updateLocation writes what consumers read', () => {
       maxUsageCount: Number.POSITIVE_INFINITY,
     };
 
-    const cache = new InMemoryCache();
+    const cache = makeCache();
     const { result } = renderHookWithApollo(
       () => useStorageLocationManagement('home-1'),
       {

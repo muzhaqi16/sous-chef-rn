@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { InMemoryCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import { screen, within } from '@testing-library/react-native';
 import {
   renderWithApollo,
@@ -223,7 +223,7 @@ function buildItem(
 }
 
 function buildCache(item: PantryItemCard_PantryItemFragment) {
-  const cache = new InMemoryCache();
+  const cache = makeCache();
   cache.writeFragment({
     id:
       cache.identify({ __typename: item.__typename, id: item.id }) ??

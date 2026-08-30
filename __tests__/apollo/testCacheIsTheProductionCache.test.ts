@@ -18,6 +18,8 @@
  * Both assertions are behavioural rather than structural: they check what the
  * cache DOES, so they survive a refactor of how `makeCache` is composed.
  */
+import { readdirSync, readFileSync, statSync } from 'fs';
+import { join, relative } from 'path';
 import { gql, InMemoryCache } from '@apollo/client';
 import { seedCache } from '#/test-utils/apolloMockProvider';
 
@@ -129,5 +131,47 @@ describe('the default test cache is the production cache', () => {
     // not the ability to opt out.
     const bare = new InMemoryCache();
     expect(bare.extract()).toEqual({});
+  });
+
+  /**
+   * ...but no HELPER USER may take it.
+   *
+   * Passing a bare instance into `renderWithApollo` reinstates the substitute
+   * for that suite alone, while every other caller has moved off it — the
+   * quietest possible regression, and one no assertion in the suite itself
+   * would notice. A test that genuinely needs a reduced cache builds one
+   * directly, without the helper, where the choice is visible.
+   *
+   * Enforced rather than left to convention because convention had already
+   * failed: a hand-run sweep put this at zero, and this check found 19. The
+   * default flip missed exactly these files — they passed their own instance
+   * in, so they kept the substitute while every other suite moved off it.
+   */
+  it('no user of the shared helper passes its own bare cache', () => {
+    const src = join(process.cwd(), 'src');
+    const tests = join(process.cwd(), '__tests__');
+
+    const collect = (dir: string, found: string[] = []): string[] => {
+      for (const entry of readdirSync(dir)) {
+        const full = join(dir, entry);
+        if (statSync(full).isDirectory()) collect(full, found);
+        else if (/\.test\.tsx?$/.test(entry)) found.push(full);
+      }
+      return found;
+    };
+
+    const offenders = [...collect(src), ...collect(tests)]
+      .map(file => relative(process.cwd(), file))
+      // This file constructs one deliberately, to show the hatch still works.
+      .filter(file => !file.endsWith('testCacheIsTheProductionCache.test.ts'))
+      .filter(file => {
+        const code = readFileSync(join(process.cwd(), file), 'utf8');
+        return (
+          /renderWithApollo|renderHookWithApollo/.test(code) &&
+          /new InMemoryCache\s*\(/.test(code)
+        );
+      });
+
+    expect(offenders).toEqual([]);
   });
 });

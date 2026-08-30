@@ -1,4 +1,5 @@
 import { InMemoryCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import { waitFor } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetHomesDocument } from '#operations/home/home.generated';
@@ -40,7 +41,7 @@ beforeEach(() => {
  * `normalizeHome` then converts the connections into flat arrays.
  */
 function cacheWithHomes(homes: HomeFixture[]): InMemoryCache {
-  const cache = new InMemoryCache();
+  const cache = makeCache();
   cache.writeQuery({
     query: GetHomesDocument,
     data: homesData(homes),
@@ -49,7 +50,7 @@ function cacheWithHomes(homes: HomeFixture[]): InMemoryCache {
 }
 
 function emptyCache(): InMemoryCache {
-  return new InMemoryCache();
+  return makeCache();
 }
 
 describe('useCurrentPantry', () => {
