@@ -38,6 +38,15 @@ const ECHO_ITEMS = gql`
   }
 `;
 
+const LIST_FOR_RESET = gql`
+  query ProbeUnitsForReset {
+    units {
+      id
+      name
+    }
+  }
+`;
+
 const PROBE_UNITS = gql`
   query ProbeUnitsForEmptyMocks {
     units {
@@ -269,6 +278,47 @@ describe('completion is memoized per variables, not across them', () => {
   });
 });
 
+describe('the shared schema carries no state between tests', () => {
+  // The schema and its store are built ONCE and shared, which is what makes
+  // completion deterministic and what makes it 19% cheaper. Both properties
+  // depend on the store being emptied between tests rather than accumulating.
+  const firstIds: string[] = [];
+
+  it('issues identity from the start of the sequence', () => {
+    firstIds.push(...idsIn(complete(LIST_FOR_RESET, { units: [{ name: 'A' }] })));
+    expect(firstIds.length).toBeGreaterThan(0);
+  });
+
+  it('issues the SAME identity in the next test, not the next numbers', () => {
+    const second = idsIn(complete(LIST_FOR_RESET, { units: [{ name: 'A' }] }));
+    expect(second).toEqual(firstIds);
+  });
+});
+
+describe('schema drift fails at wrapper construction', () => {
+  it('throws synchronously, not from inside a deferred mock callback', () => {
+    // Raised from the `result` callback it was thrown out of MockLink's
+    // `setTimeout`: the test failed as a 5s `waitFor` timeout with the real
+    // message relegated to a secondary trace, and under `forceExit` it could
+    // vanish entirely.
+    const drifted = gql`
+      query ProbeDriftedDocument {
+        units {
+          id
+          aFieldTheSchemaDoesNotHave
+        }
+      }
+    `;
+    expect(() =>
+      createApolloTestWrapper({
+        operationMocks: [
+          { request: { query: drifted }, result: { data: {} } } as MockedResponse,
+        ],
+      }),
+    ).toThrow(/does not match src\/graphql\/generated\/schema\.graphql/);
+  });
+});
+
 describe('a fixture the operation cannot return is rejected', () => {
   // The check that found 74 over-stated keys across 18 operations. Reported
   // rather than thrown in place, because completion runs inside MockLink's
@@ -298,6 +348,22 @@ describe('a fixture the operation cannot return is rejected', () => {
     (echo.result as (v: Record<string, unknown>) => unknown)({});
 
     expect(() => throwOnUnknownFixtureKeys()).not.toThrow();
+  });
+});
+
+describe('the two mocking strategies cannot be combined', () => {
+  it('rejects a caller that passes both', () => {
+    // The union type makes this unreachable from TypeScript — it caught four
+    // live sites in `useNotificationSettings.test.ts`, where the discarded
+    // `mocks` left the preferences query unanswered and the hook running on
+    // defaults with all sixteen tests passing. This is the backstop for a
+    // JavaScript caller and for an object assembled at runtime.
+    expect(() =>
+      createApolloTestWrapper({
+        operationMocks: [],
+        mocks: { Query: () => ({}) },
+      } as unknown as Parameters<typeof createApolloTestWrapper>[0]),
+    ).toThrow(/not both/);
   });
 });
 
