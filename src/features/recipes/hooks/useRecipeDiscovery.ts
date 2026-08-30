@@ -267,12 +267,9 @@ async function fetchRandomDiscovery(
 }
 
 /**
- * Manages recipe discovery. Prefers pantry-based ingredient search if user
- * has pantry items, falls back to random recipe suggestions otherwise.
- *
- * Fetches up to 50 pantry recipes in one API call (cached for 24h),
- * then paginates client-side (15 at a time). Bulk enrichment (cook time,
- * servings) is fetched per visible batch and deferred to idle time.
+ * Pantry-based ingredient search where the user has pantry items, random
+ * suggestions otherwise. Up to 50 recipes in one call (cached 24h), paginated
+ * client-side 15 at a time; enrichment is fetched per batch, deferred to idle.
  */
 export function useRecipeDiscovery(
   dietaryTags?: string,
@@ -289,19 +286,12 @@ export function useRecipeDiscovery(
 
   const defaultPantry = getDefaultPantry(homeData?.home);
 
-  // Focus gate for the pantry watch. The Recipes tab stays mounted while
-  // hidden (HomeTabs runs `inactiveBehavior: 'none'`), so a live watcher here
-  // re-rendered this screen on every pantry write — and because the fetch key
-  // below tracks the item count while the discovery cache is keyed by the
-  // ingredient list, every delete on the Pantry tab also called the recipe API
-  // from a hidden tab. While blurred the watch is skipped and
-  // `usePreservedConnection` holds the last result, so nothing downstream
-  // moves; on focus it resumes from the cache the Pantry tab keeps current
-  // (`cache-first`, no round-trip) and discovery refreshes once if the pantry
-  // changed meanwhile. Starts focused: tabs are lazy, so this screen mounts on
-  // its first focus, and a blurred first render would fire a throwaway
-  // random-mode fetch before the focus effect runs. `useFocusEffect` rather
-  // than `useIsFocused`, per `useTabBarAddButton`.
+  // Focus gate for the pantry watch: the Recipes tab stays mounted while hidden
+  // (`inactiveBehavior: 'none'`), so a live watcher re-renders on every pantry
+  // write and calls the recipe API from a hidden tab. Blurred, the watch is
+  // skipped and `usePreservedConnection` holds the last result; on focus it
+  // resumes `cache-first`. Starts FOCUSED — tabs are lazy, and a blurred first
+  // render would fire a throwaway random-mode fetch.
   const [isFocused, setIsFocused] = useState(true);
   const [onFocusChange] = useState(() => () => {
     setIsFocused(true);
@@ -503,14 +493,11 @@ export function useRecipeDiscovery(
     setFetchKey(currentKey);
   }
 
-  // Read pantryItems via a ref inside the fetch effect so the effect can
-  // depend only on the stable `fetchKey` (which already encodes the item
-  // count). Keeping `pantryItems` in the dep array re-ran the effect on every
-  // reference change (cache-and-network re-renders churn the array identity) —
-  // and each re-run's cleanup aborted the in-flight Spoonacular request, so
-  // the first visit's discovery fetch was cancelled over and over. Because the
-  // abort path guards `loading` from being cleared, the skeleton stayed up
-  // until a later visit warmed the cache.
+  // Read through a ref so the fetch effect depends only on the stable
+  // `fetchKey`, which already encodes the item count. `pantryItems` in the dep
+  // array re-runs on every reference change, and each cleanup aborts the
+  // in-flight request — leaving the skeleton up, since the abort path does not
+  // clear `loading`.
   const pantryItemsRef = useRef(pantryItems);
   useEffect(() => {
     pantryItemsRef.current = pantryItems;

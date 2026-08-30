@@ -69,6 +69,7 @@ export const SignUpScreen = (): React.JSX.Element => {
   return (
     <AuthWrapper testID="signup-screen">
       <AuthFormTemplate<SignUpValues>
+        contentPlacement="center"
         title={t('auth.signupTitle')}
         subtitle={t('auth.signupSubtitle')}
         onBackPress={() => goBack()}

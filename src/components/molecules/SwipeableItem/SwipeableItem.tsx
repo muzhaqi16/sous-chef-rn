@@ -14,27 +14,19 @@ import { useSwipeableActions } from './hooks/useSwipeableActions';
 import { styles } from './styles';
 import type { SwipeAction, SwipeableItemProps } from './types';
 
-// Matches marginLeft/marginRight: -12 in actionsContainer/leftActionsContainer styles.
-// Placeholders must include the same margin so the Swipeable measures the same layout
-// width as the actual action components — preventing the card from opening past the
-// action background during the placeholder→actual component transition.
+// Mirrors the -12 marginLeft/Right in the action container styles, so the
+// placeholder measures the same width as the real tray and the card cannot open
+// past its own action background during the swap.
 const CARD_EDGE_EXTENSION = 12;
 
-// Defence in depth only: what actually keeps a scroll from opening rows is the list
-// rendering RNGH's ScrollView (see SwipeAwareScrollComponent) — no activation
-// distance can, because the v3 pan is never cancelled when the scroll takes over and
-// so crosses any threshold eventually. 16dp is Android's own PAGING_TOUCH_SLOP for a
-// horizontal gesture nested in a vertical scroller.
+// Defence in depth only — the list rendering RNGH's ScrollView (see
+// SwipeAwareScrollComponent) is what actually stops a scroll opening rows; no
+// activation distance can. 16dp is Android's own PAGING_TOUCH_SLOP.
 const DEFAULT_DRAG_OFFSET = 16;
 
-// Reserves the tray's width before the real one mounts, so the card cannot open
-// past its own action background during the placeholder→actual swap. The margin
-// mirrors the -12 in the action container styles.
-//
-// Memoized per (count, side): the style object is a prop on a view that renders
-// on every swipe frame, and a fresh object each time defeats the identity check
-// downstream. The pair of frozen lookup tables this replaced did the same job;
-// the cache keeps that property without enumerating the counts by hand.
+// Reserves the tray's width before the real one mounts. Memoized per (count,
+// side): this style is a prop on a view that renders every swipe frame, and a
+// fresh object each time defeats the identity check downstream.
 const placeholderStyles = new Map<string, ViewStyle>();
 const placeholderStyle = (count: number, side: 'left' | 'right'): ViewStyle => {
   const cacheKey = `${side}:${count}`;
@@ -52,13 +44,10 @@ const placeholderStyle = (count: number, side: 'left' | 'right'): ViewStyle => {
 };
 
 /**
- * Module-level so an omitted action list keeps ONE identity for the life of the
- * app. `leftActions = []` as an inline default allocates a fresh array on every
- * render, and the React Compiler cannot cache anything derived from a value
- * that changes identity every time — which, for this component, is the action
- * list, the accessibility actions (one `t()` per action), the action handler
- * and both tray renderers. Rows are the most re-rendered surface in the app,
- * and most of them pass no actions at all.
+ * Module-level so an omitted action list keeps ONE identity for the app's life.
+ * An inline `= []` default allocates per render, and the React Compiler can cache
+ * nothing derived from it — here that is the action list, the accessibility
+ * actions, the handler and both tray renderers, on the app's hottest surface.
  */
 const EMPTY_ACTIONS: SwipeAction[] = [];
 
@@ -95,9 +84,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     onSwipeableClose,
   });
 
-  // Actions inherit the row's testID as a prefix unless they set their own, so
-  // a pantry row's edit button stays `pantry-item-<id>-edit` without every call
-  // site threading the prefix into every action it builds.
+  // Actions inherit the row's testID as a prefix unless they set their own.
   const withTestIDs = (actions: SwipeAction[]): SwipeAction[] =>
     testIDPrefix
       ? actions.map(action =>
@@ -107,9 +94,8 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
         )
       : actions;
 
-  // Two named renderers rather than one curried builder: react-navigation calls
-  // these per side, and a function produced during render reads to ESLint as an
-  // inline component definition.
+  // Two named renderers, not one curried builder: a function produced during
+  // render reads to ESLint as an inline component definition.
   const renderLeftTray = (progress: SharedValue<number>) =>
     !hasSwipeStarted ? (
       <View style={placeholderStyle(leftActions.length, 'left')} />
@@ -134,17 +120,12 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
       />
     );
 
-  // Every swipe action is also an accessibility action, so VoiceOver/TalkBack
-  // users can reach it without swiping. Derived from the same list rather than
-  // a parallel one — the two used to be separate `if` chains, and an action
-  // added to one could silently miss the other.
+  // Every swipe action is also an accessibility action, derived from the same
+  // list so the two cannot drift.
   const allActions = [...leftActions, ...rightActions];
 
-  // `key` doubles as the accessibility action NAME, and dispatch is a `find` —
-  // so the same key on both edges publishes duplicate `accessibilityActions`
-  // and VoiceOver/TalkBack always reaches the left one, silently. `key` became
-  // free-form when the named verbs were replaced by descriptors, which is what
-  // made this reachable at all.
+  // `key` doubles as the accessibility action NAME and dispatch is a `find`, so a
+  // key repeated on both edges silently makes only the left one reachable.
   if (__DEV__) {
     const seen = new Set<string>();
     const duplicate = allActions.find(action => {
@@ -169,11 +150,8 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
       ?.onPress();
   };
 
-  // No wrapper view: the accessibility actions live on SwipeableContent's own
-  // container, and `swipeableContainer` already carries the `overflow: 'visible'`
-  // the wrapper existed for. One fewer view per row on every list using this
-  // molecule — the frame cost on device is Yoga layout and RenderThread draw
-  // over the mounted view tree, so per-row view count is what matters.
+  // No wrapper view: the accessibility actions sit on SwipeableContent's own
+  // container and `swipeableContainer` already carries `overflow: 'visible'`.
   return (
     <Swipeable
       ref={swipeableRef}

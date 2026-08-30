@@ -1,12 +1,6 @@
 /**
- * ExpirationActionSheet
- *
- * Bottom sheet presenting expiration action options when a user taps
- * an expiring-item notification. Uses useStandardBottomSheet with
- * visible prop for state-driven presentation (avoids ref access during render).
- *
- * Follows the RecipeDetail option button pattern: Pressable rows with
- * Ionicons inside a BottomSheetModal.
+ * Expiration action options, shown when a user taps an expiring-item
+ * notification.
  */
 
 import React from 'react';

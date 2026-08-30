@@ -147,9 +147,9 @@ describe('SubscriptionService', () => {
       // We verify by advancing timers past the cleanup window.
       jest.advanceTimersByTime(200);
 
-      // The item should no longer be tracked (cleanup occurred)
+      // The item is untracked once cleanup has occurred.
       // This is indirectly verified: a sortOrder-only update after cleanup
-      // would no longer be filtered.
+      // is not filtered.
       const stats = service.getStats();
       expect(stats).toBeDefined();
     });

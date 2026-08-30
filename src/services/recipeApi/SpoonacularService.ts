@@ -18,13 +18,7 @@ import type {
 
 const BASE_URL = 'https://api.spoonacular.com';
 
-/**
- * Spoonacular API Service
- * Handles all interactions with the Spoonacular API
- *
- * Free tier limits: 150 requests/day
- * Rate limiting: Consider implementing caching and request throttling
- */
+/** Spoonacular API client. Free tier allows 150 requests/day. */
 class SpoonacularService {
   private apiKey: string;
   private requestCount: number = 0;
@@ -37,9 +31,6 @@ class SpoonacularService {
     }
   }
 
-  /**
-   * Check if we're approaching the daily limit
-   */
   private checkRateLimit(): void {
     if (this.requestCount >= this.dailyLimit) {
       logger.warn('Spoonacular daily request limit reached or exceeded');
@@ -50,9 +41,6 @@ class SpoonacularService {
     }
   }
 
-  /**
-   * Generic fetch wrapper with error handling
-   */
   private async fetch<T>(
     endpoint: string,
     params: Record<string, unknown> = {},
@@ -87,7 +75,6 @@ class SpoonacularService {
         );
         error.status = response.status;
 
-        // Check for rate limiting or quota exceeded
         if (response.status === 402) {
           error.isQuotaExceeded = true;
           error.message = 'Spoonacular API quota exceeded';
@@ -102,10 +89,8 @@ class SpoonacularService {
       }
 
       const data = await response.json();
-      // Log a shape summary, not the raw payload — a 25-result findByIngredients
-      // response has deeply nested ingredient arrays per recipe, and serializing
-      // that for the console (especially with a JS inspector attached) can block
-      // the JS thread for seconds.
+      // A shape summary, not the raw payload: serializing a 25-result
+      // findByIngredients response can block the JS thread for seconds.
       logger.debug(
         'Spoonacular API response:',
         Array.isArray(data)
@@ -115,10 +100,9 @@ class SpoonacularService {
 
       return data as T;
     } catch (error) {
-      // Aborts (screen unmount, superseded request) are expected, not failures.
-      // RN's fetch polyfill throws `Error: Aborted` rather than a DOMException
-      // named 'AbortError', so key off the signal the caller controls. Re-throw
-      // either way — callers gate on `signal?.aborted` to ignore the rejection.
+      // RN's fetch polyfill throws `Error: Aborted`, not a DOMException named
+      // 'AbortError', so an expected abort is recognised by the caller's signal.
+      // Re-thrown either way; callers gate on `signal?.aborted`.
       if (!signal?.aborted) {
         logger.error('Spoonacular API request failed:', error);
       }
@@ -126,13 +110,7 @@ class SpoonacularService {
     }
   }
 
-  /**
-   * Search recipes by ingredients
-   * https://spoonacular.com/food-api/docs#Search-Recipes-by-Ingredients
-   *
-   * @param params - Search parameters
-   * @returns Array of recipe search results
-   */
+  /** https://spoonacular.com/food-api/docs#Search-Recipes-by-Ingredients */
   async searchRecipesByIngredients(
     params: SearchRecipesByIngredientsParams,
     signal?: AbortSignal,
@@ -156,13 +134,7 @@ class SpoonacularService {
     );
   }
 
-  /**
-   * Get detailed recipe information
-   * https://spoonacular.com/food-api/docs#Get-Recipe-Information
-   *
-   * @param params - Recipe ID and options
-   * @returns Detailed recipe information
-   */
+  /** https://spoonacular.com/food-api/docs#Get-Recipe-Information */
   async getRecipeInformation(
     params: GetRecipeInformationParams,
     signal?: AbortSignal,
@@ -179,11 +151,9 @@ class SpoonacularService {
   }
 
   /**
-   * Search recipes (complex search) — basic results only.
+   * Complex search, basic results only — for full details per result use
+   * `searchRecipesWithInfo`.
    * https://spoonacular.com/food-api/docs#Search-Recipes-Complex
-   *
-   * For full recipe details (extendedIngredients, analyzedInstructions, …) in
-   * `results[]`, use `searchRecipesWithInfo` instead.
    */
   async searchRecipes(
     params: SearchRecipesParamsWithoutInfo,
@@ -192,11 +162,7 @@ class SpoonacularService {
     return this.complexSearch<SearchRecipesResponse>(params, signal);
   }
 
-  /**
-   * Search recipes (complex search) with full recipe information per result —
-   * sends `addRecipeInformation=true` so `results[]` contains
-   * `RecipeInformation` objects.
-   */
+  /** Sends `addRecipeInformation=true`, so `results[]` holds RecipeInformation. */
   async searchRecipesWithInfo(
     params: SearchRecipesParamsWithoutInfo,
     signal?: AbortSignal,
@@ -224,13 +190,7 @@ class SpoonacularService {
     );
   }
 
-  /**
-   * Get random recipes
-   * https://spoonacular.com/food-api/docs#Get-Random-Recipes
-   *
-   * @param params - Random recipe parameters
-   * @returns Array of random recipe information
-   */
+  /** https://spoonacular.com/food-api/docs#Get-Random-Recipes */
   async getRandomRecipes(
     params: GetRandomRecipesParams = {},
     signal?: AbortSignal,
@@ -250,19 +210,11 @@ class SpoonacularService {
     return response.recipes;
   }
 
-  /**
-   * Get multiple recipes information in bulk
-   * Useful for batch processing
-   *
-   * @param ids - Array of recipe IDs
-   * @returns Array of recipe information
-   */
+  /** One HTTP call, but still charged one quota request per recipe id. */
   async getBulkRecipeInformation(
     ids: number[],
     signal?: AbortSignal,
   ): Promise<RecipeInformation[]> {
-    // Note: This is more efficient than individual calls
-    // but still counts as 1 request per recipe
     const idsString = ids.join(',');
 
     return this.fetch<RecipeInformation[]>(
@@ -275,11 +227,9 @@ class SpoonacularService {
   }
 
   /**
-   * Get a recipe's price breakdown (per-ingredient estimated cost + totals).
+   * Per-ingredient estimated cost + totals; `price` fields are in US cents. The
+   * `.json` widget variant returns raw data instead of HTML.
    * https://spoonacular.com/food-api/docs#Price-Breakdown-by-ID
-   *
-   * Recipe-scoped — ONE call per recipe (quota-safe). The `.json` widget
-   * variant returns raw data instead of HTML. `price` fields are in US cents.
    */
   async getRecipePriceBreakdown(
     id: number,

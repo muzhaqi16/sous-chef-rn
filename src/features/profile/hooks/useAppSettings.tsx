@@ -120,15 +120,10 @@ export const useAppSettings = () => {
         logLabel: 'Update Settings',
       });
 
-    // This call is the ONLY alerter for its own failure (there is no mutation
-    // `onError`) — callers must not add their own, see `alertIfRejected`'s
-    // contract. Two branches because they fail differently:
-    //  - `false` means the call THREW. `executeMutation` reported it (log +
-    //    telemetry) but shows the user nothing, and `alertIfRejected`
-    //    deliberately no-ops on a missing result — so without this the setting
-    //    reverts with no explanation.
-    //  - anything else is a resolved rejection (union error member, or an
-    //    `errorPolicy: 'all'` transport error), which `alertIfRejected` owns.
+    // The ONLY alerter for this failure (there is no mutation `onError`), so
+    // callers must not add their own. Two branches: `false` means the call
+    // THREW, which `alertIfRejected` deliberately no-ops on; anything else is a
+    // resolved rejection, which it owns.
     if (!persisted) {
       if (!result) {
         alertService.alert(t('labels.error'), failureMessage);
@@ -185,8 +180,12 @@ export const useAppSettings = () => {
   return {
     settings: memoizedSettings,
     loading,
-    // errorPolicy:'all' (global) resolves failures with data+error rather than
-    // throwing — expose `error` so consumers can surface a load failure.
+    // `settings` is never empty (`getAppSettings()` fills every field), so it
+    // cannot answer "has the server replied yet" — and a screen gating on
+    // `loading` blanks itself on every mount, since `cache-and-network` reports
+    // `loading: true` for the whole network leg whatever the cache holds.
+    hasLoadedSettings: !!settings,
+    // Failures RESOLVE under the global `errorPolicy: 'all'`.
     error,
     updateAppSetting,
     updateMultipleSettings,

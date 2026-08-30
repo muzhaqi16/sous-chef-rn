@@ -66,7 +66,7 @@ describe('useShoppingListTemplate', () => {
             data: {
               markAsTemplate: {
                 __typename: 'ValidationError',
-                code: 'VALIDATION_ERROR',
+                code: 'VALIDATION_FAILED',
                 message: 'bad',
                 field: 'templateName',
               },

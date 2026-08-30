@@ -51,20 +51,8 @@ type ActiveModal =
 const CLOSED_MODAL: ActiveModal = { type: null };
 
 /**
- * Pantry Item Actions Hook
- * Extracts modal state, mutations, and handlers from PantryMain for better separation of concerns
- *
- * Handles:
- * - Consume item (modal + mutation)
- * - Waste item (modal + mutation)
- * - Restock item (modal + mutation)
- * - Edit item (navigation)
- * - Delete item (mutation)
- */
-/**
- * "Item Updated" — the version-conflict alert title, built the same way
- * `alertVersionConflict` builds it. Parameterized on the entity rather than
- * hardcoded so languages that read "Updated {entity}" can reorder it.
+ * The version-conflict alert title, built as `alertVersionConflict` builds it.
+ * Parameterized on the entity so a locale reading "Updated {entity}" can reorder.
  */
 const entityUpdatedTitle = (
   t: (key: string, options?: Record<string, unknown>) => string,
@@ -163,11 +151,8 @@ export function usePantryItemActions({
   };
 
   /**
-   * Handle payload-level errors from pantry mutations.
-   * Returns true if an error was detected and handled, false otherwise.
-   *
-   * Accepts either a payload-variant (anything with __typename ending in
-   * 'Payload') or an error-variant carrying `code` + `message`.
+   * Accepts either a payload-variant (`__typename` ending in 'Payload') or an
+   * error-variant carrying `code` + `message`.
    */
   const handlePayloadError = (
     payload: { __typename: string } & Record<string, unknown>,

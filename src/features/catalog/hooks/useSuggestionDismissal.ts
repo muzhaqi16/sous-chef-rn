@@ -13,12 +13,10 @@ interface DismissTarget {
 }
 
 /**
- * Dismiss/undismiss catalog items from a surface's suggestions (Add Again /
- * Favorites / Popular). The caller owns the optimistic removal (exit animation +
- * cache eviction), so the success path does NOT refetch — refetching mid-exit
- * would replace the cache arrays and cut the slide animation short. A refetch
- * runs only to restore the item on failure, and to bring it back on Undo.
- * Dismissals are per-user and per-surface, idempotent, and reversible.
+ * Dismiss/undismiss catalog items from a suggestion surface. The caller owns
+ * the optimistic removal, so the success path does NOT refetch — that would
+ * replace the cache arrays and cut the exit animation short. Refetch runs only
+ * to restore the item on failure or on Undo.
  */
 export function useSuggestionDismissal(
   surface: SuggestionSurface,

@@ -4,50 +4,27 @@ import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
 
 /**
- * Re-reads what the app is already watching, after an outage ends.
- *
- * Nothing else did this. `watchQuery` settles into `nextFetchPolicy:
- * 'cache-first'` once it has fetched, so a screen left mounted across
- * offline → online kept showing pre-outage data indefinitely — until the user
- * pulled to refresh, or navigated away and back. Subscriptions do not cover the
- * gap either: `useSubscriptionTransportRecovery` re-subscribes, which delivers
- * what happens NEXT, not what was published while the socket was down. In a
- * shared home that is a collaborator's whole set of changes.
- *
- * `include: 'active'` is doing real work here, not decoration:
- *
- *   - queries in standby are skipped, which is exactly the repo's
- *     `skip: !isFocused` cross-tab watchers (`useRecipeDiscovery`) — the
- *     cheapest "only what's on screen" filter available, and already in place;
- *   - `cache-only` queries are skipped;
- *   - `skipToken` queries with unknown variables are skipped, which the
- *     deprecated `refetchObservableQueries` does NOT do (it would refire them
- *     with whatever stale variables they hold).
- *
- * `refetch()` forces `network-only` for that one fetch, so a settled
- * `cache-first` query does hit the wire — and the override is disposable, so it
- * does not stick.
- *
- * What this costs: `HomeTabs` and the root `Home` run `inactiveBehavior:
- * 'none'`, so background tabs stay subscribed and are refetched too. That is
- * the intent of keeping them warm — a tab switch after an outage should not
- * show stale data — but it does mean one burst of roughly a tab's worth of
- * queries per outage. Hence: once per transition, after the drain, counted.
+ * Re-reads what the app is already watching once an outage ends: `watchQuery`
+ * settles into `cache-first`, so a screen mounted across offline → online keeps
+ * pre-outage data, and re-subscribing only delivers what happens NEXT. One
+ * burst per transition — `HomeTabs` keeps background tabs subscribed too.
  */
 export async function backfillActiveQueries(): Promise<number> {
-  // The drain's replayed mutations write their own responses into the cache.
-  // Refetching at the same moment doubles the burst and races the results, so
-  // let the queue finish first.
+  // Replayed mutations write their own responses into the cache; refetching at
+  // the same moment doubles the burst and races the results.
   await queueManager.whenIdle();
 
   let refetched = 0;
 
   try {
+    // 'active' skips standby queries (the repo's `skip: !isFocused` watchers),
+    // `cache-only` ones, and unknown-variable `skipToken` ones, which
+    // `refetchObservableQueries` would refire with stale variables. Each
+    // `refetch()` forces one disposable `network-only` fetch.
     await client.refetchQueries({
       include: 'active',
-      // Called once per included query. Nothing is vetoed — `'active'` has
-      // already applied the only scoping this layer can honestly do — but the
-      // count is what makes the burst measurable instead of assumed.
+      // Nothing is vetoed — `'active'` already applied the only scoping this
+      // layer can honestly do — but counting makes the burst measurable.
       onQueryUpdated: () => {
         refetched++;
         return true;
@@ -55,7 +32,7 @@ export async function backfillActiveQueries(): Promise<number> {
     });
   } catch (error) {
     // A flaky reconnect can reject individual refetches; the next transition
-    // (or a screen's own refresh) will try again. Never let this surface.
+    // retries. Never let this surface.
     logger.debug('Reconnect backfill did not complete cleanly:', error);
   }
 

@@ -80,7 +80,7 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
   };
 
   const handleUnitTextChange = (index: number, text: string) => {
-    // Sets the name and drops any previously selected unit id in ONE write.
+    // Sets the name and drops the selected unit id in ONE write.
     const updated = entries.map((entry, i) =>
       i === index ? { ...entry, unitName: text, unitId: undefined } : entry,
     );

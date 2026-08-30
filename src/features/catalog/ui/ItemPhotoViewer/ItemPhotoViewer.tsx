@@ -46,22 +46,17 @@ const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const DOUBLE_TAP_SCALE = 2.5;
 /**
- * Scale within this of 1x counts as fit-to-screen.
- *
- * A pinch settles on a continuous float, so two fingers drifting a hair apart
- * leave `savedScale` at e.g. 1.02 — visually identical to unzoomed, but a strict
- * `<= MIN_SCALE` test then reads "zoomed" and silently kills both paging and
- * tap-to-close. Snap to exactly MIN_SCALE inside this band.
+ * Scale within this of 1x counts as fit-to-screen, snapped to exactly
+ * MIN_SCALE. A pinch settles on a float, so a 1.02 that looks unzoomed would
+ * otherwise read as "zoomed" and kill both paging and tap-to-close.
  */
 const ZOOM_EPSILON = 0.01;
 
 /**
- * Keep a magnified photo's translation inside its own bounds.
- *
- * At scale s the content overflows the frame by `extent * (s - 1)`, half on each
- * side. Without this a continued drag walks the photo clean off screen and
- * `savedX/Y` persist that, leaving a black modal the user cannot recover from —
- * paging is disabled while zoomed, so there is nothing to swipe back to.
+ * Keeps a magnified photo's translation inside its own bounds — at scale s the
+ * content overflows by `extent * (s - 1)`, half per side. Unclamped, a drag
+ * walks the photo off screen and `savedX/Y` persist an unrecoverable black
+ * modal, since paging is disabled while zoomed.
  */
 function clampPan(value: number, extent: number, scaleValue: number): number {
   'worklet';
@@ -85,14 +80,9 @@ interface ItemPhotoViewerProps {
 }
 
 /**
- * Fullscreen, pinch-zoomable photo viewer.
- *
- * This is the destination that makes multi-photo items worth having: the hero
- * band crops to 280pt, so a nutrition panel or ingredient list is only legible
- * once it can be opened and zoomed.
- *
- * Paging is disabled while a photo is zoomed in, so a pan on a magnified label
- * moves the image rather than flicking to the next photo.
+ * Fullscreen, pinch-zoomable photo viewer — the hero band crops to 280pt, so a
+ * label is only legible here. Paging is disabled while zoomed, so a pan on a
+ * magnified photo moves the image instead of flicking to the next one.
  */
 export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
   visible,
@@ -221,12 +211,9 @@ const ZoomablePhoto: React.FC<{
   const savedX = useSharedValue(0);
   const savedY = useSharedValue(0);
   /**
-   * Drives `pan.enabled`. A disabled handler never activates, which is the only
-   * way to keep it from stealing the drag: an `onUpdate` that early-returns
-   * still activates, and activation alone cancels the enclosing pager's own pan
-   * (RNGH calls requestDisallowInterceptTouchEvent on Android; on iOS the
-   * recognizers race). With this false at fit-to-screen the swipe reaches the
-   * FlatList and the photo actually pages.
+   * Drives `pan.enabled`. Disabling is the ONLY way to stop the handler
+   * stealing the drag — an `onUpdate` that early-returns still activates, and
+   * activation alone cancels the enclosing pager's pan.
    */
   const panEnabled = useSharedValue(false);
 
@@ -403,12 +390,9 @@ const ZoomablePhoto: React.FC<{
 };
 
 /**
- * "Set as main photo" for the photo currently on screen, or a static badge once
- * it is the hero.
- *
- * Rendered only when the item's `canEdit` is true, and only for an APPROVED
- * photo: the server refuses to promote a PENDING one, so offering it there
- * would be an affordance whose only outcome is a ValidationError.
+ * "Set as main photo", or a static badge once it is the hero. Rendered only for
+ * `canEdit` items and APPROVED photos — the server refuses to promote a PENDING
+ * one, so the affordance could only produce a ValidationError.
  */
 const SetPrimaryAction: React.FC<{ photoRef: ItemPhotoRef }> = ({
   photoRef,

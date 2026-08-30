@@ -159,7 +159,7 @@ describe('useCreateShoppingList', () => {
               data: {
                 createShoppingList: {
                   __typename: 'ValidationError',
-                  code: 'VALIDATION_ERROR',
+                  code: 'VALIDATION_FAILED',
                   message: 'Name is required',
                   field: 'name',
                 },

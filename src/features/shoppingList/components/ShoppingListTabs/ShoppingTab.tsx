@@ -18,12 +18,12 @@ import {
 } from './ShoppingListDataContext';
 import { useShoppingListModals } from '#features/shoppingList/context/ShoppingListModalsContext';
 
-// Module-level flag: once shopping tab content has been shown, skip skeletons on remount.
-// Persists across component unmount/remount (stack navigation), resets on app restart.
+// Module scope so it survives unmount/remount through stack navigation (and
+// resets on app restart): once content has shown, skeletons are skipped.
 let hasShoppingTabShownContent = false;
 
 const ShoppingTabComponent: React.FC = () => {
-  // PERF: All data from context so renderScene in ShoppingListTabs is data-free and stable
+  // All data via context, so ShoppingListTabs' renderScene stays data-free.
   const actions = useShoppingListTabsActions();
   const {
     items,
@@ -47,22 +47,17 @@ const ShoppingTabComponent: React.FC = () => {
     scrollEventThrottle,
     listHeaderComponent,
   } = useShoppingListData('shopping');
-  // PERFORMANCE: Defer heavy SortableShoppingList render until after navigation completes
-  // This ensures smooth screen transitions by showing skeletons during navigation animation
+  // Defers the heavy list render past the navigation animation.
   const isReady = useDeferredRender();
 
-  // First FlashList layout commit with rows visible. Data being ready is NOT
-  // rows being visible: FlashList holds every cell at `opacity: 0` through its
-  // progressive first layout (~200 ms of blank on a mid-range device), so the
-  // overlay releases on this signal instead of on the loading flags. A settled
-  // EMPTY list never fires it (the list's `hasRealContent` is `items.length >
-  // 0`), which is why the conditions below always pair it with a length check
-  // — otherwise an empty tab would hold skeletons forever.
+  // First FlashList layout commit with rows VISIBLE — data being ready is not
+  // that, since FlashList holds every cell at `opacity: 0` through its first
+  // layout. A settled EMPTY list never fires it (`hasRealContent` is
+  // `items.length > 0`), so every condition below pairs it with a length check.
   const [listPainted, setListPainted] = useState(false);
   const handleFirstContentLayout = () => setListPainted(true);
 
-  // Sync the module-level flag when content is truly rendered (ready, loaded,
-  // not transitioning, and — when there are rows — actually painted).
+  // Latch the module flag only once content is really on screen.
   useEffect(() => {
     if (
       isReady &&
@@ -74,10 +69,8 @@ const ShoppingTabComponent: React.FC = () => {
     }
   }, [isReady, loading, isTransitioning, items.length, listPainted]);
 
-  // Show skeletons only on the very first data load, before content is ready
-  // AND painted. The minimum-visible latch keeps a fast cache-warm load from
-  // flashing them for a sub-perceptible frame; when content is ready
-  // immediately it never arms.
+  // First data load only. The minimum-visible latch below keeps a cache-warm
+  // load from flashing them for a sub-perceptible frame.
   const rawShowSkeletons =
     !hasShoppingTabShownContent &&
     (!isReady ||
@@ -115,7 +108,7 @@ const ShoppingTabComponent: React.FC = () => {
 
   return (
     <View style={tabStyles.container}>
-      {/* Content layer — always mounted so FlashList recycling pool is preserved */}
+      {/* Always mounted, so the FlashList recycling pool survives. */}
       <View
         style={tabStyles.contentFill}
         pointerEvents={showSkeletons ? 'none' : 'auto'}
@@ -150,7 +143,6 @@ const ShoppingTabComponent: React.FC = () => {
         />
       </View>
 
-      {/* Skeleton overlay — Reanimated exiting prop handles fade-out + unmount */}
       {showSkeletons ? (
         <Animated.View
           exiting={FadeOut.duration(TIMING.STANDARD)}

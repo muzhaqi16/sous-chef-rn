@@ -66,13 +66,9 @@ const BASELINE = baselineFile(
 
 /**
  * Any stylesheet identifier, not the literal `styles`.
- *
- * Matching `styles.useVariants` as a lowercase substring made whole files
- * invisible: `indicatorStyles.useVariants(...)` in AddDetailsSheet.tsx never
- * matched, and that file carried the worst form of this defect — the page
- * indicator's dot read once against `react.memo_cache_sentinel`, so the current
- * page never highlighted. Six call sites name their stylesheet something other
- * than `styles`, deliberately: a file with two stylesheets has to.
+ * Six call sites name their stylesheet something else — a file with two
+ * stylesheets has to — and matching the literal made them invisible, including
+ * AddDetailsSheet.tsx, whose page indicator never highlighted the current page.
  */
 const USE_VARIANTS_CALL = /\b([A-Za-z_$][\w$]*)\.useVariants\s*\(/;
 const UPDATE = process.argv.includes('--update');
@@ -105,14 +101,10 @@ const BABEL_OPTIONS = {
 };
 
 /**
- * Style keys that actually declare `variants:` — the only ones that can go
- * stale — as `"<stylesheet>.<key>"` pairs.
- *
- * Qualified by the stylesheet they belong to, because key names are NOT unique
- * within a file. `NutritionSummary.tsx` declares `container` in both `styles`
- * and `circleStyles`, and `PageIndicator.tsx` declares `label` twice; matching
- * on the bare key made a correctly-guarded read of one satisfy the other, and
- * both files sat in the baseline as false positives because of it.
+ * Style keys that declare `variants:` — the only ones that can go stale — as
+ * `"<stylesheet>.<key>"` pairs. Qualified because key names are NOT unique in a
+ * file (`NutritionSummary.tsx` has `container` twice), and on the bare key a
+ * guarded read of one satisfies the other, producing false positives.
  */
 function variantBearingKeys(source) {
   const keys = new Set();
@@ -138,10 +130,9 @@ function variantBearingKeys(source) {
 
 /**
  * `circleStyles$0` / `_circleStyles2` → `circleStyles`.
- *
- * Both plugin orders rename the shadowed stylesheet, and the suffix differs
- * between them, so the local in the compiled output has to be mapped back to
- * the source stylesheet name before it can be matched against the pairs above.
+ * Both plugin orders rename the shadowed stylesheet with different suffixes, so
+ * the compiled local has to be mapped back to the source stylesheet name before
+ * it can be matched against the pairs above.
  */
 function sheetOf(local) {
   return local.replace(/^_/, '').replace(/(\$\d+|\d+)$/, '');
@@ -152,25 +143,19 @@ function sheetOf(local) {
  * guard cannot re-run when the variant inputs change.
  */
 function staleReads(code, keys) {
-  // The temp (or inline object) handed to useVariants. A cache guard mentioning
-  // it DOES re-run when the variants move, so it is safe.
-  // EVERY `useVariants` argument in the file, not just the first. A file may
-  // hold several stylesheets — NutritionSummary.tsx has `circleStyles`,
-  // `badgeStyles` and `styles`, each with its own call — and exempting guards
-  // against only the first call's temp reports the other two as stale.
+  // EVERY temp handed to a `useVariants` call in the file, not just the first:
+  // a guard mentioning one DOES re-run when the variants move, so it is safe,
+  // and a file may hold several stylesheets each with its own call.
   const variantArgs = Array.from(
     code.matchAll(/useVariants\((t\d+|\{[^}]*\})\)/g),
     m => m[1],
   );
   const found = new Map();
 
-  // Any `<local>.<key>` read, not a particular local NAME. The shadow's name is
-  // an artifact of the plugin order: `_styles2` when the compiler ran first,
-  // `styles$0` now that Unistyles runs first and the scope is re-crawled. A
-  // pattern anchored to `_<name><digits>` matches nothing under the current
-  // order, so the scan would find zero and report a confident all-clear —
-  // exactly the failure a staleness check must not have. `keys` is what makes
-  // this specific: only variant-bearing style keys are ever recorded.
+  // Any `<local>.<key>` read, not a particular local NAME: the shadow's name is
+  // an artifact of the plugin order, so a pattern anchored to one spelling
+  // matches nothing and reports a confident all-clear. `keys` is what makes this
+  // specific — only variant-bearing style keys are ever recorded.
   const STYLE_READ = /\b([A-Za-z_$][\w$]*)\.([A-Za-z0-9_]+)/g;
 
   // `<stylesheet>.<key>`, the same shape `variantBearingKeys` produces.
@@ -271,18 +256,11 @@ const scanned = filesUnder('src/**/*.tsx', {
 }).filter(f => USE_VARIANTS_CALL.test(readFileSync(f, 'utf8')));
 
 // A preset upgrade, a rename, or a moved directory can leave this scan matching
-// nothing — and a scan that matched nothing prints exactly what a clean tree
-// prints. Fail instead.
-//
-// The floor comes from `scannedFiles`, which records how many files the scan
-// reached at the last `--update`. It cannot come from `files`: that is the
-// FINDINGS list, it is empty by design and meant to stay empty, so a floor
-// derived from it is permanently 1 and a collapse from 76 files to one passes
-// silently — the exact failure this call exists to prevent.
-//
-// (This is not the `maxFilesWithStaleVariants` count removed earlier. That one
-// capped findings and nothing read it. This one is read here, every run, and is
-// the only thing standing between a broken scan and a green tick.)
+// nothing, which prints exactly what a clean tree prints. Fail instead.
+// The floor comes from `scannedFiles` — how many files the scan reached at the
+// last `--update`. It cannot come from `files`: that is the FINDINGS list, empty
+// by design, so a floor derived from it is permanently 1 and a collapse to a
+// single scanned file passes silently.
 const baselineForFloor = BASELINE.require('check-unistyles-variant-staleness');
 
 if (typeof baselineForFloor.scannedFiles !== 'number' && !UPDATE) {

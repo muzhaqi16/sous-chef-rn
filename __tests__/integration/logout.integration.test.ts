@@ -3,7 +3,7 @@
  *
  * Boundary under test: the seam between Apollo's `InMemoryCache` and the
  * Zustand auth slice. The contract is "after a logout flow runs, the user
- * cannot read previously-cached entities and is no longer authenticated."
+ * cannot read entities cached before it and is unauthenticated."
  *
  * Both halves are exercised with real implementations:
  *  - Apollo: a real `ApolloClient` + the production `makeCache()` (no MockedProvider here

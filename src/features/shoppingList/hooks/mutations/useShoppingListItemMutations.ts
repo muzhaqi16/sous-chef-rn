@@ -1,26 +1,4 @@
-/**
- * useShoppingListItemMutations - Composition hook for all CRUD mutations
- *
- * This maintains backward compatibility with the original hook.
- * For new code, prefer using individual hooks directly:
- * - useAddShoppingItem
- * - useRemoveShoppingItem
- * - useToggleShoppingItem
- *
- * @example
- * ```tsx
- * // Backward compatible usage
- * const { addItem, removeItem, toggleItem } = useShoppingListItemMutations(
- *   listId,
- *   items,
- *   refetch,
- * );
- *
- * // Preferred: Use individual hooks
- * const { addItem } = useAddShoppingItem({ listId, refetch });
- * const { toggleItem } = useToggleShoppingItem({ listId, items, refetch });
- * ```
- */
+// Convenience composition; new code should reach for the individual hooks.
 
 import { useAddShoppingItem } from './useAddShoppingItem';
 import { useRemoveShoppingItem } from './useRemoveShoppingItem';

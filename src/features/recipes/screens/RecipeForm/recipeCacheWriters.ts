@@ -1,14 +1,8 @@
 /**
- * Recipe local-first cache writers (pure functions — no React state, so they
- * live outside the screen component and are independently testable).
- *
- * A local-first create writes BOTH:
- *  - the MyRecipes list edge (so the recipe shows in the list), and
- *  - the full `useRecipeData_recipe` entity (so the complete-gated detail
- *    screen renders offline — `Query.recipe` redirects to it by id).
- *
- * Ingredient `item`/`unit` links are nullable, so offline ingredients carry
- * name + quantity and their links resolve from the server response on sync.
+ * Local-first cache writers for recipes. A create writes BOTH the MyRecipes
+ * list edge and the full `useRecipeData_recipe` entity — the detail screen is
+ * complete-gated, so without the second an offline create blanks it. Ingredient
+ * `item`/`unit` links are nullable and resolve from the server on sync.
  */
 
 import { type ApolloCache } from '@apollo/client';
@@ -92,11 +86,9 @@ function buildOptimisticRecipeNode(
 }
 
 /**
- * Materialize the full Recipe entity the detail screen reads
- * (`useRecipeData_recipe`). The list edge alone isn't enough: the detail screen
- * is complete-gated, so an offline-created recipe would blank without this.
- * Ratings start zeroed, `savedDetails` is null, and ingredient ids are
- * client-minted (replaced by real ids when the create replays).
+ * Materializes the full `useRecipeData_recipe` entity — the list edge alone
+ * leaves the complete-gated detail screen blank offline. Ratings start zeroed,
+ * `savedDetails` is null, and ingredient ids are client-minted.
  */
 function buildOptimisticRecipeEntity(
   id: string,

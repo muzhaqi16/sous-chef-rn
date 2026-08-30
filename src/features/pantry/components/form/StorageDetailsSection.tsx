@@ -27,13 +27,10 @@ import {
 } from '#/utils/items/itemEnumLabels';
 import type { Translate } from '#/i18n/types';
 
-/**
- * A function, not a const: built at import time these labels would freeze
- * whatever language loaded first, and a later language change would never reach
- * the chips. `enumKeyCoverage.test.ts` asserts every StorageState member has a
- * key here, so codegen adding one fails the suite rather than shipping a raw
- * SCREAMING_SNAKE value.
- */
+// A function, not a const: at import time these labels would freeze whichever
+// language loaded first. `enumKeyCoverage.test.ts` asserts every StorageState
+// member has a key, so a new enum member fails the suite rather than shipping
+// a raw SCREAMING_SNAKE value.
 const getStorageStateOptions = (t: Translate): ChipOption<StorageState>[] =>
   Object.values(StorageState).map(state => ({
     key: state,
@@ -166,9 +163,8 @@ const styles = StyleSheet.create(theme => ({
   field: {
     marginBottom: theme.spacing.lg,
   },
-  // Content-sized pill (not a fixed-height box) with the same md corner radius
-  // as the sibling input fields; tighter vertical padding so it doesn't read
-  // taller than them.
+  // Content-sized pill sharing the sibling inputs' md radius, with tighter
+  // vertical padding so it doesn't read taller than them.
   statePill: {
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.md,

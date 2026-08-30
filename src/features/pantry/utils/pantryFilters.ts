@@ -9,25 +9,18 @@ import {
   PantrySortDirection,
 } from '#store/slices/preferenceTypes';
 
-/** Built-in temperature-based filters */
 export type BuiltInLocationFilter = 'all' | 'fridge' | 'freezer' | 'pantry';
 
-/** LocationFilter can be a built-in filter or a custom storage location ID */
+/** A built-in filter or a custom storage location ID. */
 export type LocationFilter = BuiltInLocationFilter | string;
 
-/** Check if a filter is a built-in filter */
 export function isBuiltInFilter(
   filter: LocationFilter,
 ): filter is BuiltInLocationFilter {
   return ['all', 'fridge', 'freezer', 'pantry'].includes(filter);
 }
 
-/**
- * Converts a LocationFilter to a PantryItemFilters object for server-side filtering.
- *
- * @param filter - The location filter ('all', 'fridge', 'freezer', 'pantry', or a custom location ID)
- * @returns PantryItemFilters for the query, or null for 'all' (no filter)
- */
+/** Server-side filter for a LocationFilter; null for 'all' (no filter). */
 export function locationFilterToQueryFilter(
   filter: LocationFilter,
 ): PantryItemFilters | null {
@@ -41,18 +34,11 @@ export function locationFilterToQueryFilter(
     case 'pantry':
       return { storageState: StorageState.Ambient };
     default:
-      // Custom storage location ID
       return { storageLocationId: filter };
   }
 }
 
-/**
- * Maps a UI sort option + direction to the GraphQL PantryItemOrderBy input.
- *
- * @param option - The sort option from the UI ('name', 'expiry', 'quantity', 'recent')
- * @param direction - The sort direction ('asc' or 'desc')
- * @returns PantryItemOrderBy for the query
- */
+/** Maps a UI sort option + direction to the GraphQL PantryItemOrderBy input. */
 export function sortOptionToOrderBy(
   option: PantrySortOption,
   direction: PantrySortDirection,
@@ -72,18 +58,7 @@ export function sortOptionToOrderBy(
   }
 }
 
-/**
- * Filters pantry items by storage location
- *
- * @param items - Array of items with storageState and optionally storageLocation
- * @param locationFilter - The location filter to apply:
- *   - 'all': Show all items
- *   - 'fridge': Filter by StorageState.Refrigerated
- *   - 'freezer': Filter by StorageState.Frozen
- *   - 'pantry': Filter by StorageState.Ambient or no state
- *   - Custom location ID: Filter by storageLocation.id
- * @returns Filtered array of items
- */
+/** Client-side mirror of {@link locationFilterToQueryFilter}. */
 export function filterByLocation<
   T extends {
     storageState?: string | null;
@@ -99,10 +74,9 @@ export function filterByLocation<
       case 'freezer':
         return item.storageState === StorageState.Frozen;
       case 'pantry':
-        // Items with Ambient state or no state default to Pantry
+        // No storage state defaults to Pantry.
         return item.storageState === StorageState.Ambient || !item.storageState;
       default:
-        // Custom storage location filter - match by storageLocation.id
         return item.storageLocation?.id === locationFilter;
     }
   });

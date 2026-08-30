@@ -1,18 +1,8 @@
 /**
- * User Subscriptions
- *
- * Centralizes user-related real-time updates using the unified
- * SubscriptionService. Opens a single consolidated `userEvents(userId)` stream
- * carrying account updates, profile changes, and lifecycle events
- * (membership/moderation), discriminated by `subtype` — replacing the former
- * userUpdated + userProfileChanged + userLifecycleEvents subscriptions. One
- * stream keeps the per-user concurrent-subscription count low (the server caps
- * it cluster-wide).
- *
- * - ACCOUNT_UPDATED (User node) / PROFILE_CHANGED (UserProfile node): Apollo
- *   auto-normalizes the entity by id — no manual cache work.
- * - Lifecycle subtypes: membership add/remove + moderation (ban/suspend/warn),
- *   with context (parents / reason / warningCount) carried on the envelope.
+ * ONE consolidated `userEvents(userId)` stream — account, profile and lifecycle
+ * events discriminated by `subtype` — because the server caps concurrent
+ * subscriptions per user cluster-wide. ACCOUNT_UPDATED / PROFILE_CHANGED
+ * normalize by id; lifecycle subtypes carry their context on the envelope.
  */
 
 import { useApolloClient, useSubscription } from '@apollo/client/react';

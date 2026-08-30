@@ -73,28 +73,12 @@ export const BarcodeScannerScreen: React.FC<
   // events so a command issued mid-transition is deferred rather than rejected.
   const [isSessionRunning, setIsSessionRunning] = useState(false);
 
-  // 1) Request permission once the initial check completes and the status is
-  //    undetermined — but only after this screen has SETTLED, never from a
-  //    plain mount effect.
-  //
-  //    Firing it on mount raced two animations that were still running: the
-  //    stack push, and the Add-to-Pantry sheet's blur-dismiss
-  //    (`useStandardBottomSheet` dismisses on `blur`, which React Navigation
-  //    emits when the navigation state changes, not when the animation
-  //    finishes). The OS dialog landed on top of a half-dismissed sheet over a
-  //    half-transitioned screen — the "camera permission overlaps Add to
-  //    Pantry" report.
-  //
-  //    A timer rather than the native stack's own `transitionEnd`: that event
-  //    is not reachable through the navigation type here (RootNavigator
-  //    registers a global navigator, so `useNavigation()` resolves to the root
-  //    navigation whose `EventMapCore` has no `transitionEnd`, and the generic
-  //    does not override a global registration). The delay covers the push plus
-  //    the sheet's dismiss, both bounded by the same constants that drive them.
-  //
-  //    Armed on FOCUS, not mount: this screen is `React.lazy`, so its chunk can
-  //    resolve at any point relative to the transition, and focus is the one
-  //    moment we know the screen is the active one.
+  // 1) Ask for permission only after the screen SETTLES — on mount the OS
+  //    dialog lands over the running stack push and the Add-to-Pantry sheet's
+  //    blur-dismiss. A timer, not `transitionEnd` (unreachable through the root
+  //    navigation's `EventMapCore`), covering both via their own constants.
+  //    Armed on FOCUS: this screen is `React.lazy`, so its chunk can resolve at
+  //    any point relative to the transition.
   const [screenSettled, setScreenSettled] = useState(false);
   const [onScannerFocus] = useState(() => () => {
     const handle = setTimeout(
@@ -162,20 +146,15 @@ export const BarcodeScannerScreen: React.FC<
     };
   });
 
-  // 3) Set up the barcode-scanner output. On iOS this resolves to
-  //    VisionCamera's built-in useObjectOutput (native AVCaptureMetadataOutput,
-  //    no MLKit). On Android it falls through to react-native-vision-camera-
-  //    barcode-scanner (MLKit). useBarcodeOutput normalizes both sides to
-  //    `{ value, format }` with format ∈ 'qr' | 'ean-13' | 'ean-8' | 'upc-a'
-  //    | 'upc-e' so callers don't see the platform difference.
-  //
-  // PERFORMANCE: Limited to most common barcode types for grocery items.
+  // 3) `useBarcodeOutput` normalizes VisionCamera's native output (iOS) and
+  //    MLKit (Android) to `{ value, format }`. Formats are limited to the ones
+  //    grocery items actually carry, for scan throughput.
   const barcodeOutput = useBarcodeOutput({
     formats: [
-      'qr', // QR codes - common for product info, coupons
-      'ean-13', // European Article Number - most common grocery barcode
-      'upc-a', // Universal Product Code - US standard
-      'upc-e', // UPC compressed format
+      'qr', // product info, coupons
+      'ean-13', // most common grocery barcode
+      'upc-a', // US standard
+      'upc-e', // UPC compressed
     ],
     onBarcodeScanned: ({ value, format }) => {
       if (!isActive || hasNavigatedRef.current) return;
@@ -229,15 +208,10 @@ export const BarcodeScannerScreen: React.FC<
     }
   };
 
-  // --- RENDER FALLBACKS ---
-
-  // A) Nothing truthful to show yet — a neutral screen, never the refusal UI.
-  //    Either the initial check is still running, or we have not finished
-  //    ASKING: the request waits for `screenSettled`, so branch B would
-  //    otherwise render "camera access is required" plus a Grant button for a
-  //    permission the app has not requested yet — telling the user they
-  //    refused something they were never asked. `isBlocked` is excluded
-  //    because a blocked permission IS a settled refusal worth showing at once.
+  // A) Nothing truthful to show yet — a neutral screen, never the refusal UI:
+  //    the request waits for `screenSettled`, so branch B would otherwise tell
+  //    the user they refused something they were never asked. `isBlocked` is
+  //    excluded because that IS a settled refusal.
   if (
     isCheckingPermission ||
     (!hasPermission && !isBlocked && !hasAskedPermission)

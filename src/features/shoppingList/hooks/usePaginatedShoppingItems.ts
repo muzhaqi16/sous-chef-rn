@@ -16,10 +16,8 @@ import { isAbortError } from '#/utils/errors/abort';
 import type { HookReturn } from '#hooks/types';
 
 /**
- * Node shape emitted by the GetShoppingListItemsFiltered query.
- * Carries inline meta fields (id, itemName, category, sortOrder, version, ...)
- * for direct hook-layer access, plus the masked `SortableItem_item` fragment
- * ref consumed by the row component via `useFragment`.
+ * Carries inline meta fields for direct hook-layer access plus the masked
+ * `SortableItem_item` ref the row component reads via `useFragment`.
  */
 export type ShoppingListItemNode = NonNullable<
   NonNullable<
@@ -50,15 +48,9 @@ type UsePaginatedShoppingItemsResult = HookReturn<
 >;
 
 /**
- * Fetches paginated shopping list items via two independent queries (unpurchased + purchased).
- *
- * Each tab gets its own cursor, cache entry, and fetchMore to avoid alias-based
- * cross-contamination. Apollo's `keyArgs: ['filters']` on `itemsConnection` ensures
- * separate cache entries per `isPurchased` filter value.
- *
- * @param options - Configuration with `listId` and optional `skip` flag
- * @returns `{ state, actions }` — state contains unpurchased/purchased connection data,
- *   loading, and error; actions contains refetch
+ * Two independent queries, one per tab, so each gets its own cursor and
+ * `fetchMore` with no alias-based cross-contamination — `keyArgs: ['filters']`
+ * on `itemsConnection` is what keeps their cache entries separate.
  */
 export function usePaginatedShoppingItems({
   listId,
@@ -69,7 +61,7 @@ export function usePaginatedShoppingItems({
   const hasValidListId = !!listId && !isLoggedOut;
   const shouldSkip = skip || !hasValidListId;
 
-  // Track previous listId to detect list switches (compiler-safe pattern)
+  // Adjusting state during render — a ref must never be read or written there.
   const [previousListId, setPreviousListId] = useState<
     string | null | undefined
   >(listId);
@@ -90,7 +82,6 @@ export function usePaginatedShoppingItems({
     return () => cancelIdleCallback(id);
   }, [shouldSkip, listId]);
 
-  // --- Two independent queries ---
   const {
     data: unpurchasedData,
     loading: uLoading,
@@ -124,10 +115,8 @@ export function usePaginatedShoppingItems({
   useApolloErrorLogger('GetShoppingListItemsFiltered[unpurchased]', uError);
   useApolloErrorLogger('GetShoppingListItemsFiltered[purchased]', pError);
 
-  // --- Extract + paginate via useConnectionData ---
-  // The parent query selects inline scalar meta fields at `node` alongside
-  // the masked `SortableItem_item` ref, so consumers (search, sort, modal
-  // lookups) read directly without a `cache.readFragment` round-trip.
+  // The parent query selects inline scalar meta at `node` beside the masked ref,
+  // so search/sort/modal lookups read it without a `cache.readFragment` hop.
   const unpurchased = useConnectionData({
     data: unpurchasedData,
     selector: d => d.shoppingList?.itemsConnection,
@@ -142,7 +131,6 @@ export function usePaginatedShoppingItems({
     fetchMore: pFetchMore,
   });
 
-  // --- Refetch both queries ---
   const refetchQuietly = async (
     refetch: () => Promise<unknown>,
     operation: string,

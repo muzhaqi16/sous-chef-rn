@@ -10,11 +10,8 @@ import { getI18n } from '#/i18n/config';
 const DATE_FNS_LOCALES: Record<string, Locale> = { en: enUS, es, it, sq };
 
 /**
- * The date-fns `Locale` matching the app's active i18n language, to pass as the
- * `locale` option to date-fns formatters (`format`, `formatDistanceToNow`, …)
- * so dates and relative times render in the user's language instead of always
- * in English. Reads the live i18n language, so a component that re-renders on
- * language change (via `useTranslation`) picks up the new locale automatically.
+ * The `locale` option for date-fns formatters. Reads the LIVE i18n language, so
+ * a component re-rendering on a language change picks up the new locale.
  */
 export function getDateFnsLocale(): Locale {
   const i18n = getI18n();

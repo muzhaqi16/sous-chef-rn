@@ -19,12 +19,14 @@ const RESTRICTED_SYNTAX = [
   // truncate.
   //
   // `parseDecimalInput` is the replacement. Where a value genuinely comes
-  // from machine data rather than a person, the two agree anyway, so
-  // reaching for the escape hatch should be rare and argued.
+  // from machine data rather than a person, the two agree anyway, so there is
+  // no case for reaching past it. `Number.parseFloat` is matched too: it is the
+  // same function, and the bare-callee selector alone left it as a way in.
   {
-    selector: "CallExpression[callee.name='parseFloat']",
+    selector:
+      "CallExpression[callee.name='parseFloat'], CallExpression[callee.property.name='parseFloat']",
     message:
-      'Use parseDecimalInput from #/utils/parseDecimalInput instead of parseFloat. parseFloat reads "4,99" as 4 on any device whose keyboard offers a comma, silently saving a wrong number. If this value is machine-generated and never typed, both behave identically — so prefer parseDecimalInput regardless, or add a justified eslint-disable explaining why.',
+      'Use parseDecimalInput from #/utils/parseDecimalInput instead of parseFloat. parseFloat reads "4,99" as 4 on any device whose keyboard offers a comma, silently saving a wrong number. If this value is machine-generated and never typed, both behave identically — so use parseDecimalInput regardless.',
   },
   {
     selector: 'TSImportType',
@@ -183,7 +185,6 @@ module.exports = {
   extends: ['@react-native', 'plugin:react-hooks/recommended-latest'],
   plugins: ['no-barrel-files', 'import'],
   ignorePatterns: [
-    'e2e/**/*',
     'src/graphql/generated/**/*',
     'src/**/*.generated.ts',
     'coverage/**/*',
@@ -348,6 +349,69 @@ module.exports = {
       },
       rules: {
         '@typescript-eslint/no-unnecessary-condition': 'error',
+      },
+    },
+    {
+      // A comment describing what the code USED to do outlives the code and
+      // then lies. A repo-wide sweep found 36 wrong ones, including a block
+      // that described the exact bug the fix beneath it had already removed.
+      //
+      // Covers app code, tests and the Detox suite. `scripts/`, the root config
+      // files and `.graphql` stay out: each has a genuine false positive it cannot
+      // express, since `no-warning-comments` matches plain substrings —
+      // `device.graphql`'s "used to push notifications" means "used FOR", and
+      // `check-comment-budget.mjs` has to quote these very terms to document
+      // the ban.
+      //
+      // `no longer` is the blunt one, and deliberately kept: clearing it from
+      // tests took 26 rewords that were not history at all, mostly a test
+      // narrating its own state ("the refetch no longer includes gone-1").
+      // Every one of those rewrites still read better, because defining the
+      // present by reference to a past state is worse than saying it directly
+      // — but drop the term from this list if the friction outweighs that.
+      //
+      // Its own block: no other override declares this rule, so nothing
+      // replaces it — see the note at the top of this file for why that is
+      // worth stating.
+      files: [
+        'src/**/*.ts',
+        'src/**/*.tsx',
+        '__tests__/**/*.ts',
+        '__tests__/**/*.tsx',
+        '__tests__/**/*.js',
+        'e2e/**/*.ts',
+      ],
+      rules: {
+        'no-warning-comments': [
+          'error',
+          {
+            terms: [
+              'previously',
+              'used to',
+              'old behavior',
+              'old behaviour',
+              'was tried',
+              'we tried',
+              'regressed',
+              'historically',
+              'formerly',
+              'no longer',
+              'this replaces',
+              'changed from',
+              'until recently',
+            ],
+            location: 'anywhere',
+          },
+        ],
+      },
+    },
+    {
+      // The Detox suite. The root `tsconfig.json` EXCLUDES `e2e`, so its
+      // type-checked rules have to run against `__tests__/tsconfig.json` —
+      // the only config that compiles `../e2e/**/*.ts`.
+      files: ['e2e/**/*.ts'],
+      parserOptions: {
+        project: './__tests__/tsconfig.json',
       },
     },
     {

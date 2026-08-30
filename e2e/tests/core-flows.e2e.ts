@@ -1,14 +1,13 @@
 /**
- * Core user journeys
- *
- * A focused suite that exercises the primary happy-path flows without
- * duplicating coverage across multiple files. These tests prioritize
- * stability over exhaustive edge cases.
+ * Core user journeys — the primary happy paths, without duplicating coverage
+ * across the other suites. Stability over exhaustive edge cases.
  */
 
 import { relaunchToHomeTab } from '../helpers/flows';
 import { bootstrapAuthenticatedSession } from '../helpers/auth';
-import { PantryScreen, ShoppingListScreen, RecipesScreen } from '../screens';
+import { PantryScreen } from '../screens/PantryScreen';
+import { RecipesScreen } from '../screens/RecipesScreen';
+import { ShoppingListScreen } from '../screens/ShoppingListScreen';
 
 describe('Core app flows', () => {
   const pantryScreen = new PantryScreen();
@@ -49,8 +48,7 @@ describe('Core app flows', () => {
     await recipesScreen.navigateToTab();
     await recipesScreen.waitForScreen();
 
-    // Verify screen loaded successfully (recipes may be empty for test user)
-    // Just check that the screen is functional without errors
+    // Recipes may be empty for the test user — assert the screen renders only.
     await recipesScreen.expectScreenVisible();
   });
 });

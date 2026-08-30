@@ -9,19 +9,10 @@ import { useIsHydrated } from '#store/useAppStore';
 import { handleTokenRefreshOnResume } from '#store/slices/authSlice';
 
 /**
- * Single AppState listener for the app:
- *   - background → active: re-probe API reachability if the circuit is open,
- *     refresh token if expired, then replay offline queue
- *   - active → background: flush the pending cache write + telemetry
- * Tracks the previous state in a closure so the resume branch only fires
- * on a real background→active transition (not on launch, where currentState
- * is already 'active').
- *
- * Gated on `isHydrated` — the listener is only registered after Zustand
- * hydration completes, which guarantees MMKV storage is initialized.
- * Without this gate, an early AppState `active` event fires
- * `Telemetry.trackEvent()` before storage is ready, crashing telemetry
- * module init (getDeviceId → storage.getString).
+ * The app's one AppState listener. The previous state is tracked in a closure so
+ * the resume branch fires only on a real background → active transition, not on
+ * launch. Gated on `isHydrated`: an earlier `active` event reaches
+ * `Telemetry.trackEvent()` before MMKV is up and crashes telemetry init.
  */
 export function useAppStateLifecycle(): void {
   const isHydrated = useIsHydrated();
@@ -38,10 +29,8 @@ export function useAppStateLifecycle(): void {
 
       if (nextAppState === 'active') {
         if (wasBackgrounded) {
-          // Probe, don't assume: if the reachability circuit is open (or the
-          // flag is somehow stuck false), hit /health now — the open-circuit
-          // backoff timer didn't run while the JS thread was suspended. A
-          // probe success closes the circuit and drains the queue itself.
+          // Probe, don't assume: the open-circuit backoff timer did not run
+          // while the JS thread was suspended.
           apiReachabilityBreaker.onAppForeground();
           await handleTokenRefreshOnResume(
             () => useStore.getState().accessToken,
@@ -49,9 +38,8 @@ export function useAppStateLifecycle(): void {
         }
         queueManager.processQueue();
       } else if (nextAppState === 'background') {
-        // Persist the last few seconds of cache writes before a possible kill so
-        // optimistic local-first state paints from disk on cold start (no-op
-        // when nothing is pending).
+        // Persist recent cache writes before a possible kill, so local-first
+        // state paints from disk on cold start.
         flushCachePersistence();
         Telemetry.flush();
       }

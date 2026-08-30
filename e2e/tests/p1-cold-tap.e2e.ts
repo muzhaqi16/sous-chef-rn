@@ -1,16 +1,8 @@
 /**
- * P1 verification: cold-launch notification tap routing.
- *
- * Bootstraps an authenticated session first (token-inject with UI-login
- * fallback — the persisted session survives relaunches), then launches a NEW
- * app instance with a userNotification (Detox's simulation of launching the
- * app by tapping a push) carrying `category: SHOPPING` and asserts the app
- * lands on the Shopping List screen instead of the default Pantry tab.
- * Exercises PushNotificationForwarder's tap cache / InitialNotificationTap
- * consume and NavigationService's pending-navigation flush on container ready.
- *
- * The follow-up plain launch asserts the one-shot semantics: no stale tap
- * replays on the next cold start.
+ * P1: cold-launch notification tap routing. Detox's `userNotification`
+ * simulates launching by tapping a push; `category: SHOPPING` must land on
+ * Shopping List, not Pantry — exercising PushNotificationForwarder's tap cache
+ * and NavigationService's pending-nav flush. Relaunch pins one-shot semantics.
  */
 import { element, by, waitFor } from 'detox';
 import { launchAppWithFabricWorkaround } from '../init';

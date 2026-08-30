@@ -123,9 +123,9 @@ function listNodeSelection(): SelectionSetNode {
 /**
  * The gate's own coverage, demonstrated rather than assumed.
  *
- * `fieldPaths` used to skip every non-FIELD selection, so a field reached
- * through `...SomeFragment` counted as absent on BOTH sides — the comparison
- * then agreed for the wrong reason and the gate was blind wherever a spread was
+ * `fieldPaths` must not skip non-FIELD selections: a field reached through
+ * `...SomeFragment` would count as absent on BOTH sides, the comparison would
+ * agree for the wrong reason, and the gate would be blind wherever a spread is
  * used. These assert it sees through one, in each direction.
  */
 describe('the coverage check sees through a fragment spread', () => {

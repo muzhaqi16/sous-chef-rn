@@ -4,23 +4,13 @@ import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigati
 import type { OnboardingStep } from '#components/navigation/OnboardingSteps/types';
 import type { SharedValue } from 'react-native-reanimated';
 
-/**
- * Split into Actions + State contexts (TabBarActionsContext pattern).
- * Consumers that only need callbacks (goToNextStep, etc.) subscribe to
- * OnboardingActionsContext and won't re-render when step index changes.
- *
- * State separation from `navigationSlice.onBoardingStep`:
- *   - `navigationSlice.onBoardingStep` (Zustand): persistent navigation state.
- *     Source of truth for "which onboarding screen is current". Survives app
- *     restarts; used by post-login flow + deep linking to resume mid-onboarding.
- *   - `OnboardingContext.activeStepIndex` (SharedValue) and `currentIndex`
- *     (state): session-only animation driver + UI derivations (canGoBack,
- *     isFirstStep, etc.). Reset on provider remount.
- *
- * Both update together via `useOnboardingNavigation`. If you change one, change
- * the other — they share a logical "current step" concept but live in different
- * runtime tiers (persistent vs animation/UI).
- */
+// Split into Actions + State contexts so callback-only consumers don't re-render
+// on a step change.
+
+// `navigationSlice.onBoardingStep` (Zustand) is the PERSISTENT source of truth,
+// surviving restarts so deep links can resume mid-onboarding; `activeStepIndex`
+// and `currentIndex` here are session-only animation and UI derivations. Both
+// update together via `useOnboardingNavigation` — change one, change the other.
 
 interface OnboardingActionsContextType {
   goToNextStep: () => void;
@@ -41,7 +31,6 @@ interface OnboardingStateContextType {
   isLastStep: boolean;
 }
 
-// Combined type for backwards compatibility
 type OnboardingContextType = OnboardingActionsContextType &
   OnboardingStateContextType;
 
@@ -98,9 +87,8 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   children,
   initialStepIndex = 0,
 }) => {
-  // SharedValue drives the animated progress bar in <OnboardingSteps>
-  // (consumed inside useAnimatedStyle). React state drives derivations
-  // below (currentStep, canGoBack, etc.) which need re-renders.
+  // The SharedValue drives the animated progress bar; the React state drives the
+  // derivations below, which need re-renders.
   const activeStepIndex = useSharedValue(initialStepIndex);
   const [currentIndex, setCurrentIndex] = useState(initialStepIndex);
   const {
@@ -187,10 +175,6 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   );
 };
 
-/**
- * Hook to access only onboarding action callbacks.
- * Consumers won't re-render when step state changes.
- */
 export const useOnboardingActions = (): OnboardingActionsContextType => {
   const context = useContext(OnboardingActionsContext);
   if (!context) {
@@ -201,10 +185,6 @@ export const useOnboardingActions = (): OnboardingActionsContextType => {
   return context;
 };
 
-/**
- * Hook to access onboarding step state (currentStep, canGoBack, etc.).
- * Re-renders when step state changes.
- */
 export const useOnboardingState = (): OnboardingStateContextType => {
   const context = useContext(OnboardingStateContext);
   if (!context) {
@@ -215,17 +195,13 @@ export const useOnboardingState = (): OnboardingStateContextType => {
   return context;
 };
 
-/**
- * Combined hook — backwards compatible.
- * Prefer useOnboardingActions or useOnboardingState for better performance.
- */
+/** Prefer `useOnboardingActions` or `useOnboardingState` — this subscribes to both. */
 export const useOnboardingContext = (): OnboardingContextType => {
   const actions = useOnboardingActions();
   const state = useOnboardingState();
   return { ...actions, ...state };
 };
 
-// Safe version that returns null instead of throwing
 export const useOnboardingContextSafe = (): OnboardingContextType | null => {
   const actions = useContext(OnboardingActionsContext);
   const state = useContext(OnboardingStateContext);

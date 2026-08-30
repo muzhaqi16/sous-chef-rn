@@ -1,23 +1,6 @@
 /**
- * Alert Service - Custom modal alert replacement for React Native's Alert.alert
- *
- * Provides an imperative API with the same signature as Alert.alert(),
- * callable from both React components and plain utility functions.
- * The AlertProvider bridges this singleton to the React tree.
- *
- * Usage:
- * ```typescript
- * import { alertService } from '#/services/alertService';
- *
- * // Simple info alert (default OK button)
- * alertService.alert('Success', 'Item added successfully');
- *
- * // Confirmation with buttons
- * alertService.alert('Delete Item', 'Are you sure?', [
- *   { text: 'Cancel', style: 'cancel' },
- *   { text: 'Delete', style: 'destructive', onPress: handleDelete },
- * ]);
- * ```
+ * Imperative modal alert with Alert.alert()'s signature, callable from outside
+ * the React tree. AlertProvider bridges this singleton to the React tree.
  */
 
 import { Alert } from 'react-native';
@@ -44,20 +27,13 @@ class AlertService {
   private showAlertFn: ShowAlertFn | null = null;
   private nextId = 1;
 
-  /**
-   * Initialize the alert service with the provider's show function.
-   * Called once by AlertProvider on mount.
-   */
+  /** Called once by AlertProvider on mount. */
   init(showAlert: ShowAlertFn) {
     this.showAlertFn = showAlert;
   }
 
-  /**
-   * Show a modal alert. Same signature as React Native's Alert.alert().
-   *
-   * When no buttons are provided, a single "OK" dismiss button is shown.
-   * Falls back to native Alert.alert() if the provider isn't mounted yet.
-   */
+  /** No buttons means a single "OK"; falls back to native Alert before the
+   * provider mounts. */
   alert(title: string, message?: string, buttons?: AlertButton[]) {
     const resolvedButtons: AlertButton[] =
       buttons && buttons.length > 0

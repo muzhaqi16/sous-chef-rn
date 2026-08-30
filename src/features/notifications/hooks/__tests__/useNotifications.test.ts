@@ -39,8 +39,8 @@ jest.mock('#/services/push/iosPushMessaging', () => ({
   registerIosPushTapHandlers: () => mockRegisterIosPushTapHandlers(),
 }));
 
-// The store no longer holds notifications — only the signed-in user (which
-// gates push-tap registration) and the expiration buffer.
+// The store holds no notifications — only the signed-in user (which gates
+// push-tap registration) and the expiration buffer.
 type MockNotificationsState = {
   user: { id: string } | null;
   pendingExpirationLinks: Record<string, unknown>;

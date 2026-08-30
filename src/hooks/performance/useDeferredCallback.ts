@@ -1,26 +1,9 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * Defers a callback execution using a simple timeout.
- *
- * Waits for the specified timeout to elapse before executing the callback.
- * This ensures we're past the startup hot zone before running background work.
- *
- * Previously used a two-phase approach (setTimeout + requestIdleCallback),
- * but the inner requestIdleCallback added negligible value after long timeouts
- * and had iOS reliability issues (RN #28602).
- *
- * @param callback - Function to call after timeout
- * @param enabled - Whether the callback should run (default: true)
- * @param timeout - Time to wait before execution (default: 1000ms)
- *
- * @example
- * ```tsx
- * // Run heavy work after screen settles
- * useDeferredCallback(() => {
- *   fetchBackgroundData();
- * }, isAuthenticated && isOnline, 5000);
- * ```
+ * Runs `callback` once `timeout` elapses, so background work starts past the
+ * startup hot zone. A plain timeout on purpose: `requestIdleCallback` adds
+ * nothing after a long delay and is unreliable on iOS (RN #28602).
  */
 export function useDeferredCallback(
   callback: () => void,

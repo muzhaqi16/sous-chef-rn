@@ -6,11 +6,11 @@
  * worse than having no metric at all: an empty panel reads as "no problem"
  * rather than "not measured".
  *
- * This bit the repo three times before it was noticed — `useRenderTime`'s whole
- * reporting effect, the three `cache_persist_*` metrics, `apollo_cache_edge_count`
- * and `resort_edges_duration_ms` were all dev-only while their dashboards and
- * config implied production coverage (`slowRenderThreshold: __DEV__ ? 500 : 16`
- * is meaningless if the hook never runs in release).
+ * This bit the repo three times — `useRenderTime`'s whole reporting effect, the
+ * three `cache_persist_*` metrics, `apollo_cache_edge_count` and
+ * `resort_edges_duration_ms` were all dev-only while their dashboards implied
+ * production coverage. A release-tuned sample rate means nothing when the hook
+ * emitting the metric never runs in release.
  *
  * The rule: human-readable breadcrumbs (`logger.debug`, `console.*`) belong
  * inside `__DEV__`; `Telemetry.*` metric calls do not. Gate reporting volume

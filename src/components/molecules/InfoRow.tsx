@@ -11,97 +11,36 @@ import { Icon } from '#/utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
 export interface InfoRowProps {
-  /**
-   * The label text (left side)
-   */
   label: string;
 
-  /**
-   * The value to display (right side)
-   */
   value: string | number | null | undefined;
 
-  /**
-   * Optional unit to display after the value (e.g., 'kcal', 'minutes', 'g')
-   */
+  /** Rendered after the value (e.g. 'kcal', 'minutes', 'g'). */
   unit?: string;
 
-  /**
-   * Optional custom formatter for the value
-   */
   formatter?: (value: string | number) => string;
 
-  /**
-   * Show a bottom border (default: true)
-   */
+  /** Default true. */
   showBorder?: boolean;
 
-  /**
-   * Custom label style
-   */
   labelStyle?: StyleProp<TextStyle>;
 
-  /**
-   * Custom value style
-   */
   valueStyle?: StyleProp<TextStyle>;
 
-  /**
-   * Custom container style
-   */
   containerStyle?: StyleProp<ViewStyle>;
 
-  /**
-   * Append a colon after the label (default: true)
-   */
+  /** Append a colon after the label; default true. */
   showColon?: boolean;
 
-  /**
-   * Optional Ionicon name to display before the value
-   */
   icon?: string;
 
-  /**
-   * Custom icon color (defaults to theme textSecondary)
-   */
+  /** Defaults to `textSecondary`. */
   iconColor?: string;
 
-  /**
-   * Optional children to render instead of the default value text
-   */
+  /** Rendered instead of the default value text. */
   children?: React.ReactNode;
 }
 
-/**
- * InfoRow - A reusable component for displaying key-value pairs
- *
- * Standardizes the label/value display pattern used across settings screens,
- * profile displays, and detail views throughout the app.
- *
- * @example Basic usage
- * ```tsx
- * <InfoRow label="Meals per day" value={3} />
- * ```
- *
- * @example With unit
- * ```tsx
- * <InfoRow label="Max Prep Time" value={30} unit="minutes" />
- * ```
- *
- * @example With custom formatter
- * ```tsx
- * <InfoRow
- *   label="Budget per Meal"
- *   value={15.50}
- *   formatter={(val) => formatCurrency(Number(val), DEFAULT_CURRENCY)}
- * />
- * ```
- *
- * @example Currency with unit
- * ```tsx
- * <InfoRow label="Price" value={25} formatter={(v) => formatCurrency(Number(v), 'USD')} />
- * ```
- */
 export const InfoRow: React.FC<InfoRowProps> = ({
   label,
   value,

@@ -4,11 +4,11 @@
  *
  * `seedCache` writes directly, bypassing the network, which makes it the one
  * place where a test can put the production cache into a shape production
- * cannot produce. Two ways it used to: a collection of identified children was
- * stored as an opaque blob rather than as records and references, and the
- * selection was synthesized from the fixture's own keys — so a seed could never
- * be incomplete, and the completeness contract every other fixture is held to
- * simply did not apply to the 35 files that seed.
+ * cannot produce. Two ways it can: storing a collection of identified children
+ * as an opaque blob rather than as records and references, and synthesizing the
+ * selection from the fixture's own keys — which makes a seed incapable of being
+ * incomplete and exempts the 35 files that seed from the completeness contract
+ * every other fixture is held to.
  */
 import { gql } from '@apollo/client';
 import { seedCache } from '#/test-utils/apolloMockProvider';

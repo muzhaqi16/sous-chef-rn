@@ -241,6 +241,12 @@ jobs:
       - name: Dead modules
         run: node scripts/check-dead-modules.mjs
 
+      - name: Comment budget (self-test)
+        run: node scripts/check-comment-budget.mjs --self-test
+
+      - name: Comment budget
+        run: node scripts/check-comment-budget.mjs
+
       - name: Optimistic fillers are up to date
         run: npm run check:fillers
 

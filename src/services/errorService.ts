@@ -1,19 +1,6 @@
 /**
- * Error Service - Unified error handling for the application
- *
- * This service provides:
- * 1. Structured error parsing with Telemetry integration
- * 2. Error wrapper functions for mutations
- * 3. Returns typed results instead of showing alerts
- * 4. Works with toast/snackbar service for user feedback
- * 5. reportError() for non-Apollo errors
- *
- * Usage:
- * ```typescript
- * const { handleApolloError } = useErrorService();
- * const { message } = handleApolloError(error, { operation: 'Update Item' });
- * Alert.alert('Error', message);
- * ```
+ * Unified error handling: parses Apollo and non-Apollo errors into a typed
+ * result with telemetry attached, rather than showing anything itself.
  */
 
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
@@ -40,9 +27,6 @@ import {
 import { Telemetry } from '#/services/telemetry';
 import { t } from '#/i18n';
 
-/**
- * Result type for error operations
- */
 export interface ErrorResult<T = unknown> {
   success: boolean;
   data?: T;
@@ -56,9 +40,7 @@ export interface ErrorResult<T = unknown> {
   };
 }
 
-/**
- * Flat error result matching the legacy handleApolloError return shape
- */
+/** Flat variant of {@link ErrorResult}'s error branch. */
 export interface ApolloErrorResult {
   code: string;
   message: string;
@@ -68,9 +50,6 @@ export interface ApolloErrorResult {
   validationErrors?: Record<string, string>;
 }
 
-/**
- * Configuration for error handling
- */
 export interface ErrorConfig {
   operation?: string;
   customMessage?: string;
@@ -79,19 +58,10 @@ export interface ErrorConfig {
 
 export class ErrorService {
   /**
-   * Error code → i18n key *suffix*. Each value is a fragment, not a whole key:
-   * {@link getUserFriendlyMessage} composes it as `errors.codes.<suffix>`, so
-   * `'signInRequired'` resolves `errors.codes.signInRequired`.
-   *
-   * Key suffixes, not strings: these messages are shown to the user (login
-   * failures and password-reset refusals are the most-seen strings in the app),
-   * and the app ships four locales. Resolution happens per call in
-   * {@link getUserFriendlyMessage} rather than here, because this table is a
-   * static class field — evaluating `t()` at module load would freeze whatever
-   * language happened to be active first and ignore later changes.
-   *
-   * Codes that warrant the same sentence deliberately share a suffix rather
-   * than getting near-duplicate translations that can drift apart.
+   * Error code → i18n key SUFFIX, composed as `errors.codes.<suffix>` by
+   * {@link getUserFriendlyMessage}. Suffixes, not resolved strings: this is a
+   * static field, so calling `t()` here would freeze the language active at
+   * module load. Codes warranting the same sentence share a suffix.
    */
   private static readonly ERROR_MESSAGE_KEY_SUFFIXES: Record<string, string> = {
     // Authentication Errors
@@ -100,18 +70,14 @@ export class ErrorService {
     AUTH_TOKEN_EXPIRED: 'sessionExpired',
     AUTH_REFRESH_TOKEN_MISSING: 'sessionEnded',
     AUTH_REFRESH_TOKEN_INVALID: 'sessionEnded',
-    // Its own sentence, not a shared session-ending one. The exchange lost a
-    // rotation race and the session is alive; the refresh path recovers without
-    // the user doing anything. 'sessionExpired' and 'sessionEnded' BOTH read
-    // "Please sign in again", so either would tell the user to fix something
-    // that is already fixing itself — and send them to a sign-in screen their
-    // live session does not need.
+    // Its own sentence: the exchange lost a rotation race, the session is alive
+    // and the refresh path recovers on its own. 'sessionExpired'/'sessionEnded'
+    // both read "Please sign in again", which would be wrong here.
     AUTH_REFRESH_TOKEN_SUPERSEDED: 'sessionRetrying',
     AUTH_CREDENTIALS_INVALID: 'credentialsInvalid',
     AUTH_ACCOUNT_LOCKED: 'accountLocked',
-    // Distinct from the lockout above: a moderation decision, not a window
-    // that expires. Says nothing about why, and points at support rather than
-    // inviting a retry that can never succeed.
+    // Distinct from the lockout above: a moderation decision, not a window that
+    // expires, so the copy points at support rather than inviting a retry.
     AUTH_ACCOUNT_SUSPENDED: 'accountSuspended',
     AUTH_EMAIL_NOT_VERIFIED: 'emailNotVerified',
 
@@ -177,20 +143,12 @@ export class ErrorService {
     // Version Control Errors
     VERSION_CONFLICT: 'versionConflict',
 
-    // Schema-declared codes that had no mapping.
-    //
     // Every member of `ErrorCode` and `TopLevelErrorCode` must appear in this
-    // table — `__tests__/i18n/errorCodeCoverage.test.ts` enumerates the
-    // generated enums and fails on a gap, in the direction that matters. A
-    // missing member fell through to `errors.codes.unexpected`, so a user who
-    // hit a not-found, a conflict, a quota or a duplicate read "An unexpected
-    // error occurred" while localized copy for exactly that case already
-    // shipped, unreachable.
-    //
-    // (The table is deliberately WIDER than the two enums: `NETWORK_ERROR`,
-    // `CIRCUIT_OPEN`, the `BUSINESS_*` and `RATE_LIMIT_*` families and the
-    // client's own `SERVICE_TIMEOUT` are raised on this side and have no SDL
-    // to be declared in. Only the missing direction is an error.)
+    // table, or its message falls through to `errors.codes.unexpected` while
+    // localized copy for the case sits unreachable;
+    // `__tests__/i18n/errorCodeCoverage.test.ts` fails on a gap. The table is
+    // deliberately WIDER than the enums — client-raised codes have no SDL to be
+    // declared in — so only the missing direction is an error.
     NOT_FOUND: 'resourceNotFound',
     CONFLICT: 'resourceConflict',
     UNIT_INVALID: 'unitInvalid',
@@ -210,9 +168,8 @@ export class ErrorService {
     SUBSCRIPTION_ERROR: 'genericRetry',
     SUBSCRIPTION_FILTER_ERROR: 'genericRetry',
     SUBSCRIPTION_LIMIT_EXCEEDED: 'genericRetry',
-    // Should never be DISPLAYED — both classifiers treat it as converged, so
-    // reaching a message means something upstream stopped doing that. Mapped so
-    // the table stays total rather than because the string is expected.
+    // Should never be DISPLAYED: both classifiers treat it as converged. Mapped
+    // only to keep the table total.
     IDEMPOTENT_REPLAY: 'genericRetry',
 
     // Pantry Errors
@@ -241,16 +198,10 @@ export class ErrorService {
     TopLevelErrorCode.AuthRefreshTokenSuperseded,
   ];
 
-  // Expected user-input / business-rule outcomes — normal UX, not system
-  // faults. These are logged at warn level and kept out of app_errors_total so
-  // the error dashboards aren't polluted by routine validation results (e.g. a
-  // user signing up with an email that's already taken). Any VALIDATION_* code
-  // is also treated as expected (see isExpectedUserError).
-  // Both channels are represented because this is asked of whatever code was
-  // parsed out: ErrorCode.* for a result-union member, TopLevelErrorCode.* for
-  // an `extensions.code`. The SHOPPING_* / HOME_* codes are in neither enum —
-  // the API's registry defines them but nothing emits them — so they stay
-  // literals, kept defensively.
+  // Expected user-input outcomes: logged at warn and kept out of
+  // app_errors_total. Any VALIDATION_* code counts too (see
+  // isExpectedUserError). Both code channels appear because this is asked of
+  // whatever was parsed out; the SHOPPING_*/HOME_* literals are in neither enum.
   private static readonly EXPECTED_USER_ERRORS = new Set<string>([
     ErrorCode.EmailAlreadyExists,
     ErrorCode.VersionConflict,
@@ -266,9 +217,8 @@ export class ErrorService {
 
   private static readonly ERROR_CATEGORIES: Record<string, string> = {
     AUTH_: 'Authentication',
-    // The two Apollo-standard codes carry no category prefix, so they are
-    // listed in full. An 'AUTHZ_' prefix would select nothing — that family is
-    // retired — while implying codes that no longer exist.
+    // The two Apollo-standard codes carry no category prefix, so they are listed
+    // in full. There is no 'AUTHZ_' family to prefix-match.
     [TopLevelErrorCode.Unauthenticated]: 'Authentication',
     [TopLevelErrorCode.Forbidden]: 'Authorization',
     API_: 'API Key',
@@ -323,10 +273,7 @@ export class ErrorService {
     );
   }
 
-  /**
-   * Report a non-Apollo error to telemetry and console.
-   * Use this to replace scattered console.error calls so errors flow to Loki.
-   */
+  /** Report a non-Apollo error to telemetry and console, so it reaches Loki. */
   reportError(
     error: unknown,
     context?: { operation?: string; [key: string]: unknown },
@@ -355,9 +302,6 @@ export class ErrorService {
     });
   }
 
-  /**
-   * Parse Apollo error into structured result
-   */
   parseApolloError(
     error: unknown,
     config: ErrorConfig = {},
@@ -398,13 +342,9 @@ export class ErrorService {
       } else if (ServerError.is(error)) {
         const statusCode = error.statusCode;
         if (statusCode === 401) errorCode = TopLevelErrorCode.AuthTokenInvalid;
-        // Only reached when the body wasn't a GraphQL envelope, so there is no
-        // `extensions.code` to read and the status is all we have. Four
-        // different conditions share 403 — FORBIDDEN, AUTH_EMAIL_NOT_VERIFIED,
-        // AUTH_ACCOUNT_SUSPENDED and API_KEY_INSUFFICIENT_PERMISSIONS — so this
-        // resolves to the generic authorization code rather than guessing.
-        // Deliberately not an AUTH_* code: isAuthError() must stay false here,
-        // or a key-provisioning fault gets handled as a dead session.
+        // No GraphQL envelope here, so the status is all there is, and four
+        // conditions share 403. Deliberately NOT an AUTH_* code: isAuthError()
+        // must stay false, or a key-provisioning fault reads as a dead session.
         else if (statusCode === 403) errorCode = TopLevelErrorCode.Forbidden;
         else if (statusCode === 404)
           errorCode = TopLevelErrorCode.ResourceNotFound;
@@ -422,13 +362,9 @@ export class ErrorService {
         errorCode = 'NETWORK_ERROR';
         errorMessage = error.message || 'Unable to connect.';
       }
-      // A refusal that `unwrapPayload` turned into a throw. It carries the
-      // server's own `code`, and this branch is what keeps it: without it the
-      // error fell through to the plain `instanceof Error` arm below, `errorCode`
-      // stayed at its 'UNKNOWN_ERROR' initializer, and every domain refusal
-      // reaching a caller by throw — a quota, a duplicate, a version conflict —
-      // resolved to "An unexpected error occurred". It must be tested BEFORE
-      // `instanceof Error`, which it also satisfies.
+      // A refusal `unwrapPayload` turned into a throw; it carries the server's
+      // own `code`. MUST be tested before the `instanceof Error` arm, which it
+      // also satisfies, or every thrown domain refusal reads as UNKNOWN_ERROR.
       else if (error instanceof GraphQLDomainError) {
         errorCode = error.code;
         errorMessage = error.message;
@@ -462,9 +398,7 @@ export class ErrorService {
         }
       }
 
-      // Report to telemetry so errors flow to Loki in production. Expected
-      // user-input outcomes go to warn level and skip app_errors_total; only
-      // genuine faults are tracked as errors.
+      // Expected user-input outcomes go to warn and skip app_errors_total.
       if (isExpectedUserError) {
         Telemetry.warn(`Validation: ${errorCode} in ${operation}`, {
           component: category,
@@ -505,10 +439,7 @@ export class ErrorService {
     }
   }
 
-  /**
-   * Handle an Apollo error and return a flat result.
-   * Drop-in replacement for the legacy ErrorHandler.handleApolloError().
-   */
+  /** {@link parseApolloError}, flattened to the error branch. */
   handleApolloError(
     error: unknown,
     config: ErrorConfig = {},
@@ -525,10 +456,7 @@ export class ErrorService {
     );
   }
 
-  /**
-   * Wrap a mutation with error handling
-   * Returns structured result instead of throwing
-   */
+  /** Wrap a mutation so a throw becomes a structured result. */
   async handleMutation<T>(
     fn: () => Promise<T>,
     config: ErrorConfig = {},
@@ -541,10 +469,7 @@ export class ErrorService {
     }
   }
 
-  /**
-   * Wrap a mutation with version conflict handling
-   * Returns structured result with version conflict flag
-   */
+  /** {@link handleMutation} plus an `isVersionConflict` flag. */
   async handleMutationWithVersionConflict<T>(
     fn: () => Promise<T>,
     config: ErrorConfig = {},
@@ -562,35 +487,13 @@ export class ErrorService {
   }
 }
 
-// Export singleton instance
 export const errorService = new ErrorService();
 
 /**
- * What to SHOW a user when a mutation fails.
- *
- * Resolved from the error's CODE through `errors.codes.*`, never from the
- * server's message. The server's text is unlocalizable English by construction,
- * and it reaches users verbatim otherwise: an Albanian-locale user pressing
- * "move to pantry" against an unmigrated database saw a "Gabim" alert whose
- * body read "An unexpected database error occurred".
- *
- * An unmapped code lands on the caller's `fallback` — or on
- * `errors.codes.unexpected` when there is none — rather than on that text. A
- * vaguer sentence in the right language beats a precise one in the wrong one,
- * and the precise version is in the log either way.
- *
- * `fallback` must itself be localized: it is the caller's own copy for what
- * failed ("Couldn't update the home name"), which is more useful than a generic
- * sentence wherever the site knows what it was doing.
- *
- * A TRANSPORT failure yields to that fallback rather than overriding it. The
- * copy for `NETWORK_ERROR` and `CIRCUIT_OPEN` is written for a READ — "You're
- * currently offline. Showing cached data when available." — and on a write it
- * is not merely vague but untrue: nothing is being shown, the change did not
- * land. The code tells the caller only that the request did not arrive, which
- * the caller already knew; what failed is the part only the caller knows. With
- * no fallback the transport sentence still stands, since a generic message in
- * the reader's language beats none.
+ * What to SHOW a user when a mutation fails: resolved from the error CODE
+ * through `errors.codes.*`, never the server's message (unlocalizable English).
+ * An unmapped code lands on the caller's localized `fallback`. A TRANSPORT code
+ * also yields to it — that copy is written for a read, and on a write is untrue.
  */
 const TRANSPORT_CODES = new Set(['NETWORK_ERROR', 'CIRCUIT_OPEN']);
 
@@ -605,8 +508,7 @@ export const localizedErrorMessage = (
   return errorService.getUserFriendlyMessage(code, fallback);
 };
 
-// Export hook for use in components
-// Returns an object matching the legacy useErrorHandler shape for easy migration
+// Hook form for components.
 export const useErrorService = () => {
   return {
     handleApolloError: errorService.handleApolloError.bind(errorService),

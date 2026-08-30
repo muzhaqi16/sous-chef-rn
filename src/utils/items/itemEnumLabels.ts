@@ -1,10 +1,7 @@
 /**
- * Shared option lists and i18n label keys for the item enums shown in the
- * pantry add/edit forms (`ItemCondition`, `AcquisitionMethod`). Centralized so
- * the bottom-sheet pages (`StoragePage`, `StockSettingsPage`) and the
- * full-screen form (`StorageDetailsSection`) render the same labels instead of
- * each maintaining its own list / formatter (some of which showed raw enum
- * values).
+ * Shared option lists and i18n keys for `ItemCondition` / `AcquisitionMethod`,
+ * so the sheet pages and the full-screen form render the same labels rather than
+ * each formatting the enum its own way.
  */
 import {
   ItemCondition,

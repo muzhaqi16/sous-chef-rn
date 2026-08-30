@@ -2,9 +2,6 @@ import React from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
 import type { SwipeableRef, SwipeAction } from '../SwipeableItem/types';
 
-/**
- * Visual variant for the card
- */
 export type CardVariant =
   | 'normal'
   | 'warning'
@@ -12,128 +9,81 @@ export type CardVariant =
   | 'success'
   | 'dimmed';
 
-/**
- * Props for the BaseItemCard component
- */
 export interface BaseItemCardProps {
-  // Layout slots
-  /** Left element (image, emoji, icon) */
+  /** Left element (image, emoji, icon). */
   leftElement?: React.ReactNode;
-  /** Main content area */
   children?: React.ReactNode;
-  /** Right element (meta info, counter, drag handle) */
+  /** Right element (meta info, counter, drag handle). */
   rightElement?: React.ReactNode;
 
-  // Styling
-  /** Visual variant affecting background and border colors */
   variant?: CardVariant;
-  /** Additional container styles */
   containerStyle?: StyleProp<ViewStyle>;
 
-  // Press handler
-  /** Callback when card is pressed */
   onPress?: () => void;
 
-  // Swipe actions. Descriptors rather than named handlers: which actions a row
-  // offers is the caller's decision, and this card used to enumerate one
-  // feature's verbs (consume/waste/restock) beside another's (togglePurchase).
+  // Descriptors, not named handlers: which verbs a row offers is the caller's.
   /** Revealed by swiping right. */
   leftActions?: SwipeAction[];
   /** Revealed by swiping left. */
   rightActions?: SwipeAction[];
 
-  // Swipeable coordination
-  /** Callback when swipeable begins to open */
   onSwipeableWillOpen?: (ref: SwipeableRef) => void;
-  /** Callback when swipeable closes */
   onSwipeableClose?: () => void;
 
-  // Swipe configuration
-  /** Left swipe threshold in pixels */
+  /** Left swipe threshold, px. */
   leftThreshold?: number;
-  /** Right swipe threshold in pixels */
+  /** Right swipe threshold, px. */
   rightThreshold?: number;
 
-  // Recycling
-  /** Item ID for FlashList recycling reset */
+  /** Drives the FlashList recycling reset. */
   itemId?: string;
 
-  // Accessibility
-  /** Test ID prefix */
   testID?: string;
 }
 
-/**
- * Props for CardLeftSlot component
- */
 export interface CardLeftSlotProps {
-  /** Type of content to render */
   type: 'emoji' | 'image' | 'icon' | 'custom';
-  /** Emoji character (for type='emoji') */
+  /** For type='emoji'. */
   emoji?: string;
-  /** Image URL (for type='image') */
+  /** For type='image'. */
   imageUrl?: string | null;
-  /** Icon name (for type='icon') */
+  /** For type='icon'. */
   icon?: string;
-  /** Icon library (for type='icon') */
   iconLibrary?: string;
-  /** Background color override */
   backgroundColor?: string;
-  /** Card variant for dynamic styling */
   variant?: CardVariant;
-  /** Whether to dim the content (purchased state) */
   dimmed?: boolean;
-  /** Custom content (for type='custom') */
+  /** For type='custom'. */
   children?: React.ReactNode;
 }
 
-/**
- * Props for CardContent component
- */
 export interface CardContentProps {
-  /** Primary title text */
   title: string;
-  /** Secondary subtitle (string or custom element) */
   subtitle?: string | React.ReactNode;
-  /** Whether item is purchased (for strikethrough styling) */
+  /** Drives strikethrough styling. */
   isPurchased?: boolean;
-  /** Additional title styles */
   titleStyle?: StyleProp<ViewStyle>;
 }
 
-/**
- * Props for CardRightSlot component
- */
 export interface CardRightSlotProps {
-  /** Type of content to render */
   type: 'meta' | 'counter' | 'dragHandle' | 'custom';
   /**
-   * testID for the PRIMARY value (for type='meta').
-   *
-   * The primary text is the item's quantity, which is the value a parsing test
-   * needs to read back — "1 1/4" must arrive as "1.25 cup". Without an id the
-   * only way to assert it is `by.text`, which is locale- and unit-dependent.
-   * Shopping list's `QuantityBadge` already takes one for the same reason.
+   * testID for the PRIMARY value (type='meta') — the item's quantity, which a
+   * parsing test must read back without going through locale-dependent text.
    */
   testID?: string;
-  /** Primary text (for type='meta') */
+  /** For type='meta'. */
   primary?: string;
-  /** Secondary text (for type='meta') */
   secondary?: string;
-  /** Tertiary text (for type='meta') */
   tertiary?: string;
-  /** Current quantity (for type='counter') */
+  /** For type='counter'. */
   quantity?: number;
-  /** Unit label (for type='counter') */
   unit?: string;
-  /** Increment callback (for type='counter') */
   onIncrement?: () => void;
-  /** Decrement callback (for type='counter') */
   onDecrement?: () => void;
-  /** Whether counter is disabled (for type='counter') */
   disabled?: boolean;
-  /** Drag callback (for type='dragHandle') */
+  /** For type='dragHandle'. */
   onDrag?: () => void;
-  /** Custom content (for type='custom') */
+  /** For type='custom'. */
   children?: React.ReactNode;
 }

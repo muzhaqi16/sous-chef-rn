@@ -3,8 +3,7 @@ import { useTranslation } from '#/i18n';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 
-// Selectable storage states. Excludes `StorageState.None`, which has no
-// meaningful UI (it previously rendered as a blank fourth segment).
+// Excludes `StorageState.None`: it has no label, so it renders as a blank segment.
 const STORAGE_STATE_OPTIONS: readonly StorageState[] = [
   StorageState.Ambient,
   StorageState.Frozen,
@@ -16,12 +15,6 @@ interface StorageStateControlProps {
   onChange: (state: StorageState) => void;
 }
 
-/**
- * Segmented control for picking a {@link StorageState} in
- * {@link MoveToPantryModal}. Delegates to the shared {@link SegmentedControl}
- * so it matches every other segmented control in the app (animated sliding
- * pill, consistent sizing/theming) instead of re-implementing one.
- */
 export const StorageStateControl: React.FC<StorageStateControlProps> = ({
   value,
   onChange,

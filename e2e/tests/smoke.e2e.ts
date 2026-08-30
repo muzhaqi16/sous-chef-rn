@@ -1,24 +1,11 @@
 /**
- * Smoke Tests — the gate that blocks pull requests.
- *
- * This suite is the only e2e file `e2e-smoke-tests.yml` runs on a PR, so it is
- * the last thing standing between a regression and `main`. It therefore asserts
- * unconditionally.
- *
- * The previous version branched on whichever screen happened to appear and
- * skipped when it guessed wrong. Because those branches gated on mutually
- * exclusive states (on-landing / on-login / logged-in), at most one could ever
- * assert; the other two passed by printing "⊘ skipping". A missing tab bar was
- * indistinguishable from a signed-out launch, so the suite reported success on
- * an app that could not render its own navigation.
- *
- * The fix is to remove the guessing: bootstrap a known authenticated session
- * before the suite runs, then assert against it. If the session cannot be
- * established the suite fails, which is the correct outcome — an app that
- * cannot be signed into has not passed a smoke test.
+ * Smoke tests — the only e2e file `e2e-smoke-tests.yml` runs on a PR, so the
+ * last thing standing between a regression and `main`. It asserts
+ * UNCONDITIONALLY: a known authenticated session is bootstrapped first and the
+ * suite fails if that cannot be established. Never branch on the screen shown.
  */
 import { element, by, waitFor, expect } from 'detox';
-import { bootstrapAuthenticatedSession } from '../helpers';
+import { bootstrapAuthenticatedSession } from '../helpers/auth';
 import { TIMEOUTS } from '../helpers/waitFor';
 
 /** Tab id → the screen that tab must render. Both sides are real testIDs in
@@ -39,18 +26,9 @@ describe('Smoke Tests', () => {
 
   it('launches into the app', async () => {
     // Asserts the state that must hold once the splash clears, NOT that the
-    // splash is absent.
-    //
-    // `waitFor(by.id('splash-screen')).not.toBeVisible()` was the whole test,
-    // and it could not fail. `SplashScreen` is a real component
-    // (`src/screens/SplashScreen.tsx`), but `beforeAll` has already launched the
-    // app and waited for it to settle, so the splash is gone before this line
-    // runs — and a `not.toBeVisible()` on something absent passes the instant it
-    // is evaluated. It held for any app state whatsoever, a crash included.
-    //
-    // The splash half is not recoverable here: nothing in this test can observe
-    // the splash to begin with, so there is no "it was there, now it is gone"
-    // to assert. What IS checkable is that the launch arrived somewhere real.
+    // splash is absent: `beforeAll` has already launched and settled the app, so
+    // the splash is gone before this line runs — and `not.toBeVisible()` on
+    // something absent passes instantly, for any app state, a crash included.
     await waitFor(element(by.id('tab-bar')))
       .toBeVisible()
       .withTimeout(TIMEOUTS.LONG);
@@ -68,9 +46,6 @@ describe('Smoke Tests', () => {
   });
 
   it.each(TABS)('navigates to %s and renders %s', async (tab, screen) => {
-    // A real interaction, unlike the "should not crash during basic
-    // interactions" test this replaces — that one performed no interaction and
-    // asserted only that the splash screen was gone.
     await element(by.id(tab)).tap();
     // LONG, not NETWORK: a cold CI simulator is materially slower than a warm
     // local one, and a smoke gate that flakes gets ignored.

@@ -1,10 +1,6 @@
 /**
- * A recipe's total time in minutes, falling back to prep + cook.
- *
- * The server does not always populate `totalTimeMinutes`, and where it does not
- * the two components are added — or whichever single one exists is used. Shared
- * because `MyRecipeCard` and `SavedRecipeCard` each carried a byte-identical
- * copy of this expression.
+ * A recipe's total time in minutes. The server does not always populate
+ * `totalTimeMinutes`, so it falls back to prep + cook, or whichever one exists.
  */
 export const recipeTotalMinutes = (recipe: {
   totalTimeMinutes?: number | null;

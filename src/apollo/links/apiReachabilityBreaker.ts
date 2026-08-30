@@ -5,42 +5,10 @@ import { probeApiHealth } from './apiHealthProbe';
 import { logger } from '#/utils/environment';
 
 /**
- * Circuit breaker over GraphQL network outcomes — the single source of truth for
- * "is our API reachable right now," distinct from device internet (`isOnline`).
- *
- * The device can be online while the API is down / timing out / behind a captive
- * portal. Without this, every query independently fires, retries 3×, and fails
- * while the API is down. The breaker collapses that into one signal
- * (`store.apiReachable`) so `offlineModeLink` serves queries from cache and
- * `queueLink` queues mutations — exactly as if the device were offline.
- *
- * States:
- *  - closed: normal. After N consecutive per-operation failures (while the app
- *    is foregrounded) → open.
- *  - open:   `apiReachable = false`. Queries served from cache, mutations
- *    queued. Recovery is ACTIVE: the breaker probes the REST `/health`
- *    endpoint ({@link probeApiHealth}) on a backoff schedule rather than
- *    waiting for user traffic — `offlineModeLink` is blocking that traffic
- *    precisely because the circuit is open. A probe success (or any real
- *    network success, e.g. an allow-listed operation) closes the circuit and
- *    drains the queue.
- *
- * Invariants that keep the flag from sticking (the "stuck offline" bug class):
- *  - `recordSuccess` writes `apiReachable = true` UNCONDITIONALLY (the setter
- *    no-ops on unchanged values), so a desync between the store flag and the
- *    breaker's internal state self-heals on the first successful response.
- *  - `apiReachable` is never persisted (excluded in the store's `partialize`;
- *    the v11 migration strips it from older blobs) — a new session always
- *    starts optimistic.
- *  - Failures while the app is not active are ignored: the OS aborts in-flight
- *    requests on suspend, which would otherwise open the circuit even though
- *    the API is fine.
- *  - `onAppForeground` (wired in `useAppStateLifecycle`) probes immediately
- *    when the circuit is open, instead of waiting out a backoff timer that
- *    didn't run while the JS thread was suspended.
- *
- * Fed by `networkStatusLink` (one outcome per operation, above retryLink) and
- * reset on every connectivity transition by `useOnlineQueueSync`.
+ * The single source of truth for "is the API reachable", distinct from device
+ * internet. Recovery is ACTIVE — it probes `/health`, because `offlineModeLink`
+ * blocks the traffic that would prove it. `recordSuccess` writes unconditionally
+ * and the flag is never persisted, so a desync self-heals rather than sticking.
  */
 
 /** Consecutive per-operation failures (in the closed state) before opening. */
@@ -128,16 +96,10 @@ class ApiReachabilityBreaker {
   }
 
   /**
-   * Fresh start, optimistic only while a link exists. Called when the device
-   * reconnects so it doesn't carry a stale open circuit (which would keep
-   * serving cache until the next probe fired even though the network is back).
-   *
-   * The optimism is conditional on purpose: with no link, reachability is
-   * UNKNOWN, not proven. Asserting `true` here once made `shouldTreatAsOffline`
-   * (`!isOnline && apiReachable !== true`) false for an entire offline session,
-   * and the probe loop could not correct it — this also zeroes the counter and
-   * closes the circuit, so a failing probe matched no branch that records a
-   * verdict. Callers must not have to know that; `reset()` reads the link.
+   * Fresh start, optimistic only while a link exists. With no link reachability
+   * is UNKNOWN, not proven — asserting `true` there makes `shouldTreatAsOffline`
+   * false for a whole offline session, and the probe loop cannot correct it
+   * because this also closes the circuit. So `reset()` reads the link itself.
    */
   reset(): void {
     this.consecutiveFailures = 0;
@@ -155,19 +117,10 @@ class ApiReachabilityBreaker {
   }
 
   /**
-   * The device link went down.
-   *
-   * The store has already moved `apiReachable` to `null` — unknown — because
-   * what we knew about the API expired with the link. This starts the probe
-   * loop, which is the only thing that can turn it back into a fact: a
-   * `/health` success while NetInfo says offline proves NetInfo wrong about a
-   * route our API is reachable over anyway. Without it the app had no way to
-   * find out — no traffic is allowed while offline, so the circuit can never
-   * open, and the probe loop only ran while it was open.
-   *
-   * This is the SAME loop the open circuit uses, on the same backoff — not a
-   * second one. A genuinely offline device fails each probe at the socket,
-   * which is cheap, and the backoff caps it at one every two minutes.
+   * The device link went down; the store has already moved `apiReachable` to
+   * `null`. Starts the probe loop, the only thing that can turn it back into a
+   * fact — a `/health` success while NetInfo says offline proves NetInfo wrong.
+   * The SAME loop the open circuit uses, capped at one probe every two minutes.
    */
   onDeviceOffline(): void {
     this.probeAttempt = 0;

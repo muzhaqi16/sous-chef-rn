@@ -11,15 +11,10 @@ interface TokenPayload {
 let refreshTimer: NodeJS.Timeout | null = null;
 
 /**
- * The expiry of the token that last scheduled an IMMEDIATE refresh, or null
- * when the last schedule was an ordinary timed one.
- *
- * Scheduling at zero delay is a chain: refresh → `setTokens` → schedule again.
- * `proactiveTokenRefresh` bypasses `canAttemptRefresh`, so it has no throttle
- * of its own and nothing else bounds that chain. Two things do here — a floor
- * between chained immediate refreshes, and giving up when a refresh stops
- * moving the expiry forward, which is the only signal that refreshing is not
- * the thing that will fix this.
+ * Expiry of the token that last scheduled an IMMEDIATE refresh. Zero-delay
+ * scheduling is a chain (refresh → setTokens → schedule) that nothing else
+ * bounds, so this enforces a floor between chained refreshes and gives up once
+ * a refresh stops moving the expiry forward.
  */
 let lastImmediateRefreshExpiry: number | null = null;
 
@@ -32,24 +27,9 @@ let lastImmediateRefreshExpiry: number | null = null;
 const CHAINED_IMMEDIATE_REFRESH_DELAY_MS = 5000;
 
 /**
- * Schedule proactive token refresh before expiration
- * Best practice: Refresh 5 minutes before token expires (1 hour token → refresh at 55 min)
- *
- * This implements the "Proactive (Recommended)" strategy from authentication best practices:
- * - Eliminates user-facing 401 errors
- * - Provides smoother UX (no momentary failures)
- * - Reduces concurrent refresh requests
- * - Cleaner logs (no expected 401 errors)
- *
- * OFFLINE PROTECTION:
- * - Checks network status before attempting refresh
- * - Skips refresh if device is offline (saves battery, prevents errors)
- * - Reactive refresh (errorLink) handles token expiration when back online
- * - User NEVER logged out due to network errors
- * - Cache always preserved during offline periods
- *
- * @param accessToken - The JWT access token to decode for expiration
- * @param refreshCallback - Async function to call when refresh is needed
+ * Refresh proactively `REFRESH_BUFFER_MS` before expiry, so a 401 never reaches
+ * the user. Skipped while offline — `errorLink` refreshes reactively on the
+ * next request instead, and a network failure never signs anyone out.
  */
 export function scheduleTokenRefresh(
   accessToken: string,
@@ -67,18 +47,8 @@ export function scheduleTokenRefresh(
     const expiresAt = decoded.exp * 1000; // Convert to milliseconds
     const now = Date.now();
 
-    // Refresh 10 minutes (600 seconds) before expiration
-    // Configuration: Can be adjusted based on security requirements
-    // - 2 minutes: Very conservative (high security apps)
-    // - 5 minutes: Standard (industry baseline)
-    // - 10 minutes: Recommended (better UX with margin for delays) ← DEFAULT
-    // - 15 minutes: Aggressive (maximum UX, less secure)
-    //
-    // Increased to 10 minutes to provide more margin for:
-    // - Network delays and latency
-    // - App being backgrounded
-    // - Device wake-up latency
-    // - Offline->online transitions
+    // 10 minutes of margin for network latency, backgrounding and device
+    // wake-up. A one-hour token therefore refreshes at 50 minutes.
     const REFRESH_BUFFER_MS = 10 * 60 * 1000;
     const refreshAt = expiresAt - REFRESH_BUFFER_MS;
 
@@ -125,13 +95,8 @@ export function scheduleTokenRefresh(
     );
 
     refreshTimer = setTimeout(async () => {
-      // OFFLINE PROTECTION: Check network status before attempting refresh
-      // This prevents unnecessary network attempts and battery drain when offline
-      //
-      // NOTE: Using direct store access (getState) instead of useNetworkState() hook
-      // because this code runs outside React component lifecycle (setTimeout callback).
-      // React hooks can only be used inside React components, but Zustand's getState()
-      // is specifically designed for accessing state from non-React code.
+      // Skip the refresh while offline. `getState()` rather than the hook —
+      // this runs in a setTimeout callback, outside React.
       const state = useStore.getState();
       if (!state.isOnline) {
         logger.debug(
@@ -162,11 +127,7 @@ export function scheduleTokenRefresh(
   }
 }
 
-/**
- * Cancel scheduled token refresh (call on logout)
- * Important: Always call this when user logs out to prevent
- * unnecessary refresh attempts with invalid tokens
- */
+/** Cancel the scheduled refresh — always call on logout. */
 export function cancelTokenRefresh() {
   lastImmediateRefreshExpiry = null;
   if (refreshTimer) {

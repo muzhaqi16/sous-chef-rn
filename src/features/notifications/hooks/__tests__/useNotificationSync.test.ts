@@ -23,9 +23,9 @@ jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/errorService');
 
-// The hook reads only the signed-in user from the store now — whether a
+// The hook reads only the signed-in user from the store — whether a
 // notification is unread is read from the cache, which is also what renders
-// it, so the two can no longer disagree.
+// it, so the two cannot disagree.
 let mockUser: { id: string } | null = { id: 'user-1' };
 const mockClearExpirationLink = jest.fn();
 
@@ -53,8 +53,8 @@ const BADGE_FRAGMENT = gql`
 /**
  * A cache holding the badge and the rows it counts.
  *
- * The rows are what changed: the hook used to ask a Zustand mirror whether a
- * notification was unread, and now asks the cache the list renders from.
+ * The rows matter: the hook asks the cache the list renders from whether a
+ * notification is unread, not a Zustand mirror of it.
  */
 const seedFeed = (
   unreadNotificationCount: number,
@@ -95,6 +95,9 @@ const seedFeed = (
     })),
   ]);
 
+// The enum has no `UNREAD` member: an unread notification is `SENT` (or
+// `PENDING`). A mock spelling it `'UNREAD'` writes a status the schema cannot
+// produce, and the row only reads back correctly until the result lands.
 const UNREAD = NotificationStatus.Sent;
 const READ = NotificationStatus.Read;
 
@@ -117,7 +120,7 @@ const markReadMock = (
               notification: {
                 __typename: 'Notification',
                 id: 'n1',
-                status: 'READ',
+                status: READ,
               },
             }
           : {
@@ -140,7 +143,7 @@ const markUnreadMock = (): MockedResponse => ({
         notification: {
           __typename: 'Notification',
           id: 'n1',
-          status: 'UNREAD',
+          status: UNREAD,
         },
       },
     },

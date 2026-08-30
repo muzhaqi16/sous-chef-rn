@@ -50,7 +50,6 @@ import {
   formatNumberForInput,
 } from '#/utils/formatters/number';
 
-/** Module-level helper to sync shopping list form state from loaded data */
 function syncListFormState(
   shoppingList:
     | { name: string; isDefault: boolean; budgetAmount?: number | null }
@@ -108,8 +107,8 @@ export const ListSettings: React.FC<
   const selectedTemplate =
     templates.find(tpl => tpl.id === selectedTemplateId) ?? null;
   const user = useUser();
-  // Use lazy loading for homes data to avoid triggering Zustand store updates
-  // that would cause ShoppingListMain to re-render
+  // Lazy: eager home data writes to the Zustand store and re-renders
+  // ShoppingListMain.
   const { homes, fetchHomeData, isLoaded: homesLoaded } = useLazyHomeData();
 
   // ownerships + collaborators are materialized in the hook so the helpers
@@ -123,7 +122,6 @@ export const ListSettings: React.FC<
       }
     : null;
 
-  // Check if current user is the owner
   const isOwner =
     listId && ownershipSnapshot
       ? isShoppingListOwner(ownershipSnapshot, user?.id)
@@ -140,20 +138,16 @@ export const ListSettings: React.FC<
     ? getShoppingListOwnerInfo(ownershipSnapshot)
     : null;
 
-  // Find current user's collaborator entry for leave functionality
-  // The email arm is guarded: both sides are nullable, and a null-to-null
-  // comparison would match an arbitrary collaborator as "me".
+  // The email arm is guarded: both sides are nullable, and null-to-null would
+  // match an arbitrary collaborator as "me".
   const currentUserCollaborator = collaborators.find(
     c =>
       (!!user?.email && c.email === user.email) ||
       c.collaboratorId === user?.id,
   );
-  // Only members of the linked home are told to "leave the home first" — that's
-  // the only case where list access actually derives from home membership. A
-  // direct collaborator who isn't a member of the home (e.g. the list was shared
-  // while personal, then later linked to a home) has an orphaned collaborator
-  // row and must be able to leave the list directly. Gating on homeId alone
-  // dead-ends those users: they can't leave a home they were never in.
+  // Only a home MEMBER is told to "leave the home first". A direct collaborator
+  // on a since-linked list has an orphaned row and must be able to leave the
+  // list itself — gating on homeId alone dead-ends them.
   const isHomeMember = !!shoppingList?.home?.myMembership;
   const linkedHomeId = shoppingList?.homeId ?? null;
 
@@ -204,23 +198,18 @@ export const ListSettings: React.FC<
     });
   };
 
-  // Budget / spend — read straight off the list (totalCost / estimatedTotal are
-  // server-derived).
   const currency = shoppingList?.currency ?? null;
   const totalCost = shoppingList?.totalCost ?? 0;
   const estimatedTotal = shoppingList?.estimatedTotal ?? 0;
   const priceTracking = shoppingList?.priceTracking ?? false;
 
-  // Reminder — read straight off the list.
   const reminderEnabled = shoppingList?.reminderEnabled ?? false;
   const reminderDate = shoppingList?.reminderDate ?? null;
 
-  // Templates — read straight off the list.
   const isTemplate = shoppingList?.isTemplate ?? false;
   const templateName = shoppingList?.templateName ?? null;
   const basedOnTemplate = shoppingList?.basedOnTemplate ?? null;
 
-  // Recurrence — read straight off the list.
   const isRecurring = shoppingList?.isRecurring ?? false;
   const recurringPattern = shoppingList?.recurringPattern ?? null;
   const nextRecurringDate = shoppingList?.nextRecurringDate ?? null;
@@ -251,15 +240,10 @@ export const ListSettings: React.FC<
     );
   }, [shoppingList, listId]);
 
-  // Safe return after leaving the linked home. A non-owner's access to a
-  // home-linked list is derived from their home membership — there's no direct
-  // collaborator row. Leaving the home from the "Manage Home" screen evicts the
-  // Home from cache (see useHomeDetailManagement) but leaves the ShoppingList
-  // entity in place, so without this guard the user would land back on a list
-  // they can no longer open. When this screen regains focus with the list still
-  // loaded but every access path gone (not the owner, no collaborator row, no
-  // home membership), pop back to the list index and clear the now-inaccessible
-  // selection so ShoppingListMain auto-selects another list.
+  // A non-owner reaches a home-linked list through their home membership, and
+  // leaving the home evicts only the Home from cache — the ShoppingList entity
+  // stays. So on focus with every access path gone, pop back and clear the
+  // selection, or the user lands on a list they cannot open.
   const hasLostListAccess =
     !!listId &&
     !!shoppingList &&
@@ -283,10 +267,9 @@ export const ListSettings: React.FC<
     executeWithLoadingState(
       async () => {
         if (!listId && selectedTemplateId) {
-          // Create from a saved template — the server copies the template's
-          // items into the new list. It mints the id (so this can't be queued
-          // offline) and doesn't take a home, hence no homeId here; the
-          // default flag still rides on its own mutation afterwards.
+          // The server copies the template's items and mints the id, so this
+          // cannot be queued offline and takes no homeId. The default flag
+          // still rides on its own mutation afterwards.
           const newListId = await createFromTemplate(
             selectedTemplateId,
             name.trim(),
@@ -298,7 +281,6 @@ export const ListSettings: React.FC<
           setSelectedShoppingListId(newListId);
           goBack();
         } else if (!listId) {
-          // Create new list
           const newList = await createShoppingList({
             name: name.trim(),
             description: t('shoppingListScreens.createdFromSettings'),
@@ -309,10 +291,9 @@ export const ListSettings: React.FC<
           setSelectedShoppingListId(newList.id);
           goBack();
         } else {
-          // Update existing list (local-first: a queued offline save keeps the
-          // permanent cache write and replays on reconnect). The default flag
-          // goes through the dedicated mutation so the server unsets the prior
-          // default atomically; an explicit un-set rides on updateShoppingList.
+          // Local-first: a queued offline save keeps its cache write and
+          // replays on reconnect. Turning the default ON goes through the
+          // dedicated mutation, which unsets the prior default atomically.
           const defaultTurnedOn = isDefault && !shoppingList?.isDefault;
           const defaultTurnedOff = !isDefault && !!shoppingList?.isDefault;
           if (defaultTurnedOn) {
@@ -360,20 +341,18 @@ export const ListSettings: React.FC<
           text: t('labels.delete'),
           style: 'destructive',
           onPress: async () => {
-            // Register parent deletion to prevent subscription race conditions
-            // 10s auto-cleanup timeout in service handles unregistration
+            // Suppresses subscription races; the service auto-cleans after 10s.
             subscriptionService.registerParentDeletion(listId);
 
             try {
               await deleteShoppingList(listId!);
 
-              // Clear selection — useShoppingListSelection auto-selects the next list
+              // useShoppingListSelection then auto-selects the next list.
               setSelectedShoppingListId(null);
-              // Use goBack() to pop ListSettings off the stack, unmounting its
-              // query watcher so late subscription updates can't trigger a refetch
+              // Unmounts this screen's query watcher, so a late subscription
+              // update cannot trigger a refetch of the deleted list.
               goBack();
             } catch {
-              // Deletion failed — list wasn't actually deleted, so unregister immediately
               subscriptionService.unregisterParentDeletion(listId);
             }
           },
@@ -474,8 +453,7 @@ export const ListSettings: React.FC<
     );
   };
 
-  // Recurring — pick a pattern (interval defaults to 1; Custom intervals are an
-  // advanced case we don't expose here).
+  // Interval defaults to 1; custom intervals are not exposed here.
   const handleSelectPattern = (pattern: RecurringPattern) => {
     setShowPatternPicker(false);
     if (listId) {
@@ -520,7 +498,6 @@ export const ListSettings: React.FC<
     }
   };
 
-  // Lazy-load homes when opening the picker
   const handleOpenHomePicker = () => {
     if (!homesLoaded) {
       fetchHomeData();
@@ -628,7 +605,6 @@ export const ListSettings: React.FC<
               )}
             </View>
 
-            {/* Leave List section for non-owner collaborators */}
             <View style={commonStyles.settingsSection}>
               <Text style={commonStyles.settingsSectionTitle}>
                 {t('labels.leaveList')}
@@ -818,7 +794,7 @@ export const ListSettings: React.FC<
           </View>
         )}
 
-        {/* List status — complete / reactivate / archive (owner, existing list) */}
+        {/* List status — complete / reactivate / archive. */}
         {!!listId && !!isOwner && (
           <View style={commonStyles.settingsSection}>
             <Text style={commonStyles.settingsSectionTitle}>
@@ -878,7 +854,7 @@ export const ListSettings: React.FC<
           </View>
         )}
 
-        {/* Recurring — set up / stop auto-regeneration (owner, existing list) */}
+        {/* Recurring — set up / stop auto-regeneration. */}
         {!!listId && !!isOwner && (
           <View style={commonStyles.settingsSection}>
             <Text style={commonStyles.settingsSectionTitle}>
@@ -940,7 +916,7 @@ export const ListSettings: React.FC<
           </View>
         )}
 
-        {/* Templates — save as / create from a template (owner, existing list) */}
+        {/* Templates — save as / create from a template. */}
         {!!listId && !!isOwner && (
           <View style={commonStyles.settingsSection}>
             <Text style={commonStyles.settingsSectionTitle}>
@@ -992,7 +968,7 @@ export const ListSettings: React.FC<
           </View>
         )}
 
-        {/* Budget / spend — limit, running totals, price tracking (owner) */}
+        {/* Budget / spend — limit, running totals, price tracking. */}
         {!!listId && !!isOwner && (
           <View style={commonStyles.settingsSection}>
             <Text style={commonStyles.settingsSectionTitle}>
@@ -1033,7 +1009,7 @@ export const ListSettings: React.FC<
           </View>
         )}
 
-        {/* Reminder — set / clear a shopping reminder (owner, existing list) */}
+        {/* Reminder — set / clear a shopping reminder. */}
         {!!listId && !!isOwner && (
           <View style={commonStyles.settingsSection}>
             <Text style={commonStyles.settingsSectionTitle}>
@@ -1069,7 +1045,6 @@ export const ListSettings: React.FC<
           </View>
         )}
 
-        {/* Only show sharing section if editing existing list and user is owner */}
         {!!listId && !!isOwner && (
           <View style={commonStyles.settingsSection}>
             <Text style={commonStyles.settingsSectionTitle}>
@@ -1100,7 +1075,6 @@ export const ListSettings: React.FC<
           </View>
         )}
 
-        {/* Only show danger zone if editing existing list and user is owner */}
         {!!listId && !!isOwner && (
           <View style={commonStyles.settingsSection}>
             <Text style={commonStyles.settingsSectionTitle}>
@@ -1128,7 +1102,6 @@ export const ListSettings: React.FC<
         )}
       </ScrollView>
 
-      {/* Home picker modal */}
       <ModalPicker
         visible={showHomePicker}
         label={t('shoppingListScreens.selectHome')}
@@ -1147,7 +1120,6 @@ export const ListSettings: React.FC<
         onCancel={() => setShowHomePicker(false)}
       />
 
-      {/* Template picker (create mode) */}
       <ModalPicker
         visible={showTemplatePicker}
         label={t('shoppingListScreens.selectTemplate')}
@@ -1163,7 +1135,6 @@ export const ListSettings: React.FC<
         onCancel={() => setShowTemplatePicker(false)}
       />
 
-      {/* Recurring pattern picker */}
       <ModalPicker
         visible={showPatternPicker}
         label={t('shoppingListScreens.selectPattern')}

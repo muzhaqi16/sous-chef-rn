@@ -1,17 +1,7 @@
 /**
- * Ownership Helper Utilities
- *
- * Provides helper functions to determine ownership, roles, and user information
- * for shopping lists and homes.
- */
-
-/**
- * Shopping List Types (matching GraphQL schema)
- *
- * `user.email` is nullable: the API returns `User.email` only when the caller
- * is that user (or an admin), so it is populated for the viewer's own record
- * and null for every other member. Treat it as an optional extra, never as a
- * guaranteed display label — see `OwnerInfo` consumers for the fallbacks.
+ * Ownership, roles and user info for shopping lists and homes. `user.email` is
+ * nullable — the API returns it only for the caller's own record — so it is
+ * never a guaranteed display label; see the `OwnerInfo` consumers' fallbacks.
  */
 interface ShoppingListOwnership {
   userId: string;
@@ -213,15 +203,7 @@ export function isHomeOwner(
   );
 }
 
-/**
- * Extract initials from a display name for avatar fallback
- * Returns first letter capitalized
- *
- * @example
- * getInitials("John Doe") => "J"
- * getInitials("jane_smith@example.com") => "J"
- * getInitials(null) => "?"
- */
+/** Avatar fallback: the first letter, capitalized; "?" for nullish. */
 export function getInitials(displayName?: string | null): string {
   if (!displayName) return '?';
 

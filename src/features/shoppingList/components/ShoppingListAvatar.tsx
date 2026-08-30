@@ -1,11 +1,3 @@
-/**
- * ShoppingListAvatar Component
- *
- * Displays avatar for shopping lists with priority:
- * 1. Home owner's avatar (if list belongs to a home)
- * 2. List creator's avatar (for personal lists)
- */
-
 import React from 'react';
 import { Avatar } from '#components/atoms/Avatar';
 import {
@@ -14,12 +6,8 @@ import {
 } from '#utils/ownershipHelpers';
 
 interface ShoppingListAvatarProps {
-  /**
-   * Shopping list with ownerships and optional home data. Shares the resolver's
-   * own input type so the accepted shape can't drift from what it reads.
-   */
+  /** Shares the resolver's own input type so the two can't drift apart. */
   list: ShoppingListWithHome;
-  /** Size of avatar in pixels */
   size?: number;
 }
 

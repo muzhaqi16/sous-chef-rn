@@ -1,15 +1,8 @@
 /**
- * useMealTemplateEditor — author and edit meal templates.
- *
- * - createTemplate: mints the permanent cuid PK and fires createMealTemplate
- *   (with its inline items) local-first — a queued replay converges on the same
- *   row by id. The created template is added to the overview connection from the
- *   response; returns its id for navigation.
- * - updateTemplate: local-first optimistic write of the edited metadata
- *   (name/category/tags/…), reverting the snapshot on a refused result.
- * - add/update/remove item: online authoring mutations. The server returns the
- *   updated template (or item), which Apollo normalizes — no optimistic write,
- *   since a new item's id is server-minted (nothing to key an offline replay on).
+ * Authors and edits meal templates, local-first throughout: create and every
+ * item mutation mint a client-side CUID2 the server accepts, so a queued replay
+ * converges on the same row rather than duplicating it. Metadata updates
+ * snapshot first and revert on a refusal.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -134,13 +127,11 @@ export function useMealTemplateEditor() {
   const [updateItemMutation] = useMutation(UpdateTemplateItemDocument);
   const [removeItemMutation] = useMutation(RemoveTemplateItemDocument);
 
-  // Items are local-first too now. `AddTemplateItemInput.id` accepts a
-  // client-minted CUID2, so a replayed add resolves to the same row
-  // (`IDEMPOTENT_REPLAY`) instead of adding the line twice; update writes
-  // absolute fields on an existing id; and a replayed remove converges
-  // server-side rather than 404ing. Each writes the cache before firing,
-  // because these mutations return the whole `mealTemplate { items }` and rely
-  // on the response to move anything on screen.
+  // `AddTemplateItemInput.id` accepts a client-minted CUID2, so a replayed add
+  // resolves to the same row (`IDEMPOTENT_REPLAY`), update writes absolute
+  // fields, and a replayed remove converges rather than 404ing. Each writes the
+  // cache before firing: these mutations return the whole
+  // `mealTemplate { items }` and nothing moves on screen without it.
 
   // Returns the created template's id (for navigation) or null on failure.
   const createTemplate = async (
@@ -333,14 +324,10 @@ export function useMealTemplateEditor() {
   ): Promise<boolean> => {
     const { id, meal, ...flatFields } = input;
     const previousItem = readTemplateItem(client.cache, id);
-    // `meal` is an @oneOf ref, not a flat field — the row shows it as
-    // `customMealName` / `recipe`, so map it rather than writing it through.
-    //
-    // BOTH fields move together. The input can only name one of them, but the
-    // entity carries both, so writing only the named one leaves the row holding
-    // the value it was supposed to replace: renaming a recipe-backed row to a
-    // custom name kept the old recipe, and picking a recipe left the row with
-    // neither a name nor a recipe. Offline no response arrives to reconcile it.
+    // `meal` is an @oneOf ref, so it maps to `customMealName` / `recipe`, and
+    // BOTH must move together: the input names one, the entity carries both, so
+    // writing only the named one leaves the row holding the value it was meant
+    // to replace — and offline no response arrives to reconcile it.
     const updates = {
       ...flatFields,
       ...(meal
@@ -385,10 +372,9 @@ export function useMealTemplateEditor() {
     itemId: string,
     templateId: string,
   ): Promise<boolean> => {
-    // Snapshot before evicting: a refusal has to put the row back, and once the
-    // entity is gone the cache can no longer describe it. The snapshot is
-    // partial (the editor's query selects no `recipe`), so it is completed here
-    // rather than trusted whole.
+    // Snapshot before evicting: a refusal has to put the row back, and an
+    // evicted entity is one the cache cannot describe. The read is partial (the
+    // editor's query selects no `recipe`), so it is completed here.
     const removed = toRestorableTemplateItem(
       readTemplateItem(client.cache, itemId),
       itemId,

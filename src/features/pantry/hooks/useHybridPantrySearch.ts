@@ -38,14 +38,9 @@ export interface UseHybridPantrySearchParams {
 }
 
 /**
- * Pantry-specific wrapper around the generic `useHybridSearch` primitive. Bakes
- * in the GetPantry document, the variable shape (id + itemsFilter + orderBy),
- * the result extractor (extractNodes → items), and the local search
- * predicate. Callers just supply the pantry context.
- *
- * The generic `useHybridSearch` is harder to test because its document is a
- * runtime parameter; this wrapper has a fixed document, so tests can use
- * `recordMock(GetPantryDocument, ...)` directly.
+ * Bakes the GetPantry document, variable shape, extractor and local predicate
+ * into the generic `useHybridSearch`. The fixed document is also what lets tests
+ * use `recordMock(GetPantryDocument, ...)` directly.
  */
 export function useHybridPantrySearch({
   pantryId,

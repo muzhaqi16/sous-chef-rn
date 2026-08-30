@@ -221,7 +221,7 @@ function toggleFieldRefusalMock(): MockedResponse {
       data: {
         toggleShoppingListItemPurchased: {
           __typename: 'ValidationError',
-          code: 'VALIDATION_ERROR',
+          code: 'VALIDATION_FAILED',
           message: NAMELESS_ROW_MESSAGE,
           field: 'itemName',
         },
@@ -284,7 +284,7 @@ function updatePurchaseMock(
             : outcome === 'fieldRefusal'
             ? {
                 __typename: 'ValidationError',
-                code: 'VALIDATION_ERROR',
+                code: 'VALIDATION_FAILED',
                 message: NAMELESS_ROW_MESSAGE,
                 field: 'itemName',
               }
@@ -485,9 +485,9 @@ describe('the stocked stamp follows the purchased flag', () => {
    * The same for the TOGGLE mutation, which `toggleItem` actually fires.
    *
    * Without it the operation is unmatched, resolves as an error, and the hook
-   * REVERTS — so every assertion below described the post-revert state while
-   * claiming to describe the flip. They passed only because the revert used to
-   * clear the stamp too, which is the defect they were written to catch.
+   * REVERTS — so every assertion below describes the post-revert state while
+   * claiming to describe the flip, and passes only if the revert clears the
+   * stamp too, which is the defect they were written to catch.
    */
   const toggleQueued: MockedResponse = {
     request: {

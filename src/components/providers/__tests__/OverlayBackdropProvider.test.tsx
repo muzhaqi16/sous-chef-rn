@@ -211,15 +211,14 @@ describe('OverlayBackdropProvider', () => {
   });
 
   it('does not subscribe to navigation state changes', () => {
-    // The previous implementation registered a `navigationRef` listener
-    // that force-cleared all slots on every navigation state change. That
-    // listener broke the AddToPantrySheet → BarcodeStack → back flow: the
-    // slot was released on push into Barcode, the sheet stayed at index 0,
-    // and on return the sheet was visible with no dim layer because the
-    // hook's slotIdRef was still held but no slot existed. With the new
-    // imperative onChange-driven claim/release model (plus the hook's
-    // defensive unmount cleanup), the listener is no longer earning its
-    // keep and was removed.
+    // A `navigationRef` listener that force-cleared all slots on every
+    // navigation state change breaks the AddToPantrySheet → BarcodeStack →
+    // back flow: the slot is released on push into Barcode, the sheet stays
+    // at index 0, and on return the sheet is visible with no dim layer
+    // because the hook's slotIdRef is still held but no slot exists. The
+    // imperative onChange-driven claim/release model, plus the hook's
+    // defensive unmount cleanup, covers what such a listener would — so
+    // there must be none.
     render(
       <OverlayBackdropProvider>
         <DeclarativeConsumer active={true} />

@@ -42,13 +42,8 @@ import {
 import type { ShoppingListRowItem } from './types';
 
 /**
- * Props for SwipeableListItem - extends ListRenderItemInfo from FlashList.
- *
- * The wrapper `item` holds a per-row primitive (`id`, `isPurchased` — forced
- * to match the active tab) plus the masked `itemRef` fragment ref. The row
- * subscribes to its entity via `useFragment(SortableItem_item, itemRef)`
- * and derives all display data inline; no upstream transform pipeline is
- * involved.
+ * The row subscribes to its own entity via `useFragment(SortableItem_item)` and
+ * derives display data inline — there is no upstream transform pipeline.
  */
 type SwipeableListItemProps = ListRenderItemInfo<ShoppingListRowItem>;
 
@@ -56,27 +51,22 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   item: rowItem,
   index,
 }) => {
-  // FlashList v2 can transiently call renderItem with an `undefined` item while
-  // recycling cells during a layout-animation render: toggling purchase or
-  // deleting an item calls prepareForLayoutAnimationRender() and shrinks the
-  // data array, so a recycled cell may briefly map to an out-of-range index.
-  // Read everything off the row defensively (hooks stay unconditional) and
-  // render the stable empty cell below when it's missing — the next commit
-  // supplies the correct item.
+  // FlashList v2 can call renderItem with an `undefined` item: a toggle/delete
+  // runs prepareForLayoutAnimationRender() and shrinks the data array, so a
+  // recycled cell briefly maps out of range. Read defensively (hooks stay
+  // unconditional) and render the empty cell below; the next commit fixes it.
   const itemRef = rowItem?.itemRef;
 
-  // Per-entity cache subscription: this row re-renders only when its own
-  // ShoppingListItem cache record changes (quantity, unit, image, etc.).
+  // Per-entity subscription: this row re-renders only for its own cache record.
   const { data, complete } = useFragment({
     fragment: SortableItem_ItemFragmentDoc,
     fragmentName: 'SortableItem_item',
     from: itemRef ?? null,
   });
 
-  // PERFORMANCE: Get theme colors from context (single useUnistyles at list level)
+  // One list-level useUnistyles, rather than a theme subscription per row.
   const themeColors = useSortableListTheme();
 
-  // Staggered entry animation (only during initial render, disabled after)
   const staggerCtx = useStaggeredEntry();
   const entryDelay = staggerCtx?.getEntryDelay(index) ?? 0;
   const entering = (() => {
@@ -86,10 +76,8 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       .easing(standardEasing.factory());
   })();
 
-  // PERFORMANCE: Get screen width from context (single subscription at list level, not per-item)
   const screenWidth = themeColors?.screenWidth ?? 375;
 
-  // Slide animation for purchase toggle
   const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
     itemId: rowItem?.id ?? '',
     slideDistance: screenWidth,
@@ -98,7 +86,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
 
   const { t } = useTranslation();
 
-  // Get actions and permissions from context (stable references)
   const { actions, permissions } = useSortableListActions();
   const {
     onItemPress,
@@ -116,20 +103,19 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     canMarkPurchased = true,
   } = permissions;
 
-  // ── Interactive tutorial (only active for first item during relevant steps) ──
+  // Interactive tutorial — only the first row, and only on its steps.
   const tutorial = useShoppingListTutorialState();
   const tutorialActions = useShoppingListTutorialActions();
   const itemCardRef = useRef<View>(null);
   const checkboxRef = useRef<View>(null);
   const archiveIconRef = useRef<View>(null);
 
-  // `rowItem.isPurchased` is forced to match the active tab — use it for
-  // visual state so a freshly toggled item paints the new state immediately
-  // before the cache propagates.
+  // Forced to match the active tab, so a freshly toggled row paints the new
+  // state before the cache propagates.
   const isPurchased = rowItem?.isPurchased ?? false;
   const itemId = rowItem?.id ?? '';
-  // A derivation, read from its own context so it is the current one — the
-  // command bag publishes behind a ref that children see too late.
+  // Read from its own context: the command bag publishes behind a ref children
+  // see too late.
   const itemSwipeActions = useItemSwipeActions();
   const swipeActions = resolveRowActions(
     itemSwipeActions,
@@ -137,25 +123,21 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     onBeforeRowRemoved,
   );
 
-  // This line's purchase already reached the pantry. The bulk move filters its
-  // working set on the same stamp, so offering "move to pantry" here would
-  // promise an action that does nothing — the row is shown as stocked instead.
-  // Cleared server-side when the line re-enters an unpurchased state, so a
-  // re-added item becomes actionable again on its own.
+  // Already in the pantry. The bulk move filters on the same stamp, so a
+  // "move to pantry" here would do nothing — show it as stocked. Cleared
+  // server-side when the line goes unpurchased again.
   const isStocked = !!data?.purchaseInfo?.movedToPantryAt;
 
-  // Derive display data from the fragment. On cache miss before first paint
-  // we fall back to safe defaults instead of returning null so the cell still
-  // takes up its FlashList slot during initial restore.
+  // Safe defaults rather than null on a cache miss, so the cell keeps its
+  // FlashList slot during initial restore.
   const itemName = data?.itemName ?? '';
   const category = data?.category ?? null;
   const subtitle = category?.split(',')[0].trim() || undefined;
   const quantity = data?.quantity ?? 0;
   const quantityInput = data?.quantityInput ?? null;
   const unitDisplay = data?.unitName || data?.unit?.symbol || undefined;
-  // `resolveImageUrl` accepts a structural { item?: { images, imageUrl } }
-  // shape — feeding the fragment data directly resolves to the best image
-  // variant available without an intermediate transform step.
+  // `resolveImageUrl` takes a structural { item?: { images, imageUrl } }, so the
+  // fragment data feeds it directly.
   const imageUrl = data ? resolveImageUrl(data) : null;
   const { showImages } = useShoppingListRowOptions();
   const showImage = showImages && !!imageUrl;
@@ -172,16 +154,12 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     index === 0 &&
     !isPurchased;
 
-  // Swipe and long-press both spotlight the full item row, so they share the
-  // same measured rect ('itemCard') — only one of the two steps is ever
-  // active at a time.
+  // Both spotlight the whole row, so they share the 'itemCard' rect; only one
+  // of the two steps is ever active.
   const isTutorialItemCardTarget =
     isTutorialSwipeTarget || isTutorialLongPressTarget;
 
-  // Disable swipe gestures during non-swipe spotlight steps so users can't
-  // accidentally swipe items while the tutorial overlay is showing.
-  // During the swipe step itself, swiping is allowed so the user can
-  // interact with the real item.
+  // No swiping under the tutorial overlay, except on the swipe step itself.
   const swipeEnabled =
     !tutorial?.isActive ||
     tutorial.currentStep === ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS;
@@ -192,23 +170,17 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     index === 0 &&
     !isPurchased;
 
-  // Check currentStep directly (not isActive) so the archive icon gets measured
-  // during the 400ms transition period when the purchased tab first mounts.
-  // isActive is false during transitions, but we need the rect ready for when
-  // the spotlight renders after the transition completes.
+  // `currentStep`, not `isActive`: the latter is false during the 400ms tab
+  // transition, and the rect must be measured before the spotlight renders.
   const isTutorialArchiveTarget =
     tutorial?.currentStep ===
       ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY &&
     index === 0 &&
     isPurchased;
 
-  // Clear each rect the moment this row stops being that step's target —
-  // item gets purchased/removed, the step advances, or FlashList recycles
-  // this cell to a different position. Without this, `registerRect` only
-  // ever sets a value and never unsets one, so a rect measured for a since-
-  // vanished item lingers in tutorial state and the coach mark renders
-  // pointing at a target that no longer exists (e.g. spotlighting the
-  // checkbox after the only unpurchased item was just purchased).
+  // `registerRect` only ever sets, so each rect must be cleared when this row
+  // stops being the step's target (purchased, removed, step advanced, cell
+  // recycled) or the coach mark spotlights a vanished element.
   useEffect(() => {
     if (!isTutorialCheckboxTarget) return;
     return () => tutorialActions?.registerRect('checkbox', null);
@@ -224,7 +196,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     return () => tutorialActions?.registerRect('itemCard', null);
   }, [isTutorialItemCardTarget, tutorialActions]);
 
-  // Measure checkbox position for tutorial spotlight
   const handleCheckboxLayout = () => {
     if (!isTutorialCheckboxTarget) return;
     requestAnimationFrame(() => {
@@ -241,7 +212,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     });
   };
 
-  // Measure archive icon position for tutorial spotlight
   const handleArchiveIconLayout = () => {
     if (!isTutorialArchiveTarget) return;
     requestAnimationFrame(() => {
@@ -258,7 +228,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     });
   };
 
-  // Measure entire item card for swipe actions / long-press tutorial spotlight
   const handleItemCardLayout = () => {
     if (!isTutorialItemCardTarget) return;
     requestAnimationFrame(() => {
@@ -275,9 +244,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     });
   };
 
-  // === ELEMENT CREATION ===
-
-  // Create rightElement: quantity badge + optional archive action
   const rightElement = (() => {
     const stockedIndicator = isPurchased && isStocked && (
       <View
@@ -314,10 +280,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     return (
       <View style={styles.rightElementContainer}>
         <QuantityBadge
-          // Keyed by item id so a test can open the quantity sheet for a
-          // specific row. The badge had no testID, so the shopping list's
-          // quantity flow was unreachable — its spec looked for a
-          // `quantity-button` the app has never rendered.
+          // Keyed by item id so a test can open one specific row's sheet.
           testID={`shopping-list-item-${itemId}-quantity`}
           quantity={quantity}
           quantityInput={quantityInput}
@@ -333,7 +296,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     );
   })();
 
-  // Create leftElement: cached image if the item has one
   const leftElement = (() => {
     if (!showImage || !imageUrl) return null;
     return (
@@ -352,9 +314,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     );
   })();
 
-  // Create checkbox element for marking items as purchased
-  // Uses AnimatedCheckbox with pendingChecked state for immediate visual feedback
-  // Slide animation triggers state change via callback AFTER animation completes
   const checkboxElement = (() => {
     if (!onTogglePurchase || !canMarkPurchased) return null;
 
@@ -363,11 +322,9 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
         checked={isPurchased}
         itemId={itemId}
         onPress={() => {
-          // A tap toggles purchase immediately: marks the item purchased with
-          // default values, or un-purchases it. Either way the row moves to the
-          // other tab — slide it out first, then apply the toggle after the
-          // animation. Recording actual qty/price is done via a long-press
-          // (opens the purchase-amount sheet), not a tap.
+          // A tap toggles with default values; the row then moves to the other
+          // tab, so slide it out first and toggle after. Recording actual
+          // qty/price is the long-press.
           triggerSlide(-1, () => {
             onTogglePurchase(itemId);
             tutorialActions?.notifyCheckboxTapped();
@@ -378,7 +335,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       />
     );
 
-    // Wrap first item's checkbox in a measured View for tutorial spotlight
     if (isTutorialCheckboxTarget) {
       return (
         <View
@@ -394,15 +350,13 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     return checkbox;
   })();
 
-  // While the fragment is hydrating from cache — or when FlashList hands us a
-  // recycled cell with no backing row (see note at the top) — render an empty
-  // cell rather than blanking, keeping the FlashList slot stable.
+  // An empty cell rather than nothing, so the FlashList slot stays stable while
+  // the fragment hydrates (or the recycled cell has no backing row).
   if (!rowItem || (!complete && !data)) {
     return <View style={styles.container} />;
   }
 
-  // Render the item
-  // PERF: Single Animated.View for both entry animation and slide style
+  // One Animated.View carries both the entry animation and the slide style.
   return (
     <Animated.View
       entering={entering}
@@ -419,19 +373,13 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       ) : null}
       <SwipeableItem
         itemId={itemId}
-        // Gives the swipe actions `shopping-list-item-<id>-edit` / `-delete`
-        // (RightActions appends the suffix). Keyed by id rather than index to
-        // match the row's own `shopping-item-checkbox-<id>`, and because a
-        // reorderable list makes an index-keyed id point at a different row
-        // after a drag.
+        // Keyed by id, not index: a drag would repoint an index-keyed testID at
+        // a different row. Swipe actions append `-edit` / `-delete`.
         testIDPrefix={`shopping-list-item-${itemId}`}
         onPress={onItemPress ? () => onItemPress(itemId) : undefined}
-        // Press-and-hold an unpurchased item to open the purchase-amount sheet
-        // (mark purchased with actual qty/price). Falls back to opening details
-        // for already-purchased rows or when the user can't mark purchased.
-        // The tutorial only advances once that sheet actually closes (see
-        // ShoppingListModalsContext's PurchaseAmountSheet onClose/onConfirm) —
-        // not here, where the sheet has only just opened.
+        // Hold an unpurchased row to record actual qty/price; falls back to
+        // details otherwise. The tutorial advances when that sheet CLOSES
+        // (ShoppingListModalsContext), not here where it has only just opened.
         onLongPress={
           !isPurchased && canMarkPurchased && onTogglePurchase
             ? () => onTogglePurchase(itemId, { withDetails: true })
@@ -439,16 +387,13 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             ? () => onItemPress(itemId)
             : undefined
         }
-        // Edit on the left, delete on the right — what `swipeMode="shopping"`
-        // used to mean inside the swipe molecule. The descriptors come from the
-        // screen; the permission flags decide whether this row may show them,
-        // which is why the gate stays here rather than at the source.
+        // Edit left, delete right. The descriptors come from the screen; the
+        // permission gate stays here because it is per-row.
         leftActions={canEditItems ? swipeActions?.left : undefined}
         rightActions={canRemoveItems ? swipeActions?.right : undefined}
         friction={1}
         onSwipeableWillOpen={ref => {
           onSwipeableWillOpen?.(ref);
-          // Detect swipe during tutorial swipe step → advance tutorial
           if (isTutorialSwipeTarget) {
             tutorialActions?.notifySwipeActionsSeen();
           }

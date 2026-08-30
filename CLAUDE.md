@@ -1,7 +1,7 @@
 # Sous Chef RN — project instructions
 
 React Native 0.86 (New Architecture) · React 19.2 + React Compiler · Apollo
-Client 4.1 (`dataMasking` on) + GraphQL codegen · Unistyles 3 · FlashList v2 ·
+Client 4.2 (`dataMasking` on) + GraphQL codegen · Unistyles 3 · FlashList v2 ·
 React Navigation 8 · Zustand · i18next · MMKV. Offline-first: writes land in
 the cache immediately and replay through an offline queue.
 
@@ -26,6 +26,7 @@ node scripts/check-unistyles-variant-staleness.mjs   # also in pre-push
 node scripts/check-layer-purity.mjs              # also in pre-commit
 node scripts/check-feature-shape.mjs             # also in pre-commit
 node scripts/check-dead-modules.mjs              # also in pre-commit
+node scripts/check-comment-budget.mjs            # also in pre-commit
 node scripts/check-bundled-secrets.mjs --self-test
 ```
 
@@ -147,6 +148,45 @@ scoping.
 - `Unmasked<>` appears ONLY as an `optimisticResponse` callback return type;
   never `@unmask`. HKT registration: `src/types/apollo-masking.d.ts`.
 
+## Comments
+
+A comment earns its place only when the code cannot say it: a library gotcha,
+an invariant a future edit would silently break, a "this looks wrong and is
+deliberate" note. That fits in **one to three lines**. Rationale, evidence and
+alternatives-considered belong in the PR or `docs/`; what the code used to do
+belongs in git.
+
+- **Present tense, current behaviour only.** No "previously", "used to", "old
+  behavior", "was tried", "regressed", "formerly", "no longer". A comment
+  narrating a fix outlives the fix and then lies — a sweep found 37 wrong ones,
+  including a block describing the exact bug the code beneath it had removed.
+  This is a LINT ERROR (`no-warning-comments`), so your editor catches it. In a
+  TEST, keep the defect the case pins — just state it in the present: "the chips
+  used to size to their labels" becomes "a chip sizes to the row, not its
+  label".
+- **No comment run longer than six lines.** A `/** … */` counts its `/**` and
+  `*/`, and an internal blank ` *` line does not split the run, so that is four
+  lines of prose.
+- **No file whose comments exceed half its code** (files of 60+ code lines).
+- Don't restate the identifier (`/** Props for the FooCard component */`), and
+  don't write `@param`/`@returns` that repeat the TypeScript signature. No
+  `@example` blocks for internal helpers.
+- **Attach a doc to the thing it documents.** Eleven orphaned JSDoc blocks were
+  found stacked above a *different* declaration than the one they described,
+  one of them 350 lines away. Use `{@link other}` instead of "the function
+  above/below", which goes stale on a reorder.
+
+Two enforcers, split by what they can see. **Vocabulary** is
+`no-warning-comments` in `.eslintrc.js` — an error, so it lands in the editor —
+covering `src/**` and `__tests__/**`, tests included. **Volume** is
+`node scripts/check-comment-budget.mjs` (pre-commit and CI) over production
+`src` only, since a test comment explaining why a case exists is worth its
+length; its baseline is EMPTY, so any finding is a regression. Tool directives —
+`@ts-expect-error`, generated-file banners, `@deprecated`, `@internal` — are
+never counted and never removed. `scripts/`, the root config files and
+`.graphql` are outside the vocabulary rule: each has a phrase it would flag
+wrongly.
+
 ## GraphQL & Apollo
 
 ### Fragments & data masking
@@ -189,7 +229,7 @@ Pick the cache-update pattern by what the mutation changes
 | `updateEntityFieldsLocalFirst`                | Settings-shaped entity whose field names ARE the setting names      | `useAppSettings`, `useNotificationSettings`                                |
 | `cache.modify` on connection edges + counts   | Entity moves between filtered connections                           | `moveShoppingListItemTo*` helpers                                          |
 | `writeFragment`                               | Subscription push written through                                   | `usePantrySubscriptions`, `useShoppingListSubscriptions`                   |
-| `refetchQueries` (last resort)                | Query shape underivable from the response                           | `CreateHomeScreen`, `useRecipePreload`                                     |
+| `refetchQueries` (last resort)                | Query shape underivable from the response                           | `useHomeSubscriptions`, `usePantryItemDetailActions`                      |
 
 Defaults:
 
@@ -254,6 +294,31 @@ Defaults:
 deliberately not adopted — reach for them only when a new screen has 2+
 independent parallel queries; rationale and decision trees:
 `docs/apollo-client-patterns.md` § Apollo Client 4.x Notes.
+
+- **Gate a screen on "is there anything to show", NEVER on `loading` alone.**
+  Under that default `loading` is `true` on the FIRST result whatever the cache
+  holds — Apollo hard-codes it for `cache-and-network` — and `nextFetchPolicy`
+  lives on the ObservableQuery, which `useQuery` rebuilds per mount, so it never
+  survives a navigation and every visit is a fresh network leg.
+  `notifyOnNetworkStatusChange: false` changes neither. So `if (loading)` blanks
+  the screen for the whole request on every visit, which against a stalled API
+  is httpLink's 10s abort (`Environment.getApiConfig().timeout`) and up to ~30s
+  across `retryLink`'s three attempts. Write `loading && !data`, as
+  `ProfileScreen` does. When the hook's value is always defined because it fills
+  in defaults (`useAppSettings`, `useNotificationSettings`) it cannot answer the
+  question — return a separate `hasLoadedSettings` / `hasPreferences` flag.
+  And keep the loading branch INSIDE the screen's header wrapper: rendered
+  outside `ProfileScreenWrapper` it has no back button, so the screen cannot be
+  left while it waits.
+- **`returnPartialData: false` makes `!data` mean "the cache read was
+  INCOMPLETE"** — one missing field of the selection yields no data at all, not
+  a partial object. Hence the completeness invariant: every writer of an entity
+  writes the full shape the reading query selects. `GetUserProfile` reads 12
+  profile fields and `LoginUser` / `PartialUser` / `UserEvents` each write the
+  same 12; `__tests__/apollo/userProfileCompleteness.test.ts` fails if one
+  drifts. Verified 2026-08-30 vs `@apollo/client@4.2.12` — re-check:
+  `node scripts/probe-apollo-loading-on-mount.mjs`; mechanism:
+  `docs/verified-library-behaviour.md#apollo-reports-loading-true-on-every-mount-warm-cache-or-not`.
 
 ### Subscriptions & transport verdicts
 
@@ -564,14 +629,15 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
 
 ## React Compiler
 
-- **Default to NOT writing `useMemo` / `useCallback` / `React.memo`** — the
-  compiler memoizes. A default, not an absolute; manual memoization is right
-  for: a value feeding a **dependency array**, and a prop read by something the
-  compiler did not compile (a third-party `===` check). The bailout baseline
+- **Never write `useMemo` / `useCallback` / `React.memo`** — the compiler
+  memoizes, the lint rule is an error, and there is no way to opt out:
+  `eslint-comments/no-use` bans every `eslint-disable` directive repo-wide, so a
+  disable comment is itself an error. The bailout baseline
   (`scripts/check-compiler-bailouts.baseline.json`) is empty — a file appearing
-  there is a regression to fix, not a licence to memoize. The
-  lint rule is an error so the exception is written down:
-  `// eslint-disable-next-line no-restricted-imports` + the reason.
+  there is a regression to fix, not a licence to memoize.
+  Where a stable reference is genuinely needed for a **dependency array**, hoist
+  the function to module scope and pass what it needs as arguments — see
+  `syncAsAccountDefault` in `src/features/home/hooks/useDefaultHome.ts`.
 - **Never add `'use no memo'`.** The `noMemoOptOuts` list in
   `scripts/check-compiler-bailouts.baseline.json` is EMPTY and the ratchet only
   lets it shrink, so a new one fails the check. Needing one means the Babel
@@ -668,7 +734,7 @@ arguments).
   (`numberNounConcatenation.test.ts`; literal `'s'` appends are banned too).
 - **Plural categories are derived, not hand-written** —
   `completePluralCategories` (`src/i18n/config.ts`) fills what a locale's JSON
-  lacks. Verified 2026-08-23 vs `i18next@26.0.10` — a missing category falls
+  lacks. Verified 2026-08-30 vs `i18next@26.4.0` — a missing category falls
   through to `fallbackLng`, not the locale's own `_other`:
   `docs/verified-library-behaviour.md#i18next-plural-category-fallback`.
 - **Never inflect copy for the reader's gender** — use a construction with no
@@ -849,6 +915,7 @@ npm run typecheck && npm run lint && npm test
 npm run check:compiler-bailouts && npm run check:unistyles-variants
 npm run check:layer-purity && npm run check:feature-shape
 npm run check:dead-modules
+npm run check:comment-budget
 ```
 
 `check-compiler-bailouts` guards a file COUNT; separately, WHICH function bails

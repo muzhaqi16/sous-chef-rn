@@ -1,11 +1,4 @@
-/**
- * useHomeInvitations - Invitation and join by code mutations
- *
- * Single responsibility:
- * - Invite users to home
- * - Join home by code
- * - Preview home by code
- */
+/** Invite, preview-by-code, and join-by-code mutations. */
 
 import { alertService } from '#/services/alertService';
 import { useLazyQuery, useMutation } from '@apollo/client/react';
@@ -21,7 +14,6 @@ import { handleMutationError } from '#/utils/errorHandlers';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { t } from '#/i18n';
 import { errorService } from '#/services/errorService';
-import { logger } from '#/utils/environment';
 
 const addInviteToHomeCache = createAddToParentConnectionUpdater(
   'Home',
@@ -38,15 +30,6 @@ interface UseHomeInvitationsOptions {
   setSelectedHomeId: (homeId: string) => void;
 }
 
-/**
- * Hook for home invitation and join operations
- *
- * @example
- * ```tsx
- * const { inviteUserToHome, joinHomeByCode, previewHomeByCode, inviting, joiningByCode } =
- *   useHomeInvitations({ homes, refetch, setDefaultHome, setSelectedHomeId });
- * ```
- */
 export function useHomeInvitations({
   homes,
   refetch,
@@ -105,12 +88,25 @@ export function useHomeInvitations({
         if (data?.joinHomeByCode?.__typename === 'JoinHomeByCodePayload') {
           const homeId = data.joinHomeByCode.membership.homeId;
 
-          // Set as default if this is the first home
-          const freshHomes = homes || [];
-          if (freshHomes.length === 0) {
+          // The PROP, not a cache read: the question is whether the user had
+          // zero homes BEFORE this join, and the prop is that pre-join snapshot
+          // (a cache read would race the un-awaited `refetch()`). The joined
+          // home is in neither yet — `JoinHomeByCode` returns Membership only —
+          // so `setDefaultHome` must not require a local record to exist.
+          const homesBeforeJoin = homes || [];
+          if (homesBeforeJoin.length === 0) {
             setSelectedHomeId(homeId);
-            setDefaultHome(homeId).catch((error: unknown) => {
-              logger.warn('Failed to set default home after join:', error);
+            // Resolves false on a refusal rather than rejecting.
+            void setDefaultHome(homeId).then(ok => {
+              if (!ok) {
+                handleMutationError(
+                  new Error('markHomeAsDefault refused after join'),
+                  {
+                    operation: 'Set Default Home After Join',
+                    showAlert: false,
+                  },
+                );
+              }
             });
           }
 

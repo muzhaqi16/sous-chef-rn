@@ -27,20 +27,7 @@ interface EditableCounterProps {
   testID?: string;
 }
 
-/**
- * EditableCounter - A pill-shaped counter with +/- buttons and editable text input
- *
- * Combines the modern pill design from Counter with editable text input.
- * Supports fractional values (1/2, 1.5, etc.)
- *
- * @example
- * <EditableCounter
- *   label="Quantity"
- *   value={quantity}
- *   onChangeText={setQuantity}
- *   required
- * />
- */
+/** Pill counter with +/- buttons and an editable field; accepts fractions ("1/2"). */
 export const EditableCounter: React.FC<EditableCounterProps> = ({
   label,
   value,
@@ -55,10 +42,9 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isFocused, setIsFocused] = useState(false);
-  // Inside a sheet the value field has to be a `BottomSheetTextInput`, or
-  // gorhom never registers the focus and the host sheet ignores the keyboard.
-  // Chosen from context because this counter is also used on full screens,
-  // where `BottomSheetTextInput` would throw. Same rule as `FormInput`.
+  // Inside a sheet the field must be a `BottomSheetTextInput` or gorhom misses
+  // the focus; picked from context because it throws on the full screens this
+  // counter also serves. Same rule as `FormInput`.
   const InputComponent = useIsBottomSheetInput()
     ? ThemedBottomSheetTextInput
     : ThemedTextInput;
@@ -114,7 +100,6 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           }
         }}
       >
-        {/* Decrement Button */}
         <Pressable
           onPress={handleDecrement}
           disabled={disabled}
@@ -135,7 +120,6 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           />
         </Pressable>
 
-        {/* Editable Number Input */}
         <InputComponent
           style={styles.input}
           value={value}
@@ -155,7 +139,6 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           testID={testID}
         />
 
-        {/* Increment Button */}
         <Pressable
           onPress={handleIncrement}
           disabled={disabled}
@@ -189,9 +172,7 @@ const styles = StyleSheet.create(theme => ({
   errorText: {
     marginTop: theme.spacing.xs,
   },
-  wrapper: {
-    // No marginBottom - let parent (FieldRow) handle spacing
-  },
+  wrapper: {},
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',

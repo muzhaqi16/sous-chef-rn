@@ -1,41 +1,26 @@
 /**
- * On-device validation for locale-aware decimal parsing.
- *
- * `keyboardType` renders the separator key of the DEVICE locale, so a Spanish
- * or Italian phone offers `,`. Every numeric field used to read its value with
- * `parseFloat`, and `parseFloat('4,99')` is `4` — not a rejection the user can
- * see and correct, but a silently wrong number written to the server.
- *
- * `parseDecimalInput` has unit tests, but they pin the parser in isolation and
- * cannot catch a call site the sweep missed. This drives the real path:
- * keystroke → form state → mutation input → server.
- *
- * **Why the EDIT screen, not the add sheet.** The sheet's name field is a
- * modal-variant autocomplete, so `replaceText` never registers a selection and
- * submit creates nothing. That path also produces a FALSE PASS: after typing
- * the name into the search box to find the row, `by.text(name)` matches the
- * search field itself. The edit screen has plain inputs and owns
- * `edit-item-price-input`, the field the bug was reported against.
- *
- * **Why the assertion lives outside this file.** `fetch` fails inside Detox's
- * jest environment even though the same query succeeds from plain Node, so the
- * spec does UI only. The caller reads `priceEstimate.estimated` back from the
- * server before and after — see `scripts/verify-comma-decimal.sh`. Asserting in
- * the UI would only prove the form kept the string; the bug was in what got
- * persisted.
- *
- * `E2E_ITEM_ID` is the shopping-list item to edit, supplied by that script.
+ * On-device validation for locale-aware decimal parsing. `keyboardType` renders
+ * the DEVICE locale's separator, so a Spanish or Italian phone offers `,` — and
+ * `parseFloat('4,99')` is 4: a silently wrong number written to the server, not
+ * a rejection the user can see. Drives keystroke → form → mutation for real.
  */
 import { element, by, waitFor } from 'detox';
-import { ShoppingListScreen } from '../screens';
-import { bootstrapAuthenticatedSession } from '../helpers';
+import { ShoppingListScreen } from '../screens/ShoppingListScreen';
+import { bootstrapAuthenticatedSession } from '../helpers/auth';
 import { TIMEOUTS } from '../helpers/waitFor';
 
+// `fetch` fails inside Detox's jest environment, so this spec does UI only.
+// `scripts/verify-comma-decimal.sh` supplies these and reads the stored
+// `priceEstimate.estimated` back from the server before and after — the bug was
+// in what got persisted, not in what the form held.
 const ITEM_ID = process.env.E2E_ITEM_ID;
 const ITEM_NAME = process.env.E2E_ITEM_NAME;
 /** Rotated by the script so a run can never re-type the value already stored. */
 const PRICE = process.env.E2E_PRICE ?? '4,99';
 
+// The EDIT screen, not the add sheet: the sheet's name field is a modal-variant
+// autocomplete, so `replaceText` never registers a selection and submit creates
+// nothing. The edit screen has plain inputs and owns `edit-item-price-input`.
 describe('comma-typed decimal price', () => {
   const shoppingList = new ShoppingListScreen();
 
@@ -63,14 +48,10 @@ describe('comma-typed decimal price', () => {
 
     // Reach the editor through the row's detail screen rather than its swipe
     // action: Detox swipes do not reliably open an RNGH `Swipeable`, and the
-    // checkbox swallows the gesture anyway (see the note atop SortableItem).
-    // Tapping the row opens ItemDetail, which offers the same editor.
-    // by.id, not by.text — Detox's own guidance, and the reason matters here:
-    // once the list is filtered by this name the SEARCH FIELD carries the same
-    // text, so `by.text(name)` matched it instead of the row. Tapping that
-    // opened iOS's selection callout and the row was never touched, which is
-    // what made an earlier version of this spec report success while doing
-    // nothing.
+    // row's checkbox swallows the gesture anyway.
+    // by.id, not by.text: once the list is filtered by this name the SEARCH
+    // FIELD carries the same text, so `by.text(name)` matches it instead of the
+    // row, and tapping that opens iOS's selection callout.
     const row = element(by.id(`shopping-list-item-${ITEM_ID}`));
     await waitFor(row).toBeVisible().withTimeout(TIMEOUTS.NETWORK);
     await row.tap();
@@ -90,8 +71,8 @@ describe('comma-typed decimal price', () => {
     await element(by.id('edit-item-price-input')).replaceText(PRICE);
 
     // Dismiss the keyboard via the return key, NOT by tapping the modal at
-    // (10, 10) — that corner is the header's back button, so it closed the
-    // editor and the submit below then missed entirely.
+    // (10, 10) — that corner is the header's back button, which closes the
+    // editor and makes the submit below miss entirely.
     await element(by.id('edit-item-price-input')).tapReturnKey();
     await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -100,17 +81,12 @@ describe('comma-typed decimal price', () => {
       .withTimeout(TIMEOUTS.DEFAULT);
     await element(by.id('edit-item-submit-button')).tap();
 
-    // Assert on the price field, not on `edit-item-modal`.
-    //
-    // `edit-item-modal` lands on FormModal's full-screen container view, and
-    // Detox counts an obscured element as not visible — so `.not.toBeVisible()`
-    // on it was satisfied while the editor was still open and nothing had been
-    // saved. The price field was just typed into, so it is proven matchable and
-    // its disappearance means the editor actually closed.
-    //
-    // KNOWN GAP — with this check in place the run fails at the submit: the
-    // field shows `4,99` (confirmed on screen, so the comma is accepted) but
-    // the editor does not close. Diagnose the submit before trusting a pass.
+    // Assert on the price field, not on `edit-item-modal`: that id lands on
+    // FormModal's full-screen container, and Detox counts an obscured element as
+    // not visible, so `.not.toBeVisible()` is satisfied with the editor open.
+    // KNOWN GAP — the run fails at the submit: the field shows `4,99` (so the
+    // comma is accepted) but the editor does not close. Diagnose the submit
+    // before trusting a pass.
     await waitFor(element(by.id('edit-item-price-input')))
       .not.toBeVisible()
       .withTimeout(TIMEOUTS.NETWORK);

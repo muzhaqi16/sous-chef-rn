@@ -8,40 +8,45 @@ import * as readline from 'readline';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
+const packageJson = JSON.parse(
+  readFileSync(join(__dirname, '../package.json'), 'utf-8'),
+);
 const { version } = packageJson;
 
-// Parse arguments: <prefix> [--ios-only | --android-only]
 const args = process.argv.slice(2);
-const platformFlag = args.find(a => a === '--ios-only' || a === '--android-only');
+const platformFlag = args.find(
+  a => a === '--ios-only' || a === '--android-only',
+);
 const tagPrefix = args.find(a => !a.startsWith('--'));
 
 if (!tagPrefix) {
   console.error('❌ Error: Tag prefix is required');
-  console.error('Usage: node scripts/create-tag.mjs <prefix> [--ios-only | --android-only]');
+  console.error(
+    'Usage: node scripts/create-tag.mjs <prefix> [--ios-only | --android-only]',
+  );
   console.error('');
   console.error('Examples:');
-  console.error('  node scripts/create-tag.mjs prod              # Both iOS and Android');
+  console.error(
+    '  node scripts/create-tag.mjs prod              # Both iOS and Android',
+  );
   console.error('  node scripts/create-tag.mjs prod --ios-only   # iOS only');
-  console.error('  node scripts/create-tag.mjs stg --android-only # Android only');
+  console.error(
+    '  node scripts/create-tag.mjs stg --android-only # Android only',
+  );
   process.exit(1);
 }
 
-// Determine which tags to create
-// Android tag: {prefix}-v{version}  (e.g., stg-v2.6.7, prod-v2.6.7)
-// iOS tag:     ios-v{version}       (e.g., ios-v2.6.7) — prod only
-//
-// iOS only has prod builds, so:
-// - tag:prod (no flag)    → both Android prod + iOS prod
-// - tag:dev / tag:stg     → Android only (no iOS equivalent)
-// - --ios-only            → iOS prod tag only
-// - --android-only        → Android tag only
-// - playstore             → always Android only
+// Android tag: {prefix}-v{version}; iOS tag: ios-v{version}, prod only —
+// iOS has no dev or stg builds. So `prod` with no flag tags both, `dev`/`stg`
+// tag Android alone, `playstore` is always Android, and the two platform flags
+// narrow to one side.
 const isPlaystore = tagPrefix === 'playstore';
 const iosProdOnly = tagPrefix === 'prod';
 
 const buildAndroid = platformFlag !== '--ios-only' || isPlaystore;
-const buildIos = !isPlaystore && (platformFlag === '--ios-only' || (iosProdOnly && !platformFlag));
+const buildIos =
+  !isPlaystore &&
+  (platformFlag === '--ios-only' || (iosProdOnly && !platformFlag));
 
 const tags = [];
 if (buildAndroid) tags.push(`${tagPrefix}-v${version}`);
@@ -52,28 +57,28 @@ if (tags.length === 0) {
   process.exit(1);
 }
 
-// Helper function to prompt user for yes/no confirmation
 function askQuestion(query) {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   });
 
-  return new Promise(resolve => rl.question(query, answer => {
-    rl.close();
-    resolve(answer);
-  }));
+  return new Promise(resolve =>
+    rl.question(query, answer => {
+      rl.close();
+      resolve(answer);
+    }),
+  );
 }
 
-const platforms = [buildAndroid && 'Android', buildIos && 'iOS'].filter(Boolean).join(' + ');
+const platforms = [buildAndroid && 'Android', buildIos && 'iOS']
+  .filter(Boolean)
+  .join(' + ');
 console.log(`📦 Creating ${platforms} tags for: ${tagPrefix}`);
 console.log(`📝 Version: ${version}`);
 console.log(`🏷️  Tags: ${tags.join(', ')}`);
 console.log('');
 
-/**
- * Check if a tag exists locally and/or remotely.
- */
 function checkTagExists(tag) {
   let local = false;
   let remote = false;
@@ -86,7 +91,11 @@ function checkTagExists(tag) {
   }
 
   try {
-    const remoteCheck = execSync(`git ls-remote --tags origin ${tag}`, { stdio: 'pipe' }).toString().trim();
+    const remoteCheck = execSync(`git ls-remote --tags origin ${tag}`, {
+      stdio: 'pipe',
+    })
+      .toString()
+      .trim();
     if (remoteCheck) remote = true;
   } catch {
     // Tag doesn't exist on remote
@@ -95,9 +104,6 @@ function checkTagExists(tag) {
   return { local, remote };
 }
 
-/**
- * Delete a tag locally and/or remotely.
- */
 function deleteTag(tag, { local, remote }) {
   if (local) {
     console.log(`🗑️  Deleting local tag ${tag}...`);
@@ -110,7 +116,6 @@ function deleteTag(tag, { local, remote }) {
 }
 
 try {
-  // Check all tags for existence
   const existingTags = [];
   for (const tag of tags) {
     const exists = checkTagExists(tag);
@@ -119,16 +124,19 @@ try {
     }
   }
 
-  // If any tags exist, ask for confirmation once
   if (existingTags.length > 0) {
     console.log('⚠️  The following tags already exist:');
     for (const { tag, local, remote } of existingTags) {
-      const where = [local && 'local', remote && 'remote'].filter(Boolean).join(', ');
+      const where = [local && 'local', remote && 'remote']
+        .filter(Boolean)
+        .join(', ');
       console.log(`   - ${tag} (${where})`);
     }
     console.log('');
 
-    const answer = await askQuestion('Do you want to delete and recreate these tags? (y/N): ');
+    const answer = await askQuestion(
+      'Do you want to delete and recreate these tags? (y/N): ',
+    );
 
     if (answer.toLowerCase() !== 'y' && answer.toLowerCase() !== 'yes') {
       console.log('❌ Aborted. Tags were not modified.');
@@ -137,14 +145,12 @@ try {
 
     console.log('');
 
-    // Delete existing tags
     for (const { tag, local, remote } of existingTags) {
       deleteTag(tag, { local, remote });
     }
     console.log('');
   }
 
-  // Create and push all tags
   for (const tag of tags) {
     const platform = tag.startsWith('ios-') ? 'iOS' : 'Android';
     const message = `${platform} ${tagPrefix} release ${tag}`;
@@ -164,7 +170,6 @@ try {
     const icon = tag.startsWith('ios-') ? '🍎' : '🤖';
     console.log(`   ${icon} ${tag}`);
   }
-
 } catch (error) {
   console.error('');
   console.error('❌ Failed to create/push tags');
@@ -173,9 +178,13 @@ try {
   if (error.message.includes('not a git repository')) {
     console.error('Error: Not in a git repository');
   } else if (error.message.includes('remote: Permission')) {
-    console.error('Error: Permission denied. Check your git credentials and repository access.');
+    console.error(
+      'Error: Permission denied. Check your git credentials and repository access.',
+    );
   } else if (error.message.includes('Could not resolve host')) {
-    console.error('Error: Network connection failed. Check your internet connection.');
+    console.error(
+      'Error: Network connection failed. Check your internet connection.',
+    );
   } else if (error.message.includes('ssh')) {
     console.error('Error: SSH authentication failed.');
     console.error('Try running: ssh-add ~/.ssh/id_rsa');

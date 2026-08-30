@@ -1,21 +1,8 @@
 /**
- * The notification feed: the paginated history (read + unread), its unread and
- * urgent counts, and `loadMore`.
- *
- * This is the ONLY source of the feed. It used to copy every page into a
- * Zustand slice that the screen then read from, which meant a live event, an
- * optimistic read and a refetch each had two places to land and no rule about
- * which won. The notifications live in the Apollo cache; this hook projects
- * them for rendering and holds nothing.
- *
- * The category filter is applied server-side (via the query's `filter` var), so
- * switching category re-queries that slice rather than filtering a partial
- * local list — which is also why the screen no longer filters again on top.
- *
- * `readFragment` per edge is not indirection: `dataMasking` hides the spread
- * fragment's fields from the query result, so the edge's `node` is
- * `{ __typename, id }` until it is read back through the fragment that declared
- * them.
+ * The notification feed and its counts — the ONLY source; it projects the
+ * Apollo cache and holds nothing. The category filter is server-side, so the
+ * screen must not filter again. `readFragment` per edge is required, not
+ * indirection: `dataMasking` leaves `node` as `{ __typename, id }`.
  */
 
 import { useNotificationStore } from '#features/notifications/store/notificationStore';

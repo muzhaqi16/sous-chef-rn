@@ -11,11 +11,9 @@ import type { HookReturn } from '#hooks/types';
 const DEFAULT_PAGE_SIZE = 20;
 
 /**
- * Connection node type emitted by the MySavedRecipes query. Cells read fields
- * via `useFragment(SavedRecipeCard_savedRecipe)` for a per-entity cache
- * subscription. The hook itself exposes only the id-level scalars needed for
- * client-side filter helpers (`getRecipeById`, `getRecipesByFolder`,
- * `getRecipesByTag`).
+ * Cells read fields via `useFragment(SavedRecipeCard_savedRecipe)` for a
+ * per-entity subscription; the hook exposes only the id-level scalars its
+ * client-side filter helpers need.
  */
 export type SavedRecipeNode = NonNullable<
   MySavedRecipesQuery['me']
@@ -44,11 +42,9 @@ interface SavedRecipesActions {
 type UseSavedRecipesResult = HookReturn<SavedRecipesState, SavedRecipesActions>;
 
 /**
- * Hook to fetch the user's saved/favorited recipes.
- *
- * Returns connection nodes as refs — consumers render them through
- * `<SavedRecipeCard savedRecipeRef={node} />` which internally calls
- * `useFragment` for a per-entity cache subscription.
+ * The user's saved recipes. Returns connection nodes as REFS — consumers render
+ * them through `<SavedRecipeCard savedRecipeRef={node} />`, which takes its own
+ * per-entity `useFragment` subscription.
  */
 export function useSavedRecipes(folder?: string | null): UseSavedRecipesResult {
   const isLoggedOut = useIsLoggedOut();

@@ -3,11 +3,9 @@ import { HapticService } from '#services/haptic/HapticService';
 import { logger } from '#/utils/environment';
 
 /**
- * Imperative toast API for use outside the React tree (API error handlers,
- * async helpers, etc). Inside components, prefer `useToast()`.
- *
- * Mounted by ToastProvider via `_setToastDispatch`. If a caller fires a toast
- * before the provider mounts, the message is dropped with a dev warning.
+ * Imperative toast API for use outside the React tree; inside components prefer
+ * `useToast()`. ToastProvider mounts it via `_setToastDispatch` — a toast fired
+ * before that is dropped with a dev warning.
  */
 type Dispatch = (opts: ToastOptions) => void;
 
@@ -21,10 +19,8 @@ export const _setToastDispatch = (fn: Dispatch) => {
 
 type ShortOpts = Omit<ToastOptions, 'message' | 'type'>;
 
-// Notification-grade haptics paired with the toast type. `info` is neutral and
-// stays silent — firing haptics on every informational toast would be noise.
-// Centralizing here wires the correct haptic into every toast consumer at once
-// instead of leaving ~20 mutation hooks to fire success/error toasts silently.
+// Haptics are paired with the toast type here so every consumer gets them.
+// `info` is neutral and deliberately stays silent.
 export const toastService = {
   success: (message: string, opts?: ShortOpts) => {
     HapticService.success();

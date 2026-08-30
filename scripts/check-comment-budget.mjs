@@ -1,0 +1,448 @@
+#!/usr/bin/env node
+/**
+ * Fails when a comment block runs longer than six lines, or when a file carries
+ * more comment lines than half its code. Covers `src/`, `e2e/` and `scripts/`.
+ *
+ * ## Why a check
+ * The house style had drifted to essayistic docblocks: 20-50 lines of prose
+ * arguing a design decision, recording what was tried and citing benchmark
+ * tables, on top of two or three lines of code. Production `src/` was 17.7% of
+ * non-blank lines, 97 files carried more comment than code, and 43% of all
+ * comment lines sat in blocks of eight or more. Long blocks also rot fastest —
+ * a sweep confirmed 31 wrong comments, including one that described the exact
+ * bug the fix beneath it had removed, and three citing docs that do not exist.
+ *
+ * A comment earns its place when the code cannot say it: a library gotcha, an
+ * invariant a future edit would break, a deliberate-looking-wrong note. That
+ * fits in one to three lines. Rationale belongs in the PR or `docs/`, and what
+ * the code USED to do belongs in git.
+ *
+ * VOLUME only. Whether a comment narrates history rather than current behaviour
+ * is ESLint's `no-warning-comments`, configured in `.eslintrc.js` over this same
+ * file set — one rule, one place, so the two cannot drift.
+ *
+ * ## What counts
+ * A run of consecutive whole-line comments — `//`, `/* … *\/`, or a JSX
+ * `{/* … *\/}` node — with no code and no blank line between them. Length is
+ * the line count of that run.
+ *
+ * ## What is deliberately NOT a rule
+ * - Trailing comments on a code line. They are bounded by the code beside them.
+ * - The ratio, on files under MIN_CODE_LINES_FOR_RATIO lines of code. On a
+ *   35-line module, two 6-line docblocks over two exported functions is 0.5 and
+ *   entirely reasonable; on a 565-line one it is 280 lines of prose. Measured
+ *   across the tree, a 60-line floor flags 64 files — the substantial offenders
+ *   (`cacheUpdaters` 364/565, `wsLink` 302/372) — where a 20-line floor flags
+ *   172 and buries them. Small files are the block rule's job.
+ * - Tests, mocks and generated files. Test comments explain why a case exists,
+ *   and generated files are not hand-edited.
+ * - A `scripts/` file's LEADING docblock, which is that check's only
+ *   documentation and follows a fixed house shape. Everything below it counts.
+ * - Content. This counts lines; it cannot tell a load-bearing invariant from a
+ *   war story. Judgement stays with the author.
+ *
+ * A blank line splits a run, so a long rationale cannot be smuggled past this by
+ * spacing it out — that reads as separate notes, which is the point.
+ *
+ * The baseline is EMPTY, which makes it an invariant rather than a worklist: no
+ * file is exempt, and a new entry is a regression to fix rather than a tally to
+ * accept. `--update` deliberately refuses to write an empty baseline over a
+ * non-empty one, so reaching zero is a one-time deliberate edit.
+ *
+ *   node scripts/check-comment-budget.mjs             # check
+ *   node scripts/check-comment-budget.mjs --list      # print every finding
+ *   node scripts/check-comment-budget.mjs --update    # re-baseline
+ *   node scripts/check-comment-budget.mjs --self-test # prove the classifier bites
+ */
+import { readFileSync } from 'node:fs';
+import { relative } from 'node:path';
+import {
+  baselineFile,
+  diffSets,
+  filesUnder,
+  fromRoot,
+  parseFlags,
+  refuseEmptyBaselineUpdate,
+  REPO_ROOT,
+  requireNonEmptyScan,
+} from './lib/tooling.mjs';
+
+const CHECK = 'check-comment-budget';
+const BASELINE = baselineFile(
+  fromRoot('scripts/check-comment-budget.baseline.json'),
+);
+
+const MAX_BLOCK_LINES = 6;
+
+const MAX_COMMENT_RATIO = 0.5;
+const MIN_CODE_LINES_FOR_RATIO = 60;
+
+const SKIP = [
+  /(^|\/)__tests__(\/|$)/,
+  /(^|\/)__mocks__(\/|$)/,
+  /(^|\/)__perf__(\/|$)/,
+  /(^|\/)generated(\/|$)/,
+  /\.test\.tsx?$/,
+  /\.generated\.ts$/,
+];
+
+/**
+ * Classify each line as comment, code or blank, and group consecutive comment
+ * lines into runs. Only a line that STARTS a comment counts; a trailing comment
+ * leaves its line classified as code.
+ */
+export function analyze(source) {
+  const lines = source.split('\n');
+  const blocks = [];
+  let inBlockComment = false;
+  let run = 0;
+  let runStart = 0;
+  let code = 0;
+  let comment = 0;
+
+  const endRun = () => {
+    if (run > 0) blocks.push({ start: runStart, length: run });
+    run = 0;
+  };
+
+  lines.forEach((raw, index) => {
+    const text = raw.trim();
+    let isComment = false;
+
+    if (inBlockComment) {
+      isComment = true;
+      if (text.includes('*/')) inBlockComment = false;
+    } else if (text === '') {
+      endRun();
+      return;
+    } else if (text.startsWith('//')) {
+      isComment = true;
+    } else if (text.startsWith('/*') || text.startsWith('{/*')) {
+      // `{/* … */}` is a JSX comment node. It renders nothing, so it is a
+      // comment for every purpose here — and being brace-prefixed it was
+      // invisible to an earlier version of this scan, which let two five-line
+      // history blocks sit in `Header` and `CollapsingHeroDetail` unflagged.
+      isComment = true;
+      if (!text.includes('*/')) inBlockComment = true;
+    }
+
+    if (isComment) {
+      if (run === 0) runStart = index + 1;
+      run += 1;
+      comment += 1;
+    } else {
+      endRun();
+      code += 1;
+    }
+  });
+  endRun();
+
+  return { blocks, code, comment };
+}
+
+/**
+ * A `scripts/` file opens with a docblock that IS its documentation — the
+ * "Fails when …" summary, `## Why a check`, and the usage lines. That block is
+ * exempt from both rules; nothing else in the file is.
+ */
+function exemptLeadingDocblock(rel, blocks, source) {
+  if (!rel.startsWith('scripts/')) return { blocks, exemptLines: 0 };
+  const firstCodeLine = source.startsWith('#!') ? 2 : 1;
+  const [first] = blocks;
+  if (!first || first.start !== firstCodeLine)
+    return { blocks, exemptLines: 0 };
+  return { blocks: blocks.slice(1), exemptLines: first.length };
+}
+
+/** Every budget violation in one file, as stable path-keyed findings. */
+function findingsFor(rel, source) {
+  const analysis = analyze(source);
+  const { code } = analysis;
+  const { blocks, exemptLines } = exemptLeadingDocblock(
+    rel,
+    analysis.blocks,
+    source,
+  );
+  const comment = analysis.comment - exemptLines;
+  const found = [];
+
+  const longest = blocks.reduce((max, b) => Math.max(max, b.length), 0);
+  if (longest > MAX_BLOCK_LINES) found.push(`${rel}#block`);
+
+  if (code >= MIN_CODE_LINES_FOR_RATIO && comment > code * MAX_COMMENT_RATIO) {
+    found.push(`${rel}#ratio`);
+  }
+
+  return { found, blocks, code, comment, longest };
+}
+
+function selfTest() {
+  const cases = [
+    {
+      name: 'a seven-line run is flagged',
+      source: [
+        '// 1',
+        '// 2',
+        '// 3',
+        '// 4',
+        '// 5',
+        '// 6',
+        '// 7',
+        'const a = 1;',
+      ].join('\n'),
+      expectBlock: true,
+    },
+    {
+      name: 'a six-line run is within budget',
+      source: [
+        '// 1',
+        '// 2',
+        '// 3',
+        '// 4',
+        '// 5',
+        '// 6',
+        'const a = 1;',
+      ].join('\n'),
+      expectBlock: false,
+    },
+    {
+      name: 'a long JSDoc is flagged',
+      source: [
+        '/**',
+        ' * 1',
+        ' * 2',
+        ' * 3',
+        ' * 4',
+        ' * 5',
+        ' * 6',
+        ' */',
+        'const a = 1;',
+      ].join('\n'),
+      expectBlock: true,
+    },
+    {
+      name: 'a blank line splits a run',
+      source: [
+        '// 1',
+        '// 2',
+        '// 3',
+        '',
+        '// 4',
+        '// 5',
+        '// 6',
+        'const a = 1;',
+      ].join('\n'),
+      expectBlock: false,
+    },
+    {
+      name: 'trailing comments are not a run',
+      source: Array.from(
+        { length: 9 },
+        (_, i) => `const a${i} = 1; // note`,
+      ).join('\n'),
+      expectBlock: false,
+    },
+    {
+      name: "a line-1 'use no memo' directive is code, not a comment",
+      source: ["'use no memo';", 'const a = 1;'].join('\n'),
+      expectBlock: false,
+      expectComment: 0,
+    },
+    {
+      name: "a scripts/ file's LEADING docblock is exempt",
+      path: 'scripts/probe.mjs',
+      source: [
+        '#!/usr/bin/env node',
+        '/**',
+        ' * 1',
+        ' * 2',
+        ' * 3',
+        ' * 4',
+        ' * 5',
+        ' * 6',
+        ' */',
+        'const a = 1;',
+      ].join('\n'),
+      expectBlock: false,
+    },
+    {
+      name: "a scripts/ file's BODY block is not exempt",
+      path: 'scripts/probe.mjs',
+      source: [
+        '#!/usr/bin/env node',
+        '/** short header */',
+        'const a = 1;',
+        '// 1',
+        '// 2',
+        '// 3',
+        '// 4',
+        '// 5',
+        '// 6',
+        '// 7',
+        'const b = 2;',
+      ].join('\n'),
+      expectBlock: true,
+    },
+    {
+      name: 'the exemption does NOT apply outside scripts/',
+      path: 'src/probe.ts',
+      source: [
+        '/**',
+        ' * 1',
+        ' * 2',
+        ' * 3',
+        ' * 4',
+        ' * 5',
+        ' * 6',
+        ' */',
+        'const a = 1;',
+      ].join('\n'),
+      expectBlock: true,
+    },
+    {
+      name: 'a JSX comment node is a comment',
+      source: [
+        '{/* 1',
+        '  2',
+        '  3',
+        '  4',
+        '  5',
+        '  6',
+        '  7 */}',
+        '<View />',
+      ].join('\n'),
+      expectBlock: true,
+    },
+  ];
+
+  let failed = 0;
+  for (const testCase of cases) {
+    const { blocks, comment } = findingsFor(
+      testCase.path ?? 'probe.ts',
+      testCase.source,
+    );
+    const flagged = blocks.some(b => b.length > MAX_BLOCK_LINES);
+    if (flagged !== testCase.expectBlock) {
+      console.error(
+        `  ✗ ${testCase.name}: expected flagged=${testCase.expectBlock}, got ${flagged}`,
+      );
+      failed += 1;
+    } else if (
+      testCase.expectComment !== undefined &&
+      comment !== testCase.expectComment
+    ) {
+      console.error(
+        `  ✗ ${testCase.name}: expected ${testCase.expectComment} comment lines, got ${comment}`,
+      );
+      failed += 1;
+    } else {
+      console.log(`  ✓ ${testCase.name}`);
+    }
+  }
+
+  if (failed) {
+    console.error(`\n✗ ${CHECK} --self-test: ${failed} case(s) failed.\n`);
+    process.exit(2);
+  }
+  console.log(`\n✓ ${CHECK} --self-test: ${cases.length} case(s) passed.`);
+  process.exit(0);
+}
+
+const flags = parseFlags({
+  list: { type: 'boolean', default: false },
+  update: { type: 'boolean', default: false },
+  'self-test': { type: 'boolean', default: false },
+});
+
+if (flags['self-test']) selfTest();
+
+const files = filesUnder(
+  [
+    'src/**/*.ts',
+    'src/**/*.tsx',
+    // The Detox suite is ESLint-ignored, so this is its only comment gate.
+    'e2e/**/*.ts',
+    'scripts/**/*.mjs',
+    'scripts/**/*.js',
+  ],
+  { exclude: SKIP },
+);
+
+requireNonEmptyScan({
+  count: files.length,
+  what: 'source files',
+  check: CHECK,
+  hint: 'the src/e2e/scripts globs match nothing — did the exclude patterns widen?',
+  minimum: 200,
+});
+
+const current = [];
+const detail = [];
+
+for (const file of files) {
+  const rel = relative(REPO_ROOT, file);
+  const { found, blocks, code, comment, longest } = findingsFor(
+    rel,
+    readFileSync(file, 'utf8'),
+  );
+  if (!found.length) continue;
+  current.push(...found);
+  detail.push({ rel, blocks, code, comment, longest });
+}
+
+current.sort();
+
+if (flags.list) {
+  for (const entry of detail) {
+    const over = entry.blocks.filter(b => b.length > MAX_BLOCK_LINES);
+    const ratio = entry.code ? (entry.comment / entry.code).toFixed(2) : 'n/a';
+    console.log(
+      `  ${entry.rel}  (${entry.comment} cmt / ${entry.code} code, ratio ${ratio})`,
+    );
+    for (const block of over) {
+      console.log(`      line ${block.start}: ${block.length}-line block`);
+    }
+  }
+  console.log(`\n${current.length} finding(s) across ${files.length} files.`);
+  process.exit(0);
+}
+
+if (flags.update) {
+  refuseEmptyBaselineUpdate({
+    count: current.length,
+    baselineCount: (BASELINE.read()?.findings ?? []).length,
+    check: CHECK,
+  });
+  BASELINE.write({ findings: current, scannedFiles: files.length });
+  console.log(
+    `Recorded ${current.length} finding(s) from ${files.length} scanned.`,
+  );
+  process.exit(0);
+}
+
+const baseline = BASELINE.require(CHECK);
+const recorded = baseline.findings ?? [];
+const { added, removed } = diffSets(current, recorded);
+
+if (added.length) {
+  console.error(`\n✗ ${CHECK}: ${added.length} new finding(s).\n`);
+  for (const finding of added) console.error(`    ${finding}`);
+  console.error(
+    `\n  '#block' is a comment run longer than ${MAX_BLOCK_LINES} lines; '#ratio' is a file whose\n` +
+      `  comments exceed ${
+        MAX_COMMENT_RATIO * 100
+      }% of its code. Say the constraint the code cannot\n` +
+      `  say — a library gotcha, an invariant an edit would break — in one to\n` +
+      `  three lines. Rationale and evidence go in the PR or docs/. Narration\n` +
+      `  about what the code used to do is ESLint's no-warning-comments. Run\n` +
+      `  with --list to see the offending blocks.\n`,
+  );
+  process.exit(1);
+}
+
+console.log(
+  `${CHECK}: ${current.length} finding(s) across ${files.length} files, ` +
+    `baseline ${recorded.length}` +
+    (removed.length ? ` (${removed.length} cleared — run --update)` : '') +
+    '.',
+);

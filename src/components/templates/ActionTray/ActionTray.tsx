@@ -29,13 +29,12 @@ import { useSheetBackdropOpacity } from '#hooks/useSheetBackdropOpacity';
 import { ActionTrayScrollContext } from './ActionTrayScrollContext';
 import type { ActionTrayProps, ActionTrayRef } from './types';
 
-// Detached sheets float this far above the screen bottom. The pinned footer
-// does NOT take a `bottomInset` of its own: the detached container already
-// lifts the whole sheet by this amount, so passing it to BottomSheetFooter too
-// would double-count it and leave an empty band below the footer.
+// Detached sheets float this far above the screen bottom. The pinned footer takes
+// NO `bottomInset` of its own — the detached container already lifts the whole
+// sheet, and passing it twice leaves an empty band below the footer.
 const BOTTOM_INSET = 30;
 
-// Null backdrop component - we use GlobalBackdrop instead
+// GlobalBackdrop paints the dim instead.
 const NullBackdrop = () => null;
 
 export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
@@ -61,16 +60,12 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     const [isSettledOpen, setIsSettledOpen] = useState(false);
     const { height } = useWindowDimensions();
 
-    // Backdrop driven by the sheet's own `animatedIndex` so the dim ramps in
-    // and out in lockstep with the sheet on the UI thread (on close it fades AS
-    // the sheet slides down). Crucially, the claim's LIFECYCLE is tied to
-    // `mounted` — a React state transition — so `useBackdropClaim` releases the
-    // slot deterministically via effect cleanup when the tray closes
-    // (mounted → false) or the screen unmounts. Releasing off gorhom's close
-    // events instead is racy: navigation can interrupt the close so those
-    // events never fire, leaking the dim (and the tab bar that reads it).
+    // Driven by the sheet's own `animatedIndex`, so the dim moves in lockstep on
+    // the UI thread. The claim's LIFECYCLE is tied to `mounted`, a React state
+    // transition, so effect cleanup releases it deterministically — releasing off
+    // gorhom's close events is racy, since navigation can interrupt the close and
+    // those events never fire, leaking the dim and the tab bar reading it.
     const { animatedIndex, backdropOpacity } = useSheetBackdropOpacity();
-    // Shared dismiss for the backdrop tap and the header close button.
     const handleDismiss = () => {
       bottomSheetRef.current?.dismiss();
     };
@@ -79,23 +74,14 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       onPress: handleDismiss,
     });
 
-    // Android hardware back dismisses the open tray instead of navigating away
-    // with it still mounted (which would strand its backdrop + the tab bar that
-    // reads it). gorhom has no built-in back handling, so wire it explicitly —
-    // only while the tray is open.
+    // gorhom has no built-in back handling, so hardware back is wired explicitly —
+    // navigating away with the tray mounted strands its backdrop and the tab bar.
     useBottomSheetBackHandler(bottomSheetRef, mounted);
 
-    // Settled-closed cleanup (`onClose` + unmount), reachable from two gorhom
-    // signals that can each fire without the other:
-    // - `onChange(-1)` — settled-closed. Gorhom SKIPS this when a close
-    //   interrupts an open animation that never settled (its internal
-    //   `animatedCurrentIndex` is still -1, so `nextIndex !==
-    //   animatedCurrentIndex` is false and the callback is never scheduled —
-    //   BottomSheet.tsx `animateToPositionCompleted`).
-    // - `onDismiss` — fired from gorhom's `unmount()` in every modal
-    //   dismissal path, but NOT on minimize (stackBehavior 'switch'), which
-    //   only emits `onChange(-1)`.
-    // `dismissHandledRef` dedupes the pair so cleanup runs exactly once.
+    // Two gorhom signals, each of which can fire without the other: `onChange(-1)`
+    // is skipped when a close interrupts an open animation that never settled, and
+    // `onDismiss` never fires on a minimize (stackBehavior 'switch').
+    // `dismissHandledRef` dedupes them so cleanup runs exactly once.
     const dismissHandledRef = useRef(false);
     const handleClosed = () => {
       if (dismissHandledRef.current) return;
@@ -104,7 +90,6 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       onClose?.();
     };
 
-    // Present the sheet once mounted.
     useEffect(() => {
       if (mounted) {
         dismissHandledRef.current = false;
@@ -112,14 +97,9 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       }
     }, [mounted]);
 
-    // Tear the tray down when its screen loses focus, so a programmatic
-    // navigation while it's open can't strand the sheet (and its backdrop +
-    // the tab bar that reads it). Hardware back is covered by the back handler
-    // above; this covers navigation that doesn't go through a close.
-    // `NavigationContext` is read directly (not `useNavigation`) so ActionTray
-    // stays usable outside a navigator — the listener simply isn't wired then.
-    // Subscribe only while open; the latest `handleClosed` is read via a ref so
-    // the subscription doesn't churn every render.
+    // Covers navigation that doesn't go through a close, which would otherwise
+    // strand the sheet and its backdrop. `NavigationContext` is read directly, not
+    // via `useNavigation`, so ActionTray stays usable outside a navigator.
     const navigation = useContext(NavigationContext);
     const handleClosedRef = useRef(handleClosed);
     useEffect(() => {
@@ -136,7 +116,6 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       if (index < 0) {
         handleClosed();
       } else {
-        // Settled at an open detent — the scrollable is now unlocked.
         setIsSettledOpen(true);
       }
     };
@@ -147,9 +126,8 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         const dismiss = () => {
           bottomSheetRef.current?.dismiss();
         };
-        // Reset the settled flag here (on open) rather than in an effect:
-        // returning null below doesn't unmount this component, so the flag
-        // would otherwise persist from the previous presentation.
+        // Reset on open, not in an effect: returning null below does not unmount
+        // this component, so the flag would persist from the last presentation.
         const open = () => {
           onOpen?.();
           setIsSettledOpen(false);
@@ -174,12 +152,9 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       [mounted, onOpen],
     );
 
-    // Pinned header. Rendered through gorhom's `handleComponent` slot so it
-    // stays fixed while the content scrolls. Its measured height feeds the
-    // sheet's dynamic size (`contentHeight + handleHeight`), so the sheet still
-    // hugs short content and caps long content at `maxDynamicContentSize`.
-    // Returning null when there's nothing to show suppresses gorhom's default
-    // grab handle and avoids drawing an empty padded band.
+    // Rendered through gorhom's `handleComponent` slot so it stays pinned; its
+    // measured height feeds the sheet's dynamic size. Returning null suppresses
+    // gorhom's default grab handle rather than drawing an empty band.
     const hasHeader = !!title || !!headerRight || showCloseButton;
     const renderHandle = () =>
       hasHeader ? (
@@ -199,8 +174,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         </View>
       ) : null;
 
-    // Pinned footer (optional). Rendered through gorhom's `footerComponent` so
-    // it floats above the scroll; `enableFooterMarginAdjustment` on the
+    // gorhom's `footerComponent` slot; `enableFooterMarginAdjustment` on the
     // scrollview reserves matching space so the last row never hides behind it.
     const renderFooter =
       footer != null
@@ -211,7 +185,6 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
           )
         : undefined;
 
-    // Let content (e.g. selectors) bring the active row into view on open.
     const handleScrollLayout = (event: LayoutChangeEvent) => {
       setViewportHeight(event.nativeEvent.layout.height);
     };
@@ -319,8 +292,8 @@ const styles = UnistylesStyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.lg,
   },
-  // With a pinned footer the bottom gap comes from `footerGap` + gorhom's
-  // footer-height reserve, so the content container itself adds no bottom pad.
+  // With a pinned footer the bottom gap is `footerGap` plus gorhom's height
+  // reserve, so the content container adds no bottom pad of its own.
   contentWithFooter: {
     paddingTop: 0,
     paddingHorizontal: theme.spacing.lg,

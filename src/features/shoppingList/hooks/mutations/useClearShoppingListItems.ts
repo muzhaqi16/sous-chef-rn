@@ -1,14 +1,6 @@
 /**
- * useClearShoppingListItems - Unified hook for batch clearing shopping list items
- *
- * Handles both purchased and unpurchased items:
- * - purchased=true: Clear all purchased items
- * - purchased=false: Clear all unpurchased (shopping) items
- *
- * Optimized for instant UI feedback:
- * 1. Immediately clears items from cache (instant UI update)
- * 2. Fires single batch mutation (efficient server-side deletion)
- * 3. Refetch on error to restore consistency
+ * Local-first: the items are evicted from the cache PERMANENTLY before the single
+ * batch remove fires, so the clear survives an offline queue.
  */
 
 import { useRef } from 'react';
@@ -26,10 +18,7 @@ import {
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { logger } from '#/utils/environment';
 
-// The mutate function returned by useMutation for the clear operation. The
-// hook only ever passes `variables` (the operation's `input`), a no-op
-// `update`, and the local-first context, so this captures just that subset of
-// the Apollo mutate options.
+// Just the subset of Apollo's mutate options this hook ever passes.
 type ClearMutationFn = (options: {
   variables: RemoveItemsFromShoppingListMutationVariables;
   update?: () => void;
@@ -48,8 +37,6 @@ interface UseClearShoppingListItemsOptions {
   refetch: () => Promise<unknown>;
 }
 
-// --- Module-level helper (outside hook body for React Compiler) ---
-
 async function executeClearItems(
   client: ApolloClient,
   clearMutation: ClearMutationFn,
@@ -59,19 +46,15 @@ async function executeClearItems(
   refetch: () => Promise<unknown>,
   isClearingRef: React.RefObject<boolean>,
 ): Promise<void> {
-  // 1. IMMEDIATE: Optimistic cache clear (instant UI feedback)
   if (purchased) {
     clearAllPurchasedItemsFromCache(client.cache, listId, itemIds);
   } else {
     clearAllUnpurchasedItemsFromCache(client.cache, listId, itemIds);
   }
 
-  // 2. Fire single batch mutation with the EXACT ids captured at tap time (not a
-  //    purchased filter). Local-first: a queued offline clear keeps the cache
-  //    cleared and replays later; because it targets concrete ids, a replay
-  //    deletes only those and never items another member added/purchased in the
-  //    meantime. Removing an already-removed id is a server-side no-op, so the
-  //    replay is idempotent.
+  // The EXACT ids captured at tap time, not a purchased filter: a queued replay
+  // then deletes only those and never a row another member added meanwhile.
+  // Removing an already-removed id is a server-side no-op, so the replay is safe.
   let result;
   try {
     result = await clearMutation({
@@ -92,32 +75,13 @@ async function executeClearItems(
   isClearingRef.current = false;
   if (!result) return;
 
-  // 'queued' (null payload, no error) keeps the cleared cache — the clear
-  // replays later. A rejection means the server refused it: the evicted items
-  // still exist server-side, so alert (the eviction would otherwise snap back
-  // silently) and refetch to restore them.
+  // 'queued' (null payload, no error) keeps the cleared cache and replays later.
+  // A rejection means the items still exist server-side — alert, then refetch.
   if (alertIfRejected(result, t('shoppingListScreens.failedToClear'))) {
     await refetch();
   }
 }
 
-/**
- * Hook for clearing shopping list items (purchased or unpurchased)
- *
- * Uses optimistic cache clearing for instant UI feedback,
- * then fires a single batch mutation.
- *
- * @example
- * ```tsx
- * const { clearItems } = useClearShoppingListItems({ listId, items, refetch });
- *
- * // Clear purchased items
- * await clearItems(true);
- *
- * // Clear unpurchased items
- * await clearItems(false);
- * ```
- */
 export function useClearShoppingListItems({
   listId,
   unpurchasedItems,

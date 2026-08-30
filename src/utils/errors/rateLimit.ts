@@ -1,13 +1,10 @@
 import { getI18n } from '#/i18n/config';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 
-// Match on the exact code — never on a `RATE_` prefix. OPERATION_RATE_LIMITED
-// deliberately doesn't carry it (docs/api/errors.md), so a prefix test would
-// silently drop every per-operation limit.
-// Only RATE_LIMIT_EXCEEDED and OPERATION_RATE_LIMITED are declared in the
-// published TopLevelErrorCode enum, which admits a code only once something
-// emits it. The rest live in the API's internal registry without an emitter, so
-// they stay literals — kept defensively rather than promoted.
+// Exact codes, never a `RATE_` prefix: OPERATION_RATE_LIMITED does not carry it,
+// so a prefix test drops every per-operation limit. Only two are declared in the
+// published enum (which admits a code once something emits it); the rest are
+// registry-only and stay literals.
 const RATE_LIMIT_CODES: string[] = [
   'RATE_LIMITED',
   // The global budget. Carries `resetAt` rather than `retryAfter`, so the

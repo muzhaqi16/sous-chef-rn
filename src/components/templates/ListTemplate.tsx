@@ -5,7 +5,6 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { ItemList } from '../organisms/ItemList';
 
-/** Shared empty-state configuration */
 interface EmptyStateConfig {
   icon?: string;
   title: string;
@@ -18,8 +17,7 @@ interface EmptyStateConfig {
 }
 
 interface ListTemplateProps<TItem extends { id: string } = { id: string }> {
-  // Items flow through to either ItemList or a custom list component; the item
-  // type `TItem` is inferred from `items`/`customListComponent` at the call site.
+  // `TItem` is inferred from `items`/`customListComponent` at the call site.
   items?: TItem[];
   onItemPress?: (id: string) => void;
   /** Swipe actions for one row — see `ItemListActions.itemSwipeActions`. */
@@ -30,7 +28,6 @@ interface ListTemplateProps<TItem extends { id: string } = { id: string }> {
   onRefresh?: () => Promise<void>;
   emptyState?: EmptyStateConfig;
 
-  // List composition
   ListHeaderComponent?:
     | React.ComponentType<unknown>
     | React.ReactElement
@@ -40,23 +37,16 @@ interface ListTemplateProps<TItem extends { id: string } = { id: string }> {
     | React.ReactElement
     | null;
 
-  // State management
   loading?: boolean;
 
-  // Test IDs
   testIDPrefix?: string;
 
   customListComponent?: React.ComponentType<CustomListComponentProps<TItem>>;
   /**
    * Extra props for a `customListComponent`, spread BEFORE the template's own
-   * injections so a caller cannot override them. It used to be spread last: a
-   * key colliding with `onItemPress`, `itemSwipeActions` or `testIDPrefix`
-   * silently replaced the wiring the template exists to guarantee.
-   *
-   * The type rejects such a key too. It used to be written as an `Omit` over an
-   * index-signature type, which removes nothing — an open record has no known
-   * keys to omit — so it read as a guard and permitted every collision it
-   * named. Mapping the injected keys to `never` is what actually refuses them.
+   * injections so a caller cannot override the wiring this template guarantees.
+   * The type refuses such a key by mapping the injected names to `never` — an
+   * `Omit` over an index signature removes nothing and permits them all.
    */
   customListProps?: Record<string, unknown> &
     Partial<Record<keyof CustomListComponentProps<TItem>, never>>;
@@ -85,14 +75,10 @@ interface CustomListComponentProps<
   emptyState?: EmptyStateConfig;
 }
 /*
- * This prop set used to end in `[key: string]: unknown`, which let a custom
- * list component be typed against props the template never injects. Removing it
- * stops untyped props flowing through the typed slot — caller extras go in
- * `customListProps` — but it does NOT catch the defect that motivated it: a
- * component reading a renamed prop declares it OPTIONAL, and an unused optional
- * prop stays assignable either way. The guard for that is behavioural, in
- * `SortableItem.test.tsx` § "swipe actions reach the row", which asserts the
- * descriptors the screen supplies actually reach the row's swipe props.
+ * No index signature here, so untyped props cannot flow through the typed slot;
+ * caller extras go in `customListProps`. That does NOT catch a component reading a
+ * RENAMED prop — an unused optional prop stays assignable — so the guard for that
+ * is behavioural, in `SortableItem.test.tsx` § "swipe actions reach the row".
  */
 
 export const ListTemplate = <TItem extends { id: string } = { id: string }>({
@@ -113,13 +99,10 @@ export const ListTemplate = <TItem extends { id: string } = { id: string }>({
   customListProps = {},
 }: ListTemplateProps<TItem>) => {
   const { t } = useTranslation();
-  // Don't show loading state if custom component exists - let it handle its own loading
   const isLoading = loading && items.length === 0 && !CustomListComponent;
 
-  // Show loading empty state when loading with no items.
-  // The icon falls back to a neutral placeholder, not `cube-outline` — that is
-  // a pantry-shaped box, and a generic template picking one feature's icon is
-  // how the shopping list ended up flashing a pantry glyph while loading.
+  // The fallback icon is a NEUTRAL placeholder: `cube-outline` is pantry-shaped,
+  // and a generic template must not flash one feature's glyph on another's list.
   const effectiveEmptyState = isLoading
     ? {
         icon: emptyState?.icon || 'ellipsis-horizontal',
@@ -133,7 +116,6 @@ export const ListTemplate = <TItem extends { id: string } = { id: string }>({
     <View style={styles.container}>
       {CustomListComponent ? (
         <CustomListComponent
-          // Caller extras FIRST: the template's own wiring is not overridable.
           {...customListProps}
           items={items || []}
           onItemPress={isLoading ? () => {} : onItemPress}
@@ -146,8 +128,8 @@ export const ListTemplate = <TItem extends { id: string } = { id: string }>({
         />
       ) : (
         <ItemList
-          // The template only guarantees `{ id: string }`; ItemList narrows to
-          // its own item type for the default (non-custom) rendering path.
+          // The template guarantees only `{ id: string }`; ItemList narrows to its
+          // own item type on the default rendering path.
           items={
             items as { id: string }[] as Parameters<typeof ItemList>[0]['items']
           }

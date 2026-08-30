@@ -2,14 +2,7 @@ import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { useShallow } from 'zustand/react/shallow';
 import { storeApi, RootState } from './index';
 
-/**
- * Core store hook. Prefer the named hooks below for common state.
- * Use this directly only for one-off or uncommon selections:
- *
- * ```tsx
- * const theme = useAppStore(state => state.theme);
- * ```
- */
+/** Core store hook. Prefer the named hooks below; use this for one-offs. */
 export function useAppStore<T>(
   selector: (state: RootState) => T,
   equalityFn?: (a: T, b: T) => boolean,
@@ -17,10 +10,6 @@ export function useAppStore<T>(
   return useStoreWithEqualityFn(storeApi, selector, equalityFn);
 }
 
-// ─── Internal selectors ──────────────────────────────────────────────────────
-// Not exported — used as building blocks for the hooks below.
-
-// Auth
 const selectUser = (state: RootState) => state.user;
 const selectUserId = (state: RootState) => state.user?.id;
 const selectUpdateUser = (state: RootState) => state.updateUser;
@@ -31,7 +20,6 @@ const selectIsAdminUser = (state: RootState) =>
 const selectCanAccessDevTools = (state: RootState) =>
   state.user?.canAccessDevTools === true;
 
-// Navigation / selection IDs
 const selectSelectedHomeId = (state: RootState) => state.selectedHomeId;
 const selectSelectedPantryId = (state: RootState) => state.selectedPantryId;
 const selectSelectedShoppingListId = (state: RootState) =>
@@ -39,7 +27,6 @@ const selectSelectedShoppingListId = (state: RootState) =>
 const selectSetSelectedPantryId = (state: RootState) =>
   state.setSelectedPantryId;
 
-// Home initialization flags
 const selectIsHomeSelectionReady = (state: RootState) =>
   state.isHomeSelectionReady;
 const selectSetIsHomeSelectionReady = (state: RootState) =>
@@ -49,18 +36,14 @@ const selectSetIsPantryQueryComplete = (state: RootState) =>
 const selectIsPantryQueryComplete = (state: RootState) =>
   state.isPantryQueryComplete;
 
-// Atomic action selectors
 const selectSetHomeAndPantry = (state: RootState) => state.setHomeAndPantry;
 
-// Network
 const selectIsOnline = (state: RootState) => state.isOnline;
 
-// Auth navigation state machine (atomic — used by guards and conditional UI)
 const selectNavigationState = (state: RootState) => state.navigationState;
 
-// True once the signed-in user has tapped "skip for now" on email verification.
-// Read as a plain boolean (not the nav-state object) so consumers only re-render
-// when the flag itself flips.
+// Plain boolean rather than the nav-state object, so consumers re-render only
+// when the "skip for now" flag itself flips.
 const selectVerificationSkipped = (state: RootState) => {
   const userId = state.user?.id;
   return userId
@@ -68,17 +51,14 @@ const selectVerificationSkipped = (state: RootState) => {
     : false;
 };
 
-// An unverified account that deferred verification. Drives the reminder banner
-// and the share/collaborate gate.
 const selectHasUnverifiedEmail = (state: RootState) =>
   state.user != null && !state.user.emailVerified;
 
-// Preferences (atomic)
 const selectTheme = (state: RootState) => state.theme;
 const selectShowNavigationLabels = (state: RootState) =>
   state.showNavigationLabels;
 
-// Grouped selectors (return object literals — always consumed via useShallow)
+// Grouped selectors return fresh object literals — always via useShallow.
 const selectAuthTokens = (state: RootState) => ({
   user: state.user,
   accessToken: state.accessToken,
@@ -155,8 +135,6 @@ const selectThemePreferences = (state: RootState) => ({
   setHighContrast: state.setHighContrast,
 });
 
-// ─── Atomic hooks ────────────────────────────────────────────────────────────
-
 export const useUser = () => useAppStore(selectUser);
 export const useUserId = () => useAppStore(selectUserId);
 export const useUpdateUser = () => useAppStore(selectUpdateUser);
@@ -188,11 +166,6 @@ export const useHasUnverifiedEmail = () =>
 export const useTheme = () => useAppStore(selectTheme);
 export const useShowNavigationLabels = () =>
   useAppStore(selectShowNavigationLabels);
-
-// ─── Grouped hooks (useShallow baked in) ─────────────────────────────────────
-// Grouped selectors return fresh object literals on every call. useShallow
-// prevents unnecessary re-renders by comparing each property individually
-// instead of the object reference.
 
 export const useAuthTokens = () => useAppStore(useShallow(selectAuthTokens));
 export const useAuthActions = () => useAppStore(useShallow(selectAuthActions));

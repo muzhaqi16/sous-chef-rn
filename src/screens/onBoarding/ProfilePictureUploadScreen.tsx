@@ -101,7 +101,11 @@ export const ProfilePictureUploadScreen = () => {
     null,
   );
 
-  const { profile, loading: profileLoading } = useProfileData();
+  const { profile, loading } = useProfileData();
+  // Only the avatar placeholder waits on the request. The picker actions do not
+  // depend on it, and `cache-and-network` reports loading for the whole network
+  // leg — gating them on it removes the only way forward for its duration.
+  const avatarLoading = loading && !profile;
 
   const hasLocalImage = !!(croppedImage || selectedImage);
   const hasExistingAvatar = !!existingAvatarUrl && !hasLocalImage;
@@ -278,7 +282,7 @@ export const ProfilePictureUploadScreen = () => {
                 <Icon tone="error" name="close-circle" size={24} />
               </AppPressable>
             </>
-          ) : profileLoading ? (
+          ) : avatarLoading ? (
             <View style={styles.avatarPlaceholder}>
               <PrimaryActivityIndicator size="large" />
             </View>
@@ -304,7 +308,7 @@ export const ProfilePictureUploadScreen = () => {
           </View>
         )}
 
-        {!hasAnyImage && !profileLoading && (
+        {!hasAnyImage && (
           <View style={styles.formAction}>
             <AppPressable
               onPress={handleSelectPhoto}

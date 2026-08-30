@@ -58,20 +58,10 @@ const getEncryptionKeyWithRetry = async (): Promise<DeviceEncryptionKey> => {
 };
 
 /**
- * Initialize the encrypted MMKV instance. Idempotent — subsequent calls
- * return the same instance.
- *
- * Must be called from index.js before App renders. Storage access from React
- * code is gated by `useIsHydrated()` (Zustand persist awaits this internally
- * via `zustandStorage`), so by the time any component reads `storage.X` the
- * encrypted instance is ready.
- *
- * Fail-closed contract (mirrors DeviceKeyManager): the primary encrypted
- * file is only ever opened with its key. If the key is unavailable after
- * retries, this session runs on a separate unencrypted RECOVERY instance —
- * the app stays usable with fresh defaults, the encrypted data survives for
- * the next launch, and session tokens are unaffected (they live in the
- * keychain, see src/storage/keychain.ts).
+ * Initialize the encrypted MMKV instance; idempotent. Must run from index.js
+ * before App renders. Fail-closed: the primary file is only ever opened WITH
+ * its key, so a key outage runs the session on a separate unencrypted recovery
+ * instance rather than risking MMKV discarding the encrypted file.
  */
 export const initializeSecureStorage = async (): Promise<MMKV> => {
   if (secureStorageInstance) return secureStorageInstance;

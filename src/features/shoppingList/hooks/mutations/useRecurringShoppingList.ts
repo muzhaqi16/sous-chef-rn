@@ -1,16 +1,8 @@
 /**
- * useRecurringShoppingList — turn a list's recurrence on/off and generate the
- * next occurrence.
- *
- * setRecurring / cancelRecurring are local-first: the recurrence fields are
- * absolute sets keyed by the list id, so we write them to the cache before
- * firing and a queued replay re-applies the same state idempotently. A real
- * rejection restores the pre-change snapshot and alerts.
- *
- * generateNext is ONLINE-ONLY: it creates a brand-new list whose id the server
- * mints, so there's no client id to key idempotency on — a queued replay would
- * spawn duplicates. It adds the created list to the overview connection (same
- * updater createShoppingList uses) and returns its id for navigation.
+ * setRecurring / cancelRecurring are local-first: absolute sets keyed by the list
+ * id, written to the cache before firing and idempotent on a queued replay.
+ * generateNext is ONLINE-ONLY — the server mints the new list's id, so there is no
+ * client key to make a replay idempotent and a queued one would spawn duplicates.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -150,7 +142,6 @@ export function useRecurringShoppingList() {
     return true;
   };
 
-  // Returns the created list's id (for navigation) or null on failure.
   const generateNext = async (id: string): Promise<string | null> => {
     let result;
     try {

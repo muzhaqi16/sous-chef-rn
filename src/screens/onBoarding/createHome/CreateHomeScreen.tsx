@@ -18,7 +18,6 @@ import {
   useInviteActions,
 } from './InviteActionsContext';
 
-// Components
 import { FormContent, type FormValues } from './FormContent';
 import { LoadingView } from './LoadingView';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
@@ -26,7 +25,6 @@ import { SubmitButton } from './SubmitButton';
 import { ErrorMessage } from './ErrorMessage';
 import { Button } from '#components/atoms/Button';
 
-// GraphQL
 import { useFragment, useMutation, useQuery } from '@apollo/client/react';
 import { ApolloCache, type Reference } from '@apollo/client';
 import type { ModifierDetails } from '@apollo/client/cache';
@@ -44,7 +42,6 @@ import {
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { addToHomesCache } from '#features/home/hooks/homeCacheUpdaters';
 
-// Store & Navigation
 import {
   useAppStore,
   useHasUnverifiedEmail,
@@ -54,7 +51,6 @@ import {
 } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 
-// Validation & Helpers
 import { getCreateHomeSchema } from '#/utils/validation/onboarding';
 import { logValidationErrors } from '#/utils/validation/common';
 import {
@@ -70,9 +66,7 @@ import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
 
-/** Module-level cache update closure for `useAcceptHomeInviteMutation`.
- *  Extracted from the component body to keep the surrounding try/catch outside
- *  hook call sites (React Compiler bailout). */
+/** Module scope so the try/catch does not bail the component out of the compiler. */
 function buildAcceptHomeInviteUpdater(userId: string | undefined) {
   return function acceptHomeInviteUpdater(
     cache: ApolloCache,
@@ -114,13 +108,11 @@ function buildAcceptHomeInviteUpdater(userId: string | undefined) {
       });
     } catch (error) {
       logger.warn('Cache update failed for acceptHomeInvite:', error);
-      // UI will still work via optimistic/onCompleted handlers
     }
   };
 }
 
-/** Module-level async function for home/pantry creation.
- *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
+/** Module scope: a throw inside a try in the component body bails the compiler. */
 type CreateHomeFn = useMutation.MutationFunction<
   CreateHomeMutation,
   CreateHomeMutationVariables
@@ -151,10 +143,9 @@ async function performCreateHome(
           description: 'Created during onboarding',
           type: HomeType.Household,
           isPublic: false,
-          // Asking for a join code while the caller's email is unverified makes
-          // the server refuse the whole mutation, which would dead-end
-          // onboarding for anyone who deferred verification. Create the home
-          // without one — it can be enabled later from the home's settings.
+          // Asking for a join code while the email is unverified makes the server
+          // refuse the whole mutation, dead-ending onboarding for anyone who
+          // deferred verification. A join code can be enabled later in settings.
           allowJoinCode: !deps.hasUnverifiedEmail,
           createDefaultPantry: true,
           defaultPantryName: data.pantryName.trim(),
@@ -195,7 +186,6 @@ async function performCreateHome(
   deps.navigateToNextStep('CreateHome');
 }
 
-/** Module-level helper to sync existing home/pantry state */
 function syncExistingResources(
   existingHome: { id: string } | undefined,
   existingPantry: { id: string } | undefined,
@@ -212,8 +202,6 @@ function syncExistingResources(
   setCheckingExisting(false);
 }
 
-// --- Invite card component ---
-
 const InviteCard: React.FC<{
   inviteRef: FragmentType<typeof InviteCard_InviteFragmentDoc>;
 }> = ({ inviteRef }) => {
@@ -221,9 +209,7 @@ const InviteCard: React.FC<{
   const { handleAcceptInvite, handleDeclineInvite, accepting } =
     useInviteActions();
 
-  // Per-entity cache subscription via fragment colocation: this card
-  // re-renders only when this HomeInvite's fields change (e.g., after a
-  // revoke/decline mutation).
+  // Fragment colocation makes this card re-render only on ITS invite's changes.
   const { data: invite, complete } = useFragment({
     fragment: InviteCard_InviteFragmentDoc,
     fragmentName: 'InviteCard_invite',
@@ -308,13 +294,11 @@ const CreateHomeScreenComponent = () => {
   const setSelectedHomeId = useAppStore(state => state.setSelectedHomeId);
   const setSelectedPantryId = useSetSelectedPantryId();
 
-  // State
   const [graphqlError, setGraphqlError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [checkingExisting, setCheckingExisting] = useState(true);
   const [forceShowCreateForm, setForceShowCreateForm] = useState(false);
 
-  // Track onboarding start (only once at the beginning)
   const hasTrackedStartRef = useRef(false);
   useEffect(() => {
     if (user?.id && !hasTrackedStartRef.current) {
@@ -326,7 +310,6 @@ const CreateHomeScreenComponent = () => {
     }
   }, [user?.id, setUserNavigationState]);
 
-  // GraphQL Queries
   const {
     data: homesData,
     loading: homesLoading,
@@ -342,7 +325,6 @@ const CreateHomeScreenComponent = () => {
     },
   );
 
-  // Extract nodes from connection types (homes and pantries return Connection types)
   const homes = extractNodes(homesData?.homes) as Array<{
     id: string;
     name?: string;
@@ -362,19 +344,16 @@ const CreateHomeScreenComponent = () => {
   const hasUnverifiedEmail = useHasUnverifiedEmail();
   const hasPendingInvites = pendingInvites.length > 0;
 
-  // GraphQL Mutations
   const [createHome] = useMutation(CreateHomeDocument, {
-    // The new home has to be written into the GetHomes connection here.
-    // `useDefaultHome` fires the app's only GetHomes fetch once per session and
-    // that already happened during onboarding, while this user still had zero
-    // homes — so the cached connection stays an authoritative empty list and
-    // nothing refills it. PantryMain resolves the selected home out of that
-    // cached list (cache-only), so without this write its header falls back to
-    // the "Your Home" placeholder until some other screen refetches homes.
+    // The new home MUST be written into the GetHomes connection here:
+    // `useDefaultHome` fires the app's only GetHomes fetch once per session, and
+    // it already happened during onboarding when this user had zero homes. The
+    // cached empty list is then authoritative, and PantryMain reads the selected
+    // home out of it cache-only.
     update: (cache, { data }) => {
       if (data?.createHome?.__typename !== 'CreateHomePayload') return;
-      // `cache.modify` skips fields the cache doesn't hold, so a missing
-      // connection reports no write rather than throwing — refetch instead.
+      // `cache.modify` skips fields the cache lacks, reporting no write rather
+      // than throwing, so refetch instead.
       if (!addToHomesCache(cache, data.createHome.home, { position: 'end' })) {
         void refetchHomes();
       }
@@ -442,9 +421,7 @@ const CreateHomeScreenComponent = () => {
   const [acceptHomeInvite, { loading: accepting }] = useMutation(
     AcceptHomeInviteDocument,
     {
-      // Manual cache update instead of refetchQueries for better performance.
-      // Builder is module-scope so the inner try/catch is not inside the
-      // component body (React Compiler bailout).
+      // The builder is module-scope so its try/catch is not in the component body.
       update: buildAcceptHomeInviteUpdater(user?.id),
       onCompleted: data => {
         if (data.acceptHomeInvite?.__typename === 'AcceptHomeInvitePayload') {
@@ -459,14 +436,12 @@ const CreateHomeScreenComponent = () => {
   );
 
   const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument, {
-    // Note: Declining an invite doesn't add or remove homes from the list,
-    // it just changes the invite status. No cache update needed.
+    // Declining changes only the invite status, so no cache update is needed.
     onError: error => {
       handleMutationError(error, { operation: 'Decline Home Invite' });
     },
   });
 
-  // Form Setup
   const form = useForm<FormValues>({
     resolver: yupResolver(
       getCreateHomeSchema(needsHome),
@@ -477,7 +452,6 @@ const CreateHomeScreenComponent = () => {
     },
   });
 
-  // Check existing resources without auto-navigating
   useEffect(() => {
     if (homesLoading) return;
 
@@ -496,7 +470,6 @@ const CreateHomeScreenComponent = () => {
     setSelectedPantryId,
   ]);
 
-  // Form submission handler
   const onSubmit = (data: FormValues) => {
     setGraphqlError(null);
 
@@ -560,12 +533,10 @@ const CreateHomeScreenComponent = () => {
     );
   };
 
-  // Loading state
   if (checkingExisting || homesLoading || invitesLoading) {
     return <LoadingView onSkip={() => skipToStep('CreateShoppingList')} />;
   }
 
-  // Determine what needs to be created
   const getTitle = () => {
     if (!existingHome) return t('onBoarding.welcomeTitle');
     if (!existingPantry) return t('onBoarding.almostThere');
@@ -581,7 +552,6 @@ const CreateHomeScreenComponent = () => {
     return t('onBoarding.homeAlreadyConfigured');
   };
 
-  // If user has pending invites and no home, show invitations (unless forcing create form)
   if (hasPendingInvites && !existingHome && !forceShowCreateForm) {
     return (
       <OnBoardingWrapper
@@ -634,7 +604,6 @@ const CreateHomeScreenComponent = () => {
     );
   }
 
-  // If both exist, show summary and continue button
   if (existingHome && existingPantry) {
     return (
       <OnBoardingWrapper
@@ -695,7 +664,6 @@ const CreateHomeScreenComponent = () => {
     );
   }
 
-  // Show form for creating what's missing
   return (
     <OnBoardingWrapper
       title={getTitle()}
@@ -735,7 +703,7 @@ const CreateHomeScreenComponent = () => {
   );
 };
 
-// PERFORMANCE: Screen-level error boundary prevents full app reset on mutation failures
+// A screen-level boundary keeps a mutation failure from resetting the whole app.
 export const CreateHomeScreen = () => (
   <OnboardingErrorBoundary>
     <CreateHomeScreenComponent />

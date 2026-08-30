@@ -128,7 +128,6 @@
     "currentMembers": "Miembros actuales",
     "manageHome": "Gestionar hogar",
     "shareHomeLinkedNotice": "Esta lista pertenece al hogar \"{{name}}\". Los miembros se gestionan desde los ajustes del hogar.",
-    "removeMemberTitle": "Eliminar miembro",
     "removeMemberA11y": "Eliminar miembro",
     "cannotLeaveOwnerMessage": "Los propietarios no pueden abandonar la lista. Transfiere la propiedad a otro miembro o elimina la lista.",
     "failedToUpdateShareSettings": "No se pudieron actualizar los ajustes de compartir",

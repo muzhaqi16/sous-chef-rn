@@ -10,17 +10,9 @@ interface UseAddItemSheetStateOptions {
   deferFetch?: boolean;
 }
 
-// RENDER_SUGGESTIONS_DELAY_MS removed — now uses requestIdleCallback to wait for sheet animation
-
 /**
- * Shared state management hook for AddItemSheet.
- *
- * Manages:
- * - Search query state
- * - Deferred fetch state (for smooth animations)
- * - Deferred suggestion rendering (avoids jank during sheet open)
- * - Exit animation tracking
- * - Search/suggestion display logic
+ * Shared state for AddItemSheet. Fetching and suggestion rendering are deferred
+ * past the sheet's open animation via `requestIdleCallback`.
  */
 export function useAddItemSheetState({
   visible,

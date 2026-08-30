@@ -106,23 +106,15 @@ function findMyCollaborator(
   return null;
 }
 
-/**
- * Get permissions from home membership for home-linked lists
- *
- * Permission rules for home-linked lists:
- * - OWNER/ADMIN/MEMBER: all permissions (use membership fields)
- * - GUEST: mark purchased only
- */
+/** GUEST marks purchased only; every other role reads the membership fields. */
 function getHomePermissions(
   membership: HomeMembership,
 ): ShoppingListPermissions {
-  // Guest role: mark purchased only
   if (membership.role === MembershipRole.Guest) {
     return GUEST_PERMISSIONS;
   }
 
-  // OWNER/ADMIN/MEMBER: Use the membership permission fields
-  // Fall back to true for backward compatibility if fields are undefined
+  // An undefined field falls back to true for these roles.
   return {
     canAddItems: membership.canAddItems ?? true,
     canRemoveItems: membership.canRemoveItems ?? true,
@@ -131,9 +123,7 @@ function getHomePermissions(
   };
 }
 
-/**
- * Get permissions from collaborator for personal lists (no homeId)
- */
+/** For personal lists (no homeId). */
 function getCollaboratorPermissions(
   collaborator: Collaborator,
 ): ShoppingListPermissions {
@@ -146,14 +136,8 @@ function getCollaboratorPermissions(
 }
 
 /**
- * Get permissions for a shopping list based on:
- * - Home membership (if list has homeId) - uses home membership permissions
- * - Collaborator permissions (if list has no homeId) - uses collaborator permissions
- *
- * @param shoppingList - The shopping list data with homeId and collaborators
- * @param userId - The current user's ID
- * @param homeMembership - The user's membership in the home (required for home-linked lists)
- * @returns Permission flags for the shopping list
+ * Home membership when the list has a `homeId`, collaborator permissions
+ * otherwise. `homeMembership` is required for a home-linked list.
  */
 export function getShoppingListPermissions(
   shoppingList: ShoppingListData,

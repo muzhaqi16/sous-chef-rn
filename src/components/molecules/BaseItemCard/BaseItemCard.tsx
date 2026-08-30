@@ -7,59 +7,13 @@ import { HapticService } from '#services/haptic/HapticService';
 import { RIPPLE } from '#constants/ripple';
 import type { BaseItemCardProps, CardVariant } from './types';
 
-/**
- * Base item card component with swipeable actions
- * Provides a flexible slot-based layout for different item types
- *
- * When to use which card:
- * - Use `BaseItemCard` when you need full slot-based flexibility — custom
- *   left/right slots, counters, purchase toggles, per-slot variants. The
- *   caller owns any exit animation.
- * - Use `ItemCard` (`#components/organisms/ItemCard`) for the common
- *   title/subtitle/badge list row that needs the standard slide-off-screen
- *   exit animation on delete/consume/waste handled automatically.
- *
- * Row actions are DESCRIPTORS (`leftActions` / `rightActions`), not named
- * verbs. The examples below documented `onConsume` / `onWaste` / `onRestock` /
- * `onEdit` / `onDelete` props for months after they were replaced, which is
- * worse than no example: it reads as the supported API.
- *
- * @example
- * // Pantry item
- * <BaseItemCard
- *   variant="warning"
- *   onPress={handlePress}
- *   rightActions={pantrySwipeActions({ onEdit, onDelete })}
- * >
- *   <CardLeftSlot type="emoji" emoji="🥬" variant="warning" />
- *   <CardContent title="Spinach" subtitle="Expires in 2 days" />
- *   <CardRightSlot type="meta" primary="500g" secondary="Fridge" />
- * </BaseItemCard>
- *
- * // Shopping list item
- * <BaseItemCard
- *   variant={isPurchased ? 'dimmed' : 'normal'}
- *   isPurchased={isPurchased}
- *   onTogglePurchase={handleToggle}
- *   leftActions={[togglePurchaseAction]}
- *   rightActions={[editAction, deleteAction]}
- * >
- *   <CardLeftSlot type="image" imageUrl={imageUrl} dimmed={isPurchased} />
- *   <CardContent title="Milk" subtitle="Dairy" isPurchased={isPurchased} />
- *   <CardRightSlot type="counter" quantity={2} unit="L" onIncrement={...} onDecrement={...} />
- * </BaseItemCard>
- */
-/**
- * The card surface, owning the `variant` → background/border mapping and the
- * `useVariants` call that selects it.
- *
- * Extracted so `BaseItemCard` itself keeps compiling: Unistyles' variant
- * transform makes the React Compiler bail out of whatever function contains
- * the call, and `BaseItemCard` is the row component behind every list in the
- * app. `node scripts/check-compiler-bailouts.mjs --list` names the bailing
- * function, so the leaf's own (harmless) bailout stays distinguishable from a
- * regression here.
- */
+// Slot-based swipeable row; `ItemCard` is the one with the standard
+// title/subtitle/badge layout and automatic slide-off-screen exit. Row actions
+// are DESCRIPTORS (`leftActions` / `rightActions`), never named verbs.
+
+// `CardSurface` is extracted so `BaseItemCard` itself keeps compiling: Unistyles'
+// variant transform bails the React Compiler out of whichever function holds the
+// `useVariants` call, and this is the row behind every list in the app.
 const CardSurface: React.FC<{
   variant: CardVariant;
   containerStyle?: StyleProp<ViewStyle>;
@@ -90,7 +44,6 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
   itemId,
   testID,
 }) => {
-  // Build children array from slot props with keys to prevent React warnings
   const slotChildren: React.ReactNode[] = [];
   if (leftElement)
     slotChildren.push(
@@ -173,9 +126,8 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
     borderWidth: 1,
-    // Soft floating elevation instead of a hard outline. Status variants below
-    // keep a colored border to stay distinguishable; the default row relies on
-    // the shadow alone (transparent border preserves consistent sizing).
+    // Status variants keep a colored border; the default row relies on the
+    // shadow alone, with a transparent border to preserve sizing.
     ...theme.shadows.card,
     backgroundColor: theme.colors.surface,
     borderColor: 'transparent',

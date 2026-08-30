@@ -87,11 +87,9 @@ export const ProfileScreen = () => {
     toProfilePhotoUpload();
   };
 
-  // Takes the row's OWN handler rather than looking the row up again. The
-  // lookup this replaces matched the logout section by a `key` that a settings
-  // refactor renamed from the title to the section id, which left the button
-  // firing telemetry and nothing else. There is only one binding now, and it is
-  // the item the renderer already has in hand.
+  // Takes the row's OWN handler rather than looking the row up by key — one
+  // binding, the item the renderer already has in hand, so a renamed section
+  // key cannot leave the button firing telemetry and nothing else.
   const handleLogout = (performLogout: (() => void) | undefined) => {
     Telemetry.trackEvent('logout_clicked', { source: 'ProfileScreen' });
     performLogout?.();
@@ -109,17 +107,14 @@ export const ProfileScreen = () => {
   };
 
   const handleOverlayOpen = () => {
-    // No-op: Profile is no longer in tab bar context
+    // No-op: Profile sits outside the tab bar context.
   };
 
   const handleOverlayClose = () => {
-    // No-op: Profile is no longer in tab bar context
+    // No-op: Profile sits outside the tab bar context.
   };
 
-  // ✅ OPTIMIZED: Don't block render on loading
-  // Show cached profile data immediately while loading fresh data in background
-  // Only show loading state if we have NO data at all
-  // Biometric loading is handled inline (toggle disabled while loading)
+  // Cached data renders immediately; only a total absence shows the skeleton.
   if (loading && !profile) {
     return <ProfileSkeleton />;
   }

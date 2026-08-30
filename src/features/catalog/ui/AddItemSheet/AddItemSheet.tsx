@@ -35,18 +35,7 @@ import { Text } from '#components/atoms/Text';
  */
 const PREVIEW_COUNT = 5;
 
-/**
- * Generic AddItemSheet component.
- *
- * A reusable bottom sheet for adding items with:
- * - Search with autocomplete
- * - Suggestion sections (configurable)
- * - Quick add functionality
- * - Barcode scanning
- * - Add manually option
- *
- * Used by both AddToPantrySheet and AddToShoppingListSheet.
- */
+/** Shared add-item bottom sheet, used by AddToPantrySheet and AddToShoppingListSheet. */
 export function AddItemSheet<
   T extends BaseSuggestionItem = BaseSuggestionItem,
 >({
@@ -72,9 +61,6 @@ export function AddItemSheet<
   const insets = useSafeAreaInsets();
   const searchBarRef = useRef<BottomSheetSearchBarRef>(null);
 
-  // useStandardBottomSheet handles ref, modalProps (backdrop, animations,
-  // insets, back handler), present/dismiss effect, and contentContainerStyle.
-  // Visibility is auto-managed via the `visible && !!contextId` boolean.
   const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
     visible: visible && !!contextId,
     onDismiss: onClose,
@@ -82,14 +68,11 @@ export function AddItemSheet<
     keyboardBehavior: 'extend',
   });
 
-  // Morphing step: the SAME sheet shows the search/suggestions view, an
-  // in-place details form when a consumer supplies `renderDetails`, or the
-  // report-an-item form. This replaces the old "stack a second
-  // BottomSheetModal" approach (which raced the global backdrop and tore the
-  // first sheet down — and, with gorhom's default `stackBehavior: 'switch'`,
-  // minimized this sheet instead of stacking on it). The sheet keeps its
-  // current height across the morph — it opens at the first (search) snap
-  // point and the user can drag it up to the 95% max; we never force-expand it.
+  // Morphing step: ONE sheet shows search, an in-place details form, or the
+  // report form. Stacking a second BottomSheetModal instead races the global
+  // backdrop, and gorhom's default `stackBehavior: 'switch'` minimizes this
+  // sheet rather than stacking on it. The height is never force-expanded across
+  // a morph — the user drags from the search snap point to the 95% max.
   const [step, setStep] = useState<'search' | 'details' | 'report'>('search');
   const goBackToSearch = () => {
     setStep('search');

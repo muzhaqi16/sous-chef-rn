@@ -1,73 +1,40 @@
-/**
- * BaseScreen
- *
- * Base class for all screen object models.
- * Provides common functionality for interacting with screens in E2E tests.
- */
-
 import { element, by, waitFor, device, expect } from 'detox';
 
 export abstract class BaseScreen {
-  /**
-   * The test ID of the screen container.
-   * Must be implemented by subclasses.
-   */
   protected abstract screenID: string;
 
-  /**
-   * Get the screen container element
-   */
   get screen() {
     return element(by.id(this.screenID));
   }
 
-  /**
-   * Wait for the screen to be visible (5 second max - screens appear in 1-2s)
-   */
+  /** The 5s default is generous — screens appear in 1-2s. */
   async waitForScreen(timeout: number = 5000) {
     await waitFor(this.screen).toBeVisible().withTimeout(timeout);
   }
 
-  /**
-   * Assert that the screen is visible (wait first, then check)
-   */
   async expectScreenVisible() {
     await this.waitForScreen();
     await expect(this.screen).toBeVisible();
   }
 
-  /**
-   * Find element by test ID
-   */
   protected getElementById(testID: string) {
     return element(by.id(testID));
   }
 
-  /**
-   * Find element by text
-   */
   protected getElementByText(text: string) {
     return element(by.text(text));
   }
 
-  /**
-   * Find element by label (iOS) or contentDescription (Android)
-   */
+  /** `by.label` is the iOS accessibilityLabel, the Android contentDescription. */
   protected getElementByLabel(label: string) {
     return element(by.label(label));
   }
 
-  /**
-   * Tap element by test ID (wait for element first)
-   */
   async tapByID(testID: string) {
     await this.waitForElement(testID);
     await this.getElementById(testID).tap();
   }
 
-  /**
-   * Tap element by text (wait for element first)
-   */
   async tapByText(text: string) {
     await waitFor(this.getElementByText(text))
       .toBeVisible()
@@ -75,32 +42,20 @@ export abstract class BaseScreen {
     await this.getElementByText(text).tap();
   }
 
-  /**
-   * Type text into field by test ID
-   */
   async typeIntoField(testID: string, text: string) {
     await this.getElementById(testID).typeText(text);
   }
 
-  /**
-   * Clear field and type text
-   */
   async clearAndType(testID: string, text: string) {
     const field = this.getElementById(testID);
     await field.clearText();
     await field.typeText(text);
   }
 
-  /**
-   * Scroll to element within the screen
-   */
   async scrollTo(testID: string, direction: 'top' | 'bottom' = 'bottom') {
     await this.getElementById(testID).scrollTo(direction);
   }
 
-  /**
-   * Swipe element
-   */
   async swipe(
     testID: string,
     direction: 'left' | 'right' | 'up' | 'down',
@@ -109,43 +64,29 @@ export abstract class BaseScreen {
     await this.getElementById(testID).swipe(direction, speed);
   }
 
-  /**
-   * Wait for element to be visible
-   */
   async waitForElement(testID: string, timeout: number = 5000) {
     await waitFor(this.getElementById(testID))
       .toBeVisible()
       .withTimeout(timeout);
   }
 
-  /**
-   * Wait for element to disappear
-   */
   async waitForElementToDisappear(testID: string, timeout: number = 5000) {
     await waitFor(this.getElementById(testID))
       .not.toBeVisible()
       .withTimeout(timeout);
   }
 
-  /**
-   * Expect element to be visible (wait first, then check)
-   */
   async expectVisible(testID: string) {
     await this.waitForElement(testID);
     await expect(this.getElementById(testID)).toBeVisible();
   }
 
-  /**
-   * Expect element to not be visible (wait first, then check)
-   */
   async expectNotVisible(testID: string) {
     await this.waitForElementToDisappear(testID);
     await expect(this.getElementById(testID)).not.toBeVisible();
   }
 
-  /**
-   * Expect element to exist (may not be visible)
-   */
+  /** Existence only — an element can exist while off-screen or covered. */
   async expectExists(testID: string) {
     await waitFor(this.getElementById(testID))
       .toExist()
@@ -153,9 +94,6 @@ export abstract class BaseScreen {
     await expect(this.getElementById(testID)).toExist();
   }
 
-  /**
-   * Expect text to be visible (wait first, then check)
-   */
   async expectTextVisible(text: string) {
     await waitFor(this.getElementByText(text))
       .toBeVisible()
@@ -163,47 +101,33 @@ export abstract class BaseScreen {
     await expect(this.getElementByText(text)).toBeVisible();
   }
 
-  /**
-   * Expect element to have text
-   */
   async expectElementText(testID: string, text: string) {
     await expect(this.getElementById(testID)).toHaveText(text);
   }
 
-  /**
-   * Dismiss keyboard
-   */
   async dismissKeyboard() {
     if (device.getPlatform() === 'ios') {
-      // Best-effort keyboard dismissal on iOS.
-      // First try tapping the Return key, then fall back to tapping the
-      // screen container. The fallback is necessary because Return key
-      // label varies (Return, Done, Go) and may not match 'return'.
+      // The Return key's label varies (Return, Done, Go), so `by.label('return')`
+      // often misses; tapping the screen container to blur is the fallback.
       try {
         await element(by.label('return')).atIndex(0).tap();
       } catch {
-        // Return key label didn't match — tap the screen to blur input
         try {
           await this.screen.tap({ x: 10, y: 10 });
         } catch {
-          // Keyboard may not be visible — safe to continue
+          // No keyboard up — nothing to dismiss.
         }
       }
     } else {
-      // On Android, tap outside the input field to dismiss keyboard
-      // Using pressBack() can navigate away from the screen
+      // pressBack() can navigate away from the screen, so tap outside first.
       try {
         await this.screen.tap({ x: 10, y: 10 });
       } catch {
-        // Fallback: use pressBack but only if necessary
         await device.pressBack();
       }
     }
   }
 
-  /**
-   * Go back using native back button
-   */
   async goBack() {
     if (device.getPlatform() === 'ios') {
       await this.tapByID('header-back-button');
@@ -212,9 +136,6 @@ export abstract class BaseScreen {
     }
   }
 
-  /**
-   * Take screenshot with screen name, timestamp, and optional description
-   */
   async takeScreenshot(suffix?: string, description?: string) {
     try {
       const timestamp = Date.now();
@@ -230,9 +151,6 @@ export abstract class BaseScreen {
     }
   }
 
-  /**
-   * Reload React Native
-   */
   async reloadApp() {
     await device.reloadReactNative();
   }

@@ -175,7 +175,7 @@ describe('i18n config on an engine without Intl.PluralRules', () => {
       '#/i18n/config',
     );
 
-    // Reaching here at all is the assertion: the import used to throw.
+    // Reaching here at all is the assertion: the import must not throw.
     expect(typeof config.getI18n().t('labels.error')).toBe('string');
   });
 });

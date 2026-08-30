@@ -33,13 +33,9 @@ interface ChipDescriptor {
 }
 
 /**
- * Compact indicator for the filters currently applied to recipe searches.
- * Dietary-profile filters are auto-applied silently, so this row is the
- * visible answer to "why am I getting so few results?".
- *
- * Collapsed by default to a one-line summary ("6 filters active"); tapping it
- * expands a horizontal row of removable chips — each chip removes one filter
- * (re-running the active search), and Clear resets them all.
+ * The filters currently applied to recipe searches. Dietary-profile filters are
+ * auto-applied silently, so this row is the visible answer to "why am I getting
+ * so few results?". Collapsed to a summary until tapped.
  */
 export const ActiveFilterChipsRow: React.FC<ActiveFilterChipsRowProps> = ({
   filters,

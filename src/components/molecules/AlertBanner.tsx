@@ -8,44 +8,20 @@ import { Text } from '#components/atoms/Text';
 export type AlertBannerVariant = 'error' | 'warning' | 'info' | 'success';
 
 export interface AlertBannerProps {
-  /** Main title text */
+  /** Main title. */
   title: string;
-  /** Optional subtitle text */
   subtitle?: string;
-  /** Icon to display (emoji string or icon name if iconLibrary is specified) */
+  /** Emoji string, or an icon name when `iconLibrary` is set. */
   icon?: string;
-  /** Icon library to use for vector icons */
   iconLibrary?: IconLibrary;
-  /** Visual variant affecting colors */
   variant?: AlertBannerVariant;
-  /** Callback when banner is pressed */
   onPress?: () => void;
-  /** Whether to show navigation chevron (default: true if onPress provided) */
+  /** Navigation chevron; defaults to true when `onPress` is given. */
   showChevron?: boolean;
-  /** Test ID for accessibility */
   testID?: string;
 }
 
-/**
- * Generic alert banner for status messages
- *
- * @example
- * // Error variant (expired items)
- * <AlertBanner
- *   title="3 items expired"
- *   subtitle="Tap to review and remove"
- *   icon="⚠️"
- *   variant="error"
- *   onPress={handlePress}
- * />
- *
- * // Success variant
- * <AlertBanner
- *   title="All items in stock"
- *   icon="✅"
- *   variant="success"
- * />
- */
+/** Generic alert banner for status messages. */
 export const AlertBanner: React.FC<AlertBannerProps> = ({
   title,
   subtitle,

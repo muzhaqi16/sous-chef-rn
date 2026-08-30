@@ -1,13 +1,8 @@
 /**
- * useSetDefaultShoppingList — mark a list as the user's default (local-first).
- *
- * Uses the dedicated markShoppingListAsDefault mutation rather than
- * updateShoppingList({ isDefault: true }) because the server unsets the previous
- * default in the same transaction. We optimistically flip only THIS list's
- * isDefault before firing (an absolute set keyed by the list id, idempotent on a
- * queued replay); the previously-default list clears when the network response /
- * cache-and-network refetch lands — a brief two-defaults flash that self-heals.
- * A real rejection restores the prior flag and alerts.
+ * Local-first, via the dedicated markShoppingListAsDefault: the server unsets the
+ * other default in the same transaction, so only THIS list's flag flips locally
+ * (an absolute set keyed by the list id, idempotent on a queued replay) and the
+ * stale one clears when the response lands — a brief two-defaults flash.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';

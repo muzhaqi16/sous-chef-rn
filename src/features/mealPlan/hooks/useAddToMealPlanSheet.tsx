@@ -8,13 +8,9 @@ interface Options {
 }
 
 /**
- * Public entry point to the "add this recipe to a meal plan" sheet.
- *
- * The sheet itself reads mealPlan's own mutation and calendar hooks, so it is
- * feature-private. Another feature that needs it takes this hook instead —
- * top-level `hooks/` is a feature's public surface, `components/` is not. That
- * keeps the caller ignorant of how the sheet is built, and keeps mealPlan free
- * to change it.
+ * Public entry point to the "add this recipe to a meal plan" sheet. The sheet
+ * itself reads mealPlan's private hooks, so other features take this instead —
+ * top-level `hooks/` is a feature's public surface, `components/` is not.
  */
 export const useAddToMealPlanSheet = ({
   recipeId,

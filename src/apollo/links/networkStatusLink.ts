@@ -14,31 +14,10 @@ const describeError = (error: unknown): string => {
 };
 
 /**
- * Observes one network outcome per operation and feeds the API-reachability
- * circuit breaker ({@link apiReachabilityBreaker}).
- *
- * Placement (high in the chain, just below `offlineModeLink` and above
- * `retryLink`/`queueLink`) is load-bearing:
- *  - Above `retryLink`: retries are absorbed, so this sees ONE outcome per
- *    operation (not one per attempt).
- *  - Below `offlineModeLink`: queries short-circuited while offline never reach
- *    here, so blocked traffic doesn't feed the breaker.
- *  - Above `queueLink`: a queued mutation bubbles up as `next` carrying
- *    `extensions.queued` + `extensions.queuedReason`. Only a mutation queued
- *    after a REAL network failure (`queuedReason: 'network-error'`) counts as
- *    a breaker failure. Mutations queued preemptively — device offline, or
- *    queued *because* the breaker is already open (`'offline'` /
- *    `'api-unreachable'`) — never touched the network: counting them would
- *    feed the breaker its own output, which can keep a stale open/false state
- *    alive with zero evidence the API is actually down.
- *
- * Subscriptions never feed the breaker (their errors are logged for
- * diagnostics only). They ride the WebSocket transport, which owns its own
- * health (keep-alive pings, backoff reconnects, and auth-close handling in
- * `wsLink`) — a WS error says nothing about HTTP reachability. Worse, one
- * socket drop errors EVERY active subscription at once, so counting them
- * tripped the 3-failure threshold and opened the circuit while the HTTP API
- * was healthy (login worked while the banner said "Can't reach the server").
+ * Feeds the reachability breaker one outcome per operation. Placement is
+ * load-bearing: above `retryLink` (retries absorbed), below `offlineModeLink`
+ * (blocked traffic never counts), above `queueLink` (only a mutation queued
+ * after a REAL network failure counts). Subscriptions never feed it.
  */
 export const createNetworkStatusLink = () =>
   new ApolloLink((operation, forward) => {
@@ -102,12 +81,9 @@ export const createNetworkStatusLink = () =>
             apiReachabilityBreaker.recordFailure(
               `${operationName} (${operationKind}): ${describeError(error)}`,
             );
-            // One warning per operation. This link is above retryLink, so
-            // retries are absorbed — errorLink (below retryLink) used to log
-            // every attempt, producing a wall of identical warnings. Suppressed
-            // once offline / circuit open: then the breaker's one-line verdict
-            // is the signal. Reading state after recordFailure naturally
-            // silences the operation that trips the circuit.
+            // One warning per operation: this link sits above retryLink, so
+            // retries are absorbed. Suppressed once offline or the circuit is
+            // open — the breaker's one-line verdict is the signal then.
             const state = useStore.getState();
             if (!state.offlineModeEnabled && !isApiUnavailable(state)) {
               logger.warn(

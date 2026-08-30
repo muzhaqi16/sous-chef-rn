@@ -23,12 +23,10 @@ const AppearanceScreen = React.lazy(() => import('./AppearanceScreen'));
 const NotificationSettingsScreen = React.lazy(
   () => import('#features/notifications/screens/NotificationSettingsScreen'),
 );
-// Same arrangement: an auth screen, but from inside the app it is only ever
-// reached from Profile's verify-email banner (and the collaborate gate's
-// alert). Registered here as a sibling of `Home` so it PUSHES over the app —
-// the root navigator's `verification` group is a different thing, a gate with
-// no app behind it, and swapping to it is what used to strand the user on Home
-// after verifying and offer sign-out as the only way back.
+// An auth screen, but reached from inside the app (Profile's verify-email
+// banner, the collaborate gate's alert). Registered as a sibling of `Home` so
+// it PUSHES over the app; the root navigator's `verification` group is a gate
+// with no app behind it, and swapping to it strands the user after verifying.
 const VerifyEmailScreen = React.lazy(() =>
   import('#screens/auth/CodeVerificationScreen').then(m => ({
     default: m.VerifyEmailScreen,
@@ -36,16 +34,10 @@ const VerifyEmailScreen = React.lazy(() =>
 );
 
 /**
- * Profile and its settings screens, registered as siblings of `Home` — see
- * RootNavigator and `pantryDetailScreens` for the rationale.
- *
- * `ProfilePhotoUpload`, `ImageCrop` and `DeleteAccount` keep the deep-link
- * paths they have always had; every other screen here opts out with
- * `linking: null`.
- *
- * Onboarding registers its own `ImageCrop` inside `OnboardingStack` — that
- * copy exists so cropping during onboarding stays inside the onboarding flow,
- * and is reached with `toOnboardingImageCrop`.
+ * Profile and its settings screens, siblings of `Home` (see RootNavigator).
+ * Only `ProfilePhotoUpload`, `ImageCrop` and `DeleteAccount` are deep-linkable;
+ * the rest opt out with `linking: null`. Onboarding registers its own
+ * `ImageCrop` so cropping there stays inside the onboarding flow.
  */
 export const profileScreens = {
   Profile: createNativeStackScreen({

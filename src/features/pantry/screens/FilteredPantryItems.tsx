@@ -2,9 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
-// RNGH's Pressable (not AppPressable/RN) for the cart button: it's nested in
-// the row's RNGH Swipeable, so RNGH's native button captures the tap and it
-// doesn't also fire the row's onPress (which navigates to the item).
+// RNGH's Pressable for the cart button: nested in the row's RNGH Swipeable, its
+// native button captures the tap so the row's onPress does not also fire.
 import { Pressable } from 'react-native-gesture-handler';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -58,17 +57,14 @@ import { Text } from '#components/atoms/Text';
 import type { Translate } from '#/i18n/types';
 import { errorService } from '#/services/errorService';
 
-// ── Types ──
-
 export type FilteredPantryItemsMode = 'lowStock' | 'expiring' | 'expired';
 
 type FilteredPantryItemsParams = {
   mode?: FilteredPantryItemsMode;
 };
 
-// Minimal shape needed by `FilteredPantryItems` — kept structurally
-// compatible with the `GetPantry` node so the `usePantryManagement` items
-// flow through without explicit casts.
+// Structurally compatible with the `GetPantry` node, so `usePantryManagement`
+// items flow through without casts.
 interface FilteredItem {
   id: string;
   itemName: string;
@@ -78,27 +74,15 @@ interface FilteredItem {
   expiresAt: string | null;
 }
 
-// ── Mode config ──
-
 interface ModeConfig {
   title: string;
   emptyMessage: string;
   emptyIcon: string;
   /**
-   * Server-side narrowing, so the screen never has to hold the WHOLE pantry to
-   * filter it. That matters because `itemsConnection` caps its cached edges at
-   * `MAX_WINDOW_EDGES` (100) while `pageInfo.hasNextPage` reports the last
-   * FETCHED page — above 100 items the connection claims completeness while
-   * holding a subset, `hasMore` goes false, and a client-only filter silently
-   * reports "none" over whatever 100 edges survived.
-   *
-   * A non-null value also re-keys the cache entry (`keyArgs: ['filters', …]`),
-   * so these screens get their own small connection instead of sharing the
-   * capped one.
-   *
-   * Non-nullable on purpose: a mode that declares no narrowing is a mode that
-   * silently breaks above 100 items, which is how the expiring list came to
-   * report "none" against a pantry that had some.
+   * Non-nullable on purpose. `itemsConnection` caps cached edges at
+   * `MAX_WINDOW_EDGES` (100) while `hasNextPage` reports the last FETCHED page,
+   * so above 100 items a client-only filter silently reports "none". A non-null
+   * value also re-keys the cache entry (`keyArgs: ['filters', …]`).
    */
   serverFilters: PantryItemFilters;
   filter: (item: FilteredItem) => boolean;
@@ -128,12 +112,9 @@ function buildModeConfig(
       title: t('filteredPantry.lowStockTitle'),
       emptyMessage: t('filteredPantry.lowStockEmpty'),
       emptyIcon: 'cube-outline',
-      // `lowStock` is quantity <= 0, or <= minQuantity when a minimum is set —
-      // exactly what `PantryStats.lowStockCount` counts and `PantryItem
-      // .isLowStock` reports, so the badge and this list cannot disagree.
-      // NOT the `lowStockAlert` opt-in, which only records whether the user
-      // wants notifying; the suggestion and shopping-list paths gate on that
-      // one instead, and answer a different question.
+      // `lowStock` is what `PantryStats.lowStockCount` counts and
+      // `PantryItem.isLowStock` reports, so badge and list cannot disagree. NOT
+      // the `lowStockAlert` opt-in, which is only a notification preference.
       serverFilters: { lowStock: true },
       filter: item => item.isLowStock,
       subtitle: item =>
@@ -161,20 +142,13 @@ function buildModeConfig(
       title: t('filteredPantry.expiringTitle'),
       emptyMessage: t('filteredPantry.expiringEmpty'),
       emptyIcon: 'time-outline',
-      // `expiringSoon` is `expiresAt <= now + expirationDays AND quantity > 0`
-      // server-side — note it has NO lower bound, so it returns already-expired
-      // items too. That superset is exactly what both this mode and `expired`
-      // need; the predicate below splits it.
-      //
-      // We deliberately do NOT pass `expirationDays`. It defaults to 7, and
-      // `PantryStats.expiringCount` is ALWAYS a 7-day window regardless of it —
-      // so the filter and the badge line up arithmetically only at the default.
-      // Widening the horizon here would list items the badge never counted.
+      // `expiringSoon` has NO lower bound, so it returns already-expired items
+      // too — the superset this mode and `expired` split between them.
+      // `expirationDays` is deliberately not passed: `PantryStats.expiringCount`
+      // is always a 7-day window, so widening it here would list items the badge
+      // never counted.
       serverFilters: { expiringSoon: true },
-      // Mirrors server `PantryStats.expiringCount`: expiring within 7 days but
-      // NOT yet expired (now ≤ expiresAt ≤ now + 7d, quantity > 0). Already-
-      // expired items live in the `expired` mode below — the two are mutually
-      // exclusive so badge counts and lists stay aligned.
+      // Mirrors `PantryStats.expiringCount`: within 7 days, not yet expired.
       filter: item => {
         if (!item.expiresAt || item.quantity <= 0) return false;
         const days = differenceInCalendarDays(
@@ -196,8 +170,7 @@ function buildModeConfig(
       title: t('filteredPantry.expiredTitle'),
       emptyMessage: t('filteredPantry.expiredEmpty'),
       emptyIcon: 'alert-circle-outline',
-      // Same superset as `expiring` (see above) — `expiringSoon` has no lower
-      // bound, so past-dated items are included and the predicate keeps them.
+      // Same unbounded superset as `expiring`; the predicate keeps the past-dated.
       serverFilters: { expiringSoon: true },
       // Mirrors server `PantryStats.expiredCount`: past expiresAt, quantity > 0.
       filter: item => {
@@ -221,14 +194,10 @@ function buildModeConfig(
   };
 }
 
-// ── Helpers ──
-
 const keyExtractor = (item: { id: string }) => item.id;
 const getItemType = () => 'item';
 
 type LayoutRect = { x: number; y: number; width: number; height: number };
-
-// ── Render item ──
 
 interface FilteredRenderItemProps {
   item: FilteredItem;
@@ -298,8 +267,6 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
 
 const FilteredRenderItem = FilteredRenderItemComponent;
 
-// ── Empty state ──
-
 interface FilteredEmptyProps {
   state: DataState;
   onRetry: () => void;
@@ -308,13 +275,9 @@ interface FilteredEmptyProps {
 }
 
 /**
- * The four states, for a list whose contents are filtered client-side.
- *
- * The empty message here is congratulatory — "Nothing is expiring", "You're all
- * stocked up" — so it is the worst possible thing to show when the fetch failed:
- * the app cheerfully reports good news it has no evidence for. Skeletons were
- * the other half of the same problem, standing in for both "still loading" and
- * "gave up", so a failure read as a load that never finished.
+ * Error and offline get their own branch because the empty message is
+ * congratulatory ("You're all stocked up") — good news the app has no evidence
+ * for if the fetch failed; skeletons cannot stand in for a failure either.
  */
 const FilteredEmpty: React.FC<FilteredEmptyProps> = ({
   state,
@@ -346,8 +309,6 @@ const FilteredEmpty: React.FC<FilteredEmptyProps> = ({
   );
 };
 
-// ── Main component ──
-
 export const FilteredPantryItems: React.FC<
   StaticScreenProps<FilteredPantryItemsParams | undefined>
 > = ({ route }) => {
@@ -359,7 +320,6 @@ export const FilteredPantryItems: React.FC<
 
   const [refreshing, setRefreshing] = React.useState(false);
 
-  // ── Focus tracking for tutorial pausing ──
   const [isScreenFocused, setIsScreenFocused] = useState(true);
   const [onScreenFocus] = useState(() => () => {
     setIsScreenFocused(true);
@@ -392,23 +352,20 @@ export const FilteredPantryItems: React.FC<
     filters: config.serverFilters,
   });
 
-  // Classified on the fetched set. The client-side filter narrowing to nothing
-  // is the genuine empty case; a fetch that never returned is not.
+  // Classified on the FETCHED set: a client filter narrowing to nothing is the
+  // genuine empty case, a fetch that never returned is not.
   const dataState = useDataState({
     loading,
     error,
     hasResult,
     skipped,
-    // Nullable in practice while the query is in flight, as the filter
-    // below already assumes.
     isEmpty: !allItems?.length,
   });
   const [addToShoppingList] = useMutation(
     AddItemToShoppingListFromFilteredPantryDocument,
     {
-      // Add the created item to the list connection so it appears when the list
-      // comes into view (the mutation returns the full item). Reads the list id
-      // from the mutation's own variables to stay correct across re-renders.
+      // Reads the list id from the mutation's own variables, so it stays
+      // correct across re-renders.
       update: buildAddItemsReconcileUpdate({}),
     },
   );
@@ -429,9 +386,8 @@ export const FilteredPantryItems: React.FC<
     return filtered;
   })();
 
-  // Instrumented like PantryContent/SortableList: a full screen, so
-  // `flashlist_initial_load_ms` and blank-cell episodes are worth the
-  // per-cell wrapper's cost (per-session sampled, 5% in release).
+  // Full screen, so the per-cell wrapper's cost is worth the blank-cell
+  // instrumentation (per-session sampled, 5% in release).
   const flashListRef = useRef<FlashListRef<FilteredItem>>(null);
   const perfCallbacks = useFlashListPerformance(flashListRef, {
     componentName: 'FilteredPantryItems',
@@ -443,7 +399,6 @@ export const FilteredPantryItems: React.FC<
     perfCallbacks.onDataReferenceChange,
   );
 
-  // ── Tutorial measurement state ──
   const [itemCartRect, setItemCartRect] = useState<LayoutRect | null>(null);
   const [headerCartRect, setHeaderCartRect] = useState<LayoutRect | null>(null);
 
@@ -469,12 +424,10 @@ export const FilteredPantryItems: React.FC<
       toastService.info(t('filteredPantry.noListSelected'));
       return;
     }
-    // Generate the new item's id so a create that gets queued (offline / API
-    // down) replays idempotently, keyed by this id.
+    // Mint the id so a queued create replays idempotently, keyed by it.
     const id = generateEntityId();
 
-    // Write the item into the cache before firing so it's on the list when it
-    // comes into view — and survives a queued (offline / API-down) create.
+    // Written before firing, so it survives a queued create.
     try {
       addOptimisticShoppingListItem(
         client.cache,
@@ -513,10 +466,9 @@ export const FilteredPantryItems: React.FC<
         t('filteredPantry.addToShoppingFailed'),
       );
     }
-    // A queued create (offline / API down) replays later — treat as success.
-    // Only a real rejection surfaces an error; errorPolicy:'all' resolves
-    // rejections, so the catch above never fires for them — the reconciler
-    // classifies the result instead and discards the item we wrote.
+    // A queued create replays later — treat as success. `errorPolicy: 'all'`
+    // resolves rejections, so the catch above never sees them; the reconciler
+    // classifies the result and discards the item we wrote.
     if (
       result &&
       reconcileShoppingCreate(

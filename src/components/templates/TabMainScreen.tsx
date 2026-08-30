@@ -8,12 +8,8 @@ interface TabMainScreenProps {
 }
 
 /**
- * Root container for the top-level screens of each HomeTabs stack
- * (PantryMain, ShoppingListMain, RecipeMain, MealPlanMain).
- *
- * Centralizes the top spacing below the status bar so every tab is
- * visually aligned. This is the single source of truth for that spacing —
- * do not re-apply marginTop/paddingTop in individual headers.
+ * Root container for each HomeTabs stack's top-level screen, and the single source
+ * of the top spacing below the status bar — never re-apply it in a header.
  */
 export const TabMainScreen: React.FC<TabMainScreenProps> = ({
   children,

@@ -1,16 +1,8 @@
-/**
- * Onboarding Screen Objects
- *
- * Screen object models for the onboarding wizard flow.
- * The onboarding uses a multi-step wizard with separate screens.
- */
+/** The onboarding wizard is a separate screen per step, one class each. */
 
 import { BaseScreen } from './BaseScreen';
 
-/**
- * CreateHomeScreen
- * Step 1: Create or join a home
- */
+/** Step 1: create or join a home. */
 export class CreateHomeScreen extends BaseScreen {
   protected screenID = 'onboarding-create-home-screen';
 
@@ -22,14 +14,11 @@ export class CreateHomeScreen extends BaseScreen {
     await this.tapByID(`${this.screenID}-back-button`);
   }
 
-  // Note: Form submission handled by CreateHomeScreen internally
-  // Test will need to interact with form fields directly or wait for navigation
+  // No submit helper: the screen submits its own form, so a test drives the
+  // fields directly or waits for the navigation.
 }
 
-/**
- * CreateShoppingListScreen
- * Step 2: Create a shopping list
- */
+/** Step 2: create a shopping list. */
 export class CreateShoppingListScreen extends BaseScreen {
   protected screenID = 'onboarding-create-shopping-list-screen';
 
@@ -42,10 +31,7 @@ export class CreateShoppingListScreen extends BaseScreen {
   }
 }
 
-/**
- * SelectPantryItemsScreen
- * Step 3: Select initial pantry items
- */
+/** Step 3: select initial pantry items. */
 export class SelectPantryItemsScreen extends BaseScreen {
   protected screenID = 'onboarding-select-pantry-items-screen';
 
@@ -57,14 +43,11 @@ export class SelectPantryItemsScreen extends BaseScreen {
     await this.tapByID(`${this.screenID}-back-button`);
   }
 
-  // Note: Item selection uses AnimatedChip components
-  // Tests can verify screen presence and skip to next step
+  // Item selection is AnimatedChip components with no testIDs — a test can
+  // assert the screen is present and skip.
 }
 
-/**
- * BiometricSetupScreen
- * Step 7: Set up biometric authentication (optional)
- */
+/** Step 6 of 7: optional biometric authentication setup. */
 export class BiometricSetupScreen extends BaseScreen {
   protected screenID = 'biometric-setup-screen';
 
@@ -77,15 +60,11 @@ export class BiometricSetupScreen extends BaseScreen {
   }
 }
 
-/**
- * OnboardingCompleteScreen
- * Final step: Completion screen
- */
+/** Step 7 of 7, the last. */
 export class OnboardingCompleteScreen extends BaseScreen {
   protected screenID = 'onboarding-complete-screen';
 
   async expectCompletionMessage() {
-    // Verify completion screen is showing
     await this.waitForScreen();
   }
 }

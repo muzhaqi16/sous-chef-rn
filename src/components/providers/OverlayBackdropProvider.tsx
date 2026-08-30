@@ -21,10 +21,8 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { logger } from '#/utils/environment';
 
 export interface BackdropClaimOptions {
-  /** A fixed target opacity (provider creates + animates an internal SV via
-   *  withTiming on claim/release), or a SharedValue the contributor drives
-   *  itself — e.g. a sheet's animatedIndex-interpolated opacity, kept in
-   *  lockstep with the sheet on the UI thread. */
+  /** A fixed target the provider animates itself, or a SharedValue the contributor
+   *  drives — e.g. a sheet's animatedIndex-interpolated opacity. */
   opacity?: number | SharedValue<number>;
   onPress?: () => void;
 }
@@ -32,8 +30,7 @@ export interface BackdropClaimOptions {
 interface SlotEntry {
   id: string;
   sv: SharedValue<number>;
-  /** true → provider created the SV (makeMutable) and owns its animation;
-   *  false → contributor-supplied SV the provider must not touch. */
+  /** true means the provider created and owns the SV; false means hands off. */
   ownedByProvider: boolean;
   onPress?: () => void;
 }
@@ -67,9 +64,8 @@ export const useOverlayBackdrop = (): OverlayBackdropContextType => {
   return context;
 };
 
-// No-op fallback for `useOverlayBackdropOptional` when no provider is mounted
-// (unit-test trees). `claim` returns '' so a paired `release` harmlessly finds
-// no slot. Module-scoped for stable identity.
+// Module-scoped for stable identity. `claim` returns '' so a paired `release`
+// harmlessly finds no slot.
 const NOOP_BACKDROP: OverlayBackdropContextType = {
   claim: () => '',
   release: () => {},
@@ -79,11 +75,9 @@ const NOOP_BACKDROP: OverlayBackdropContextType = {
 let missingProviderWarned = false;
 
 /**
- * Like `useOverlayBackdrop` but returns a no-op fallback instead of throwing
- * when no provider is mounted — for cross-cutting hooks (e.g.
- * `useStandardBottomSheet`) rendered in unit-test trees without the provider.
- * Warns once in DEV, since hitting the fallback in real code silently drops the
- * dim layer.
+ * `useOverlayBackdrop` with a no-op fallback instead of a throw, for cross-cutting
+ * hooks rendered in provider-less test trees. Warns once in DEV — hitting the
+ * fallback in real code silently drops the dim layer.
  */
 export const useOverlayBackdropOptional = (): OverlayBackdropContextType => {
   const context = useContext(OverlayBackdropContext);
@@ -101,11 +95,9 @@ export const useOverlayBackdropOptional = (): OverlayBackdropContextType => {
 };
 
 /**
- * The global dim opacity SharedValue (max across active claims, UI-thread
- * driven), or null when no provider is mounted. The single source of truth for
- * "an overlay covers the screen, and how far through its animation." Chrome
- * like the floating tab bar reads it to react in lockstep; normalize by
- * `SHEET.BACKDROP_OPACITY` for a 0…1 coverage value.
+ * The global dim opacity (max across claims, UI-thread driven), or null with no
+ * provider. Chrome like the floating tab bar reads it to move in lockstep;
+ * normalize by `SHEET.BACKDROP_OPACITY` for a 0…1 coverage value.
  */
 export const useOverlayBackdropOpacity = (): SharedValue<number> | null => {
   const internal = useContext(OverlayBackdropInternalContext);
@@ -113,11 +105,9 @@ export const useOverlayBackdropOpacity = (): SharedValue<number> | null => {
 };
 
 /**
- * Whether any overlay is currently claiming the backdrop (slot count > 0). The
- * floating tab bar reads it to reset its scroll-hidden state when an overlay
- * opens. Distinct from `isOverlayOpen` in TabBarActionsContext, which selectors
- * set explicitly to gate tutorial pausing (a tutorial may open its own sheet,
- * so it must not treat every backdrop as blocking).
+ * Whether any overlay claims the backdrop. Distinct from `isOverlayOpen` in
+ * TabBarActionsContext, which selectors set explicitly to gate tutorial pausing —
+ * a tutorial opens its own sheet, so it must not treat every backdrop as blocking.
  */
 export const useOverlayBackdropPresence = (): boolean => {
   const internal = useContext(OverlayBackdropInternalContext);
@@ -125,10 +115,9 @@ export const useOverlayBackdropPresence = (): boolean => {
 };
 
 /**
- * Declarative backdrop claim: painted while `active`, released on unmount via
- * effect cleanup — nothing to leak. `onPress` is wrapped in a stable closure so
- * prop updates don't re-claim; `opacity` is reactive (changing it re-claims),
- * but consumers keep it stable in practice.
+ * Declarative claim: painted while `active`, released by effect cleanup, so
+ * nothing leaks. `onPress` is wrapped in a stable closure so prop updates don't
+ * re-claim; changing `opacity` does re-claim.
  */
 export function useBackdropClaim(
   active: boolean,
@@ -155,18 +144,11 @@ interface OverlayBackdropProviderProps {
   children: React.ReactNode;
 }
 
-/**
- * Owns the backdrop claim registry. Global opacity is an owned SharedValue
- * driven by a `useAnimatedReaction` over the max of all claim SVs, with a
- * JS-thread zero-floor when nothing is claimed; `isVisible` (gating
- * pointerEvents) is claim count > 0.
- *
- * Sheets claim/release imperatively from `useStandardBottomSheet` via gorhom's
- * `onChange`; `ActionTray` and other static overlays use `useBackdropClaim`.
- * Every claim has a guaranteed release path (the consumer's unmount cleanup),
- * so there is deliberately no navigation-state listener wiping slots — that
- * approach broke the AddToPantrySheet → Barcode → back flow.
- */
+// Owns the claim registry. Global opacity is an owned SharedValue driven by a
+// `useAnimatedReaction` over the max of all claim SVs, plus a JS-thread
+// zero-floor. Every claim has a guaranteed release path through its consumer's
+// unmount cleanup, so there is deliberately NO navigation-state listener wiping
+// slots — that breaks the AddToPantrySheet → Barcode → back flow.
 export const OverlayBackdropProvider: React.FC<
   OverlayBackdropProviderProps
 > = ({ children }) => {
@@ -177,17 +159,15 @@ export const OverlayBackdropProvider: React.FC<
   });
   const nextIdRef = useRef(0);
 
-  // Track claim presence (not opacity) so taps are blocked across the whole
-  // fade-in/out window.
+  // Presence, not opacity, so taps stay blocked across the whole fade window.
   const isVisible = slots.length > 0;
 
   // Latest claim owns the backdrop-tap handler.
   const onPress =
     slots.length > 0 ? slots[slots.length - 1].onPress ?? null : null;
 
-  // Global dim opacity = max across active claim SVs, on the UI thread.
-  // Reanimated recurses into `slots` to track every `.sv`, so the reaction
-  // re-runs as a contributor animates and on any add/remove.
+  // Reanimated recurses into `slots` to track every `.sv`, so this re-runs as a
+  // contributor animates and on any add/remove.
   const opacity = useSharedValue(0);
   useAnimatedReaction(
     () => {
@@ -203,21 +183,18 @@ export const OverlayBackdropProvider: React.FC<
     },
   );
 
-  // Zero-floor: an empty slot set has no contributor SV left to drive the
-  // reaction down, so force opacity to 0 from the JS thread. Normal closes
-  // already animate to 0 before the slot is removed; this only bites an
-  // interrupted close (portal unmounts mid-animation, stranding the sheet's
-  // animatedIndex), which otherwise strands the dim and tab bar at ~half.
+  // An empty slot set has no contributor SV left to drive the reaction down, so
+  // force 0 from the JS thread. Only bites an interrupted close, where the portal
+  // unmounts mid-animation and strands the dim and tab bar at ~half.
   useEffect(() => {
     if (slots.length === 0) opacity.set(0);
   }, [slots, opacity]);
 
-  // Created once so `claim`/`release` have stable identity for consumers' effect
-  // deps; they read the live slot list through `slotsRef`.
+  // Created once so `claim`/`release` are stable in consumers' effect deps; they
+  // read the live slot list through `slotsRef`.
   const [publicValue] = useState<OverlayBackdropContextType>(() => {
     const removeSlot = (id: string): void => {
-      // Cancel a provider-owned SV's in-flight animation before dropping it
-      // (makeMutable SVs persist unless cancelled); leave external SVs alone.
+      // makeMutable SVs persist unless cancelled; leave external SVs alone.
       const entry = slotsRef.current.find(e => e.id === id);
       if (entry?.ownedByProvider) cancelAnimation(entry.sv);
       setSlots(prev => {
@@ -236,7 +213,6 @@ export const OverlayBackdropProvider: React.FC<
       const id = String(nextIdRef.current);
       nextIdRef.current += 1;
 
-      // External SV: use the contributor's value directly, no provider animation.
       if (opts?.opacity !== undefined && typeof opts.opacity !== 'number') {
         const entry: SlotEntry = {
           id,
@@ -256,7 +232,6 @@ export const OverlayBackdropProvider: React.FC<
         return id;
       }
 
-      // Static: provider creates an SV and animates 0 → target (ActionTray etc.).
       const target = (opts?.opacity as number | undefined) ?? 0.5;
       const sv = makeMutable(0);
       sv.set(withTiming(target, { duration: SHEET.BACKDROP_FADE_IN }));
@@ -281,8 +256,8 @@ export const OverlayBackdropProvider: React.FC<
     const release = (id: string): void => {
       const entry = slotsRef.current.find(e => e.id === id);
 
-      // Provider-owned: fade to 0, then drop the slot. An interrupting claim
-      // still fires this callback; removeSlot's `.some` guard makes it a no-op.
+      // An interrupting claim still fires this callback; removeSlot's `.some`
+      // guard makes that a no-op.
       if (entry?.ownedByProvider) {
         entry.sv.set(
           withTiming(0, { duration: SHEET.BACKDROP_FADE_OUT }, () => {
@@ -293,10 +268,9 @@ export const OverlayBackdropProvider: React.FC<
         return;
       }
 
-      // External SV: remove immediately. Don't early-return on a missing entry —
-      // a fast claim→release can outrun the `slotsRef` sync, but removeSlot's
-      // functional setSlots reads authoritative state and still removes it.
-      // Early-returning here stranded the slot with a frozen non-zero SV.
+      // Never early-return on a missing entry: a fast claim→release outruns the
+      // `slotsRef` sync, and removeSlot's functional setSlots still removes it.
+      // Returning here strands the slot with a frozen non-zero SV.
       removeSlot(id);
     };
 
@@ -318,10 +292,7 @@ export const OverlayBackdropProvider: React.FC<
   );
 };
 
-/**
- * The global dim layer, rendered once at App level inside
- * BottomSheetModalProvider so sheet portals stack above it.
- */
+/** Rendered once at App level inside BottomSheetModalProvider, so sheets stack above. */
 export const GlobalBackdrop: React.FC = () => {
   const internal = useContext(OverlayBackdropInternalContext);
   const opacity = internal?.opacity;

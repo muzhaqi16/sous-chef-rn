@@ -49,7 +49,7 @@ describe('toDisplayNotification', () => {
 
   // The server counts a notification as unread only while PENDING or SENT, so
   // the terminal statuses must map to isRead even though `readAt` is null —
-  // that combination is what used to inflate the locally recomputed badge.
+  // that combination is what inflates a locally recomputed badge.
   it.each([
     [NotificationStatus.Pending, false],
     [NotificationStatus.Sent, false],

@@ -126,13 +126,10 @@ const styles = StyleSheet.create(theme => ({
           color: theme.colors.error,
         },
       },
-      // `size` overrides only `fontSize`, so a size larger than the variant's
-      // font keeps that variant's leading — and `variant` defaults to `body`,
-      // whose leading is 24. At `2xl` and up the glyphs are as tall as or
-      // taller than that line box and get clipped top and bottom, so those
-      // sizes carry their own leading. Declared after `variant` and before
-      // `lineHeight` so it wins over the former and yields to an explicit
-      // `lineHeight` prop.
+      // `size` sets only `fontSize`, so it otherwise keeps the variant's leading
+      // (`body` = 24) and clips glyphs at `2xl` and up — hence the per-size
+      // leading. Declared after `variant`, before `lineHeight`, so it beats the
+      // former and yields to an explicit `lineHeight` prop.
       size: {
         '2xs': { fontSize: theme.fonts.size['2xs'] },
         xs: { fontSize: theme.fonts.size.xs },

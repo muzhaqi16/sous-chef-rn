@@ -3,12 +3,8 @@ import { storage } from '#/storage/mmkv';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 
 /**
- * Selector hook for just the showTutorials setting
- * Use this when you only need to check if tutorials are enabled
- *
- * PERFORMANCE: Reads from MMKV instead of triggering the GetUserSettings GraphQL query.
- * The MMKV value is synced whenever useAppSettings loads fresh data (see useAppSettings).
- * Re-reads on tutorial reset so hooks see the updated value immediately.
+ * Reads MMKV rather than firing `GetUserSettings`; `useAppSettings` writes the
+ * value whenever it loads fresh data. Re-reads on a tutorial reset.
  */
 export const useShowTutorials = (): boolean => {
   const wasReset = useTutorialResetSignal();

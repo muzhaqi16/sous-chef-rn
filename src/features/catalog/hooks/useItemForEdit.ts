@@ -18,12 +18,9 @@ export interface UseItemForEditResult {
 }
 
 /**
- * Loads the canonical pre-edit snapshot of a catalog item.
- *
- * A partial cache read would report absent fields as user-cleared values, and
- * would lie about `canEdit` — which decides whether the edit is proposed for
- * review or written straight through. So the snapshot is withheld entirely
- * until the read is complete; a spinner is the right answer until then.
+ * Loads the canonical pre-edit snapshot of a catalog item. Withheld entirely
+ * until the read is complete: a partial read reports absent fields as
+ * user-cleared values, and lies about `canEdit`.
  */
 export function useItemForEdit(itemId: string): UseItemForEditResult {
   const { loading, error, refetch } = useQuery(GetItemForEditDocument, {

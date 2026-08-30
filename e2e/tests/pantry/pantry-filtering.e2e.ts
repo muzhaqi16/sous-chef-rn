@@ -1,19 +1,11 @@
 /**
- * Pantry Filtering E2E Tests
- *
- * Tests for pantry search and filter functionality including:
- * - Search by name
- * - Filter by storage location
- * - Empty state when no results
- * - Combined search and filter
+ * Pantry search, storage-location filtering, sort, and their combinations.
  */
 
-import { element, by, waitFor, expect } from 'detox';
-import { PantryScreen } from '../../screens';
-import {
-  bootstrapAuthenticatedSession,
-  relaunchToHomeTab,
-} from '../../helpers';
+import { element, by, waitFor } from 'detox';
+import { PantryScreen } from '../../screens/PantryScreen';
+import { bootstrapAuthenticatedSession } from '../../helpers/auth';
+import { relaunchToHomeTab } from '../../helpers/flows';
 import { TIMEOUTS } from '../../helpers/waitFor';
 
 describe('Pantry Filtering', () => {
@@ -22,7 +14,6 @@ describe('Pantry Filtering', () => {
   beforeAll(async () => {
     await bootstrapAuthenticatedSession();
 
-    // Navigate to pantry
     await relaunchToHomeTab();
     await pantryScreen.waitForScreen();
 
@@ -69,7 +60,6 @@ describe('Pantry Filtering', () => {
       await searchInput.clearText();
       await searchInput.typeText('NonExistentItem123');
 
-      // Should show empty state or "no results" message
       await waitFor(element(by.id('pantry-empty-state')))
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
@@ -86,10 +76,8 @@ describe('Pantry Filtering', () => {
         .not.toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
-      // Clear search
       await searchInput.clearText();
 
-      // Should show all items again
       await waitFor(element(by.text('Banana')))
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
@@ -102,7 +90,6 @@ describe('Pantry Filtering', () => {
       await searchInput.clearText();
       await searchInput.typeText('apple'); // lowercase
 
-      // Should still find Apple
       await waitFor(element(by.text('Apple')))
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
@@ -123,15 +110,12 @@ describe('Pantry Filtering', () => {
   describe('Filter by Storage Location', () => {
     // The app has no filter *menu*: the locations are a persistent tab strip
     // (`FilterTabs` with `testIDPrefix="pantry-location-tab"`), so the ids are
-    // `pantry-location-tab-{all,fridge,freezer,pantry}`. These tests looked for
-    // `pantry-filter-button` and `filter-refrigerator`, neither of which the app
-    // has ever rendered — see __tests__/harness/e2eTestIdsExist.test.ts.
+    // `pantry-location-tab-{all,fridge,freezer,pantry}`.
     it('narrows the list to a storage location', async () => {
       await element(by.id('pantry-location-tab-fridge')).tap();
 
-      // The tab strip is still there and the list re-rendered under it. The
-      // previous version asserted only `waitForListToLoad()`, which passes
-      // whether or not the tap did anything.
+      // The tab strip is still there and the list re-rendered under it;
+      // `waitForListToLoad()` alone passes whether or not the tap did anything.
       await waitFor(element(by.id('pantry-location-tab-fridge')))
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
@@ -151,10 +135,7 @@ describe('Pantry Filtering', () => {
   });
 
   describe('Sort', () => {
-    // `pantry-sort-option-*` is derived from the option key in
-    // `PantrySortModal`. The modal previously carried no testIDs at all, so the
-    // `sort-by-name` / `sort-by-expiration` these tests used could not have
-    // matched anything.
+    // `pantry-sort-option-*` is derived from the option key in `PantrySortModal`.
     const openSortModal = async () => {
       await element(by.id('pantry-sort-button')).tap();
       await waitFor(element(by.id('pantry-sort-modal')))

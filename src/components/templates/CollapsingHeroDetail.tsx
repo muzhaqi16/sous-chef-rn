@@ -23,45 +23,34 @@ import {
   type HeaderAction,
 } from '#components/atoms/HeaderActionIcon';
 
-// Visible hero height below the status bar. The rendered hero is grown by the
-// top inset (see `heroHeight`) so it fills edge-to-edge behind the status bar.
+// Visible hero height below the status bar; `heroHeight` grows it by the top
+// inset so it fills edge-to-edge behind it.
 export const HERO_IMAGE_HEIGHT = 280;
 
 const HEADER_TOP_GAP = 8;
 const BUTTON_SIZE = 40;
-// Action-button band height below the status-bar inset (gap + button + gap).
-// Reserved above the title when there's no hero, and used to size the bar.
+// Action-button band below the status-bar inset; also reserved above the title
+// when there is no hero.
 export const HEADER_BAND_HEIGHT = HEADER_TOP_GAP + BUTTON_SIZE + HEADER_TOP_GAP;
 
 const COLLAPSE_DISTANCE = HERO_IMAGE_HEIGHT - HEADER_BAND_HEIGHT;
-// The content card overlaps the hero by `theme.spacing['5']` (its negative
-// marginTop), so its top reaches the bar at this scroll offset. The photo stays
-// un-dimmed until then; the solid bar + inline title fade in over a short window
-// just before it, so the bar is opaque exactly as content arrives to scroll
-// beneath it (no overlap), tinting only a small top strip briefly.
-// Exported so hero renderers (GalleryHero) can keep interactive elements
-// above the covered band.
+// The scroll offset at which the content card's top reaches the bar. The bar
+// turns opaque just before it, so content arrives to scroll beneath an already
+// solid bar. Exported so hero renderers can keep interactive elements clear.
 export const CONTENT_OVERLAP = 20;
 const COLLAPSE_POINT = COLLAPSE_DISTANCE - CONTENT_OVERLAP;
 const BAR_FADE_END = COLLAPSE_POINT;
 const BAR_FADE_START = COLLAPSE_POINT - 24;
 
-// The inline bar title must not appear until the screen's own large title
-// (the in-content DetailTitleRow) has scrolled fully under the opaque bar —
-// otherwise both are visible at once ("double title"). The scroll distance at
-// which a single 2xl title line clears the bar is inset-independent: it's the
-// title's line box (~32) plus the card/row top paddings, measured from where
-// each variant places that title. Hero variant: heroHeight + title box -
-// content overlap - bar band ≈ 252px. Begin the fade just after the bar turns
-// solid (BAR_FADE_END) and finish it as the title clears.
+// The inline bar title must not appear until the in-content `DetailTitleRow` has
+// scrolled fully under the opaque bar, or both show at once. The clearing
+// distance is inset-independent: the title's line box plus the card/row top
+// paddings, measured from where the variant places it.
 const TITLE_FADE_START = COLLAPSE_POINT + 12;
 const TITLE_FADE_END = COLLAPSE_POINT + 48;
 
-// No-hero screens keep their own large title at the top of the content and
-// leave the inline bar title hidden until that large title scrolls up under the
-// (already-solid) bar. The large title clears the bar after ≈ its line box plus
-// the card/row top paddings (~48px); start the fade only then so the two titles
-// never coexist.
+// Same rule for no-hero screens, whose bar is already solid: the large title
+// clears after roughly its line box plus the card/row top paddings.
 const NO_HERO_TITLE_FADE_START = 48;
 const NO_HERO_TITLE_FADE_END = 72;
 
@@ -75,9 +64,8 @@ const CIRCLE_SHADOW = [
   },
 ];
 
-/** Circular icon button that stays legible floating over a photo. The icon
- *  and its color/loading/disabled rules come from the shared HeaderActionIcon
- *  renderer, so chips and Header bars treat a HeaderAction identically. */
+/** Circular icon button, legible floating over a photo. Its color/loading/disabled
+ *  rules come from `HeaderActionIcon`, shared with the `Header` bars. */
 const HeroChip: React.FC<{ action: HeaderAction }> = ({ action }) => (
   <AppPressable
     onPress={action.onPress}
@@ -93,46 +81,31 @@ const HeroChip: React.FC<{ action: HeaderAction }> = ({ action }) => (
 );
 
 interface CollapsingHeroDetailProps {
-  /** Back handler — rendered as the leading circular chip. */
   onBack: () => void;
-  /** Trailing action chips. */
   actions?: HeaderAction[];
-  /** Inline bar title. Hidden at rest; fades in on scroll — as the hero
-   *  collapses, or (with no hero) as the screen's large title scrolls up under
-   *  the bar. */
+  /** Hidden at rest; fades in as the hero collapses, or as the large title
+   *  scrolls under the bar on a no-hero screen. */
   title?: string;
   /**
-   * Renders the hero image at the given height (already grown by the top inset
-   * so it draws edge-to-edge behind the status bar). Omit for a screen with no
-   * hero — the bar is then solid from the start, like a normal header.
+   * Renders the hero at the given height, already grown by the top inset. Omit for
+   * a no-hero screen, whose bar is then solid from the start.
    */
   renderHero?: (heroHeight: number) => React.ReactNode;
   /** Recede the hero at half scroll speed and zoom on pull-down. */
   parallax?: boolean;
   refreshing?: boolean;
   onRefresh?: () => void;
-  /** Extra style merged into the content card (e.g. horizontal padding). */
   contentStyle?: StyleProp<ViewStyle>;
   children: React.ReactNode;
   testID?: string;
 }
 
-/**
- * Immersive detail layout: an edge-to-edge hero image that collapses into a
- * pinned action bar as the user scrolls, with the content riding up over it in
- * a rounded card.
- *
- * Behavior (standard collapsing-toolbar pattern):
- * - Back + actions are circular chips, pinned, legible over the photo at rest.
- * - On scroll the whole image dims to the app background (uniform scrim) while a
- *   solid bar + optional inline title fade in, so content scrolls beneath an
- *   opaque bar instead of under floating icons.
- * - With no hero, the bar is solid from the start and space is reserved for it.
- *
- * The screen must NOT apply a top safe-area inset (omit `topInsetScreenLayout`
- * in its stack registration) — this layout draws behind the status bar and
- * insets itself.
- */
+// Edge-to-edge hero collapsing into a pinned action bar, with the content riding
+// up over it in a rounded card. With no hero the bar is solid from the start.
+//
+// The screen must NOT apply a top safe-area inset (omit `topInsetScreenLayout` in
+// its stack registration) — this layout draws behind the status bar and insets
+// itself.
 export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
   onBack,
   actions = [],
@@ -165,9 +138,8 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
     return { transform: [{ translateY: y * 0.5 }] };
   });
 
-  // Solid bar background: transparent over the prominent hero, fading to opaque
-  // right as the content card reaches the bar so content scrolls beneath it.
-  // Image-less screens are solid from the start.
+  // Transparent over the hero, opaque exactly as the content card reaches the
+  // bar. Image-less screens are solid from the start.
   const barBgStyle = useAnimatedStyle(() => {
     if (!hasHero) return { opacity: 1 };
     return {
@@ -241,7 +213,6 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
         </View>
       </Animated.ScrollView>
 
-      {/* Pinned action bar */}
       <View
         pointerEvents="box-none"
         style={[styles.bar, { height: insets.top + HEADER_BAND_HEIGHT }]}
@@ -274,9 +245,8 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
           </Animated.View>
           <View style={styles.actionsRow}>
             {/* Leads the chips so a pushed detail screen carries the offline
-                signal too — it used to live only on the four tab headers, so
-                navigating into a detail silently dropped it. Renders null when
-                online, leaving the chip row untouched. */}
+                signal too, not just the tab headers. Renders null when online,
+                leaving the chip row untouched. */}
             <OfflineStatusPill size={22} />
             {actions.map((action, index) => (
               <HeroChip

@@ -27,11 +27,8 @@ interface UseConvertAvailableQuantityResult {
 }
 
 /**
- * Converts the item's available quantity into the selected unit.
- *
- * For dual-tracked items, converts from `remainingNetWeight` (accurate).
- * For simple items, uses local `conversionRatio` when available,
- * otherwise falls back to the `convertQuantity` API.
+ * Dual-tracked items convert from `remainingNetWeight`; simple items use the
+ * local `conversionRatio`, falling back to the `convertQuantity` API.
  */
 export function useConvertAvailableQuantity({
   pantryItemId,

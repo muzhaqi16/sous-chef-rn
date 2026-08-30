@@ -11,16 +11,9 @@ export type CurrentHomeNode = {
 };
 
 /**
- * Resolves the selected home from the cached `GetHomes` result.
- *
- * Split out of `useCurrentPantry` so consumers that only need the home — most
- * notably `usePantryPermissions` — don't also run that hook's pantry-resolution
- * effect, which writes `selectedPantryId` to the store. Mounting both on one
- * pantry screen runs that reconciliation effect twice against identical
- * inputs.
- *
- * Reads `cache-only`: `useDefaultHome` owns the network fetch and populates the
- * cache, so querying here would duplicate a request during startup.
+ * Separate from `useCurrentPantry` so a home-only consumer does not also run its
+ * pantry-resolution effect, which writes `selectedPantryId`. Reads `cache-only`:
+ * `useDefaultHome` owns the network fetch that populates the cache.
  */
 export function useCurrentHome() {
   const selectedHomeId = useSelectedHomeId();

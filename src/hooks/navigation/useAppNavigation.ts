@@ -5,26 +5,10 @@ import type { NotificationStackParams } from '#navigation/stacks/NotificationSta
 import type { OnboardingStackParams } from '#navigation/stacks/OnboardingStack';
 
 /**
- * Centralized navigation facade — the single place that knows screen names.
- *
- * Always navigate through this hook rather than calling
- * `navigation.navigate('X')` or `CommonActions.navigate('X')` directly.
- * Renaming a screen in the navigator config flows here as a TypeScript error
- * (via the `RootNavigator` module augmentation in `RootNavigator.tsx`); call
- * sites stay untouched.
- *
- * Two navigate shapes appear below:
- * - Root-level screens (every feature detail/sub screen, plus the deep-link
- *   entry points) use the flat form, type-checked against `RootStackParamList`.
- * - Screens inside a nested navigator (Auth, Onboarding, Barcode,
- *   Notifications, and each tab's own Main screen) use
- *   `navigate(Parent, { screen, params })` — the v8-idiomatic alternative to
- *   the untyped `CommonActions.navigate(name)`.
- *
- * Screen names appear as string literals in this file only — extracting them
- * into a `ROUTES` constants object would lose type safety, because
- * `navigation.navigate` overloads discriminate on literal types and a
- * `string`-typed constant won't match a route's specific param overload.
+ * The one place that knows screen names — always navigate through this hook, so
+ * a rename surfaces here as a type error. Root screens use the flat form, nested
+ * navigators `navigate(Parent, { screen, params })`. Names stay string LITERALS:
+ * a `ROUTES` object loses type safety, as the overloads discriminate on those.
  */
 export function useAppNavigation() {
   const navigation = useNavigation();
@@ -42,14 +26,9 @@ export function useAppNavigation() {
     toAuth: () => navigation.navigate('Auth'),
     toLogin: () => navigation.navigate('Auth', { screen: 'Login' }),
     /**
-     * Hand off to sign-in from a deep-link screen, dropping that screen from
-     * the stack.
-     *
-     * `toLogin` would leave it behind: deep-link screens live in a group with
-     * no `if`, so they outlive the `Auth` group that a login removes, and the
-     * abandoned screen — still holding its finished state — becomes the top
-     * route the moment the user signs in. `replace` is what the other
-     * transparent deep-link screens use for the same reason.
+     * Sign-in from a deep-link screen, DROPPING that screen. `toLogin` leaves it
+     * behind: deep-link screens have no `if` on their group, so they outlive the
+     * `Auth` group and resurface as the top route after sign-in.
      */
     replaceWithLogin: () =>
       navigation.dispatch(StackActions.replace('Auth', { screen: 'Login' })),

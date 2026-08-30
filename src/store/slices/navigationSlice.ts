@@ -1,17 +1,9 @@
-// ============================================
-// store/slices/navigationSlice.ts
-// Navigation and onboarding state
-// ============================================
-
 import { StateCreator } from 'zustand';
 import { RootState } from '../index';
 
 /**
- * A deep-link intent queued while the app is hydrating or the user is logged
- * out, replayed by `useDeepLinkRouter` once conditions are met.
- *
- * Two shapes: JWT-token actions (auth lifecycle + person-specific invites) and
- * share-code actions (anyone-with-link joins). Codes are not JWTs, so they skip
+ * A deep-link intent queued while hydrating or logged out, replayed by
+ * `useDeepLinkRouter`. Share codes are not JWTs, so they skip
  * `validateDeepLinkToken`.
  */
 export interface TokenDeepLinkAction {

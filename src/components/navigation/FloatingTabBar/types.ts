@@ -8,12 +8,8 @@ export interface TabIconPair {
 }
 
 /**
- * Per-tab presentation, keyed by React Navigation screen name.
- *
- * Supplied by whoever composes the navigator. The tab bar is kit code and has
- * no way to learn which tabs exist or what they should look like — that is the
- * app's decision, and passing it in is what lets a different app ship a
- * different set of tabs without editing this component.
+ * Per-tab presentation, keyed by screen name, supplied by whoever composes the
+ * navigator: the tab bar is kit code, so which tabs exist is the app's decision.
  */
 export type TabAppearance = Record<
   string,

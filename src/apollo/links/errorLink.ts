@@ -38,29 +38,19 @@ import { useStore } from '#store';
 // on rejected reads.
 const isResourceAccessError = (code: string) => code === ErrorCode.Forbidden;
 
-// The @auth directive rejects EVERY field for a suspended, banned, or deleted
-// account: the credentials are valid but the account may not transact. That is
-// not a resource-access denial, so it gets its own code and ends the session.
-//
-// `AUTH_ACCOUNT_SUSPENDED` is the current signal. Servers predating it emit
-// FORBIDDEN with a prose `reason` instead, which the second branch matches so
-// the session still ends against an older API. The server documents that
-// wording as non-contractual, so drop the fallback once every deployed
-// environment serves the code.
+// A suspended, banned or deleted account has valid credentials but may not
+// transact, so it gets its own code rather than a resource-access denial.
+// `AUTH_ACCOUNT_SUSPENDED` is the signal; the prose-`reason` branch covers an
+// older API and can go once every environment serves the code.
 const isAccountInactiveError = (code: string, reason: string) =>
   code === ErrorCode.AuthAccountSuspended ||
   /suspended or deleted/i.test(reason);
 
-// The key travels in the `x-api-key` header and is baked into the build, so
-// every code here is a build/config fault rather than anything the session can
-// recover from. Matched on the exact codes the API documents (docs/api/errors.md
-// "API Key Errors") — never the message text, which would let a refusal whose
-// wording merely differs fall through to the auth branch below and trigger a
-// pointless token refresh.
-// API_KEY_RATE_LIMITED is in the API's internal registry but absent from the
-// published TopLevelErrorCode enum, which admits only codes that have an
-// emitter — so it stays a literal and is retained defensively rather than
-// promoted.
+// The key is baked into the build, so every code here is a build fault, not a
+// recoverable session state. Matched on the exact codes — never message text,
+// which would let a differently-worded refusal fall through to the auth branch
+// and trigger a pointless token refresh. API_KEY_RATE_LIMITED stays a literal:
+// it has no emitter, so it is absent from the published enum.
 const API_KEY_ERROR_CODES: string[] = [
   TopLevelErrorCode.ApiKeyMissing,
   TopLevelErrorCode.ApiKeyInvalid,
@@ -143,14 +133,10 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
         continue;
       }
 
-      // Checked before the resource-access branch: the legacy fallback arrives
-      // as FORBIDDEN, so testing it after that branch would `continue` past it.
-      // Staying "logged in" would strand the user on cached data with every
-      // request failing, so end the session and land them on sign-in.
-      //
-      // `endSession` and not `clearAuth`: the account is suspended, banned or
-      // deleted, and clearing tokens alone would leave its normalized entities
-      // in the persisted cache for whoever signs in on this device next.
+      // Before the resource-access branch: the prose fallback arrives as
+      // FORBIDDEN and would otherwise `continue` past it. `endSession`, not
+      // `clearAuth` — clearing tokens alone leaves this account's entities in
+      // the persisted cache for whoever signs in next.
       if (isAccountInactiveError(code, String(err.extensions?.reason || ''))) {
         logger.error(
           `Account inactive (${operation.operationName}) — ending session`,
@@ -204,19 +190,10 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       return;
     }
 
-    // Network errors are neither logged nor re-forwarded here.
-    //
-    // Not logged: that lives in networkStatusLink, which sits ABOVE retryLink
-    // and so emits one warning per operation. This link sits BELOW retryLink and
-    // would log every retry attempt — a wall of identical warnings on an offline
-    // cold start.
-    //
-    // Not re-forwarded: retryLink owns query-retry policy (backoff/jitter, and
-    // it deliberately skips mutations), so re-forwarding would double query
-    // retries AND re-send mutations, a duplicate-write risk for non-idempotent
-    // ones. Returning void instead makes Apollo emit the networkError to the
-    // observer, where errorPolicy plus the cache-and-network fetch policy keep
-    // cached data visible.
+    // Network errors are neither logged (networkStatusLink sits above retryLink
+    // and logs once per operation; this sits below and would log every attempt)
+    // nor re-forwarded (retryLink owns retry policy, so forwarding would double
+    // query retries and RE-SEND mutations — a duplicate-write risk).
     if (isNetworkError(error)) {
       return;
     }

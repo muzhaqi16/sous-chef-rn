@@ -1,14 +1,8 @@
 /**
- * useCreateShoppingList - Create list mutation (local-first).
- *
- * Generates the list's id client-side and writes the list into the cache
- * before firing the create, leaving it there. The list shows instantly in the
- * overview and stays if the create is queued offline or the API is
- * unreachable — the server stores `input.id` as the primary key and the queue
- * replays the create keyed by that same id, so they converge on one row (a
- * duplicate replay surfaces as a ConflictError, which the queue drops). An
- * `optimisticResponse` can't be used here: Apollo would roll it back the
- * moment the request is queued (null result).
+ * Local-first: the list is written to the cache PERMANENTLY before firing — an
+ * `optimisticResponse` rolls back on the offline queue's null result. `input.id`
+ * is the client-minted PK, so a queued replay converges on one row (a duplicate
+ * surfaces as a ConflictError, which the queue drops).
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -45,14 +39,10 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
   });
 
   const createShoppingList = async (input: CreateShoppingListInput) => {
-    // Local-first: mint the permanent cuid id (the row's real PK).
     const id = generateEntityId();
 
-    // Write the list into the cache (full entity + overview edge + empty
-    // itemsConnection variants) before firing, so it shows immediately and
-    // stays if the create is queued offline. Skipped when no auth identity is
-    // available to materialize the ownership row (shouldn't happen on any
-    // create surface) — the legacy online-only behavior applies then.
+    // Materializing the ownership row needs an auth identity; without one the
+    // create falls back to online-only (no create surface should hit this).
     const optimisticList = user
       ? buildOptimisticShoppingList(client.cache, id, input, user)
       : null;
@@ -80,7 +70,7 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
 
     if (!result) {
       // mutate() itself threw (non-queueable transport failure) — drop the
-      // optimistic list and surface the standard failure to the caller.
+      // optimistic list and surface the failure to the caller.
       if (optimisticList) {
         try {
           revertOptimisticShoppingList(client.cache, id);
@@ -99,8 +89,7 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
     const payload = result.data?.createShoppingList;
 
     if (!optimisticList || reconciled === 'reverted' || payload != null) {
-      // Real response: unwrap the success payload, or throw the precise
-      // domain/network error for the caller's toast.
+      // Success unwraps the payload; a refusal throws the precise domain error.
       const success = unwrapPayload(
         payload,
         'CreateShoppingListPayload',
@@ -109,8 +98,7 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
       return success.shoppingList;
     }
 
-    // Queued (offline / API down): the optimistic list stays in cache and the
-    // create replays keyed by the same id — succeed with the local entity.
+    // Queued: the optimistic list stands and the create replays under the same id.
     return optimisticList;
   };
 

@@ -1,28 +1,16 @@
 /**
- * Push-token platform boundary.
- *
- * The transport differs per platform — iOS acquires an APNs token (no Firebase),
- * Android an FCM token (via @react-native-firebase/messaging) — but the rest of
- * the app only needs "give me a token" and "tell me when it rotates". This
- * module is that seam.
- *
- * The native providers are NOT imported here: importing an uninstalled native
- * module would break the Metro bundle. Instead the app injects the real provider
- * at startup via `setPushTokenProvider(...)` once the native modules are
- * installed (see docs/push-notifications.md). Until then the no-op provider is
- * active, so `pushToken` stays undefined — exactly today's behavior — and
- * nothing else changes.
+ * Push-token platform boundary: iOS acquires an APNs token, Android an FCM one.
+ * The native providers must NOT be imported here — importing an uninstalled
+ * native module breaks the Metro bundle — so the app injects one at startup via
+ * `setPushTokenProvider(...)` (docs/push-notifications.md).
  */
 
 export interface PushTokenProvider {
-  /** Request OS notification permission. Resolves to whether it was granted. */
+  /** Resolves to whether OS notification permission was granted. */
   requestPermission(): Promise<boolean>;
-  /** The current push token, or null if unavailable / permission denied. */
+  /** null if unavailable or permission denied. */
   getToken(): Promise<string | null>;
-  /**
-   * Subscribe to token rotation (the OS periodically reissues tokens). Returns
-   * an unsubscribe function.
-   */
+  /** Subscribe to OS token rotation; returns an unsubscribe. */
   onTokenRefresh(listener: (token: string) => void): () => void;
 }
 
@@ -45,10 +33,9 @@ export function getPushTokenProvider(): PushTokenProvider {
 }
 
 /**
- * Acquire a push token, gated on OS permission. Returns null (no token
- * registered) when permission is denied or the platform provider is the no-op
- * default. The server-side `pushEnabled` preference is enforced by the server at
- * send time, so a registered token is harmless when push is disabled there.
+ * Gated on OS permission; null when denied or on the no-op provider. The
+ * `pushEnabled` preference is enforced server-side at send time, so a registered
+ * token is harmless when push is disabled there.
  */
 export async function acquirePushToken(): Promise<string | null> {
   const granted = await activeProvider.requestPermission();

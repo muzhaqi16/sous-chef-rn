@@ -8,12 +8,8 @@ import { SkeletonLine } from './SkeletonLine';
 const AVATAR_SIZE = 80; // matches ProfileHeader.AVATAR_SIZE
 const USER_INFO_HEIGHT = 72; // matches ProfileHeader.USER_INFO_HEIGHT
 
-/**
- * Rows per section. Mirrors `PROFILE_SETTINGS_CONFIG` in
- * `src/config/settingsConfig.ts`. The Developer section is omitted because
- * `Environment.shouldEnableDebugFeatures()` gates it out for most users.
- * The trailing entry (`hasTitle: false`) is the empty-title logout section.
- */
+// Mirrors `PROFILE_SETTINGS_CONFIG` in `src/config/settingsConfig.ts`, minus the
+// Developer section that `Environment.shouldEnableDebugFeatures()` gates out.
 const SECTIONS: ReadonlyArray<{ rows: number; hasTitle: boolean }> = [
   { rows: 1, hasTitle: true }, // Personal Information
   { rows: 2, hasTitle: true }, // Appearance & Language
@@ -24,29 +20,18 @@ const SECTIONS: ReadonlyArray<{ rows: number; hasTitle: boolean }> = [
   { rows: 1, hasTitle: false }, // Logout
 ];
 
-/**
- * Skeleton placeholder for the ProfileScreen.
- *
- * Mirrors `ProfileHeader` (back / avatar / more row + userInfo block) and
- * `PROFILE_SETTINGS_CONFIG` (section/row layout) so the layout doesn't shift
- * when real data lands. Row dimensions match `SettingRow.rowWrapper` exactly.
- */
+// Dimensions mirror `ProfileHeader` and `SettingRow.rowWrapper` exactly, so the
+// layout doesn't shift when real data lands.
 export const ProfileSkeleton: React.FC = () => {
   return (
     <ThemedSafeAreaView style={styles.container} edges={['left', 'right']}>
-      {/* Header row: back button (44) / avatar (80) / more button (44).
-          Avatar overlaps the smaller buttons vertically — same as the real
-          ProfileHeader. */}
       <View style={styles.header}>
         <SkeletonCircle size={44} />
         <SkeletonCircle size={AVATAR_SIZE} />
         <SkeletonCircle size={44} />
       </View>
 
-      {/* User info block — fixed 72px height matches the expanded
-          `userInfoStyle.height` interpolation in ProfileHeader. We render
-          only the subtitle (email) line; the optional name line is usually
-          empty until the profile loads. */}
+      {/* Fixed height matches ProfileHeader's expanded `userInfoStyle.height`. */}
       <View style={styles.userInfo}>
         <SkeletonLine width="55%" height={14} />
       </View>

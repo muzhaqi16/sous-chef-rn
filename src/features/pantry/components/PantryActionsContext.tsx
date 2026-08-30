@@ -3,9 +3,6 @@ import type { SwipeableRef } from '#components/molecules/SwipeableItem/types';
 import { createActionsContext } from '#hooks/utils/createActionsContext';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 
-/**
- * Actions available for pantry items
- */
 export interface PantryItemActions {
   onItemPress: (id: string) => void;
   onItemEdit?: (id: string) => void;
@@ -15,9 +12,6 @@ export interface PantryItemActions {
   onItemRestock?: (id: string) => void;
 }
 
-/**
- * Swipeable coordination for closing other swipeables
- */
 export interface SwipeableCoordination {
   onSwipeableWillOpen: (ref: SwipeableRef) => void;
 }
@@ -31,18 +25,11 @@ const actionsContext = createActionsContext<PantryItemActions>(
   'PantryActionsProvider',
 );
 
-// Swipe coordination is stable for the provider's lifetime (it is ref-backed),
-// so it rides in its own context rather than being merged into the actions
-// value — merging would mean rebuilding that value to change either half.
+// Ref-backed and stable for the provider's lifetime, so it rides in its own
+// context: merging it into the actions value would mean rebuilding that value
+// to change either half.
 const SwipeableContext = createContext<SwipeableCoordination | null>(null);
 
-/**
- * Provides pantry item actions and swipe coordination to the rows below.
- *
- * Callback stability comes from `createActionsContext`, and closing the
- * previously-open row comes from `useSwipeableCoordinator` — both were
- * hand-rolled here, the second one duplicating a kit hook verbatim.
- */
 export const PantryActionsProvider: React.FC<{
   children: ReactNode;
   actions: PantryItemActions;
@@ -60,11 +47,7 @@ export const PantryActionsProvider: React.FC<{
   );
 };
 
-/**
- * Pantry item actions and swipe coordination.
- *
- * @throws if used outside a PantryActionsProvider
- */
+/** Throws outside a `PantryActionsProvider`. */
 export const usePantryActions = (): PantryActionsContextValue => {
   const actions = actionsContext.useActions();
   const swipeable = useContext(SwipeableContext);

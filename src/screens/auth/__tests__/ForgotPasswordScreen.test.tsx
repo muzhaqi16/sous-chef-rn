@@ -257,7 +257,7 @@ describe('ForgotPasswordScreen', () => {
       expect(fired).toHaveLength(2);
     });
     // The resend targets the address the link already went to, rather than
-    // re-reading a form the user can no longer see.
+    // re-reading a form that is off screen by this point.
     expect(fired[0]).toEqual({ input: { email: TEST_EMAIL } });
     expect(fired[1]).toEqual(fired[0]);
     jest.useRealTimers();

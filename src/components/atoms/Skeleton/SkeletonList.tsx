@@ -3,27 +3,12 @@ import { StyleProp, ViewStyle, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 interface SkeletonListProps {
-  /** Number of skeleton items to render */
   count?: number;
-  /** Skeleton component to render for each item */
   SkeletonComponent: React.ComponentType;
-  /** Additional container styles */
   containerStyle?: StyleProp<ViewStyle>;
 }
 
-/**
- * SkeletonList - Reusable skeleton loading list
- *
- * Renders a scrollable list of skeleton placeholders.
- * Use with useDeferredRender() to show skeletons during navigation transitions.
- *
- * @example
- * ```tsx
- * if (!isReady) {
- *   return <SkeletonList SkeletonComponent={ShoppingListItemSkeleton} />;
- * }
- * ```
- */
+/** Scrollable list of skeleton placeholders; pairs with `useDeferredRender()`. */
 export const SkeletonList: React.FC<SkeletonListProps> = ({
   count = 6,
   SkeletonComponent,

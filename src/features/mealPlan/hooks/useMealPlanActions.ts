@@ -1,15 +1,8 @@
 /**
- * useMealPlanActions - Meal plan create / update / delete (local-first).
- *
- * Each operation writes its change to the cache PERMANENTLY before firing, so
- * it survives an offline / API-down queue (an `optimisticResponse` would roll
- * back the moment the queue completes the request with a null result):
- * - create: mints the permanent cuid PK, materializes a complete
- *   `MealPlanDisplay` entity (creator + home resolved from cache) and adds the
- *   overview connection edge — the queued replay re-sends the original
- *   mutation keyed by that id.
- * - update: merges the changed fields over a snapshot; a rejection restores it.
- * - delete: removes edge + entity up front; a rejection restores the snapshot.
+ * Meal plan create / update / delete, local-first: each writes the cache
+ * PERMANENTLY before firing, since an `optimisticResponse` rolls back when the
+ * queue completes with a null result. Create mints the cuid PK the replay
+ * re-sends under; update and delete snapshot and restore on a rejection.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -131,16 +124,10 @@ function buildOptimisticMealPlan(
 }
 
 /**
- * A meal plan created offline must render on its complete-gated detail screen —
- * `useMealPlan` reads `MealPlanMain_mealPlan` and returns null unless the whole
- * fragment is `complete`. Materialize the detail-only fields alongside the
- * `MealPlanDisplay` write so the fragment is complete until the server response
- * / queued replay fills real values.
- *
- * The values are the neutral base derived from the SDL (see
- * scripts/generate-optimistic-fillers.mjs) — zeroed nutrition, no goal
- * progress, empty items — so a field added to the fragment cannot be forgotten
- * here, an omission that is invisible until the detail screen blanks offline.
+ * `useMealPlan` returns null unless `MealPlanMain_mealPlan` is `complete`, so an
+ * offline-created plan needs its detail-only fields too. The values are the
+ * SDL-derived neutral base (`scripts/generate-optimistic-fillers.mjs`), so a new
+ * fragment field cannot be forgotten here — invisible until the screen blanks.
  */
 function buildMealPlanDetailStub(
   planId: string,

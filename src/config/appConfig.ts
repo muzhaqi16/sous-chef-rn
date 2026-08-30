@@ -1,15 +1,10 @@
 import type { ImageSourcePropType } from 'react-native';
 
 /**
- * Single source of truth for app brand identity.
- *
- * Forking this repo for a sibling app? This is the file to edit first. It
- * does NOT replace `app.json` or native project names — those still drive
- * bundle IDs / display names at the OS level and must be updated alongside.
- *
- * Intentionally narrow: only values that are genuinely shared brand
- * references live here. Design tokens (color palettes, typography) remain
- * in `src/theme/foundations/` and are updated independently.
+ * Single source of truth for brand identity, and the first file to edit when
+ * forking. Does NOT replace `app.json` or the native project names, which still
+ * drive bundle ids and OS-level display names. Design tokens stay in
+ * `src/theme/foundations/`.
  */
 export interface AppConfig {
   identity: {
@@ -26,23 +21,15 @@ export interface AppConfig {
       hosts: string[];
     };
     /**
-     * Reverse-DNS namespace for keychain entries (`<namespace>.credentials`,
-     * `.session.tokens`, …).
-     *
-     * **Changing this on a shipped app orphans every existing user's stored
-     * credentials and session** — the OS keychain is keyed by service name, so
-     * the old entries become unreachable and everyone is silently signed out
-     * with biometrics no longer enrolled. Set it once, when forking.
-     * `src/storage/__tests__/keychainServiceNames.test.ts` pins the derived
-     * strings so a rename cannot happen by accident.
+     * Reverse-DNS namespace for keychain entries. **Changing it on a shipped
+     * app orphans every user's stored credentials and session** — the keychain
+     * is keyed by service name, so everyone is silently signed out with
+     * biometrics unenrolled. Set once, when forking; a test pins the strings.
      */
     keychainNamespace: string;
     /**
-     * Keychain key holding the last email used for biometric login.
-     *
-     * Deliberately NOT derived from `keychainNamespace`: it predates that
-     * convention and re-deriving it would strand the stored value, with the
-     * same consequence as above.
+     * Keychain key for the last biometric-login email. Deliberately NOT derived
+     * from `keychainNamespace` — re-deriving it strands the stored value.
      */
     lastBiometricEmailKey: string;
   };
@@ -51,13 +38,9 @@ export interface AppConfig {
     logo: ImageSourcePropType;
   };
   /**
-   * Which features this app ships.
-   *
-   * Absent means shipped. A `false` here drops the feature from
-   * `FEATURE_REGISTRY`'s enabled set without touching the feature itself — the
-   * fork-level switch, where a manifest's own `enabled` is the feature-owner's.
-   * A tabbed feature also needs its entry removed from `HomeTabs`' literal;
-   * `HomeTabs.test.tsx` says so when it does not.
+   * Which features ship; absent means shipped. The FORK-level switch, where a
+   * manifest's own `enabled` is the feature-owner's. A tabbed feature also needs
+   * removing from `HomeTabs`' literal — `HomeTabs.test.tsx` says so if not.
    */
   features: Partial<Record<string, boolean>>;
   /**
@@ -67,11 +50,9 @@ export interface AppConfig {
   locales: string[];
   branding: {
     /**
-     * Brand primary color in hex. Single source of truth for the theme's
-     * `primary*` / brand-accent roles: `src/theme/foundations/brand.ts` derives
-     * the full 11-stop palette from this hex (and uses the hand-tuned `jaffa`
-     * palette verbatim when it matches the shipping default), so rebranding is
-     * a one-line change here.
+     * Brand primary in hex. `src/theme/foundations/brand.ts` derives the full
+     * 11-stop palette from it (using the hand-tuned `jaffa` palette verbatim
+     * when it matches the default), so a rebrand is one line here.
      */
     primaryColor: string;
   };

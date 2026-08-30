@@ -1,10 +1,7 @@
 /**
- * Hook for preloading recipe data to the backend
- *
- * When a user views an external recipe (from Spoonacular), this hook will:
- * 1. Store the recipe in the backend via upsertExternalRecipe
- * 2. Return the backend recipe ID for subsequent operations
- * 3. Provide a function to save the recipe to user's favorites
+ * Mirrors an external (Spoonacular) recipe into the backend via
+ * `upsertExternalRecipe`, returning its backend id for later operations, and
+ * exposes the save-to-favorites path over it.
  */
 
 import { useState, useRef } from 'react';
@@ -247,16 +244,11 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
         );
       }
 
-      // Reconcile a divergent server id. The client mints `input.id` and writes
-      // the optimistic SavedRecipe under it; when the recipe was already
-      // favorited elsewhere the server resolves to an EXISTING SavedRecipe with
-      // a different id. Re-point Recipe.savedDetails at the server row (the
-      // mutation response omits recipe.savedDetails) and evict the stale
-      // client-id entity so its dangling MySavedRecipes edge drops via the
-      // self-healing read — one saved-list row, heart stays filled, no phantom
-      // entity. Runs after the server edge above roots the server SavedRecipe,
-      // so the evict's gc can't collect it. No-op when the server honored the
-      // client id.
+      // Reconciles a divergent server id: if the recipe was already favorited
+      // elsewhere the server resolves to an EXISTING SavedRecipe. Re-point
+      // `Recipe.savedDetails` (the response omits it) and evict the client-id
+      // entity, whose dangling edge drops via the self-healing read. Must run
+      // after the server edge roots that row, or gc collects it.
       const clientId = variables?.input?.id;
       if (clientId && savedRecipe.id !== clientId) {
         const recipeCacheId = cache.identify({
@@ -447,11 +439,8 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   };
 
   /**
-   * Preload a recipe to the backend (fire-and-forget)
-   *
-   * This should be called when a user views an external recipe.
-   * The recipe will be stored in the backend (find-or-create pattern).
-   * This is fire-and-forget - it only attempts once per recipe.
+   * Fire-and-forget find-or-create when the user views an external recipe.
+   * Attempts once per recipe.
    */
   const preloadRecipe = async (
     spoonacularRecipe: RecipeInformation,
@@ -532,11 +521,8 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   };
 
   /**
-   * Save a recipe to the user's favorites.
-   *
-   * Re-ingests the recipe with per-ingredient cost (withCost) before favoriting
-   * so the deliberate-save path enriches the mirror, then favorites the
-   * resulting backend recipe.
+   * Re-ingests with per-ingredient cost before favoriting, so the deliberate
+   * save enriches the mirror, then favorites the resulting backend recipe.
    */
   const saveRecipeToFavorites = async (
     spoonacularRecipe: RecipeInformation,
@@ -634,13 +620,10 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   };
 
   /**
-   * Write the optimistic favorite to the cache and return a closure that undoes
-   * it. Three writes, all reverted together:
-   *   (a) the `SavedRecipe` entity keyed by the client-minted `savedRecipeId`,
-   *   (b) `Recipe.savedDetails` pointed at that SavedRecipe (so the heart fills),
-   *   (c) a `MySavedRecipes` edge for the SavedRecipe (so the saved list shows it).
-   * `revert()` restores the MySavedRecipes snapshot, restores the previous
-   * `savedDetails`, and evicts the optimistic SavedRecipe entity.
+   * Writes the optimistic favorite and returns its undo. Three writes reverted
+   * together: the `SavedRecipe` entity under the client-minted id,
+   * `Recipe.savedDetails` pointed at it (the heart), and its `MySavedRecipes`
+   * edge (the saved list).
    */
   const writeOptimisticFavorite = (
     savedRecipeId: string,

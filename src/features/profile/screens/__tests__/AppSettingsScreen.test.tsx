@@ -18,6 +18,9 @@ jest.mock('#features/profile/hooks/useAppSettings', () => ({
       betaFeatures: [],
     },
     loading: false,
+    hasLoadedSettings: true,
+    error: undefined,
+    refetch: jest.fn(),
     updateAppSetting: mockUpdateAppSetting,
     resetToDefaults: mockResetToDefaults,
   }),
@@ -252,6 +255,14 @@ describe('AppSettingsScreen', () => {
   });
 });
 
+/**
+ * The gate is `loading && !hasLoadedSettings`, not `loading`. Under
+ * `cache-and-network` Apollo reports `loading: true` for the whole network leg
+ * on EVERY mount — `nextFetchPolicy` lives on the ObservableQuery and useQuery
+ * builds a new one each time — so gating on `loading` alone blanked this screen
+ * on every visit for as long as the request took, which against a stalled API
+ * is the 10s httpLink abort deadline.
+ */
 describe('AppSettingsScreen - loading state', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -269,13 +280,51 @@ describe('AppSettingsScreen - loading state', () => {
           betaFeatures: [],
         },
         loading: true,
+        hasLoadedSettings: false,
+        error: undefined,
+        refetch: jest.fn(),
         updateAppSetting: mockUpdateAppSetting,
         resetToDefaults: mockResetToDefaults,
       });
   });
 
-  it('shows loading text when settings are loading', () => {
+  it('shows loading text when nothing has been loaded yet', () => {
     render(<AppSettingsScreen />);
-    expect(screen.getByText('Loading settings...')).toBeTruthy();
+    expect(screen.getByTestId('settings-state')).toBeTruthy();
+  });
+
+  it('keeps the header and back button while it waits', () => {
+    render(<AppSettingsScreen />);
+    // A loading branch that returns a bare View leaves the user on a blank
+    // screen with no way off it while a request stalls.
+    expect(screen.getByTestId('settings-screen')).toBeTruthy();
+    expect(screen.getByText('App Settings')).toBeTruthy();
+  });
+
+  it('renders the settings while a background refresh is in flight', () => {
+    jest
+      .spyOn(
+        require('#features/profile/hooks/useAppSettings'),
+        'useAppSettings',
+      )
+      .mockReturnValue({
+        settings: {
+          preferredUnitSystem: 'METRIC',
+          autoSync: true,
+          offlineMode: false,
+          showTutorials: true,
+          betaFeatures: [],
+        },
+        loading: true,
+        hasLoadedSettings: true,
+        updateAppSetting: mockUpdateAppSetting,
+        resetToDefaults: mockResetToDefaults,
+      });
+
+    render(<AppSettingsScreen />);
+
+    expect(screen.queryByText('Loading settings...')).toBeNull();
+    expect(screen.getByTestId('settings-screen')).toBeTruthy();
+    expect(screen.getByText('Auto Sync')).toBeTruthy();
   });
 });

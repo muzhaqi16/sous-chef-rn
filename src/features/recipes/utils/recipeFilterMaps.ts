@@ -16,16 +16,11 @@ export const DEFAULT_FILTERS: RecipeFilters = {
   maxReadyTime: null,
 };
 
-// ── Diet / Intolerance ↔ Spoonacular-string maps ──
-// Single source of truth for both directions. `activeFilters.diet` /
-// `.intolerances` hold Spoonacular-format strings (the `value` fields in
-// recipeFilterOptions' DIET_OPTIONS / INTOLERANCE_OPTIONS); the dietary profile
-// is normalized into that form through the forward maps below. Spoonacular's
-// complexSearch consumes those strings directly, while the local `searchRecipes`
-// GraphQL API takes Diet/Intolerance enums — so the reverse lookups are derived
-// from the same maps and can't drift. The forward maps are exhaustive over the
-// enums: TS requires every member as a key, so a new schema enum fails to
-// compile until it's mapped here.
+// Single source of truth for BOTH directions: `activeFilters` holds
+// Spoonacular strings (which complexSearch takes directly) while the local
+// `searchRecipes` API takes Diet/Intolerance enums, so the reverse lookups are
+// derived from these maps and cannot drift. The forward maps are exhaustive
+// over the enums, so a new schema member fails to compile until mapped.
 export const DIET_ENUM_TO_SPOONACULAR: Record<Diet, string> = {
   [Diet.Vegetarian]: 'vegetarian',
   [Diet.Vegan]: 'vegan',

@@ -48,7 +48,6 @@ import { TabMainScreen } from '#components/templates/TabMainScreen';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import type { Translate } from '#/i18n/types';
 
-// ── Pantry tutorial steps (data-driven, add entries to extend) ──
 function buildPantryTutorialSteps(t: Translate): TutorialStep[] {
   return [
     {
@@ -73,8 +72,8 @@ function buildPantryTutorialSteps(t: Translate): TutorialStep[] {
 }
 
 /**
- * Inner component that runs all heavy hooks.
- * Only mounts after DeferredScreen gates rendering, so the skeleton paints instantly.
+ * Runs every heavy hook; mounts only after DeferredScreen's deferred re-render,
+ * so the skeleton paints instantly.
  */
 const PantryMainInner: React.FC = () => {
   const {
@@ -89,10 +88,8 @@ const PantryMainInner: React.FC = () => {
   } = useAppNavigation();
   const { setOverlayOpen, scrollTabBarHidden } = useTabBarSetters();
 
-  // Deep link `pantry?homeId=` switches the active home; `useCurrentPantry`
-  // then resolves that home's default pantry. RN's global param-list
-  // registration types tab-route params as `object`, so read the query param
-  // off the route directly.
+  // Deep link `pantry?homeId=` switches the active home. Tab-route params type
+  // as `object` in RN's global param list, so read the query param directly.
   const route = useRoute();
   const deepLinkedHomeId = (route.params as { homeId?: string } | undefined)
     ?.homeId;
@@ -102,7 +99,6 @@ const PantryMainInner: React.FC = () => {
     }
   }, [deepLinkedHomeId]);
 
-  // ── Scroll direction tracking (tab bar hide on scroll down) ──
   const {
     scrollBeginDragHandler,
     scrollHandler,
@@ -112,7 +108,7 @@ const PantryMainInner: React.FC = () => {
     isUserDragging,
   } = useCollapsibleScroll();
 
-  // Sync scroll direction → tab bar visibility (UI thread only)
+  // Scroll direction → tab bar visibility, UI thread only.
   useAnimatedReaction(
     () => isScrolledDown.get(),
     hidden => {
@@ -120,10 +116,8 @@ const PantryMainInner: React.FC = () => {
     },
   );
 
-  // ── Facade hook: all data-fetching & state ──
   const screen = usePantryScreen();
 
-  // ── Lifecycle: optimistic restoration, cache persistence, perf tracking ──
   useTabScreenLifecycle({
     screenName: 'PantryMain',
     optimisticTypes: ['Pantry', 'PantryItem'],
@@ -135,20 +129,17 @@ const PantryMainInner: React.FC = () => {
     }),
   });
 
-  // ── Refs ──
   const selectorRef = useRef<ItemSelectorRef>(null);
   const pantryContentRef = useRef<PantryContentRef>(null);
 
-  // ── Tab focus tracking + scroll-to-top on focus ──
   const [isPantryFocused, setIsPantryFocused] = useState(true);
   const [onPantryFocus] = useState(() => () => {
     setIsPantryFocused(true);
-    // Return to a clean, visible tab bar on focus so a stale scroll-hidden
-    // state from a previous visit can never leave the bar hidden.
+    // A stale scroll-hidden state from a previous visit must not leave the bar
+    // hidden.
     isScrolledDown.set(false);
     isUserDragging.set(false);
     scrollTabBarHidden.set(false);
-    // Scroll-to-top from barcode scanner returning
     const store = useStore.getState();
     if (store.pendingPantryScrollToTop) {
       pantryContentRef.current?.scrollToTop();
@@ -156,25 +147,22 @@ const PantryMainInner: React.FC = () => {
     }
     return () => {
       setIsPantryFocused(false);
-      // Reset scroll-driven tab bar hide so tab bar reappears on other tabs
+      // Reset the scroll-driven hide so the bar reappears on other tabs.
       isUserDragging.set(false);
       scrollTabBarHidden.set(false);
     };
   });
   useFocusEffect(onPantryFocus);
 
-  // ── Selector management ──
   const { handleOpenSelector, handleOverlayOpen, handleOverlayClose } =
     useSelectorManagement({ selectorRef, setOverlayOpen });
 
-  // ── Scanner setup ──
   useScannerSetup({
     enabled: true,
     homeId: screen.selectedHomeId,
     context: { source: 'pantry', pantryId: screen.pantry?.id },
   });
 
-  // ── Pantry selector config ──
   const pantryConfig = usePantrySelectorConfig({
     pantries: screen.pantries,
     selectedPantryId: screen.pantry?.id,
@@ -185,10 +173,8 @@ const PantryMainInner: React.FC = () => {
     toPantryAnalytics,
   });
 
-  // Tutorial trigger conditions (passed to usePantryTutorial in PantryMainContent)
   const canStartTutorial = !!screen.selectedHomeId;
 
-  // ── Navigation callbacks ──
   const handleItemPress = (id: string) => toPantryItemDetail({ itemId: id });
   const handleAvatarPress = toProfile;
   const handleNotificationPress = toNotifications;
@@ -252,8 +238,8 @@ const PantryMainInner: React.FC = () => {
 };
 
 /**
- * Inner content component that has access to PantryModalsContext.
- * Separated from PantryMainInner so usePantryModals() works (it must be within the provider).
+ * Split from PantryMainInner so `usePantryModals()` resolves — it has to run
+ * inside the provider.
  */
 interface PantryMainContentProps {
   screen: ReturnType<typeof usePantryScreen>;
@@ -275,7 +261,6 @@ interface PantryMainContentProps {
   onOverlayClose: () => void;
   canStartTutorial: boolean;
   isPantryFocused: boolean;
-  // Scroll handlers for tab bar direction tracking
   scrollBeginDragHandler: () => void;
   scrollHandler: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   scrollEndDragHandler: (
@@ -323,7 +308,7 @@ function PantryMainContent({
 
   const permissions = usePantryPermissions();
 
-  // Track element positions for tutorial spotlight coach-marks
+  // Element positions for the tutorial spotlight coach-marks.
   const [homeBadgeRect, setHomeBadgeRect] = useState<{
     x: number;
     y: number;
@@ -338,7 +323,6 @@ function PantryMainContent({
   } | null>(null);
   const { addButtonRect, isOverlayOpen } = useTabBarState();
 
-  // ── Tutorial orchestration ──
   const tutorial = useTutorialSequence({
     steps: buildPantryTutorialSteps(t),
     targetRects: {
@@ -350,7 +334,6 @@ function PantryMainContent({
     isPaused: !isPantryFocused || isOverlayOpen,
   });
 
-  // Target press actions per tutorial step
   const tutorialTargetActions: Record<number, () => void> = {
     0: onHomePress,
     1: onSettingsPress,
@@ -366,13 +349,10 @@ function PantryMainContent({
     !screen.noPantries &&
     permissions.canAddItems;
 
-  // Register add button action via tab bar. The handler is registered
-  // unconditionally and gated with the `disabled` flag instead of being passed
-  // as `undefined`: an undefined handler leaves the button rendered (its
-  // visibility is per-tab, not per-handler — see TabBarActionsContext's
-  // `shouldShowAdd`) but makes `onAddPress?.()` a silent no-op with no toast,
-  // so the button looks live and does nothing. Passing `disabled` routes the
-  // press through FloatingTabBar's toast instead. Mirrors ShoppingListMain.
+  // Always registered, gated by `disabled` rather than passed as `undefined`:
+  // add-button visibility is per-tab (TabBarActionsContext's `shouldShowAdd`), so
+  // an undefined handler leaves a live-looking button that silently does nothing.
+  // `disabled` routes the press through FloatingTabBar's toast instead.
   useTabBarAddButton(() => {
     Telemetry.trackEvent('add_pantry_item_clicked');
     setAddSheetVisible(true);
@@ -520,9 +500,7 @@ const PantryMainFallback: React.FC = () => {
   );
 };
 
-// PERFORMANCE: Screen-level error boundary prevents full app reset on mutation failures.
-// DeferredScreen gates heavy work — skeleton paints instantly; PantryMainInner mounts
-// on the deferred re-render.
+// The screen-level boundary keeps a mutation failure from resetting the whole app.
 export const PantryMain: React.FC = () => (
   <PantryErrorBoundary>
     <DeferredScreen

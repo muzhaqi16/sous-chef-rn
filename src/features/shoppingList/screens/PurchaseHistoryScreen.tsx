@@ -42,20 +42,15 @@ type RouteParams = {
 };
 
 /**
- * One purchase row, derived from the query instead of restated beside it.
- *
- * The restated copy had `user.email` as `string` where the schema has `String`
- * — the API gates the address to self-or-admin — so the first query that
- * actually selected the field failed to compile. Deriving keeps the two from
- * disagreeing again.
+ * Derived from the query rather than restated beside it, so it cannot disagree
+ * with the schema (`user.email` is nullable — self-or-admin only).
  */
 type PurchaseItem = NonNullable<
   GetItemPurchaseHistoryQuery['shoppingListItem']
 >['purchasesConnection']['edges'][number]['node'];
 
-// `undefined` as the locale makes Intl use the device's own, so the date reads
-// natively for the user. A hardcoded 'en-US' put the month before the day for
-// every locale that writes it the other way round, inside otherwise translated UI.
+// An `undefined` locale makes Intl use the device's own, so the field order
+// follows the reader rather than forcing US month-day.
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
   return date.toLocaleDateString(undefined, {
@@ -67,14 +62,10 @@ const formatDate = (dateString: string) => {
   });
 };
 
-// Format a money amount in the purchase's own currency. Returns null for
-// missing/zero amounts so the price row is omitted rather than showing a
-// meaningless "$0.00" — purchases auto-recorded when an item is checked off
-// may carry no price.
-//
-// Formatted from the ISO code rather than by prefixing `currencySymbol`, so the
-// symbol lands where the locale puts it and the decimal separator matches what
-// the app accepts on input.
+// null for a missing/zero amount, so the row is omitted rather than showing
+// "$0.00" — a purchase auto-recorded at check-off carries no price. Formatted
+// from the ISO code, not by prefixing `currencySymbol`, so the symbol and
+// separator land where the locale puts them.
 const formatPrice = (
   amount: number | null | undefined,
   currencyCode: string | null | undefined,
@@ -82,8 +73,6 @@ const formatPrice = (
   if (amount == null || amount <= 0) return null;
   return formatCurrency(amount, currencyCode ?? DEFAULT_CURRENCY);
 };
-
-// --- Module-scope FlashList components ---
 
 type PurchaseHistoryItemProps = ListRenderItemInfo<PurchaseItem>;
 
@@ -213,8 +202,6 @@ const PurchaseHistoryEmpty: React.FC = () => {
   );
 };
 
-// --- Main screen component ---
-
 export const PurchaseHistoryScreen: React.FC<
   StaticScreenProps<RouteParams>
 > = ({ route }) => {
@@ -222,31 +209,18 @@ export const PurchaseHistoryScreen: React.FC<
   const { goBack } = useAppNavigation();
   const { itemId, itemName } = route.params;
 
-  // Fetch the history on demand (ItemDetail only carries the summary), paging
-  // in more as the user scrolls — a frequently re-bought item can exceed a
-  // single page.
+  // On demand: ItemDetail carries only the summary, and a frequently re-bought
+  // item runs past one page.
   const { data, loading, error, refetch, fetchMore, networkStatus } = useQuery(
     GetItemPurchaseHistoryDocument,
     {
       variables: { itemId, first: PAGE_SIZE },
       notifyOnNetworkStatusChange: true,
-      // NOT the app-wide `'all'`. `purchasesConnection` is
-      // `PurchaseConnection!`, so a field error anywhere inside it propagates
-      // up every non-null hop and nulls `shoppingListItem` itself — and under
-      // `'all'` Apollo WRITES that partial `{ shoppingListItem: null }` to the
-      // cache (`shouldWriteResult` writes whenever the policy ignores errors
-      // and `result.data` is truthy). It would land on
-      // `ROOT_QUERY.shoppingListItem({"id": itemId})`, the same field
-      // `GetShoppingListItem` reads, so the ItemDetail screen still mounted
-      // underneath this one would flip to "Item not found" and STAY there: the
-      // `Query.shoppingListItem` redirect only fires when `existing ===
-      // undefined`, `nextFetchPolicy: 'cache-first'` issues no fetch on resume,
-      // and `cache.extract()` persists the null to MMKV.
-      //
-      // `'none'` refuses the write instead of letting one screen's failed read
-      // decide whether an item exists. The cost is a partial page: if some rows
-      // resolve and others error, none are shown. Worth it — `useDataState`
-      // classifies the same either way, and a retry is one tap.
+      // NOT the app-wide `'all'`: a field error inside the non-null
+      // `purchasesConnection` nulls `shoppingListItem`, and `'all'` WRITES that
+      // null onto `ROOT_QUERY.shoppingListItem({id})` — the field ItemDetail
+      // reads — where it sticks (the redirect fires only on `undefined`) and
+      // persists to MMKV. The cost of `'none'` is losing a partial page.
       errorPolicy: 'none',
     },
   );
@@ -255,9 +229,8 @@ export const PurchaseHistoryScreen: React.FC<
   const purchases: PurchaseItem[] =
     connection?.edges?.map(edge => edge.node) ?? [];
 
-  // Instrumented like PantryContent/SortableList: this is a full screen,
-  // so `flashlist_initial_load_ms` and blank-cell episodes are worth the
-  // per-cell wrapper's cost (sampled 5% in release).
+  // A full screen, so `flashlist_initial_load_ms` and blank-cell episodes are
+  // worth the per-cell wrapper's cost (sampled 5% in release).
   const flashListRef = useRef<FlashListRef<PurchaseItem>>(null);
   const perfCallbacks = useFlashListPerformance(flashListRef, {
     componentName: 'PurchaseHistoryScreen',
@@ -288,12 +261,9 @@ export const PurchaseHistoryScreen: React.FC<
     );
   };
 
-  // A failed read and a genuinely empty history are NOT the same thing, and the
-  // screen used to render both as "No purchase history — mark this item as
-  // purchased to start tracking history": advice to buy something the person
-  // may well have bought already, shown precisely when the app does not know.
-  // `useDataState` also splits offline out of error, which the empty state
-  // cannot express at all.
+  // A failed read is not an empty history: rendering both as the empty state
+  // advises buying something the user may already own, exactly when the app
+  // cannot know. `useDataState` also splits offline out of error.
   const state = useDataState({
     loading,
     error,
@@ -302,11 +272,8 @@ export const PurchaseHistoryScreen: React.FC<
   });
 
   const handleRetry = () => {
-    // Under this query's `errorPolicy: 'none'` a failed refetch REJECTS rather
-    // than resolving with the error, so this catch is the one that runs on an
-    // ordinary failure — not just on a link-level throw. `useDataState` keeps
-    // the error state on screen either way; reporting here is what stops the
-    // rejection going unhandled.
+    // Under `errorPolicy: 'none'` a failed refetch REJECTS rather than
+    // resolving with the error, so this catch runs on an ordinary failure too.
     void refetch().catch(refetchError =>
       errorService.reportError(refetchError, {
         operation: 'PurchaseHistory.retry',
@@ -314,8 +281,7 @@ export const PurchaseHistoryScreen: React.FC<
     );
   };
 
-  // Summary stats over purchases that actually carry a price. Auto-recorded
-  // purchases with no price are excluded so the average isn't dragged toward 0.
+  // Priced purchases only — auto-recorded ones would drag the average to 0.
   const pricedPurchases = purchases.filter(p => p.totalPrice > 0);
   const currencyCode = pricedPurchases[0]?.currency.code;
   const spent = pricedPurchases.reduce((sum, p) => sum + p.totalPrice, 0);
@@ -326,7 +292,6 @@ export const PurchaseHistoryScreen: React.FC<
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <ThemedBackButton onPress={goBack} style={styles.backButton} />
         <View style={styles.headerContent}>
@@ -340,7 +305,6 @@ export const PurchaseHistoryScreen: React.FC<
         <View style={styles.headerSpacer} />
       </View>
 
-      {/* Purchase List */}
       {state === 'loading' ? (
         <View style={styles.loadingContainer}>
           <ThemedActivityIndicator />

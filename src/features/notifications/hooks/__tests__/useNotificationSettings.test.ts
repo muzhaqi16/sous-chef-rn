@@ -87,12 +87,12 @@ beforeEach(() => {
 /**
  * The preferences query, as a PER-OPERATION mock — the form that composes.
  *
- * This used to be a schema-driven `mocks` map, which four tests then spread
- * alongside `operationMocks`. The wrapper discarded it: the query went
- * unanswered, the hook ran on its defaults, and all sixteen tests still passed.
- * `showWarnings={false}` hid the unanswered operation and `errorPolicy: 'all'`
- * routed the failure into an `error` field nothing read. The two strategies are
- * mutually exclusive by type now, so the mistake cannot be made again.
+ * A schema-driven `mocks` map spread alongside `operationMocks` does NOT
+ * compose: the wrapper discards it, the query goes unanswered, the hook runs on
+ * its defaults, and every test here still passes — `showWarnings={false}` hides
+ * the unanswered operation and `errorPolicy: 'all'` routes the failure into an
+ * `error` field nothing reads. The two strategies are mutually exclusive by
+ * type, so the mistake cannot be made here.
  */
 function withPrefs(prefs: typeof mockPreferencesData | null) {
   return {

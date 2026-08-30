@@ -24,36 +24,13 @@ import type {
   PantrySortDirection,
 } from '#store/slices/preferenceTypes';
 
-/**
- * usePantryScreen - Facade hook for the PantryMain screen
- *
- * Orchestrates all data-fetching and state management:
- * 1. useAuthUser - User info for greeting/avatar
- * 2. useCurrentPantry - Home/pantry resolution with fallback chain
- * 3. Zustand store - Sort prefs, unread count, scroll-to-top
- * 4. Location filter + usePantryManagement + useHybridSearch
- * 5. useCreateStorageLocation + tab construction + location count merging
- * 6. Derived states (loading, no-home, user/household names)
- * 7. Sort change handler
- * 8. handleRemoveItem (removeItem + removeFromResults)
- * 9. Sheet visibility state (addSheet, addLocationSheet)
- * 10. handleAddSheetClose logic (with itemsAddedRef)
- *
- * The component only needs to:
- * - Call this hook
- * - Set up navigation callbacks, refs, scanner, feature hint, lifecycle
- * - Render JSX
- */
+/** Facade hook for PantryMain: the screen only renders and wires navigation. */
 export function usePantryScreen() {
   const { t } = useTranslation();
-  // -------------------------------------------------------------------------
   // 1. User info
-  // -------------------------------------------------------------------------
   const authUser = useUser();
 
-  // -------------------------------------------------------------------------
   // 2. Home/pantry resolution
-  // -------------------------------------------------------------------------
   const {
     pantry,
     pantries,
@@ -64,9 +41,7 @@ export function usePantryScreen() {
     isReady,
   } = useCurrentPantry();
 
-  // -------------------------------------------------------------------------
   // 3. Zustand store — consolidated selector
-  // -------------------------------------------------------------------------
   const {
     pantrySortOption,
     pantrySortDirection,
@@ -87,9 +62,7 @@ export function usePantryScreen() {
     })),
   );
 
-  // -------------------------------------------------------------------------
   // 4. Location filter + pantry management + hybrid search
-  // -------------------------------------------------------------------------
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
   const isOnline = useIsOnline();
 
@@ -97,15 +70,11 @@ export function usePantryScreen() {
   const queryFilter = locationQueryFilter;
   const orderBy = sortOptionToOrderBy(pantrySortOption, pantrySortDirection);
 
-  // Server vs client mode. In CLIENT mode (the common case — pantries that fit
-  // in one load window), the main query uses a STABLE cache key (no per-sort /
-  // per-filter variables), so changing the sort or location tab does not refetch
-  // or re-key the connection — sort, location-filter, and search all run on the
-  // already-loaded items and update instantly (and the stable key means cold
-  // start always hits cache, no blank flash). Large pantries (> PAGE_SIZE.MAX
-  // total) fall back to SERVER mode so filter/sort/search stay correct beyond
-  // the loaded window. The decision reads the argument-free `stats.totalItems`
-  // (the true full count, unaffected by the active filter) to avoid oscillation.
+  // CLIENT mode keeps a STABLE query cache key (no per-sort/per-filter
+  // variables), so sort/filter/search run on the loaded items with no refetch and
+  // cold start always hits cache. Pantries over PAGE_SIZE.MAX fall back to SERVER
+  // mode. The decision reads the argument-free `stats.totalItems` — the filtered
+  // count would oscillate.
   const [serverMode, setServerMode] = useState(false);
   const mainFilter = serverMode ? queryFilter : null;
   const mainOrderBy = serverMode ? orderBy : null;
@@ -161,9 +130,7 @@ export function usePantryScreen() {
 
   const pantryItems = activeItems;
 
-  // -------------------------------------------------------------------------
   // 5. Create storage location + tab construction + count merging
-  // -------------------------------------------------------------------------
   const { createLocation, creating: creatingLocation } =
     useCreateStorageLocation(selectedHomeId ?? undefined, pantry?.id);
 
@@ -232,9 +199,7 @@ export function usePantryScreen() {
     }
   }
 
-  // -------------------------------------------------------------------------
   // 6. Derived states
-  // -------------------------------------------------------------------------
   const noHomeSelected = isReady && !selectedHomeId && homeCount > 0;
   const noHomes = isReady && !selectedHomeId && homeCount === 0;
   // Requires the home itself to have resolved. `isReady` alone isn't enough:
@@ -249,19 +214,14 @@ export function usePantryScreen() {
   const isLoadingInitial =
     (!isReady || loading) && !pantryError && pantryItems.length === 0;
 
-  // True while a SERVER-mode tab/sort switch is re-fetching the filtered page —
-  // the previous tab's items linger until it lands, so the UI can show a
-  // skeleton over them instead of the stale list. Client mode filters the
-  // already-loaded set locally, so it never refetches on switch and this stays
-  // false (the switch is instant).
+  // True while a SERVER-mode tab/sort switch re-fetches: the outgoing tab's items
+  // linger until it lands, so the UI covers them with a skeleton. Client mode
+  // filters locally and never refetches, so this stays false.
   const itemsFetching = serverMode && loading;
 
-  // `undefined` rather than a fallback word. The greeting used to fall back to
-  // the literal 'there' and interpolate it into "Hello, {{name}}!", which is
-  // untranslated English AND unworkable in the other locales — Spanish would
-  // read "¡Hola, hola!". The header now picks a whole no-name greeting instead,
-  // which is the same rule as the plural keys: give each case its own sentence
-  // rather than interpolating a word into one.
+  // `undefined` rather than a fallback word: the header picks a whole no-name
+  // greeting instead of interpolating one into "Hello, {{name}}!", which no
+  // locale can express (Spanish would read "¡Hola, hola!").
   const userName =
     authUser?.name || authUser?.firstName || authUser?.lastName || undefined;
 
@@ -273,9 +233,7 @@ export function usePantryScreen() {
     ? t('pantryHeader.homeNoneYet')
     : currentHome?.name || t('pantryHeader.homeFallback');
 
-  // -------------------------------------------------------------------------
   // 7. Sort change handler
-  // -------------------------------------------------------------------------
   const handleSortChange = (
     option: PantrySortOption,
     direction: PantrySortDirection,
@@ -284,9 +242,7 @@ export function usePantryScreen() {
     setPantrySortDirection?.(direction);
   };
 
-  // -------------------------------------------------------------------------
   // 8. handleRemoveItem (wraps removeItem + removeFromResults)
-  // -------------------------------------------------------------------------
   const handleRemoveItem = async (id: string) => {
     removeFromResults(id);
     await removeItem(id);
@@ -310,12 +266,8 @@ export function usePantryScreen() {
     }
   };
 
-  // -------------------------------------------------------------------------
-  // Reset UI state when switching between pantries
-  // Uses "adjusting state during render" pattern (no ref.current read during render)
-  // NOTE: No explicit refetch() needed — Apollo re-executes the query automatically
-  // when variables.id changes (via cache-and-network fetch policy).
-  // -------------------------------------------------------------------------
+  // Reset UI state on pantry switch, via adjusting-state-during-render (no
+  // ref.current read). No refetch() needed — Apollo re-executes on variables.id.
   const [prevPantryId, setPrevPantryId] = useState<string | undefined>(
     pantry?.id,
   );
@@ -325,9 +277,7 @@ export function usePantryScreen() {
     setSearchQuery('');
   }
 
-  // -------------------------------------------------------------------------
   // Return flat interface
-  // -------------------------------------------------------------------------
   return {
     // User
     authUser,

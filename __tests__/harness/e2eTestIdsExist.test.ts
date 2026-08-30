@@ -61,10 +61,10 @@ const walk = (dir: string, match: RegExp, out: string[] = []): string[] => {
  * testIDs the app can render.
  *
  * Deliberately a SUPERSET: every kebab-case string literal anywhere in `src`,
- * plus the config-built and prefix forms. Narrower extraction was tried first
- * and produced false alarms — `edit-item-submit-button` sits inside a
- * multi-line ternary, and `login-submit-button` is passed as
- * `submitButtonTestID`, so neither is adjacent to the token `testID`.
+ * plus the config-built and prefix forms. Narrower extraction produces false
+ * alarms — `edit-item-submit-button` sits inside a multi-line ternary, and
+ * `login-submit-button` is passed as `submitButtonTestID`, so neither is
+ * adjacent to the token `testID`.
  *
  * A guard that cries wolf gets muted, and the cost here is asymmetric: missing
  * a stale id means one Detox test still fails the slow way, which is the status
@@ -178,7 +178,15 @@ const appTestIds = (): {
     //   - Templates whose interpolation IS a declared prefix are expanded into
     //     concrete ids above; re-adding them here as `.+` would only widen what
     //     the expansion already covers exactly.
-    for (const m of source.matchAll(/testID=\{`([^`]+)`\}/g)) {
+    // Both the bare form `` testID={`a-${b}`} `` and the conditional one
+    // `` testID={cond ? `a-${b}` : undefined} `` are read. Reading only the bare
+    // form hides `alert-button-${index}` in `AlertProvider`, leaving the spec's
+    // `alert-button-0` to pass only because the id also appears, backtick-quoted,
+    // in a comment two lines above — which the literal scan picks up. Deleting
+    // that prose then fails this test on a testID that renders.
+    for (const m of source.matchAll(
+      /testID=\{(?:[^`{}]*\?\s*)?`([^`]+)`/g,
+    )) {
       const template = m[1];
       if (!template.includes('${')) continue;
       if (/\$\{(?:config\.)?testIDPrefix\}/.test(template)) continue;

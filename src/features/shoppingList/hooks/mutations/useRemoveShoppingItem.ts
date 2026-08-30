@@ -1,13 +1,8 @@
 /**
- * useRemoveShoppingItem - Remove item mutation for shopping list
- *
- * Evicts the item and decrements the list stats in the cache before firing the
- * mutation, and leaves those changes in place. The removal persists even when the
- * delete is queued offline or the API is unreachable — the queue replays it,
- * idempotent by the item's id. An `optimisticResponse` can't be used here: Apollo
- * would roll it back the moment the request is queued (null result). On a real
- * (non-network) error the item still exists server-side, so it's restored via
- * refetch.
+ * Local-first: the item is evicted and the list stats decremented in the cache
+ * PERMANENTLY before firing — an `optimisticResponse` rolls back on the offline
+ * queue's null result. The replay is idempotent by item id; on a real (non-network)
+ * error the item still exists server-side, so a refetch restores it.
  */
 
 import { gql } from '@apollo/client';
@@ -54,8 +49,7 @@ export function useRemoveShoppingItem({
   const [removeItemMutation] = useMutation(RemoveItemFromShoppingListDocument, {
     update(cache, { data }, { variables }) {
       // Re-evict on the server response: Apollo re-normalizes the
-      // `shoppingListItem { id }` payload, which would otherwise resurrect the
-      // (already optimistically evicted) entity into its connection.
+      // `shoppingListItem { id }` payload, resurrecting the evicted entity.
       if (
         data?.removeItemFromShoppingList?.__typename !==
           'RemoveItemFromShoppingListPayload' ||
@@ -75,8 +69,7 @@ export function useRemoveShoppingItem({
       }
     },
     onError: error => {
-      // Network/transient error: queueLink queued the delete for replay — keep
-      // the optimistic eviction; do NOT restore.
+      // queueLink queued the delete for replay — keep the eviction, do NOT restore.
       if (isNetworkError(error)) return;
       // Real (server/validation) error: the item still exists → restore.
       handleMutationError(error, { operation: 'Remove Shopping List Item' });
@@ -87,8 +80,7 @@ export function useRemoveShoppingItem({
   const removeItem = async (itemId: string) => {
     if (!listId) return false;
 
-    // Snapshot list stats + purchased state to compute the decremented
-    // aggregates (the old optimisticResponse path did this via the response).
+    // Snapshot stats + purchased state to compute the decremented aggregates.
     const listStats = client.cache.readFragment<{
       totalItems: number;
       completedItems: number;
@@ -120,7 +112,6 @@ export function useRemoveShoppingItem({
     const newRemaining = Math.max(0, newTotal - newCompleted);
     const newCompletionRate = newTotal > 0 ? newCompleted / newTotal : 0;
 
-    // Apply the removal to the cache before the mutation, and leave it in place.
     try {
       removeFromShoppingListItemsCache(client.cache, listId, itemId, {
         evictItem: true,

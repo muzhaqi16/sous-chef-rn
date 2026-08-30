@@ -4,10 +4,10 @@ import { promisify } from 'util';
  * `jest.setup.js` replaces the global timers with wrappers that `unref()` what
  * they return, so a stray timer cannot hold the worker open.
  *
- * An arrow wrapper does not inherit `util.promisify.custom`, and the property
- * that used to be forwarded — `__promisify__` — is a @types/node declaration
- * with no runtime existence, so the copy assigned `undefined` and
- * `promisify(setTimeout)` threw.
+ * An arrow wrapper does not inherit `util.promisify.custom`, and `__promisify__`
+ * — the property it is tempting to forward instead — is a @types/node
+ * declaration with no runtime existence, so copying it assigns `undefined` and
+ * `promisify(setTimeout)` throws.
  */
 describe('promisified global timers', () => {
   it('resolves with the value rather than throwing', async () => {

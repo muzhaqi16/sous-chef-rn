@@ -1,15 +1,7 @@
 /**
- * Data Reference Tracker Hook
- *
- * Fires a callback when a value's reference identity changes (not on mount).
- * Useful for detecting unnecessary re-renders caused by unstable references.
- *
- * The onChange callback fires in both DEV and production so consumers
- * (e.g. useFlashListPerformance) can track data churn in production telemetry.
- * Console logging remains DEV-only.
- *
- * No try-catch in hook body (React Compiler safe).
- * Ref read is inside useEffect (not during render) — compiler safe.
+ * Fires `onChange` when a value's reference identity changes (never on mount),
+ * in DEV and production alike — `useFlashListPerformance` reports data churn
+ * from it. Console logging stays DEV-only.
  */
 import { useEffect, useRef } from 'react';
 
@@ -22,7 +14,7 @@ export function useDataReferenceTracker<T>(
   const labelRef = useRef(label);
   const onChangeRef = useRef(onChange);
 
-  // Sync refs after render — never assign ref.current during render (compiler safe)
+  // Never assign ref.current during render.
   useEffect(() => {
     labelRef.current = label;
   });

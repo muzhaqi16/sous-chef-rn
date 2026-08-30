@@ -1,9 +1,4 @@
-/**
- * Shared network error detection utility.
- *
- * Previously duplicated across errorLink.ts, refreshToken.ts,
- * and shopping list mutation utils.
- */
+/** Shared network-error detection: errorLink, refreshToken, mutation utils. */
 
 const NETWORK_ERROR_PATTERNS = [
   'network request failed',

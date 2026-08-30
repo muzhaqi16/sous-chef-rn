@@ -1,22 +1,8 @@
 /**
- * Detail-shaped cache write for a local-first pantry create.
- *
- * `buildOptimisticPantryItem` makes the new row complete for the LIST query;
- * this makes it complete for the DETAIL ones (`GetPantryItem`,
- * `GetPantryItemBatches`). Both halves are needed: a row that is list-complete
- * and detail-incomplete shows up in the pantry and then dead-ends the moment
- * it is tapped, because Apollo serves no partial data and goes to the network
- * for an id the server does not have yet. Offline there is no recovery.
- *
- * Paired with the `Query.pantryItem` cache redirect in `cache.ts` — the
- * redirect resolves the by-id read to this entity, and the entity being
- * complete is what stops that read falling through to the wire.
- * `__tests__/apollo/optimisticEntityCompleteness.test.ts` holds both ends.
- *
- * Values are neutral, never invented: empty connections, empty lists, nulls for
- * anything the client cannot know. A brand-new item genuinely has no purchase
- * record, no usage history and no batches, so the neutral value IS the correct
- * one until the server says otherwise.
+ * `buildOptimisticPantryItem` completes a local-first row for the LIST query;
+ * this completes it for the DETAIL ones. A list-complete but detail-incomplete
+ * row dead-ends on tap: Apollo serves no partial data and goes to the wire for
+ * an id the server does not have yet. Values are neutral, never invented.
  */
 
 import { type ApolloCache } from '@apollo/client';
@@ -64,27 +50,10 @@ export interface PantryItemDetailStubFields {
 }
 
 /**
- * Fill in the fields of `fragment` that `Item:<id>` does not already have.
- *
- * Presence is decided per FIELD, not per fragment. A plain `readFragment`
- * returns null on a PARTIAL entity exactly as on a missing one, so treating a
- * failed read as "nothing is here" defaults the whole group — and destroys real
- * catalog data that a narrower query already fetched. `ItemByUpcFilter` is the
- * case that bites: after a scan the `Item` holds `imageUrl`, `shelfLifeDays`,
- * `shelfLifeOpenedDays` and `categories`, but neither `images` nor
- * `nutritions`, so both of those groups read as absent and every real value in
- * them was overwritten with a neutral one. Offline that never heals.
- *
- * Grouping the fragments narrows that blast radius; it cannot remove it, because
- * the boundary just moves to the group. Asking the cache, field by field, which
- * fields it can satisfy IN FULL removes it — see {@link completeFields}.
- *
- * Types come from the generated fragment docs — `TypedDocumentNode<TFragment>`
- * carries the shape, so `data`, the read and the write are all checked against
- * the codegen'd type rather than an erasing `Record<string, unknown>`.
- * `Unmasked<>` appears here against the usual convention (optimisticResponse
- * returns) because it is the parameter type `cache.writeFragment` declares; the
- * alternative is the erasure this helper exists to remove.
+ * Fills the fields of `fragment` that `Item:<id>` lacks, deciding presence per
+ * FIELD (see {@link completeFields}): a plain `readFragment` returns null on a
+ * PARTIAL entity exactly as on a missing one, so a per-fragment test defaults
+ * the whole group and destroys real catalog data a narrower query fetched.
  */
 function topUpEntityGroup<TFragment extends { __typename: string; id: string }>(
   cache: ApolloCache,
@@ -120,28 +89,10 @@ function topUpEntityGroup<TFragment extends { __typename: string; id: string }>(
 }
 
 /**
- * The fields of `fragment` the cache can satisfy IN FULL, read one at a time.
- *
- * Completeness has to be asked of the cache, not computed from the values it
- * returns. A `returnPartialData` read OMITS the key it cannot satisfy rather
- * than setting it `undefined`, so a filter written as `value !== undefined`
- * judges every partially-cached nested object whole — and writing one back
- * re-states the incompleteness instead of repairing it, which is the exact case
- * the comment above says this fixed. Verified against the installed Apollo:
- * `node scripts/probe-apollo-cache-shapes.mjs`.
- *
- * A strict `readFragment` of ONE field answers for every level beneath it,
- * because all-or-nothing is what the later read will apply too. `null` still
- * reads complete, so a genuinely-null value the server supplied is kept as a
- * value rather than mistaken for a hole.
- *
- * The trade, deliberately: a nested value the cache holds only partially is
- * dropped in favour of the neutral default. It is the one value that cannot be
- * written back — keeping it leaves EVERY read of this entity failing, which
- * offline means a permanently blank detail screen, against losing one field
- * that the create response will supply. Preserving it instead would mean
- * completing it, which needs a neutral for the nested element and so a change
- * to `scripts/generate-optimistic-fillers.mjs`.
+ * Completeness must be ASKED of the cache, not computed from returned values: a
+ * `returnPartialData` read OMITS the key it cannot satisfy rather than setting it
+ * `undefined`, so a `value !== undefined` filter judges partial objects whole. A
+ * strict one-field `readFragment` answers for every level beneath it.
  */
 function completeFields<TFragment extends { __typename: string; id: string }>(
   cache: ApolloCache,
@@ -194,12 +145,9 @@ function findFragmentDefinition(
 }
 
 /**
- * `fragment` narrowed to a single field, for a per-field completeness read.
- *
- * Built by filtering the already-parsed AST rather than by re-parsing source,
- * so no document is registered under a name it shares with different content —
- * see `writeEntityFields` for the same constraint. Memoized: these are fixed at
- * module scope, so each (group, field) pair is built once per process.
+ * `fragment` narrowed to one field. Built by filtering the parsed AST, never by
+ * re-parsing source, so no document is registered under a name it shares with
+ * different content. Memoized per (group, field) pair.
  */
 const singleFieldDocs = new Map<
   string,
@@ -252,11 +200,9 @@ function singleFieldFragment(
 }
 
 /**
- * `PantryItem.item` is `Item!`, so there is always an entity to point at — but
- * a free-text create has no catalog id, and the builder used to write
- * `Item:''` for it. Derive a stable per-row id instead: the server mints the
- * real `Item` and its create response re-points `PantryItem.item` at it,
- * leaving this one unreferenced for `cache.gc()`.
+ * `PantryItem.item` is `Item!`, but a free-text create has no catalog id, so a
+ * stable per-row id stands in. The create response re-points `PantryItem.item`
+ * at the server's real `Item`, leaving this one for `cache.gc()`.
  */
 const resolveItemId = (
   pantryItemId: string,

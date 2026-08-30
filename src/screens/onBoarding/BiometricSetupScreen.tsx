@@ -15,9 +15,7 @@ import { Text } from '#components/atoms/Text';
 import { BiometricSetupView } from '#components/organisms/biometric/BiometricSetupView';
 import { useBiometricSetup } from '#components/organisms/biometric/useBiometricSetup';
 
-/** Module-level helper that loads a temp registration password from the
- *  keychain. Returns null on failure. Kept at module scope so the try/catch
- *  stays out of the component (React Compiler bailout — see CLAUDE.md). */
+/** Module scope so the try/catch stays out of the component (compiler bailout). */
 async function tryLoadTempPassword(email: string): Promise<string | null> {
   try {
     return await loadTempRegistrationPassword(email);
@@ -27,12 +25,9 @@ async function tryLoadTempPassword(email: string): Promise<string | null> {
 }
 
 /**
- * Onboarding biometric enrollment step (final step before OnboardingComplete).
- * Renders the shared `BiometricSetupView` via `useBiometricSetup` — identical
- * card + logic as the post-login gate and the settings modal. This shell only
- * owns onboarding concerns: where the password comes from (registration
- * password → keychain → inline field), the completion side-effects, and
- * advancing the onboarding flow.
+ * Onboarding's biometric step. The card and logic are the shared
+ * `BiometricSetupView` + `useBiometricSetup`; this shell owns only where the
+ * password comes from and advancing the flow.
  */
 export const BiometricSetupScreen = () => {
   const { t } = useTranslation();
@@ -48,9 +43,8 @@ export const BiometricSetupScreen = () => {
   );
   const { markBiometricDeclined, markBiometricEnabled } = useAuthPreferences();
 
-  // Recover the password from the keychain if it was lost from memory (app
-  // restart mid-onboarding). If neither source has it, the shared card falls
-  // back to an inline password field.
+  // Recovers the password from the keychain after a restart mid-onboarding; with
+  // neither source the shared card falls back to an inline field.
   const [keychainPassword, setKeychainPassword] = useState<string | null>(null);
   useEffect(() => {
     if (registrationPassword || !user?.email) return;
@@ -59,7 +53,6 @@ export const BiometricSetupScreen = () => {
   const presetPassword = registrationPassword ?? keychainPassword ?? undefined;
 
   const handleComplete = (biometricEnabled: boolean) => {
-    // Onboarding is finishing — clear the transient registration password.
     clearRegistrationPassword();
     clearTempRegistrationPassword(); // fire-and-forget keychain cleanup
 
@@ -88,7 +81,6 @@ export const BiometricSetupScreen = () => {
     onComplete: handleComplete,
   });
 
-  // Still probing device capability.
   if (bio.checking) {
     return (
       <OnBoardingWrapper
@@ -105,7 +97,6 @@ export const BiometricSetupScreen = () => {
     );
   }
 
-  // Unavailable → `useBiometricSetup` already advanced the flow via onComplete.
   if (!bio.available) return null;
 
   return (

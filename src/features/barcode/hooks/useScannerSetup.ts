@@ -13,63 +13,27 @@ export interface ScannerContext {
 }
 
 interface UseScannerSetupOptions {
-  /**
-   * Whether scanner setup is enabled
-   * @default true
-   */
+  /** Defaults to true. */
   enabled?: boolean;
-
-  /**
-   * Home ID required to scan
-   * If not provided, scanner will show error
-   */
+  /** Absent means the scanner reports "no home selected" instead of opening. */
   homeId?: string | null;
-
-  /**
-   * Context passed to scanner navigation
-   * Must include source and optional ids
-   */
   context: ScannerContext;
-
-  /**
-   * Custom error handling when home is not selected
-   */
+  /** Replaces the default "no home selected" alert. */
   onNoHome?: () => void;
 }
 
-/**
- * Hook to set up scanner button functionality
- *
- * Handles:
- * - Scanner button setup and cleanup
- * - Home validation before scanning
- * - Navigation to barcode scanner with context
- * - Error alerts for missing home
- *
- * @example
- * ```typescript
- * useScannerSetup({
- *   enabled: true,
- *   homeId: selectedHomeId,
- *   context: {
- *     source: 'pantry',
- *     pantryId: pantry?.id,
- *   },
- * });
- * ```
- */
+/** Registers the tab bar's scanner button and tears it down on unmount. */
 export function useScannerSetup(options: UseScannerSetupOptions): void {
   const { enabled = true, homeId, context, onNoHome } = options;
 
   const { setScannerProps } = useTabBarSetters();
   const { toHomeManagement, toBarcode } = useAppNavigation();
 
-  // Use refs to track dynamic values without triggering effect re-runs
+  // Refs so changing values don't re-register the scanner button.
   const homeIdRef = useRef(homeId);
   const contextRef = useRef(context);
   const onNoHomeRef = useRef(onNoHome);
 
-  // Update refs when values change
   useEffect(() => {
     homeIdRef.current = homeId;
   }, [homeId]);
@@ -82,14 +46,12 @@ export function useScannerSetup(options: UseScannerSetupOptions): void {
     onNoHomeRef.current = onNoHome;
   }, [onNoHome]);
 
-  // Set up scanner button
   useEffect(() => {
     if (!enabled) {
       return;
     }
 
     const handleScanPress = () => {
-      // Validate home selection
       if (!homeIdRef.current) {
         if (onNoHomeRef.current) {
           onNoHomeRef.current();
@@ -110,13 +72,11 @@ export function useScannerSetup(options: UseScannerSetupOptions): void {
         return;
       }
 
-      // Navigate to barcode scanner with context
       toBarcode(contextRef.current);
     };
 
     setScannerProps(handleScanPress, true);
 
-    // Clean up on unmount
     return () => {
       setScannerProps(undefined, false);
     };

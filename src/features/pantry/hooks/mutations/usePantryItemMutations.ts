@@ -1,15 +1,8 @@
 /**
- * usePantryItemMutations - update/remove mutations for pantry items
- *
- * Single responsibility:
- * - Update and remove mutations
- * - Optimistic responses for instant UI
- * - Cache updates for offline-first support
- *
- * Adds do NOT live here: every add surface goes through `AddToPantrySheet` /
- * `usePantryItemSubmission` / `useCreatePantryItem`, which own the
- * DuplicatePantryItemError restock/force-add recovery flow the contract
- * requires on every add path.
+ * Update and remove mutations for pantry items. Adds do NOT live here — every
+ * add surface goes through `AddToPantrySheet` / `usePantryItemSubmission`,
+ * which own the DuplicatePantryItemError restock/force-add recovery flow the
+ * contract requires on every add path.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -49,17 +42,6 @@ interface UsePantryItemMutationsOptions {
   refetch: () => void;
 }
 
-/**
- * Hook for pantry item update/remove operations
- *
- * @example
- * ```tsx
- * const { updateItem, removeItem } = usePantryItemMutations({
- *   pantryId,
- *   refetch,
- * });
- * ```
- */
 export function usePantryItemMutations({
   pantryId,
   refetch,

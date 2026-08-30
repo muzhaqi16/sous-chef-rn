@@ -8,32 +8,22 @@ import { toastService } from '#/services/toastService';
 import { TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
 
-// The glyph matches the warning-banner text color, which differs per theme.
-// `<Icon tone>` only exposes flat top-level colors, not the nested
-// `alertBanner.warning.text` path, so wrap Ionicons directly with withUnistyles —
-// it re-resolves the color on theme change so the icon stays in sync instead of
-// going stale until a remount.
+// `<Icon tone>` exposes flat top-level colors only, not the nested
+// `alertBanner.warning.text` path, so wrap Ionicons directly — withUnistyles
+// re-resolves the color on theme change instead of going stale until a remount.
 const PillIcon = withUnistyles(Ionicons, theme => ({
   color: theme.colors.alertBanner.warning.text,
 }));
 
 interface OfflineStatusPillProps {
-  /** Icon size, to match the surrounding header actions. */
   size?: number;
-  /** Extra style (e.g. spacing) merged onto the pressable. */
   style?: StyleProp<ViewStyle>;
 }
 
 /**
- * Compact, inline offline indicator meant to sit among a header's action icons
- * (e.g. next to the notification bell). Renders nothing while online. When the
- * server can't be reached it shows a cloud-off glyph in the warning color, with
- * a badge for the count of changes queued to sync. Tapping re-surfaces the full
- * message as a toast.
- *
- * The on/off announcement toast is fired once at the app root by
- * `OfflineTransitionToaster`, not here — this component is purely visual so it
- * can be mounted in every header without firing duplicate toasts.
+ * Inline offline indicator for a header's action row; renders nothing online.
+ * Purely visual so it can be mounted in every header — the on/off announcement
+ * toast fires once at the app root in `OfflineTransitionToaster`, not here.
  */
 export const OfflineStatusPill: React.FC<OfflineStatusPillProps> = ({
   size = 22,

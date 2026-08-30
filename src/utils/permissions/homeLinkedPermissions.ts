@@ -11,16 +11,7 @@ export interface HomeLinkedResource {
   } | null;
 }
 
-/**
- * Map a home membership role to the corresponding permission level.
- *
- * | Home Role | PermissionLevel |
- * |-----------|-----------------|
- * | OWNER     | owner           |
- * | ADMIN     | admin           |
- * | MEMBER    | editor          |
- * | GUEST     | viewer          |
- */
+/** MEMBER maps to `editor` and GUEST to `viewer`; the rest map by name. */
 export function mapRoleToPermissionLevel(
   role: MembershipRole,
 ): PermissionLevel {
@@ -38,15 +29,7 @@ export function mapRoleToPermissionLevel(
   }
 }
 
-/**
- * Get the user's permission level for a home-linked resource.
- *
- * Resolution order:
- * 1. Personal resource (no homeId) → 'owner'
- * 2. Creator of a home resource → 'owner'
- * 3. Home member → mapped from membership role
- * 4. No membership → 'none'
- */
+/** A personal resource and a home resource's creator are both `owner`. */
 export function getPermissionLevel(
   resource: HomeLinkedResource,
   isCreator: boolean,

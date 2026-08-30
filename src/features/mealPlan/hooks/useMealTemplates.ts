@@ -15,12 +15,10 @@ interface MealTemplatesState {
   loading: boolean;
   error: Error | undefined;
   /**
-   * `data !== undefined` — a response arrived, empty or not.
-   *
-   * `search` and `category` are live controls, so every combination is its own
-   * cache entry and the first touch of either while offline is a guaranteed
-   * miss. Consumers pass this to `useDataState`, which turns that miss into
-   * "we don't know" rather than "there are none".
+   * `data !== undefined` — a response arrived, empty or not. `search` and
+   * `category` are live controls, so every combination is its own cache entry
+   * and the first offline touch is a guaranteed miss; `useDataState` turns that
+   * into "we don't know" rather than "there are none".
    */
   hasResult: boolean;
   hasMore: boolean;

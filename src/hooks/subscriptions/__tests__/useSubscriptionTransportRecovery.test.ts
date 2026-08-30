@@ -249,9 +249,9 @@ describe('useSubscriptionTransportRecovery', () => {
     expect(restart).toHaveBeenCalledTimes(2);
   });
 
-  // The regression this window exists for: the budget used to count faults for
-  // the life of the session, so six separately-recovered faults exhausted it and
-  // left the subscription dark with a report saying it had not recovered.
+  // The regression this window exists for: a budget counting faults for the life
+  // of the session lets six separately-recovered faults exhaust it, leaving the
+  // subscription dark under a report saying it had not recovered.
   it('never exhausts the budget across faults that each recover', () => {
     const restart = jest.fn();
     const error = socketClosed(4500);

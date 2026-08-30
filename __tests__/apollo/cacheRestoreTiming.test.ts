@@ -1,16 +1,19 @@
 /**
  * Guard: the persisted Apollo cache must actually be restored.
  *
- * `restorePersistedCache()` used to live inline in `initializeClient()`, which
- * runs at module import. `initializeSecureStorage()` is async (keychain-backed)
- * and `index.js` does not await it, so at import time `isStorageReady()` is
- * false, `load()` returns null, and nothing is restored — every session wrote a
- * cache that was never read back. Offline reads therefore did not survive a
- * relaunch, and `cache-and-network` hid it whenever the device was online.
+ * `restorePersistedCache()` cannot be a single inline call in
+ * `initializeClient()`, which runs at module import. `initializeSecureStorage()`
+ * is async (keychain-backed) and `index.js` does not await it, so at import time
+ * `isStorageReady()` is false, `load()` returns null, and nothing is restored —
+ * a session that only tries then writes a cache it never reads back. Offline
+ * reads do not survive a relaunch, and `cache-and-network` hides that whenever
+ * the device is online. So App retries at the hydration boundary, and the call
+ * is idempotent.
  *
- * The regression is invisible to every other gate: it type-checks, lints, and
- * passes the suite, because nothing asserted the restore happened. Telemetry
- * caught it (`app_apollo_restore_ms{outcome="empty"}` beside a 79KB write).
+ * The defect is invisible to every other gate: it type-checks, lints, and
+ * passes the suite, because nothing else asserts the restore happened.
+ * Telemetry is what surfaces it (`app_apollo_restore_ms{outcome="empty"}`
+ * beside a 79KB write).
  */
 export {};
 

@@ -191,10 +191,10 @@ describe('ItemList', () => {
     const { rerender } = render(<ItemList {...defaultProps} />);
     expect(screen.queryByText('action:delete')).toBeNull();
 
-    // Whether rows HAVE swipe actions used to be encoded into `extraData` so
-    // FlashList would re-render its cells for it. The factory now travels on its
-    // own context, which each row subscribes to directly — context propagation
-    // does not go through the cells' props, so the encoding buys nothing.
+    // The swipe-action factory travels on its own context, which each row
+    // subscribes to directly. Context propagation does not go through the cells'
+    // props, so encoding "rows HAVE swipe actions" into `extraData` to make
+    // FlashList re-render its cells buys nothing.
     rerender(
       <ItemList
         {...defaultProps}

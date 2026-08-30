@@ -34,15 +34,8 @@ interface CachedConnection {
 const MAX_WINDOW_EDGES = 100;
 
 /**
- * Version-aware merge function that handles optimistic updates and conflict resolution
- *
- * Features:
- * - Preserves optimistic items (temp- IDs) until server confirms
- * - Resolves conflicts using version field (higher version wins)
- * - Falls back to updatedAt timestamp if versions are equal
- * - Works with any entity type that has id, version, and updatedAt
- *
- * @template T - Entity type with id, version, updatedAt fields
+ * Version-aware merge: optimistic (`temp-`) items survive until the server
+ * confirms, and conflicts resolve on `version`, falling back to `updatedAt`.
  */
 function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
   existing: T[] = [],
@@ -135,13 +128,10 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
     },
   );
 
-  // Preserve locally-created items the server hasn't confirmed yet. An offline
-  // create writes the item (with its client-minted cuid) before the mutation
-  // replays, so a background refetch that lands first must not drop it. Keep
-  // existing items whose id still has a PENDING mutation in the offline queue;
-  // once the queue drains, the authoritative server page wins. A genuinely
-  // server-deleted item (no pending op) is correctly dropped. Mirrors the
-  // pending-id guard in itemsConnectionFieldPolicy.
+  // Keep existing items whose id still has a PENDING queue mutation, so an
+  // offline create survives a refetch that beats the queue drain. Once the
+  // queue empties the server page wins, and a genuinely deleted item (no
+  // pending op) is dropped. Mirrors the guard in itemsConnectionFieldPolicy.
   const pendingIds = queueStore.getPendingClientIds();
   existingMap.forEach(({ item }, id) => {
     if (incomingMap.has(id)) {
@@ -191,14 +181,10 @@ function shouldPreservePageInfo(
 }
 
 /**
- * Preserve un-replayed local creates when an authoritative first page replaces
- * a connection. Keeps only existing edges whose `node.id` still has a PENDING
- * mutation in the offline queue and is absent from the incoming page — so an
- * offline create survives a refetch that wins the race against the queue drain,
- * while a genuinely server-deleted node (no pending op) is still dropped. Falls
- * straight through to `incoming` once the queue drains (pendingIds empty).
- * Shared by {@link itemsConnectionFieldPolicy} and
- * {@link mergeConnectionByNodeId} so the guard is encoded in one place.
+ * Preserve un-replayed local creates when an authoritative first page replaces a
+ * connection: keeps only edges whose `node.id` still has a PENDING queue
+ * mutation and is absent from the incoming page. Falls straight through once
+ * the queue drains. Shared so the guard is encoded in one place.
  */
 function preservePendingEdges(
   existing: CachedConnection,
@@ -230,35 +216,10 @@ function preservePendingEdges(
 }
 
 /**
- * Merge a cursorless (first-page) response into a cached connection, treating
- * the incoming page as authoritative for the window it covers.
- *
- * This is the difference between a refresh that works and one that only ever
- * adds. The append-only branch below keeps every existing edge in place and
- * appends whatever is new, which is right for `fetchMore` and wrong for a
- * refetch: an entry deleted on another device would stay on screen (it is in
- * `existing` and simply absent from `incoming`), and an entry that now sorts
- * first would keep its old position, taken from the cached edge rather than the
- * fresh page — pull-to-refresh appearing to do nothing.
- *
- * How much the page re-states is decided by `hasNextPage`, and only by it:
- *
- * - `false` — the response is the entire list, so it replaces the whole
- *   connection. Anything cached and absent from it is gone.
- * - `true` — the response is the first page of a longer list, so it replaces
- *   the first page's worth of edges. Edges past its length were loaded by
- *   later `fetchMore` calls and survive, minus any id the fresh page now
- *   carries — an entry that sorted forward into the window must not appear
- *   twice.
- *
- * Position alone cannot make that call. A page can be short because entries
- * were deleted, in which case the "tail" is the deletions and keeping it puts
- * them back on screen.
- *
- * The resilience guard comes first: a transient or partial response (API
- * briefly unreachable, an `errorPolicy: 'ignore'` fallback, a 200 that arrives
- * mid-token-refresh) must not empty a populated list. Only `totalCount === 0`
- * is treated as the server genuinely saying everything is gone.
+ * Merge a cursorless first page as authoritative for the window it covers.
+ * `hasNextPage` decides how much it restates: `false` replaces the whole
+ * connection, `true` replaces the first page's worth and keeps later
+ * `fetchMore` edges. Only `totalCount === 0` may empty a populated list.
  */
 function mergeAuthoritativeFirstPage(
   existing: CachedConnection,
@@ -310,16 +271,10 @@ function mergeAuthoritativeFirstPage(
 }
 
 /**
- * Connection merge for non-paginated-window lists where fresh server data
- * should win on duplicate node IDs.
- *
- * Used for membership/invites/saved-recipes-style connections where the
- * server's representation of a node is always authoritative. Incoming edges
- * overwrite existing ones at the same id (last-write-wins).
- *
- * For append-only paginated lists with cursor windows, use
- * {@link itemsConnectionFieldPolicy} instead — its dedup strategy preserves
- * existing edge positions and bounds the window via MAX_WINDOW_EDGES.
+ * Connection merge where fresh server data wins on duplicate node ids
+ * (last-write-wins), for connections with no paginated window. Append-only
+ * paginated lists use {@link itemsConnectionFieldPolicy} instead, which keeps
+ * existing edge positions and bounds the window.
  */
 function mergeConnectionByNodeId(keyArgs: string[] = ['filters']) {
   return {
@@ -355,9 +310,9 @@ function mergeConnectionByNodeId(keyArgs: string[] = ['filters']) {
       if (!existing) return incoming;
       if (!args?.after) {
         // No cursor means a refresh, not a page: the response re-states the
-        // window it covers, so it replaces those edges rather than merging
-        // into them. Gating this on `!hasNextPage` — as it used to — meant any
-        // list long enough to paginate never saw a removal or a reorder.
+        // window it covers, so it replaces those edges rather than merging in.
+        // Gating on `!hasNextPage` would hide every removal and reorder in a
+        // list long enough to paginate.
         return mergeAuthoritativeFirstPage(existing, incoming, readField);
       }
 
@@ -413,30 +368,18 @@ function mergeConnectionByNodeId(keyArgs: string[] = ['filters']) {
 }
 
 /**
- * Connection merge for paginated, append-only lists with a bounded edge window.
- *
- * Used by ShoppingList.itemsConnection and Pantry.itemsConnection. Existing
- * edges keep their positions; only incoming edges with new node IDs are
- * appended. The result is capped at MAX_WINDOW_EDGES — the oldest edges are
- * evicted when the window overflows, which keeps memory bounded for users
- * with thousands of historical items.
- *
- * For non-paginated connections where fresh data should overwrite duplicates,
- * use {@link mergeConnectionByNodeId} instead.
+ * Paginated append-only merge with a bounded window: existing edges keep their
+ * positions, only new node ids are appended, and the result is capped at
+ * MAX_WINDOW_EDGES so memory stays bounded. Use
+ * {@link mergeConnectionByNodeId} where fresh data should overwrite duplicates.
  */
 function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
   return {
     keyArgs,
-    // Self-heal dangling refs: when an entity is evicted (delete mutation, gc,
-    // cache restore from MMKV with stale edges), Apollo leaves the dangling
-    // Reference inside `edge.node` because connections are `{ edges: [{ node }] }`
-    // — its default broken-ref filter only handles plain lists of refs, not
-    // nested `edge.node` shape. The unresolved ref still reads as a truthy
-    // Reference object, so `extractNodes` doesn't drop it and strict
-    // (null-on-incomplete) useFragment consumers render null → phantom rows +
-    // stale totalCount.
-    // Filtering via `canRead` here drops those edges at the source and
-    // decrements `totalCount` by however many were dropped.
+    // Self-heal dangling refs: Apollo's broken-ref filter handles plain lists,
+    // never a nested `edge.node`, so an evicted entity leaves a truthy
+    // Reference that renders as a phantom row with a stale totalCount.
+    // `canRead` drops those edges and decrements the count.
     read(
       existing: CachedConnection | undefined,
       { canRead }: FieldFunctionOptions,
@@ -574,24 +517,10 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
 }
 
 /**
- * Apollo InMemoryCache with intelligent merge functions.
- *
- * Uses version-based conflict resolution to handle mutation responses,
- * optimistic updates, and concurrent modifications. Targeted `cache.evict()`
- * + `cache.gc()` at known eviction points (logout, item deletion) keep the
- * cache bounded — no periodic sweep needed.
- *
- * **No type declares `keyFields: ['id']`.** That is already Apollo's default,
- * so writing it out looks harmless — but declaring `keyFields` at all switches
- * the cache key to its explicit form: `PantryItem:{"id":"abc"}` instead of
- * `PantryItem:abc`. Twenty-seven types spelled out the default and silently got
- * the other format, which broke every consumer that reads a key back:
- * `queueManager.findCachedTypename` looks for a key ending in `:<entityId>`,
- * found nothing for any of them, and so never evicted a failed mutation's
- * entity or cleared its persisted optimistic fields.
- *
- * Add `keyFields` only for a type that is genuinely keyed on something other
- * than `id`, and expect the explicit key format when you do.
+ * **No type declares `keyFields: ['id']`.** It is already Apollo's default, and
+ * declaring it switches the cache key to its explicit form
+ * (`PantryItem:{"id":"abc"}`, not `PantryItem:abc`), breaking every consumer
+ * that reads a key back. Declare it only for a genuinely different key.
  */
 
 export function makeCache(): InMemoryCache {
@@ -613,49 +542,12 @@ export function makeCache(): InMemoryCache {
           purchasesConnection: mergeConnectionByNodeId(['orderBy']),
         },
       },
-      // A nested object with NO type policy is REPLACED wholesale on write, not
-      // merged field-by-field. Verified against the installed
-      // @apollo/client@4.1.7 — re-derive with:
-      //
-      //   node -e "const {InMemoryCache, gql} = require('@apollo/client');
-      //   const c = new InMemoryCache();
-      //   const Q1 = gql\`{ shoppingListItem(id:\"1\") { id purchaseInfo {
-      //     isPurchased purchaseDate purchasedBy { id } } } }\`;
-      //   const Q2 = gql\`{ shoppingListItem(id:\"1\") { id purchaseInfo {
-      //     isPurchased purchasedQuantity } } }\`; /* write Q1 then Q2 */
-      //   console.log(c.diff({query: Q1, optimistic: false}).complete)"  // false
-      //
-      // Eleven operations select `purchaseInfo { isPurchased }` and nothing
-      // else — GetShoppingListItemsFiltered (refetched cache-and-network on
-      // every list visit), the item subscription fragment, both offline-queue
-      // fragments, both purchase mutations. ItemDetail selects all five fields
-      // and returns null when its fragment reads incomplete, so without these
-      // policies any one of those writes lands under the open detail screen and
-      // it renders "Item not found" — with the item sitting right there in the
-      // cache, minus the four fields the last writer didn't ask for.
-      //
-      // The trade with a plain `merge: true` is that a field only ever leaves
-      // the object when a write overwrites it — and the five purchase fields
-      // are ONE FACT, not five. A narrow write that flips `isPurchased` leaves
-      // the previous purchase's amounts and purchaser sitting beside the new
-      // flag, and the detail screen attributes them to the new purchase: buy an
-      // item, have a collaborator unmark and re-buy it, and their purchase
-      // shows your name and your amounts. Gating every consumer on
-      // `isPurchased` does not help, because `isPurchased` is precisely the
-      // field the narrow write sets.
-      //
-      // So the merge expresses the invariant instead: a write that CHANGES
-      // `isPurchased` describes a different purchase, so the fields it does not
-      // carry are cleared rather than inherited. A write that leaves
-      // `isPurchased` alone is a partial read of the SAME purchase and merges
-      // field-wise as before — which is what keeps a list refetch from blanking
-      // an open detail screen.
-      //
-      // Cleared means written as `null`, never removed. Every dependent field
-      // is nullable in the schema, and an explicit null still reads COMPLETE —
-      // whereas removing them would blank the detail screen, which is the bug
-      // the policy exists to prevent. So the two failures are avoided together
-      // rather than traded against each other.
+      // A nested object with no type policy is REPLACED wholesale on write, so
+      // a narrow `purchaseInfo { isPurchased }` write would blank an open
+      // detail screen. Plain `merge: true` is also wrong — the purchase fields
+      // are ONE FACT, so a flipped `isPurchased` must not inherit the previous
+      // purchase's amounts. So: an unchanged `isPurchased` merges field-wise, a
+      // changed one clears what it omits as `null` (removing reads INCOMPLETE).
       ShoppingListItemPurchaseInfo: {
         merge(
           existing: StoreObject | Reference | undefined,
@@ -919,15 +811,10 @@ export function makeCache(): InMemoryCache {
           storageLocations: {
             // Different homes have different storage locations - cache separately
             keyArgs: ['homeId'],
-            // `StorageLocationConnection`, not a list — so Apollo's default
-            // broken-reference filtering (which handles plain arrays of refs)
-            // never reaches `edge.node`. Without this read, an optimistic
-            // delete's evict left a dangling node behind: `GetStorageLocations`
-            // went incomplete, `cache-first` went to the network, offline the
-            // request was refused and swallowed by `errorPolicy: 'ignore'`, and
-            // `usePreservedNodes` handed back the PRE-delete connection —
-            // freezing the list, deleted row and all, for the rest of the
-            // session. Same self-healing read as the connection policies above.
+            // A connection, not a list, so Apollo's broken-ref filtering never
+            // reaches `edge.node`. Without this read an optimistic delete's
+            // evict leaves a dangling node, the query goes incomplete, and
+            // offline `usePreservedNodes` freezes the PRE-delete list.
             read(
               existing: CachedConnection | undefined,
               { canRead }: FieldFunctionOptions,

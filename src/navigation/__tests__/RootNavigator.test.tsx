@@ -192,8 +192,8 @@ jest.mock('../stacks/NotificationStack', () => ({
 }));
 
 // Feature-owned screen groups spread into the root config. One mock per
-// feature replaces the per-screen mocks this file used to carry, and keeps
-// the real (heavy) screen modules out of this suite. The linking-intent
+// feature stands in for every screen in the group, and keeps the real
+// (heavy) screen modules out of this suite. The linking-intent
 // invariant for the screens inside each group is asserted against the real
 // module in the feature's own test — see
 // features/pantry/screens/__tests__/registration.test.ts.

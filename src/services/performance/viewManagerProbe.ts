@@ -1,30 +1,16 @@
 /**
- * Records which native view managers get their constants fetched, and how long
- * each fetch takes.
- *
- * A Hermes sample carries no arguments, so the CPU profile can prove that
- * `getConstantsForViewManager` is disproportionately expensive on device
- * (3.29x vs 1.75x for everything else) without naming a single component. This
- * closes that gap by timing each call by name.
- *
- * On the New Architecture the call routes through `BridgelessUIManager`, which
- * captures `global.RN$LegacyInterop_UIManager_getConstantsForViewManager` into
- * a module-scope const at evaluation time (its `:44`). So the wrap has to be
- * installed from `index.js`, before anything pulls that module in — which
- * `inlineRequires` defers until first use, giving us the window.
- *
- * Measurement-only, behind `HERMES_PROFILE_STARTUP`. Never on in a normal build.
+ * Times each `getConstantsForViewManager` call by name — a Hermes sample carries
+ * no arguments, so the profile alone cannot name callers. Measurement-only,
+ * behind `HERMES_PROFILE_STARTUP`. The wrap must be installed from `index.js`
+ * before `BridgelessUIManager` captures the interop global at evaluation time.
  */
 type CallRecord = { name: string; ms: number };
 
 const records: CallRecord[] = [];
 
 /**
- * Whether the probe found the interop global to wrap.
- *
- * Without this, "the probe never attached" and "no view manager was queried"
- * produce the SAME empty report — and an empty report reads as "this costs
- * nothing", which is the failure mode this whole measurement exists to avoid.
+ * Without this, "never attached" and "nothing was queried" produce the SAME
+ * empty report — which reads as "this costs nothing".
  */
 let attached = false;
 
@@ -37,8 +23,7 @@ const now = (): number => {
 export function instrumentViewManagerConstants(): void {
   const original = global.RN$LegacyInterop_UIManager_getConstantsForViewManager;
   if (typeof original !== 'function') {
-    // Left false on purpose: the report says it did not observe, rather than
-    // reporting zero observations.
+    // Left false on purpose: "did not observe" is not "observed zero".
     attached = false;
     return;
   }
@@ -55,20 +40,10 @@ export function instrumentViewManagerConstants(): void {
 }
 
 /**
- * Whether the probe wrapped the interop global — the one condition that decides
- * whether the report is worth writing.
- *
- * False on iOS, always: the wrapped global is installed only when
- * `useNativeViewConfigsInBridgelessMode()` is true (`RCTInstance.mm`), and that
- * flag defaults to false, so `instrumentViewManagerConstants` returns at its
- * `typeof original !== 'function'` guard. iOS does not take this code path at
- * all; view configs come from the static native component registry.
- *
- * Gating the report on RECORDS instead made `attached: false` — the field the
- * report tells you to read FIRST — structurally unreachable: no attach means no
- * records, which meant no report at all, so "never attached" and "attached and
- * saw nothing" were indistinguishable. Both are real findings; only the second
- * means the interop path is free.
+ * Decides whether the report is worth writing. Always false on iOS: the interop
+ * global exists only when `useNativeViewConfigsInBridgelessMode()` is true
+ * (`RCTInstance.mm`, default false), so iOS never takes this path — its view
+ * configs come from the static native component registry.
  */
 export function didViewManagerProbeAttach(): boolean {
   return attached;
@@ -89,9 +64,8 @@ export function summarizeViewManagerConstants(): string {
   const total = rows.reduce((sum, row) => sum + row.ms, 0);
   return JSON.stringify(
     {
-      // Read this FIRST. `attached: false` means the probe never wrapped the
-      // interop global — the zeroes below are the absence of a measurement, not
-      // a measurement of absence.
+      // Read FIRST: `attached: false` makes the zeroes below the absence of a
+      // measurement, not a measurement of absence.
       attached,
       totalMs: total,
       count: records.length,

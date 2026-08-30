@@ -1,15 +1,6 @@
 import type { PantryItemSuggestion } from '#features/pantry/hooks/usePantryItemSuggestions';
 import type { AddItemSheetConfig } from '#features/catalog/ui/AddItemSheet/types';
 
-/**
- * Configuration for AddToPantrySheet.
- *
- * Features:
- * - 5 suggestion groups (Low Stock, Expiring Soon, Add Again, Favorites, Popular)
- * - Fire-and-forget quick add with exit animations
- * - Add Details sub-sheet support
- * - Deferred fetch for smooth sheet animation
- */
 export const pantrySheetConfig: AddItemSheetConfig<PantryItemSuggestion> = {
   titleKey: 'addItemSheet.addToPantry',
   testIDPrefix: 'add-pantry-item',

@@ -28,11 +28,9 @@ interface UseRecipeSavedMetadataOptions {
 }
 
 /**
- * The cached `SavedRecipe` behind a recipe, read off `Recipe.savedDetails`
- * (which every detail query already selects). Needed because the metadata
- * mutations key on `recipeId`, but the row those edits land on is the
- * SavedRecipe — without its id the change cannot be written to the cache, and
- * an offline edit would toast success with nothing visibly changed.
+ * The cached `SavedRecipe` behind a recipe, off `Recipe.savedDetails`. The
+ * metadata mutations key on `recipeId` but the edits land on the SavedRecipe,
+ * so without its id an offline edit toasts success and changes nothing.
  */
 const SavedDetailsRefFragment = gql`
   fragment _SavedDetailsRef on Recipe {

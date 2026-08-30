@@ -225,6 +225,12 @@ describe('DietaryProfileScreen', () => {
   });
 });
 
+/**
+ * The gate is `loading && !profile`, not `loading`. Under `cache-and-network`
+ * Apollo reports `loading: true` for the whole network leg on EVERY mount, so
+ * gating on `loading` alone blanked this screen on every visit for as long as
+ * the request took — up to the 10s httpLink abort deadline.
+ */
 describe('DietaryProfileScreen - loading state', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -242,9 +248,52 @@ describe('DietaryProfileScreen - loading state', () => {
       });
   });
 
-  it('shows loading text when dietary profile is loading', () => {
+  it('shows loading text when there is no profile yet', () => {
     render(<DietaryProfileScreen />);
     expect(screen.getByText('Loading dietary profile...')).toBeTruthy();
+  });
+
+  it('keeps the header and back button while it waits', () => {
+    render(<DietaryProfileScreen />);
+    // A loading branch that returns a bare View leaves the user on a blank
+    // screen with no way off it while a request stalls.
+    expect(screen.getByTestId('profile-screen-wrapper')).toBeTruthy();
+    expect(screen.getByText('Dietary Profile')).toBeTruthy();
+  });
+
+  it('renders the profile while a background refresh is in flight', () => {
+    jest
+      .spyOn(
+        require('#features/profile/hooks/useDietaryProfile'),
+        'useDietaryProfile',
+      )
+      .mockReturnValue({
+        profile: {
+          restrictions: [],
+          preferredCuisines: ['ITALIAN'],
+          favoriteIngredients: ['Garlic'],
+          dislikedIngredients: [],
+          mealsPerDay: 3,
+          snacksPerDay: 2,
+          cookingSkillLevel: 'Intermediate',
+          maxPrepTimeMinutes: 30,
+          maxCookTimeMinutes: 45,
+          budgetPerMeal: 15,
+          calorieTarget: 2000,
+          proteinTarget: 150,
+          carbsTarget: 250,
+          fatTarget: 70,
+        },
+        loading: true,
+        updateDietaryProfile: mockUpdateDietaryProfile,
+        addDietaryRestriction: mockAddDietaryRestriction,
+        removeDietaryRestriction: mockRemoveDietaryRestriction,
+      });
+
+    render(<DietaryProfileScreen />);
+
+    expect(screen.queryByText('Loading dietary profile...')).toBeNull();
+    expect(screen.getByText('Dietary Profile')).toBeTruthy();
   });
 });
 

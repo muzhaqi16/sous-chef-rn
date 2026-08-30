@@ -15,38 +15,9 @@ interface SubscriptionProviderProps {
 }
 
 /**
- * SubscriptionProvider - Centralizes all real-time subscription management
- *
- * This component wraps the app to initialize and manage all real-time
- * subscriptions across different domains (shopping lists, pantry, home, notifications).
- *
- * Architecture:
- * - Uses the unified SubscriptionService for consistent behavior
- * - Provides automatic deduplication (filters self-echo and duplicates)
- * - Handles cache updates automatically based on mutation type
- * - Provides consistent error handling and logging
- * - Cleans up subscriptions on logout
- *
- * Benefits:
- * - Eliminates 90%+ of subscription boilerplate in individual hooks
- * - Consistent subscription patterns across the entire app
- * - Easier to add new subscriptions (just register with service)
- * - Better testability (test service once, not every hook)
- * - Improved debugging (centralized logging)
- *
- * This component should be placed inside ApolloProvider (requires Apollo context)
- * and alongside DataProvider in the component tree.
- *
- * @example
- * ```tsx
- * <ApolloProvider client={client}>
- *   <DataProvider>
- *     <SubscriptionProvider>
- *       <Navigation />
- *     </SubscriptionProvider>
- *   </DataProvider>
- * </ApolloProvider>
- * ```
+ * Mounts every domain's real-time subscription through `SubscriptionService`, so
+ * deduplication, cache updates and logout teardown behave the same everywhere.
+ * Must sit inside `ApolloProvider`, alongside `DataProvider`.
  */
 export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
   children,
@@ -64,12 +35,9 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
   useEffect(() => {
     const initializeWebSocket = () => {
       if (isAuthenticated) {
-        // No blocking refresh is needed here. `connectionParams` sends the
-        // refresh token alongside the access token, and the SERVER rotates an
-        // expired one during the handshake, returning the new pair in the ack —
-        // so enabling reconnects is safe even when the stored token is stale.
-        // This also restores the socket client if the previous session's
-        // teardown disposed one.
+        // No blocking refresh: `connectionParams` sends the refresh token too,
+        // and the server rotates an expired access token during the handshake,
+        // so reconnecting is safe even with a stale stored token.
         enableAutoReconnect();
         setIsTokenReady(true);
       } else {

@@ -3,6 +3,7 @@
 import React from 'react';
 import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
 import { SelectPantryItems } from '../SelectPantryItems';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -209,6 +210,31 @@ describe('SelectPantryItems', () => {
     expect(await screen.findByText('Eggs')).toBeTruthy();
     expect(await screen.findByText('Milk')).toBeTruthy();
     expect(await screen.findByText('Bread')).toBeTruthy();
+  });
+
+  /**
+   * The gate is `(loading && !data) || (pantryLoading && !pantryData)`, not the
+   * two flags alone. Under `cache-and-network` Apollo reports `loading: true`
+   * for the whole network leg on EVERY mount — `nextFetchPolicy` lives on the
+   * ObservableQuery and useQuery builds a new one each time — so stepping back
+   * into this onboarding step re-showed the loader over a warm cache, for as
+   * long as the request took.
+   */
+  it('renders the cached items on a remount, without the loader', async () => {
+    const cache = makeCache();
+
+    const first = renderWithApollo(<SelectPantryItems />, {
+      mocks: onboardingMocks,
+      cache,
+    });
+    expect(await screen.findByText('Eggs')).toBeTruthy();
+    first.unmount();
+
+    // Same cache — stepping back into this screen.
+    renderWithApollo(<SelectPantryItems />, { mocks: onboardingMocks, cache });
+
+    expect(screen.getByText('Eggs')).toBeTruthy();
+    expect(screen.queryByText('Loading...')).toBeNull();
   });
 
   it('shows selected count', async () => {

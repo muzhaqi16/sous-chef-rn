@@ -1,10 +1,7 @@
 /**
- * The unread badge count, read from the one place that holds it.
- *
- * `cache-only`: this is a badge on an unrelated screen, and the count is kept
- * current by the feed query, the subscription and every notification mutation.
- * Firing a network request from here would be a second fetch of something the
- * cache already knows, on a screen that never displays the notifications.
+ * The unread badge count. `cache-only` — the feed query, the subscription and
+ * every notification mutation keep it current, and this renders on screens that
+ * never display the notifications themselves.
  */
 import { useQuery } from '@apollo/client/react';
 import { GetUnreadNotificationsDocument } from '#features/notifications/graphql/notifications.generated';

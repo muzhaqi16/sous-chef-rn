@@ -1,39 +1,24 @@
-/**
- * useHomeMutations - CRUD mutations for homes
- *
- * Single responsibility:
- * - Create, update, delete home mutations
- * - Optimistic responses and cache updates
- * - Error handling with user feedback
- */
+/** Create and delete mutations for homes. Renaming lives in the detail hook. */
 
 import type { ErrorLike } from '@apollo/client';
-import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useMutation } from '@apollo/client/react';
 import {
   CreateHomeDocument,
-  UpdateHomeDocument,
   DeleteHomeDocument,
   GetHomesDocument,
   type CreateHomeMutation,
 } from '#operations/home/home.generated';
-import { UpdateHomeOptimistic_HomeFragmentDoc } from './useHomeMutations.generated';
 import {
   useSelectedHomeId,
   useHomeState,
   useHasUnverifiedEmail,
 } from '#store/useAppStore';
-import {
-  handleMutationError,
-  versionConflictCheck,
-} from '#/utils/errorHandlers';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { extractNodes } from '#/utils/connectionUtils';
-import { buildOptimisticMutationResponse } from '#/apollo/utils/createOptimisticResponse';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { addToHomesCache, removeFromHomesCache } from './homeCacheUpdaters';
 import { errorService } from '#/services/errorService';
-import { logger } from '#/utils/environment';
 
 interface UseHomeMutationsOptions {
   refetch: () => Promise<void>;
@@ -41,18 +26,7 @@ interface UseHomeMutationsOptions {
   setSelectedPantryId: (pantryId: string | null) => void;
 }
 
-/**
- * Hook for home CRUD operations
- *
- * @example
- * ```tsx
- * const { createHome, updateHome, deleteHome, creating, updating, deleting } = useHomeMutations({
- *   refetch,
- *   setDefaultHome,
- *   setSelectedPantryId,
- * });
- * ```
- */
+/** Home create/delete mutations. */
 export function useHomeMutations({
   refetch,
   setDefaultHome,
@@ -62,7 +36,6 @@ export function useHomeMutations({
   const hasUnverifiedEmail = useHasUnverifiedEmail();
   const { setSelectedHomeId } = useHomeState();
   const { createAddOperation, createRemoveOperation } = useCrudOperations();
-  const apolloClient = useApolloClient();
 
   const [createHomeMutation, { loading: creating, client }] = useMutation(
     CreateHomeDocument,
@@ -92,81 +65,37 @@ export function useHomeMutations({
           const freshHomes = extractNodes(cachedData?.homes);
 
           // Only set as default if this is truly the first/only home
-          if (freshHomes.length === 1 && freshHomes[0].id === newHome.id) {
-            setSelectedHomeId(newHome.id);
-            setDefaultHome(newHome.id).catch((error: unknown) => {
-              logger.warn(
-                'Failed to set newly created home as default:',
-                error,
-              );
-            });
-          }
+          const isFirstHome =
+            freshHomes.length === 1 && freshHomes[0].id === newHome.id;
 
-          // If a default pantry was created, set it as selected
-          const pantries = extractNodes(newHome.pantriesConnection);
-          const defaultPantry = pantries.find(p => p.isDefault);
-          if (defaultPantry) {
-            setSelectedPantryId(defaultPantry.id);
+          if (isFirstHome) {
+            setSelectedHomeId(newHome.id);
+            // `setDefaultHome` resolves false on a refusal rather than
+            // rejecting, so the status is the only signal there is.
+            void setDefaultHome(newHome.id).then(ok => {
+              if (!ok) {
+                handleMutationError(
+                  new Error('markHomeAsDefault refused for first home'),
+                  { operation: 'Set First Home as Default', showAlert: false },
+                );
+              }
+            });
+
+            // Adopt the new home's default pantry ONLY when we also switched
+            // to that home. Unconditionally, creating a SECOND home points
+            // `selectedPantryId` at a pantry in a home `selectedHomeId` does
+            // not name, and every pantry watcher fires across homes until
+            // `useCurrentPantry` reconciles a render later.
+            const pantries = extractNodes(newHome.pantriesConnection);
+            const defaultPantry = pantries.find(p => p.isDefault);
+            if (defaultPantry) {
+              setSelectedPantryId(defaultPantry.id);
+            }
           }
         }
       },
       onError: (error: ErrorLike) => {
         handleMutationError(error, { operation: 'Create Home' });
-      },
-    },
-  );
-
-  const [updateHomeMutation, { loading: updating }] = useMutation(
-    UpdateHomeDocument,
-    {
-      optimisticResponse: (variables, { IGNORE }) => {
-        // Read the home's current payload fields from cache (populated by the
-        // home-detail query). Without them we can't predict the response shape.
-        const current = apolloClient.cache.readFragment({
-          id: apolloClient.cache.identify({
-            __typename: 'Home',
-            id: variables.input.id,
-          }),
-          fragment: UpdateHomeOptimistic_HomeFragmentDoc,
-        });
-        if (!current) return IGNORE;
-        // Enabling a join code mints a server-generated code — wait for the
-        // server rather than predicting it. Every other field is known.
-        if (variables.input.allowJoinCode === true && !current.joinCode) {
-          return IGNORE;
-        }
-        return buildOptimisticMutationResponse(
-          'updateHome',
-          'UpdateHomePayload',
-          {
-            home: {
-              __typename: current.__typename,
-              id: current.id,
-              name: variables.input.name ?? current.name,
-              allowJoinCode:
-                variables.input.allowJoinCode ?? current.allowJoinCode,
-              joinCode: current.joinCode,
-              version: current.version,
-              updatedAt: new Date().toISOString(),
-            },
-          },
-        );
-      },
-      onCompleted: data => {
-        if (data?.updateHome?.__typename === 'UpdateHomePayload') {
-          toastService.success(t('success.homeUpdated'));
-        }
-      },
-      onError: (error: ErrorLike) => {
-        handleMutationError(error, {
-          operation: 'Update Home',
-          checks: [
-            versionConflictCheck({
-              itemName: t('errors.entityHome'),
-              onRefresh: () => refetch(),
-            }),
-          ],
-        });
       },
     },
   );
@@ -208,11 +137,16 @@ export function useHomeMutations({
               setSelectedHomeId(newDefaultHome.id);
               // Clear orphaned pantry selection - useDefaultHome will auto-select new home's default
               setSelectedPantryId(null);
-              setDefaultHome(newDefaultHome.id).catch((error: unknown) => {
-                logger.warn(
-                  'Failed to set new default home after delete:',
-                  error,
-                );
+              void setDefaultHome(newDefaultHome.id).then(ok => {
+                if (!ok) {
+                  handleMutationError(
+                    new Error('markHomeAsDefault refused after delete'),
+                    {
+                      operation: 'Set Default Home After Delete',
+                      showAlert: false,
+                    },
+                  );
+                }
               });
             } else {
               // No homes left, clear all selections
@@ -246,7 +180,7 @@ export function useHomeMutations({
     }),
     validateInput: (input: { name: string }) => {
       if (!input.name?.trim()) {
-        return 'Please enter a home name';
+        return t('homeDetail.homeNameEmptyError');
       }
       return true;
     },
@@ -274,61 +208,14 @@ export function useHomeMutations({
     return createHomeOperation(input);
   };
 
-  const updateHome = async (
-    homeId: string,
-    updates: { name?: string; isDefault?: boolean; allowJoinCode?: boolean },
-  ) => {
-    // Handle default home update separately if needed
-    if (updates.isDefault !== undefined && updates.isDefault) {
-      let defaultResult;
-      try {
-        defaultResult = await setDefaultHome(homeId);
-      } catch (error) {
-        errorService.reportError(error, {
-          operation: 'Set default home error:',
-        });
-      }
-      if (defaultResult === false) return false;
-      delete updates.isDefault; // Remove from updates since we handle it separately
-    }
-
-    if (Object.keys(updates).length > 0) {
-      // The server requires the version: an update sent without one reports
-      // success while overwriting a concurrent edit.
-      const current = apolloClient.cache.readFragment({
-        id: apolloClient.cache.identify({ __typename: 'Home', id: homeId }),
-        fragment: UpdateHomeOptimistic_HomeFragmentDoc,
-      });
-      if (!current) return false;
-
-      let result;
-      try {
-        result = await updateHomeMutation({
-          variables: {
-            input: { ...updates, id: homeId, version: current.version },
-          },
-        });
-      } catch (error) {
-        errorService.reportError(error, {
-          operation: 'Update home error:',
-        });
-      }
-      if (!result) return false;
-
-      return result.data?.updateHome?.__typename === 'UpdateHomePayload'
-        ? result.data.updateHome.home
-        : false;
-    }
-
-    return true;
-  };
-
   const deleteHome = (homeId: string, homeName: string) => {
     const operation = createRemoveOperation({
       mutation: deleteHomeMutation,
       itemId: homeId,
-      confirmMessage: 'Are you sure you want to delete "{name}"?',
-      itemName: homeName,
+      confirmTitle: t('confirmations.deleteHomeTitle'),
+      confirmMessage: t('labels.areYouSureYouWantToDeleteThisCannotBeUndone', {
+        name: homeName,
+      }),
       operationName: 'Delete Home',
     });
     return operation();
@@ -336,10 +223,8 @@ export function useHomeMutations({
 
   return {
     createHome,
-    updateHome,
     deleteHome,
     creating,
-    updating,
     deleting,
   };
 }

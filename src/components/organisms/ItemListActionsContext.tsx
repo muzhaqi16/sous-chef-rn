@@ -1,9 +1,6 @@
 import React, { createContext, useContext, type ReactNode } from 'react';
 import type { SwipeableRef } from '#components/molecules/SwipeableItem/types';
 
-/**
- * Actions available for item list items
- */
 export interface ItemListActions {
   onItemPress: (id: string) => void;
   onSwipeableWillOpen?: (ref: SwipeableRef) => void;
@@ -24,26 +21,11 @@ interface ItemListActionsProviderProps {
   actions: ItemListActions;
 }
 
-/**
- * ItemListActionsProvider - Context provider for item list actions
- *
- * Eliminates prop drilling by providing item actions through context.
- * Uses ref-based stable callbacks so the context value stays stable
- * and does not trigger re-renders when parent callbacks change.
- *
- * @example
- * ```tsx
- * <ItemListActionsProvider actions={{ onItemPress }}>
- *   <FlashList ... />
- * </ItemListActionsProvider>
- * ```
- */
 export const ItemListActionsProvider: React.FC<
   ItemListActionsProviderProps
 > = ({ children, actions }) => {
-  // React Compiler auto-memoizes `value` based on `actions` identity —
-  // no manual ref/effect/wrapper needed. Optional actions that are `undefined`
-  // stay `undefined`, so downstream truthiness checks correctly gate rendering.
+  // The compiler memoizes `value` on `actions` identity. An absent action stays
+  // `undefined`, so downstream truthiness checks still gate rendering.
   const value: ItemListActionsContextValue = { actions };
 
   return (
@@ -53,11 +35,6 @@ export const ItemListActionsProvider: React.FC<
   );
 };
 
-/**
- * Hook to access item list actions from context
- *
- * @throws Error if used outside ItemListActionsProvider
- */
 export const useItemListActions = (): ItemListActionsContextValue => {
   const context = useContext(ItemListActionsContext);
   if (!context) {

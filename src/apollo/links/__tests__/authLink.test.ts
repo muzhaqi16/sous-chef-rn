@@ -218,9 +218,9 @@ describe('authLink', () => {
     it('does not block the request on that refresh completing', async () => {
       // The refresh never settles. The token is still valid for the rest of the
       // buffer window, so the request must go out immediately carrying it —
-      // awaiting here previously stalled every concurrent request behind one
-      // slow refresh. Racing a timer keeps the regression a fast, named failure
-      // rather than a suite timeout.
+      // awaiting here stalls every concurrent request behind one slow refresh.
+      // Racing a timer keeps the regression a fast, named failure rather than a
+      // suite timeout.
       mockedProactiveRefresh.mockReturnValue(new Promise(() => {}));
       mockStoreState.accessToken = makeToken(120);
 

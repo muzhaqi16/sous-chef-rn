@@ -1,17 +1,8 @@
 /**
- * useConvertExpiredToWaste - Mutation hook for discarding an expired pantry item
- * (local-first).
- *
- * Converts an expired pantry item to waste in one step: sets `condition` to
- * SPOILED, creates a WASTE usage record with wasteReason=EXPIRED, and sets
- * `quantity` to 0. The cached item is set to quantity 0 + SPOILED PERMANENTLY
- * before firing so it reads as discarded instantly and survives an
- * offline/queued conversion. Because the server writes a waste ledger row, a
- * naive replay would double-count — so the canonical mutation carries a
- * client-minted `input.idempotencyKey`; the server records it in the same
- * transaction as the conversion, so a queued replay applies it exactly once (it
- * returns ConflictError(IDEMPOTENT_REPLAY), which the queue converges). A real
- * rejection restores the pre-convert quantity + condition.
+ * Sets `condition` SPOILED + `quantity` 0 and writes a WASTE usage record.
+ * Local-first: the cache is written PERMANENTLY before firing (an
+ * `optimisticResponse` rolls back on the queue's null result), and
+ * `input.idempotencyKey` keeps a queued replay from double-counting the ledger.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';

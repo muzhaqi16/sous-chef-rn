@@ -1,20 +1,13 @@
 /**
- * Native FCM message receiving (Android).
- *
- * Bridges incoming Firebase Cloud Messaging messages to the tray via the shared
- * Notifee helper, and routes taps to the matching screen. This is the delivery
- * path that works when the JS process is asleep or killed — the in-app
- * WebSocket feed only fires while the app is alive and foregrounded.
- *
- * Every entry point is Android-guarded and defensive: if the native module is
- * missing from the running binary (e.g. before a native rebuild, or on iOS
- * before its APNs setup), it degrades to a no-op instead of crashing.
+ * Native FCM message receiving (Android): draws messages into the tray via
+ * Notifee and routes taps. This is the only delivery path that works while the
+ * JS process is asleep or killed — the in-app WebSocket feed needs a live,
+ * foregrounded app. Degrades to a no-op when the native module is missing.
  */
 
 import { Platform } from 'react-native';
-// NOTE: react-native-firebase v25 JSDoc-marks its messaging API as deprecated
-// ahead of a future redesign, but there is no non-deprecated equivalent in this
-// version — the `no-deprecated` lint warnings here are unavoidable and benign.
+// react-native-firebase v25 JSDoc-marks its messaging API deprecated with no
+// non-deprecated equivalent in this version, so the lint warnings are benign.
 // See invertase/react-native-firebase#6283.
 import {
   getMessaging,
@@ -28,11 +21,9 @@ import { showLocalNotification } from '#/utils/notifications/localNotificationHe
 import { routeNotificationTap } from './pushNotificationRouting';
 
 /**
- * A message we should surface ourselves. Data-only messages (no `notification`
- * block) are never auto-displayed by the OS, so we draw them via Notifee.
- * Messages that carry a `notification` block are auto-displayed by the OS when
- * the app is backgrounded — re-drawing them would duplicate the tray entry, so
- * we skip display and let the OS own it.
+ * Data-only messages (no `notification` block) are never auto-displayed, so
+ * Notifee draws them. One WITH a block is drawn by the OS — redrawing it would
+ * duplicate the tray entry.
  */
 const toDisplayableNotification = (
   message: FirebaseMessagingTypes.RemoteMessage,
@@ -58,8 +49,7 @@ const toDisplayableNotification = (
 };
 
 /**
- * Registers the background/quit-state FCM handler. MUST be called at the JS
- * entry point (index.js), synchronously and outside the React tree, so the
+ * MUST be called from index.js, synchronously and outside the React tree, so the
  * headless task that wakes the app can invoke it.
  */
 export const registerFcmBackgroundHandler = (): void => {
@@ -77,12 +67,9 @@ export const registerFcmBackgroundHandler = (): void => {
 };
 
 /**
- * Registers tap handlers for OS-auto-displayed FCM notifications (those with a
- * `notification` block): `onNotificationOpenedApp` covers a tap that brings the
- * app from background, `getInitialNotification` covers a tap that cold-launches
- * it from a killed state. Taps on our own Notifee-drawn (data-only) messages
- * arrive through Notifee's event handlers instead — see setupNotificationHandlers.
- * Returns an unsubscribe for the background-tap listener.
+ * Taps on OS-auto-displayed notifications only: `onNotificationOpenedApp` for a
+ * background tap, `getInitialNotification` for a cold launch. Taps on our own
+ * Notifee-drawn data-only messages arrive via `setupNotificationHandlers`.
  */
 export const registerFcmTapHandlers = (): (() => void) => {
   if (Platform.OS !== 'android') return () => {};

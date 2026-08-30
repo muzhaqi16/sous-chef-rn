@@ -26,18 +26,11 @@ import { createHash } from 'crypto';
  * Re-record with:
  *   sha256sum src/apollo/cache.ts | cut -c1-16
  */
-// Re-recorded 2026-08-29: added a self-healing `read` to
-// `Query.storageLocations`. The field is a CONNECTION keyed on a plain
-// `homeId` argument, so Apollo's default broken-reference filtering — which
-// handles plain arrays of refs — never reached `edge.node`, and an optimistic
-// delete's evict left the connection incomplete. Offline that made
-// `usePreservedNodes` hand back the pre-delete snapshot and freeze the list.
-//
-// An old blob stays safe: the read only DROPS edges whose node can no longer
-// be read, which is a narrowing at read time over data that was already
-// written in this shape. Nothing is interpreted differently, so no
-// `CURRENT_CACHE_VERSION` bump.
-const REVIEWED_CACHE_POLICY_HASH = '62f31bd221f594fb';
+// Re-recorded 2026-08-30: comment-only pass over this file. Long rationale
+// blocks were compressed and their stale counts ("eleven operations", "five
+// fields") and `@apollo/client@4.1.7` pin dropped. No policy, `keyArgs` or
+// `merge`/`read` body changed, so no `CURRENT_CACHE_VERSION` bump.
+const REVIEWED_CACHE_POLICY_HASH = '6a3be817c116b238';
 
 it('cache.ts has not changed without the persisted-shape decision being made', () => {
   const actual = createHash('sha256')

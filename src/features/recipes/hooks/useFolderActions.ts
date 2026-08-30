@@ -33,33 +33,20 @@ function writeFolders(cache: ApolloCache, folders: string[]): void {
 }
 
 /**
- * Move every cached `SavedRecipe` out of `from` and into `to`.
- *
- * The folder LIST and the recipes' own `folder` field are two separate pieces
- * of cache state, and the Saved Recipes screen filters on the second
- * (`recipe.folder === selectedFolder`). Rewriting only the list renamed the
- * chip and left every recipe pointing at the old name, so the folder the user
- * had just renamed rendered empty under a success toast. `DeleteRecipeFolderPayload`
- * returns no recipe nodes, and this hook has no `refetchQueries`, so nothing
- * else repairs it — and under `localFirst` there is no response at all until
- * the queue replays.
- *
- * Returns the ids it changed so a refusal can put them back.
+ * Moves every cached `SavedRecipe` from `from` to `to`, returning the ids it
+ * changed so a refusal can restore them. The folder LIST and each recipe's own
+ * `folder` are separate cache state and the screen filters on the second, so
+ * rewriting only the list leaves the renamed folder rendering empty.
  */
 function rewriteSavedRecipeFolders(
   cache: ApolloCache,
   from: string,
   to: string | null,
 ): string[] {
-  // `extract()` is typed as `unknown` on the base ApolloCache; the normalized
-  // store is a flat map keyed by `TypeName:id`, which is what the loop needs.
-  //
-  // It serializes the WHOLE store, which is the cost of the only correct
-  // question here: which `SavedRecipe` entities carry this folder, whichever
-  // query happened to load them. Reading a specific list instead would miss the
-  // ones another query cached, and leave exactly the stale-folder rows this
-  // function exists to rewrite. Bounded to a rename or delete — a rare,
-  // user-initiated action, not a render path.
+  // `extract()` is `unknown` on the base ApolloCache but is a flat map keyed by
+  // `TypeName:id`. Serializing the whole store is the cost of the only correct
+  // question — which `SavedRecipe` entities carry this folder, whichever query
+  // cached them — and this runs on a rename or delete, not a render path.
   const snapshot = cache.extract() as Record<
     string,
     { folder?: string | null } | undefined

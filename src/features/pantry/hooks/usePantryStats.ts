@@ -1,13 +1,3 @@
-/**
- * usePantryStats - Computed values for pantry items
- *
- * Single responsibility:
- * - Compute location counts for filter tabs (including custom storage locations)
- *
- * PERFORMANCE: Uses server-side counts (O(1)) when available,
- * falls back to client-side single-pass algorithm (O(n))
- */
-
 import { StorageState } from '#/graphql/generated/schemaTypes';
 import type { LocationCounts } from './pantryDataTypes';
 
@@ -32,20 +22,7 @@ interface UsePantryStatsOptions {
 }
 
 /**
- * Hook for computing pantry location counts
- *
- * Prefers server-side counts (storageStateCounts, currentItemCount)
- * when available, falling back to client-side counting.
- *
- * @example
- * ```tsx
- * const { locationCounts } = usePantryStats({
- *   pantryItems,
- *   totalCount: stats?.totalItems,
- *   storageStateCounts: stats?.storageStateCounts ?? null,
- *   storageLocationCounts: stats?.storageLocationCounts ?? [],
- * });
- * ```
+ * Prefers the server's O(1) counts, falling back to a single client-side pass.
  */
 export function usePantryStats(options: UsePantryStatsOptions) {
   const { pantryItems, totalCount, storageStateCounts, storageLocationCounts } =

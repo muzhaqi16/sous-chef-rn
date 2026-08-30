@@ -22,13 +22,7 @@ export interface TransformedRecipeItem {
   dietTags?: DietTag[];
 }
 
-/**
- * Transforms a Spoonacular recipe result into a display item for lists
- * Optimized for performance - handles both ingredient-based and text-based search results
- *
- * @param recipe - Either a RecipeSearchResult (ingredient search) or SearchRecipesResult (text search)
- * @returns TransformedRecipeItem with unified display properties
- */
+/** Unifies an ingredient-search and a text-search Spoonacular result. */
 export function transformRecipeForDisplay(
   recipe: SearchRecipesResult | RecipeSearchResult,
 ): TransformedRecipeItem {

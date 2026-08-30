@@ -12,8 +12,7 @@ import { useUserId } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 
-// ── Storage key helpers (compatible with useFeatureHint / resetAllFeatureHints) ──
-
+// Key shape shared with useFeatureHint / resetAllFeatureHints.
 const HINT_PREFIX = 'feature_hint_shown_';
 const FEATURE_ID = 'shopping_interactive_tutorial';
 
@@ -29,10 +28,8 @@ function buildStorageKey(userId: string | undefined, featureId: string) {
     : `${HINT_PREFIX}${featureId}`;
 }
 
-// Completed if the interactive tutorial's flag (or an old static-tutorial flag)
-// is set in MMKV. Read both on mount and on a reset signal so
-// resetAllFeatureHints (Settings → "Reset to Defaults") clears the flags and
-// the tutorial replays.
+// Read on mount AND on a reset signal, so resetAllFeatureHints (Settings →
+// "Reset to Defaults") clearing the flags replays the tutorial.
 function readCompletedFromStorage(userId: string | undefined): boolean {
   if (storage.getBoolean(buildStorageKey(userId, FEATURE_ID))) return true;
   for (const oldId of OLD_TUTORIAL_IDS) {
@@ -40,8 +37,6 @@ function readCompletedFromStorage(userId: string | undefined): boolean {
   }
   return false;
 }
-
-// ── Public types ──
 
 export enum ShoppingListTutorialStep {
   IDLE = 'IDLE',
@@ -113,14 +108,8 @@ export const TUTORIAL_STEP_CONFIG: Record<
   },
 };
 
-// ── Context ──
-//
-// Split into State + Actions contexts (TabBarActionsContext / OnboardingContext
-// pattern). Components that only read state (e.g. SortableItem checking
-// currentStep) won't re-render when an action callback is recreated, and
-// components that only call actions (e.g. ShoppingListModalsContext) won't
-// re-render when state changes.
-
+// State and actions are separate contexts so a state reader does not re-render
+// when a callback is recreated, nor an action caller when state changes.
 interface ShoppingListTutorialStateContextValue {
   currentStep: ShoppingListTutorialStep;
   isActive: boolean;
@@ -128,7 +117,7 @@ interface ShoppingListTutorialStateContextValue {
 }
 
 interface ShoppingListTutorialActionsContextValue {
-  // Event dispatchers (called by child components when the user completes an action)
+  // Fired by child components as the user completes each action.
   notifyAddButtonPressed: () => void;
   notifyItemAdded: () => void;
   notifySheetClosed: () => void;
@@ -138,12 +127,11 @@ interface ShoppingListTutorialActionsContextValue {
   notifyPurchasedTabTapped: () => void;
   notifyMoveToPantryTapped: () => void;
 
-  // Element position registration for SpotlightCoachMark
+  /** Element positions for SpotlightCoachMark. */
   registerRect: (key: TutorialRectKey, rect: TargetRect | null) => void;
 
-  // Skip current spotlight step and advance to the next one
   skipCurrentStep: () => void;
-  // Dismiss entire tutorial
+  /** Dismisses the whole tutorial. */
   skipAll: () => void;
 }
 
@@ -156,28 +144,19 @@ const ShoppingListTutorialStateContext =
 const ShoppingListTutorialActionsContext =
   createContext<ShoppingListTutorialActionsContextValue | null>(null);
 
-/**
- * Hook to access tutorial state (currentStep, isActive, rects).
- * Re-renders when state changes. Prefer this over useShoppingListTutorial
- * for components that only read state.
- */
+/** Re-renders on state changes — prefer it in components that only read. */
 export function useShoppingListTutorialState() {
   return useContext(ShoppingListTutorialStateContext);
 }
 
-/**
- * Hook to access tutorial actions (notify*, registerRect, skip*).
- * Stable across state changes — components that only fire events
- * won't re-render on state transitions.
- */
+/** Stable across state changes — an event-only component never re-renders. */
 export function useShoppingListTutorialActions() {
   return useContext(ShoppingListTutorialActionsContext);
 }
 
 /**
- * Combined hook — backwards compatible. Prefer useShoppingListTutorialState
- * or useShoppingListTutorialActions for better performance.
- * Returns null when used outside the provider (safe for components shared across screens).
+ * Both halves at once; prefer the split hooks. Returns null outside the
+ * provider, so a component shared across screens can call it safely.
  */
 export function useShoppingListTutorial(): ShoppingListTutorialContextValue | null {
   const state = useContext(ShoppingListTutorialStateContext);
@@ -185,8 +164,6 @@ export function useShoppingListTutorial(): ShoppingListTutorialContextValue | nu
   if (!state || !actions) return null;
   return { ...state, ...actions };
 }
-
-// ── Provider ──
 
 interface ShoppingListTutorialProviderProps {
   children: ReactNode;
@@ -201,7 +178,6 @@ export function ShoppingListTutorialProvider({
   const userId = useUserId();
   const tutorialsEnabled = useShowTutorials();
 
-  // Check if tutorial (or old tutorial) was already completed — once, on mount
   const [isCompleted, setIsCompleted] = useState(() =>
     readCompletedFromStorage(userId),
   );
@@ -211,8 +187,8 @@ export function ShoppingListTutorialProvider({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [rects, setRects] = useState<Record<string, TargetRect | null>>({});
 
-  // Track the in-flight transition timer so it can be cleared on unmount
-  // (advanceTo schedules a setTimeout to clear isTransitioning after 800ms).
+  // `advanceTo` schedules an 800ms timer to clear isTransitioning; hold it so
+  // unmount can cancel it.
   const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     return () => {
@@ -223,9 +199,8 @@ export function ShoppingListTutorialProvider({
     };
   }, []);
 
-  // React to external resets (centralized signal hook). Re-derive completion
-  // from MMKV rather than forcing it false, since resetAllFeatureHints is the
-  // only path that clears the flags (→ replay).
+  // Re-derive from MMKV rather than forcing false: resetAllFeatureHints is the
+  // only thing that clears the flags.
   const wasReset = useTutorialResetSignal();
   if (wasReset) {
     setIsCompleted(readCompletedFromStorage(userId));
@@ -239,7 +214,7 @@ export function ShoppingListTutorialProvider({
     userIdRef.current = userId;
   }, [userId]);
 
-  // Startup delay (2 s, same as old tutorial)
+  // 2s startup delay.
   useEffect(() => {
     if (!canStart || isCompleted || hasStarted || !tutorialsEnabled) return;
 
@@ -250,15 +225,13 @@ export function ShoppingListTutorialProvider({
     return () => clearTimeout(timer);
   }, [canStart, isCompleted, hasStarted, tutorialsEnabled]);
 
-  // Mark old feature IDs as shown once the new tutorial starts
+  // The superseded feature IDs count as shown once this tutorial starts.
   useEffect(() => {
     if (!hasStarted) return;
     for (const oldId of OLD_TUTORIAL_IDS) {
       storage.set(buildStorageKey(userIdRef.current, oldId), true);
     }
   }, [hasStarted]);
-
-  // ── Helpers ──
 
   const advanceTo = (nextStep: ShoppingListTutorialStep) => {
     setIsTransitioning(true);
@@ -273,12 +246,10 @@ export function ShoppingListTutorialProvider({
   };
 
   const markComplete = () => {
-    // Scoped to this tutorial only — the "Show Tutorials" setting (which
-    // gates every screen's tutorial via tutorialsEnabled) is a separate,
-    // user-controlled flag and must not be flipped as a side effect of
-    // finishing one screen's guided tour.
+    // This tutorial's own flag only: the user-controlled "Show Tutorials"
+    // setting gates every screen and must not be flipped here.
     storage.set(buildStorageKey(userIdRef.current, FEATURE_ID), true);
-    // Also mark the standalone swipe hint as shown so it never fires independently
+    // The standalone swipe hint must not fire on its own afterwards.
     storage.set(
       buildStorageKey(userIdRef.current, 'shopping_list_swipe'),
       true,
@@ -286,8 +257,6 @@ export function ShoppingListTutorialProvider({
     setIsCompleted(true);
     setCurrentStep(ShoppingListTutorialStep.COMPLETED);
   };
-
-  // ── Event dispatchers ──
 
   const notifyAddButtonPressed = () => {
     if (currentStep !== ShoppingListTutorialStep.SPOTLIGHT_ADD_BUTTON) return;
@@ -337,8 +306,6 @@ export function ShoppingListTutorialProvider({
     markComplete();
   };
 
-  // ── Rect registration ──
-
   const registerRect = (key: TutorialRectKey, rect: TargetRect | null) => {
     setRects(prev => {
       const existing = prev[key];
@@ -355,8 +322,6 @@ export function ShoppingListTutorialProvider({
       return { ...prev, [key]: rect };
     });
   };
-
-  // ── Skip ──
 
   const skipCurrentStep = () => {
     const nextSpotlight: Partial<

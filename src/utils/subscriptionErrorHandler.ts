@@ -36,32 +36,17 @@ export const isExpectedNetworkTransitionError = (message?: string): boolean => {
 };
 
 /**
- * The exact message `GraphQLWsLink` produces when the SOCKET ended a
- * subscription, rather than the subscription failing on its own.
- *
- * From the installed `@apollo/client/link/subscriptions`:
- * `` new Error(`Socket closed${likeClose ? ` with event ${err.code}` : ''}${likeClose ? ` ${err.reason}` : ''}`) ``
- * — so the close code is in the message and nowhere else. A connection failure
- * with no CloseEvent (DNS, TCP) produces the bare `Socket closed`.
+ * `GraphQLWsLink`'s message when the SOCKET ended a subscription. The close code
+ * is in that message and NOWHERE else; a connection failure with no CloseEvent
+ * (DNS, TCP) produces the bare `Socket closed`.
  */
 const SOCKET_CLOSED_MESSAGE = /^Socket closed(?: with event (\d+))?/i;
 
 /**
- * Whether this error means the transport ended the subscription, AND whether
- * re-subscribing has any chance of working.
- *
- * This is deliberately narrower than {@link isExpectedNetworkTransitionError},
- * which matches any message mentioning a network and is used to pick a LOG
- * LEVEL. Deciding to re-subscribe off that would restart on unrelated failures.
- *
- * The verdict comes from the same table the socket itself reads
- * ({@link isRetryableWebSocketClose}), so a code that latched reconnection off —
- * an upgrade requirement, a dead session, a refused API key, a protocol bug —
- * is never restarted here either. Restarting one of those would dial straight
- * back into the refusal the socket just stopped for.
- *
- * @returns `null` when the error is not a transport termination, or is one no
- *          re-subscribe can fix.
+ * Did the transport end this subscription, and can re-subscribing work? Narrower
+ * than {@link isExpectedNetworkTransitionError}, which only picks a LOG LEVEL.
+ * The verdict comes from {@link isRetryableWebSocketClose}, the table the socket
+ * itself reads, so a code that latched reconnection off is never restarted.
  */
 export const classifyTransportTermination = (
   error: SubscriptionError,
@@ -77,12 +62,10 @@ export const classifyTransportTermination = (
 };
 
 /**
- * Codes that mean "this document will never be accepted".
- *
- * Narrow on purpose — a permanent rejection disables a stream for the session.
- * The two adjacent-looking subscription codes are excluded deliberately:
- * `SUBSCRIPTION_LIMIT_EXCEEDED` is a capacity condition that frees up, and
- * `SUBSCRIPTION_ERROR` is documented retryable.
+ * Codes meaning "this document will never be accepted". Narrow on purpose, since
+ * a permanent rejection disables a stream for the session:
+ * `SUBSCRIPTION_LIMIT_EXCEEDED` frees up and `SUBSCRIPTION_ERROR` is documented
+ * retryable, so neither belongs here.
  */
 const PERMANENT_REJECTION_CODES = new Set([
   'BAD_USER_INPUT',

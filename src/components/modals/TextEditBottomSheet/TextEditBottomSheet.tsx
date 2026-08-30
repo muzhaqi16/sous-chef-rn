@@ -33,15 +33,7 @@ interface TextEditBottomSheetProps {
     | 'decimal-pad';
 }
 
-/**
- * TextEditBottomSheet - Reusable bottom sheet for editing text fields
- *
- * Features:
- * - Cancel/Save buttons at TOP for consistency
- * - Proper keyboard handling with BottomSheetTextInput
- * - Validation support via yup schema
- * - Dynamic sizing based on content
- */
+/** Bottom sheet for editing a single text field, validated by a yup schema. */
 export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
   visible,
   title,
@@ -63,7 +55,6 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
     snapPoints: ['30%'],
   });
 
-  // Default schema if none provided
   const schema = validationSchema || object({ [fieldKey]: string() });
 
   const form = useForm({
@@ -71,7 +62,6 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
     defaultValues: { [fieldKey]: initialValue },
   });
 
-  // Reset form when sheet opens with new value
   useEffect(() => {
     if (visible) {
       form.reset({ [fieldKey]: initialValue });
@@ -94,7 +84,6 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
   return (
     <BottomSheetModal ref={ref} {...modalProps} index={0}>
       <BottomSheetView style={[styles.content, contentContainerStyle]}>
-        {/* Header with Cancel/Save at TOP */}
         <View style={styles.header}>
           <Button
             variant="ghost"
@@ -119,10 +108,8 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
           </Button>
         </View>
 
-        {/* Divider */}
         <View style={styles.divider} />
 
-        {/* Input Field */}
         <View style={styles.inputContainer}>
           {!!label && (
             <Text

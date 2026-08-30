@@ -78,7 +78,7 @@ describe('useUpdateShoppingList', () => {
               data: {
                 updateShoppingList: {
                   __typename: 'ValidationError',
-                  code: 'VALIDATION_ERROR',
+                  code: 'VALIDATION_FAILED',
                   message: 'Name too long',
                   field: 'name',
                 },

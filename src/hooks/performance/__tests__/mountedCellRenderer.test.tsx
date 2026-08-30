@@ -124,8 +124,8 @@ describe('the unsampled cell renderer', () => {
   it('still wraps the cell in an Animated.View', () => {
     // The wrapper is not instrumentation: FlashList's Reanimated guide requires
     // a cell renderer that renders one, or layout animations on cells stop
-    // working. Sampling used to hand FlashList `undefined`, so ~95% of release
-    // sessions silently lost every cell layout animation.
+    // working. Handing FlashList `undefined` in an unsampled session costs ~95%
+    // of release sessions every cell layout animation.
     const tree = render(
       <PlainAnimatedCellRenderer index={0} testID="cell">
         <View testID="row" />

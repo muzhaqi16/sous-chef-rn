@@ -67,9 +67,9 @@ describe('handleMutationErrorAlert', () => {
   it("shows localized copy, never the error's own message", () => {
     handleMutationErrorAlert(new Error('boom'), { operation: 'Test' });
 
-    // 'boom' stands for the server's message. It used to reach the alert
-    // verbatim: an Albanian-locale user saw a "Gabim" title over the English
-    // "An unexpected database error occurred".
+    // 'boom' stands for the server's message. Letting it reach the alert
+    // verbatim puts an English "An unexpected database error occurred" under a
+    // "Gabim" title for an Albanian-locale user.
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
       'Something went wrong.',
@@ -100,9 +100,9 @@ describe('handleMutationErrorAlert', () => {
   });
 
   /**
-   * During an outage every failing mutation used to write a console error and a
-   * telemetry error event — one settings session against a down API produced
-   * 228, all describing the same known condition.
+   * During an outage, reporting every failing mutation writes a console error
+   * and a telemetry error event apiece — one settings session against a down API
+   * produces 228, all describing the same known condition.
    */
   describe('reporting during a known outage', () => {
     const setApiUnavailable = (unavailable: boolean) => {

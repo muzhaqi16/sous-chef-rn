@@ -12,36 +12,17 @@ interface UseActiveMealPlanArgs {
 }
 
 /**
- * Resolve which meal plan the screen shows, and load it.
- *
- * Selection priority is the user's explicit pick, then the current plan, then
- * the first plan in the overview — minus any id this session has learned the
- * server won't serve.
- *
- * That subtraction is what keeps the screen from wedging. `selectedMealPlanId`
- * is persisted, and nothing clears it when the plan disappears from under the
- * user: a plan deleted on another device, or a home membership revoked, leaves
- * a stale id that the priority above would keep choosing forever, with its
- * detail read failing every time. Two server answers say that id is finished,
- * and they are different conditions:
- *
- * - **null data** (`planNotFound`) — there is no such row. A by-id query
- *   reports a miss this way, not as an error.
- * - **FORBIDDEN** — the row is there and is not this user's.
- *
- * Either one drops the persisted pick, excludes the id from re-selection, and
- * evicts the cached entity so a cold-start hydrate can't resurrect it.
- *
- * Reading null as "gone" is only sound because `useMealPlan` skips the query
- * for a create the server hasn't acknowledged. Under offline-first, null on a
- * client-minted id is the routine "my create hasn't synced yet" state — the
- * queued mutation still owns that row, and evicting it here would delete work
- * the user is waiting on.
- *
- * Otherwise deliberately narrow: only a definitive answer about that id counts.
- * Network errors leave the selection alone, so going offline never looks like a
- * deletion. An id absent from `planIds` doesn't count either — the overview is
- * one page of 20, so absence there is not evidence of anything.
+ * Resolves which plan the screen shows: explicit pick, current plan, then the
+ * first in the overview — minus ids this session learned are dead.
+ * `selectedMealPlanId` is persisted and nothing else clears it, so without that
+ * subtraction a plan deleted elsewhere wedges the screen forever.
+ */
+
+/*
+ * Only null data (a by-id miss is not an error) and FORBIDDEN retire an id;
+ * both drop the pick, exclude it and evict the entity. Null means "gone" only
+ * because `useMealPlan` skips unacknowledged creates. A network error is not a
+ * deletion, and `planIds` is one page of 20, so absence there is no evidence.
  */
 export function useActiveMealPlan({
   currentPlanId,

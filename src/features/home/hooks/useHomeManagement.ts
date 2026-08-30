@@ -1,22 +1,8 @@
 /**
- * useHomeManagement - Composition hook for all home operations
- *
- * This maintains backward compatibility with the original hook.
- * For new code, prefer using individual hooks directly:
- * - useHomeQuery: For data fetching
- * - useHomeSelection: For default home logic
- * - useHomeMutations: For CRUD operations
- * - useHomeInvitations: For invites and join by code
- *
- * @example
- * ```tsx
- * // Backward compatible usage
- * const { homes, createHome, setDefaultHome, inviteUserToHome } = useHomeManagement();
- *
- * // Preferred: Use individual hooks
- * const { homes, stats } = useHomeQuery();
- * const { setDefaultHome } = useHomeSelection({ homes, remoteDefaultHomeId, loading });
- * ```
+ * Composes the four home hooks — `useHomeQuery`, `useHomeSelection`,
+ * `useHomeMutations`, `useHomeInvitations` — into one surface. Prefer the
+ * individual hooks in new code; a consumer that needs one of them should not
+ * mount all four.
  */
 
 import { useHomeQuery } from './useHomeQuery';
@@ -42,24 +28,20 @@ export function useHomeManagement() {
   // Selection hook - handles default home logic
   const {
     selectedHomeId,
-    defaultHome,
-    isSynced,
     setDefaultHome,
     setSelectedHomeId,
     setSelectedPantryId,
   } = useHomeSelection({
     homes,
     remoteDefaultHomeId,
-    loading,
   });
 
   // Mutations hook - CRUD operations
-  const { createHome, updateHome, deleteHome, creating, updating, deleting } =
-    useHomeMutations({
-      refetch,
-      setDefaultHome,
-      setSelectedPantryId,
-    });
+  const { createHome, deleteHome, creating, deleting } = useHomeMutations({
+    refetch,
+    setDefaultHome,
+    setSelectedPantryId,
+  });
 
   // Invitations hook - invite and join operations
   const {
@@ -81,10 +63,8 @@ export function useHomeManagement() {
     // Data
     homes,
     allHomes: homes,
-    defaultHome,
-    defaultHomeId: selectedHomeId,
+    selectedHomeId,
     remoteDefaultHomeId,
-    isSynced,
     loading,
     initialLoading,
     error,
@@ -93,7 +73,6 @@ export function useHomeManagement() {
 
     // Loading states
     creating,
-    updating,
     deleting,
     inviting,
     joiningByCode,
@@ -101,7 +80,6 @@ export function useHomeManagement() {
 
     // Actions
     createHome,
-    updateHome,
     deleteHome,
     setDefaultHome,
     inviteUserToHome,

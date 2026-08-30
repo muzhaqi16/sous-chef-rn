@@ -7,23 +7,14 @@ import {
   AcquisitionMethod,
 } from '#/graphql/generated/schemaTypes';
 
-/**
- * Shape, defaults and validation for the four-page Add-to-Pantry sheet.
- *
- * Split from `usePantryItemSubmission` on purpose: that hook builds the
- * mutation input and fires it, and used to ALSO validate — reporting failures
- * through `alertService.alert`, which covers the form, has to be dismissed
- * before the field can be corrected, and once dismissed no longer says which
- * of the four pages the offending input is on. Validation lives here now and
- * renders on the field; the hook only submits.
- */
+// Shape, defaults and validation for the four-page Add-to-Pantry sheet.
+// Validation lives here and renders ON the field; `usePantryItemSubmission`
+// only submits. An alert covers the form, and once dismissed it cannot say
+// which of the four pages the offending input is on.
 
-/**
- * Messages resolve LAZILY — the schema is built once at module scope, so an
- * eagerly-resolved message would freeze whichever language was active at
- * import time. Yup calls this when the rule fails. Same pattern as
- * `src/utils/validation/common.ts`.
- */
+// Messages resolve LAZILY: the schema is built once at module scope, so an
+// eagerly resolved one would freeze whichever language was active at import
+// time. Yup calls this when the rule fails.
 const msg = (key: string) => (): string => t(key);
 
 export type AddPantryItemFormData = {
@@ -108,18 +99,10 @@ export const addPantryItemDefaults = (
   acquisitionMethod: AcquisitionMethod.Purchased,
 });
 
-/**
- * A quantity may be fractional ("1/2", "1 1/4") — parsing lives in
- * `parseFractionalInput`, so the schema only asserts it is present and
- * resolves to a positive number.
- *
- * It defers to the parser rather than restating its grammar. The regex that
- * stood here mirrored the accepted forms by hand and matched only `.` as the
- * decimal separator, so `2,5` failed validation on exactly the devices whose
- * `decimal-pad` offers no `.` at all — fractional quantities were unreachable
- * in es, it and sq. Validation and parsing have to agree, and the only way to
- * guarantee that is to ask the parser.
- */
+// Defers to `parseFractionalInput` rather than restating its grammar: a regex
+// mirroring the accepted forms by hand drifts from the parser — one that took
+// only `.` as the decimal separator made `2,5` unreachable in es/it/sq, whose
+// `decimal-pad` offers no `.` at all.
 const isPositiveQuantity = (value: string | undefined): boolean => {
   if (!value?.trim()) return false;
   const parsed = parseFractionalInput(value);
@@ -136,11 +119,9 @@ export const addPantryItemSchema = object({
       msg('errors.invalidQuantity'),
       isPositiveQuantity,
     ),
-  // Net weight is ALL-OR-NOTHING in BOTH directions — the same rule the
-  // shopping-item form applies, against the same create contract: "a
-  // netWeightUnitId with no netWeight is always rejected", and a weight with no
-  // resolved unit id is dropped by the submit path. Each direction reports on
-  // the field the user has to fill.
+  // ALL-OR-NOTHING in BOTH directions: the create contract rejects a unit id
+  // with no weight, and the submit path drops a weight with no resolved unit
+  // id. Each direction reports on the field the user has to fill.
   pantryNetWeight: string().test(
     'net-weight-needs-value',
     msg('errors.field.netWeight'),
@@ -158,13 +139,10 @@ export const addPantryItemSchema = object({
       return Boolean(context.parent.pantryNetWeightUnitId);
     },
   ),
-  // The package-details per-container weight is the SAME all-or-nothing rule,
-  // one level down: it feeds `item.netWeight` + `item.displayUnitId` inline,
-  // and (times the package size) the pantry-level `NetWeightInput`. Without
-  // this, a weight typed with no unit was dropped from the pantry input by the
-  // both-or-neither guard in the submit path and sent inline as a unitless
-  // Float — the value vanished with nothing reported. Scoped to
-  // `showPackageDetails` so a collapsed section can never block Save.
+  // The same all-or-nothing rule one level down, on the per-container weight
+  // that feeds `item.netWeight` + `item.displayUnitId`: without it a unitless
+  // weight is silently dropped. Scoped to `showPackageDetails` so a collapsed
+  // section can never block Save.
   itemNetWeight: string().test(
     'item-net-weight-needs-value',
     msg('errors.field.netWeight'),

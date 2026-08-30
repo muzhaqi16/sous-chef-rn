@@ -6,31 +6,16 @@ import { sizes } from '#/theme/foundations/sizes';
 import { SkeletonLine } from '#components/atoms/Skeleton/SkeletonLine';
 import { SkeletonRectangle } from '#components/atoms/Skeleton/SkeletonRectangle';
 
-// Theme foundations (radii, sizes) are mode-invariant — they live in
-// `commonTheme` and don't change between light/dark. Read them at module
-// scope so this skeleton no longer needs `useUnistyles()`.
+// Mode-invariant foundations (`commonTheme`), so reading them at module scope
+// saves this skeleton a `useUnistyles()` subscription.
 const IMAGE_SIZE = sizes.itemCard.compact.image;
 const IMAGE_RADIUS = radii.md;
 
 interface PantryItemSkeletonProps {
-  /** Whether to show shimmer animation */
   animated?: boolean;
 }
 
-/**
- * Pantry Item Skeleton
- *
- * Matches the layout of PantryItemCard with image, title, subtitle, quantity, and location.
- *
- * @example
- * ```typescript
- * // While loading pantry
- * <FlatList
- *   data={[1, 2, 3, 4, 5]}
- *   renderItem={() => <PantryItemSkeleton />}
- * />
- * ```
- */
+/** Mirrors `PantryItemCard`'s layout, so rows don't shift on reveal. */
 export const PantryItemSkeleton: React.FC<PantryItemSkeletonProps> = ({
   animated = true,
 }) => {

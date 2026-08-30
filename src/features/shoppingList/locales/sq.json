@@ -128,7 +128,6 @@
     "currentMembers": "Anëtarët aktualë",
     "manageHome": "Menaxho shtëpinë",
     "shareHomeLinkedNotice": "Kjo listë i përket shtëpisë \"{{name}}\". Anëtarët menaxhohen nga cilësimet e shtëpisë.",
-    "removeMemberTitle": "Hiq anëtarin",
     "removeMemberA11y": "Hiq anëtarin",
     "cannotLeaveOwnerMessage": "Pronarët nuk mund të largohen nga lista. Transfero pronësinë te një anëtar tjetër ose fshi listën.",
     "failedToUpdateShareSettings": "Nuk u përditësuan dot cilësimet e ndarjes",

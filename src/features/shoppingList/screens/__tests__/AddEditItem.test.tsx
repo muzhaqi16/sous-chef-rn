@@ -295,7 +295,7 @@ const SHOPPING_LIST_ITEM_CORE = {
   itemName: 'Milk',
   quantity: '1',
   quantityInput: '1',
-  displayFormat: 'COMPACT',
+  displayFormat: 'AUTO',
   purchaseInfo: {
     __typename: 'ShoppingListItemPurchaseInfo',
     isPurchased: false,
@@ -471,11 +471,11 @@ function buildGetShoppingListItemMock(itemId: string): MockedResponse {
 /**
  * Builds a hook IMPLEMENTATION (not a return value) that seeds the real hook.
  *
- * It used to return a frozen object standing in for the whole hook. That
- * cannot work now: the screen renders through `Controller control={control}`,
- * and react-hook-form's `control` has no plain-object equivalent. Seeding the
- * real hook keeps these tests honest — Save is gated by the real yup schema,
- * so a case that expects a refusal gets one for the real reason.
+ * A frozen object standing in for the whole hook cannot work: the screen
+ * renders through `Controller control={control}`, and react-hook-form's
+ * `control` has no plain-object equivalent. Seeding the real hook keeps these
+ * tests honest — Save is gated by the real yup schema, so a case that expects a
+ * refusal gets one for the real reason.
  *
  * Use with `.mockImplementation(...)`, not `.mockReturnValue(...)`.
  */
@@ -500,8 +500,8 @@ const mockUseShoppingListItemForm =
   };
 
 // Force the next executeWithLoadingState invocation to immediately call its
-// onError callback with the supplied error. Used to exercise the catch path
-// for assertions that depend on hook-side error mapping (gotcha #1: Apollo
+// onError callback with the supplied error. Exercises the catch path for
+// assertions that depend on hook-side error mapping (gotcha #1: Apollo
 // errorPolicy: 'all' swallows mutation errors so onError otherwise never
 // fires through the natural flow).
 function forceExecuteWithLoadingStateOnError(error: unknown) {
@@ -963,11 +963,11 @@ describe('AddEditItem', () => {
     });
   });
 
-  it('handles VALIDATION_ERROR graphQL error', async () => {
+  it('handles VALIDATION_FAILED graphQL error', async () => {
     const user = userEvent.setup();
     const validationError = {
       graphQLErrors: [
-        { extensions: { code: 'VALIDATION_ERROR' }, message: 'Invalid' },
+        { extensions: { code: 'VALIDATION_FAILED' }, message: 'Invalid' },
       ],
     };
     forceExecuteWithLoadingStateOnError(validationError);

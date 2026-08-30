@@ -36,16 +36,12 @@ interface FolderPickerBaseProps {
   onSelect: (folder: string | null) => void;
   onCancel: () => void;
   loading?: boolean;
-  /** Allow creating new folders. Set to false for filter-only mode. Default: true */
+  /** Default true; false for filter-only mode. */
   allowCreate?: boolean;
-  /** Loading state for folder actions */
   folderActionLoading?: boolean;
 }
 
-/**
- * Selection only — rename and delete are not offered, so there is nothing to
- * protect and `protectedFolders` is optional.
- */
+/** Selection only, so there is nothing to protect. */
 interface FolderPickerWithoutActionsProps {
   onRenameFolder?: undefined;
   onDeleteFolder?: undefined;
@@ -53,19 +49,13 @@ interface FolderPickerWithoutActionsProps {
 }
 
 /**
- * Folder management offered, so the caller MUST say what is protected.
- *
- * Required rather than defaulted: the protected list is a prop because
- * `['Favorites']` is a recipes concept that does not belong in a generic
- * picker — but as an optional prop defaulting to `[]` it silently protected
- * nothing at the one call site that offers rename and delete. A caller that
- * can perform the destructive action now cannot compile without declaring
- * what the action may not touch.
+ * Folder management offered, so `protectedFolders` is REQUIRED, not defaulted: a
+ * caller able to rename and delete cannot compile without declaring what those
+ * actions may not touch.
  */
 interface FolderPickerWithActionsProps {
-  /** Callback for renaming a folder. If provided, enables long-press menu. */
+  /** Enables the long-press menu. */
   onRenameFolder?: (oldName: string, newName: string) => Promise<boolean>;
-  /** Callback for deleting a folder. If provided, enables long-press menu. */
   onDeleteFolder?: (folderName: string) => Promise<boolean>;
   /** Folders that cannot be renamed or deleted. */
   protectedFolders: string[];
@@ -88,18 +78,14 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   folderActionLoading = false,
 }) => {
   const { t } = useTranslation();
-  // Track what should happen after the folder picker dismisses
   const nextSheetActionRef = useRef<'manage' | null>(null);
 
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
-  // The manage sub-sheet is the folder picker's swap-partner and borrows the
-  // picker's modalProps (single useStandardBottomSheet instance), so it stays
-  // on the manual ref + effect pattern rather than its own `visible` hook.
-  // `manageHasPresentedRef` guards the initial dismiss: gorhom 5.2.14 wedges a
-  // modal permanently closed if dismiss() lands while it's still in INITIAL
-  // status (never presented) — exactly what the else branch did on first mount
-  // with manageVisible=false.
+  // The manage sub-sheet borrows the picker's modalProps (one
+  // useStandardBottomSheet instance), so it stays on the manual ref + effect
+  // pattern. `manageHasPresentedRef` guards the initial dismiss: gorhom 5.2.14
+  // wedges a modal closed forever if dismiss() lands before it ever presented.
   const [manageVisible, setManageVisible] = useState(false);
   const manageSheetRef = useRef<BottomSheetModalRef>(null);
   const manageHasPresentedRef = useRef(false);
@@ -121,7 +107,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     onDismiss: () => {
       if (nextSheetActionRef.current === 'manage') {
         nextSheetActionRef.current = null;
-        // Effect will dispatch present() once state commits.
         setManageVisible(true);
         return;
       }
@@ -134,12 +119,10 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   const [newFolderName, setNewFolderName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Manage folder state
   const [managingFolder, setManagingFolder] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Check if folder management is enabled
   const hasFolderActions = Boolean(onRenameFolder || onDeleteFolder);
 
   const filteredFolders = (() => {
@@ -169,17 +152,12 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     setManagingFolder(null);
     setRenameValue('');
     setShowDeleteConfirm(false);
-    // Dismiss in a deferred microtask so the call lands outside of any
-    // synchronous render/state-update chain (per CLAUDE.md, present()/
-    // dismiss() should not be called from event handlers in-line).
+    // Deferred so the dismiss lands outside any synchronous render/state chain.
     queueMicrotask(() => folderPickerRef.current?.dismiss());
-    // onCancel is called by the picker's onDismiss callback once the
-    // dismiss animation completes.
   };
 
-  // Handle long-press on folder item - show manage folder bottom sheet.
-  // The decision itself lives in `resolveFolderLongPress` so it can be tested:
-  // this handler is reached only through the mocked-away list.
+  // The decision lives in `resolveFolderLongPress` so it can be tested — this
+  // handler is only reachable through the mocked-away list.
   const handleFolderLongPress = (folder: string) => {
     const outcome = resolveFolderLongPress(folder, {
       hasFolderActions,
@@ -196,25 +174,21 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     setManagingFolder(folder);
     setRenameValue(folder);
     setShowDeleteConfirm(false);
-    // Dismiss folder picker; onDismiss will present manage sheet via state.
     nextSheetActionRef.current = 'manage';
     queueMicrotask(() => folderPickerRef.current?.dismiss());
   };
 
-  // Handle rename confirmation
   const handleRenameConfirm = async () => {
     if (!managingFolder || !renameValue.trim() || !onRenameFolder) return;
 
     const newName = renameValue.trim();
     if (newName === managingFolder) {
-      // No change, just close manage sheet — onDismiss will re-open folder picker
       setManageVisible(false);
       setManagingFolder(null);
       setRenameValue('');
       return;
     }
 
-    // Check for duplicate
     if (folders.includes(newName)) {
       alertService.alert(
         t('labels.error'),
@@ -225,28 +199,23 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
 
     const success = await onRenameFolder(managingFolder, newName);
     if (success) {
-      // Update selection if renamed folder was selected
       if (selectedFolder === managingFolder) {
         onSelect(newName);
       }
-      // Close manage sheet — onDismiss will re-open folder picker
       setManageVisible(false);
       setManagingFolder(null);
       setRenameValue('');
     }
   };
 
-  // Handle delete confirmation
   const handleDeleteConfirm = async () => {
     if (!managingFolder || !onDeleteFolder) return;
 
     const success = await onDeleteFolder(managingFolder);
     if (success) {
-      // Reset selection if deleted folder was selected
       if (selectedFolder === managingFolder) {
         onSelect(null);
       }
-      // Close manage sheet — onDismiss will re-open folder picker
       setManageVisible(false);
       setManagingFolder(null);
       setRenameValue('');
@@ -254,7 +223,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     }
   };
 
-  // Handle manage folder bottom sheet close — onDismiss will re-open folder picker
   const handleManageFolderClose = () => {
     setManageVisible(false);
     setManagingFolder(null);
@@ -274,7 +242,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
 
   return (
     <>
-      {/* Folder Picker Bottom Sheet */}
       <BottomSheetModal ref={folderPickerRef} {...modalProps}>
         <BottomSheetView
           style={[styles.bottomSheetContent, contentContainerStyle]}
@@ -291,7 +258,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
             </Pressable>
           </View>
 
-          {/* Search Input */}
           {folders.length > 5 && (
             <View style={styles.searchContainer}>
               <Icon name="search" size={18} tone="textSecondary" />
@@ -305,7 +271,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
             </View>
           )}
 
-          {/* No Folder Option */}
           <AppPressable
             style={[
               styles.folderItem,
@@ -331,10 +296,8 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
             )}
           </AppPressable>
 
-          {/* Divider */}
           <View style={styles.divider} />
 
-          {/* Create New Folder - only shown if allowCreate is true */}
           {!!allowCreate &&
             (showNewFolder ? (
               <View style={styles.newFolderContainer}>
@@ -379,7 +342,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               </AppPressable>
             ))}
 
-          {/* Existing Folders */}
           {loading ? (
             <View style={styles.loadingContainer}>
               <Text size="base" tone="secondary">
@@ -405,7 +367,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
             </View>
           ) : null}
 
-          {/* Hint text for folder management */}
           {!!hasFolderActions && filteredFolders.length > 0 && (
             <Text
               size="sm"
@@ -417,7 +378,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
             </Text>
           )}
 
-          {/* Loading overlay */}
           {!!folderActionLoading && (
             <View style={styles.loadingOverlay}>
               <ThemedActivityIndicator size="large" />
@@ -425,7 +385,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           )}
         </BottomSheetView>
       </BottomSheetModal>
-      {/* Manage Folder Bottom Sheet */}
       <ManageFolderSheet
         sheetRef={manageSheetRef}
         modalProps={modalProps}
@@ -435,8 +394,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           setRenameValue('');
           setShowDeleteConfirm(false);
           setManageVisible(false);
-          // Re-open folder picker — defer until after the manage sheet's
-          // dismiss event has flushed so the present call lands cleanly.
+          // Deferred until the manage sheet's dismiss event has flushed.
           queueMicrotask(() => folderPickerRef.current?.present());
         }}
         managingFolder={managingFolder}

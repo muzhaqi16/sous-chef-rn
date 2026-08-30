@@ -100,20 +100,50 @@ describe('NotificationSettingsScreen', () => {
     expect(tree.toJSON()).toBeTruthy();
   });
 
-  it('shows loading state when settings are loading', () => {
+  it('shows loading state when no preferences have loaded yet', () => {
     const { useNotificationSettings } = jest.requireMock(
       '#features/notifications/hooks/useNotificationSettings',
     );
     useNotificationSettings.mockReturnValue({
       settings: {},
       loading: true,
+      hasPreferences: false,
       updateNotificationSetting: jest.fn(),
       resetToDefaults: jest.fn(),
       isQuietTime: jest.fn(() => false),
     });
 
     const tree = render(<NotificationSettingsScreen />);
-    expect(tree.getByText('Loading settings...')).toBeTruthy();
+    expect(tree.getByTestId('notification-settings-state')).toBeTruthy();
+  });
+
+  /**
+   * The gate is `loading && !hasPreferences`, not `loading`. Under
+   * `cache-and-network` Apollo reports `loading: true` for the whole network
+   * leg on EVERY mount — `nextFetchPolicy` lives on the ObservableQuery and
+   * useQuery builds a new one each time — so gating on `loading` alone blanked
+   * this screen on every visit for as long as the request took, which against
+   * a stalled API is the 10s httpLink abort deadline.
+   */
+  it('renders the settings while a background refresh is in flight', () => {
+    const { useNotificationSettings } = jest.requireMock(
+      '#features/notifications/hooks/useNotificationSettings',
+    );
+    useNotificationSettings.mockReturnValue({
+      settings: { pushEnabled: true, emailEnabled: true },
+      loading: true,
+      hasPreferences: true,
+      updateNotificationSetting: jest.fn(),
+      resetToDefaults: jest.fn(),
+      isQuietTime: jest.fn(() => false),
+    });
+
+    const tree = render(<NotificationSettingsScreen />);
+    expect(tree.queryByText('Loading settings...')).toBeNull();
+    // The mocked SettingSwitch renders its title as a bare string child, not a
+    // <Text>, so it is reachable through the serialized tree rather than
+    // getByText.
+    expect(JSON.stringify(tree.toJSON())).toContain('Push Notifications');
   });
 
   it('renders when quiet time is active', () => {

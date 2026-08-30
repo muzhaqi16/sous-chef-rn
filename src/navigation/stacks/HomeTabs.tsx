@@ -33,20 +33,12 @@ const styles = StyleSheet.create(theme => ({
   },
 }));
 
-// `screens` is a literal rather than a map built from the registry:
-// react-navigation's static typing only infers per-tab param types from a
-// literal shape, and a dynamically-built object collapses all four stacks to
-// one generic type. Everything ELSE about a tab — its label key, icons, sort
-// order and reset-to-root target — comes from the owning feature's manifest.
-//
-// The literal is therefore the one place the registry cannot reach, so
-// `__tests__/HomeTabs.test.tsx` asserts its key set equals
-// `TAB_FEATURES.map(f => f.tab.screenName)`. Types force the duplication; the
-// test forbids the drift.
-//
-// `TAB_APPEARANCE` is passed DOWN to the tab bar because `FloatingTabBar` and
-// `TabItem` live in `src/components/` — the kit — and must not import a
-// feature. This file is the composition root and the only place that may.
+// A literal, not a map built from the registry: react-navigation infers per-tab
+// param types only from a literal shape, and a dynamic object collapses all four
+// stacks to one generic type. Everything else about a tab comes from its
+// feature's manifest, and `HomeTabs.test.tsx` asserts this key set matches
+// `TAB_FEATURES`. `TAB_APPEARANCE` is passed DOWN because `FloatingTabBar` is kit
+// code and must not import a feature; this file is the composition root.
 export const HomeTabs = createBottomTabNavigator({
   tabBar: props => <FloatingTabBar {...props} tabs={TAB_APPEARANCE} />,
   layout: HomeTabsLayout,
@@ -54,12 +46,10 @@ export const HomeTabs = createBottomTabNavigator({
     headerShown: false,
     tabBarHideOnKeyboard: true,
     lazy: true,
-    // Crossfade between tabs instead of an instant cut. This is the most
-    // repeated transition in the app; a hard swap reads as cheap.
+    // The most repeated transition in the app; a hard swap reads as cheap.
     animation: 'fade',
-    // Keeps a blurred tab's effects (queries, animations) running instead of
-    // tearing them down and re-running them all synchronously on resume —
-    // see CLAUDE.md's `inactiveBehavior` section.
+    // Keeps a blurred tab's queries and animations running rather than re-running
+    // every effect synchronously on resume — see CLAUDE.md `inactiveBehavior`.
     inactiveBehavior: 'none',
   },
   screens: {

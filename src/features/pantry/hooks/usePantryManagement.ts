@@ -1,16 +1,6 @@
 /**
- * usePantryManagement - Composition hook for all pantry operations
- *
- * For new code, prefer using individual hooks directly:
- * - usePantryQuery: For data fetching and search
- * - usePantryStats: For location counts and sectioned items
- * - usePantryItemMutations: For CRUD operations
- *
- * @example
- * ```tsx
- * const { pantryItems, searchQuery, setSearchQuery } = usePantryQuery(pantryId);
- * const { locationCounts, sectionedItems } = usePantryStats(pantryItems);
- * ```
+ * Composition of `usePantryQuery` + `usePantryStats` + `usePantryItemMutations`;
+ * new code should prefer those directly.
  */
 
 import {
@@ -21,13 +11,6 @@ import { usePantryQuery, type PantryQueryOptions } from './usePantryQuery';
 import { usePantryStats } from './usePantryStats';
 import { usePantryItemMutations } from './mutations/usePantryItemMutations';
 
-/**
- * Everything a caller can vary, in one bag.
- *
- * These were four positional parameters, which meant a caller that wanted only
- * the last of them wrote `(id, null, null, undefined, { … })` — three
- * placeholders whose meaning is invisible at the call site.
- */
 export interface PantryManagementOptions extends PantryQueryOptions {
   filters?: PantryItemFilters | null;
   orderBy?: PantryItemOrderBy | null;

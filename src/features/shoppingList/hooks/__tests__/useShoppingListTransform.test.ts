@@ -4,11 +4,11 @@ import type { ShoppingListItemNode } from '../usePaginatedShoppingItems';
 import { useShoppingListTransformMulti } from '../useShoppingListTransform';
 
 /**
- * After the per-cell `useFragment` migration the transform hook no longer
- * computes display data — each row owns its own rendering. The remaining
- * `useShoppingListTransformMulti` just wraps connection nodes into the
- * lightweight FlashList row shape (`id`, `isPurchased`, `sortOrder`,
- * `itemRef`) and pins `isPurchased` to the tab it came from.
+ * The transform hook computes no display data — each row owns its own
+ * rendering through a per-cell `useFragment`. `useShoppingListTransformMulti`
+ * just wraps connection nodes into the lightweight FlashList row shape (`id`,
+ * `isPurchased`, `sortOrder`, `itemRef`) and pins `isPurchased` to the tab it
+ * came from.
  */
 
 // Build a minimal ShoppingListItemNode-shaped stub that satisfies the wrap

@@ -30,13 +30,9 @@ export type ItemEditResult =
 const FAILED: ItemEditResult = { status: 'failed' };
 
 // The 5-pending cap is the only CONFLICT either mutation raises, so the
-// typename alone identifies it. Should a second conflict appear, key on
-// `payload.code` instead — this copy would be actively wrong for it.
-//
-// The values are i18n key suffixes, not whole keys: `alertMutationFailure`
-// composes each under the call's `keyPrefix`, which is `'suggestItemEdit'` at
-// both sites below — so `'pendingCapTitle'` resolves
-// `suggestItemEdit.pendingCapTitle`.
+// typename alone identifies it; a second one would need keying on
+// `payload.code`. Values are i18n key SUFFIXES — `alertMutationFailure`
+// composes each under the call's `keyPrefix` (`'suggestItemEdit'` here).
 const SUGGEST_FAILURE_CASES: Record<string, AlertCaseKeySuffixes> = {
   ConflictError: {
     titleSuffix: 'pendingCapTitle',
@@ -45,14 +41,10 @@ const SUGGEST_FAILURE_CASES: Record<string, AlertCaseKeySuffixes> = {
 };
 
 /**
- * The slice of an Apollo mutation result the helpers below read. Structural on
- * purpose: they take whatever `executeMutation` inferred rather than naming
- * Apollo's result type, so neither helper has to be retyped when it changes.
- *
- * `errorPolicy: 'all'` is set globally, so mutations resolve with
- * `{ data, error }` instead of throwing. `executeMutation` is therefore the net
- * for genuine network throws, not the error path — the result union and
- * `result.error` are what actually carry server outcomes.
+ * Structural on purpose: the helpers take whatever `executeMutation` inferred
+ * rather than naming Apollo's result type. Under the global
+ * `errorPolicy: 'all'` a failing mutation RESOLVES, so the result union and
+ * `result.error` carry server outcomes — the catch is for transport throws.
  */
 type MutationResult<TData> = { data?: TData | null; error?: unknown };
 
@@ -158,13 +150,9 @@ export function useSuggestItemEdit() {
       }
     }
 
-    // Reached either by never having had canEdit, or by a stale one that the
-    // server just refused — both still need the item to be a legal suggestion
-    // target. It isn't for a PRIVATE item this user doesn't own (a housemate's
-    // pantry entry, a shared list's item, a recipe ingredient), which arrives
-    // with both flags false. The form should not have opened for one, so this
-    // is the last line of defence: createItemSuggestion takes PUBLIC items only
-    // and the rejected attempt would still cost one of the 10 per hour.
+    // Last line of defence: `createItemSuggestion` takes PUBLIC items only, and
+    // a rejected attempt still costs one of the 10 per hour. A PRIVATE item
+    // this user doesn't own arrives with both flags false.
     if (!original.canSuggest) {
       alertService.alert(
         t('suggestItemEdit.readOnlyTitle'),
@@ -224,12 +212,9 @@ export function useSuggestItemEdit() {
 }
 
 /**
- * Returns how many photos actually landed.
- *
- * `uploadItemImages` stops the run at the first fatal failure (rate limit,
- * offline) and returns a short array, so the count is the only way to tell a
- * successful submission from one where nothing reached the server. It alerts
- * with the specific reason itself, so callers only decide what to report.
+ * Returns how many photos actually landed. `uploadItemImages` stops at the
+ * first fatal failure and returns a short array, alerting with the specific
+ * reason itself — callers only decide what to report.
  */
 async function uploadImages(
   upload: ReturnType<typeof useImageUpload>['uploadItemImages'],

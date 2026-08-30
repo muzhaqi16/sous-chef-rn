@@ -10,24 +10,22 @@ import { useRecyclingState } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
 import { standardEasing, TIMING } from '#/constants/animations';
-// RNGH's Pressable (not the themed RN re-export). This checkbox is nested
-// inside the row's RNGH Swipeable/Pressable; RNGH's native button captures the
-// tap so it doesn't propagate to the row's onPress. An RN Pressable here lives
-// in a separate gesture system and the tap fires both (toggle + row navigate).
+// RNGH's Pressable, not the themed RN re-export: nested inside the row's RNGH
+// Swipeable, only RNGH's native button captures the tap. An RN Pressable is in a
+// separate gesture system, so the tap fires both toggle and row navigation.
 import { Pressable } from 'react-native-gesture-handler';
 
 type AnimatedCheckboxProps = {
   checked: boolean;
-  itemId?: string; // Used to detect FlashList view recycling
+  itemId?: string; // Detects FlashList view recycling
   onPress?: () => void;
   size?: number;
   disabled?: boolean;
   testID?: string;
   /**
    * Show the toggled state immediately on press (default). Set false when the
-   * press only *starts* a confirmed/deferred action (e.g. opens a sheet) so the
-   * box stays on the real `checked` value until the change actually lands —
-   * otherwise it gets stuck visually checked if the user cancels.
+   * press only starts a deferred/confirmed action (e.g. opens a sheet), or the
+   * box sticks visually checked when the user cancels.
    */
   optimistic?: boolean;
 };
@@ -45,9 +43,8 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   const isPressed = useSharedValue(false);
   styles.useVariants({ disabled });
 
-  // Local state for pending visual state (shows immediately on press)
-  // useRecyclingState auto-resets when itemId changes (FlashList view recycling)
-  // onReset callback synchronously resets shared values during render (before paint)
+  // useRecyclingState auto-resets on itemId change; onReset clears the shared
+  // value synchronously during render, before paint.
   const [pendingChecked, setPendingChecked] = useRecyclingState<boolean | null>(
     null,
     [itemId],
@@ -56,10 +53,8 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
     },
   );
 
-  // Determine visual checked state: pending takes priority, otherwise actual
   const visuallyChecked = pendingChecked !== null ? pendingChecked : checked;
 
-  // Clear pending state when actual checked prop syncs (render-time pattern)
   const [prevChecked, setPrevChecked] = useState(checked);
   if (checked !== prevChecked) {
     setPrevChecked(checked);
@@ -68,7 +63,6 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
     }
   }
 
-  // Combined color + scale animation
   const animatedStyle = useAnimatedStyle(() => {
     const baseScale = visuallyChecked ? 1.05 : 1;
     const pressScale = isPressed.get() ? 0.9 : 1;
@@ -97,7 +91,6 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   const handlePressIn = () => {
     if (!disabled) {
       isPressed.set(true);
-      // Short haptic feedback for checkbox toggle
       HapticService.light();
     }
   };
@@ -108,19 +101,14 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
     }
   };
 
-  // Handle press: show animation immediately, then call onPress
-  // The caller is responsible for timing any state changes (e.g., via slide animation callback)
+  // The caller owns the timing of the real state change.
   const handlePress = () => {
     if (disabled) return;
 
-    // Immediately show the opposite state — unless the press only starts a
-    // deferred/confirmed action, in which case the box must stay on the real
-    // `checked` value (it would otherwise stick checked if the user cancels).
     if (optimistic) {
       setPendingChecked(!checked);
     }
 
-    // Fire onPress - caller handles timing of actual state change
     onPress?.();
   };
 
@@ -140,8 +128,6 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
           animatedStyle,
         ]}
       >
-        {/* PERFORMANCE: Simple conditional render without layout animations */}
-        {/* The container scale/color animation provides sufficient visual feedback */}
         {!!visuallyChecked && (
           <Icon name="checkmark" size={size * 0.66} color="white" />
         )}

@@ -5,18 +5,12 @@ import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance/types';
 import { usePerformanceStore } from '#/store/performanceStore';
 
 /**
- * Maximum valid render duration in ms. Any measurement above this is treated
- * as contaminated (e.g. tree-batching overhead, app backgrounded, hot reload)
- * and discarded. Individual component renders should not exceed 1 second even
- * in dev mode — the render-to-commit gap includes other components' work
- * during batched updates, inflating the measurement.
+ * Above this, a measurement is contaminated (batching overhead, backgrounding,
+ * hot reload) and discarded — no single component render takes a second.
  */
 const MAX_VALID_RENDER_MS = 1000;
 
-/**
- * Tracks the last wall-clock time the app left the foreground.
- * Module-level subscription — runs once at import, lives for the process.
- */
+/** Last time the app left the foreground; the subscription lives for the process. */
 let lastBackgroundedAt = 0;
 
 AppState.addEventListener('change', nextAppState => {
@@ -36,30 +30,10 @@ export function _simulateBackground(timestamp: number) {
 }
 
 /**
- * Tracks how often a component commits, and how much wall time elapsed since
- * its previous commit.
- *
- * This is NOT render cost. `useLayoutEffect` captures `Date.now()` per commit
- * and reports the gap to the previous one, so the value is dominated by idle
- * time between commits. React's `<Profiler onRender>` would give true
- * `actualDuration`, but `ReactFabric-prod.js` strips `onRender` entirely, so it
- * cannot report from a release build — hence the commit-gap approach, named for
- * what it actually measures.
- *
- * The useful signal here is `component_render_count`: a component committing
- * many times without user input is churning. Reports in production as well as
- * dev, gated by `enabled` and `sampleRate`; console output stays dev-only.
- *
- * @param componentName - Name of the component being tracked
- * @param options - Configuration options
- *
- * @example
- * ```typescript
- * function MyComponent() {
- *   useCommitTracking('MyComponent');
- *   return <View>...</View>;
- * }
- * ```
+ * Commit COUNT and the wall-clock gap between commits — NOT render cost, hence
+ * the name. `<Profiler onRender>` would give true `actualDuration`, but
+ * `ReactFabric-prod.js` strips it from release builds. The useful signal is
+ * `component_render_count`: many commits with no user input means churn.
  */
 export function useCommitTracking(
   componentName: string,
@@ -77,14 +51,13 @@ export function useCommitTracking(
   const sampleRate =
     options?.sampleRate ?? DEFAULT_PERFORMANCE_CONFIG.sampleRate;
 
-  // Measure commit-to-commit duration synchronously after commit.
-  // All timing captured inside useLayoutEffect — no impure calls during render.
+  // All timing inside the layout effect — no impure calls during render.
   useLayoutEffect(() => {
     const commitTime = Date.now();
     const prevCommitTime = lastCommitTimeRef.current;
     lastCommitTimeRef.current = commitTime;
 
-    // First commit — establish baseline, no duration to measure yet
+    // First commit: a baseline, with no gap to measure yet.
     if (prevCommitTime === 0) {
       renderDurationRef.current = -1;
       return;
@@ -92,8 +65,6 @@ export function useCommitTracking(
 
     const duration = commitTime - prevCommitTime;
 
-    // Discard if app went to background between commits or duration
-    // exceeds the safety cap (likely includes background/idle time).
     const wasBackgrounded = lastBackgroundedAt >= prevCommitTime;
     if (wasBackgrounded || duration > MAX_VALID_RENDER_MS) {
       renderDurationRef.current = -1;
@@ -112,28 +83,24 @@ export function useCommitTracking(
     }
   });
 
-  // Report metrics after paint.
-  // Intentionally omitting deps — this effect must run after every render to capture timing.
+  // No deps on purpose: this must run after EVERY render to capture timing.
   useEffect(() => {
-    // Skip discarded renders (first render, backgrounded, or exceeded max duration cap)
     if (renderDurationRef.current < 0) return;
 
-    // Skip if disabled
     if (!enabled) {
       return;
     }
 
-    // Apply sampling decision inside effect to avoid impure Math.random() during render
+    // Sampled in the effect, so `Math.random()` never runs during render.
     const shouldTrack = Math.random() < sampleRate;
 
-    // Skip if not tracking this render (except first measured render)
+    // The first measured render always reports.
     if (!shouldTrack && renderCount.current > 1) {
       return;
     }
 
     const renderDuration = renderDurationRef.current;
 
-    // Update totals
     totalRenderTime.current += renderDuration;
     const avgRenderTime = totalRenderTime.current / renderCount.current;
 
@@ -145,7 +112,6 @@ export function useCommitTracking(
       component: componentName,
     });
 
-    // Record metrics in performance store for dashboard (isolated from main store)
     usePerformanceStore
       .getState()
       .recordComponentRender(componentName, renderDuration);
@@ -161,7 +127,6 @@ export function useCommitTracking(
         )}ms`,
       );
     } else if (renderCount.current <= 10) {
-      // Log first 10 renders to track unnecessary re-renders
       console.log(
         `[Performance] ${componentName} render #${
           renderCount.current

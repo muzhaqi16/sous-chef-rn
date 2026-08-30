@@ -52,8 +52,8 @@ const successMock = (variables: {
   },
 });
 
-// These two no longer read their argument — the generated idempotencyKey means
-// the mock matches on the operation, not the exact variables.
+// These two take no argument — the generated idempotencyKey means the mock
+// matches on the operation, not the exact variables.
 const errorMock = (): MockedResponse => ({
   request: { query: AdjustPantryItemWeightDocument, variables: () => true },
   error: new Error('Network error'),
@@ -67,7 +67,7 @@ const validationErrorMock = (): MockedResponse => ({
     data: {
       adjustPantryItemWeight: {
         __typename: 'ValidationError',
-        code: 'VALIDATION_ERROR',
+        code: 'VALIDATION_FAILED',
         message: 'Invalid weight',
         field: 'netWeight',
       },
@@ -223,10 +223,10 @@ describe('useCorrectPantryItemWeight', () => {
     });
 
     /**
-     * The correction used to refuse offline with a toast. It is local-first
-     * now: `AdjustPantryItemWeightInput.idempotencyKey` makes the replay
+     * The correction is local-first, not an offline refusal with a toast:
+     * `AdjustPantryItemWeightInput.idempotencyKey` makes the replay
      * at-most-once, so the write goes to the cache and the queue, and the
-     * screen no longer disables the control.
+     * screen leaves the control enabled.
      */
     it('still fires the mutation, so the queue can replay it', async () => {
       useStore.setState({ apiReachable: false });

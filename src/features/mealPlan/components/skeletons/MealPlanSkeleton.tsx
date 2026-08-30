@@ -4,13 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { SkeletonBase } from '#components/atoms/Skeleton/SkeletonBase';
 import { MealPlanItemCardSkeleton } from '#features/mealPlan/components/skeletons/MealPlanItemCardSkeleton';
 
-/**
- * Full-screen skeleton for MealPlanMain.
- *
- * Replicates the loaded layout: WeekStrip, CalendarToggleBar,
- * NutritionSummary header, day summary, and meal type sections
- * so the skeleton matches what the user sees after data loads.
- */
+/** Mirrors MealPlanMain's loaded layout, section for section. */
 export const MealPlanSkeleton: React.FC = () => (
   <ScrollView
     contentContainerStyle={styles.container}

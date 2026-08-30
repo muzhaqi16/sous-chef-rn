@@ -1,21 +1,5 @@
 /**
- * CRUD Operations Utilities - Reusable patterns for Create, Read, Update, Delete
- *
- * This hook provides common CRUD operation patterns that can be reused across
- * different management hooks to reduce boilerplate and ensure consistency.
- *
- * Usage:
- * ```typescript
- * const { createAddOperation, createUpdateOperation, createRemoveOperation } = useCrudOperations();
- *
- * const addItem = createAddOperation({
- *   mutation: addItemMutation,
- *   parentId,
- *   transformInput: (input) => ({ ...input, parentId }),
- *   validateInput: (input) => !!input.name,
- *   onSuccess: () => console.log('Item added'),
- * });
- * ```
+ * Shared add/update/remove operation builders for the feature management hooks.
  */
 
 import { alertService } from '#/services/alertService';
@@ -36,22 +20,10 @@ import { validationFieldName } from '#/utils/errors/mutationPayload';
 import { t } from '#/i18n';
 
 /**
- * Surface a resolved errors-as-data member from a mutation `data` payload.
- *
- * Uses `findFirstErrorMember` rather than `classifyCreateResult` because this
- * needs the member's `code` (and, via the payload, a `ValidationError`'s
- * `field`) to pick localized copy, which the classifier doesn't return — both
- * apply the same `isErrorTypename` rule, so they agree on WHICH member is the
- * refusal and differ only in what they hand back. Under `errorPolicy:'all'`
- * that member resolves as truthy `data` and would otherwise be treated as
- * success. Returns true (and alerts + reports) when an error was surfaced.
- *
- * Copy resolution mirrors `alertRejectedMutation`: a refusal naming a `field`
- * resolves `errors.field.<field>`; otherwise the member's `code` maps through
- * `errorService.getUserFriendlyMessage` (`errors.codes.*`); otherwise the
- * generic retry line. The server's `message` is English by construction and is
- * never displayed — it goes to telemetry below, where raw server wording
- * belongs.
+ * Alerts + reports an errors-as-data refusal, which under `errorPolicy:'all'`
+ * would otherwise read as success. Copy mirrors `alertRejectedMutation`: a
+ * `field` resolves `errors.field.<field>`, else `code` via `errors.codes.*`.
+ * The server's `message` is English by construction — telemetry only.
  */
 function surfaceCrudDataError(data: unknown, operationName: string): boolean {
   const member = findFirstErrorMember(data);
@@ -86,18 +58,13 @@ type MutateResultLike<TResult> = {
 };
 
 /**
- * Minimal Apollo mutate option shape. The config interfaces declare `mutation`
- * as a **method** so the parameter is checked bivariantly: this lets a mutate
- * function returned by `useMutation()[0]` (which has strongly-typed,
- * operation-specific required variables) stay assignable, while these helpers
- * invoke it with a dynamically-built `{ variables }` record. A full
- * `MutationFunctionOptions<TResult, …>` would be too strict to accept both.
+ * Minimal mutate options. The config interfaces declare `mutation` as a METHOD
+ * so the parameter is checked bivariantly — that is what keeps a strongly-typed
+ * `useMutation()[0]` assignable while these helpers call it with a
+ * dynamically-built `{ variables }` record.
  */
 type MutateOptions = { variables?: Record<string, unknown> };
 
-/**
- * Configuration for create operation
- */
 export interface CreateOperationConfig<TInput, TResult> {
   mutation(options: MutateOptions): Promise<MutateResultLike<TResult>>;
   parentId?: string | null | (() => string | null | undefined);
@@ -137,7 +104,12 @@ export interface RemoveOperationConfig<TResult> {
   parentId?: string | null | (() => string | null | undefined);
   itemId: string;
   confirmMessage?: string;
-  itemName?: string;
+  /**
+   * Localized heading for the confirmation dialog. Required alongside
+   * `confirmMessage`: `operationName` is a telemetry label, English by
+   * construction, and must never reach a dialog.
+   */
+  confirmTitle?: string;
   onSuccess?: (data: TResult) => void;
   onError?: (error: unknown) => void;
   operationName?: string;
@@ -394,7 +366,7 @@ function createRemoveOperationImpl<TResult>(
       parentId,
       itemId,
       confirmMessage,
-      itemName,
+      confirmTitle,
       onSuccess,
       onError,
       operationName = 'Delete Item',
@@ -414,33 +386,27 @@ function createRemoveOperationImpl<TResult>(
     // Show confirmation if message provided
     if (confirmMessage) {
       return new Promise(resolve => {
-        alertService.alert(
-          operationName,
-          itemName
-            ? confirmMessage.replace('{name}', itemName)
-            : confirmMessage,
-          [
-            {
-              text: t('labels.cancel'),
-              style: 'cancel',
-              onPress: () => resolve(false),
+        alertService.alert(confirmTitle ?? operationName, confirmMessage, [
+          {
+            text: t('labels.cancel'),
+            style: 'cancel',
+            onPress: () => resolve(false),
+          },
+          {
+            text: t('labels.delete'),
+            style: 'destructive',
+            onPress: async () => {
+              const result = await executeRemoveImpl(
+                mutation,
+                itemId,
+                operationName,
+                onSuccess,
+                onError,
+              );
+              resolve(result);
             },
-            {
-              text: t('labels.delete'),
-              style: 'destructive',
-              onPress: async () => {
-                const result = await executeRemoveImpl(
-                  mutation,
-                  itemId,
-                  operationName,
-                  onSuccess,
-                  onError,
-                );
-                resolve(result);
-              },
-            },
-          ],
-        );
+          },
+        ]);
       });
     }
 

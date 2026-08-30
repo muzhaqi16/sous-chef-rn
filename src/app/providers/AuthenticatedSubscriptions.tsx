@@ -12,18 +12,9 @@ interface AuthenticatedSubscriptionsProps {
 }
 
 /**
- * AuthenticatedSubscriptions - Initializes all subscription hooks for authenticated users
- *
- * This component is only rendered when a user is authenticated, preventing
- * WebSocket connection attempts before authentication (which would fail with JWT errors).
- *
- * Architecture:
- * - Only mounts when user is logged in (controlled by SubscriptionProvider)
- * - Initializes all domain-specific subscription hooks
- * - Automatically unmounts on logout (via parent conditional rendering)
- * - Prevents "JWT token is required for WebSocket connections" errors on startup
- *
- * @param userId - The authenticated user's ID (required)
+ * Mounts every domain subscription hook, and only while a user is
+ * authenticated — the socket needs a JWT, so connecting earlier fails. The
+ * parent's conditional render is what unmounts them on logout.
  */
 export const AuthenticatedSubscriptions: React.FC<
   AuthenticatedSubscriptionsProps

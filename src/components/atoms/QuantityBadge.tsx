@@ -1,10 +1,9 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
-// RNGH's Pressable (not the themed RN re-export). This badge is nested inside
-// the row's RNGH Swipeable/Pressable; RNGH's native button captures the tap so
-// it doesn't also fire the row's onPress. An RN Pressable here lives in a
-// separate gesture system and the tap fires both (edit quantity + row navigate).
+// RNGH's Pressable, not the themed RN re-export: nested inside the row's RNGH
+// Swipeable, only RNGH's native button captures the tap. An RN Pressable is in a
+// separate gesture system, so the tap fires both edit and row navigation.
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import type { RowThemeColors } from '#components/atoms/rowTheme';
@@ -19,22 +18,10 @@ interface QuantityBadgeProps {
   onPress: () => void;
   disabled?: boolean;
   isPurchased?: boolean;
-  // Optional theme override applied as inline style on top of the variant-based
-  // stylesheet defaults (the stylesheet already gives theme-reactive colors).
+  /** Inline override on top of the stylesheet's already theme-reactive colors. */
   themeColors?: RowThemeColors | null;
 }
 
-/**
- * QuantityBadge - Tappable pill displaying quantity + unit
- *
- * Displays quantity and optional unit in a pill-shaped badge.
- * Tapping opens the quantity edit sheet.
- *
- * Examples:
- * - "2 lb"
- * - "1 pc"
- * - "3" (when no unit)
- */
 export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
   quantity,
   quantityInput,
@@ -46,7 +33,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
   testID,
 }) => {
   const { t } = useTranslation();
-  // Prefer quantityInput (user's original input like "1/4") over formatted numeric quantity
+  // `quantityInput` keeps the user's own text (e.g. "1/4") over the formatted number.
   const formattedQuantity = quantityInput || formatQuantity(quantity);
   const accessibilityText = unit
     ? `${formattedQuantity} ${unit}`
@@ -61,8 +48,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
     purchased: isPurchased,
   });
 
-  // Optional per-instance color overrides from parent (shopping list passes these
-  // via context to share a single theme read across many items).
+  // The shopping list passes these through context to share one theme read.
   const containerOverride = themeColors
     ? { backgroundColor: themeColors.surfaceVariant }
     : null;

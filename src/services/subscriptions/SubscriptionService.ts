@@ -1,29 +1,7 @@
 /**
- * SubscriptionService - Centralized Subscription Management
- *
- * A singleton service that provides unified subscription handling across
- * the entire application. Eliminates code duplication and provides consistent
- * patterns for deduplication, cache updates, error handling, and logging.
- *
- * @example
- * ```typescript
- * const service = SubscriptionService.getInstance();
- *
- * const handlers = service.register({
- *   subscriptionName: 'ShoppingListItemsChanged',
- *   entityType: 'ShoppingListItem',
- *   enableDeduplication: true,
- *   userId: user?.id,
- *   cacheUpdateStrategy: CacheStrategy.AUTOMATIC,
- *   cacheFieldName: 'shoppingListItems',
- * });
- *
- * useShoppingListItemsChangedSubscription({
- *   variables: { listId },
- *   skip: !listId,
- *   ...handlers,
- * });
- * ```
+ * Singleton that builds the `onData` / `onError` handlers every `useSubscription`
+ * call site passes through, so deduplication, cache updates and logging are
+ * applied the same way everywhere.
  */
 
 import type {
@@ -58,11 +36,7 @@ import { markSubscriptionRejected } from './rejectedSubscriptions';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
 
-/**
- * Entity shape extracted from a subscription payload's `item`/`node`.
- * Extends `StoreObject` so it can be passed to `toReference`, while
- * surfacing the `id` the service reads for cache identification.
- */
+/** `StoreObject` (so `toReference` accepts it) plus the `id` the service reads. */
 type PayloadEntity = StoreObject & { id?: string };
 
 export class SubscriptionService {
@@ -80,9 +54,8 @@ export class SubscriptionService {
   /** Expiry timers for {@link recentReorders}, so a session end can cancel them. */
   private reorderTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-  // Pending delete tracking (to handle subscription race conditions)
-  // When we optimistically delete an item, Apollo's auto-normalization may re-add it
-  // from the subscription payload. We track pending deletes to re-evict if needed.
+  // An optimistic delete can be undone by Apollo re-normalizing the subscription
+  // payload for the same item; tracked here so it can be re-evicted.
   private pendingDeletes = new Map<
     string,
     {
@@ -90,15 +63,13 @@ export class SubscriptionService {
       entityType: string;
       parentTypename: string;
       connectionField: string;
-      // Handle for the 30s safety-net expiry, so removing the entry early can
-      // also cancel the timer instead of leaving it pending for the full 30s.
+      // 30s safety-net expiry; cancelled when the entry is removed early.
       timer: ReturnType<typeof setTimeout>;
     }
   >();
 
-  // Pending parent entity deletes (shopping lists, pantries)
-  // When deleting a parent entity, subscriptions may still be active and receiving
-  // messages. We track pending parent deletes to skip subscription processing.
+  // Subscriptions stay live while a parent (list, pantry) is being deleted, so
+  // its id is parked here to skip processing until the delete settles.
   private pendingParentDeletes = new Set<string>();
   /** Expiry timers for {@link pendingParentDeletes}, cancelled by `cleanup()`. */
   private parentDeleteTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -111,13 +82,8 @@ export class SubscriptionService {
     filteredSortOrderUpdates: 0,
   };
 
-  private constructor() {
-    // Private constructor for singleton pattern
-  }
+  private constructor() {}
 
-  /**
-   * Get singleton instance
-   */
   static getInstance(): SubscriptionService {
     if (!SubscriptionService.instance) {
       SubscriptionService.instance = new SubscriptionService();
@@ -126,16 +92,8 @@ export class SubscriptionService {
   }
 
   /**
-   * Register a pending delete to handle subscription race conditions.
-   * When we optimistically delete an item, the subscription may arrive with
-   * the deleted item's data, causing Apollo to re-add it via auto-normalization.
-   * By tracking pending deletes, we can re-evict the item if this happens.
-   *
-   * @param itemId - The ID of the item being deleted
-   * @param parentId - The parent entity ID (e.g., pantryId)
-   * @param entityType - The GraphQL typename (e.g., 'PantryItem')
-   * @param parentTypename - The parent entity typename (e.g., 'Pantry')
-   * @param connectionField - The Connection field name (e.g., 'itemsConnection')
+   * Guards an optimistic delete: a subscription carrying the deleted item's data
+   * makes Apollo re-add it by normalization, and this is what re-evicts it.
    */
   registerPendingDelete(
     itemId: string,
@@ -144,25 +102,21 @@ export class SubscriptionService {
     parentTypename: string = 'Pantry',
     connectionField: string = 'itemsConnection',
   ): void {
-    // A re-register for the same id would otherwise strand the previous entry's
-    // timer, which still holds a reference for its full 30s.
+    // Or the previous entry's timer is stranded, holding a reference for 30s.
     this.clearPendingDelete(itemId);
     this.pendingDeletes.set(itemId, {
       parentId,
       entityType,
       parentTypename,
       connectionField,
-      // Auto-cleanup after 30s to prevent memory leaks in edge cases
+      // Safety net against an entry never being unregistered.
       timer: setTimeout(() => this.clearPendingDelete(itemId), 30000),
     });
   }
 
   /**
-   * Drop a pending delete AND cancel its expiry timer.
-   *
-   * The single removal path: deleting the map entry on its own leaves a live
-   * 30s timer behind, one per delete, long after the mutation it guards has
-   * settled.
+   * The single removal path: deleting the map entry alone strands a live 30s
+   * timer per delete, long after the mutation it guards has settled.
    */
   private clearPendingDelete(itemId: string): void {
     const pending = this.pendingDeletes.get(itemId);
@@ -171,28 +125,19 @@ export class SubscriptionService {
     this.pendingDeletes.delete(itemId);
   }
 
-  /**
-   * Unregister a pending delete (called after mutation completes)
-   */
+  /** Called once the delete mutation completes. */
   unregisterPendingDelete(itemId: string): void {
     this.clearPendingDelete(itemId);
   }
 
-  /**
-   * Check if an item is pending deletion.
-   * Use this to filter out items that are being deleted but may have been
-   * temporarily re-added to cache by Apollo's auto-normalization.
-   */
+  /** True while the item may still be re-added by Apollo's normalization. */
   isPendingDelete(itemId: string): boolean {
     return this.pendingDeletes.has(itemId);
   }
 
   /**
-   * Whether any delete is currently in flight.
-   *
-   * Used by handlers that re-read a parent from the network: such a read
-   * returns the server's copy of rows the user has already removed locally, so
-   * it has to wait until the deletes settle or it resurrects them.
+   * A handler re-reading a parent from the network must wait on this, or the
+   * server's copy resurrects rows the user has already removed locally.
    */
   hasPendingDeletes(): boolean {
     return this.pendingDeletes.size > 0;
@@ -257,19 +202,10 @@ export class SubscriptionService {
     return items.filter(item => !this.pendingDeletes.has(item.id));
   }
 
-  /**
-   * Register a subscription and get configured handlers
-   *
-   * This is the main entry point for using the service. It returns handlers
-   * that can be spread directly into Apollo subscription hooks.
-   *
-   * @param config - Subscription configuration
-   * @returns Configured handlers (onData, onError, onComplete)
-   */
+  /** Main entry point: handlers to spread into an Apollo subscription hook. */
   register<TData = unknown>(
     config: SubscriptionConfig<TData>,
   ): SubscriptionHandlers {
-    // Set defaults - use Partial for optional fields
     const finalConfig = {
       subscriptionName: config.subscriptionName,
       entityType: config.entityType,
@@ -569,16 +505,10 @@ export class SubscriptionService {
   }
 
   /**
-   * Unified deduplication logic
-   *
-   * Filters out:
-   * 1. Duplicate updates (same timestamp + mutation)
-   * 2. SortOrder-only updates (handled optimistically)
-   *
-   * Note: Self-echo filtering (userId check) has been removed to support
-   * multi-device scenarios where the same user may be on multiple devices.
-   * For most use cases (family members on shared pantry/shopping lists),
-   * different users will see each other's updates in real-time.
+   * Drops duplicates (same timestamp + mutation) and sortOrder-only updates,
+   * which optimistic mutations already applied. Self-echo is deliberately NOT
+   * filtered here — a call site that needs it uses `isSelfEcho`, so one user on
+   * two devices still sees their own changes on the other.
    */
   private shouldProcessUpdate<TData>(
     payload: SubscriptionPayload<TData>,
@@ -592,7 +522,6 @@ export class SubscriptionService {
         (payload.item as { id?: string } | undefined)?.id ||
         (payload.node as { id?: string } | undefined)?.id;
 
-      // Check if we recently reordered this item
       if (itemId) {
         const reorderTime = this.recentReorders.get(itemId);
         const isRecentReorder = reorderTime && Date.now() - reorderTime < 200;
@@ -610,8 +539,7 @@ export class SubscriptionService {
     }
 
     // Dedup key = mutation + subtype + node + tick. The server can emit distinct
-    // events in one tick (e.g. two items changed together), so subtype + node
-    // keep them apart while true duplicates still collapse.
+    // events in one tick, so subtype + node keep those apart.
     if (payload.timestamp && payload.mutation) {
       const nodeId =
         (payload.node as { id?: string } | undefined)?.id ??
@@ -625,10 +553,8 @@ export class SubscriptionService {
         return false;
       }
 
-      // Add to processed set
       this.processedMutations.add(mutationKey);
 
-      // Clean up old entries if set gets too large
       if (this.processedMutations.size > this.MAX_PROCESSED_MUTATIONS) {
         const iterator = this.processedMutations.values();
         const firstKey = iterator.next().value;
@@ -642,12 +568,8 @@ export class SubscriptionService {
   }
 
   /**
-   * Unified cache update strategy
-   *
-   * Handles:
-   * - CREATE: Add item to array using cache.modify()
-   * - UPDATE: Apollo automatic normalization (no action needed)
-   * - DELETE: Remove item from array and evict from cache
+   * CREATE adds to the array via cache.modify(), UPDATE relies on Apollo's
+   * normalization, DELETE removes from the array and evicts.
    */
   private updateCache<TData>(
     cache: ApolloCache,

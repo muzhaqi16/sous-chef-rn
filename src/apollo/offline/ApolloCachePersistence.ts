@@ -6,43 +6,17 @@ import { logger } from '#/utils/environment';
 const CACHE_STORAGE_KEY = 'apollo-cache-v1';
 const CACHE_VERSION_KEY = 'apollo-cache-version';
 /**
- * Identifies the SHAPE of a persisted blob, not the app that wrote it.
- *
- * App version is not the right key: keying on it purges the cache on every
- * store update and every OTA, so a user's first launch after an update —
- * offline, on a plane, in a basement — is an empty app, the queue surviving
- * while nothing they can read does. A persisted blob is a raw
- * `NormalizedCacheObject` of field keys produced by `src/apollo/cache.ts`'s
- * type policies, so what makes an old blob unsafe is a change to THOSE, not a
- * version bump. Most such changes are harmless anyway — a changed `keyArgs`
- * strands old field keys, which is a cache miss and a refetch. The one that
- * genuinely bites is a changed `merge`/`read` running over a value written in
- * the old shape.
- *
- * So: bump this by hand when a change to `cache.ts` makes previously persisted
- * data unsafe to restore. `__tests__/apollo/cacheSchemaVersion.test.ts` fails
- * on any edit to that file until the change has been looked at, because a
- * hand-maintained constant that nothing checks will drift.
+ * The SHAPE of a persisted blob, not the app that wrote it — keying on app
+ * version would purge the cache on every update. Bump by hand when a `cache.ts`
+ * change makes persisted data unsafe; `cacheSchemaVersion.test.ts` fails on any
+ * edit to that file until the decision has been made.
  */
 const CURRENT_CACHE_VERSION = 'shape-1';
 
 /**
- * Written by a previous scheme that split the cache into a small "critical"
- * blob (ROOT_QUERY + User/Home/settings) restored at startup and a "deferred"
- * blob restored from `requestIdleCallback`.
- *
- * The deferral never ran: the client read both blobs eagerly and merged them,
- * so the split only added a second MMKV read and a second `JSON.parse` to every
- * cold start. It could not have run as designed either — `ROOT_QUERY` sat in
- * the critical blob while the entities its `__ref`s point at sat in the
- * deferred one, so a critical-only restore leaves every list query's cache read
- * incomplete and Apollo returns no data for it. Restoring the "fast" half
- * would have painted nothing and refetched everything, which is the opposite of
- * why the cache is persisted.
- *
- * The names remain so `load()` can migrate an install that still has data under
- * them, and so `clear()` removes them at session end rather than stranding the
- * previous person's entities on disk.
+ * Keys from a retired split-blob scheme. Kept so `load()` can migrate an install
+ * that still has data under them, and so `clear()` removes them at session end
+ * rather than stranding the previous person's entities on disk.
  */
 const LEGACY_SPLIT_KEYS = [
   'apollo-cache-v1-critical',
@@ -50,48 +24,10 @@ const LEGACY_SPLIT_KEYS = [
 ];
 
 /**
- * Custom Apollo cache persistence using MMKV
- *
- * This is a lightweight alternative to apollo3-cache-persist that:
- * - Works with Apollo Client 4.x
- * - Uses your existing MMKV storage (faster than AsyncStorage)
- * - Provides production-ready cache persistence
- * - No external dependencies or compatibility issues
- *
- * Usage:
- * ```typescript
- * // On app start (before creating Apollo client)
- * const persistedCache = apolloCachePersistence.load();
- * const cache = makeCache();
- * if (persistedCache) {
- *   cache.restore(persistedCache);
- * }
- *
- * // After mutations (debounced)
- * apolloCachePersistence.save(client.cache.extract());
- *
- * // On logout
- * apolloCachePersistence.clear();
- * ```
- */
-
-/**
- * Whether anything in the normalized cache differs from the last persisted
- * snapshot.
- *
- * Compares object identity per top-level key rather than value. `extract()`
- * hands back the store's own entity objects, so an untouched entity keeps its
- * reference across extracts and a modified one gets a new one — the scan is
- * `Object.keys(cache).length` pointer comparisons, cheaper by far than the
- * `JSON.stringify` of the whole cache it guards.
- *
- * It has to be the whole cache, not a set of keys reported by the writers.
- * `cache.write` for a query result reports only `ROOT_QUERY`, and ROOT_QUERY
- * holds `__ref` pointers: when a refetch returns new field values for entities
- * already cached, every ref is the same, ROOT_QUERY keeps its identity, and the
- * key count is unchanged. Under the old per-key check that read as "nothing
- * changed", so the edit was never written to disk and the next cold start
- * restored the previous values.
+ * Identity per top-level key, not value: `extract()` returns the store's own
+ * objects, so an untouched entity keeps its reference. Must scan the WHOLE
+ * cache — writers report only `ROOT_QUERY`, whose `__ref`s are unchanged when a
+ * refetch updates entities in place, so a per-key check reads as "no change".
  */
 function hasCacheChanged(
   cache: NormalizedCacheObject,
@@ -162,13 +98,9 @@ class ApolloCachePersistence {
   }
 
   /**
-   * Read a cache left behind by the split-blob scheme, for an install that
-   * upgraded before ever saving under the single key.
-   *
-   * Without this the first launch after the upgrade starts from an empty
-   * cache — one extra fetch online, and a blank app for a person who is
-   * offline at that moment. The next save writes the single key and removes
-   * these, so this path runs at most once per install.
+   * Read a cache left by the split-blob scheme, so an install that upgraded
+   * before saving under the single key does not start empty. The next save
+   * writes the single key and removes these, so this runs once per install.
    */
   private loadLegacySplitCache(): NormalizedCacheObject | null {
     const merged: NormalizedCacheObject = {};
@@ -233,13 +165,8 @@ class ApolloCachePersistence {
   }
 
   /**
-   * Schedule a lazy cache extraction and save (debounced)
-   *
-   * Unlike save(), this defers cache.extract() until after the debounce period,
-   * so only one extract() call happens per debounce window instead of one per
-   * cache operation (write, evict, modify, gc).
-   *
-   * @param extractor - Lazy function that returns the cache data when called
+   * Debounced save that defers `cache.extract()` until the window closes, so
+   * one extract happens per window rather than one per cache operation.
    */
   scheduleExtractAndSave(extractor: () => NormalizedCacheObject): void {
     if (this.paused) {
@@ -329,16 +256,9 @@ class ApolloCachePersistence {
   }
 
   /**
-   * Flush a pending debounced save immediately — call when the app goes to
-   * background, where a fast kill could otherwise lose the last ≤3s of cache
-   * writes. The offline queue durably persists the mutations regardless, but
-   * without this the optimistic cache state only reappears after the queue
-   * replays on next launch; flushing keeps it visible from disk on cold start.
-   *
-   * No-op when nothing is pending (no debounced save and no scheduled idle
-   * serialization), so it's cheap to call on every background transition.
-   *
-   * @param extractor - Lazy cache extractor; only invoked when a save is pending.
+   * Flush a pending debounced save — call on background, where a fast kill
+   * would otherwise lose the last ≤3s of writes and leave optimistic state
+   * invisible until the queue replays. A no-op when nothing is pending.
    */
   flushPending(extractor: () => NormalizedCacheObject): void {
     if (this.saveTimeout == null && this.idleCallbackId == null) return;

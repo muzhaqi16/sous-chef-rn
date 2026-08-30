@@ -62,18 +62,10 @@ export function createLink() {
   // Queue link for offline mutation support
   const queueLink = createQueueLink();
 
-  // Link chain - ordered by priority
-  // Offline support is handled by:
-  // 1. offlineModeLink - serves queries from cache (short-circuits the network)
-  //    when offline: user-enabled offline mode OR device offline (isOnline=false).
-  //    Sits first, so blocked queries never reach retryLink/errorLink (no doomed
-  //    requests, no retry/error noise). Mutations pass through to queueLink.
-  // 2. retryLink - retries transient network failures for queries (mutations are
-  //    skipped); the remaining case is API-down-while-online.
-  // 3. errorLink - catches non-retryable failures, returns cached data
-  // 4. fetch policies (cache-and-network → cache-first) - immediate cache, then network
-  // 5. queueLink - queues mutations when offline
-  // Note: Query deduplication is handled by Apollo Client's built-in queryDeduplication: true
+  // Order matters: offlineModeLink first, so blocked queries never reach
+  // retryLink/errorLink and produce doomed requests; then retryLink (queries
+  // only), errorLink, and queueLink for mutations. Query deduplication is
+  // Apollo's own `queryDeduplication: true`.
   return ApolloLink.from([
     offlineModeLink, // Block queries when effectively offline (before telemetry to skip tracking)
     networkStatusLink, // Feed the API-reachability circuit breaker (one outcome/op)

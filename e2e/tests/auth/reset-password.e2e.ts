@@ -1,27 +1,11 @@
 /**
- * Device validation for the "choose a new password" screen.
- *
- * This is the screen behind a password-reset link, not the request-a-link
- * screen that `password-reset.e2e.ts` covers. It is only reachable by deep
- * link, and only at cold start — `openURL` against a running app does not
- * route here reliably.
- *
- * Two shipped bugs are pinned here:
- *  - the submit button stayed disabled no matter what was typed, because the
- *    inputs wrote through `setValue` without asking for validation, so
- *    `formState.isValid` never recomputed;
- *  - the screen had no scroll container, so the keyboard covered the confirm
- *    field and the button.
- *
- * The token is deliberately bogus: the API rejects it and the screen shows an
- * error toast. That toast is the signal the mutation actually fired, which is
- * only possible if the button was enabled. Asserting the button's disabled
- * flag directly is not something Detox exposes on Android.
- *
+ * The "choose a new password" screen behind a reset link, not the request-a-
+ * link screen (`password-reset.e2e.ts`). Only a cold-start deep link routes
+ * here; `openURL` on a running app does not.
  * Run: npx detox test -c android.att.debug e2e/tests/auth/reset-password.e2e.ts
  */
 import { device, element, by, expect as detoxExpect } from 'detox';
-import { ResetPasswordScreen } from '../../screens';
+import { ResetPasswordScreen } from '../../screens/ResetPasswordScreen';
 
 // Long enough to clear the screen's client-side format check (>= 10 chars),
 // so we land on the form rather than the "Invalid Reset Link" view.
@@ -60,9 +44,10 @@ describe('Reset password (choose new password)', () => {
     await resetScreen.resetPasswordTo(VALID_PASSWORD);
 
     // The API answers a bad token with status INVALID_OR_EXPIRED, which the
-    // screen turns into the invalid-link view. Asserting on that rather than
-    // on the toast: the toast is up for 1.4s and its testID tracks whichever
-    // type is showing, whereas this view persists.
+    // screen turns into the invalid-link view. Asserting on that rather than on
+    // the toast: the toast is up for 1.4s and its testID tracks whichever type
+    // is showing, whereas this view persists. Reaching it at all proves submit
+    // was enabled — Detox exposes no disabled-flag assertion on Android.
     await resetScreen.expectRejectedLinkVisible();
   });
 

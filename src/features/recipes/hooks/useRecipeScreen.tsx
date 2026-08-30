@@ -90,13 +90,10 @@ function createSeenKeys(): SeenKeys {
   return { spoonacularIds: new Set(), titles: new Set() };
 }
 
-// Drop a page's rows that collide with something already shown — across BOTH
-// sources and across pages. Two guards: (1) by Spoonacular id when a backend
-// recipe is linked (viewed external recipes are upserted server-side); (2) by
-// normalized title, which catches the same recipe surfaced from both sources
-// (or a later local page) without an external-id link. Local backend rows
-// render first, so a backend copy is the one kept when a title appears on both
-// sides. `seen` is mutated in place so the next page sees these keys too.
+// Drops rows colliding with something already shown, across BOTH sources and
+// pages: by Spoonacular id where a backend recipe is linked, and by normalized
+// title for the rest. Local rows render first, so a backend copy wins a title
+// collision. `seen` is mutated in place so the next page sees these keys.
 function dedupePageAgainstSeen(
   localNodes: LocalRecipeNode[],
   spoonacularResults: SpoonacularRecipe[],
@@ -189,13 +186,10 @@ async function fetchRecipeSearchPage(
   fetchSpoonacular: boolean,
   seen: SeenKeys,
 ): Promise<SearchPageResult> {
-  // Local API search — the user's own recipes. `searchRecipes` accepts the
-  // same diet/intolerance/maxReadyTime filters as Spoonacular, so both sources
-  // stay consistent under active filters. `activeFilters` stores Spoonacular
-  // strings; map them back to Diet/Intolerance enums for the GraphQL API
-  // (unmapped values are dropped). Skipped entirely when the local source has
-  // no more pages — re-querying with a null cursor would re-fetch page 1 and
-  // double-append its rows.
+  // `activeFilters` holds Spoonacular strings; map them back to the
+  // Diet/Intolerance enums the GraphQL API takes (unmapped values drop), so
+  // both sources filter alike. Skipped when local has no more pages — a null
+  // cursor re-fetches page 1 and double-appends it.
   const localDiets = filters.diet
     .map(d => SPOONACULAR_TO_DIET_ENUM[d])
     .filter((d): d is Diet => Boolean(d));
@@ -398,15 +392,11 @@ async function executeRecipeTextSearch(
   setLoading(false);
 }
 
-// Fetch the NEXT page from whichever source still has results, dedupe the new
-// rows against everything already shown (via the shared `seen` keys carried in
-// `pagination`), and return the rows plus advanced cursors — the CALLER commits
-// them (atomically, and only if the search wasn't replaced mid-flight). Each
-// source is queried only when it reports more (`localHasNextPage`,
-// `offset < total`); the exhausted one is skipped by the `fetchLocal` /
-// `fetchSpoonacular` flags so it isn't re-fetched and its rows re-appended.
-// Local failures degrade silently; a Spoonacular error on load-more is reported
-// but never wipes already-shown results.
+// Fetches the next page from whichever source still has results, dedupes
+// against `pagination`'s shared `seen` keys, and returns rows plus advanced
+// cursors — the CALLER commits them, and only if the search was not replaced
+// mid-flight. An exhausted source is skipped so its rows are not re-appended.
+// Failures never wipe already-shown results.
 async function executeRecipeLoadMore(
   pagination: SearchPagination,
   client: ApolloClient,
@@ -561,13 +551,10 @@ export function useRecipeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
-  // Results and their pagination cursors live in ONE state atom because they
-  // advance together: the pagination carries the local connection cursor, the
-  // Spoonacular offset/total, and the dedupe keys for exactly the rows shown.
-  // A single atom lets a resolved load-more commit rows + cursors atomically —
-  // and lets it detect (via pagination identity) that a new search or clear
-  // replaced the state while the page was in flight, so the stale page is
-  // dropped instead of corrupting the new query's list.
+  // Rows and cursors live in ONE atom because they advance together, so a
+  // resolved load-more commits both atomically — and pagination identity is
+  // what tells it a new search replaced the state mid-flight, so the stale page
+  // is dropped instead of corrupting the new list.
   const [searchData, setSearchData] = useState<{
     items: DisplayItem[];
     pagination: SearchPagination;

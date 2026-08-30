@@ -407,7 +407,7 @@ describe('createTelemetryLink', () => {
       });
     });
 
-    it('still reports the duration without the mark it used to place', done => {
+    it('reports the duration without placing a performance mark', done => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
       mockedEnvironment.isDevelopment.mockReturnValue(true);
 
@@ -460,7 +460,7 @@ describe('createTelemetryLink', () => {
       // `clearMarks` filters the whole entries array, and every `measure`
       // appended an entry that was never removed. Ten times the operations must
       // not cost more than ten times as much — here it costs nothing at all,
-      // because the link no longer touches that buffer.
+      // because the link does not touch that buffer at all.
       expect(perfCallsFor(10)).toBe(0);
       expect(perfCallsFor(100)).toBe(0);
     });

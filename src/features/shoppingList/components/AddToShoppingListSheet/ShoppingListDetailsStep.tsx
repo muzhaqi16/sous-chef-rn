@@ -41,17 +41,9 @@ interface ShoppingListDetailsStepProps {
 }
 
 /**
- * In-place "details" step for the Add to Shopping List sheet.
- *
- * Rendered as content INSIDE the shared AddItemSheet (not its own modal) when
- * the user taps "Add manually", so the search → form transition is a single
- * morphing sheet — the same pattern the pantry flow uses. Reuses the shared
- * `useShoppingListItemForm` state and the bottom-sheet-aware autocomplete
- * fields; the offline-first create goes through the shared `useAddShoppingItem`.
- *
- * The item name is a plain field here, not a catalog picker: the user reached
- * this step by choosing "Add manually" under the search step's own catalog
- * matches, and the add never linked a catalog item from this form anyway
+ * The "details" step, rendered as content INSIDE the shared AddItemSheet rather
+ * than as its own modal, so search → form is one morphing sheet. The item name
+ * is a plain field, not a catalog picker: this form never links a catalog item
  * (`useAddShoppingItem` posts `item: { itemName }`).
  */
 export const ShoppingListDetailsStep: React.FC<
@@ -103,11 +95,9 @@ export const ShoppingListDetailsStep: React.FC<
     id => setFieldValue('brandId', id),
     name => setFieldValue('brand', name),
   );
-  // Not `makeIdNameHandler`: that writes the display NAME, and
-  // `UnitAutocompleteField` has already written the symbol through
-  // `onChangeText`. Writing the name back turns "g" into "gram". The handler is
-  // still the right one for brand and store, where the name IS the display
-  // value.
+  // Not `makeIdNameHandler`: it writes the display NAME over the symbol
+  // `UnitAutocompleteField` already wrote, turning "g" into "gram". That handler
+  // is still right for brand and store, where the name IS the display value.
   const handleNetWeightUnitSelected = (id: string | null) => {
     setFieldValue('netWeightUnitId', id);
   };
@@ -183,9 +173,7 @@ export const ShoppingListDetailsStep: React.FC<
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Plain field, as on the pantry details page: the search step
-            already showed catalog matches for this text, and a picker here
-            only ever pre-filled unit and category — it never linked the item. */}
+        {/* Plain field: the search step already showed the catalog matches. */}
         <Controller
           control={control}
           name="itemName"

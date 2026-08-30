@@ -62,15 +62,9 @@ export const handleTokenRefreshOnResume = async (
 };
 
 /**
- * The signed-in user, as persisted by the store.
- *
- * `email`, `emailVerified` and `role` are gated by the API: `User.email` and
- * friends resolve to null unless the caller is that user or an admin. The
- * bootstrap payloads that feed `setAuth` are always the caller's own record, so
- * these arrive populated in practice — but the types stay nullable because the
- * schema permits null, and silently substituting a placeholder would make "not
- * authorized to read" indistinguishable from a real value. Read them
- * defensively (`user?.email || fallback`) rather than asserting.
+ * The signed-in user as persisted. `email` / `emailVerified` / `role` are
+ * API-gated (null unless the caller is that user or an admin), so they stay
+ * nullable — read defensively (`user?.email || fallback`), never assert.
  */
 export interface User {
   id: string;
@@ -86,13 +80,9 @@ export interface User {
 }
 
 /**
- * Shape accepted by `setAuth`. The login/register response (the `LoginUser`
- * fragment) carries a nested `profile` that the persisted `User` doesn't model.
- * Accept it explicitly so `setAuth` can flatten the profile fields the greeting
- * reads (`user.firstName` / `user.name`) without an `as any`. Every profile
- * field is optional — the LoginUser fragment currently only selects
- * displayName/avatar, so name/lastName flattening is a no-op until the fragment
- * is extended, but the mapping stays correct either way.
+ * Shape accepted by `setAuth`. The `LoginUser` fragment carries a nested
+ * `profile` the persisted `User` does not model; flattening it here is what
+ * feeds the greeting (`user.firstName` / `user.name`) without a cast.
  */
 export type AuthUserInput = User & {
   profile?: {

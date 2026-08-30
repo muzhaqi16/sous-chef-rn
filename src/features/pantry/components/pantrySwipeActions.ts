@@ -5,15 +5,10 @@ import {
 import type { SwipeAction } from '#components/molecules/SwipeableItem/types';
 
 /**
- * The pantry's swipe vocabulary.
- *
- * Left: consume / record waste / restock. Right: edit / delete. These verbs
- * used to be named props on `SwipeableItem`, `BaseItemCard`, `ItemCard` and
- * `ItemList`, with their icons hardcoded in the shared swipe components — so
- * the pantry's vocabulary was spelled out in four kit files. It lives here now.
- *
- * `haptic: false` on the three left actions preserves existing behaviour: only
- * edit, delete and toggle-purchase have ever buzzed.
+ * The pantry's swipe vocabulary — left: consume / waste / restock, right:
+ * edit / delete. Domain verbs belong to the feature, not the kit's swipe
+ * components. `haptic: false` on the left three: only edit, delete and
+ * toggle-purchase buzz.
  */
 export const pantrySwipeActions = ({
   onConsume,

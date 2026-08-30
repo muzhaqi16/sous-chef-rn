@@ -21,6 +21,7 @@ import {
   completeMockedResponse,
   createApolloTestWrapper,
   renderHookWithApollo,
+  throwOnMisrepresentedFixtureValues,
   throwOnUnknownFixtureKeys,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
@@ -117,9 +118,9 @@ describe('completion does not alter what the fixture states', () => {
   `;
 
   it('gives every stated entry its own identity past the generated template', () => {
-    // The generated list is two entries long, so entries 3, 5, 7… used to reuse
-    // entry 0 — including its generated id. Rows 0 and 2 then normalized onto
-    // one record and the third entry's data was simply gone.
+    // The generated list is two entries long, so entries 3, 5, 7… must not
+    // recycle entry 0 and its generated id: rows 0 and 2 would normalize onto
+    // one record and the third entry's data would simply be gone.
     const data = complete(LIST, {
       units: [{ name: 'Alpha' }, { name: 'Beta' }, { name: 'Gamma' }],
     });
@@ -153,10 +154,10 @@ describe('completion does not alter what the fixture states', () => {
   });
 
   it('issues disjoint identity to two fixtures completed in one test', () => {
-    // The counter used to rewind at the start of every completion, so two mocks
-    // in one test were handed the same sequence and their entities collided on
-    // one normalized cache key — the collapse the counter exists to prevent,
-    // moved from within an operation to across two.
+    // The counter does not rewind at the start of a completion. Rewinding hands
+    // two mocks in one test the same sequence, and their entities collide on one
+    // normalized cache key — the collapse the counter exists to prevent, moved
+    // from within an operation to across two.
     const items = gql`
       query ProbeItemList {
         items {
@@ -351,6 +352,66 @@ describe('a fixture the operation cannot return is rejected', () => {
   });
 });
 
+describe('a fixture stating a value the type cannot hold is rejected', () => {
+  const PROBE_STATUS = gql`
+    query ProbeNotificationStatus {
+      notification(id: "n1") {
+        id
+        status
+        title
+      }
+    }
+  `;
+
+  const row = (over: Record<string, unknown>) => ({
+    notification: { __typename: 'Notification', id: 'n1', ...over },
+  });
+
+  // `NotificationStatus` has no `UNREAD` member — unread is `SENT`. Unchecked,
+  // the merge is data-shaped enough to serve it, and the cache then holds a
+  // status that silently disagrees with the hook's own local write.
+  it('names the operation, the path, the type and the value', () => {
+    complete(PROBE_STATUS, row({ status: 'UNREAD' }));
+
+    expect(() => throwOnMisrepresentedFixtureValues()).toThrow(
+      /ProbeNotificationStatus: notification\.status — Enum "NotificationStatus" cannot represent value: "UNREAD"/,
+    );
+  });
+
+  it('says nothing about a real member', () => {
+    complete(PROBE_STATUS, row({ status: 'SENT' }));
+
+    expect(() => throwOnMisrepresentedFixtureValues()).not.toThrow();
+  });
+
+  // A key written as `undefined` is the established spelling of "the API
+  // omitted this", and the case a test asserting `toBeUndefined()` is about.
+  // Reporting the non-null field it leaves empty would break that idiom.
+  it('says nothing about a field the fixture states as absent', () => {
+    complete(PROBE_STATUS, row({ status: 'SENT', title: undefined }));
+
+    expect(() => throwOnMisrepresentedFixtureValues()).not.toThrow();
+  });
+
+  // The payload is keyed by response key, so reading an aliased field by its
+  // schema name finds nothing and reports its non-null parent instead.
+  it('says nothing about an aliased field', () => {
+    const aliased = gql`
+      query ProbeAliasedStatus {
+        notification(id: "n1") {
+          id
+          state: status
+        }
+      }
+    `;
+    complete(aliased, {
+      notification: { __typename: 'Notification', id: 'n1', state: 'SENT' },
+    });
+
+    expect(() => throwOnMisrepresentedFixtureValues()).not.toThrow();
+  });
+});
+
 describe('the two mocking strategies cannot be combined', () => {
   it('rejects a caller that passes both', () => {
     // The union type makes this unreachable from TypeScript — it caught four
@@ -369,9 +430,9 @@ describe('the two mocking strategies cannot be combined', () => {
 
 describe('an empty operationMocks array means no mocks', () => {
   it('does not fall through to the schema-driven link', () => {
-    // `operationMocks: []` reads as "no mocks" and used to select a link that
-    // answered EVERY operation with generated data and wrote it into the cache,
-    // possibly after teardown. 14 sites spell it that way.
+    // `operationMocks: []` reads as "no mocks". Falling through instead selects
+    // a link that answers EVERY operation with generated data and writes it into
+    // the cache, possibly after teardown. 14 sites spell it that way.
     const wrapper = createApolloTestWrapper({ operationMocks: [] });
     expect(typeof wrapper).toBe('function');
 

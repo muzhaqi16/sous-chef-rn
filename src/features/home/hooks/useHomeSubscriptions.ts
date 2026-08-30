@@ -1,22 +1,8 @@
 /**
- * Home/Membership Subscriptions
- *
- * Centralizes home + membership real-time updates using the unified
- * SubscriptionService. Opens a single consolidated `homeEvents(homeId)` stream
- * carrying both membership changes (MEMBERSHIP_*) and invite lifecycle
- * (INVITE_*), discriminated by `subtype` — replacing the former
- * membershipChanged + homeInviteChanged subscriptions. One stream keeps the
- * per-user concurrent-subscription count low (the server caps it cluster-wide).
- *
- * Handles:
- * - Membership changes (join/leave, role/permission updates) — refreshes the
- *   home's member list.
- * - Invite lifecycle (created/accepted/declined/revoked) — maintains
- *   me.pendingHomeInvitesConnection.
- *
- * The event carries the envelope plus the changed entity's id — subscriptions
- * are validated against depth 5, which no fragment spread fits under. Removals
- * work from the id alone; connection changes are refetched.
+ * One `homeEvents(homeId)` stream carries both membership and invite changes,
+ * discriminated by `subtype` — a single stream keeps the per-user subscription
+ * count under the server's cap. The event carries only the envelope plus the
+ * changed id: subscriptions validate at depth 5, which no fragment spread fits.
  */
 
 import { useIsHomeSelectionReady, useSelectedHomeId } from '#store/useAppStore';
@@ -49,12 +35,8 @@ const removeInviteFromCache = createRemoveFromParentConnectionUpdater(
 );
 
 /**
- * Initialize home/membership subscriptions for the current user.
- *
- * Subscribes to `homeEvents` for the user's selected home. Mounted once at the
- * app level (in AuthenticatedSubscriptions).
- *
- * @param userId - Current user ID for deduplication / self-echo suppression
+ * Subscribes to `homeEvents` for the selected home. Mounted once at app level,
+ * in `AuthenticatedSubscriptions`. `userId` drives self-echo suppression.
  */
 export function useHomeSubscriptions(userId?: string) {
   const selectedHomeId = useSelectedHomeId() || undefined;
@@ -76,8 +58,8 @@ export function useHomeSubscriptions(userId?: string) {
       if (!payload) return;
 
       // Skip this device's own echo — its mutation already updated the cache.
-      // An admin acting on you reports the admin, so this no longer swallows
-      // the event that removed you.
+      // An admin acting on you reports the ADMIN, so the event that removed you
+      // still gets through.
       if (isSelfEcho(payload, userId)) {
         if (__DEV__) {
           logger.debug('⏭️ [HomeEvents] Skipping self-echo');

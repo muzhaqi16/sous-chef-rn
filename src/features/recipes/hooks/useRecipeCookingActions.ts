@@ -40,12 +40,10 @@ export function useRecipeCookingActions({
   const [markRecipeAsCookedMutation] = useMutation(MarkRecipeAsCookedDocument);
 
   /**
-   * Fire the cook-log mutation with a client-minted cooking-log id and queue it
-   * locally when the API is unreachable (`localFirst`). The shared id means a
-   * queued replay converges on the same cooking log instead of creating a
-   * duplicate and re-deducting the pantry. Returns the classified outcome:
-   * `'rejected'` means the server refused it (or the call threw); `'created'` /
-   * `'queued'` both succeed (a queued cook replays later).
+   * Fires the cook-log mutation with a client-minted id, so a queued replay
+   * converges on the same log instead of re-deducting the pantry. `'rejected'`
+   * means the server refused it or the call threw; `'created'` and `'queued'`
+   * both succeed.
    */
   const fireMarkCooked = async (vars: FireMarkCookedVars) => {
     const id = generateEntityId();

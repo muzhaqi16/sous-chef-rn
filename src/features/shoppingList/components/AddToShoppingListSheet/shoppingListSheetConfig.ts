@@ -1,15 +1,6 @@
 import type { ShoppingListSuggestionItem } from '#features/shoppingList/hooks/useShoppingListSuggestions';
 import type { AddItemSheetConfig } from '#features/catalog/ui/AddItemSheet/types';
 
-/**
- * Configuration for AddToShoppingListSheet.
- *
- * Features:
- * - 3 suggestion groups (Add Again, Favorites, Popular)
- * - Fire-and-forget quick add with exit animations
- * - Deferred fetch for smooth sheet animation
- * - No add details sub-sheet (navigates to separate screen)
- */
 export const shoppingListSheetConfig: AddItemSheetConfig<ShoppingListSuggestionItem> =
   {
     titleKey: 'labels.addToShoppingList',

@@ -36,15 +36,7 @@ interface AddStorageLocationSheetProps {
   creating?: boolean;
 }
 
-/**
- * AddStorageLocationSheet - Simple bottom sheet for quick storage location creation
- *
- * Features:
- * - Text input for location name
- * - Cancel/Create buttons
- * - Creates location with default type (Other)
- * - Used from PantryMain for quick creation
- */
+/** Name-only quick create from PantryMain; the location gets the default type. */
 export const AddStorageLocationSheet: React.FC<
   AddStorageLocationSheetProps
 > = ({ visible, onClose, onCreateLocation, creating = false }) => {

@@ -158,9 +158,8 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
             <PrimaryActivityIndicator size="large" />
           </View>
         ) : dataState === 'error' || dataState === 'offline' ? (
-          // The hook classified this all along; the sheet used to read only
-          // `offline` and drop `error` on the floor, so a genuine failure
-          // rendered as "No templates found" with no way to try again.
+          // `error` and `offline` both need a retry affordance — reading only
+          // `offline` renders a genuine failure as "No templates found".
           <DataStateView state={dataState} onRetry={refetch} />
         ) : dataState === 'empty' ? (
           <View style={styles.emptyContainer}>

@@ -95,8 +95,8 @@ describe('errorLink.ts', () => {
     });
 
     // The codes the API actually emits (docs/api/errors.md "API Key Errors").
-    // API_KEY_REQUIRED and INVALID_API_KEY, asserted here previously, are not in
-    // the server's registry — nothing has ever sent them.
+    // API_KEY_REQUIRED and INVALID_API_KEY are deliberately absent: neither is
+    // in the server's registry, so nothing sends them.
     it.each(['API_KEY_MISSING', 'API_KEY_INVALID', 'API_KEY_EXPIRED', 'API_KEY_REVOKED'])(
       'handles %s as an API key error',
       code => {

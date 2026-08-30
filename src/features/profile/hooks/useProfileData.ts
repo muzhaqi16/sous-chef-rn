@@ -7,12 +7,14 @@ export const useProfileData = () => {
   const user = useUser();
   const isLoggingOut = useIsLoggingOut();
 
+  // `nextFetchPolicy` lives on the ObservableQuery, which `useQuery` rebuilds
+  // per mount, so EVERY mount runs a network leg and reports `loading: true`
+  // throughout. Gate on `!profile`, never `loading` alone — and with
+  // `returnPartialData` false, `profile` is null whenever the cache read is
+  // INCOMPLETE, which is why every writer must write the full shape
+  // (`__tests__/apollo/userProfileCompleteness.test.ts`).
   const { data, loading, error, refetch } = useQuery(GetUserProfileDocument, {
-    // First mount: read cache + fire one network request to refresh.
-    // Subsequent re-renders: serve from cache only (no network thrash).
-    // Per CLAUDE.md cache persistence convention.
     skip: !user || isLoggingOut, // Skip query if logging out
-    // Don't trigger loading state during background refresh
     notifyOnNetworkStatusChange: false,
   });
 

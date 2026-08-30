@@ -123,7 +123,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     );
   };
 
-  // Rotating the code invalidates any previously-shared link — confirm first.
+  // Rotating the code invalidates every link already shared — confirm first.
   const handleRotateJoinCode = () => {
     alertService.alert(
       t('homeDetail.rotateJoinCodeTitle'),
@@ -177,7 +177,13 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     }
   };
 
-  if (loading || !home) {
+  // Gate on the absence of the home, not on `loading`. Under
+  // `cache-and-network` Apollo reports `loading: true` for the whole network
+  // leg on EVERY mount — `nextFetchPolicy` lives on the ObservableQuery and
+  // useQuery builds a new one each time — so `loading ||` here threw the cached
+  // home away and showed a spinner on every visit, for as long as the request
+  // took.
+  if (!home) {
     const getMessage = () => {
       if (loading) return t('labels.loading');
       if (error) return t('homeDetail.errorFailedToLoad');

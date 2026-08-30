@@ -5,31 +5,17 @@ import { logger } from '#/utils/environment';
 const EMPTY_ROW_ITEMS: ShoppingListRowItem[] = [];
 
 /**
- * Two-level transform cache.
- *
- * After the per-row `useFragment` migration the row component computes every
- * piece of display data itself, so this hook no longer produces a transformed
- * shape — it just wraps each node with the primitive metadata the FlashList
- * needs (`id`, `isPurchased`, `sortOrder`) and the masked fragment ref.
- *
- * Array level: the wrapper array is reused while the source array is stable,
- * so downstream memoization holds across unrelated re-renders.
- *
- * Row level: each row object is cached against its node. A page append hands
- * us a NEW nodes array, but Apollo's structural sharing keeps every unchanged
- * node identical — and FlashList re-renders a cell only when its `item` prop
- * changes identity (`ViewHolder`'s memo compares `item` with `===`).
- * Rebuilding every row on append therefore re-rendered every mounted cell to
- * show a handful of new ones; reusing rows for unchanged nodes makes an append
- * cost only the cells it adds. Apollo produces a new node object whenever any
- * of its fields change, so a `sortOrder` edit still yields a fresh row. One
- * row cache per tab, because the same node is wrapped with a different
- * `isPurchased` on each tab while a toggle is in flight.
+ * Two-level identity cache. FlashList re-renders a cell only when its `item`
+ * prop changes identity (`ViewHolder`'s memo compares with `===`), so reusing
+ * the row object for an unchanged node makes an append cost only its own cells;
+ * Apollo mints a new node on any field change, so an edit still yields a row.
  */
 const wrapItemsCache = new WeakMap<
   readonly ShoppingListItemNode[],
   { key: string; result: ShoppingListRowItem[] }
 >();
+// One cache per tab: the same node carries a different `isPurchased` on each
+// while a toggle is in flight.
 const rowCacheByTab = {
   unpurchased: new WeakMap<ShoppingListItemNode, ShoppingListRowItem>(),
   purchased: new WeakMap<ShoppingListItemNode, ShoppingListRowItem>(),
@@ -73,23 +59,15 @@ function wrapItems(
   return result;
 }
 
-/**
- * Options for consolidated multi-source wrap.
- * Pass the pre-filtered (unpurchased / purchased) raw node arrays from
- * `useShoppingListManagement` and get the matching FlashList row arrays
- * back, with `isPurchased` pinned to each tab.
- */
+/** Pre-filtered node arrays from `useShoppingListManagement`, one per tab. */
 interface MultiSourceTransformOptions {
   rawUnpurchasedItems: ShoppingListItemNode[];
   rawPurchasedItems: ShoppingListItemNode[];
 }
 
 /**
- * useShoppingListTransformMulti
- *
- * Wraps the two paginated source arrays into the lightweight FlashList row
- * shape. No display data is computed here — that lives on the row component
- * via `useFragment`.
+ * Wraps both source arrays into the FlashList row shape. No display data is
+ * computed here — the row component reads its fields via `useFragment`.
  */
 export function useShoppingListTransformMulti(
   options: MultiSourceTransformOptions,

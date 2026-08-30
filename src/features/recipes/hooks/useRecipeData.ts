@@ -207,11 +207,9 @@ function buildExternalDisplayData(
 }
 
 /**
- * Loads a recipe from either the backend (`recipeId`) or an external source
- * (`externalSource` + `externalId`) and returns a normalized `displayData`
- * shape. Backend recipes preempt external ones; an external load also
- * fire-and-forget preloads the recipe to the backend so the next visit hits
- * the cached backend copy.
+ * Loads a recipe from the backend (`recipeId`) or an external source, returning
+ * one normalized `displayData` shape. Backend preempts external, and an
+ * external load fire-and-forget preloads it so the next visit hits the backend.
  */
 export function useRecipeData({
   recipeId,

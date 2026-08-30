@@ -4,18 +4,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 
 /**
- * Applies the top safe-area inset to a single navigation screen.
- *
- * The top inset is applied per screen (wired through react-navigation's
- * `layout` / `screenLayout`) rather than once globally, so screens that
- * should stay immersive (Recipe Detail's edge-to-edge hero) simply omit it.
- *
- * Uses a `View` + `paddingTop` (not `SafeAreaView`) so the Unistyles babel
- * plugin keeps it bound to the native ShadowTree and theme changes apply
- * without a React re-render.
- *
- * The offline indicator floats as an absolute overlay and does not consume the
- * top inset, so `insets.top` here is the true safe-area inset.
+ * Applies the top safe-area inset per screen rather than globally, so an
+ * immersive screen simply omits it. A `View` + `paddingTop`, not `SafeAreaView`,
+ * so the Unistyles plugin keeps it bound to the ShadowTree and a theme change
+ * needs no React re-render.
  */
 export function TopInsetLayout({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
@@ -32,10 +24,8 @@ export const topInsetScreenLayout = ({
 }) => <TopInsetLayout>{children}</TopInsetLayout>;
 
 /**
- * Combines the top inset with an existing wrapper (e.g. an error boundary).
- * Needed because a per-screen/group `layout` REPLACES a parent `screenLayout`
- * in react-navigation v8 — it doesn't nest — so a group that already wraps its
- * screens in a boundary must fold the inset into the same function.
+ * Combines the inset with an existing wrapper: a per-screen/group `layout`
+ * REPLACES a parent `screenLayout` in react-navigation v8 rather than nesting.
  */
 export const topInsetWith =
   (Boundary: React.ComponentType<{ children: React.ReactNode }>) =>
@@ -46,11 +36,7 @@ export const topInsetWith =
       </Boundary>
     );
 
-/**
- * Passthrough `layout` that adds NO inset. Used to opt a screen out of a
- * group-level `topInsetScreenLayout` (a nested navigator that insets its own
- * screens, or the tab host whose tabs inset themselves).
- */
+/** Opts a screen out of a group-level `topInsetScreenLayout`. */
 export const noInsetScreenLayout = ({
   children,
 }: {

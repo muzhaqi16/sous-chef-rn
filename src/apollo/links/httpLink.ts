@@ -4,21 +4,10 @@ import { env } from '#/config/env';
 import { Environment } from '#/utils/environment';
 
 /**
- * Create a fetch function with timeout support using AbortController.
- *
- * Apollo's HttpLink passes its own `signal` in `init` — an AbortController
- * it aborts when a query's observable is torn down (component unmounts,
- * navigates away, or the query is otherwise cancelled). That signal must be
- * forwarded into our own controller, not overwritten: without this, walking
- * away from a screen mid-request never actually cancels the underlying
- * fetch — it keeps running in the background, holding a connection, and
- * competes with whatever the same query fires next time the screen is
- * revisited. Left unfixed, this is exactly the mechanism that turns a single
- * slow request into a growing pile of orphaned in-flight requests, some of
- * which then stall long enough to hit this timeout and go through
- * `retryLink`'s retries — the layered delay is what a hung `GetX` query
- * spanning ~30s (10s timeout × up to 3 attempts, see retryLink.ts) actually
- * traces back to.
+ * A fetch with timeout support. Apollo's HttpLink passes its own `signal`,
+ * aborted when a query's observable is torn down; it must be FORWARDED into our
+ * controller rather than overwritten, or leaving a screen mid-request never
+ * cancels the fetch and orphaned requests pile up behind the timeout.
  */
 const createTimeoutFetch = (timeoutMs: number): typeof fetch => {
   return async (input, init) => {
@@ -65,13 +54,10 @@ const baseOptions = {
   fetch: createTimeoutFetch(apiConfig.timeout),
 };
 
-// GraphQL batching — opt-in via env flag (default off). DO NOT ENABLE against
-// the sous-chef API: it sets `allowBatchedHttpRequests: false` (verified in
-// apps/api/src/main.ts — deliberate, for rate-limit integrity and a
-// Cache-Control leak in batched responses), so every array-bodied POST is
-// rejected. The bandwidth win is covered server-side by APQ (see
-// persistedQueryLink) + HTTP/2 multiplexing. The flag stays only for
-// hypothetical use against a server that accepts array bodies.
+// DO NOT ENABLE against the sous-chef API: it sets
+// `allowBatchedHttpRequests: false`, so every array-bodied POST is rejected.
+// APQ + HTTP/2 multiplexing already cover the bandwidth win. The flag remains
+// only for a server that accepts array bodies.
 const batchEnabled = env.GRAPHQL_BATCH_ENABLED === 'true';
 
 export const httpLink: ApolloLink = batchEnabled

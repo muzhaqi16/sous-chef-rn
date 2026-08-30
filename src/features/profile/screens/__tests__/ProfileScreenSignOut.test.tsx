@@ -13,12 +13,11 @@ import { ProfileScreen } from '../ProfileScreen';
 /**
  * Sign-out reachability.
  *
- * The screen used to find the logout ROW by looking its SECTION up by `key`,
- * which meant one action had two independent identifier bindings. When
- * `useConfigurableSettings` switched from `key: configSection.title` to
- * `key: configSection.id`, the lookup stopped matching and Log Out became a
- * button that fired telemetry and nothing else — with every suite still green,
- * because nothing pressed it.
+ * Finding the logout ROW by looking its SECTION up by `key` gives one action
+ * two independent identifier bindings. Rename what `useConfigurableSettings`
+ * puts in `key` — `configSection.title` versus `configSection.id` — and the
+ * lookup stops matching, leaving Log Out a button that fires telemetry and
+ * nothing else, with every suite still green because nothing pressed it.
  *
  * So this suite presses the row and asserts the handler the settings config
  * built actually runs, and it does so with the section carrying an unexpected

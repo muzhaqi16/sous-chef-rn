@@ -109,7 +109,7 @@ describe('SaveRecipeSheet', () => {
     const user = userEvent.setup();
     render(<SaveRecipeSheet {...defaultProps} />);
     await user.press(screen.getByText('Dinner'));
-    // After pressing Dinner, Favorites should no longer be selected (checkmark removed)
+    // After pressing Dinner, Favorites is deselected (checkmark removed)
     expect(screen.getByText('Dinner')).toBeTruthy();
   });
 

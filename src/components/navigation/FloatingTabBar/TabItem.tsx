@@ -57,7 +57,6 @@ export const TabItem: React.FC<TabItemProps> = ({
   const { t } = useTranslation();
   const iconScale = useSharedValue(isFocused ? 1.2 : 1);
 
-  // Drive scale animation from shared value on the UI thread
   useAnimatedReaction(
     () => activeTabIndex.get() === tabIndex,
     (isActive, prevIsActive) => {
@@ -73,7 +72,6 @@ export const TabItem: React.FC<TabItemProps> = ({
   );
 
   const handlePress = () => {
-    // Animate icon scale on press (squeeze then expand to active size)
     iconScale.set(
       withSequence(
         withTiming(0.85, {
@@ -93,11 +91,11 @@ export const TabItem: React.FC<TabItemProps> = ({
     transform: [{ scale: iconScale.get() }],
   }));
 
-  // The manifest stores an i18n key in options.title; resolve it here so the
-  // tab label re-renders on language change.
+  // The manifest stores an i18n key in options.title; resolving it here is what
+  // makes the label re-render on a language change.
   const label = options.title ? t(options.title) : route.name;
-  // tone routes through withUnistyles(Ionicons) — only the Icon re-renders on
-  // theme/brand-color changes, not the entire tab.
+  // `tone` routes through withUnistyles(Ionicons), so a theme change re-renders
+  // only the Icon, not the whole tab.
   const renderIcon = () => (
     <Icon
       name={isFocused ? icon.active : icon.inactive}
@@ -143,21 +141,14 @@ const styles = StyleSheet.create(theme => ({
   tabLabel: {
     color: theme.colors.white,
     marginTop: theme.spacing.xs,
-    // A label that fits sizes to its own content and is centred by the tab's
-    // `alignItems`. One that does NOT fit takes the full tab width instead, and
-    // then the default left alignment puts it off to one side of its own icon —
-    // which is what a long translation looked like. Centre the text so a label
-    // sits under its icon whatever its width. `numberOfLines={1}` at the call
-    // site is the other half: line count drives the tab's content height, so a
-    // wrapping label lifts its own icon above the other three.
+    // A label too wide to fit takes the full tab width, where the default left
+    // alignment puts it off to one side of its own icon — so centre it. The call
+    // site's `numberOfLines={1}` is the other half: a wrapping label would grow
+    // the tab's content height and lift its icon above the other three.
     textAlign: 'center',
-    // The shared Text's `body` variant carries a 24px line height (md * 1.5);
-    // at the 12px tab-label font that makes the text box twice the glyph
-    // height, padding empty space below the label and pushing the icon+label
-    // group upward so the bar reads top-heavy. Pin a snug line height (and drop
-    // Android's extra font padding) so the box hugs the glyph and the group
-    // centers evenly. The 1.3 ratio leaves room for descenders (y/p) and scales
-    // with the font-size preference.
+    // The shared `body` variant's 24px leading is twice the glyph height at the
+    // 12px tab font, padding the box and pushing the group upward. The 1.3 ratio
+    // hugs the glyph, leaves room for descenders, and scales with the preference.
     lineHeight: theme.fonts.size.xs * 1.3,
     includeFontPadding: false,
   },

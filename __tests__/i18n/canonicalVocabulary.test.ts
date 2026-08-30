@@ -602,8 +602,8 @@ const isCanonical = (key: string) =>
 /**
  * A string worth having one home.
  *
- * This used to be a shape test — does the copy LOOK like an error or an empty
- * state — which let every other kind of duplicate through. "Home", "Item" and
+ * This is not a shape test — asking whether the copy LOOKS like an error or an
+ * empty state lets every other kind of duplicate through. "Home", "Item" and
  * "Try Again" match none of those patterns, and all three had drifted into two
  * different translations by the time anyone looked. The concept a string names
  * is what makes it worth sharing, not the words it happens to contain.
@@ -741,7 +741,7 @@ describe('shared copy has one canonical home', () => {
   });
 
   it('every intentional exemption still describes a real duplicate', () => {
-    // An exemption whose keys no longer collide has outlived its subject and
+    // An exemption whose keys have stopped colliding has outlived its subject and
     // would go on excusing a future duplicate that happened to match.
     const stale = INTENTIONAL.filter(entry => {
       const values = entry.keys.map(k => en[k]);

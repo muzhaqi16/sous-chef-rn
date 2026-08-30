@@ -49,13 +49,10 @@ import { createRequire } from 'node:module';
 
 const { prefixPairs } = createRequire(import.meta.url)('./lib/aliases.js');
 
-// Derived from `tsconfig.json`, the single source — not restated. This was a
-// FOURTH hand-written list and had already drifted in both directions: it
-// carried `#theme/`, which tsconfig did not declare at the time, and lacked
-// `#graphql/`, `#styles/`, `#types/` and `#/test-utils/`, which it did. A
-// module reached only through a missing alias reads as unreferenced (a false
-// finding), and one reached through a stale alias reads as referenced (a missed
-// one) — neither visible from here.
+// Derived from `tsconfig.json`, the single source — not restated. A hand-kept
+// copy drifts both ways invisibly: a module reached only through a MISSING alias
+// reads as unreferenced (a false finding), and one reached through a STALE alias
+// reads as referenced (a missed one).
 const ALIASES = prefixPairs();
 const toRepoPath = spec => {
   for (const [alias, real] of ALIASES) {

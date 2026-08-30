@@ -4,18 +4,10 @@ import { HomeManagement } from './HomeManagement';
 import { HomeDetailScreen } from './HomeDetailScreen';
 
 /**
- * Home (household) management screens, registered as siblings of `Home` the
- * tab navigator — see RootNavigator and `pantryDetailScreens` for the
- * rationale.
- *
- * These are reached from several places: `HomeManagement` from Profile, and
- * `HomeDetail` from both HomeManagement and the shopping list's
- * ListSettings/ShareList. One root-level registration serves all of them, so
- * `HomeDetail` needs no per-caller alias.
- *
- * `HomeDetail`'s "manage storage locations" action navigates to
- * `StorageLocations`, which the catalog feature registers — a route name, not
- * an import, so neither feature depends on the other's code.
+ * Registered as siblings of the `Home` tab navigator, so one root-level entry
+ * serves every caller and `HomeDetail` needs no per-caller alias. Its "manage
+ * storage locations" action targets `StorageLocations` by ROUTE NAME, which the
+ * catalog feature registers — so neither feature imports the other.
  */
 export const homeManagementScreens = {
   HomeManagement: createNativeStackScreen({

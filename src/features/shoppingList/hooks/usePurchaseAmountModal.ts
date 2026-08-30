@@ -5,80 +5,48 @@ import { UsePurchaseAmountModal_ItemFragmentDoc } from './usePurchaseAmountModal
 import { t } from '#/i18n';
 import { unitPriceFromTotal } from '#/utils/purchasePrice';
 
-/**
- * Transformed item for PurchaseAmountSheet
- */
 export interface PurchaseAmountItem {
   id: string;
   itemName: string;
-  /** Requested quantity to pre-fill the quantity input (defaults to 1) */
   requestedQuantity: number;
-  /** Unit symbol/name shown as a suffix on the quantity input */
   unitName: string | null;
-  /**
-   * Per-unit estimate (null when unknown). The sheet multiplies it by the
-   * requested quantity to seed its total-price input.
-   */
+  /** PER UNIT estimate; the sheet multiplies it out to seed the total input. */
   estimatedPrice: number | null;
 }
 
-/**
- * Recorded purchase amounts confirmed by the user.
- */
 export interface RecordPurchaseAmounts {
   purchasedQuantity: number;
   /**
    * PER UNIT — the API multiplies it by `purchasedQuantity` to record
-   * `Purchase.totalPrice`, and move-to-pantry derives its per-unit cost from
-   * it. See `unitPriceFromTotal`.
+   * `Purchase.totalPrice`, and move-to-pantry derives its per-unit cost from it.
    */
   purchasedPrice: number | null;
 }
 
-/**
- * Options for usePurchaseAmountModal hook
- */
 export interface UsePurchaseAmountModalOptions {
-  /** Items array to find item by ID (fallback when the cache hasn't loaded yet) */
+  /** Fallback lookup for the initial open, before the cache holds the entity. */
   items: ShoppingListItemDisplayFragment[];
-  /**
-   * Records the actual purchase amounts. Owned by `useToggleShoppingItem` and
-   * threaded down through the screen facade — this hook never instantiates the
-   * mutation itself.
-   */
+  /** Owned by `useToggleShoppingItem`; this hook never runs the mutation. */
   recordPurchase: (
     itemId: string,
     amounts: RecordPurchaseAmounts,
   ) => Promise<boolean>;
 }
 
-/**
- * Return value from usePurchaseAmountModal hook
- */
 export interface UsePurchaseAmountModalResult {
-  /** Whether the modal is visible */
   visible: boolean;
-  /** Transformed item for PurchaseAmountSheet (or null if not selected) */
   selectedItem: PurchaseAmountItem | null;
-  /** Whether a record operation is in progress */
   isLoading: boolean;
-  /** Open modal for a specific item */
   openForItem: (itemId: string) => void;
-  /** Close the modal */
   close: () => void;
-  /** Record the confirmed quantity and the TOTAL paid, then close */
+  /** Takes the TOTAL paid, not the per-unit price. */
   confirm: (quantity: number, totalPrice: number | null) => Promise<void>;
 }
 
 /**
- * Hook to manage PurchaseAmountSheet state.
- *
- * When the user marks an unpurchased item as purchased, this opens a pre-filled
- * sheet (requested quantity + estimated price). Confirm records the actual
- * amounts via the passed-in `recordPurchase`; Cancel leaves the item unpurchased.
- *
- * Stores only the entity id in state; the live item is read from the Apollo
- * cache via `useFragment`, so cache updates are reflected in the open sheet.
+ * Opens pre-filled when an unpurchased item is marked purchased; Cancel leaves
+ * the item unpurchased. Only the entity id is held in state — the live item is
+ * read from the cache via `useFragment`, so updates reach the open sheet.
  */
 export function usePurchaseAmountModal(
   options: UsePurchaseAmountModalOptions,
@@ -89,8 +57,7 @@ export function usePurchaseAmountModal(
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Subscribe to the selected item in the cache. When `selectedItemId` is null
-  // we pass `null` to `from` which makes `useFragment` return `complete: false`.
+  // `from: null` makes `useFragment` return `complete: false`.
   const { data: liveItem, complete: liveItemComplete } = useFragment({
     fragment: UsePurchaseAmountModal_ItemFragmentDoc,
     fragmentName: 'usePurchaseAmountModal_item',
@@ -99,10 +66,9 @@ export function usePurchaseAmountModal(
       : null,
   });
 
-  // Prefer the live cache copy; fall back to the snapshot in `items` for the
-  // initial open before the cache has the entity (tests, edge cases). The
-  // Display fragment lacks `priceEstimate`, so the fallback yields a null
-  // estimated price — acceptable, the cache copy fills it in moments later.
+  // The `items` snapshot covers the initial open before the cache has the entity;
+  // the Display fragment lacks `priceEstimate`, so that path shows no estimate
+  // until the live copy arrives.
   const fallbackItem = selectedItemId
     ? items.find(i => i.id === selectedItemId) ?? null
     : null;
@@ -112,7 +78,6 @@ export function usePurchaseAmountModal(
     : null;
   const selectedItemRaw = useLive ? liveItem : fallbackItem;
 
-  // Transform raw item to PurchaseAmountItem format
   const selectedItem: PurchaseAmountItem | null = selectedItemRaw
     ? {
         id: selectedItemRaw.id,

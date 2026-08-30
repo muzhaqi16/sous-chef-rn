@@ -218,7 +218,7 @@ export const PerformanceDashboard: React.FC = () => {
 
   const canAccessDevTools = useCanAccessDevTools();
 
-  // lastUpdated is used to ensure IIFEs below recompute on interval/pull-to-refresh
+  // Read so the IIFEs below recompute on interval / pull-to-refresh.
   void lastUpdated;
 
   const startupMetrics = (() => {

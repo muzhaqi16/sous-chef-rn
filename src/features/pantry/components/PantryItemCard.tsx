@@ -34,12 +34,10 @@ import {
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated';
 
-// Module-level constant — only used for slide animation distance, no need for reactive updates
+// Slide animation distance only; no reactive updates needed.
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
-// Only surface the expiry label on a list row once an item is within this many
-// days of expiring (or already expired). Far-out dates like "113 days left" are
-// noise on the main pantry list — the dedicated "expiring" filter covers the
+// Far-out dates are noise on the main list; the "expiring" filter covers the
 // full horizon.
 const EXPIRATION_DISPLAY_THRESHOLD_DAYS = 10;
 
@@ -49,11 +47,8 @@ export type ExpirationVariant = 'normal' | 'warning' | 'critical' | 'expired';
 
 type ExpiryStatus = 'expired' | 'warning' | 'normal';
 
-/**
- * Expiration text — uses theme-tied styles via `styles.useVariants` so that
- * theme color changes propagate through Unistyles' ShadowTree binding rather
- * than React re-renders. Extracted so `useVariants` fires once per row.
- */
+// Extracted so `styles.useVariants` fires once per row and theme colors reach
+// it through the ShadowTree instead of a React re-render.
 const ExpirationText: React.FC<{
   text: string;
   status: ExpiryStatus;
@@ -71,11 +66,8 @@ const ExpirationText: React.FC<{
   );
 };
 
-/**
- * Lightweight slide-right + fade animation wrapper for delete.
- * Always renders <Animated.View> so the React tree structure never changes,
- * preventing image flicker caused by View → Animated.View swaps.
- */
+// Delete slide-out. Always renders <Animated.View> so the tree shape never
+// changes — a View → Animated.View swap flickers the image.
 const SLIDE_INITIAL = { translateX: 0, opacity: 1 };
 
 const SlideAnimatedWrapper: React.FC<{
@@ -83,7 +75,6 @@ const SlideAnimatedWrapper: React.FC<{
   onDelete: (id: string) => void;
   children: (handleDelete: () => void) => React.ReactNode;
 }> = ({ itemId, onDelete, children }) => {
-  // Consolidated into 2 shared values (from 3) to reduce Reanimated bridge overhead per cell
   const slide = useSharedValue(SLIDE_INITIAL);
   const isAnimating = useSharedValue(false);
 
@@ -92,17 +83,16 @@ const SlideAnimatedWrapper: React.FC<{
     opacity: slide.get().opacity,
   }));
 
-  // Reset slide/animation state whenever this cell is recycled for a new item
-  // (FlashList reuses cell instances). Keyed by itemId so a reused — or
-  // reappearing (failed/reverted delete) — cell never stays mid-slide.
+  // Keyed by itemId so a recycled — or reappearing, after a reverted delete —
+  // cell never stays mid-slide.
   useRecyclingState(undefined, [itemId], () => {
     cancelAnimation(slide);
     slide.set(SLIDE_INITIAL);
     isAnimating.set(false);
   });
 
-  // Stable RN-scope callback for scheduleOnRN (captures onDelete/itemId via
-  // closure — no args cross the worklet boundary).
+  // RN-scope callback for scheduleOnRN: captured by closure, so no args cross
+  // the worklet boundary.
   const doDelete = () => {
     onDelete(itemId);
   };
@@ -162,13 +152,9 @@ interface PantryItemCardProps {
 }
 
 /**
- * Pantry item card using BaseItemCard composition.
- *
- * Subscribes to its own PantryItem entity via `useFragment` so the cell
- * re-renders only when its own fields change (per Apollo Client 4.x's data
- * masking guidance). Display values — expiry status, location, quantity
- * breakdown — are computed inline; the React Compiler memoizes them at the
- * parent FlashList call site, so no module-level cache is needed.
+ * Subscribes to its own PantryItem via `useFragment`, so the cell re-renders
+ * only when its own fields change. Display values are computed inline — the
+ * React Compiler memoizes them, so no module-level cache is needed.
  */
 export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   pantryItemRef,
@@ -182,11 +168,8 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
 
   const { actions, swipeable } = usePantryActions();
 
-  // A row created or edited offline was visually identical to a synced one, so
-  // there was no way to tell what had actually reached the server. Called
-  // BEFORE the `!complete` early return — a hook after it is conditional, which
-  // bails the whole component out of the React Compiler. The snapshot is a
-  // boolean, so this re-renders the row only when its own state flips.
+  // BEFORE the `!complete` early return: a hook after it is conditional, which
+  // bails the whole component out of the React Compiler.
   const isPendingSync = useIsPendingSync(pantryItem?.id);
 
   if (!complete) return null;
@@ -225,8 +208,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
     pantryItem.quantity,
     pantryItem.unit?.symbol,
   );
-  // Only return custom storage location names; default states are represented
-  // by the filter tabs.
+  // Custom names only; the default locations are the filter tabs.
   const location = pantryItem.storageLocation?.name ?? null;
   const isOutOfStock = pantryItem.quantity === 0;
   const packageBreakdownText = formatPackageBreakdown(
@@ -255,18 +237,13 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
       : undefined) ||
     undefined;
 
-  // Place the storage location in the empty left line-2 slot (under the name,
-  // where the expiry label sits) when there's no expiration — filling otherwise
-  // wasted space instead of stacking a third row on the right. With an
-  // expiration present it rides the right side, but only if the detail line is
-  // free; when both an expiration and a detail line are present, location is
-  // dropped to keep the row at two lines (the Fridge/Freezer filter tabs already
-  // convey location).
+  // Location fills the empty left line-2 slot when there's no expiry, else
+  // rides the right side if the detail line is free. With both present it is
+  // dropped to keep the row at two lines — the filter tabs already convey it.
   const locationOnLeft = !isOutOfStock && !expirationText && !!location;
   const rightSecondary =
     detailText || (locationOnLeft ? undefined : location || undefined);
 
-  // PERFORMANCE: Single object for all item action callbacks
   const itemActions = {
     onPress: () => actions.onItemPress(id),
     onEdit: actions.onItemEdit ? () => actions.onItemEdit!(id) : undefined,
@@ -279,11 +256,10 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
       : undefined,
   };
 
-  // Map ItemVariant to CardVariant
   const cardVariant: CardVariant = variant;
 
-  // Always render the image slot — it shows a consistent placeholder tile when
-  // no image is available, so rows stay aligned and none collapse to a gap.
+  // Always rendered: the placeholder tile keeps rows aligned when there is no
+  // image.
   const leftElement = (
     <CardLeftSlot type="image" imageUrl={imageUrl} variant={cardVariant} />
   );

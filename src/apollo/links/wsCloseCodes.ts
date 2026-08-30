@@ -1,23 +1,8 @@
 /**
- * WebSocket close codes and what the client does about each one.
- *
- * `shouldRetry` is the ONE hook graphql-ws gives us over its own reconnect
- * loop, and it answers exactly one question: **is this verdict terminal?**
- * Returning `false` makes the library rethrow the close, which errors every
- * active subscription's sink — so it is reserved for closes no retry can fix.
- * Everything else retries, and the library's loop (configured with our backoff
- * in `wsLink.ts`) is what re-dials.
- *
- * **`shouldRetry` is not consulted for every code.** `shouldRetryConnectOrThrow`
- * (graphql-ws `dist/client.js:278`) rethrows before reaching it for 4400, 4401,
- * 4406, 4409, 4429, 4500 and the internal fatal range — so a `true` here cannot
- * make those retry, and anything transient among them needs the client to
- * re-subscribe itself. {@link isLibraryFatalCloseCode} records that list rather
- * than leaving it to be rediscovered.
- *
- * The codes are the API's (`sous-chef-api`
- * packages/core/src/subscriptions/core/wsCloseCodes.ts). They are plain numbers
- * on the wire, so nothing type-checks them against the server.
+ * Close codes and the verdict for each. `shouldRetry: false` makes graphql-ws
+ * rethrow, erroring every active subscription sink, so it is reserved for
+ * closes no retry can fix. Some codes it rethrows before ever asking — see
+ * {@link isLibraryFatalCloseCode}.
  */
 
 /** The access token expired, at connect or mid-stream. Recoverable — see below. */
@@ -44,15 +29,10 @@ export const WS_CLOSE_INTERNAL_SERVER_ERROR = 4500;
 const PROTOCOL_ERROR_CODES = [4400, 4401, 4406, 4409];
 
 /**
- * Closes where re-dialling reproduces the same rejection, so the client must
- * stop until a person or a code change intervenes.
- *
- * 4403 is deliberately NOT here. It says the presented access token was stale —
- * expired, or superseded by a rotation another request won — and a re-dial
- * recovers on its own, because `connectionParams` is re-evaluated per attempt
- * and carries the refresh token the server rotates. Listing it made the library
- * rethrow instead of retrying, which errored every active subscription; nothing
- * in the app re-subscribes, so real-time delivery stopped for the session.
+ * Closes where re-dialling reproduces the same rejection, so the client stops
+ * until a person or a code change intervenes. 4403 is deliberately NOT here: it
+ * means the access token was stale, and a re-dial recovers on its own because
+ * `connectionParams` is re-evaluated per attempt.
  */
 const NEVER_RETRY_CODES = new Set<number>([
   ...PROTOCOL_ERROR_CODES,
@@ -62,20 +42,12 @@ const NEVER_RETRY_CODES = new Set<number>([
 ]);
 
 /**
- * Codes graphql-ws refuses to retry no matter what `shouldRetry` returns.
- *
- * From `shouldRetryConnectOrThrow` (`dist/client.js:278`): its own hardcoded
- * list, plus `isFatalInternalCloseCode` — the 1000-1999 range except 1000,
- * 1001, 1005, 1006, 1012, 1013 and 1014.
- *
- * The two here we consider transient (4429, 4500) therefore end their
- * subscriptions, and only a re-subscribe brings delivery back. That is why the
- * subscription layer restarts on a transport error rather than trusting the
- * socket to return on its own.
+ * Codes graphql-ws refuses to retry whatever `shouldRetry` returns. The two we
+ * consider transient (4429, 4500) therefore end their subscriptions, which is
+ * why the subscription layer re-subscribes on a transport error rather than
+ * trusting the socket to return.
  */
 const LIBRARY_FATAL_CODES = new Set<number>([
-  // The four protocol violations are the same set we refuse above; the library
-  // refuses them too, so they are spread rather than restated.
   ...PROTOCOL_ERROR_CODES,
   WS_CLOSE_INTERNAL_SERVER_ERROR,
   WS_CLOSE_TOO_MANY_INIT_REQUESTS,

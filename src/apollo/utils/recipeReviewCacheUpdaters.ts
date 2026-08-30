@@ -193,8 +193,8 @@ export const removeReviewFromRecipe = (
 };
 
 /**
- * Read the rating currently cached for a review. Used to capture pre-mutation
- * state before an update changes the rating field.
+ * Read the rating currently cached for a review, to capture it before an update
+ * changes the rating field.
  */
 export const getReviewRating = (
   cache: ApolloCache,

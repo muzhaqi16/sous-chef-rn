@@ -60,7 +60,6 @@ const BUNDLE = flags.bundle;
 const SECONDS = Number(flags.seconds);
 const OUT = flags.out ?? join('e2e', 'artifacts', 'ios-frames');
 
-// ── Prepare ────────────────────────────────────────────────────────────────
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 
@@ -77,7 +76,7 @@ try {
   // Not running — that is what we want anyway.
 }
 
-// ── Sample ─────────────────────────────────────────────────────────────────
+// Sample.
 // The launch happens INSIDE the sampling window so the first frames capture the
 // pre-launch state, which is what makes the first transition legible.
 const frames = [];
@@ -106,7 +105,7 @@ if (frames.length < 2) {
   process.exit(1);
 }
 
-// ── Resolution of the instrument ───────────────────────────────────────────
+// Resolution of the instrument.
 const gaps = frames.slice(1).map((f, i) => f.atMs - frames[i].atMs);
 const resolution = {
   samples: frames.length,
@@ -115,23 +114,18 @@ const resolution = {
   maxMs: Math.max(...gaps),
 };
 
-// ── Anchor the run to the launch ───────────────────────────────────────────
-// The first frames can still show whatever was on screen BEFORE the launch —
-// the springboard, or the previous app's last composited state — and that frame
-// is often the LARGEST of the run. Left in, it defines the top of the scale and
-// pushes every real frame down a band, so actual settled content classifies as
-// "chrome" and the first pre-launch frame classifies as "settled". Measured
-// here: a 3.21 MB pre-launch frame against a 776 KB settled one.
-//
-// The blankest frame is the launch itself (splash / empty root view), so
-// everything from there on is this app starting. Frames before it are dropped.
+// Anchor the run to the launch.
+// The first frames can still show what was on screen BEFORE the launch, and
+// that frame is often the LARGEST of the run (3.21 MB against a 776 KB settled
+// one), defining the top of the scale and pushing every real frame down a band.
+// The blankest frame is the launch itself, so frames before it are dropped.
 const anchorIndex = frames.reduce(
   (best, f, i) => (f.bytes < frames[best].bytes ? i : best),
   0,
 );
 const launchFrames = frames.slice(anchorIndex);
 
-// ── Classify ───────────────────────────────────────────────────────────────
+// Classify.
 // Byte size stands in for visual complexity: a blank screen compresses far
 // smaller than one full of rows and thumbnails. Bands are derived from this
 // run's own post-anchor distribution so they adapt to device resolution, and the
@@ -153,13 +147,11 @@ const transitions = launchFrames.filter(
   (f, i) => i === 0 || f.band !== launchFrames[i - 1].band,
 );
 
-// ── Settle detection ───────────────────────────────────────────────────────
-// Bands alone cannot answer "when did it finish": they are relative, so the
-// tallest frame is always "settled" even if the screen was still filling in.
-// What actually marks the end of a load is the frame size going FLAT — here it
-// held 776,027 bytes for seven seconds. So: take the plateau as the median of
-// the final quarter of the run, then report the first post-anchor frame that
-// reaches it and stays there.
+// Settle detection.
+// Bands are relative, so the tallest frame is always "settled" even mid-load.
+// What marks the end of a load is the frame size going FLAT, so: take the
+// plateau as the median of the final quarter of the run, then report the first
+// post-anchor frame that reaches it and stays there.
 const TOLERANCE = 0.05;
 const tail = launchFrames.slice(Math.floor(launchFrames.length * 0.75));
 const plateau = median(tail.map(f => f.bytes));
@@ -169,7 +161,6 @@ const settledIdx = launchFrames.findIndex(
 );
 const firstSettled = settledIdx === -1 ? null : launchFrames[settledIdx];
 
-// ── Report ─────────────────────────────────────────────────────────────────
 const report = {
   device: DEVICE,
   bundle: BUNDLE,

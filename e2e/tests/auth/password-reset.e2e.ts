@@ -1,20 +1,14 @@
 /**
- * Password Reset E2E Tests
- *
- * Tests for the forgot password / password reset functionality including:
- * - Request password reset email
- * - Validation errors
- * - Navigation flows
+ * Forgot-password / reset-request flows: sending the email, validation errors,
+ * and navigation.
  */
 
-import { element, by, waitFor } from 'detox';
+import { element, by } from 'detox';
 import { launchAppWithFabricWorkaround } from '../../init';
-import {
-  LandingAuthScreen,
-  LoginScreen,
-  ForgotPasswordScreen,
-} from '../../screens';
-import { waitForNetworkIdle, TIMEOUTS } from '../../helpers';
+import { ForgotPasswordScreen } from '../../screens/ForgotPasswordScreen';
+import { LandingAuthScreen } from '../../screens/LandingAuthScreen';
+import { LoginScreen } from '../../screens/LoginScreen';
+import { TIMEOUTS, waitForNetworkIdle } from '../../helpers/waitFor';
 import { TEST_USER } from '../../fixtures/testData';
 
 describe('Password Reset', () => {
@@ -31,7 +25,6 @@ describe('Password Reset', () => {
   });
 
   beforeEach(async () => {
-    // Navigate to forgot password screen
     await landingScreen.waitForScreen(5000);
     await landingScreen.tapLogin();
     await loginScreen.waitForScreen();
@@ -50,7 +43,6 @@ describe('Password Reset', () => {
     it('should show error for empty email', async () => {
       await forgotPasswordScreen.submit();
 
-      // Should stay on forgot password screen with validation error
       await forgotPasswordScreen.waitForScreen();
       await forgotPasswordScreen.expectEmailFieldError();
     });
@@ -103,9 +95,7 @@ describe('Password Reset', () => {
 
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
 
-      // For security, many apps show the same success message
-      // regardless of whether the email exists
-      // Should not crash and should show some feedback
+      // Enumeration-safe: the same response whether or not the email exists.
       await forgotPasswordScreen.waitForScreen();
     });
   });
@@ -138,7 +128,6 @@ describe('Password Reset', () => {
 
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
 
-      // Should handle gracefully
       await forgotPasswordScreen.waitForScreen();
     });
 
@@ -147,7 +136,6 @@ describe('Password Reset', () => {
       await forgotPasswordScreen.enterEmail(longEmail);
       await forgotPasswordScreen.submit();
 
-      // Should show validation error for overly long email
       await forgotPasswordScreen.waitForScreen();
     });
   });

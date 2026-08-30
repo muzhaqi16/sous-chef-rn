@@ -11,9 +11,6 @@ import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 
-/**
- * Transformed item for QuantityEditSheet
- */
 export interface QuantityEditItem {
   id: string;
   itemName: string;
@@ -34,29 +31,17 @@ export interface QuantityEditItem {
   }>;
 }
 
-/**
- * Options for useQuantityEditModal hook
- */
 export interface UseQuantityEditModalOptions {
-  /** Items array to find item by ID (fallback when the cache hasn't loaded yet) */
+  /** Fallback lookup for the initial open, before the cache holds the entity. */
   items: ShoppingListItemDisplayFragment[];
 }
 
-/**
- * Return value from useQuantityEditModal hook
- */
 export interface UseQuantityEditModalResult {
-  /** Whether the modal is visible */
   visible: boolean;
-  /** Transformed item for QuantityEditSheet (or null if not selected) */
   selectedItem: QuantityEditItem | null;
-  /** Whether a save operation is in progress */
   isLoading: boolean;
-  /** Open modal for a specific item */
   openForItem: (itemId: string) => void;
-  /** Close the modal */
   close: () => void;
-  /** Save quantity changes */
   save: (
     quantity: string,
     unitName: string | null,
@@ -65,11 +50,8 @@ export interface UseQuantityEditModalResult {
 }
 
 /**
- * Hook to manage QuantityEditSheet state and mutations.
- *
- * Stores only the entity id in state; the live item is read from the Apollo
- * cache via `useFragment`, so mutations to the item are reflected in the open
- * sheet without re-snapshotting.
+ * Only the entity id is held in state — the live item is read from the cache via
+ * `useFragment`, so mutations reach the open sheet without re-snapshotting.
  */
 export function useQuantityEditModal(
   options: UseQuantityEditModalOptions,
@@ -80,7 +62,6 @@ export function useQuantityEditModal(
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Update mutation
   const [updateQuantity] = useMutation(UpdateShoppingListItemQuantityDocument, {
     onError: error => {
       handleMutationError(error, {
@@ -89,8 +70,7 @@ export function useQuantityEditModal(
     },
   });
 
-  // Subscribe to the selected item in the cache. When `selectedItemId` is null
-  // we pass `null` to `from` which makes `useFragment` return `complete: false`.
+  // `from: null` makes `useFragment` return `complete: false`.
   const { data: liveItem, complete: liveItemComplete } = useFragment({
     fragment: UseQuantityEditModal_ItemFragmentDoc,
     fragmentName: 'useQuantityEditModal_item',
@@ -99,15 +79,13 @@ export function useQuantityEditModal(
       : null,
   });
 
-  // Prefer the live cache copy; fall back to the snapshot in `items` for the
-  // initial open before the cache has the entity (tests, edge cases).
+  // The `items` snapshot covers the initial open, before the cache has the entity.
   const fallbackItem = selectedItemId
     ? items.find(i => i.id === selectedItemId) ?? null
     : null;
   const selectedItemRaw =
     selectedItemId && liveItemComplete ? liveItem : fallbackItem;
 
-  // Transform raw item to QuantityEditItem format
   const selectedItem: QuantityEditItem | null = selectedItemRaw
     ? {
         id: selectedItemRaw.id,
@@ -175,26 +153,20 @@ export function useQuantityEditModal(
         },
       });
     } catch {
-      // Deliberately silent: this mutation's own `onError` above already
-      // reported the throw. DeleteAccountScreen and OnboardingCompleteScreen
-      // report from their catch instead, because their mutations carry no
-      // `onError` — copying that here would double-report.
+      // Silent by design: the mutation's own `onError` already reported the
+      // throw, and reporting again here would double-report.
     }
 
     setIsLoading(false);
 
-    // A link-level throw leaves `result` undefined, which
-    // `classifyCreateResult` reads as 'rejected' while `alertRejectedMutation`
-    // only suppresses when there is a `result.error` to suppress on — so
-    // without this guard the one failure produces two alerts. The sheet stays
-    // open, as it would for any rejection.
+    // A link-level throw leaves `result` undefined, which classifies as
+    // 'rejected' while `alertRejectedMutation` suppresses only on `result.error`
+    // — without this guard one failure alerts twice. The sheet stays open.
     if (!result) return;
 
     // A refused quantity resolves as a ValidationError payload with no `error`,
-    // so onError never fires. Closing the sheet on that reads as a save that
-    // took, and the value the user typed is simply gone. Keep the sheet open
-    // and say so instead. 'queued' (offline) replays via SyncShoppingListItem,
-    // so it closes like a success.
+    // so `onError` never fires; closing here would read as a save that took and
+    // silently drop what the user typed. 'queued' (offline) closes as a success.
     if (classifyCreateResult(result) === 'rejected') {
       alertRejectedMutation(result, t('errors.adjustQuantityFailed'));
       return;

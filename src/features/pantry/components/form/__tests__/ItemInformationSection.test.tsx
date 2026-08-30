@@ -53,8 +53,8 @@ describe('ItemInformationSection', () => {
   });
 
   it('renders the edit fields', () => {
-    // There is no longer an `add` variant: the form this section belongs to is
-    // edit-only, and its former add mode was unreachable.
+    // There is no `add` variant: the form this section belongs to is
+    // edit-only.
     render(<Wrapper />);
     expect(screen.getByTestId('dynamic-fields')).toBeTruthy();
     expect(screen.getByText('Item Name')).toBeTruthy();

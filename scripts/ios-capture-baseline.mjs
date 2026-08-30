@@ -83,12 +83,10 @@ let promql = async query => {
 };
 
 /**
- * The write time of a series' own sample.
- *
- * `timestamp()` and not a range query: Prometheus carries a series' last value
- * forward for five minutes, so a range query over a window containing the
- * PREVIOUS launch shows samples right through the current one and cannot tell
- * a fresh write from a stale carry-forward.
+ * The write time of a series' own sample. `timestamp()` and not a range query:
+ * Prometheus carries a series' last value forward for five minutes, so a range
+ * query over a window containing the PREVIOUS launch cannot tell a fresh write
+ * from a stale carry-forward.
  */
 const lastWriteSeconds = async metric => {
   const r = await promql(`timestamp(${metric}_count{platform="ios"})`);
@@ -102,21 +100,10 @@ const seriesKey = labels => {
 };
 
 /**
- * This launch's value for a metric, or `null` if this launch did not produce
- * one.
- *
- * Every series is checked against its OWN write time, because the five-minute
- * carry-forward `lastWriteSeconds` exists to defeat applies to value reads too:
- * runs here are 10-30 s apart, so a run that emits no `app_fully_drawn_ms`
- * still gets the previous run's sample back from a plain query. Reading that as
- * this run's value made the series silently non-decreasing across runs and fed
- * the summary cross-launch maxima — the aggregation this file's own footer
- * forbids.
- *
- * Several fresh series is legitimate for per-component metrics
- * (`flashlist_initial_load_ms` reports one per list), and the max across them
- * is the slowest list in THIS launch. Several fresh series on a metric that
- * should have one is a labelling change worth seeing, so it is reported.
+ * This launch's value for a metric, or `null` if this launch produced none.
+ * Every series is checked against its OWN write time: runs are 10-30 s apart, so
+ * the five-minute carry-forward hands a plain query the PREVIOUS run's sample.
+ * Several fresh series is legitimate per-component, and is reported either way.
  */
 const readFreshMetric = async (metric, beforeSeconds) => {
   const [values, writes] = await Promise.all([
@@ -141,13 +128,10 @@ const readFreshMetric = async (metric, beforeSeconds) => {
   };
 };
 
-// --- self-test -------------------------------------------------------------
 // The freshness gate decides whether a recorded number belongs to the launch it
-// is filed under, and it is only ever exercised against a live Mimir — where a
-// stale carry-forward and a fresh sample look identical in the output. This
-// drives `readFreshMetric` against a stubbed query layer instead.
-//
-//   node scripts/ios-capture-baseline.mjs --self-test
+// is filed under, and against a live Mimir a stale carry-forward and a fresh
+// sample look identical. This drives `readFreshMetric` against a stubbed query
+// layer instead:  node scripts/ios-capture-baseline.mjs --self-test
 if (flags['self-test']) {
   const stub = (values, writes) => {
     promql = async query => (query.startsWith('timestamp(') ? writes : values);

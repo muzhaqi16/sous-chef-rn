@@ -123,7 +123,8 @@ export const SelectorContent = <T extends SelectableItem>({
     );
   };
 
-  if (loading) {
+  // Data outranks a request in flight.
+  if (loading && data.length === 0) {
     return <LoadingState />;
   }
 

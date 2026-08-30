@@ -65,7 +65,7 @@ describe('usePublishRecipe', () => {
             data: {
               updateRecipe: {
                 __typename: 'ValidationError',
-                code: 'VALIDATION_ERROR',
+                code: 'VALIDATION_FAILED',
                 message: 'bad',
                 field: 'status',
               },

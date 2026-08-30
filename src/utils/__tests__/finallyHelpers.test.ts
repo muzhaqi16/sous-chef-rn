@@ -7,11 +7,11 @@ import {
 
 describe('finallyHelpers', () => {
   describe('executeWriteWithFinally', () => {
-    // The regression this file exists for: a write that REJECTS used to clear
-    // its spinner and report nothing at all, because the shared refresh helper
-    // swallows rejections and every mutation call site omitted `onError`. A
-    // mutation has no query error state to fall back on, so the user saw the
-    // spinner stop and nothing else.
+    // The regression this file exists for: a write that REJECTS clearing its
+    // spinner and reporting nothing at all, because the shared refresh helper
+    // swallows rejections and a mutation call site omits `onError`. A mutation
+    // has no query error state to fall back on, so the user sees the spinner
+    // stop and nothing else.
     it('reports a rejection exactly once and still clears the pending flag', async () => {
       const pending: boolean[] = [];
       const onError = jest.fn();

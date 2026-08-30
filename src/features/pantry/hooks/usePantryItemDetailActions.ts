@@ -108,35 +108,21 @@ export function usePantryItemDetailActions({
     };
   }, []);
 
-  // The shared delete rather than a second one here. This screen used to own a
-  // `DeletePantryItem` mutation whose only cache work was an `update:` callback,
-  // which never runs when the delete is queued offline: the screen navigated
-  // back and the row was still in the list. `removeItem` evicts before firing,
-  // adjusts the count, and registers the pending-delete that keeps a
-  // subscription echo from resurrecting the row.
-  // The item's OWN pantry first. `removeItem` uses this id for cache surgery —
-  // which `itemsConnection` loses the edge, whose `stats.totalItems` drops — so
-  // the pantry that actually holds the item is the correct one; the selected
-  // pantry is a navigation detail that can differ (a deep link or notification
-  // tap can land on an item outside it) and is genuinely nullable besides
-  // (navigationSlice starts it null, authSlice clears it on logout). Keyed only
-  // on `selectedPantryId`, a delete opened before the selection resolved passed
-  // '' to `removeItem`, which early-returns on a falsy pantryId — so nothing was
-  // deleted while the screen still navigated back, reporting a success that
-  // never happened.
+  // The shared `removeItem`, not a local delete: it evicts before firing (an
+  // `update:` callback never runs on a queued offline delete) and registers the
+  // pending-delete that stops a subscription echo resurrecting the row.
+  // The item's OWN pantry drives the cache surgery. `selectedPantryId` is only a
+  // navigation detail — nullable, and a deep link can land outside it; passing
+  // '' makes `removeItem` early-return while the screen still navigates back.
   const resolvedPantryId = item?.pantryId ?? selectedPantryId ?? null;
 
   const { removeItem } = usePantryItemMutations({
     pantryId: resolvedPantryId ?? '',
-    // `removeItem` evicts the row and drops the count BEFORE firing, so a
-    // refusal has to put both back — and `refetch` is what it calls to do it.
-    // Passing a no-op here (on the reasoning that this screen navigates away on
-    // success) was wrong: on FAILURE the screen stays, and the item was left
-    // gone locally while still present on the server, with nothing to bring it
-    // back. A refusal resolves as DATA under `errorPolicy: 'all'`, so the check
-    // sits on the resolved result rather than in `onError`, which sees only
-    // transport failures — and those must NOT restore, because the delete is
-    // queued for replay.
+    // `removeItem` evicts the row and drops the count BEFORE firing, and calls
+    // this to put both back on a refusal — never a no-op, since on failure the
+    // screen stays. A refusal resolves as DATA under `errorPolicy: 'all'`, so the
+    // check sits on the resolved result; `onError` sees only transport failures,
+    // which must NOT restore because the delete is queued for replay.
     refetch: () => {
       void client.refetchQueries({ include: [GetPantryDocument] });
     },

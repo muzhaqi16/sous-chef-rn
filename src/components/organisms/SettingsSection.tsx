@@ -8,35 +8,19 @@ export interface SettingsSectionProps {
   title: string;
   /** Optional explanatory line under the title. */
   description?: string;
-  /**
-   * Rows rendered as `SettingRow`s, with first/last handled here.
-   * Mutually exclusive with `children`.
-   */
+  /** Rendered as `SettingRow`s; mutually exclusive with `children`. */
   items?: SettingRowProps['item'][];
   /** Arbitrary section content, for rows that are not `SettingRow`s. */
   children?: ReactNode;
   /**
-   * Body treatment.
-   *
-   * `card` — inset, rounded surface (profile screens).
-   * `inset` — full-bleed surface with hairline top/bottom rules (app and
-   *   notification settings).
-   *
-   * Two treatments rather than one because this component replaced three
-   * near-identical sections that disagreed only here; collapsing them to a
-   * single look would have been a visual change dressed up as a refactor.
+   * `card` is an inset rounded surface (profile screens); `inset` is full-bleed
+   * with hairline rules (app and notification settings). Two treatments because
+   * the screens genuinely look different — collapsing them is a visual change.
    */
   variant?: 'card' | 'inset';
 }
 
-/**
- * A titled group of settings rows.
- *
- * Replaces `components/settings/SettingSection`, `organisms/SettingsSection`
- * and `organisms/ProfileInfo/Section` — three components that each rendered an
- * uppercase title above a `surface`-backed body and passed `isFirst`/`isLast`
- * down. Two screens imported from two of them at once.
- */
+/** A titled group of settings rows. */
 export const SettingsSection: React.FC<SettingsSectionProps> = ({
   title,
   description,
@@ -101,12 +85,8 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       variant: {
         card: { marginBottom: theme.spacing.md, marginTop: theme.spacing.md },
-        // 13px/bold, restored. The `Text size="xs" weight="semibold"` this
-        // section renders with is the CARD variant's scale; folding the inset
-        // header into the same component silently took its titles from
-        // 13px/bold down to 12px/semibold, under a refactor whose commit
-        // described it as visually neutral. Overriding here keeps one component
-        // without changing what either variant looks like.
+        // The component's default `Text size="xs" weight="semibold"` is the CARD
+        // variant's scale; the inset header is 13px/bold, so it overrides here.
         inset: {
           letterSpacing: 0.5,
           fontSize: 13,

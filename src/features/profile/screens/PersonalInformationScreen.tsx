@@ -63,9 +63,8 @@ export const PersonalInformationScreen: React.FC = () => {
     }
 
     // Rejection restores the snapshot; a queued (null) result keeps the write.
-    // `alertIfRejected` stays quiet when the mutation threw — `errorService`
-    // above already reported that — so the two never double-report, and a
-    // refusal no longer snaps the row back with nothing said.
+    // `alertIfRejected` stays quiet when the mutation THREW, which
+    // `errorService` above already reported, so the two never double-report.
     if (classifyCreateResult(result) === 'rejected') {
       revert();
       alertIfRejected(result, t('errors.updateProfileFailed'));

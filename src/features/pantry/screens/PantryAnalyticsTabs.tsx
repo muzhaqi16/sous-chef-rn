@@ -15,10 +15,8 @@ import { PeriodGranularity } from '#/graphql/generated/schemaTypes';
 import type { usePantryAnalytics } from '#features/pantry/hooks/usePantryAnalytics';
 import type { Translate } from '#/i18n/types';
 
-// Wrap chart primitives with withUnistyles so the per-call `uniProps` prop
-// (used at consumer sites for theme-derived colors) is recognized at the type
-// level. The wrappers declare no static theme mapping — all theme reads happen
-// at the call site via `uniProps={t => ({ … })}`.
+// Wrapped only so `uniProps` type-checks at the call sites; no static theme
+// mapping — every theme read happens via `uniProps={t => ({ … })}`.
 const TrendLineChart = withUnistyles(BaseTrendLineChart);
 import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 const TopItemsBarChart = withUnistyles(BaseTopItemsBarChart);
@@ -31,7 +29,6 @@ interface SharedTabProps {
   onRefresh: () => void;
 }
 
-// Helper functions to format enum values via translation keys
 function formatPurpose(purpose: string, t: Translate): string {
   const map: Record<string, string> = {
     ADJUSTMENT: 'pantryAnalytics.purposeAdjustment',
@@ -77,10 +74,8 @@ function formatReason(reason: string, t: Translate): string {
 }
 
 /**
- * Granularity selector button. Extracted so `styles.useVariants({ active })`
- * is called per-instance with a consistent variant snapshot — calling
- * `useVariants` inside a `.map` iteration would mutate shared style state
- * between iterations.
+ * Extracted so `styles.useVariants({ active })` runs per instance — calling it
+ * inside a `.map` mutates shared style state between iterations.
  */
 const GranularityButton: React.FC<{
   label: string;
@@ -103,12 +98,9 @@ const GranularityButton: React.FC<{
 };
 
 /**
- * Offline with nothing cached for the current filters.
- *
- * One notice per tab, not one per chart: offline is a property of the whole
- * screen, and eleven identical boxes stacked down a scroll view read as eleven
- * separate failures. It stays inside the ScrollView so pull-to-refresh remains
- * reachable — that is the retry, once the connection is back.
+ * Offline with nothing cached for the current filters. One notice per tab, not
+ * one per chart, and inside the ScrollView so pull-to-refresh — the retry —
+ * stays reachable.
  */
 const OfflineTabState: React.FC<SharedTabProps> = ({
   refreshing,
@@ -713,10 +705,8 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     paddingBottom: theme.spacing.xl,
   },
-  // Standalone rather than composed with `tabScrollContent` — combining two
-  // `styles.*` on one element breaks the Unistyles v3 proxy. Fills the tab so
-  // the notice centers, while leaving the ScrollView scrollable enough to
-  // trigger pull-to-refresh.
+  // Standalone, not composed with `tabScrollContent`: two `styles.*` on one
+  // element breaks the Unistyles v3 proxy.
   offlineContent: {
     padding: theme.spacing.md,
     paddingBottom: theme.spacing.xl,

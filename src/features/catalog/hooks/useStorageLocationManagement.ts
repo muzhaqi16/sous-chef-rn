@@ -30,16 +30,9 @@ import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 import { errorService } from '#/services/errorService';
 
 /**
- * Toast a resolved errors-as-data member in the user's own language. A
- * non-success union payload (`ForbiddenError`/`ValidationError`/…) resolves
- * without throwing under `errorPolicy:'all'`, so call this on the non-success
- * branch to surface it.
- *
- * It resolves field → code → localized generic. It used to display
- * `payload.message`, which is the server's English by construction — the client
- * sends no `Accept-Language` and the token carries no locale — so deleting a
- * non-empty location told an es/it/sq user "Location has items", and a test
- * asserted that string verbatim.
+ * Toasts a resolved errors-as-data member in the user's own language, field →
+ * code → localized generic. Never display `payload.message`: it is the server's
+ * English by construction (no `Accept-Language`, no locale on the token).
  */
 function toastResolvedError(
   payload:
@@ -62,11 +55,9 @@ type StorageLocationTreeNode = FlatStorageLocation & {
 };
 
 /**
- * The two connections a storage location lives in: the screen's flat
- * `storageLocations` query and PantryMain's `Pantry.storageLocationsConnection`.
- * Both writers are module-level so each caller's try body stays a single plain
- * call — a value block inside a try bails the whole hook out of the React
- * Compiler.
+ * The two connections a storage location lives in. Both writers are
+ * module-level so each caller's try body stays a single plain call — a value
+ * block inside a try bails the whole hook out of the React Compiler.
  */
 const removeFromStorageLocationsQuery = createRemoveFromQueryConnectionUpdater(
   'storageLocations',
@@ -238,25 +229,20 @@ export function useStorageLocationManagement(
   ) => {
     const current = locations.find(location => location.id === id);
 
-    // Most input field names ARE the StorageLocation field names, so they can be
-    // written straight onto the cached entity. `parentLocationId` is the
-    // exception: the edit sheet is seeded with the flat id, but the query
-    // selects only the nested `parentLocation`, and that is what the tree
-    // builder and the delete guard read. Writing the flat field alone moved
-    // nothing on screen while reporting success — and offline no response ever
-    // arrives to correct it.
+    // Input field names ARE the StorageLocation field names except
+    // `parentLocationId`: the sheet is seeded with the flat id, but the query
+    // selects only the nested `parentLocation`, which is what the tree builder
+    // and the delete guard read. Writing the flat field alone moves nothing.
     const { parentLocationId, ...directFields } = input;
     const nextParent =
       parentLocationId === undefined
         ? undefined
         : locations.find(location => location.id === parentLocationId) ?? null;
 
-    // Identity only. `writeEntityFields` normalizes a nested `__typename`+`id`
-    // into a reference, so the child points AT the parent rather than holding a
-    // copy of its fields — renaming the parent afterwards would otherwise move
-    // that row and leave every child's sub-label on the old name, with no fetch
-    // to correct it because nothing about the child changed. Carrying no other
-    // field also means the write cannot clobber the parent's own record.
+    // Identity only: `writeEntityFields` normalizes `__typename`+`id` into a
+    // reference, so the child points AT the parent instead of copying its
+    // fields (a later rename would strand every child's sub-label) and the
+    // write cannot clobber the parent's own record.
     const locationRef = (locationId: string) => ({
       __typename: 'StorageLocation',
       id: locationId,
@@ -271,15 +257,9 @@ export function useStorageLocationManagement(
 
     // Snapshot the fields being changed. A key the read did not CARRY is
     // omitted, so a refusal leaves that field alone rather than blanking a
-    // value the snapshot never saw; a key it carries as null is recorded, so a
-    // genuinely-empty field is still restored as empty. Every key here comes
-    // from the edit form and is one this screen's own query selects, so nothing
-    // is omitted in practice — the helper is what keeps that true if that ever
-    // stops being so.
-    //
-    // `current` being undefined is separately harmless: `entity` below is then
-    // undefined too, and both the optimistic write and its revert go through
-    // `writeEntityFields`, which is a no-op without one.
+    // value the snapshot never saw; a key carried as null is recorded, so an
+    // empty field is restored as empty. An undefined `current` is harmless —
+    // `writeEntityFields` is a no-op without an entity, on write and revert.
     const previous = {
       ...snapshotFields(current, updates),
       // `current` is a query READ, so its `parentLocation` is denormalized.
@@ -344,8 +324,8 @@ export function useStorageLocationManagement(
   };
 
   const deleteLocation = async (id: string) => {
-    // Snapshot before removing: a refusal has to put the row back, and once the
-    // entity is evicted the cache can no longer describe it.
+    // Snapshot before removing: a refusal has to put the row back, and an
+    // evicted entity is one the cache cannot describe.
     const removed = locations.find(location => location.id === id);
 
     try {

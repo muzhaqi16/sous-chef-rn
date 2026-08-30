@@ -1,34 +1,16 @@
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 
 /**
- * Client-minted entity ids whose create the server has not acknowledged yet.
- *
- * A local-first create mints the row's permanent cuid and publishes it to the
- * cache BEFORE the mutation fires, so any detail query keyed on that id can
- * reach the API while the row still doesn't exist there. That read can only
- * fail — `RESOURCE_NOT_FOUND` until the create lands — and it leaves the
- * query in an error state that never retries on its own, on screens that stay
- * mounted for the session. Detail queries gate their `skip` on this set and
- * fire once the id clears, which is also when the server first has data worth
- * fetching.
- *
- * Two windows make an id unconfirmed. An acknowledged create only ever sees
- * the first; one that goes to the queue passes from the first into the second:
- *
- * 1. **In flight** — between the optimistic cache write and the mutation
- *    resolving. Tracked here, in memory: a create interrupted by app death
- *    leaves nothing to strand, and the queue below covers the restart.
- * 2. **Queued** — an offline / API-unreachable create waiting to replay.
- *    Tracked by {@link queueStore.getPendingClientIds}, which owns the
- *    persisted queue and already extracts `input.id` from every queued create.
- *
- * The hand-off between them has no gap: `queueLink` enqueues the mutation
- * before it completes the observable, so by the time `confirm()` runs on a
- * queued create the id is already in the queue's pending set.
- *
- * Read reactively via `useIsCreateUnconfirmed`.
+ * Client-minted ids whose create the server has not acknowledged. A local-first
+ * create publishes the row's cuid to the cache BEFORE firing, so a detail query
+ * keyed on that id can only fail (`RESOURCE_NOT_FOUND`) and then sits in an
+ * error state that never retries. Detail queries gate `skip` on this set.
  */
 
+// The in-flight window. The queued window belongs to
+// `queueStore.getPendingClientIds`, and the hand-off has no gap: `queueLink`
+// enqueues before completing the observable, so `confirm()` on a queued create
+// runs with the id already in the pending set.
 const inFlight = new Set<string>();
 const listeners = new Set<() => void>();
 

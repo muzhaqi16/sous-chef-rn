@@ -44,9 +44,9 @@ jest.mock('#/hooks/utils/usePagination', () => ({
   })),
 }));
 
-// The pantry query no longer touches subscriptionService — pending-delete
-// echoes are filtered at the subscription-handler layer instead. Mock is
-// still registered so any accidental call fails loudly.
+// The pantry query does not touch subscriptionService — pending-delete
+// echoes are filtered at the subscription-handler layer instead. The mock is
+// registered empty so any accidental call fails loudly.
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {},
 }));

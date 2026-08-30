@@ -44,24 +44,10 @@ const files = filesUnder(['src/**/*.ts', 'src/**/*.tsx'], {
 const failures = [];
 
 /**
- * `'use no memo'` — the OTHER way out of compiler coverage, and the one this
- * check could not see.
- *
- * A bailout is involuntary and this script counts it. The directive is
- * voluntary and produced exactly the same outcome — the function stops being
- * memoized — while the summary went on printing "0 files with bailouts" against
- * an empty baseline. Three production components had left coverage that way
- * with nothing reporting it, one of them a context provider whose published
- * value the memoization was holding stable.
- *
- * It is never the right fix. `babel.config.js` runs Unistyles ->
- * unistyles-scope-crawl -> React Compiler, and that crawl is what keeps a
- * `styles.useVariants(...)` read in the compiler's cache key. A component whose
- * variant freezes means that ordering has regressed, so the repair is to the
- * toolchain (`node scripts/probe-unistyles-compiler-order.mjs`), not to the
- * component — see check-unistyles-variant-staleness.mjs. So `noMemoOptOuts` is
- * EMPTY and ratcheted shrink-only: an entry is a regression to fix, not a
- * budget to spend.
+ * `'use no memo'` — the OTHER way out of compiler coverage: voluntary, same
+ * outcome as a bailout, so tracked too. Never the right fix — a frozen variant
+ * means the `babel.config.js` plugin order broke, so repair the toolchain
+ * (`probe-unistyles-compiler-order.mjs`). `noMemoOptOuts` is EMPTY, shrink-only.
  */
 const OPT_OUT_DIRECTIVE = /^\s*['"]use no memo['"]\s*;?\s*$/;
 const optOuts = [];
@@ -69,12 +55,10 @@ let compiled = 0;
 let succeeded = 0;
 
 /**
- * Name the function a bailout happened in, from the compiler's `fnLoc`.
- *
- * This is what makes the baseline actionable: a bailout in a one-line leaf
- * extracted on purpose to hold a `useVariants` call costs nothing, while the
- * same bailout in the composite that renders a list means that whole subtree
- * stopped being memoized. Without the name the two are indistinguishable.
+ * Name the function a bailout happened in, from the compiler's `fnLoc`. This is
+ * what makes the baseline actionable: a bailout in a leaf extracted to hold a
+ * `useVariants` call costs nothing, while the same bailout in the composite
+ * that renders a list unmemoizes that whole subtree.
  */
 function functionNameAt(lines, line) {
   // A NAMED declaration wins outright, however far back it is within the
@@ -205,11 +189,9 @@ const baseline = BASELINE.require('check-compiler-bailouts');
 
 /**
  * Files where the variant call was deliberately extracted into a leaf, so only
- * the leaf bails and the composite around it stays memoized.
- *
- * The file COUNT cannot protect this. Moving the call back into the composite
- * leaves the count at 63 and the check green, silently undoing the isolation —
- * so the baseline records WHICH function bails, not just that one does.
+ * the leaf bails and the composite around it stays memoized. The file COUNT
+ * cannot protect this — moving the call back into the composite leaves the
+ * count unchanged, so the baseline records WHICH function bails.
  */
 const isolated = baseline.isolatedLeaves ?? {};
 const regressed = Object.entries(isolated).filter(([file, expected]) => {

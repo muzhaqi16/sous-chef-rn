@@ -60,13 +60,13 @@ export const Environment = {
   // `@react-native/jest-preset` defines `__DEV__` as true, so every test
   // environment takes the first branch.
   //
-  // This used to default to `false` with a comment claiming it matched — the
-  // opposite of the truth, and `Environment` is auto-mocked globally, so any
-  // suite rendering `useStartupInit` without an explicit override never entered
-  // `injectDetoxLaunchArgs` at all. A regression inside it — a renamed launch
-  // arg, a parse change, a throw — passed CI untouched. That is the class of
-  // failure that produced commit deaf9d4c. A suite that wants the capability
-  // OFF now says so explicitly, which is the state the old comment described.
+  // Defaulting to `false` here would invert the thing this mock stands in for.
+  // `Environment` is auto-mocked globally, so any suite rendering
+  // `useStartupInit` without an explicit override would never enter
+  // `injectDetoxLaunchArgs` at all, and a regression inside it — a renamed
+  // launch arg, a parse change, a throw — would pass CI untouched. That is the
+  // class of failure behind commit deaf9d4c. A suite that wants the capability
+  // OFF says so explicitly.
   allowsLaunchArgAuth: jest.fn(() => true),
   getPlatform: jest.fn(() => 'ios' as 'ios' | 'android' | 'web'),
   shouldEnableDebugFeatures: jest.fn(() => true),

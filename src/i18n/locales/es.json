@@ -213,7 +213,12 @@
     "logout": "¿Seguro que quieres cerrar sesión?",
     "discardChanges": "¿Seguro que quieres descartar los cambios?",
     "logoutWithPending_one": "Tienes {{count}} cambio sin sincronizar. Al cerrar sesión se descartará.",
-    "logoutWithPending_other": "Tienes {{count}} cambios sin sincronizar. Al cerrar sesión se descartarán."
+    "logoutWithPending_other": "Tienes {{count}} cambios sin sincronizar. Al cerrar sesión se descartarán.",
+    "deleteHomeTitle": "Eliminar hogar",
+    "removeMemberTitle": "Eliminar miembro",
+    "removeMemberNamed": "¿Seguro que quieres eliminar a {{name}} de este hogar?",
+    "revokeInviteTitle": "Revocar invitación",
+    "revokeInviteNamed": "¿Seguro que quieres revocar la invitación a {{name}}?"
   },
   "labels": {
     "accept": "Aceptar",

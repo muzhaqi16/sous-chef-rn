@@ -790,9 +790,7 @@ describe('useShoppingListActions', () => {
         await result.current.handleClearAllPurchased();
       });
 
-      expect(toastService.error).toHaveBeenCalledWith(
-        'Failed to clear purchased items',
-      );
+      expect(toastService.error).toHaveBeenCalledWith('Failed to clear items');
     });
   });
 
@@ -814,9 +812,7 @@ describe('useShoppingListActions', () => {
         await result.current.handleClearAllShopping();
       });
 
-      expect(toastService.error).toHaveBeenCalledWith(
-        'Failed to clear shopping items',
-      );
+      expect(toastService.error).toHaveBeenCalledWith('Failed to clear items');
     });
   });
 

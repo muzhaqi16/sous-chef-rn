@@ -31,21 +31,10 @@ export function getNotFoundMessage(resource?: string | null): string {
 }
 
 /**
- * True when a by-id READ came back `RESOURCE_NOT_FOUND` — the row is gone.
- *
- * The note in `graphqlErrors.ts` says a by-id QUERY reports a miss as null
- * data and that `RESOURCE_NOT_FOUND` is the mutation-only spelling. That does
- * not hold for the pantry: `PantryItemQueryService.getItemById` throws
- * `NotFoundError`, so `GetPantryItem` delivers the miss as a field error on
- * `["pantryItem"]`. Confirmed against the API resolver and production logs.
- *
- * The code lives on the TOP-LEVEL channel (`TopLevelErrorCode`), not the
- * union-member `ErrorCode` — a thrown `NotFoundError` escaping a resolver is
- * `RESOURCE_NOT_FOUND`, while the union member spells it `NOT_FOUND`.
- *
- * Callers must not treat this as authoritative for a row whose create the
- * server has not acknowledged yet — there the same code only means "not told
- * about it yet". Gate on `useIsCreateUnconfirmed` first.
+ * True when a by-id READ came back `RESOURCE_NOT_FOUND` (TOP-LEVEL channel; the
+ * union member spells it `NOT_FOUND`). The pantry is the exception to the "a
+ * query reports a miss as null data" note in `graphqlErrors.ts`. Gate on
+ * `useIsCreateUnconfirmed` first: before a create is acknowledged it lies.
  */
 export function isResourceNotFoundError(error: unknown): boolean {
   return (

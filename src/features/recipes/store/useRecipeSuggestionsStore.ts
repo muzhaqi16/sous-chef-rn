@@ -88,12 +88,9 @@ export const useRecipeSuggestionsStore = create<RecipeSuggestionsState>()(
 );
 
 /**
- * Suggestions are keyed by the pantry items the previous person owned, and the
- * cache is persisted — so a sign-out on a shared device has to empty it.
- *
- * The root store's `SESSION_SCOPED_STATE` only reaches root state, so a feature
- * store is outside it by construction — which is exactly how this cache came to
- * survive a sign-out unnoticed.
+ * Suggestions are keyed by the previous person's pantry items and the cache is
+ * persisted, so a sign-out has to empty it. `SESSION_SCOPED_STATE` reaches only
+ * root state, so a feature store must register itself here.
  */
 registerSessionScopedStore('useRecipeSuggestionsStore', () =>
   useRecipeSuggestionsStore.getState().clearAllCache(),

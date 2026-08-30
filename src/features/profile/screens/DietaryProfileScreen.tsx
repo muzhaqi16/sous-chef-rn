@@ -216,26 +216,35 @@ export const DietaryProfileScreen: React.FC = () => {
     return await updateDietaryProfile({ snacksPerDay: value });
   };
 
-  if (loading) {
+  // Gate on "nothing to show", not on `loading` — `cache-and-network` reports
+  // `loading: true` for the whole network leg on every mount, so a bare
+  // `if (loading)` blanks the screen for up to httpLink's 10s abort. Both
+  // non-content states stay inside ProfileScreenWrapper, which is what keeps a
+  // back button on screen while it waits.
+  if (loading && !profile) {
     return (
-      <View style={commonStyles.loadingContainer}>
-        <Text style={commonStyles.loadingText}>
-          {t('dietary.loadingProfile')}
-        </Text>
-      </View>
+      <ProfileScreenWrapper title={t('dietary.title')} scrollEnabled={false}>
+        <View style={commonStyles.loadingContainer}>
+          <Text style={commonStyles.loadingText}>
+            {t('dietary.loadingProfile')}
+          </Text>
+        </View>
+      </ProfileScreenWrapper>
     );
   }
 
   if (!profile) {
     return (
-      <View style={commonStyles.emptyState}>
-        <Text style={commonStyles.emptyStateTitle}>
-          {t('dietary.noProfileTitle')}
-        </Text>
-        <Text style={commonStyles.emptyStateText}>
-          {t('dietary.noProfileSubtitle')}
-        </Text>
-      </View>
+      <ProfileScreenWrapper title={t('dietary.title')} scrollEnabled={false}>
+        <View style={commonStyles.emptyState}>
+          <Text style={commonStyles.emptyStateTitle}>
+            {t('dietary.noProfileTitle')}
+          </Text>
+          <Text style={commonStyles.emptyStateText}>
+            {t('dietary.noProfileSubtitle')}
+          </Text>
+        </View>
+      </ProfileScreenWrapper>
     );
   }
 

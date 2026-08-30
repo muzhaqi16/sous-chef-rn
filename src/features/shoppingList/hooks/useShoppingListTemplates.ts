@@ -1,13 +1,8 @@
 /**
- * useShoppingListTemplates — the lists the user saved as templates, shaped for
- * a picker.
- *
- * Backs the "start from template" option on the create screen. `templateName`
- * is what the user typed when saving the template; it falls back to the list's
- * own name for templates saved before a name was captured.
- *
- * Skipped by default on screens that don't need it, so opening an existing
- * list's settings doesn't fire an extra request.
+ * The lists saved as templates, shaped for the create screen's "start from
+ * template" picker. `templateName` is what the user typed when saving, falling
+ * back to the list's own name where none was captured. Skip it on screens that
+ * do not offer the option, so list settings fires no extra request.
  */
 
 import { useQuery } from '@apollo/client/react';

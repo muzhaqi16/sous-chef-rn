@@ -197,12 +197,9 @@ export const useRecipeCacheStore = create<RecipeCacheState>()(
 );
 
 /**
- * Recipe searches name what the previous person was cooking, and the cache is
- * persisted — so a sign-out on a shared device has to empty it.
- *
- * The root store's `SESSION_SCOPED_STATE` only reaches root state, so a feature
- * store is outside it by construction — which is exactly how this cache came to
- * survive a sign-out unnoticed.
+ * Recipe searches name what the previous person was cooking and the cache is
+ * persisted, so a sign-out has to empty it. `SESSION_SCOPED_STATE` reaches only
+ * root state, so a feature store must register itself here.
  */
 registerSessionScopedStore('useRecipeCacheStore', () =>
   useRecipeCacheStore.getState().clearAllCache(),

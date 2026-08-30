@@ -157,8 +157,8 @@ describe('ListTemplate', () => {
   });
 
   it('does not let customListProps override the template’s own wiring', () => {
-    // The spread used to come LAST, so a colliding key silently replaced the
-    // wiring the template exists to guarantee.
+    // The spread must not come LAST: a colliding key would silently replace
+    // the wiring the template exists to guarantee.
     const templateHandler = jest.fn();
     const callerHandler = jest.fn();
     const seen: Array<(id: string) => void> = [];

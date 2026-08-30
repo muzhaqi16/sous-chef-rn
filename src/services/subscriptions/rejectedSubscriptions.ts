@@ -1,11 +1,7 @@
 /**
- * Subscriptions the server refused for a reason retrying cannot fix.
- *
- * A subscribe rejected by document validation is permanent: the same document
- * is refused every time, and the connection is fine — the socket stays open and
- * its other operations keep delivering. Re-sending it on every reconnect is
- * pure waste. Nothing reopens the gate: only a new build can change the
- * document.
+ * Subscriptions the server refused for a reason retrying cannot fix. A subscribe
+ * rejected by document validation is permanent — the socket is fine and its
+ * other operations keep delivering, so only a new build reopens the gate.
  */
 
 import { useSyncExternalStore } from 'react';

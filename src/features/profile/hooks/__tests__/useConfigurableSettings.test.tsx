@@ -95,8 +95,8 @@ jest.mock('#hooks/navigation/useAuthPreferences', () => ({
 // and action rows. It deliberately contains no personal-information fields:
 // those live in PERSONAL_INFO_CONFIG and are rendered by
 // PersonalInformationScreen, so a fixture that put them here would test a path
-// production cannot reach. It previously did, and eleven unreachable branches
-// in the hook survived because of it.
+// production cannot reach — and would keep unreachable branches in the hook
+// alive.
 jest.mock('#/config/settingsConfig', () => ({
   PROFILE_SETTINGS_CONFIG: [
     {
@@ -153,10 +153,11 @@ jest.mock('#/services/alertService', () => ({
 }));
 
 /**
- * The settings mutation this hook still fires (language + preference writes).
+ * The settings mutation this hook fires (language + preference writes).
  *
- * It used to also mock `UpdateUserProfileDocument`; the hook no longer writes
- * profile fields, so that mock went with the branches that did.
+ * `UpdateUserProfileDocument` is deliberately absent: the hook writes no
+ * profile fields, so mocking it would stand in for a branch that does not
+ * exist.
  */
 function buildMocks() {
   const settings = recordMock(UpdateUserPreferencesDocument, {
@@ -197,8 +198,8 @@ function buildMocks() {
 /**
  * Sections by their stable id rather than by position.
  *
- * These assertions used to index `sections[1]` / `sections[3]`, so removing one
- * section from the fixture silently re-pointed nine tests at the wrong section.
+ * Indexing `sections[1]` / `sections[3]` instead would let one section removed
+ * from the fixture silently re-point nine tests at the wrong section.
  */
 const sectionById = (
   sections: ReturnType<typeof useConfigurableSettings>['sections'],
@@ -223,7 +224,8 @@ describe('useConfigurableSettings', () => {
     expect(result.current.sections).toHaveLength(3);
     // `key` is the section's stable id; `title` is the resolved i18n key. The
     // two are asserted together because the screen branches on the former and
-    // renders the latter, and they used to be the same English string.
+    // renders the latter, so a config that collapses them into one English
+    // string has to fail here.
     expect(result.current.sections.map(s => s.key)).toEqual([
       'appearanceAndLanguage',
       'security',
@@ -274,7 +276,7 @@ describe('useConfigurableSettings', () => {
 
   it('warns before signing out while writes are still queued', async () => {
     // Deliberate sign-out deletes the queue, so anything waiting to replay is
-    // destroyed. This path used to do it silently.
+    // destroyed. The warning is what keeps that from happening silently.
     mockPendingCount.mockReturnValue(3);
     const { settings } = buildMocks();
     const { result } = renderHookWithApollo(() => useConfigurableSettings(), {

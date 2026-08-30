@@ -1,21 +1,13 @@
 /**
- * Query Complexity Error Handling
- *
- * Handles new API query complexity limits:
- * - Maximum query depth: 10 levels
- * - Maximum fields: 150 fields per query
- * - Pagination limits: 100 items maximum
+ * The API's query complexity limits: depth 10, 150 fields per query, 100 items
+ * per page.
  */
 
 import { logger } from '#/utils/environment';
 
-/**
- * Query complexity error types
- */
-// PAGINATION_LIMIT_EXCEEDED is a TopLevelErrorCode member and would otherwise be
-// referenced through the generated enum, but a TypeScript string enum rejects a
-// computed initializer, so the value has to be repeated here. QUERY_TOO_COMPLEX
-// is in neither generated enum — the API's registry has no such code.
+// PAGINATION_LIMIT_EXCEEDED is a TopLevelErrorCode member, repeated literally
+// because a TS string enum rejects a computed initializer. QUERY_TOO_COMPLEX is
+// in neither generated enum — the API's registry has no such code.
 export enum QueryComplexityErrorType {
   TOO_COMPLEX = 'QUERY_TOO_COMPLEX',
   PAGINATION_LIMIT_EXCEEDED = 'PAGINATION_LIMIT_EXCEEDED',
@@ -169,23 +161,8 @@ export function getQueryComplexityMessage(error: unknown): string {
 }
 
 /**
- * Handle query complexity errors with automatic recovery
- *
- * @param error - Error to check
- * @param onRetryWithReducedComplexity - Optional callback to retry with reduced complexity
- * @returns True if error was a query complexity error
- *
- * @example
- * ```typescript
- * try {
- *   await fetchData({ first: 500 });
- * } catch (error) {
- *   if (handleQueryComplexityError(error, () => fetchData({ first: 100 }))) {
- *     return; // Error was handled and retry initiated
- *   }
- *   // Handle other errors
- * }
- * ```
+ * @returns true when the error was a complexity error, in which case
+ *   `onRetryWithReducedComplexity` has already been invoked.
  */
 export function handleQueryComplexityError(
   error: unknown,

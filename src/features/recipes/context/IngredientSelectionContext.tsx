@@ -1,15 +1,10 @@
 import React, { createContext, useContext, type ReactNode } from 'react';
 
 /**
- * Shared selection context for the recipes feature's ingredient-picker
- * sheets (RecipeSearch's pantry picker and RecipeDetail's add-to-list
- * picker). The selection key is an opaque string — RecipeSearch keys by
- * ingredient name, RecipeDetail by ingredient id.
- *
- * The props pass straight through: the context value changes whenever the
- * selection changes anyway (the Set is part of it), and the React Compiler
- * keeps the value object stable across unrelated renders — no manual
- * callback stabilization needed.
+ * Shared selection context for the ingredient-picker sheets. The key is an
+ * opaque string — RecipeSearch keys by ingredient name, RecipeDetail by id.
+ * Props pass straight through: the value changes with the selection anyway, and
+ * the React Compiler keeps it stable across unrelated renders.
  */
 interface IngredientSelectionContextValue {
   selectedIngredients: Set<string>;

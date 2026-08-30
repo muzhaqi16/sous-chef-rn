@@ -1,14 +1,7 @@
 /**
- * Auth Service - Singleton service for authentication operations.
- *
  * The single source of truth for login/register/logout business logic, as a
- * testable, non-React service (replacing the former useAuth/useAuthOperations
- * hooks). All dependencies are singletons:
- * - Apollo client for mutations
- * - toastService for user feedback
- * - errorService for structured error handling
- * - useStore (Zustand) for state via getState()
- * - keychain for credential storage
+ * non-React service. Every dependency is a singleton: the Apollo client,
+ * toastService, errorService, the Zustand store via `getState()`, and keychain.
  */
 
 import { client } from '#/apollo/client';
@@ -261,11 +254,9 @@ async function pushRotatedTokenToServer(
 }
 
 /**
- * Best-effort server-side device deregistration on logout, so the server stops
- * pushing to the logged-out session on a shared device. Uses
- * `updateDevice(delete: true)` — the schema's documented replacement for the
- * deleteDevice mutation. Fire-and-forget: never throws and never awaited by
- * logout, so a slow/absent network can't block the local teardown.
+ * Stops the server pushing to a logged-out session on a shared device, via
+ * `updateDevice(delete: true)` — the schema's replacement for deleteDevice.
+ * Fire-and-forget, so a slow network cannot block the local teardown.
  */
 function deregisterDeviceOnLogout(): void {
   const deviceId = registeredDeviceId;
@@ -385,6 +376,8 @@ function bootstrapUserStore(user: LoginUserFragment): void {
     const pantryId = defaultPantry?.id ?? null;
 
     storeState.setHomeAndPantry(user.defaultHomeId, pantryId);
+    // Raised without a cache check because this pair IS the server's answer,
+    // from the login response — not a restored selection.
     if (pantryId) {
       storeState.setIsHomeSelectionReady(true);
     }
@@ -393,13 +386,9 @@ function bootstrapUserStore(user: LoginUserFragment): void {
     storeState.setSelectedShoppingListId(user.defaultShoppingListId);
   }
 
-  // Seed the tutorials master switch from the account's server setting before
-  // any screen (and its tutorial hooks) mounts, so a user who explicitly
-  // disabled tutorials in Settings doesn't see a flash of coach marks on a
-  // new device. Per-screen completion itself is tracked locally per device
-  // (feature_hint_shown_*) and is never synced — only this explicit
-  // enabled/disabled preference is. useShowTutorials reads this MMKV key;
-  // useAppSettings keeps it in sync later.
+  // Seeded before any screen's tutorial hooks mount, so a user who disabled
+  // tutorials sees no flash of coach marks on a new device. Only this master
+  // switch syncs; per-screen completion (feature_hint_shown_*) stays local.
   if (user.settings) {
     storage.set('user_show_tutorials', user.settings.showTutorials);
   }
@@ -482,13 +471,9 @@ function handleAuthError(error: unknown, operation = 'Authentication'): void {
 
     toastService.error(message);
 
-    // `clearAuth` and deliberately not `endSession`, unlike the link-layer
-    // sites that see these same codes. This runs while a sign-in, register or
-    // verification request is in flight, and a full auth reset would also drop
-    // the selected-entity ids (breaking verification resume) and the
-    // session-scoped state a sign-out clears. There is also no established
-    // session's cache to clear here — this is a refused attempt to start one,
-    // not a revoked one.
+    // `clearAuth`, deliberately NOT `endSession` as the link layer does for the
+    // same codes: this is a refused attempt to START a session, so a full reset
+    // would drop selected-entity ids (breaking verification resume) for nothing.
     if (
       isAuthError &&
       (code === ErrorCode.AuthTokenExpired ||
@@ -553,9 +538,8 @@ async function handleLogin(
     }
   }
 
-  // RememberMe prompt is the no-biometrics fallback: offer to save credentials
-  // when the device can't (or the user hasn't) set up biometric login, the user
-  // has no stored credentials yet, and they haven't previously declined.
+  // The no-biometrics fallback: offer to save credentials only when biometrics
+  // are unavailable, nothing is stored yet, and the user has not declined.
   let showRememberMeGate = false;
   if (
     showRememberPrompt &&
@@ -807,26 +791,10 @@ async function register(
 
 interface LogoutOptions {
   /**
-   * KEEP this account's stored biometric credentials across the sign-out.
-   *
-   * Default FALSE — a sign-out clears them. The previous default was the
-   * reverse, on the argument that "reading the slot still costs a successful
-   * biometric prompt from that account's owner". That argument does not hold:
-   * the slot is `ACCESS_CONTROL.BIOMETRY_ANY` (`src/storage/keychain.ts`), which
-   * ANY biometric enrolled on the device satisfies — and typically the device
-   * passcode too — while the two slots the login screen reads to decide whether
-   * to offer the button (`indicatorServiceFor`, `LAST_BIOMETRIC_EMAIL_KEY`) have
-   * no access control at all. On a shared device that meant: user A signs out,
-   * user B launches, the biometric button appears for A's address, and B's own
-   * finger unlocks A's stored password.
-   *
-   * The convenience it costs is real and was the reason for the old default:
-   * biometric login exists to get the user back in after a sign-out. That
-   * remains available by opting in — pass `true` — and re-enrolment after a
-   * deliberate sign-out is one prompt.
-   *
-   * The user-facing way to forget a device is Profile → Security → disable,
-   * which calls `removeCredentials` directly.
+   * KEEP this account's biometric credentials across the sign-out. Default
+   * FALSE: the slot is `ACCESS_CONTROL.BIOMETRY_ANY`, so on a shared device any
+   * enrolled finger unlocks the signed-out user's password, and the slots the
+   * login screen reads to offer the button are unprotected.
    */
   keepBiometricCredentials?: boolean;
 }
@@ -839,17 +807,12 @@ async function logout(options?: LogoutOptions): Promise<void> {
     const currentUserEmail = user?.email;
     const currentUserId = user?.id;
 
-    // Biometric credentials do NOT survive a sign-out (see `LogoutOptions` for
-    // why the default is to clear). Credentials are scoped per account, so this
-    // never touches another user's.
-    //
-    // Done FIRST, not last. Everything below can throw, and the whole body is
-    // wrapped in a catch that only logs — so a security-relevant deletion
-    // parked at the end is a deletion that silently may not happen.
+    // Done FIRST: everything below can throw into a catch that only logs, so a
+    // security-relevant deletion parked at the end may silently not happen.
+    // Credentials are per-account, so this never touches another user's.
     if (!options?.keepBiometricCredentials && currentUserEmail) {
-      // The result is READ, not discarded: a keychain delete that failed leaves
-      // the previous user's password on the device, which is exactly the state
-      // this call exists to prevent, and it must not look like success.
+      // READ, not discarded: a failed delete leaves the previous user's password
+      // on the device — the exact state this call exists to prevent.
       const removed = await removeCredentials(currentUserEmail);
       if (!removed) {
         logger.error(
@@ -957,12 +920,10 @@ async function autoLogin(): Promise<boolean> {
     }
 
     if (result.error) {
-      // Same rule as the payload branch above, which this used to contradict:
-      // credentials are dropped only when the failure establishes they will
-      // never authenticate. A transport failure says the request did not
-      // ARRIVE — it says nothing about the password — and clearing on one meant
-      // a single blip on launch silently un-enrolled the device, with the next
-      // launch offering no biometric button and no explanation.
+      // Same rule as the payload branch above: credentials are dropped only when
+      // the failure establishes they will never authenticate. A transport failure
+      // says the request did not ARRIVE, nothing about the password — clearing on
+      // one silently un-enrols the device after a single blip.
       const parsed = errorService.parseApolloError(result.error, {
         logError: false,
       });

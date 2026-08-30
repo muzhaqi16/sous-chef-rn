@@ -33,12 +33,9 @@ export interface AppearancePreferences {
 }
 
 /**
- * Applies user appearance preferences (brand color, density, font scale,
- * high contrast) to both light and dark themes via UnistylesRuntime.updateTheme.
- *
- * Plain function (no React hooks) so it can be called both from the
- * useAppearance effect AND directly from store setters — the setter path
- * gives an instant runtime update with no useEffect/render delay.
+ * Applies brand color, density, font scale and high contrast to both themes.
+ * A plain function, so a store setter can call it directly for an instant runtime
+ * update with no effect/render delay.
  */
 export function applyAppearanceToRuntime(prefs: AppearancePreferences): void {
   const densityMul =
@@ -69,9 +66,8 @@ export function applyAppearanceToRuntime(prefs: AppearancePreferences): void {
       const isDark = themeName === 'dark';
       next.colors = {
         ...next.colors,
-        // [500] is the palette anchor (≈ the color the user picked) and matches
-        // the base theme's `primary` in both light and dark modes — the rest of
-        // these overrides mirror the base theme's per-mode shade mapping.
+        // [500] is the palette anchor and matches the base theme's `primary` in
+        // both modes; the rest mirror its per-mode shade mapping.
         primary: palette['500'],
         primaryLight: isDark ? palette['400'] + '20' : palette['100'],
         primaryDark: isDark ? palette['600'] : palette['700'],
@@ -103,10 +99,9 @@ export function applyAppearanceToRuntime(prefs: AppearancePreferences): void {
           textPrimary: '#000000',
           textSecondary: '#1A1A1A',
           textTertiary: '#333333',
-          // Boosted alongside the text tones — the default placeholder sits at
-          // ~3.6:1, which is exactly what high contrast exists to lift. Kept
-          // lighter than textTertiary so a placeholder still reads as a hint
-          // rather than as entered text.
+          // The default placeholder sits at ~3.6:1, exactly what high contrast
+          // exists to lift — but kept lighter than textTertiary so it still reads
+          // as a hint rather than entered text.
           inputPlaceholder: '#4D4D4D',
           border: '#666666',
           borderLight: '#999999',

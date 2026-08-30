@@ -21,114 +21,36 @@ import { Text } from '#components/atoms/Text';
 const defaultTransform = (item: string) => item.trim();
 
 export interface StringArrayManagerProps {
-  /**
-   * Section title displayed at the top
-   */
   title: string;
 
-  /**
-   * Array of string items to display
-   */
   items: string[];
 
-  /**
-   * Callback when a new item is added
-   * Should return true on success, false on failure
-   */
+  /** Returns true on success, false on failure. */
   onAdd: (item: string) => Promise<boolean>;
 
-  /**
-   * Callback when an item is removed
-   */
   onRemove: (item: string) => Promise<void>;
 
-  /**
-   * Placeholder text for the add input modal
-   */
   inputPlaceholder?: string;
 
-  /**
-   * Label for the add button modal title
-   */
   addButtonLabel?: string;
 
-  /**
-   * Message to display when array is empty
-   */
   emptyMessage?: string;
 
-  /**
-   * Maximum number of items allowed (optional)
-   */
   maxItems?: number;
 
-  /**
-   * Custom validation function
-   * Return error message if invalid, null if valid
-   */
+  /** Returns an error message, or null when valid. */
   validate?: (item: string) => string | null;
 
-  /**
-   * Transform function applied before adding (e.g., capitalize)
-   */
+  /** Applied before adding (e.g. capitalize). */
   transform?: (item: string) => string;
 
-  /**
-   * Show the add button (default: true)
-   */
+  /** Default true. */
   showAddButton?: boolean;
 
-  /**
-   * Custom style for the container
-   */
   containerStyle?: StyleProp<ViewStyle>;
 }
 
-/**
- * StringArrayManager - A reusable component for managing string arrays
- *
- * Provides a complete UI for displaying, adding, and removing string items
- * with chips, modal input, validation, and empty states.
- *
- * @example Basic usage (Dietary Profile - Cuisines)
- * ```tsx
- * <StringArrayManager
- *   title="Preferred Cuisines"
- *   items={profile.preferredCuisines}
- *   onAdd={async (cuisine) => {
- *     const success = await updateDietaryProfile({
- *       preferredCuisines: [...profile.preferredCuisines, cuisine]
- *     });
- *     return success;
- *   }}
- *   onRemove={async (cuisine) => {
- *     await updateDietaryProfile({
- *       preferredCuisines: profile.preferredCuisines.filter(c => c !== cuisine)
- *     });
- *   }}
- *   inputPlaceholder="e.g., Italian, Mexican, Thai"
- *   addButtonLabel="Add Cuisine"
- *   emptyMessage="No cuisines added yet"
- * />
- * ```
- *
- * @example With validation and max items
- * ```tsx
- * <StringArrayManager
- *   title="Tags"
- *   items={item.tags}
- *   onAdd={handleAddTag}
- *   onRemove={handleRemoveTag}
- *   maxItems={5}
- *   validate={(tag) => {
- *     if (tag.length < 2) return 'Tag must be at least 2 characters';
- *     if (tag.length > 20) return 'Tag must be less than 20 characters';
- *     return null;
- *   }}
- *   transform={(tag) => tag.trim().toLowerCase()}
- * />
- * ```
- */
+/** Displays, adds and removes string items as chips, with a modal input. */
 export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
   title,
   items,
@@ -174,19 +96,16 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
 
     const transformedItem = transform(newItem);
 
-    // Basic validation
     if (!transformedItem) {
       setError('Please enter a value');
       return;
     }
 
-    // Check for duplicates
     if (items.includes(transformedItem)) {
       setError('This item already exists');
       return;
     }
 
-    // Custom validation
     if (validate) {
       const validationError = validate(transformedItem);
       if (validationError) {
@@ -224,7 +143,6 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
 
   return (
     <View style={[commonStyles.card, containerStyle]}>
-      {/* Header with title and add button */}
       <View style={styles.header}>
         <Text style={commonStyles.subtitle}>{title}</Text>
         {!!showAddButton && (
@@ -233,7 +151,6 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
           </AppPressable>
         )}
       </View>
-      {/* Chip grid using static chips */}
       <View style={styles.chipContainer}>
         {items.map((item, index) => (
           <View key={index} style={styles.chipWrapper}>
@@ -249,12 +166,10 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
           </View>
         ))}
 
-        {/* Empty state */}
         {items.length === 0 && (
           <Text style={commonStyles.bodySecondary}>{emptyMessage}</Text>
         )}
       </View>
-      {/* Add bottom sheet */}
       <BottomSheetModal ref={ref} {...modalProps}>
         <BottomSheetView style={[styles.sheetContent, contentContainerStyle]}>
           <BottomSheetHeader

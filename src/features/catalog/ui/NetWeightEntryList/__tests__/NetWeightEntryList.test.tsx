@@ -170,7 +170,7 @@ describe('NetWeightEntryList', () => {
       -1,
     )?.[0] as NetWeightEntry[];
     expect(finalEntries[0].unitName).toBe('oz');
-    // Typing invalidates the previously selected unit.
+    // Typing invalidates the unit selected before the keystroke.
     expect(finalEntries[0].unitId).toBeUndefined();
   });
 });

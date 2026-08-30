@@ -159,8 +159,8 @@ describe('event envelope written to the cache after a local delete', () => {
       __typename: 'PantryItem',
       id: itemId,
     });
-    // … its edge is readable again, and the list query can no longer be
-    // satisfied from the cache. This is the state Apollo repairs by refetching.
+    // … its edge is readable again, and the list query cannot be satisfied from
+    // the cache. This is the state Apollo repairs by refetching.
     expect(diffPantry(cache).complete).toBe(false);
   });
 

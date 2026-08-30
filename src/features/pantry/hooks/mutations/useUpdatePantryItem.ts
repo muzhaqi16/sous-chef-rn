@@ -1,16 +1,8 @@
 /**
- * useUpdatePantryItem - Update mutation for pantry item non-quantity fields
- * (local-first).
- *
- * Single responsibility:
- * - Update non-quantity fields (storage, notes, tags, brand, etc.)
- * - Only sends changed fields (dirty field tracking)
- * - Version conflict handling
- * - Writes the updated entity to the cache PERMANENTLY before firing (an
- *   `optimisticResponse` would roll back the moment the offline queue
- *   completes the request with a null result). A queued update stays visible
- *   and replays via the idempotent `SyncPantryItem` upsert; a real rejection
- *   restores the pre-edit snapshot.
+ * Updates the non-quantity fields the form dirtied. Local-first: the entity is
+ * written to the cache PERMANENTLY before firing (an `optimisticResponse` rolls
+ * back on the offline queue's null result), so a queued update stays visible and
+ * replays via the idempotent `SyncPantryItem` upsert.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -191,20 +183,12 @@ export function useUpdatePantryItem({
       context: { localFirst: true },
     })
       .then(result => {
-        // 'queued' (null payload, no error) keeps the permanent write — the
-        // change replays later. A rejection restores the pre-edit snapshot.
-        //
-        // A transport/GraphQL error reaches the user through `onError` above.
-        // A refused union payload (`ValidationError`, a version conflict)
-        // resolves as DATA with no error, so `onError` never fires for it —
-        // without the alert below the edit just snaps back unexplained. One
-        // such refusal is reachable from the edit form: since 2026-08-22 the
-        // server resolves a bare `unit.unitSymbol` to a real unit and refuses
-        // the change while the item still has batches, or when no conversion
-        // exists (docs/api/breaking-changes.md). Those arrive as a
-        // ValidationError with `field: "unit"`, which routes to localized
-        // `errors.field.unit` copy — the generic copy is only for an
-        // unattributed refusal. The server's `message` is English and unused.
+        // 'queued' (null payload, no error) keeps the permanent write; a
+        // rejection restores the pre-edit snapshot. A refused union payload
+        // (ValidationError, version conflict) resolves as DATA with no error, so
+        // `onError` never fires — without the alert below the edit snaps back
+        // unexplained. A `field: "unit"` refusal (unit change refused while the
+        // item has batches) routes to localized `errors.field.unit` copy.
         const outcome = classifyCreateResult(result);
         if (outcome === 'rejected') {
           try {

@@ -30,23 +30,18 @@ import { useFlashListPerformance } from '#hooks/performance/useFlashListPerforma
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 
-// Screen-relative draw distance: 2× viewport. This window spans more rows than a
-// whole ITEMS_PAGE_SIZE page, so an append can mount a full page in one commit —
-// costly in a debug build, but not what drops frames in release. See
-// pantryDisplay/constants.ts DRAW_DISTANCE before changing it.
+// 2× viewport — wider than one ITEMS_PAGE_SIZE, so an append can mount a whole
+// page in one commit. Read pantryDisplay/constants.ts DRAW_DISTANCE first.
 const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 2);
 
-// Module-level constant — avoids creating a new object reference per render
+// Module scope: one stable reference each, nothing for the compiler to track.
 const MVCP_DISABLED = { disabled: true };
-
-// Module-scope functions — zero runtime overhead (no compiler tracking/comparison)
 const keyExtractor = (item: ShoppingListRowItem) => item.id;
 // Every row is the same component, so one recycling pool is correct.
 const getItemType = () => 'item';
 const renderItem = (info: ListRenderItemInfo<ShoppingListRowItem>) => {
-  // FlashList v2 can transiently invoke renderItem with an undefined item while
-  // recycling cells during a data swap (e.g. switching the active list). Guard
-  // here so the row never dereferences an undefined item (`item.itemRef`).
+  // FlashList v2 can transiently pass an undefined item while recycling cells
+  // through a data swap (switching the active list).
   if (!info.item) return null;
   return <SwipeableListItem {...info} />;
 };
@@ -86,10 +81,8 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   const perfCallbacks = useFlashListPerformance(flashListRef, {
     componentName: 'SortableShoppingList',
     reportInterval: 10000,
-    // This list has no loading or placeholder mode — it renders whatever rows
-    // it is given — so having rows is the only content signal it can honestly
-    // offer. Deliberately conservative: a launch landing here on an empty list
-    // emits no `app_fully_drawn_ms` rather than timing an empty frame.
+    // The list has no placeholder mode, so having rows is its only honest
+    // content signal: an empty list emits no `app_fully_drawn_ms` at all.
     hasRealContent: items.length > 0,
     onFirstContentLayout,
   });
@@ -99,9 +92,9 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
     perfCallbacks.onDataReferenceChange,
   );
 
-  // PERFORMANCE: Single useUnistyles call for entire list
+  // One theme + dimensions subscription for the whole list, shared to rows via
+  // context instead of N per-row subscriptions.
   const { theme } = useUnistyles();
-  // PERFORMANCE: Single useWindowDimensions call - shared via context to avoid N subscriptions in items
   const { width: screenWidth } = useWindowDimensions();
   const themeColors: SortableListThemeColors = {
     primary: theme.colors.primary,
@@ -113,29 +106,25 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
     screenWidth,
   };
 
-  // Safe area insets for bottom padding
   const insets = useSafeAreaInsets();
 
-  // Coordinate swipeable items — use external coordinator if provided, otherwise internal fallback
   const internalCoordinator = useSwipeableCoordinator();
   const handleSwipeableWillOpen =
     externalOnSwipeableWillOpen ?? internalCoordinator.handleSwipeableWillOpen;
   const handleSwipeableClose =
     externalOnSwipeableClose ?? internalCoordinator.handleSwipeableClose;
 
-  // Actions for context — wrap delete/toggle to prepare FlashList for layout animation
   const actions: SortableListActions = {
     onItemPress,
-    // A command: the row calls it before a `removesRow` action, and the list is
-    // what knows how to prepare itself.
+    // The row calls this before a `removesRow` action; only the list knows how
+    // to prepare itself for the layout animation.
     onBeforeRowRemoved: () => {
       flashListRef.current?.prepareForLayoutAnimationRender();
     },
     onTogglePurchase: onTogglePurchase
       ? (id: string, opts?: { withDetails?: boolean }) => {
-          // A long-press ({ withDetails }) opens the purchase-amount sheet and
-          // leaves the row in place, so only arm the layout animation for the
-          // plain toggle, which moves the row to the other tab immediately.
+          // A long-press leaves the row in place; only the plain toggle moves
+          // it to the other tab, so only that arms the layout animation.
           if (!opts?.withDetails) {
             flashListRef.current?.prepareForLayoutAnimationRender();
           }
@@ -157,7 +146,6 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
     disabled,
   };
 
-  // React Compiler auto-memoizes based on insets.bottom dependency
   const contentContainerStyle = {
     paddingTop: 8,
     paddingBottom: getTabBarBottomPadding(insets.bottom),
@@ -173,8 +161,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
           actions={actions}
           permissions={permissions}
         >
-          {/* A derivation: the value is the value, so rows read the current
-              one instead of a ref published after they render. */}
+          {/* A value, not a ref: rows read the current one as they render. */}
           <ItemSwipeActionsProvider value={itemSwipeActions}>
             <View style={styles.container}>
               <FlashList<ShoppingListRowItem>
@@ -205,13 +192,10 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
                 onScrollEndDrag={onScrollEndDrag}
                 onMomentumScrollEnd={onMomentumScrollEnd}
                 scrollEventThrottle={scrollEventThrottle}
-                // An explicit control, NOT the bare `onRefresh`/`refreshing` pair.
-                // Given only those, FlashList builds React Native's RefreshControl
-                // itself (`useSecondaryProps.tsx` — `else if (onRefresh)`), and
-                // RNGH's ScrollView above then hands that control its scroll
-                // gesture as `block`, which RN's control silently drops. The
-                // indicator ends up outside the arbitration: it hangs mid-list and
-                // will not retract until the user pushes it back up by hand.
+                // An explicit RNGH control, NOT a bare `onRefresh`/`refreshing`
+                // pair: given those, FlashList builds RN's RefreshControl, which
+                // drops the `block` scroll gesture RNGH's ScrollView hands it —
+                // the indicator then hangs mid-list and never retracts.
                 refreshControl={
                   onRefresh ? (
                     <ThemedRefreshControl

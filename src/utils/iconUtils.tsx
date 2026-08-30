@@ -77,9 +77,8 @@ export const Icon: React.FC<IconProps> = ({ name, size = 24, color, tone }) => {
       />
     );
   }
-  // No explicit `color` or `tone` → default to the theme's primary text color
-  // so icons stay visible in dark mode (previously a hardcoded #000 that
-  // rendered near-invisible on dark surfaces).
+  // No explicit `color` or `tone`: the theme's primary text color, so icons
+  // stay visible in dark mode. Never a hardcoded #000.
   return (
     <ThemedIonicons
       name={name as IoniconsIconName}

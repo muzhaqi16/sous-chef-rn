@@ -125,7 +125,7 @@ describe('useShoppingListReminder', () => {
             data: {
               updateShoppingListReminder: {
                 __typename: 'ValidationError',
-                code: 'VALIDATION_ERROR',
+                code: 'VALIDATION_FAILED',
                 message: 'bad date',
                 field: 'reminderDate',
               },

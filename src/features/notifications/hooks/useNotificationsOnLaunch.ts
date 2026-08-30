@@ -1,25 +1,8 @@
 /**
- * useNotificationsOnLaunch Hook
- *
- * Loads all unread notifications from the server on app startup via
- * notificationsConnection — the API-recommended approach for initial load.
- *
- * Replaces the previous useAllPendingInvites approach which:
- * - Only fetched invite-type notifications (missed expiry, low-stock, etc.)
- * - Constructed composite IDs like `home-invite-${inviteId}`
- *
- * Now all unread notifications arrive with real server CUIDs so
- * markNotificationAsRead works correctly for every type.
- *
- * Re-queries when the app returns to foreground, and when the WebSocket
- * reconnects, to catch events that arrived while the subscription was down.
- *
- * The query is the whole hook: Apollo normalizes the notifications and the
- * `User.unreadNotificationCount` / `hasUrgentNotifications` aggregates into the
- * cache on its own. This used to map every edge and push it into a Zustand
- * slice, then re-seed the badge from the same response — a second copy of what
- * the cache already held, and the reason a live event and a refetch could leave
- * two different answers on screen.
+ * Loads unread notifications on startup, re-querying on foreground and on WS
+ * reconnect to catch events that arrived while the subscription was down. The
+ * query is the whole hook — Apollo normalizes the rows and the badge
+ * aggregates, so nothing here may keep a second copy.
  */
 
 import { useEffect, useRef } from 'react';

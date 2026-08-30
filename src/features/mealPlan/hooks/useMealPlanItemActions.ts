@@ -1,16 +1,8 @@
 /**
- * useMealPlanItemActions - Meal plan item create / update / toggle / delete
- * (local-first).
- *
- * Each operation writes its change to the cache PERMANENTLY before firing, so
- * it survives an offline / API-down queue (an `optimisticResponse` would roll
- * back the moment the queue completes the request with a null result):
- * - create: mints the permanent cuid PK and materializes the full item display
- *   shape (recipe resolved from cache); a replay that collides with the
- *   (mealPlanId, date, mealType, recipeId) unique key returns the existing row
- *   server-side, so the queued create is idempotent.
- * - update / toggle: merge over a snapshot; a rejection restores it.
- * - delete: removes the item up front; a rejection restores the snapshot.
+ * Meal plan item create / update / toggle / delete, local-first: each writes the
+ * cache PERMANENTLY before firing, since an `optimisticResponse` rolls back when
+ * the queue completes with a null result. A replayed create collides with the
+ * (mealPlanId, date, mealType, recipeId) unique key, so it is idempotent.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -322,13 +314,11 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       });
     }
 
-    // No idempotencyKey needed on this ledger op. The server gates the pantry
-    // deduction on the false → true completion transition, read live from the
-    // pre-update row: a replayed completion (e.g. a lost-response offline-queue
-    // replay) finds the item already isCompleted and skips the deduction, so it
-    // never double-deducts. Confirmed server-side in sous-chef-api#178. (The
-    // only unguarded case is two truly concurrent in-flight completions — not
-    // the sequential queue-drain path this queues into.)
+    // No idempotencyKey: the server gates the pantry deduction on the
+    // false → true transition read from the pre-update row, so a replayed
+    // completion finds `isCompleted` already true and skips it (sous-chef-api
+    // #178). Only two truly concurrent completions are unguarded — not this
+    // sequential queue-drain path.
     let result;
     const updateItemMutationOptions = {
       variables: {

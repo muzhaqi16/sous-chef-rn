@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "4.4.7",
+  "version": "4.4.8",
   "private": true,
   "scripts": {
     "android": "bash scripts/run-android.sh",
@@ -46,6 +46,7 @@
     "check:layer-purity": "node scripts/check-layer-purity.mjs",
     "check:feature-shape": "node scripts/check-feature-shape.mjs",
     "check:dead-modules": "node scripts/check-dead-modules.mjs",
+    "check:comment-budget": "node scripts/check-comment-budget.mjs",
     "check:test-cache-fidelity": "node scripts/check-test-cache-fidelity.mjs",
     "e2e:prune": "node scripts/prune-e2e-artifacts.mjs",
     "codegen:watch": "graphql-codegen --watch --config codegen.ts",

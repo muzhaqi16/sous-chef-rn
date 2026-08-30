@@ -65,12 +65,10 @@ const BASELINE = baselineFile(
 );
 
 /**
- * Everything Jest would RUN, not everything that looks like a test.
- *
- * Mirrors `jest.config.js`: the default `testMatch` (any file under a
- * `__tests__/` directory, plus `*.test.*` / `*.spec.*` anywhere) minus
- * `testPathIgnorePatterns`. Narrower than that and a real suite is invisible;
- * wider and the check reports on helpers that never run.
+ * Everything Jest would RUN, not everything that looks like a test: mirrors
+ * `jest.config.js`'s default `testMatch` (any file under `__tests__/`, plus
+ * `*.test.*` / `*.spec.*`) minus `testPathIgnorePatterns`. Narrower and a real
+ * suite is invisible; wider and it reports on helpers that never run.
  */
 const IGNORED = [
   /(^|\/)node_modules(\/|$)/,
@@ -139,9 +137,7 @@ export function classify(entries) {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Self-test: the check's own ability to fail, in each form it claims to catch.
-// ---------------------------------------------------------------------------
 function selfTest() {
   const cases = [
     [
@@ -229,8 +225,6 @@ function selfTest() {
   }
   console.log(`\n✓ ${CHECK} --self-test: all cases pass.\n`);
 }
-
-// ---------------------------------------------------------------------------
 
 const flags = parseFlags({
   list: { type: 'boolean', default: false },

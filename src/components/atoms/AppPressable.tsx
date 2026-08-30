@@ -28,20 +28,10 @@ export interface AppPressableProps extends Omit<PressableProps, 'style'> {
 }
 
 /**
- * Canonical tappable surface for the app — the single source of truth for
- * press feedback so the touch experience is consistent everywhere.
- *
- * It wraps React Native's `Pressable` (the `themedComponents` re-export, which
- * the Unistyles babel plugin auto-binds to the C++ ShadowTree) and **appends**
- * the `pressed` style to the caller's style via the array pattern. The caller
- * keeps owning its `useVariants` styles, so this composes with variant-driven
- * components without freezing them.
- *
- * Do NOT wrap this (or its inner `Pressable`) with `withUnistyles`, and do NOT
- * rebuild it on `react-native-gesture-handler`'s `Pressable` — either drops
- * `StyleSheet.create` proxy values and freezes variants (unistyles#1109). For
- * gesture composition (Swipeable underlays, `GestureDetector` chains), keep
- * importing RNGH's `Pressable` directly at the call site.
+ * Appends the `pressed` style to the caller's, so caller-owned variants survive.
+ * Never wrap this (or its inner `Pressable`) with `withUnistyles` or rebuild it
+ * on RNGH's — either freezes variants (unistyles#1109). Gesture composition
+ * imports RNGH's `Pressable` at the call site instead.
  */
 export const AppPressable: React.FC<AppPressableProps> = ({
   style,

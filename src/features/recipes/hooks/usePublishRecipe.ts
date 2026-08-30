@@ -1,15 +1,8 @@
 /**
- * usePublishRecipe — publish / unpublish a recipe via updateRecipe(status).
- *
- * There's no dedicated publish mutation: publishing sets `status` to PUBLISHED
- * (DRAFT to unpublish). It's an absolute status set keyed by the recipe id, so
- * it's local-first (a queued replay re-applies the same state idempotently).
- *
- * The detail screen's publish toggle reads `Recipe.isPublished` from the cache,
- * so the flip is written optimistically BEFORE firing — the toggle reflects the
- * change immediately, including offline where the queued update only reconciles
- * on replay. A resolved rejection reverts from a snapshot; a queued (null)
- * result keeps the optimistic flip and replays.
+ * Publish / unpublish via `updateRecipe(status)` — an absolute status set keyed
+ * by the recipe id, so local-first and idempotent on replay. The toggle reads
+ * `Recipe.isPublished`, so the flip is written BEFORE firing; a rejection
+ * reverts from a snapshot, a queued (null) result keeps it.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';

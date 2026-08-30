@@ -116,14 +116,11 @@ const PATTERNS = [
 ];
 
 function normalize(text) {
-  // Strip GraphQL line comments (`# …` to end of line) BEFORE collapsing
-  // whitespace — otherwise a documented example selection in a comment
-  // (e.g. `# inviter {id email profile {id displayName avatar}}`) is counted
-  // as a real inline selection and trips the regression check. Must run
-  // before the `\s+` collapse, since collapsing newlines first would merge a
-  // comment into the following line.
-  // Collapse all whitespace to single spaces so multi-line and single-line
-  // selection blocks count identically.
+  // Strip GraphQL line comments BEFORE collapsing whitespace — otherwise an
+  // example selection written in a comment counts as a real inline selection.
+  // Must precede the `\s+` collapse, since collapsing newlines first merges a
+  // comment into the following line. Then collapse whitespace so multi-line and
+  // single-line selection blocks count identically.
   return text.replace(/#[^\n]*/g, ' ').replace(/\s+/g, ' ');
 }
 

@@ -6,8 +6,11 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import { alertService } from '#/services/alertService';
+import { errorService } from '#/services/errorService';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { createMockHomeNode } from '#/test-utils/mockFactories';
 import { useHomeSelection } from '../useHomeSelection';
+import { useDefaultHomeSyncStore } from '#features/home/store/useDefaultHomeSyncStore';
 
 const mockStoreState = {
   selectedHomeId: null as string | null,
@@ -17,6 +20,14 @@ const mockStoreState = {
   setHomeAndPantry: jest.fn(),
   setIsHomeSelectionReady: jest.fn(),
 };
+
+// `setDefaultHome` snapshots the selection from the live store, not from its
+// render closure — see the rollback comment there.
+jest.mock('#store', () => ({
+  useStore: {
+    getState: () => mockStoreState,
+  },
+}));
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: <T>(selector: (state: RootState) => T): T =>
@@ -62,6 +73,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockStoreState.selectedHomeId = null;
   mockStoreState.selectedPantryId = null;
+  useDefaultHomeSyncStore.getState().clearPending();
 });
 
 function setDefaultMock(defaultPantryId: string | null = null) {
@@ -86,9 +98,25 @@ function setDefaultFailureMock() {
     data: {
       markHomeAsDefault: {
         __typename: 'NotFoundError',
+        // Stated, not left to SDL completion: completion pins the union member
+        // from `__typename` but fills `code` deterministically with the first
+        // `ErrorCode` value, which is not the refusal this test means. There is
+        // no `HOME_NOT_FOUND` in the enum — only `NOT_FOUND`.
+        code: ErrorCode.NotFound,
         message: 'Home not found',
       },
     },
+  });
+}
+
+/**
+ * What `queueLink` returns for a queued write: the payload field present but
+ * null, and no error. `classifyCreateResult` reads that as `'queued'`.
+ */
+function queuedMock() {
+  return recordMock(MarkHomeAsDefaultDocument, {
+    data: { markHomeAsDefault: null },
+    partial: true,
   });
 }
 
@@ -99,62 +127,15 @@ function setDefaultErrorMock() {
 }
 
 describe('useHomeSelection', () => {
-  it('returns selection state', () => {
+  it('returns the selection', () => {
     const { result } = renderHookWithApollo(() =>
       useHomeSelection({
         homes: createHomes(),
         remoteDefaultHomeId: 'home-1',
-        loading: false,
       }),
     );
 
     expect(result.current.selectedHomeId).toBeNull();
-    expect(result.current.defaultHome).toBeNull();
-    expect(result.current.isSynced).toBe(false);
-  });
-
-  it('computes defaultHome from selectedHomeId', () => {
-    mockStoreState.selectedHomeId = 'home-1';
-
-    const { result } = renderHookWithApollo(() =>
-      useHomeSelection({
-        homes: createHomes(),
-        remoteDefaultHomeId: 'home-1',
-        loading: false,
-      }),
-    );
-
-    expect(result.current.defaultHome).toEqual(
-      expect.objectContaining({ id: 'home-1', name: 'Home 1' }),
-    );
-  });
-
-  it('reports isSynced when selectedHomeId matches remoteDefaultHomeId', () => {
-    mockStoreState.selectedHomeId = 'home-1';
-
-    const { result } = renderHookWithApollo(() =>
-      useHomeSelection({
-        homes: createHomes(),
-        remoteDefaultHomeId: 'home-1',
-        loading: false,
-      }),
-    );
-
-    expect(result.current.isSynced).toBe(true);
-  });
-
-  it('reports not synced when IDs differ', () => {
-    mockStoreState.selectedHomeId = 'home-2';
-
-    const { result } = renderHookWithApollo(() =>
-      useHomeSelection({
-        homes: createHomes(),
-        remoteDefaultHomeId: 'home-1',
-        loading: false,
-      }),
-    );
-
-    expect(result.current.isSynced).toBe(false);
   });
 
   describe('setDefaultHome', () => {
@@ -167,7 +148,6 @@ describe('useHomeSelection', () => {
           useHomeSelection({
             homes: createHomes(),
             remoteDefaultHomeId: 'home-1',
-            loading: false,
           }),
         { operationMocks: [m.mock] },
       );
@@ -181,6 +161,30 @@ describe('useHomeSelection', () => {
       expect(m.fired).toEqual([]);
     });
 
+    it('still fires when the flag is default only because we wrote it', async () => {
+      // `remoteDefaultHomeId` is derived from the field the local write sets,
+      // so without the pending marker a queued-then-dropped write leaves the
+      // retry skipping as "already done".
+      mockStoreState.selectedHomeId = 'home-1';
+      useDefaultHomeSyncStore.getState().markPending('home-1');
+      const m = setDefaultMock();
+
+      const { result } = renderHookWithApollo(
+        () =>
+          useHomeSelection({
+            homes: createHomes(),
+            remoteDefaultHomeId: 'home-1',
+          }),
+        { operationMocks: [m.mock] },
+      );
+
+      await act(async () => {
+        await result.current.setDefaultHome('home-1');
+      });
+
+      expect(m.fired).toHaveLength(1);
+    });
+
     it('shows error for empty homeId', async () => {
       const m = setDefaultMock();
 
@@ -189,7 +193,6 @@ describe('useHomeSelection', () => {
           useHomeSelection({
             homes: createHomes(),
             remoteDefaultHomeId: null,
-            loading: false,
           }),
         { operationMocks: [m.mock] },
       );
@@ -206,28 +209,126 @@ describe('useHomeSelection', () => {
       );
     });
 
-    it('shows error when home not found in list', async () => {
-      const m = setDefaultMock();
+    it('fires the mutation for a home missing from the local list', async () => {
+      // The local list is a HINT, not an authority on existence: a mutation's
+      // `onCompleted` runs before React re-renders, so a home that was just
+      // created or joined is legitimately absent from the `homes` prop.
+      const m = setDefaultMock('pantry-9');
 
       const { result } = renderHookWithApollo(
         () =>
           useHomeSelection({
             homes: createHomes(),
             remoteDefaultHomeId: null,
-            loading: false,
           }),
         { operationMocks: [m.mock] },
       );
 
       let success: boolean;
       await act(async () => {
-        success = await result.current.setDefaultHome('nonexistent-home');
+        success = await result.current.setDefaultHome('brand-new-home');
       });
 
-      expect(success!).toBe(false);
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        'Home not found',
+      expect(success!).toBe(true);
+      expect(m.fired).toContainEqual({ input: { homeId: 'brand-new-home' } });
+      expect(alertService.alert).not.toHaveBeenCalled();
+      // No local record, so no pantry hint — the server's `defaultPantry` is
+      // what lands the selection.
+      expect(mockStoreState.setHomeAndPantry).toHaveBeenCalledWith(
+        'brand-new-home',
+        null,
+      );
+      expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
+        'pantry-9',
+      );
+    });
+
+    it('pre-selects the default pantry from pantriesConnection', async () => {
+      // `GetHomes` returns `pantriesConnection`, never a flat `pantries` array,
+      // so reading only `pantries` cleared the pantry on every real switch.
+      const m = setDefaultMock(); // server returns no defaultPantry
+      const homes = [
+        createMockHomeNode({ id: 'home-1', name: 'Home 1' }),
+        {
+          ...createMockHomeNode({ id: 'home-2', name: 'Home 2' }),
+          pantries: undefined,
+          pantriesConnection: {
+            __typename: 'PantryConnection' as const,
+            totalCount: 2,
+            edges: [
+              {
+                __typename: 'PantryEdge' as const,
+                node: {
+                  __typename: 'Pantry' as const,
+                  id: 'pantry-a',
+                  name: 'A',
+                  isDefault: false,
+                },
+              },
+              {
+                __typename: 'PantryEdge' as const,
+                node: {
+                  __typename: 'Pantry' as const,
+                  id: 'pantry-b',
+                  name: 'B',
+                  isDefault: true,
+                },
+              },
+            ],
+          },
+        },
+      ];
+
+      const { result } = renderHookWithApollo(
+        () =>
+          useHomeSelection({
+            homes,
+            remoteDefaultHomeId: null,
+          }),
+        { operationMocks: [m.mock] },
+      );
+
+      await act(async () => {
+        await result.current.setDefaultHome('home-2');
+      });
+
+      expect(mockStoreState.setHomeAndPantry).toHaveBeenCalledWith(
+        'home-2',
+        'pantry-b',
+      );
+    });
+
+    it('keeps the selection when the write is queued offline', async () => {
+      // The mutation is local-first, so offline `queueLink` QUEUES it and
+      // resolves with no payload and no error. That is not a refusal: the
+      // change is already in the cache permanently and replays on reconnect,
+      // so reverting it here would snap the user's choice back for no reason.
+      mockStoreState.selectedHomeId = 'home-1';
+      mockStoreState.selectedPantryId = 'pantry-1';
+
+      const { result } = renderHookWithApollo(
+        () =>
+          useHomeSelection({
+            homes: createHomes(),
+            remoteDefaultHomeId: null,
+          }),
+        { operationMocks: [queuedMock().mock] },
+      );
+
+      let success: boolean;
+      await act(async () => {
+        success = await result.current.setDefaultHome('home-2');
+      });
+
+      expect(success!).toBe(true);
+      expect(alertService.alert).not.toHaveBeenCalled();
+      // Never rolled back to the previous home.
+      expect(mockStoreState.setHomeAndPantry).not.toHaveBeenCalledWith(
+        'home-1',
+        'pantry-1',
+      );
+      expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenLastCalledWith(
+        true,
       );
     });
 
@@ -241,7 +342,6 @@ describe('useHomeSelection', () => {
           useHomeSelection({
             homes: createHomes(),
             remoteDefaultHomeId: 'home-1',
-            loading: false,
           }),
         { operationMocks: [m.mock] },
       );
@@ -273,7 +373,6 @@ describe('useHomeSelection', () => {
           useHomeSelection({
             homes: createHomes(),
             remoteDefaultHomeId: null,
-            loading: false,
           }),
         { operationMocks: [setDefaultErrorMock().mock] },
       );
@@ -300,7 +399,6 @@ describe('useHomeSelection', () => {
           useHomeSelection({
             homes: createHomes(),
             remoteDefaultHomeId: null,
-            loading: false,
           }),
         { operationMocks: [m.mock] },
       );
@@ -317,6 +415,13 @@ describe('useHomeSelection', () => {
         'Error',
         'Failed to set default home',
       );
+      // The fallback above is what the MOCKED errorService returns; this is
+      // what proves the server's code reached the resolver at all, so that the
+      // real service maps it to `errors.codes.*` copy in production.
+      expect(errorService.getUserFriendlyMessage).toHaveBeenCalledWith(
+        ErrorCode.NotFound,
+        'Failed to set default home',
+      );
     });
   });
 
@@ -325,7 +430,6 @@ describe('useHomeSelection', () => {
       useHomeSelection({
         homes: [],
         remoteDefaultHomeId: null,
-        loading: false,
       }),
     );
 

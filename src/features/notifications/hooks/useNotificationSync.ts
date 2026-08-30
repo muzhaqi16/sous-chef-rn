@@ -1,31 +1,15 @@
 /**
- * Server-synced notification actions: mark read / unread, delete, mark all
- * read, clear read, send test.
- *
- * Each action writes the Apollo cache first so the UI moves immediately, then
- * fires the mutation. The notification and the unread badge move in the SAME
- * direction at the SAME time, because they are one fact read two ways — the
- * feed's `status` and `User.unreadNotificationCount`. A revert puts both back.
- *
- * Mutations carry `context: { localFirst: true }` so an offline action is
- * queued and replayed rather than lost; these are idempotent server-side
- * (marking an already-read notification is a no-op), so replay is safe.
- *
- * **Failure is read off the RESOLVED result, not a `catch`.** The client sets
- * `mutate: { errorPolicy: 'all' }`, and Apollo's `QueryManager.mutate` then
- * `resolve({ data: undefined, error })` instead of rejecting — so a `catch`
- * only ever sees a link-level throw. The previous version put every rollback in
- * a `catch`, which meant a server refusal left the optimistic write standing
- * permanently. `classifyCreateResult` reads the three outcomes off the result:
- *
- *  - `'rejected'` — the server refused it. Revert.
- *  - `'queued'`   — offline; the queue replays it later. Keep the write.
- *                   (A queued result is `data` with the payload field set to
- *                   `null`, NOT absent data — checking `!result.data` would
- *                   classify it as a refusal and revert a write that is about
- *                   to succeed.)
- *  - `'created'`  — confirmed. Keep, and let normalization write the server's
- *                   own `status` through.
+ * Server-synced notification actions. Each writes the cache first, then fires
+ * under `context: { localFirst: true }` so an offline action queues and
+ * replays (all are idempotent server-side). The notification and the badge are
+ * one fact read two ways, so they move together and revert together.
+ */
+
+/*
+ * Failure is read off the RESOLVED result, never a `catch` — under
+ * `errorPolicy: 'all'` a `catch` sees only link-level throws.
+ * `classifyCreateResult` gives `'rejected'` (revert), `'created'` and
+ * `'queued'` (keep: `data` with a null payload, which `!data` would misread).
  */
 
 import { useNotificationStore } from '#features/notifications/store/notificationStore';

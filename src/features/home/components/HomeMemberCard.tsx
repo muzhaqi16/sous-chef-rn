@@ -167,17 +167,11 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  // `commonStyles.card` already supplies `padding: md` and `marginBottom: sm`.
-  // This used to re-declare both — the padding identically (harmless) and the
-  // margin as `marginVertical` (not harmless: RN margins do not collapse, so
-  // every pair of adjacent cards sat `sm + sm` apart). Only the border is this
-  // card's own.
-  //
-  // `gap` rather than trailing margins on the children: the actions row and the
-  // permissions list are BOTH conditional, and for a member viewing their own
-  // home neither renders — a `marginBottom` on `memberInfo` was then pure dead
-  // space under a single line of text. A gap only exists between siblings that
-  // are actually there.
+  // `commonStyles.card` supplies padding and `marginBottom`; only the border is
+  // this card's own. Re-declaring the margin as `marginVertical` would double
+  // the gap, since RN margins do not collapse. `gap` rather than trailing
+  // margins on the children: both the actions row and the permissions list are
+  // conditional, so a trailing margin becomes dead space when neither renders.
   memberCard: {
     gap: theme.spacing.sm,
     borderWidth: 1,

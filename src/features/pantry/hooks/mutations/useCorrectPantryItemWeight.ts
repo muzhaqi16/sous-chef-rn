@@ -1,21 +1,8 @@
 /**
- * useCorrectPantryItemWeight — correct a pantry item's net weight (local-first).
- *
- * Used after an item has been used (`lastUsedAt` is set). Creates a
- * WEIGHT_CORRECTED audit record with a mandatory reason.
- *
- * The corrected weight is written to the cache PERMANENTLY before firing (an
- * `optimisticResponse` would roll back the moment the offline queue completes
- * the request with a null result), so it shows instantly and survives an
- * offline/API-down correction. The server writes a ledger row per correction,
- * so a naive replay would write the audit twice — the mutation therefore
- * carries a client-minted `input.idempotencyKey` that the server records in the
- * same transaction, making a replay apply exactly once (it answers
- * `ConflictError(IDEMPOTENT_REPLAY)`, which the queue converges). A real
- * rejection restores the pre-correction snapshot.
- *
- * `version` rides along as the optimistic-concurrency check; a replay that
- * loses the race is a genuine conflict and is surfaced, not swallowed.
+ * Corrects net weight after use, writing a WEIGHT_CORRECTED audit record.
+ * Local-first: the cache is written PERMANENTLY before firing (an
+ * `optimisticResponse` rolls back on the queue's null result), and
+ * `input.idempotencyKey` keeps a queued replay from writing the audit twice.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';

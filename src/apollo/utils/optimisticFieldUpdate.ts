@@ -3,19 +3,10 @@ import type { ModifierDetails } from '@apollo/client/cache';
 import { errorService } from '#/services/errorService';
 
 /**
- * Permanent optimistic field write with a snapshot-based revert, for local-first
- * UPDATE mutations whose displayed value reads from the Apollo cache.
- *
- * Writes the flat fields of `input` onto the cached entity PERMANENTLY before
- * the mutation fires (an `optimisticResponse` would be torn down the moment the
- * offline queue completes the request with a null result), snapshotting the
- * prior values so a rejection can restore them. The caller fires the mutation
- * with `context: { localFirst: true }`, then calls `revert()` only when
- * `classifyCreateResult(...) === 'rejected'`; a queued (null) result keeps the
- * write and replays idempotently.
- *
- * No-op (revert is a no-op) when the entity isn't cached. `input` must map 1:1
- * onto the entity's fields (flat inputs only — nested inputs don't apply).
+ * Permanent optimistic field write with a snapshot revert: an `optimisticResponse`
+ * would be torn down the moment the offline queue completes with a null result.
+ * The caller fires with `context: { localFirst: true }` and reverts ONLY on
+ * `'rejected'`. Flat `input` fields only; a no-op when the entity is uncached.
  */
 export function optimisticFieldUpdate(
   cache: ApolloCache,

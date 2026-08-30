@@ -1,18 +1,8 @@
 /**
- * Shopping List Subscriptions
- *
- * Centralizes all shopping list-related subscriptions using the unified
- * SubscriptionService. The server caps concurrent subscriptions per client
- * (per-user, cluster-wide), so this hook opens exactly ONE stream:
- * - MyShoppingListsEvents (user-scoped): every shopping-list domain event for
- *   all of the user's lists, discriminated by `subtype` — ITEMS_CHANGED,
- *   LIST_UPDATED, STATUS_CHANGED, ITEMS_BATCH_CLEARED, and COLLABORATION_CHANGED
- *   (collaborator lifecycle, folded in from the former per-list
- *   collaborationChanged subscription; mirrors pantryEvents). Connection
- *   membership is maintained for the active list only.
- *
- * This subscription automatically updates the Apollo cache and provides
- * deduplication to prevent self-echo and duplicate updates.
+ * The server caps concurrent subscriptions per user cluster-wide, so this opens
+ * exactly ONE stream: MyShoppingListsEvents carries every shopping-list domain
+ * event for all the user's lists, discriminated by `subtype`. Connection
+ * membership is maintained for the ACTIVE list only.
  */
 
 import type { ApolloCache, Reference } from '@apollo/client';
@@ -59,23 +49,14 @@ import { logger } from '#/utils/environment';
 import { errorService } from '#/services/errorService';
 import { useSubscriptionTransportRecovery } from '#hooks/subscriptions/useSubscriptionTransportRecovery';
 
-/**
- * Cached `itemsConnection` shape as seen inside a `cache.modify` field
- * function — edges wrap normalized node references. `readField` is used to
- * read `sortOrder` off each node ref rather than indexing the object directly.
- */
-// Reuses the shared cache.modify connection shape (carries `readonly __ref?`
-// so it stays structurally compatible with Apollo's `Reference` value type).
+// The connection as `cache.modify` sees it: edges wrap normalized node refs, so
+// `sortOrder` comes from `readField`, never from indexing the object.
 type CachedItemsConnection = ConnectionData;
 
-/** Re-sort shopping list edges by sortOrder after a subscription update.
- *
- * Uses cache.modify so the modifier runs once per storeFieldName variant.
- * When `targetVariant` is provided, only the matching cache variant is sorted;
- * non-matching variants are returned unchanged to avoid unnecessary work.
- *
- * @param targetVariant - Optional substring to match against storeFieldName
- *   (e.g., `'"isPurchased":false'`). If omitted, all variants are sorted.
+/**
+ * Re-sort a list's edges by sortOrder. `cache.modify` runs the modifier once per
+ * cached variant; `targetVariant` (a storeFieldName substring such as
+ * `'"isPurchased":false'`) narrows it to one, and omitting it sorts them all.
  */
 function resortEdges(
   cache: ApolloCache,
@@ -160,19 +141,12 @@ function resortEdges(
   }
 }
 
-/**
- * Animation scheduler function type for coordinating exit animations
- * with subscription cache updates
- */
 type ScheduleAnimationFn = (
   itemId: string,
   direction: 1 | -1,
   onComplete: () => void,
 ) => void;
 
-/**
- * Entry animation scheduler function type for items appearing in destination list
- */
 type ScheduleEntryAnimationFn = (itemId: string, direction: 1 | -1) => void;
 
 // Collaborator removal — module scope (constant config, no closure deps) so the
@@ -184,23 +158,14 @@ const removeCollaborator = createRemoveFromParentConnectionUpdater(
 );
 
 /**
- * Initialize shopping list subscriptions for the current user
- *
- * This hook should be called once at the app level (in SubscriptionProvider)
- * It automatically subscribes to relevant shopping list changes based on
- * the user's selected shopping list.
- *
- * @param userId - Current user ID for deduplication
- * @param scheduleAnimation - Optional callback to schedule exit animations before cache updates
- * @param scheduleEntryAnimation - Optional callback to schedule entry animations after cache updates
+ * Mounted once at app level, by `SubscriptionProvider`. The animation schedulers
+ * let a move be animated out before, and in after, the cache write.
  */
 export function useShoppingListSubscriptions(
   userId?: string,
   scheduleAnimation?: ScheduleAnimationFn,
   scheduleEntryAnimation?: ScheduleEntryAnimationFn,
 ) {
-  // Get selected shopping list from global store
-  // This allows subscriptions to follow the user's current context
   const selectedShoppingListId = useSelectedShoppingListId() || undefined;
   const rejected = useSubscriptionRejected('MyShoppingListsEvents');
 
@@ -230,7 +195,7 @@ export function useShoppingListSubscriptions(
       mutation === MutationType.ItemRemoved
     ) {
       const removeItem = () => {
-        // PERF: Batch remove + evict + gc into a single observer notification
+        // One observer notification for the remove + evict + gc.
         client.cache.batch({
           update(cache: ApolloCache) {
             removeFromShoppingListItemsConnection(cache, listId, itemId, {
@@ -272,7 +237,7 @@ export function useShoppingListSubscriptions(
     if (!data?.shoppingListItem) return;
 
     if (isCreate) {
-      // PERF: Batch so the internal modify + any follow-up writes coalesce into one notification
+      // One notification for the internal modify plus any follow-up writes.
       client.cache.batch({
         update(cache: ApolloCache) {
           addNewItemToShoppingListCache(cache, listId, { id: itemId });
@@ -309,7 +274,6 @@ export function useShoppingListSubscriptions(
         : '"isPurchased":false';
 
       scheduleAnimation(itemId, direction, () => {
-        // PERF: Batch move + sort into a single cache notification
         client.cache.batch({
           update(cache: ApolloCache) {
             moveOp(cache, listId, { id: itemId });
@@ -323,8 +287,7 @@ export function useShoppingListSubscriptions(
       return;
     }
 
-    // Determine which variant to sort: completed→purchased, uncompleted→unpurchased,
-    // otherwise sort all variants (general ItemUpdated — variant unknown)
+    // A plain ItemUpdated does not say where the row sits, so all variants sort.
     const nonAnimSortVariant = isCompletedMutation
       ? '"isPurchased":true'
       : isUncompletedMutation
@@ -336,9 +299,8 @@ export function useShoppingListSubscriptions(
       return;
     }
 
-    // PERF: Non-animated path — batch ALL cache operations into a single
-    // observer notification. This prevents cascading re-renders when
-    // the move + sort would otherwise trigger 2-3 notifications.
+    // Batched into one observer notification; unbatched, the move plus the sort
+    // fire two or three and cascade re-renders.
     client.cache.batch({
       update(cache: ApolloCache) {
         if (isCompletedMutation) {
@@ -354,21 +316,10 @@ export function useShoppingListSubscriptions(
     });
   };
 
-  //
-  // My Shopping Lists Events Subscription (consolidated)
-  // One user-scoped stream carries every shopping-list domain event for ALL
-  // of the user's lists, discriminated by `subtype` (mirrors pantryEvents):
-  // - ITEMS_CHANGED: item add/update/delete + purchased moves — connection
-  //   membership is maintained only for the active list; other lists'
-  //   connections self-correct via cache-and-network on next visit
-  // - LIST_UPDATED / STATUS_CHANGED: the list summary is read back for lists
-  //   the cache is holding; re-evicts while a local delete is in flight
-  // - ITEMS_BATCH_CLEARED: removes the cleared item entities from the active
-  //   list's cache so they disappear from every variant
-  //
-  // Every branch works from the envelope plus an id — subscriptions are
-  // validated against depth 5, which no fragment spread fits under.
-  //
+  // Only the ACTIVE list's connections are maintained; other lists self-correct
+  // via cache-and-network on the next visit. Every branch works from the
+  // envelope plus an id, because subscriptions are validated against depth 5 and
+  // no fragment spread fits under it.
   const myListsEventsHandlers =
     subscriptionService.register<MyShoppingListsEventsPayload>({
       subscriptionName: 'MyShoppingListsEvents',
@@ -482,12 +433,9 @@ export function useShoppingListSubscriptions(
   const myListsSkip = !userId || rejected;
   const myListsEvents = useSubscription(MyShoppingListsEventsDocument, {
     skip: myListsSkip,
-    // Envelope + id only; handlers read entities back with queries. Left
-    // cacheable, Apollo re-creates a just-deleted item as a bare `{ id }` from
-    // the server's echo of our own delete. The handler above re-evicts it, and
-    // that only avoids a page refetch because Apollo defers its incomplete-
-    // result check by a tick — see usePantrySubscriptions for the pantry,
-    // which had no such re-eviction and refetched GetPantry on every delete.
+    // Envelope + id only, so it must stay uncached: cached, the echo of our own
+    // delete re-creates the item as a bare `{ id }`, the list query goes
+    // incomplete and Apollo refetches the whole page per delete.
     fetchPolicy: 'no-cache',
     ...myListsEventsHandlers,
   });

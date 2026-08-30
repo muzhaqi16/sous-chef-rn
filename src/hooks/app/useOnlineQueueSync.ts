@@ -7,34 +7,18 @@ import { resumeWebSocketAfterOnline } from '#/apollo/links/wsLink';
 import { proactiveTokenRefresh } from '#/apollo/links/refreshToken';
 
 /**
- * Drives the offline mutation queue from network status. When the device
- * comes online, attempts a deferred token refresh (if one was queued during
- * the offline window) before replaying queued mutations; goes offline path
- * pauses the queue.
+ * Drives the offline mutation queue from network status: coming online kicks a
+ * deferred token refresh and replays; going offline pauses the queue.
  */
 export function useOnlineQueueSync(): void {
   const isOnline = useIsOnline();
-  // Also keyed on the authenticated user, not just connectivity. `App` calls
-  // `useAppLifecycle()` BEFORE its `isHydrated` guard, so this hook mounts on
-  // the first render with the store not yet hydrated: the effect below runs,
-  // `processQueue` finds no authenticated user and skips. `isOnline` defaults
-  // to `true` and never changes on an online launch, so the effect never ran
-  // again — writes made offline then sat unreplayed through app restarts until
-  // connectivity happened to flap. Re-running when the user lands closes that,
-  // and also drains for whoever signs in next.
+  // Keyed on BOTH halves of auth readiness, not just connectivity: `isOnline`
+  // defaults true and never changes on an online launch, so without these the
+  // effect runs once — before credentials exist — and offline writes sit
+  // unreplayed across restarts. `user` restores from MMKV synchronously while
+  // `accessToken` comes from the keychain asynchronously, so they land at
+  // different times. A boolean, so a token ROTATION does not re-run this.
   const userId = useUserId();
-  // Auth readiness is BOTH halves, and they arrive at different times.
-  // `user` is in PERSISTED_KEYS, so it is restored from MMKV synchronously at
-  // hydration — but `accessToken` is not: the keychain is its persistence tier
-  // and `hydrateSessionTokensThenFinish` restores it asynchronously. So at the
-  // first render the user is already present while the token is still null,
-  // `processQueue` skips with "no authenticated user", and nothing re-triggered
-  // it once the keychain resolved. Writes made offline then sat unreplayed
-  // across restarts until connectivity happened to flap.
-  //
-  // Deferring the drain until credentials exist is correct; the bug was having
-  // no trigger for when they arrive. Tracked as a boolean so a token ROTATION
-  // does not pointlessly re-run this.
   const hasAccessToken = useAppStore(state => !!state.accessToken);
 
   // The permanent-failure handler is registered by `useStartupInit`, not here —
@@ -42,14 +26,10 @@ export function useOnlineQueueSync(): void {
 
   useEffect(() => {
     if (!isOnline) {
-      // Unknown, not unreachable — and start probing, because a `/health`
-      // success is the only evidence that can show NetInfo is wrong about a
-      // link our API is reachable over anyway.
-      //
-      // Deliberately NOT `reset()`. It ends in `setApiReachable(true)`, which
-      // would overwrite the `null` the store just wrote and make
-      // `shouldTreatAsOffline` false for the whole offline window — no offline
-      // rejection, no offline banner, no cache-only reads.
+      // Unknown, not unreachable, and start probing — a `/health` success is
+      // the only evidence that NetInfo is wrong. Deliberately NOT `reset()`:
+      // that ends in `setApiReachable(true)`, overwriting the store's `null` and
+      // disabling offline behaviour for the whole outage.
       apiReachabilityBreaker.onDeviceOffline();
       queueManager.onOffline();
       return;
@@ -63,18 +43,11 @@ export function useOnlineQueueSync(): void {
     // dialing when NetInfo says the device has no connectivity).
     resumeWebSocketAfterOnline();
 
-    // Kick a deferred refresh, but do NOT gate the drain on it. This used to
-    // await `proactiveTokenRefresh()` and only call `onOnline()` from its
-    // `.then`/`.catch`, so an unsettled refresh stranded the queue silently:
-    // writes made offline never replayed, with no error and nothing on screen.
-    // That promise can stay pending — `proactiveTokenRefresh` hands every later
-    // caller the existing in-flight promise, and only the ORIGINAL caller's
-    // `finally` resets the state, so one stuck refresh blocks all of them, and
-    // `performTokenRefresh` has no timeout over its backoff-retry loop.
-    //
-    // Replaying with a stale token is cheap by comparison: the replay path
-    // validates the token first and refreshes + retries on an auth error, so
-    // the cost is one retry rather than the whole drain.
+    // Kick a deferred refresh but NEVER gate the drain on it: that promise can
+    // stay pending forever (`proactiveTokenRefresh` shares one in-flight promise
+    // and `performTokenRefresh` has no timeout over its retry loop), stranding
+    // the queue silently. Replaying with a stale token costs one retry, since
+    // the replay path refreshes and retries on an auth error.
     const state = useStore.getState();
     if (state.needsTokenRefresh && state.refreshToken) {
       proactiveTokenRefresh()

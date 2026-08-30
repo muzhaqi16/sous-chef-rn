@@ -218,10 +218,9 @@ describe('formatQuantityBreakdown', () => {
     expect(result).toBeNull();
   });
   it('renders the unit label the server gave, without pluralising it', () => {
-    // This used to append a literal "s" for any count but 1. That is English
-    // pluralisation applied to a label that is not English — "2 lattinas" in
-    // Italian — and it was wrong even in English the moment the unit was a
-    // symbol: "15 kgs".
+    // Appending a literal "s" for any count but 1 is English pluralisation
+    // applied to a label that is not English — "2 lattinas" in Italian — and it
+    // is wrong even in English the moment the unit is a symbol: "15 kgs".
     //
     // `Unit.symbol` is non-null in the schema and is preferred here, so the
     // symbol is what renders in practice, and symbols are not pluralised

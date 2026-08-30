@@ -628,7 +628,7 @@ describe('QueueStore', () => {
     it('revives auth-parked entries so the next drain replays them', () => {
       // An auth failure is not a refusal — the server never saw the write. A
       // sign-in is what makes it replayable again, and retries start fresh
-      // because the old count was spent against a token that no longer exists.
+      // because the old count was spent against a token that is now gone.
       store.addMutation(
         makeMutation({
           id: 'parked',

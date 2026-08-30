@@ -59,22 +59,8 @@ interface NotificationConfig {
 }
 
 /**
- * useNotificationListener — opens the consolidated `NotificationEvents`
- * subscription (CREATED + UPDATED on one stream, routed by `subtype`) and
- * processes incoming events into the notification store.
- *
- * Must be mounted exactly ONCE (by NotificationProvider). The server caps
- * concurrent subscriptions per client and Apollo does not dedupe identical
- * subscriptions, so a second mount opens another server subscription and
- * double-processes every event. Screens that need notification state should
- * use `useNotifications` instead — it reads the store without subscribing.
- */
-/**
- * Re-seed the unread count, coalesced.
- *
- * `GetUnreadNotifications` selects the connection's first 50 with the full
- * notification fragment, and a burst — a reconnect backfill, a collaborator
- * acting in bulk — would otherwise fire one full round trip per event.
+ * Coalesces the unread-count reseed: `GetUnreadNotifications` pulls the first
+ * 50 with the full fragment, so a burst would fire one round trip per event.
  */
 const RESEED_DEBOUNCE_MS = 300;
 let reseedTimer: ReturnType<typeof setTimeout> | null = null;
@@ -106,27 +92,24 @@ export const cancelPendingUnreadReseed = (): void => {
 // re-populate the cache for a session that has ended.
 registerSessionTeardown('notification-reseed', cancelPendingUnreadReseed);
 
+/**
+ * Opens the consolidated `NotificationEvents` subscription and processes its
+ * events. Must be mounted exactly ONCE (by NotificationProvider): the server
+ * caps concurrent subscriptions and Apollo does not dedupe them, so a second
+ * mount double-processes every event. Screens read via `useNotifications`.
+ */
 export const useNotificationListener = (config: NotificationConfig = {}) => {
   const client = useApolloClient();
   const { t } = useTranslation();
 
-  // Every server-delivered transition re-seeds the unread count instead of
-  // applying a delta.
-  //
-  // A delta cannot be made idempotent on this path. The guard that makes the
-  // local writes safe asks whether the row was unread BEFORE the change, and
-  // here it can no longer tell: Apollo normalizes the event's `node` into the
-  // cache before `onData` runs, so a READ event has already set the row to
-  // READ by the time the handler looks. The row would move and the badge would
-  // not — the exact disagreement `notificationCacheWrites` exists to prevent.
-  //
-  // Re-reading is also the more truthful answer: the badge counts every unread
-  // notification, including ones this device has never paged in, so a local ±1
-  // was only ever an approximation of it. An event arriving means the socket is
-  // up, so the read is available.
+  // Server-delivered transitions RESEED rather than apply a delta: Apollo
+  // normalizes the event's `node` before `onData` runs, so the "was it unread?"
+  // guard that makes local writes idempotent already sees the new value. The
+  // badge also counts notifications this device never paged in, which a local
+  // ±1 could only ever approximate.
   const reseedUnreadCount = () => scheduleUnreadReseed(client);
 
-  // PERFORMANCE: Use ref instead of state for AppState to avoid re-renders
+  // A ref, not state: AppState changes must not re-render this listener.
   const appStateRef = useRef(AppState.currentState);
 
   const user = useAppStore(selectListenerUser);
@@ -399,14 +382,11 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
     return () => subscription.remove();
   }, []);
 
-  // Route taps on OS-auto-displayed pushes (background tap + cold-launch): FCM
-  // on Android, APNs on iOS. Each is platform-guarded, so both are safe to call.
-  // Taps on data-only pushes we drew ourselves route through Notifee's handlers.
-  //
-  // Gated on authentication: registering synchronously consumes the one-shot
-  // cold-start tap, so running it while logged out would drop a launch tap
-  // before there is a session to route it into. The tap stays cached and is
-  // consumed once the user is authenticated and this effect re-runs.
+  // Taps on OS-displayed pushes (FCM/APNs, each platform-guarded); taps on
+  // data-only pushes we drew go through Notifee. Gated on authentication —
+  // registering consumes the one-shot cold-start tap synchronously, and while
+  // logged out there is no session to route it into. It stays cached until this
+  // effect re-runs.
   useEffect(() => {
     if (config.skip || !user?.id) return;
     const unsubscribeFcm = registerFcmTapHandlers();
@@ -432,9 +412,9 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
  * delivered by `useNotificationListener`, mounted once in NotificationProvider.
  */
 export const useNotifications = () => {
-  // Actions only. The feed itself comes from `useNotificationHistory`, which
-  // reads the Apollo cache — this hook used to return a Zustand copy of it, and
-  // a screen holding both had no rule for which one was current.
+  // Actions only. The feed comes from `useNotificationHistory`, which reads the
+  // Apollo cache; a second copy here would leave a screen holding both with no
+  // rule for which is current.
   const { syncMarkAsRead, syncDelete, syncMarkAllAsRead, syncClearRead } =
     useNotificationSync();
 

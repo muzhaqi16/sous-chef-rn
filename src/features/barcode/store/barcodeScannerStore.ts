@@ -68,11 +68,9 @@ export interface BarcodeScannerState {
 }
 
 /**
- * Everything empty, `recentlyScanned` included.
- *
- * `resetScanner` deliberately KEEPS the history (it survives closing the
- * scanner); a session end must not. Exported so the session reset clears the
- * whole store rather than a hand-copied subset of it.
+ * Everything empty, `recentlyScanned` included — `resetScanner` deliberately
+ * keeps the history, a session end must not. Exported so the session reset
+ * clears the whole store rather than a hand-copied subset.
  */
 export const initialBarcodeScannerState = {
   scannedBarcode: null,
@@ -194,11 +192,9 @@ registerSessionScopedStore('barcodeScanner', () =>
 );
 
 /*
- * Grouped selectors, moved here with the state they read.
- *
- * `useShallow` because each returns a fresh object: without it every store
- * write re-renders every consumer, which on the scanner is every frame the
- * camera produces a candidate.
+ * Grouped selectors. `useShallow` because each returns a fresh object —
+ * without it every store write re-renders every consumer, which on the scanner
+ * is every frame the camera produces a candidate.
  */
 
 /** Search results and the actions that write them. */

@@ -24,48 +24,15 @@ interface ShoppingListItem {
 }
 
 interface UseItemReorderingOptions<T extends ShoppingListItem> {
-  /**
-   * Current shopping list ID
-   */
   listId?: string;
-
-  /**
-   * Array of shopping list items
-   */
   items: T[];
-
-  /**
-   * Optional refetch function for version conflict recovery
-   */
+  /** Recovers from a version conflict. */
   refetch?: () => void;
 }
 
 /**
- * Hook to manage shopping list item reordering
- *
- * Provides optimistic reordering with fractional indexing for instant
- * UI feedback while coordinating with the server. Handles:
- * - Fractional index generation for new positions
- * - Optimistic UI updates
- * - Apollo cache management
- * - Error handling with user feedback
- *
- * @param options - Configuration options
- * @returns Object with sort order update handler
- *
- * @example
- * ```typescript
- * const { handleSortOrderUpdate } = useItemReordering({
- *   listId: currentListId,
- *   items: shoppingListItems,
- * });
- *
- * <SortableList
- *   onReorder={(itemId, afterId, beforeId) =>
- *     handleSortOrderUpdate(itemId, afterId, beforeId)
- *   }
- * />
- * ```
+ * Optimistic reordering by fractional index: the new sortOrder is written to the
+ * cache before the mutation fires, and reverted from persistence on failure.
  */
 export function useItemReordering<T extends ShoppingListItem>(
   options: UseItemReorderingOptions<T>,
@@ -74,19 +41,13 @@ export function useItemReordering<T extends ShoppingListItem>(
   const client = useApolloClient();
 
   const [moveItem] = useMutation(MoveShoppingListItemDocument, {
-    // NO optimisticResponse and NO update callback
-    // Per apollo-client-patterns.md Pattern 5: Use cache.modify for simple field updates
-    // We do cache.modify BEFORE the mutation call for immediate UI feedback
+    // No optimisticResponse and no update callback: cache.modify runs BEFORE the
+    // mutation call for immediate feedback.
   });
 
   /**
-   * Handle sort order update when an item is moved
-   *
-   * @param itemId - ID of the item being moved
-   * @param afterItemId - ID of the item that comes before the new position
-   * @param beforeItemId - ID of the item that comes after the new position
-   * @param afterSortOrder - sortOrder value of the item before the new position
-   * @param beforeSortOrder - sortOrder value of the item after the new position
+   * `afterItemId` is the neighbour that ends up before the new position,
+   * `beforeItemId` the one after it; either may be null at a list edge.
    */
   const handleSortOrderUpdate = async (
     itemId: string,
@@ -95,14 +56,12 @@ export function useItemReordering<T extends ShoppingListItem>(
   ) => {
     if (!listId) return;
 
-    // Find the current item from cache to preserve all fields
     const currentItem = items.find(item => item.id === itemId);
     if (!currentItem) {
       logger.error('Item not found in cache:', itemId);
       return;
     }
 
-    // Calculate new sortOrder BEFORE cache update
     const afterItem = afterItemId
       ? items.find(i => i.id === afterItemId)
       : null;
@@ -110,13 +69,12 @@ export function useItemReordering<T extends ShoppingListItem>(
       ? items.find(i => i.id === beforeItemId)
       : null;
 
-    // Defensive validation: verify sortOrder ordering
-    // If after > before, the visual order doesn't match sortOrder order (cache out of sync)
+    // after > before means the visual order and sortOrder order disagree, i.e.
+    // the cache is out of sync.
     let newSortOrder: string | undefined;
 
     if (afterItem?.sortOrder && beforeItem?.sortOrder) {
       if (afterItem.sortOrder > beforeItem.sortOrder) {
-        // Cache is out of sync - visual order doesn't match sortOrder order
         logger.warn('Invalid sortOrder state (after > before), refetching...', {
           afterId: afterItemId,
           afterSortOrder: afterItem.sortOrder,
@@ -128,8 +86,8 @@ export function useItemReordering<T extends ShoppingListItem>(
       }
 
       if (afterItem.sortOrder === beforeItem.sortOrder) {
-        // Collision: two items have the same sortOrder (can't insert between identical values)
-        // Fallback: insert after the duplicate block by finding next different sortOrder
+        // Nothing can be inserted between two identical values, so fall back to
+        // inserting after the duplicate block.
         logger.warn(
           'Duplicate sortOrder in cache, using fallback positioning',
           {
@@ -139,7 +97,6 @@ export function useItemReordering<T extends ShoppingListItem>(
           },
         );
 
-        // Find the next item with a different (higher) sortOrder
         const nextItem = items
           .filter(i => i.sortOrder && i.sortOrder > afterItem.sortOrder!)
           .sort((a, b) =>
@@ -153,7 +110,6 @@ export function useItemReordering<T extends ShoppingListItem>(
       }
     }
 
-    // Generate sortOrder normally if not already set by fallback logic
     if (!newSortOrder) {
       newSortOrder = generateKeyBetween(
         afterItem?.sortOrder ?? null,
@@ -161,12 +117,9 @@ export function useItemReordering<T extends ShoppingListItem>(
       );
     }
 
-    // PERFORMANCE: Batch both cache modifications into a single update
-    // This ensures FlashList sees a consistent state and reduces re-render cycles
-    // Per apollo-client-patterns.md Pattern 5: Use cache.modify for simple field updates
+    // Batched so FlashList sees one consistent state instead of two renders.
     client.cache.batch({
       update: cache => {
-        // 1. Update the item's sortOrder and timestamp
         cache.modify({
           id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
           fields: {
@@ -179,7 +132,6 @@ export function useItemReordering<T extends ShoppingListItem>(
           },
         });
 
-        // Helper to sort edges by sortOrder with secondary sort by id
         const sortEdges = (
           edges: readonly Reference[],
           readField: ModifierDetails['readField'],
@@ -200,15 +152,15 @@ export function useItemReordering<T extends ShoppingListItem>(
           });
         };
 
-        // 2. Re-sort edges in itemsConnection so FlashList sees new order
-        // Uses cache.modify instead of writeQuery to target the correct cache key
-        // (writeQuery with aliases doesn't match the field policy's keyArgs: ['filters'])
+        // Re-sort the connection's edges so FlashList sees the new order.
+        // cache.modify, not writeQuery: an aliased writeQuery does not match the
+        // field policy's `keyArgs: ['filters']` cache key.
         cache.modify({
           id: cache.identify({ __typename: 'ShoppingList', id: listId }),
           fields: {
-            // Target the actual field name with its keyArgs to match the cache key
             itemsConnection(existing, { storeFieldName, readField }) {
-              // Only modify the unpurchased connection (check filter in storeFieldName)
+              // cache.modify runs for every cached variant; only the unpurchased
+              // one is ordered by sortOrder.
               if (!isUnpurchasedVariant(storeFieldName)) {
                 return existing;
               }
@@ -223,7 +175,7 @@ export function useItemReordering<T extends ShoppingListItem>(
       },
     });
 
-    // Persist optimistic sortOrder to survive cache-and-network refetches while offline
+    // Survives cache-and-network refetches while offline.
     optimisticDataPersistence.save(
       'ShoppingListItem',
       itemId,
@@ -231,7 +183,6 @@ export function useItemReordering<T extends ShoppingListItem>(
       newSortOrder,
     );
 
-    // Execute mutation (NO optimisticResponse - cache already updated above)
     const moveAfterItemId = afterItemId ?? undefined;
     const moveBeforeItemId = beforeItemId ?? undefined;
     let result;
@@ -255,27 +206,25 @@ export function useItemReordering<T extends ShoppingListItem>(
       });
     }
     if (!result) {
-      // The mutation threw (handled by the onError above). Drop the persisted
-      // optimistic sortOrder — it carries no version, so the restoration hook
-      // would otherwise re-apply the failed move on every cold start.
+      // Drop the persisted sortOrder — it carries no version, so the restoration
+      // hook would re-apply the failed move on every cold start.
       optimisticDataPersistence.clear('ShoppingListItem', itemId, 'sortOrder');
       return;
     }
 
-    // Check for GraphQL errors (with errorPolicy: 'all', errors don't throw)
+    // errorPolicy: 'all' — a failing mutation resolves rather than throwing.
     if (result.error) {
       handleMutationError(result.error, {
         operation: 'Move Item',
         checks: [versionConflictCheck({ onRefresh: () => refetch?.() })],
       });
       optimisticDataPersistence.clear('ShoppingListItem', itemId, 'sortOrder');
-      refetch?.(); // Refetch to restore correct order
+      refetch?.();
       return;
     }
 
-    // Check if a real move happened by comparing versions. serverItem is a
-    // masked ref — materialize via a narrow fragment that only selects what
-    // we read here (version, sortOrder).
+    // serverItem is a masked ref — materialize it through a narrow fragment
+    // selecting only what is read here (version, sortOrder).
     const serverItemRef =
       result.data?.moveShoppingListItem?.__typename ===
       'MoveShoppingListItemPayload'
@@ -292,11 +241,11 @@ export function useItemReordering<T extends ShoppingListItem>(
     const serverSortOrder = serverItem?.sortOrder;
     const originalVersion = currentItem.version;
 
-    // Server confirmed — clear persisted optimistic sortOrder
+    // Server confirmed, so the persisted value has nothing left to restore.
     optimisticDataPersistence.clear('ShoppingListItem', itemId, 'sortOrder');
 
     if (serverVersion === originalVersion) {
-      // No-op move - item was already in correct position
+      // Unchanged version means the item was already in position.
       logger.debug('⊘ Move was no-op (item already in position):', {
         itemId,
         version: serverVersion,
@@ -304,7 +253,6 @@ export function useItemReordering<T extends ShoppingListItem>(
       return;
     }
 
-    // Real move happened
     logger.debug('✓ Sort order updated on server:', {
       itemId,
       serverSortOrder,
@@ -312,8 +260,7 @@ export function useItemReordering<T extends ShoppingListItem>(
       newVersion: serverVersion,
     });
 
-    // Ensure server's sortOrder is in cache (may differ from optimistic value)
-    // This prevents cache desync when server calculates a different sortOrder
+    // The server may compute a different sortOrder than the optimistic one.
     if (serverSortOrder && serverSortOrder !== newSortOrder) {
       logger.debug('Server returned different sortOrder, updating cache:', {
         optimistic: newSortOrder,

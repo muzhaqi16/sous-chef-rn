@@ -86,7 +86,9 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
     }
   };
 
-  if (loading) {
+  // Data first: a request in flight over a warm cache must not replace the
+  // picker with a spinner.
+  if (loading && groups.length === 0) {
     return (
       <View style={commonStyles.bottomSheetSection}>
         <View style={styles.collapsedRow}>

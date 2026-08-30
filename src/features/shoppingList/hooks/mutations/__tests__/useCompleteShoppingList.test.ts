@@ -79,7 +79,7 @@ describe('useCompleteShoppingList', () => {
             data: {
               completeShoppingList: {
                 __typename: 'ValidationError',
-                code: 'VALIDATION_ERROR',
+                code: 'VALIDATION_FAILED',
                 message: 'nope',
                 field: 'id',
               },

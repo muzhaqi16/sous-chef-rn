@@ -70,19 +70,10 @@ function readWasPurchased(cache: ApolloCache, itemId: string): boolean {
 }
 
 /**
- * Hook for moving shopping list items to pantry
- * Handles mutation, cache updates, and optimistic UI updates
- */
-/**
  * Cache side of a move-to-pantry: add the returned `PantryItem` to the pantry's
- * items connection, then either drop the shopping-list row or mark it
- * unpurchased.
- *
- * Module-level rather than inlined into the mutation's `update` because its
- * body is full of `?.` / `??` / ternaries, and the React Compiler bails out of
- * the entire hook when a value block appears inside a try/catch. Keeping it
- * here leaves the caller's try body a single plain call.
- * See scripts/probe-compiler-try-forms.mjs.
+ * connection, then drop the shopping-list row or mark it unpurchased. Kept at
+ * module level because its value blocks (`?.`/`??`/ternary) would bail the whole
+ * hook out of the React Compiler from inside the caller's try body.
  */
 function applyMoveToPantryCacheUpdate(
   cache: ApolloCache,
@@ -96,14 +87,10 @@ function applyMoveToPantryCacheUpdate(
 ): void {
   const { pantryId, shoppingListItemId, removeFromList, currentListId } = args;
 
-  // Add the returned PantryItem to the pantry's items connection. When the item
-  // already existed in the pantry, the server returns that existing entry
-  // restocked (combined quantity, extra batch) rather than a new row — so the
-  // returned id may already be in the connection. The updater's default
-  // checkDuplicates guard skips re-inserting that edge, and Apollo normalizes
-  // the restock-mutated fields (quantity, activeBatchCount, …) onto the existing
-  // entity by id. Keep checkDuplicates on — without it a restock would duplicate
-  // the edge.
+  // The server may return an EXISTING row restocked rather than a new one, so the
+  // returned id can already be in the connection. Keep the updater's default
+  // checkDuplicates on — without it a restock duplicates the edge; Apollo
+  // normalizes the restocked fields onto the existing entity by id.
   const addToPantryCache = createAddToParentConnectionUpdater(
     'Pantry',
     'itemsConnection',
@@ -124,7 +111,7 @@ function applyMoveToPantryCacheUpdate(
       readWasPurchased(cache, shoppingListItemId),
     );
   } else {
-    // If keeping in list, mark as unpurchased in cache (server does this automatically)
+    // Kept in the list: the server marks it unpurchased, so mirror that here.
     const cacheId = cache.identify({
       __typename: 'ShoppingListItem',
       id: shoppingListItemId,
@@ -152,7 +139,6 @@ export function useMoveToPantry({
   currentListId,
   onSuccess,
 }: UseMoveToPantryOptions) {
-  // Move to pantry mutation with smart cache updates
   const [moveShoppingItemToPantry, { loading }] = useMutation(
     MoveShoppingItemToPantryDocument,
     {
@@ -196,22 +182,10 @@ export function useMoveToPantry({
   const client = useApolloClient();
 
   /**
-   * Move a shopping list item to the pantry (local-first).
-   *
-   * The pantry row's id is minted here and sent as `input.pantryItemId`, so the
-   * row written to the cache before firing and the row the server writes are the
-   * SAME entity — which is what lets the move happen with no network. The write
-   * is permanent rather than an `optimisticResponse`, because the offline queue
-   * completes a queued mutation with a null result and Apollo would tear an
-   * optimistic layer down at that moment.
-   *
-   * **The minted id is honoured only on the CREATE branch.** If the target
-   * pantry already holds an active stack of the same catalog item, the server
-   * restocks that stack and the payload comes back carrying that EXISTING row's
-   * id instead. The client cannot always predict which branch it will get — its
-   * pantry cache can be stale — so it reconciles on the response: a returned id
-   * that differs from the minted one means the optimistic row was never real,
-   * and it is evicted before the server's row is added.
+   * Move a shopping list item to the pantry (local-first). The pantry row's id is
+   * minted here and sent as `input.pantryItemId`, so the cached row and the
+   * server's are the SAME entity. A permanent write, never `optimisticResponse`:
+   * the queue completes a queued mutation with null and would tear that down.
    */
   const moveToPantry = async (
     item: ShoppingListItemDisplayFragment,
@@ -235,31 +209,21 @@ export function useMoveToPantry({
       client.cache,
     );
 
-    // BOTH sides are written eagerly, because offline neither the mutation's
-    // `update` callback nor the replay runs one: the queue completes a queued
-    // mutation with a null result, and `executeMutation` replays with no
-    // `update` at all. Leaving the shopping side to that callback meant the
-    // server deleted the row while the client kept rendering it in the list and
-    // in both counters until a full refetch.
-    //
-    // The eager removal UNLINKS without evicting. That distinction is what makes
-    // it safe: the earlier version of this hook evicted, so when a REPLAY failed
-    // (not the initial call) the queue withdrew the PantryItem it created and
-    // nothing could restore the shopping row — observed on device, a move that
-    // timed out, retried, and came back NotFound left the item in neither place.
-    // The entity survives here, and `handleQueueFailure` re-links it through
-    // `restoreItemToShoppingListAfterMoveToPantry`.
+    // BOTH sides are written eagerly: offline neither the mutation's `update` nor
+    // the replay runs one (the queue completes with a null result, and
+    // `executeMutation` replays with no `update`). The removal UNLINKS without
+    // evicting, so a failed replay can re-link the surviving entity via
+    // `restoreItemToShoppingListAfterMoveToPantry`; an evict would leave the item
+    // in neither place.
     const wasPurchased = readWasPurchased(client.cache, item.id);
     // Resolved BEFORE the try: `&&` is a value block, and the React Compiler
     // bails out of the whole hook when one appears inside a try body.
     const unlinkFromListId = input.removeFromList ? currentListId : undefined;
     try {
       addToPantryItemsCache(client.cache, input.pantryId, optimisticPantryItem);
-      // The count travels with the row. Offline the mutation's `update` never
-      // runs, so nothing else corrects it and the pantry header would keep
-      // reporting the pre-move total over the rows the user can see.
-      // `usePantryScreen` also branches on this value to pick server vs client
-      // sorting, so a stale one can select the wrong mode as well.
+      // The count travels with the row: offline the mutation's `update` never
+      // runs, and `usePantryScreen` branches on this value to pick server vs
+      // client sorting, so a stale one selects the wrong mode too.
       adjustPantryItemCount(client.cache, input.pantryId, 1);
       if (unlinkFromListId) {
         removeItemFromShoppingListForMoveToPantry(
@@ -326,10 +290,9 @@ export function useMoveToPantry({
       return false;
     }
 
-    // The server may have restocked an existing stack instead of creating the
-    // row we minted. Its payload then carries that row's id, and our optimistic
-    // entity is a ghost — evict it so the pantry does not show the item twice.
-    // The mutation's `update` callback adds the server's row.
+    // The minted id is honoured only on the CREATE branch: a restock returns the
+    // EXISTING row's id, which makes the locally written entity a ghost. Evict it
+    // so the pantry does not show the item twice; `update` adds the server's row.
     const payload = result?.data?.moveShoppingItemToPantry;
     const serverId =
       payload?.__typename === 'MoveShoppingItemToPantryPayload'

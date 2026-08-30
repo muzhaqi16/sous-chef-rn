@@ -1,22 +1,13 @@
 /**
- * Native push-token provider.
- *
- * Android: FCM via @react-native-firebase/messaging (modular API).
- * iOS: added when the iOS/APNs side is set up (push-notification-ios); until
- *      then iOS falls through to no token.
- *
- * Every method is defensive: if the native module isn't present in the running
- * binary (e.g. before a native rebuild picks up the new dependency), it degrades
- * to the no-op behavior (null token / no permission) instead of crashing.
+ * Android push-token provider: FCM via @react-native-firebase/messaging. iOS has
+ * its own (`iosPushProvider`), so every method here returns the no-op value off
+ * Android, and also when the native module is missing from the running binary.
  */
 
 import { Platform } from 'react-native';
-// Notification permission is requested through the shared PermissionService
-// (Notifee + POST_NOTIFICATIONS on Android 13+) rather than the messaging
-// module's own permission API, which react-native-firebase deprecated in favor
-// of a dedicated permissions library. See invertase/react-native-firebase#6283.
-// The token plumbing below (getMessaging / getToken / onTokenRefresh) is not
-// deprecated and stays on the messaging modular API.
+// Permission goes through PermissionService, not the messaging module's own
+// permission API, which react-native-firebase deprecated. The token plumbing
+// below is NOT deprecated. See invertase/react-native-firebase#6283.
 import {
   getMessaging,
   getToken,

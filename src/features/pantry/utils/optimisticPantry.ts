@@ -1,13 +1,8 @@
 /**
- * Local-first pantry creation cache plumbing.
- *
- * Materializes a complete Pantry entity — including zeroed `stats` and empty
- * `itemsConnection` / `storageLocationsConnection` variants — BEFORE the
- * create mutation fires, so a pantry created offline renders immediately and
- * accepts local-first item adds (a `cache.modify` edge write needs an existing
- * connection variant to land in). The queued replay re-sends the original
- * `CreatePantry` keyed by the client-minted `input.id`; the FIFO parent-create
- * guard replays it before any items queued behind it.
+ * Local-first pantry creation. Materializes a COMPLETE Pantry — zeroed `stats`,
+ * empty `itemsConnection` / `storageLocationsConnection` variants — before the
+ * create fires: an incomplete entity reads as no data at all, and a
+ * `cache.modify` edge write needs an existing connection variant to land in.
  */
 
 import { gql, type ApolloCache, type Reference } from '@apollo/client';
@@ -60,9 +55,8 @@ const OptimisticPantryFragment = gql`
 `;
 
 /**
- * The no-args itemsConnection variant. `keyArgs: ['filters', 'orderBy']` and
- * the default pantry screen passes both as undefined, so this writes the same
- * storeFieldName the screen reads.
+ * The no-args itemsConnection variant — `keyArgs: ['filters', 'orderBy']`, both
+ * undefined on the default screen, so this writes the storeFieldName it reads.
  */
 const PantryEmptyItemsFragment = gql`
   fragment _PantryEmptyItems on Pantry {
@@ -80,9 +74,8 @@ const PantryEmptyItemsFragment = gql`
 `;
 
 /**
- * storageLocationsConnection has default keyArgs (all args), so the seeded
- * variant must match the screen's `first` page size exactly — passed as a
- * variable so it tracks PAGE_SIZE.COMPACT.
+ * storageLocationsConnection keys on all args, so the seeded variant must match
+ * the screen's `first` exactly — passed as a variable to track PAGE_SIZE.COMPACT.
  */
 const PantryEmptyStorageLocationsFragment = gql`
   fragment _PantryEmptyStorageLocations on Pantry {
@@ -240,13 +233,9 @@ export function addPantryToHomeCache(
 }
 
 /**
- * Take a pantry out of its home's lists.
- *
- * Two callers with different needs. Reversing a rejected CREATE evicts: the
- * entity only ever existed locally, so nothing should survive it. A local-first
- * DELETE passes `evictEntity: false` — it removes the pantry from view before
- * the server has agreed, and a refusal has to put it back, which needs the
- * entity to still be there.
+ * Take a pantry out of its home's lists. Reversing a rejected CREATE evicts (the
+ * entity only ever existed locally); a local-first DELETE passes
+ * `evictEntity: false`, since a refusal has to put the row back.
  */
 export function removeOptimisticPantry(
   cache: ApolloCache,
@@ -290,10 +279,8 @@ export function removeOptimisticPantry(
 }
 
 /**
- * Put a pantry back into its home's lists after a local-first delete was
- * refused. The mirror of {@link removeOptimisticPantry}'s non-evicting form —
- * the entity is still cached, so only the two membership fields need repairing.
- * Idempotent: a restore that runs twice must not duplicate the row.
+ * Mirror of {@link removeOptimisticPantry}'s non-evicting form: the entity is
+ * still cached, so only the two membership fields need repairing. Idempotent.
  */
 export function restorePantryToHomeCache(
   cache: ApolloCache,

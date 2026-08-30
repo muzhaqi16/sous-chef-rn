@@ -10,53 +10,16 @@ import { Telemetry } from '#/services/telemetry';
 import { t } from '#/i18n';
 
 /**
- * Operations that must always reach the network, even in offline mode.
- * - RefreshToken: Required for auth token rotation
- * - GetUserSettings: Required to sync settings changes (including toggling offline mode off)
+ * Must always reach the network, even in offline mode: RefreshToken for token
+ * rotation, GetUserSettings so offline mode itself can be toggled off.
  */
 const ALWAYS_ALLOW = ['RefreshToken', 'GetUserSettings'];
 
 /**
- * Apollo Link that short-circuits query network requests when the network leg
- * is unwanted or doomed — the user enabled offline mode, the device is
- * offline, or the API-reachability circuit breaker is open. Apollo has
- * already read from cache before the link chain fires, so blocking serves
- * cached data without firing a doomed request (and without the
- * retryLink/errorLink retry+warn noise that doomed attempts produce).
- *
- * Decision matrix for queries:
- * - Cache HIT: emit the cached data and complete — no network request.
- *   Apollo Client 4.x requires a link to emit a value before completing, and
- *   re-emitting cached data is an idempotent write that never clobbers the
- *   populated cache. The query settles with no spinner and no error.
- * - Cache MISS while the circuit breaker is open (device online, offline mode
- *   off): FORWARD to the network. Blocking would render an empty screen
- *   anyway, and emitting `{ data: null }` makes Apollo 4 write `{}` against
- *   the selection set (`shouldWriteResult` passes an error-free result;
- *   `writeToStore` coerces `result || {}`), spamming "Missing field X while
- *   writing result {}". Forwarding doubles as an organic probe: a success
- *   closes a spuriously-open circuit via recordSuccess; a failure feeds the
- *   breaker the failure it already believes in.
- * - Cache MISS with no network leg available (device offline / offline mode
- *   on): emit an explicit error result. The error stops Apollo's cache write
- *   (no "Missing field" spam) and errorPolicy 'all' surfaces an honest
- *   "unavailable offline" to the hook instead of a silent null.
- * - Mutations: pass through to queueLink which handles offline queuing.
- * - Subscriptions: pass through (WebSocket owns its own lifecycle).
- *
- * `isOnline` errs toward "online" (only false when NetInfo is confident the
- * device is offline), so a transient unknown state doesn't wrongly block.
- *
- * This approach avoids the query cascade issue caused by dynamic fetchPolicy
- * changes — see the "Do not introduce dynamic, store-subscribed fetch policies"
- * paragraph in docs/apollo-client-patterns.md § Fetch Policies. (That text used
- * to sit under a "Why NOT useOfflinePresetPolicy" heading, which no longer
- * exists; the pointer here was stale.)
- *
- * Apollo 4.2's `client.prioritizeCacheValues` is NOT a substitute — see the same
- * doc section. It is a freshness knob, not a network gate: it rewrites
- * `network-only`/`cache-and-network` to `cache-first`, and `cache-first` on a
- * cache MISS still goes to the network, which is the case this link exists for.
+ * Short-circuits a query's network leg when it is unwanted or doomed. A cache
+ * HIT re-emits and completes; a MISS forwards when only the breaker is open,
+ * and errors explicitly when there is no network leg — emitting `{data: null}`
+ * would make Apollo write `{}` and spam "Missing field".
  */
 export const createOfflineModeLink = () => {
   return new ApolloLink((operation, forward) => {
@@ -95,11 +58,9 @@ export const createOfflineModeLink = () => {
     if (cached !== null) {
       const data = cached;
       logger.debug(`Offline link: served ${operationName} from cache`);
-      // The offline READ path had no instrumentation at all, while every
-      // offline WRITE path has one. `logger` is console-only and stripped from
-      // release, so on a real device we could not tell a working offline
-      // session from a broken one. `operation` is bounded by the persisted-query
-      // manifest, so the cardinality is the same shape as `graphql_requests_total`.
+      // `logger` is console-only and stripped from release, so this counter is
+      // the only signal that distinguishes a working offline read session from
+      // a broken one. `operation` is bounded by the persisted-query manifest.
       Telemetry.increment('offline_reads_served_total', 1, {
         operation: operationName,
       });

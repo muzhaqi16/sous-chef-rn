@@ -6,39 +6,20 @@ import { TIMING } from '#constants/animations';
 import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
 import { PantryStickyTabs } from './pantryDisplay/PantryStickyTabs';
 
-// Viewport-fill: the flap only ever covers the area below the header, so a
-// screenful is enough — fewer rows than PantryScreenSkeleton's 10 because each
-// shimmer is a UI-thread animation running during the row-mount window.
+// A screenful is enough: the flap only covers the area below the header, and
+// each shimmer is a UI-thread animation running during the row-mount window.
 const SKELETON_ROWS = 8;
 
 /**
- * Opaque cover for the list area while FlashList's first layout is pending.
- *
- * FlashList v2 keeps every cell — the sticky FilterTabs sentinel included — at
- * `opacity: 0` until its progressive first layout commits, while the
- * `ListHeaderComponent` chrome paints immediately. Without this cover that
- * window is a header-only frame with a blank body (300 ms+ on a mid-range
- * device).
- *
- * It renders INSIDE the ListHeaderComponent wrapper, absolutely positioned at
- * `top: '100%'` — i.e. flush below the chrome — because anything whose mount
- * waits on a post-first-commit state update (a measured header height via
- * `onLayout`, a deferred flag) is starved behind exactly the JS-thread storm
- * it exists to cover; measured on device, an overlay gated on `onLayout`
- * appeared only AFTER the rows did. Absolute position keeps it out of the
- * header's measured height, so cell offsets are unaffected.
- *
- * No zIndex, deliberately: the cell container is a LATER sibling of the
- * header inside FlashList's scroll content, so the instant cells turn opaque
- * they paint over this flap — the reveal is not gated on the release state
- * update (which is starved like any other). The unmount fade only shows
- * through the small gaps between row cards. It must sit inside
- * `PantryStickyTabsProvider` (the tabs strip reads that context, so the cover
- * shows the real tabs, not a placeholder).
- *
- * `pointerEvents="none"` matches what it covers: the rows underneath are
- * mounted-but-transparent and already receive touches today.
+ * Covers the list area while FlashList's first layout is pending: v2 holds every
+ * cell at `opacity: 0` until it commits, while the header chrome paints at once.
+ * It must exist from the list's FIRST commit — anything mounting on a post-commit
+ * state update is starved behind the row-mount storm it covers.
  */
+
+// Absolute inside `ListHeaderComponent`, and no zIndex deliberately: cells are a
+// later sibling, so they paint over it the instant they turn opaque. Must sit
+// inside `PantryStickyTabsProvider`.
 export const PantryListSkeletonOverlay: React.FC = () => (
   <Animated.View
     testID="pantry-list-skeleton-overlay"

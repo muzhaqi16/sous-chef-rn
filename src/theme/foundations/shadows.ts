@@ -1,7 +1,5 @@
-// Soft, diffuse elevation ramp: each step is a single shadow with a wide blur
-// and low opacity (vs. tight, dark drop shadows, which read dated). Blur grows
-// and offset lifts as elevation increases; opacity stays low so surfaces feel
-// like they float on warm light rather than sit on a hard line.
+// Soft, diffuse elevation ramp: blur grows and offset lifts with elevation, while
+// opacity stays low so surfaces float rather than sit on a hard line.
 export const shadows = {
   none: {},
   sm: {
@@ -49,15 +47,12 @@ export const shadows = {
     ],
   },
   /**
-   * Floating-card elevation. Soft, wide, low-opacity — the geometry the
-   * primary cards (HomeCard, ItemCard, list thumbnails) were each inlining
-   * with inconsistent color encoding. Use this for any resting surface card.
-   * Spread 0 so the blur fades cleanly to transparent (no hard edge); the
-   * containers it renders inside must not clip (overflow: visible).
+   * Floating-card elevation for any resting surface card. Spread 0 so the blur
+   * fades cleanly to transparent, which means every container it renders inside
+   * must keep `overflow: visible`.
    */
   card: {
     boxShadow: [
-      // Contact shadow — tight and faint, grounds the card to the surface.
       {
         offsetX: 0,
         offsetY: 1,
@@ -65,9 +60,8 @@ export const shadows = {
         spreadDistance: 0,
         color: 'rgba(0, 0, 0, 0.04)',
       },
-      // Ambient shadow — wide and soft with negative spread so it fades
-      // cleanly to transparent (no hard edge). Two layers read as real
-      // depth rather than a flat drop shadow.
+      // Ambient layer: wide and soft with negative spread. Two layers read as
+      // real depth rather than a flat drop shadow.
       {
         offsetX: 0,
         offsetY: 6,

@@ -15,31 +15,10 @@ import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { generateEntityId } from '#/utils/generateEntityId';
 
 /**
- * Mark the moved lines as stocked, so their rows stop offering an action that
- * would now do nothing.
- *
- * The server keeps the lines and stamps them; without this the rows keep the
- * move-to-pantry button until the next fetch.
- *
- * Goes through `writePurchaseInfo` rather than writing the record directly.
- * That writer owns the two rules this must not break: it does not assert a flag
- * it was not given, so a line the client has locally un-purchased cannot be
- * flipped back and have its amounts cleared by the record's merge; and it
- * clears the stamp on a flip, which this write never triggers.
- *
- * The timestamp is a local placeholder: the field is read as "is this stocked",
- * and the server's own value replaces it on the next fetch. So it is only ever
- * written onto a line that has NO stamp. The payload lists every line now in the
- * pantry, including ones an earlier call moved, and those already carry the real
- * time they were stocked — overwriting that with "now" on every press would move
- * a recorded fact to keep pace with the button.
- *
- * Which is also why the payload's `alreadyInPantry` is not what decides this.
- * It reports the SERVER's view, and the case that matters is the one where the
- * two disagree: another device moved the line, so the server says it was already
- * there while this cache has no stamp and its row still offers the action. That
- * line does need stamping. The cached stamp answers the question directly, and
- * the flag adds nothing to it.
+ * Mark moved lines as stocked so their rows stop offering a no-op action.
+ * `writePurchaseInfo` owns the write-time rules (never asserts a flag it was not
+ * given; clears the stamp on a flip). The stamp is a local placeholder, so it is
+ * written only onto a line with none — the payload lists earlier moves too.
  */
 function markMovedLinesStocked(cache: ApolloCache, ids: string[]): void {
   const stampedAt = new Date().toISOString();
@@ -52,13 +31,10 @@ function markMovedLinesStocked(cache: ApolloCache, ids: string[]): void {
 interface UseBatchMoveToPantryOptions {
   currentListId: string | undefined;
   /**
-   * The purchased rows, from the screen that already renders them.
-   *
-   * Passed in rather than re-read from cache: minting a client id per line
-   * needs the exact set the user is looking at, and reconstructing it here
-   * would mean matching the filtered connection's cached field key — which,
-   * got subtly wrong, yields silently NO hints offline rather than a visible
-   * failure.
+   * The purchased rows the screen already renders. Passed in rather than re-read
+   * from cache: minting a client id per line needs the exact set on screen, and
+   * matching the filtered connection's cached field key wrong yields silently NO
+   * hints offline rather than a visible failure.
    */
   purchasedItems: readonly { id: string }[];
   onSuccess?: () => void;
@@ -78,20 +54,11 @@ export function useBatchMoveToPantry({
   const [movePurchasedMutation, { loading }] = useMutation(
     MovePurchasedItemsToPantryDocument,
     {
-      // No `update` callback, and nothing written before firing either.
-      //
-      // `movePurchasedItemsToPantry` NEVER removes the lines it moves — they
-      // stay in the purchased section, and clearing them is
-      // `deleteShoppingListItems(purchased: true)`, a separate act the user
-      // confirms. So there is nothing here for the client to take out of the
-      // list: this used to filter the purchased edges, decrement `totalItems`,
-      // `completedItems` and the connection's `totalCount`, and evict the
-      // `ShoppingListItem` entities — all of which contradicted the server and
-      // came back on the next fetch.
-      //
-      // The pantry side is not written either: the mutation carries no
-      // `pantryId`, so the client cannot know which pantry the rows land in.
-      // The pantry query picks them up on its next fetch.
+      // No `update` callback and nothing written before firing:
+      // `movePurchasedItemsToPantry` never removes the lines it moves (clearing
+      // them is a separate `deleteShoppingListItems(purchased: true)`), and it
+      // carries no `pantryId`, so the client cannot know which pantry the rows
+      // land in. The pantry query picks them up on its next fetch.
       onError: error => {
         handleMutationError(error, { operation: 'Batch Move to Pantry' });
       },
@@ -104,23 +71,14 @@ export function useBatchMoveToPantry({
       return;
     }
 
-    // One client-minted pantry-row id per purchased line. The server still
-    // decides which lines are actually purchased — a hint for a line that is
-    // no longer purchased is ignored, and a line with no hint gets a
-    // server-minted id — so this is a hint, not an instruction.
+    // One client-minted pantry-row id per purchased line — a hint, not an
+    // instruction: the server decides which lines are actually purchased and
+    // mints its own id for any line it gets no hint for.
     const idHints = purchasedItems.map(item => ({
       shoppingListItemId: item.id,
       pantryItemId: generateEntityId(),
       idempotencyKey: generateEntityId(),
     }));
-
-    // Nothing is written eagerly, and nothing is written on the response — the
-    // server keeps every line it moves (see the `useMutation` comment above).
-    //
-    // Even if it removed them, an eager removal here would be aimed at the wrong
-    // set: `purchasedItems` is the paginated, search-filtered slice the user can
-    // see, while the input carries only `shoppingListId`, so the server acts on
-    // EVERY purchased row.
 
     // Built outside the try: a `&&` spread is a value block, and one inside a
     // try body bails this whole hook out of the React Compiler.
@@ -143,10 +101,8 @@ export function useBatchMoveToPantry({
 
     const payload = result?.data?.movePurchasedItemsToPantry;
 
-    // Queued (offline / API down): there is no summary, and the client cannot
-    // know how many rows the server will move — `purchasedItems` is only the
-    // slice on screen. Say the move is pending rather than reporting a count
-    // that is right only when the whole list happens to be loaded.
+    // Queued (offline / API down): no summary, and `purchasedItems` is only the
+    // slice on screen, so report pending rather than a possibly-wrong count.
     if (classifyCreateResult(result) === 'queued') {
       toastService.success(t('moveToPantry.queued'));
       onSuccess?.();
@@ -155,21 +111,15 @@ export function useBatchMoveToPantry({
 
     if (payload?.__typename !== 'MovePurchasedItemsToPantryPayload') {
       // A resolved `*Error` union member doesn't throw under errorPolicy:'all',
-      // so the mutation `onError` never fired for it. Surface it here — guarded
-      // to skip the transport-error case (`result.error`), which onError already
-      // alerted, so the two never double-alert.
+      // so `onError` never fired for it. The helper skips the transport-error
+      // case, which onError already alerted, so the two never double-alert.
       alertRejectedMutation(result, t('errors.codes.genericRetry'));
       return;
     }
 
-    // Three outcomes, and they mean different things to the user:
-    //   succeeded — lines THIS call moved
-    //   skipped   — lines an earlier call had already moved (already stocked)
-    //   failed    — lines that errored, itemised in `failedItems`
-    // A repeat call on an unchanged list reports `succeeded: 0`, which is the
-    // honest answer rather than the same count forever.
-    // Every line the payload lists is now in the pantry — the ones this call
-    // moved and the ones it found already there.
+    // succeeded = lines THIS call moved; skipped = lines already stocked; failed
+    // = itemised in `failedItems`. Every line the payload lists is now in the
+    // pantry, whether this call moved it or found it there.
     try {
       markMovedLinesStocked(
         client.cache,
@@ -207,17 +157,15 @@ export function useBatchMoveToPantry({
         }),
       );
     } else if (failedCount === 0) {
-      // Every bucket empty. Since the move began stamping the lines it moves,
-      // this is the ordinary steady state — a second press with nothing new
-      // purchased — not a failure, so it must not read like one.
+      // Every bucket empty is the ordinary steady state — a second press with
+      // nothing newly purchased — so it must not read like a failure.
       toastService.info(t('moveToPantry.nothingLeftToMove'));
     } else {
       toastService.info(t('moveToPantry.noItemsMoved'));
     }
 
-    // Reported separately so a partial success still says what did not land.
-    // The item names are the user's own words; nothing else from the failure
-    // reaches the screen.
+    // Reported separately so a partial success still says what did not land; the
+    // names are the user's own words, and nothing else from the failure is shown.
     if (failedCount > 0) {
       const names = payload.failedItems
         .map(item => item.itemName)
@@ -236,10 +184,9 @@ export function useBatchMoveToPantry({
       moved_count: movedCount,
       already_in_pantry_count: alreadyThereCount,
       failed_count: failedCount,
-      // A count alone cannot tell a validation refusal from a database fault,
-      // and the user is shown neither. Distinct codes keep this bounded; the
-      // ids are capped like the names above, and are how support finds the
-      // server-side log for a failure nobody can reproduce.
+      // A count alone cannot tell a validation refusal from a database fault.
+      // Distinct codes keep this bounded; the capped ids are how support finds
+      // the server-side log for a failure nobody can reproduce.
       failed_codes: [...new Set(payload.failedItems.map(item => item.code))]
         .sort()
         .join(','),

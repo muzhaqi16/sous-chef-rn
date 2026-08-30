@@ -354,8 +354,7 @@ describe('pantry mutations utils', () => {
     });
 
     /**
-     * The one `UnitSpecInput` the pantry update path builds, and it was the
-     * only branch here with no test.
+     * The one `UnitSpecInput` the pantry update path builds.
      *
      * It is deliberately id-less: the caller reaches it exactly when the typed
      * unit could NOT be resolved to a catalog id. Since 2026-08-22 the server
@@ -363,8 +362,8 @@ describe('pantry mutations utils', () => {
      * it, so this is a tracking-unit CHANGE — subject to the batch and
      * conversion guards, whose refusal arrives as
      * `ValidationError(field: "unit")` and routes to `errors.field.unit`. It is
-     * no longer the caption write it once was, and pinning the shape here is
-     * what stops it drifting back into one.
+     * not a caption write, and pinning the shape here is what stops it drifting
+     * into one.
      */
     describe('unit handling', () => {
       it('sends the typed symbol with no unitId when the unit is dirty', () => {

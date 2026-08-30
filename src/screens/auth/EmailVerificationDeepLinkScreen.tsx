@@ -48,15 +48,11 @@ interface VerificationRun {
   setErrorMessage: (v: string) => void;
   /** Whichever busy flag drives the progress indicator for this run. */
   setBusy: (v: boolean) => void;
-  /**
-   * A retry leaves the failed state on screen and shows progress in the button
-   * alone. Clearing it would swap the whole screen back to the full-page
-   * "Verifying…" state, which reads as if the failure never happened.
-   */
+  /** A retry keeps the failed state on screen and spins the button alone; clearing
+   *  it swaps back to the full-page loader, reading as if nothing had failed. */
   isRetry: boolean;
 }
 
-/** Module-level try-catch extraction for React Compiler compatibility */
 async function performVerificationImpl({
   token,
   verifyEmail,
@@ -81,9 +77,8 @@ async function performVerificationImpl({
     setErrorMessage('');
   }
 
-  // Held in a local runner so the try below contains a single plain call — the
-  // React Compiler bails out when a `?.`/`??`/ternary sits inside a try body.
-  // The catch still covers the whole body.
+  // A local runner so the try holds one plain call: the React Compiler bails out
+  // when a value block sits inside a try body. The catch still covers it.
   const runVerification = async () => {
     logger.info('Attempting email verification', { userId });
 
@@ -94,9 +89,8 @@ async function performVerificationImpl({
     const payload = result.data?.verifyEmail;
     const topLevelError = getTopLevelGraphQLError(result.error);
 
-    // A link opened twice — from the mail app and then from the browser, or
-    // simply tapped again — is a verified address, not a failure. The API
-    // reports it on whichever channel the refusal came from.
+    // A link opened twice is a verified address, not a failure; the API reports it
+    // on whichever channel the refusal arrived.
     const alreadyVerified =
       (payload &&
         'code' in payload &&
@@ -106,9 +100,8 @@ async function performVerificationImpl({
     if (payload?.__typename === 'VerifyEmailPayload' || alreadyVerified) {
       logger.info('Email verification successful', { alreadyVerified });
 
-      // A patch, not a spread of the whole user: the store's updateUser
-      // assigns the given fields onto the existing user, and re-assigning
-      // every field would republish an identical object on each call.
+      // A patch: the store's updateUser assigns these onto the existing user, and
+      // re-assigning every field republishes an identical object each call.
       updateUser({ emailVerified: true });
 
       setVerificationResult('success');
@@ -118,13 +111,12 @@ async function performVerificationImpl({
         type: 'success',
       });
     } else {
-      // A throttled request says how long to wait; the server's raw
-      // "Maximum 10 requests per 3600 seconds" text is not a user message.
+      // A throttled request says how long to wait; the server's raw text is not a
+      // user message.
       if (isRateLimitError(result.error)) {
         throw new Error(getRateLimitMessage(result.error));
       }
-      // Auth failures now arrive as top-level GraphQL errors, not an
-      // AuthError union variant.
+      // Auth failures arrive as top-level GraphQL errors, not an AuthError variant.
       if (topLevelError) {
         throw new Error(
           errorService.getUserFriendlyMessage(
@@ -160,9 +152,8 @@ async function performVerificationImpl({
 export const EmailVerificationDeepLinkScreen: React.FC = () => {
   const { t } = useTranslation();
   const route = useRoute();
-  // `goBack` from the facade is guarded — the raw one logs "GO_BACK was not
-  // handled by any navigator" when this screen is the only route, which is the
-  // normal shape for a cold start straight into a link.
+  // The facade's `goBack` is guarded; the raw one logs "GO_BACK was not handled"
+  // when this screen is the only route, the normal shape for a cold link start.
   const { goBack: dismiss } = useAppNavigation();
   const { navigateToLogin, replaceWithLogin } = useAuthNavigation();
   const user = useUser();
@@ -174,22 +165,19 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
 
   const [verifyEmail] = useMutation(VerifyEmailDocument);
   const [isVerifying, setIsVerifying] = useState(true);
-  // Kept apart from `isVerifying` so a retry spins the button instead of
-  // replacing the failure the user is looking at with the full-page loader.
+  // Apart from `isVerifying` so a retry spins the button instead of replacing the
+  // failure with the full-page loader.
   const [isRetrying, setIsRetrying] = useState(false);
   const [verificationResult, setVerificationResult] = useState<
     'success' | 'error' | null
   >(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
 
-  // The token is single-use and `verifyEmail` is rate-limited to 10 requests an
-  // hour, so it has to be spent exactly once. Without this latch the effect
-  // re-fired on every identity change among its dependencies — including the
-  // one it caused itself, since a successful verification writes `emailVerified`
-  // back to the store — and burned through the whole hourly budget while the
-  // screen sat on "Verifying…". Recording which token was sent, rather than a
-  // bare "has run" flag, still lets a genuinely different token through if the
-  // screen is reused for a second link.
+  // The token is single-use and `verifyEmail` allows 10 requests an hour, so it
+  // must be spent exactly once — without this latch the effect re-fires on every
+  // dependency identity change, including the one it causes itself by writing
+  // `emailVerified` back. Recording WHICH token was sent, not a bare "has run"
+  // flag, still lets a genuinely different token through.
   const sentTokenRef = useRef<string | null>(null);
   const userId = user?.id;
 
@@ -225,22 +213,16 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
     });
   }, [token, verifyEmail, userId, updateUser, toast]);
 
-  // Held briefly so the success state registers before the screen changes.
-  // Unlike the verification itself this is safe to re-schedule — the cleanup
-  // cancels the pending hand-off, including on an unmount from the close
-  // button, so a user who dismisses the screen isn't navigated a second later.
-  //
-  // `verifyEmail` returns the user but no tokens, so a link followed from the
-  // registration mail activates the account without opening a session — signing
-  // in is the next step. A user who already had a session (verification
-  // deferred, link opened later) is moved along by the root navigator
-  // re-deriving its target from `emailVerified`; this screen sits in the
-  // always-mounted deep-link group, so it has to step aside to reveal that.
-  //
+  // Held briefly so the success state registers; the cleanup cancels the pending
+  // hand-off, so dismissing the screen doesn't navigate a second later.
+
+  // `verifyEmail` returns the user but no tokens, so a link from the registration
+  // mail activates the account with no session and signing in is next; a user who
+  // already had one is moved along by the root navigator re-deriving its target.
+
   // Both branches REMOVE this screen rather than navigate over it. The deep-link
-  // group has no `if`, so this screen outlives the `Auth` group that signing in
-  // takes away: left on the stack it resurfaces, still showing "Email Verified!",
-  // as the top route right after login — with nothing beneath it to go back to.
+  // group has no `if`, so left on the stack it outlives the `Auth` group and
+  // resurfaces as the top route after login, with nothing beneath it.
   useEffect(() => {
     if (verificationResult !== 'success') return;
     const id = setTimeout(() => {

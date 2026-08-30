@@ -220,7 +220,7 @@ describe('useRecipePreload', () => {
   });
 
   it('sanitizes a price baked into an ingredient name before sending to the API', async () => {
-    // The API stores names verbatim (it no longer strips prices), so the client
+    // The API stores names verbatim (it does not strip prices), so the client
     // must never send a price baked into a name — even one that round-tripped in
     // from the backend. Regression guard for the "garlic $0.03" bug.
     const { mock, fired } = recordUpsertMock();

@@ -15,11 +15,10 @@ interface DetailTitleRowProps {
 }
 
 /**
- * Item-name header row for detail screens (pantry / shopping / recipe).
- * Owns the large-title typography, including the Android descender fix: an
- * explicit, font-relative line height — an unset lineHeight on large bold
- * Text crops the glyph box, and a fixed token would stop scaling with the
- * user's font-size preference (which multiplies `fonts.size` only).
+ * Item-name header row for detail screens. Its line height is explicit and
+ * font-RELATIVE: unset crops the glyph box on large bold Android text, and a
+ * fixed token stops scaling with the user's font-size preference, which
+ * multiplies `fonts.size` only.
  */
 export const DetailTitleRow: React.FC<DetailTitleRowProps> = ({
   title,

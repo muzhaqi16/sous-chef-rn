@@ -7,13 +7,8 @@ import type {
 import {
   recordMock,
   renderHookWithApollo,
-  seedCache,
 } from '#/test-utils/apolloMockProvider';
-import {
-  CreateHomeDocument,
-  UpdateHomeDocument,
-} from '#operations/home/home.generated';
-import { UpdateHomeOptimistic_HomeFragmentDoc } from '../useHomeMutations.generated';
+import { CreateHomeDocument } from '#operations/home/home.generated';
 import { alertService } from '#/services/alertService';
 import { useHomeMutations } from '../useHomeMutations';
 
@@ -137,22 +132,6 @@ function createHomeMock(home: { id: string; name: string }) {
   });
 }
 
-function updateHomeMock(home: { id: string; name?: string } | null) {
-  return recordMock(UpdateHomeDocument, {
-    data: {
-      updateHome: home
-        ? {
-            __typename: 'UpdateHomePayload',
-            home: { __typename: 'Home', id: home.id, name: home.name ?? null },
-          }
-        : {
-            __typename: 'NotFoundError',
-            message: 'Home not found',
-          },
-    },
-  });
-}
-
 describe('useHomeMutations', () => {
   it('returns mutation functions and loading states', () => {
     const { result } = renderHookWithApollo(() =>
@@ -160,10 +139,8 @@ describe('useHomeMutations', () => {
     );
 
     expect(typeof result.current.createHome).toBe('function');
-    expect(typeof result.current.updateHome).toBe('function');
     expect(typeof result.current.deleteHome).toBe('function');
     expect(result.current.creating).toBe(false);
-    expect(result.current.updating).toBe(false);
     expect(result.current.deleting).toBe(false);
   });
 
@@ -248,163 +225,8 @@ describe('useHomeMutations', () => {
       expect(returnValue).toBe(false);
       expect(alertService.alert).toHaveBeenCalledWith(
         'Validation Error',
-        'Please enter a home name',
+        'Home name cannot be empty',
       );
-    });
-  });
-
-  describe('updateHome', () => {
-    it('updates home name', async () => {
-      // Seeded because the server requires the version on every update, and the
-      // hook reads it off the cached home.
-      const cache = seedCache([
-        {
-          __typename: 'Home',
-          id: 'home-1',
-          name: 'Old Name',
-          allowJoinCode: false,
-          joinCode: null,
-          version: 3,
-          updatedAt: '2025-01-01T00:00:00.000Z',
-        },
-      ]);
-      const m = updateHomeMock({ id: 'home-1', name: 'Updated Name' });
-      const { result } = renderHookWithApollo(
-        () => useHomeMutations(createOptions()),
-        { operationMocks: [m.mock], cache },
-      );
-
-      await act(async () => {
-        await result.current.updateHome('home-1', { name: 'Updated Name' });
-      });
-
-      expect(m.fired).toContainEqual({
-        input: { id: 'home-1', name: 'Updated Name', version: 3 },
-      });
-    });
-
-    it('handles isDefault update by calling setDefaultHome', async () => {
-      const options = createOptions();
-      const { result } = renderHookWithApollo(() => useHomeMutations(options));
-
-      await act(async () => {
-        await result.current.updateHome('home-2', { isDefault: true });
-      });
-
-      expect(options.setDefaultHome).toHaveBeenCalledWith('home-2');
-    });
-
-    it('returns false on mutation failure', async () => {
-      const m = updateHomeMock(null);
-      const { result } = renderHookWithApollo(
-        () => useHomeMutations(createOptions()),
-        { operationMocks: [m.mock] },
-      );
-
-      let returnValue!: Awaited<ReturnType<typeof result.current.updateHome>>;
-      await act(async () => {
-        returnValue = await result.current.updateHome('home-1', {
-          name: 'Test',
-        });
-      });
-
-      expect(returnValue).toBe(false);
-    });
-
-    it('returns true when only isDefault changes and no other updates', async () => {
-      const options = createOptions();
-      const m = updateHomeMock({ id: 'home-1' });
-      const { result } = renderHookWithApollo(() => useHomeMutations(options), {
-        operationMocks: [m.mock],
-      });
-
-      let returnValue!: Awaited<ReturnType<typeof result.current.updateHome>>;
-      await act(async () => {
-        returnValue = await result.current.updateHome('home-1', {
-          isDefault: true,
-        });
-      });
-
-      expect(returnValue).toBe(true);
-      expect(m.fired).toEqual([]);
-    });
-
-    it('optimistically updates the cached home before the server responds', async () => {
-      const cache = seedCache([
-        {
-          __typename: 'Home',
-          id: 'home-1',
-          name: 'Old Name',
-          allowJoinCode: false,
-          joinCode: null,
-          version: 1,
-          updatedAt: '2025-01-01T00:00:00.000Z',
-        },
-      ]);
-      const m = updateHomeMock({ id: 'home-1', name: 'New Name' });
-      const { result } = renderHookWithApollo(
-        () => useHomeMutations(createOptions()),
-        { operationMocks: [m.mock], cache },
-      );
-
-      let pending: Promise<unknown> | undefined;
-      act(() => {
-        pending = result.current.updateHome('home-1', { name: 'New Name' });
-      });
-
-      // The optimistic response is written synchronously from the cached home,
-      // before the server resolves. Read the optimistic layer explicitly.
-      const optimistic = cache.readFragment(
-        {
-          id: cache.identify({ __typename: 'Home', id: 'home-1' }),
-          fragment: UpdateHomeOptimistic_HomeFragmentDoc,
-        },
-        true,
-      );
-      expect(optimistic?.name).toBe('New Name');
-
-      await act(async () => {
-        await pending;
-      });
-    });
-
-    it('skips the optimistic update when enabling a join code', async () => {
-      const cache = seedCache([
-        {
-          __typename: 'Home',
-          id: 'home-1',
-          name: 'Home',
-          allowJoinCode: false,
-          joinCode: null,
-          version: 1,
-          updatedAt: '2025-01-01T00:00:00.000Z',
-        },
-      ]);
-      const m = updateHomeMock({ id: 'home-1', name: 'Home' });
-      const { result } = renderHookWithApollo(
-        () => useHomeMutations(createOptions()),
-        { operationMocks: [m.mock], cache },
-      );
-
-      let pending: Promise<unknown> | undefined;
-      act(() => {
-        pending = result.current.updateHome('home-1', { allowJoinCode: true });
-      });
-
-      // The server mints the join code, so there is no optimistic write —
-      // allowJoinCode stays at its cached value until the server responds.
-      const optimistic = cache.readFragment(
-        {
-          id: cache.identify({ __typename: 'Home', id: 'home-1' }),
-          fragment: UpdateHomeOptimistic_HomeFragmentDoc,
-        },
-        true,
-      );
-      expect(optimistic?.allowJoinCode).toBe(false);
-
-      await act(async () => {
-        await pending;
-      });
     });
   });
 

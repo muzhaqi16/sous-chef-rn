@@ -107,12 +107,9 @@ function toNestedInput(
 }
 
 /**
- * A refused update still resolves with HTTP 200: the result union carries a
- * `ValidationError` / `ForbiddenError` / `NotFoundError` / `ConflictError`
- * member instead of the payload, so `data` is truthy and the mutation's
- * `onError` never fires. Transport errors are already reported through that
- * `onError`; this logs the server's reason for the union-error case, which
- * has none. Classification itself lives in `updateEntityFieldsLocalFirst`.
+ * A refusal resolves with a union-error member instead of the payload, so
+ * `data` is truthy and `onError` never fires. This logs the server's reason for
+ * that case; classification lives in `updateEntityFieldsLocalFirst`.
  */
 function reportRefusal(
   result: { data?: unknown; error?: unknown } | undefined | null,
@@ -131,11 +128,9 @@ function reportRefusal(
 
 /**
  * The shared write path: cache first, fire with `localFirst`, revert only on a
- * genuine refusal. Lives at module scope so the quiet-hours timezone sync
- * effect can reuse it without taking a per-render function as a dependency —
- * which would re-arm the effect on every render.
- *
- * Returns whether the change is safe to treat as saved (queued counts).
+ * genuine refusal. Module scope so the quiet-hours timezone effect can reuse it
+ * without a per-render dependency that would re-arm it every render. Returns
+ * whether the change is safe to treat as saved (queued counts).
  */
 async function applySettingsUpdate({
   cache,
@@ -191,7 +186,7 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
   // could never repair itself and `settings` stayed on the defaults below —
   // which reads as "every toggle is broken".
   const skipped = !user?.id || !!options?.skip;
-  const { data, loading, error } = useQuery(
+  const { data, loading, error, refetch } = useQuery(
     GetNotificationPreferencesDocument,
     {
       skip: skipped,
@@ -215,18 +210,14 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
     }
   }, [loading, preferences, skipped, user?.id, error]);
 
-  // Update notification preferences mutation
   const [updatePreferences] = useMutation(
     UpdateNotificationPreferencesDocument,
     {
-      // Uses automatic normalization - mutation returns full NotificationPreferences fragment
-      // No manual cache update needed (Pattern 2).
-      //
-      // No `optimisticResponse`: the callers write the change into the cache
-      // permanently before firing (see `updateEntityFieldsLocalFirst`). An optimistic
-      // layer is rolled back as soon as the mutation completes, and offline that
-      // completion is `queueLink`'s null result — which snapped every toggle
-      // back to its old position while the change sat queued.
+      // The mutation returns the full fragment, so normalization is the whole
+      // cache update. No `optimisticResponse`: callers write permanently before
+      // firing, and an optimistic layer is torn down on completion — offline
+      // that completion is `queueLink`'s null result, which snaps every toggle
+      // back while the change sits queued.
       onError: error => {
         // Telemetry only — every caller already surfaces one alert off the
         // returned boolean, so alerting here too would double up.
@@ -389,6 +380,16 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
   return {
     settings,
     loading,
+    // `settings` always has a value — every field below falls back to a
+    // fabricated default — so it cannot tell a screen whether the server has
+    // answered. A screen gating on `loading` alone blanks itself on every
+    // mount: `cache-and-network` reports `loading: true` for the whole network
+    // leg even when the cache already answered, and `nextFetchPolicy` does not
+    // survive an unmount (useQuery builds a new ObservableQuery per mount).
+    hasPreferences: !!preferences,
+    skipped,
+    error,
+    refetch,
     updateNotificationSetting,
     updateMultipleSettings,
     resetToDefaults,

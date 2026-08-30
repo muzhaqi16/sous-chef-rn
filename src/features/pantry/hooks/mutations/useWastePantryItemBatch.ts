@@ -1,16 +1,8 @@
 /**
- * useWastePantryItemBatch - Mutation hook for wasting a specific batch
- * (local-first).
- *
- * Marks the cached batch's `status` as WASTED PERMANENTLY before firing so the
- * batch shows as wasted instantly and survives an offline/queued waste. Because
- * the server writes a waste ledger row, a naive replay would double-count — so
- * the canonical mutation carries a client-minted `input.idempotencyKey`; the
- * server records it in the same transaction as the waste, making a queued
- * replay apply it exactly once (it returns ConflictError(IDEMPOTENT_REPLAY),
- * which the queue converges). A real rejection restores the pre-waste status.
- * The parent item's quantity / active-batch count catch up from the server
- * response on replay.
+ * Local-first: the cached batch's `status` is set WASTED PERMANENTLY before
+ * firing, so it survives an offline/queued waste. The server writes a waste
+ * ledger row, so `input.idempotencyKey` is what keeps a queued replay from
+ * double-counting; a real rejection restores the pre-waste status.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';

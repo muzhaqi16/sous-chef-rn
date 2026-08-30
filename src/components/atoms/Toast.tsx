@@ -24,26 +24,17 @@ export type ToastType = 'default' | 'success' | 'error' | 'warning' | 'info';
 export interface ToastOptions {
   message: string;
   /**
-   * How long to hold before dismissing, in ms. Defaults to
-   * `TOAST.AUTO_DISMISS_SHORT`; `TOAST.AUTO_DISMISS_LONG` is the preset for
-   * toasts carrying a sentence. Any positive value works — prefer a preset so
-   * the timings stay tunable in one place.
-   *
-   * The hold spans the fade-in and excludes the fade-out, so time on screen is
-   * roughly `duration + TIMING.STANDARD`.
+   * Hold in ms, default `TOAST.AUTO_DISMISS_SHORT`. Prefer a `TOAST` preset. The
+   * hold spans the fade-in and excludes the fade-out, so time on screen is about
+   * `duration + TIMING.STANDARD`.
    */
   duration?: number;
   type?: ToastType;
   action?: { label: string; onPress: () => void };
   /**
-   * Marks a toast as a *state announcement* — the latest one is the only one
-   * still true, so it replaces a displayed or queued announcement instead of
-   * waiting in line behind it (offline → back-online being the case that
-   * matters: queueing meant the second toggle's toast only surfaced once the
-   * first had run its full duration, long after the state it described).
-   *
-   * Only announcements supersede each other, and never one carrying an
-   * `action` — an actionable toast is never silently dropped.
+   * Marks a state announcement: only the latest is still true, so it replaces a
+   * displayed or queued one rather than surfacing long after the state it
+   * describes. Only announcements supersede, and never one carrying an `action`.
    */
   supersede?: boolean;
 }
@@ -58,17 +49,13 @@ const TOAST_ICONS: Partial<
   info: 'information-circle-outline',
 };
 
-// Theme-reactive Ionicons. uniProps captures the runtime `type` from the
-// surrounding closure (per-render mapper) and resolves the matching alert
-// banner color, falling back to textInverse.
 const ThemedToastIcon = withUnistyles(Ionicons);
 
 type ToastQueueState = {
   current: ToastOptions | null;
   queue: ToastOptions[];
-  // Bumped every time a toast becomes current. A dismissal carries the
-  // generation it started on so it can only clear that toast — see
-  // onDismissComplete.
+  // Bumped when a toast becomes current; a dismissal carries the generation it
+  // started on so it can only clear that toast.
   generation: number;
 };
 
@@ -79,11 +66,9 @@ type DismissTargets = {
 };
 
 /**
- * Module scope so its identity is constant: the entry effect arms the
- * auto-dismiss timer with it, and a per-render function there would re-arm the
- * timer on every render and the toast would never leave.
- *
- * Idempotent — safe to call mid-animation.
+ * Module scope for a constant identity: the entry effect arms the auto-dismiss
+ * timer with it, and a per-render function would re-arm it every render so the
+ * toast never left. Idempotent, safe to call mid-animation.
  */
 const animateDismiss = (
   targets: DismissTargets,
@@ -91,9 +76,9 @@ const animateDismiss = (
   setQueue: React.Dispatch<React.SetStateAction<ToastQueueState>>,
 ) => {
   const { translateY, translateX, opacity } = targets;
-  // The spring's completion hops to the JS thread a frame later. A toast
-  // arriving in that gap is already on screen by the time this lands, so
-  // clearing unconditionally would blank it mid-display.
+  // The spring's completion hops to the JS thread a frame later; a toast that
+  // arrived in that gap is on screen already, so the generation guard is what
+  // keeps this from blanking it mid-display.
   const onDismissComplete = () => {
     setQueue(prev =>
       prev.generation === dismissedGeneration
@@ -120,30 +105,11 @@ const sameType = (a: ToastOptions, b: ToastOptions) =>
 const supersedes = (older: ToastOptions, newer: ToastOptions) =>
   older.supersede === true && newer.supersede === true;
 
-/**
- * The visible toast, kept as its own component rather than inlined into
- * `ToastProvider`.
- *
- * The split is deliberate: this owns the `styles.useVariants({ type })` read,
- * and the provider owns `showToast`, the value published through
- * `ToastContext`. Keeping the variant-reading render work off the provider
- * means anything done to THIS component cannot reach that published value — a
- * locally-declared arrow whose only free variable is the stable `setQueue`, and
- * which the compiler keeps reference-stable for all seven `useToast()`
- * consumers. Losing that identity rebuilt `panGesture` so the
- * `GestureDetector` re-attached, and stored a fresh closure on the
- * module-level dispatch singleton, on each of the several provider renders per
- * toast (show, the render-phase `setDisplayed`, auto-dismiss, queue pop).
- */
-/**
- * Forwards its ref and spreads what it does not consume, because
- * `GestureDetector` clones its child with `{ collapsable: false, ref }`. A
- * plain function component simply drops both: the ref never reaches a host
- * view, and losing `collapsable: false` lets Android's view flattening prune
- * the very view the gesture is attached to. Every other `GestureDetector` in
- * this repo passes a host view directly; this one passes a component, so the
- * component has to behave like one.
- */
+// Split out of `ToastProvider` so the `styles.useVariants({ type })` read can
+// never destabilise `showToast`, the identity published through `ToastContext`.
+// It forwards its ref and spreads unconsumed props because `GestureDetector`
+// clones its child with `{ collapsable: false, ref }` — a plain function
+// component drops both.
 const ToastCard = forwardRef<
   React.ComponentRef<typeof Animated.View>,
   {
@@ -275,18 +241,12 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
     _setToastDispatch(showToast);
   });
 
-  // Animate in + arm auto-dismiss whenever a toast becomes current. Cleanup
-  // cancels the timer on replace, gesture-dismiss, unmount. Re-running on
-  // in-place replace re-targets SharedValues at their current value (no-op
-  // visually) and resets the timer — the spam-coalescing behavior.
-  //
-  // The resting position (`insets.top` + `marginTop`) is LAYOUT; translateY is
-  // relative to it and rests at 0. Two reasons the safe-area offset isn't in
-  // the spring target: a target captured on the frame the toast appears can't
-  // follow an inset that resolves or changes later, and entering from
-  // OFFSCREEN_Y made every appearance sweep ~290pt, so its first frames sat
-  // under the status bar / Dynamic Island — screenshotted mid-flight it reads
-  // as a clipped banner. ENTER_FROM_Y keeps the slide short.
+  // Animates in and arms auto-dismiss when a toast becomes current; re-running on
+  // an in-place replace resets the timer, which is the spam-coalescing behavior.
+  // The resting position (`insets.top` + `marginTop`) is LAYOUT and translateY
+  // rests at 0 relative to it, so the safe-area offset stays out of the spring
+  // target: it can change after the frame the toast appears, and the long sweep
+  // from OFFSCREEN_Y put the first frames under the status bar / Dynamic Island.
   useEffect(() => {
     if (!current) return;
     currentGeneration.set(generation);
@@ -296,9 +256,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
     translateY.set(withSpring(0, SPRING.TOAST_ENTER));
     translateX.set(0);
     opacity.set(withTiming(1, { duration: TIMING.FAST }));
-    // Any positive duration is honoured. This used to compare against
-    // AUTO_DISMISS_LONG for equality, which made `duration` a flag with one
-    // recognized value — `duration: 800` silently held for AUTO_DISMISS_SHORT.
+    // Any positive duration is honoured, not just the TOAST presets.
     const requested = current.duration;
     const ms =
       typeof requested === 'number' && requested > 0

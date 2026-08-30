@@ -1,12 +1,3 @@
-/**
- * Test data fixtures for E2E tests
- *
- * Provides reusable test data for consistent testing
- */
-
-/**
- * Test user credentials
- */
 export const TEST_USER = {
   email: 'test@souschef.dev',
   password: 'Test123!',
@@ -15,9 +6,6 @@ export const TEST_USER = {
   lastName: 'User',
 };
 
-/**
- * Alternative test users
- */
 export const TEST_USERS = {
   user1: {
     email: 'user1@example.com',
@@ -31,9 +19,6 @@ export const TEST_USERS = {
   },
 };
 
-/**
- * Sample shopping list items
- */
 export const TEST_SHOPPING_ITEMS = [
   {
     name: 'Milk',
@@ -67,9 +52,6 @@ export const TEST_SHOPPING_ITEMS = [
   },
 ];
 
-/**
- * Sample pantry items
- */
 export const TEST_PANTRY_ITEMS = [
   {
     name: 'Pasta',
@@ -94,9 +76,6 @@ export const TEST_PANTRY_ITEMS = [
   },
 ];
 
-/**
- * Sample recipe search queries
- */
 export const TEST_RECIPES = {
   queries: [
     'chicken pasta',
@@ -112,9 +91,6 @@ export const TEST_RECIPES = {
   },
 };
 
-/**
- * Sample home/household data
- */
 export const TEST_HOME = {
   name: 'Test Family Home',
   members: [
@@ -129,18 +105,12 @@ export const TEST_HOME = {
   ],
 };
 
-/**
- * Test barcode data
- */
 export const TEST_BARCODES = {
   milk: '012345678901',
   bread: '012345678902',
   apples: '012345678903',
 };
 
-/**
- * Common error messages
- */
 export const ERROR_MESSAGES = {
   invalidCredentials: 'Invalid credentials',
   emailRequired: 'Email is required',
@@ -149,9 +119,6 @@ export const ERROR_MESSAGES = {
   itemNotFound: 'Item not found',
 };
 
-/**
- * Success messages
- */
 export const SUCCESS_MESSAGES = {
   itemAdded: 'Item added successfully',
   itemDeleted: 'Item deleted',
@@ -160,9 +127,7 @@ export const SUCCESS_MESSAGES = {
   listShared: 'List shared',
 };
 
-/**
- * Wait timeouts (ms)
- */
+/** Wait timeouts, in ms. */
 export const TIMEOUTS = {
   short: 2000,
   medium: 5000,
@@ -170,9 +135,6 @@ export const TIMEOUTS = {
   veryLong: 20000,
 };
 
-/**
- * Screen test IDs
- */
 export const SCREENS = {
   login: 'login-screen',
   signup: 'signup-screen',
@@ -184,9 +146,6 @@ export const SCREENS = {
   onboarding: 'onboarding-screen',
 };
 
-/**
- * Generate random test data
- */
 export function generateRandomItem() {
   const categories = ['Dairy', 'Meat', 'Vegetables', 'Fruits', 'Bakery'];
   const randomId = Math.random().toString(36).substring(7);
@@ -198,26 +157,17 @@ export function generateRandomItem() {
   };
 }
 
-/**
- * Generate unique email for testing
- */
 export function generateTestEmail() {
   const randomId = Math.random().toString(36).substring(7);
   return `test-${randomId}@example.com`;
 }
 
-/**
- * Generate future date for expiration testing
- */
 export function generateFutureDate(daysFromNow: number): string {
   const date = new Date();
   date.setDate(date.getDate() + daysFromNow);
   return date.toISOString().split('T')[0];
 }
 
-/**
- * Generate past date for expiration testing
- */
 export function generatePastDate(daysAgo: number): string {
   const date = new Date();
   date.setDate(date.getDate() - daysAgo);

@@ -42,7 +42,7 @@ function buildReviewNode(
   createdAt: string,
   user: { id: string },
   // Server-computed for the requesting user, so it's a flag rather than a
-  // voter list — the API windows `helpfulVotes` and it can no longer answer
+  // voter list — the API windows `helpfulVotes` and so cannot answer
   // "did I vote".
   viewerHasVotedHelpful: boolean = false,
 ) {

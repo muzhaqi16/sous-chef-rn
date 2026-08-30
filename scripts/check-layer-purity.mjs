@@ -80,33 +80,18 @@ const BASELINE = baselineFile(
 
 /**
  * The kit: what a sibling app is meant to take wholesale.
- *
- * `src/app/` is deliberately absent. That is the composition root — the
- * provider that mounts every feature's subscriptions, the one that preloads
- * every feature's data. Those exist to know the feature list, so measuring
- * them against a rule that forbids knowing it would be measuring the wrong
- * thing. See `src/app/README.md`.
+ * `src/app/` is deliberately absent — the composition root exists to know the
+ * feature list, so this rule would measure the wrong thing there.
+ * See `src/app/README.md`.
  */
 const KIT_GLOBS = ['src/components/**/*.{ts,tsx}', 'src/hooks/**/*.{ts,tsx}'];
 const KIT_GRAPHQL = ['src/components/**/*.graphql', 'src/hooks/**/*.graphql'];
 
 /**
  * The kernel: the layer BELOW the kit, which a sibling app keeps unchanged.
- *
- * Only the NAME test runs here, deliberately. The kernel genuinely imports
- * features in a few places and each is load-bearing: the offline queue has to
- * know every feature's sync builders before the first mutation, `i18n`
- * assembles every feature's locale bundle, and the subscription layer mounts
- * every feature's event subscription centrally. A `featureImport` rule would
- * be a rule that excuses more than it forbids — that reasoning is already
- * written down in the `import/no-restricted-paths` zone in `.eslintrc.js`,
- * which is where those crossings are governed.
- *
- * A kernel module NAMED after a feature is a different claim, and an
- * unambiguous one: `src/utils/recipeTransform.ts` is recipe code that a
- * sibling app without recipes still has to carry, fork or delete. This is
- * what let two recipe result caches sit in `src/store/` long enough to also
- * miss their session reset.
+ * NAME test only — its feature imports are load-bearing (offline queue, i18n
+ * bundling, the subscription layer) and governed by `import/no-restricted-paths`
+ * in `.eslintrc.js`. A module NAMED after a feature is an unambiguous fork cost.
  */
 const KERNEL_GLOBS = [
   'src/apollo/**/*.{ts,tsx}',
@@ -137,10 +122,9 @@ const SKIP = [
 
 /**
  * Feature ids, read from the directory listing rather than `registry.ts`.
- *
  * The registry is TypeScript and this script runs on bare node in CI jobs that
- * skip `npm ci`. `check-feature-shape.mjs` is what keeps a manifest's `id`
- * equal to its directory name, so the two agree by construction.
+ * skip `npm ci`; `check-feature-shape.mjs` keeps a manifest's `id` equal to its
+ * directory name, so the two agree by construction.
  */
 const FEATURE_IDS = filesUnder('src/features/*/manifest.ts')
   .map(f => f.split(sep).at(-2))
@@ -148,7 +132,6 @@ const FEATURE_IDS = filesUnder('src/features/*/manifest.ts')
 
 /**
  * Domain words that are not feature directory names.
- *
  * `storageLocation`, `ingredient` and `purchase` are pantry/shopping/recipe
  * entities that got their own kit files; the rest are the verbs the kit
  * branches on today.
@@ -168,11 +151,9 @@ const EXTRA_DOMAIN_TERMS = [
 
 /**
  * Feature ids that are app chrome, not a domain.
- *
- * `home` collides with the tab-navigator sense of the word (`HomeTabs`),
- * `profile` and `notifications` name concepts every app of this shape has.
- * Excluding them keeps the name test precise; their real coupling still shows
- * up as `featureImport`.
+ * `home` collides with the tab-navigator sense (`HomeTabs`); `profile` and
+ * `notifications` name concepts every app of this shape has. Excluding them
+ * keeps the name test precise; real coupling still shows as `featureImport`.
  */
 const AMBIGUOUS_IDS = new Set(['home', 'profile', 'notifications']);
 
@@ -202,10 +183,9 @@ const SCHEMA_TYPES =
 
 /**
  * Split camelCase/PascalCase into lowercase words before matching.
- *
  * A naive `[^a-z]` boundary misses the common case: in `MoveToPantryModal` the
- * character before `Pantry` is a lowercase `o`, so the term never matched and
- * the file read as clean.
+ * character before `Pantry` is a lowercase `o`, so the term never matches and
+ * the file reads as clean.
  */
 const words = name => name.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase();
 
@@ -255,25 +235,10 @@ const schemaTypeFiles = new Set();
 const compositionRootCouplings = new Set();
 
 /**
- * Resolve an import specifier to a repo-relative kit file, or null.
- *
- * Aliases come from `tsconfig.json` through the shared derivation, so this
- * cannot drift the way a hand-written table would.
- */
-/**
- * The files the transitive walk may step through.
- *
- * The kit itself, PLUS `src/app` — the composition root, whose whole job is to
- * know the feature list. `src/app` is exempt from the direct rule by design,
- * but a KIT file importing it drags that feature graph into what a sibling app
- * reuses wholesale, which is exactly how `SubscriptionProvider` sat in
- * `src/components/providers/` reaching all four features while this check
- * printed "0 coupled kit file(s)".
- *
- * The KERNEL is deliberately NOT walked. Its feature imports are load-bearing
- * (the offline queue, i18n bundling, the subscription layer) and governed by
- * the `.eslintrc.js` zone instead — following them would mark every kit file
- * that touches `#/apollo/client` and say nothing.
+ * The files the transitive walk may step through: the kit, PLUS `src/app`.
+ * A kit file importing the composition root drags its feature graph into what
+ * a sibling app reuses wholesale. The KERNEL is deliberately NOT walked — its
+ * feature imports are load-bearing and governed by the `.eslintrc.js` zone.
  */
 const COMPOSITION_ROOT_GLOBS = ['src/app/**/*.{ts,tsx}'];
 const walkableFiles = [
@@ -284,6 +249,8 @@ const kitFileSet = new Set(kitFiles.map(f => relative(REPO_ROOT, f)));
 const walkableSet = new Set(walkableFiles.map(f => relative(REPO_ROOT, f)));
 const CANDIDATE_SUFFIXES = ['', '.ts', '.tsx', '/index.ts', '/index.tsx'];
 
+// Aliases come from `tsconfig.json` through the shared derivation, so this
+// cannot drift the way a hand-written table would.
 const resolveToKitFile = (spec, fromRel) => {
   let base = null;
   if (spec.startsWith('.')) {
@@ -346,14 +313,9 @@ for (const file of kitFiles) {
 }
 
 /**
- * A kit file that reaches a feature THROUGH another kit file is coupled too.
- *
- * The scan above reads direct imports only, which is why the check printed
- * "0 coupled kit file(s)" while `SubscriptionProvider` — still in the kit —
- * mounted every feature's subscription providers one hop away. What a sibling
- * app reuses wholesale is the transitive closure, not the first edge.
- *
- * Only edges INSIDE the kit are followed: a feature file that imports another
+ * A kit file that reaches a feature THROUGH another kit file is coupled too:
+ * what a sibling app reuses wholesale is the transitive closure, not the first
+ * edge. Only edges INSIDE the kit are followed — a feature importing another
  * feature is that layer's business, and the kernel has its own rule.
  */
 const directlyCoupled = new Set([

@@ -1,19 +1,8 @@
 /**
- * useAdjustPantryItemQuantity - Mutation hook for adjusting pantry item quantity
- * (local-first).
- *
- * Adjusts pantry item quantity to match a physical count and creates an
- * ADJUSTMENT usage record with a mandatory reason for the audit trail.
- *
- * The corrected count is written to the cache PERMANENTLY before firing (an
- * `optimisticResponse` would roll back the moment the offline queue completes
- * the request with a null result), so it shows instantly and survives an
- * offline/API-down adjust. Because the server writes a ledger row per adjust, a
- * naive replay would double-count — so the canonical mutation carries a
- * client-minted `input.idempotencyKey` that the server records in the same
- * transaction, so a replay applies the delta exactly once (it returns
- * ConflictError(IDEMPOTENT_REPLAY), which the queue converges). A real rejection
- * restores the pre-adjust snapshot.
+ * Local-first: the corrected count is written to the cache PERMANENTLY before
+ * firing — an `optimisticResponse` rolls back on the offline queue's null
+ * result. The server writes an ADJUSTMENT ledger row per adjust, so
+ * `input.idempotencyKey` is what keeps a queued replay from double-counting.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';

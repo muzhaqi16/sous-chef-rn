@@ -27,13 +27,9 @@ export interface ExpirationStatus {
 }
 
 /**
- * The short register used on the item detail screen ("Fridge", not
- * "Refrigerated"), so it reads as a location rather than a setting. Kept as its
- * own namespace rather than reusing `storageState.*`, which is the long form
- * the pickers show.
- *
- * `t` is a parameter because resolving at module load would freeze whatever
- * language happened to load first.
+ * The short register for the detail screen ("Fridge", not "Refrigerated"); its
+ * own namespace because `storageState.*` is the long form the pickers show. `t`
+ * is a parameter — resolving at module load freezes the first-loaded language.
  */
 export const formatStorageState = (
   state: string | null | undefined,
@@ -227,11 +223,9 @@ export const formatQuantityBreakdown = (
   if (!breakdown) return null;
   const total = Math.floor(breakdown.totalContentUnits);
   if (total <= 0) return null;
-  // The unit label is server data (`Unit.symbol` / `Unit.name`) and carries no
-  // plural form, so it is passed through untouched. This used to append a
-  // literal "s" for any count but 1 — English pluralisation applied to a label
-  // that is not English, producing "2 lattinas" in Italian and "2 kgs" even in
-  // English. The count/unit order lives in the key so a locale can change it.
+  // The unit label is server data (`Unit.symbol` / `Unit.name`) with no plural
+  // form, so it passes through untouched — never append an English "s" to it.
+  // The count/unit order lives in the key so a locale can change it.
   const contentLabel =
     breakdown.contentUnit?.symbol || breakdown.contentUnit?.name;
   if (!contentLabel) return null;

@@ -23,18 +23,10 @@ import {
 } from './shoppingItemFormConfig';
 
 /**
- * The shopping-list item form, on react-hook-form.
- *
- * Both flows that create or edit a shopping item use this — the `AddEditItem`
- * screen and the `AddToShoppingListSheet` details step — so neither can drift
- * on what is required, what the message says, or which fields count as dirty.
- *
- * Two things this replaced, both of which react-hook-form already does:
- *   - a hand-rolled dirty map compared against a saved snapshot of the initial
- *     state (`formState.dirtyFields` + `reset()` as the new baseline), and
- *   - three `alertService.alert` calls per consumer for required fields, which
- *     covered the form and had to be dismissed before the field could be fixed.
- *     Validation now renders on the field, from one schema.
+ * The shopping-list item form, on react-hook-form. Shared by the `AddEditItem`
+ * screen and the `AddToShoppingListSheet` details step, so neither can drift on
+ * what is required, what the message says, or which fields count as dirty.
+ * Validation renders ON the field, from one schema — never through an alert.
  */
 export function useShoppingListItemForm(
   initialState?: Partial<ShoppingItemFormData>,
@@ -60,11 +52,9 @@ export function useShoppingListItemForm(
   const values = useWatch({ control }) as ShoppingItemFormData;
 
   /**
-   * Replace the form with an existing item AND make it the dirty baseline.
-   *
-   * `reset` is what makes edit mode work: `dirtyFields` is computed against
-   * the values passed here, so opening an item and saving without touching
-   * anything sends nothing.
+   * Replace the form with an existing item AND make it the dirty baseline:
+   * `dirtyFields` is computed against the values passed here, so opening an item
+   * and saving without touching it sends nothing.
    */
   const setFromItem = (item: UseShoppingListItemForm_ItemFragment) => {
     reset({
@@ -89,31 +79,24 @@ export function useShoppingListItemForm(
   };
 
   /**
-   * Set a field the user did not type into directly — the id behind an
-   * autocomplete pick, or a value derived from another field.
-   *
-   * `shouldDirty` so it counts for edit mode; `shouldValidate` so picking a
-   * unit clears the net-weight message immediately.
+   * Set a field the user did not type into — the id behind an autocomplete pick,
+   * or a value derived from another field. `shouldDirty` so it counts for edit
+   * mode; `shouldValidate` so picking a unit clears its message immediately.
    */
   const setFieldValue = <K extends Path<ShoppingItemFormData>>(
     field: K,
     value: PathValue<ShoppingItemFormData, K>,
   ) => {
-    // `storeName` is excluded from dirty tracking at the SOURCE rather than
-    // subtracted from `isDirty` afterwards: react-hook-form mutates
-    // `dirtyFields` in place, so a boolean derived from it memoizes against an
-    // object identity that never changes and freezes at its first value.
-    // Marking the field clean keeps `isDirty` — a subscribed primitive —
-    // authoritative.
+    // Excluded at the SOURCE, not subtracted from `isDirty` after: react-hook-form
+    // mutates `dirtyFields` in place, so anything derived from it memoizes on an
+    // identity that never changes. `isDirty` is a subscribed primitive.
     const tracked = (DIRTY_TRACKED_FIELDS as string[]).includes(field);
     setValue(field, value, { shouldDirty: tracked, shouldValidate: true });
-    // `shouldValidate` re-runs the rule on THIS field only, and the
-    // all-or-nothing net-weight rule lives on `netWeightUnit` while its inputs
-    // are `netWeight` and `netWeightUnitId`. Without this, typing a weight
-    // never raises the message and picking a unit never clears it.
+    // `shouldValidate` re-runs the rule on THIS field only, and the net-weight
+    // rule lives on `netWeightUnit` while its inputs are `netWeight` and
+    // `netWeightUnitId`. Both halves are triggered because each direction
+    // reports on a different field.
     if (field === 'netWeight' || field === 'netWeightUnitId') {
-      // Both halves of the all-or-nothing rule, because each direction reports
-      // on a different field and either edit can raise or clear either message.
       void trigger(['netWeightUnit', 'netWeight']);
     }
   };
@@ -137,8 +120,8 @@ export function useShoppingListItemForm(
     };
   };
 
-  // Build partial input with only dirty fields (for edit mode).
-  // Sends raw quantityInput string - server handles conversion via FlexibleQuantity.
+  // Only dirty fields, for edit mode. `dirtyFields` OMITS clean fields, so every
+  // read below is a truthiness check, never `=== false`.
   const buildDirtyInput = (): Partial<UpdateShoppingListItemInput> => {
     const input: Partial<UpdateShoppingListItemInput> = {};
     const v = getValues();
@@ -148,7 +131,7 @@ export function useShoppingListItemForm(
     }
 
     if (dirtyFields.quantityInput) {
-      // Send raw string - server accepts FlexibleQuantity ("1/3", "1 1/4", "0.5", etc.)
+      // Raw string: the server's FlexibleQuantity accepts "1/3", "1 1/4", "0.5".
       input.quantity = v.quantityInput;
     }
 

@@ -11,17 +11,9 @@ import type { IconLibrary } from '#/utils/iconUtils';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 
 /**
- * TabBarActionsContext - Split into State and Setters contexts
- *
- * Manages the floating action buttons in the tab bar:
- * - Scanner button: Opens barcode scanner (Pantry, ShoppingList tabs)
- * - Add button: Opens add flow (Pantry, ShoppingList, Recipe tabs)
- *
- * Split into two contexts to prevent unnecessary re-renders:
- * - TabBarSettersContext: Stable setter functions (rarely changes)
- * - TabBarStateContext: Derived state (changes on tab switches, button presses)
- *
- * Most consumers only need setters and won't re-render on tab switches.
+ * The tab bar's floating scanner and add buttons, split into a stable setters
+ * context and a derived state context — most consumers need only the setters and
+ * so do not re-render on a tab switch.
  */
 
 interface AddButtonConfig {
@@ -31,13 +23,7 @@ interface AddButtonConfig {
 
 interface TabBarSettersContextType {
   setScannerProps: (onScanPress?: () => void, showButton?: boolean) => void;
-  /**
-   * Register add button handler for the current screen.
-   * Button visibility is now automatic based on active tab - always shows on allowed tabs.
-   * @param handler - callback when button is pressed
-   * @param disabled - whether button should be disabled (shows toast instead)
-   * @param disabledMessage - custom message when button is disabled
-   */
+  /** Registers the current screen's add handler; visibility follows the active tab. */
   setAddProps: (
     handler?: () => void,
     disabled?: boolean,
@@ -46,33 +32,25 @@ interface TabBarSettersContextType {
   setActiveTab: (tabName: string) => void;
   setOverlayOpen: (isOpen: boolean) => void;
   setAddButtonRect: (rect: TargetRect) => void;
-  /**
-   * SharedValue that screens can write to from scroll handler worklets
-   * to hide/show the tab bar based on scroll direction.
-   * Written on UI thread — zero JS re-renders.
-   */
+  /** Written from screens' scroll worklets on the UI thread; no JS re-renders. */
   scrollTabBarHidden: SharedValue<boolean>;
 }
 
 interface TabBarStateContextType {
-  // Scanner button props
   onScanPress?: () => void;
   showScannerButton: boolean;
 
-  // Add button props
   onAddPress?: () => void;
   showAddButton: boolean;
   addButtonConfig: AddButtonConfig;
   isAddButtonDisabled: boolean;
   addButtonDisabledMessage?: string;
 
-  // Shared state
   activeTab: string;
   isOverlayOpen: boolean;
   addButtonRect: TargetRect | null;
 }
 
-// Combined type for backwards compatibility
 type TabBarActionsContextType = TabBarSettersContextType &
   TabBarStateContextType;
 
@@ -91,13 +69,11 @@ interface TabBarActionsProviderProps {
 export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
   children,
 }) => {
-  // Scanner state
   const [onScanPress, setOnScanPress] = useState<(() => void) | undefined>(
     undefined,
   );
   const [showScannerButton, setShowScannerButton] = useState(false);
 
-  // Add button state - visibility is now automatic based on active tab
   const [onAddPress, setOnAddPress] = useState<(() => void) | undefined>(
     undefined,
   );
@@ -106,27 +82,22 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
     string | undefined
   >(undefined);
 
-  // Shared state
   const [activeTab, setActiveTab] = useState<string>('');
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [addButtonRect, setAddButtonRect] = useState<TargetRect | null>(null);
 
-  // Scroll-driven tab bar hide — SharedValue written by screens from UI thread worklets
   const scrollTabBarHidden = useSharedValue(false);
 
-  // Ref to track activeTab for use in callbacks without causing re-renders
   const activeTabRef = useRef(activeTab);
   useEffect(() => {
     activeTabRef.current = activeTab;
   }, [activeTab]);
 
-  // Define which tabs should show buttons
   const allowedScannerTabs = ['Pantry', 'ShoppingList'];
-  // Add button shown on all main tabs to avoid layout shift/empty space
+  // Shown on every main tab so switching tabs causes no layout shift.
   const allowedAddTabs = ['Pantry', 'ShoppingList', 'Recipe', 'MealPlan'];
 
-  // Store handlers per tab so we don't lose them during transitions
-  // This prevents the add button from flickering when navigating between allowed tabs
+  // Per-tab so a transition doesn't lose the handler and flicker the button.
   const [tabHandlers, setTabHandlers] = useState<Record<string, () => void>>(
     {},
   );
@@ -135,14 +106,11 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
     scanPress?: () => void,
     showButton: boolean = false,
   ) => {
-    // Only update if values have changed to prevent unnecessary re-renders
     setOnScanPress(prev => {
-      // Compare function references - only update if different
       if (prev === scanPress) return prev;
       return scanPress || undefined;
     });
     setShowScannerButton(prev => {
-      // Only update if showButton value has changed
       if (prev === showButton) return prev;
       return showButton;
     });
@@ -153,8 +121,6 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
     disabled: boolean = false,
     disabledMessage?: string,
   ) => {
-    // Store handler by active tab to prevent flickering during tab transitions
-    // When a screen registers its handler, we store it for that tab
     if (handler) {
       setTabHandlers(prev => {
         const currentTab = activeTabRef.current;
@@ -165,7 +131,6 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
       });
     }
 
-    // Only update if values have changed to prevent unnecessary re-renders
     setOnAddPress(prev => {
       if (prev === handler) return prev;
       return handler || undefined;
@@ -198,15 +163,12 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
     scrollTabBarHidden,
   };
 
-  // Only show buttons if the current tab is in the allowed list and button is enabled
   const shouldShowScanner =
     showScannerButton && allowedScannerTabs.includes(activeTab);
 
-  // Add button: always show on allowed tabs (visibility is automatic)
-  // This eliminates race conditions during tab transitions
+  // Always shown on an allowed tab, which removes the tab-transition race.
   const shouldShowAdd = allowedAddTabs.includes(activeTab);
 
-  // Use stored handler as fallback during transitions
   const effectiveAddPress =
     onAddPress || (activeTab ? tabHandlers[activeTab] : undefined);
 
@@ -237,10 +199,6 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
   );
 };
 
-/**
- * Hook to access only tab bar setter functions.
- * Consumers using only setters won't re-render on tab switches or state changes.
- */
 export const useTabBarSetters = (): TabBarSettersContextType => {
   const context = useContext(TabBarSettersContext);
   if (context === undefined) {
@@ -251,10 +209,6 @@ export const useTabBarSetters = (): TabBarSettersContextType => {
   return context;
 };
 
-/**
- * Hook to access tab bar UI state (buttons, active tab, overlay).
- * Re-renders when any state changes.
- */
 export const useTabBarState = (): TabBarStateContextType => {
   const context = useContext(TabBarStateContext);
   if (context === undefined) {
@@ -265,11 +219,7 @@ export const useTabBarState = (): TabBarStateContextType => {
   return context;
 };
 
-/**
- * Hook to access tab bar action buttons state and setters.
- * Backwards-compatible: combines both contexts.
- * Prefer useTabBarSetters or useTabBarState for better performance.
- */
+/** Prefer `useTabBarSetters` or `useTabBarState` — this subscribes to both. */
 export const useTabBarActions = (): TabBarActionsContextType => {
   const setters = useTabBarSetters();
   const state = useTabBarState();

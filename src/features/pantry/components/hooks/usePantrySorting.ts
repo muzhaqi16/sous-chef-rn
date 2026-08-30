@@ -6,7 +6,6 @@ import {
   PREFERENCE_DEFAULTS,
 } from '#store/slices/preferenceTypes';
 
-// Item type for sorting (minimal interface)
 interface SortableItem {
   id: string;
   itemName?: string | null;
@@ -15,10 +14,9 @@ interface SortableItem {
   createdAt?: string;
 }
 
-// Module-level reference-identity cache for sort output.
-// Prevents creating a new array (via .slice()) when inputs haven't changed.
-// Defined at module scope (like computeDisplayMap) so the compiler doesn't flag
-// the cache writes as side effects inside a hook body.
+// Reference-identity cache: unchanged inputs must return the same array, or
+// FlashList re-renders every mounted cell. At module scope so the compiler
+// doesn't read the cache writes as side effects inside a hook body.
 let _lastSortInput: unknown = null;
 let _lastSortOption: SortOption | null = null;
 let _lastSortDirection: SortDirection | null = null;
@@ -37,7 +35,7 @@ function cachedSort<T extends SortableItem>(
     return _lastSortResult as T[];
   }
 
-  // Pre-compute timestamps into a Map (O(n)) instead of wrapping each item
+  // Pre-computed O(n) instead of wrapping each item.
   const expiryMap = new Map<string, number>();
   const createdMap = new Map<string, number>();
   for (const item of items) {
@@ -54,7 +52,6 @@ function cachedSort<T extends SortableItem>(
     }
   }
 
-  // Single shallow copy, sorted in-place — no wrapper objects, no final .map()
   const sorted = items.slice();
   sorted.sort((a, b) => {
     let comparison = 0;
@@ -83,59 +80,22 @@ function cachedSort<T extends SortableItem>(
 }
 
 interface UsePantrySortingOptions {
-  /** Initial sort option from preferences */
   initialSortOption?: SortOption;
-  /** Initial sort direction from preferences */
   initialSortDirection?: SortDirection;
-  /** Callback to persist sort changes to store */
+  /** Persists the change to the preferences store. */
   onSortChange?: (option: SortOption, direction: SortDirection) => void;
 }
 
 interface UsePantrySortingResult<T extends SortableItem> {
-  /** Current sort option */
   sortOption: SortOption;
-  /** Current sort direction */
   sortDirection: SortDirection;
-  /** Whether sort modal is visible */
   sortModalVisible: boolean;
-  /** Open the sort modal */
   openSortModal: () => void;
-  /** Close the sort modal */
   closeSortModal: () => void;
-  /** Handle sort option selection */
   handleSortSelect: (option: SortOption) => void;
-  /** Sort items according to current settings */
   sortItems: (items: T[]) => T[];
 }
 
-/**
- * usePantrySorting - Hook for managing pantry item sorting
- *
- * Encapsulates:
- * - Sort state (option and direction)
- * - Modal visibility state
- * - Sorting logic
- * - Persistence callbacks
- *
- * @example
- * ```tsx
- * const {
- *   sortOption,
- *   sortDirection,
- *   sortModalVisible,
- *   openSortModal,
- *   closeSortModal,
- *   handleSortSelect,
- *   sortItems,
- * } = usePantrySorting({
- *   initialSortOption: PantrySortOption.RECENT,
- *   initialSortDirection: PantrySortDirection.DESC,
- *   onSortChange: persistToStore,
- * });
- *
- * const sortedItems = sortItems(items);
- * ```
- */
 export function usePantrySorting<T extends SortableItem>(
   options: UsePantrySortingOptions = {},
 ): UsePantrySortingResult<T> {
@@ -145,13 +105,11 @@ export function usePantrySorting<T extends SortableItem>(
     onSortChange,
   } = options;
 
-  // Sort state (local, initialized from props)
   const [sortOption, setSortOption] = useState<SortOption>(initialSortOption);
   const [sortDirection, setSortDirection] =
     useState<SortDirection>(initialSortDirection);
   const [sortModalVisible, setSortModalVisible] = useState(false);
 
-  // Modal controls
   const openSortModal = () => {
     setSortModalVisible(true);
   };
@@ -160,32 +118,27 @@ export function usePantrySorting<T extends SortableItem>(
     setSortModalVisible(false);
   };
 
-  // Handle sort option selection
   const handleSortSelect = (option: SortOption) => {
     let newOption = sortOption;
     let newDirection = sortDirection;
 
     if (sortOption === option) {
-      // Toggle direction if same option selected
       newDirection =
         sortDirection === PantrySortDirection.ASC
           ? PantrySortDirection.DESC
           : PantrySortDirection.ASC;
       setSortDirection(newDirection);
     } else {
-      // Set new option and reset to ascending
       newOption = option;
       newDirection = PantrySortDirection.ASC;
       setSortOption(newOption);
       setSortDirection(newDirection);
     }
 
-    // Persist to store
     onSortChange?.(newOption, newDirection);
     setSortModalVisible(false);
   };
 
-  // Sort function — delegates to module-level cachedSort for reference stability
   const sortItems = (items: T[]): T[] =>
     cachedSort(items, sortOption, sortDirection);
 

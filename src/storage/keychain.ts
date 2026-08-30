@@ -93,12 +93,9 @@ const processQueue = async () => {
 };
 
 /**
- * Some Android emulators and low/mid-tier real devices have no hardware-backed
- * keystore (no TEE/StrongBox), so a SECURE_HARDWARE key request throws
- * CryptoFailedException ("Cannot generate keys with required security
- * guarantees") instead of degrading on its own. Retry once with a
- * software-backed key in that case — biometric gating (accessControl) is
- * unaffected, only where the key material is generated.
+ * A device with no hardware-backed keystore THROWS on a SECURE_HARDWARE request
+ * rather than degrading, so retry once software-backed. Only where the key
+ * material is generated changes; biometric gating is unaffected.
  */
 async function setGenericPasswordWithSecurityFallback(
   username: string,
@@ -216,13 +213,9 @@ export async function loadCredentials(
 }
 
 /**
- * Check if a specific account has credentials without triggering biometric
- * authentication. This checks that account's unprotected indicator, not the
- * protected credentials.
- *
- * PERFORMANCE: Results are cached per account to avoid repeated native Keychain
- * calls. The cache is invalidated when that account's credentials are saved or
- * cleared.
+ * Whether an account has credentials, WITHOUT prompting for biometrics — reads
+ * that account's unprotected indicator, not the protected entry. Cached per
+ * account; the cache clears when its credentials are saved or removed.
  */
 export async function hasCredentials(email: string): Promise<boolean> {
   const account = normalizeAccount(email);
@@ -280,15 +273,10 @@ export async function clearCredentials(email: string): Promise<void> {
     await resetGenericPassword({ service: credentialsServiceFor(email) });
     await resetGenericPassword({ service: indicatorServiceFor(email) });
 
-    // The identity hint the LOGIN SCREEN reads. Clearing only the two
-    // per-account services left this pointing at an account whose credentials
-    // are gone, so `getLastBiometricEmail()` still named the previous user, the
-    // biometric button still appeared for them, and a deleted account's address
-    // stayed on the device forever.
-    //
-    // Cleared only when it names THIS account: another account may have
-    // enrolled since, and taking its hint away would silently disable a
-    // biometric login that still works.
+    // The identity hint the login screen reads; it must be cleared alongside
+    // the per-account services or a deleted account's address stays on the
+    // device. Cleared ONLY when it names this account — another may have
+    // enrolled since, and taking its hint would disable a working login.
     await clearLastBiometricEmailFor(email);
 
     // PERFORMANCE: Invalidate cache after clearing credentials
@@ -336,12 +324,9 @@ export async function saveLastBiometricEmail(email: string): Promise<void> {
 }
 
 /**
- * Forget the stored identity hint, but only when it names `email`.
- *
- * Never throws: the hint is a convenience, and failing to clear it must not
- * turn a sign-out into an error. The credential slots it points at are already
- * gone by the time this runs, so the worst case is a button that resolves to
- * nothing.
+ * Forget the identity hint, but only when it names `email`. Never throws — the
+ * hint is a convenience, and the slots it points at are already gone, so the
+ * worst case is a button that resolves to nothing.
  */
 export async function clearLastBiometricEmailFor(email: string): Promise<void> {
   try {
@@ -418,21 +403,10 @@ export async function clearTempRegistrationPassword(): Promise<void> {
   }
 }
 
-// ============================================================================
-// Session tokens (access + refresh JWT)
-//
-// This module owns the keychain tier of the session-token lifecycle: save
-// (skipping unchanged pairs), load (with transient-failure retries), clear
-// (reporting failure). The store layer decides when the MMKV fallback copy
-// may be dropped (see `sessionTokensInKeychain` in authSlice / partialize).
-//
-// Tokens are persisted here — NOT in MMKV — so the persisted Zustand state
-// holds nothing sensitive and MMKV encryption can stay best-effort. No
-// biometric gate: tokens must be readable on every cold start without a
-// prompt. AFTER_FIRST_UNLOCK (vs WHEN_UNLOCKED) lets background work
-// (WebSocket reconnects, notification handlers) read them while the device
-// is locked, as long as it has been unlocked once since boot.
-// ============================================================================
+// Session tokens live here, NOT in MMKV, so persisted Zustand state holds
+// nothing sensitive. No biometric gate — they must be readable on every cold
+// start without a prompt — and AFTER_FIRST_UNLOCK (not WHEN_UNLOCKED) lets
+// background work read them while the device is locked.
 
 export interface SessionTokens {
   accessToken: string;
@@ -455,11 +429,9 @@ const refreshTokenIssuedAt = (refreshToken: string): number => {
 };
 
 /**
- * Choose the fresher of two session-token pairs by refresh-token issue time.
- * A failed keychain write can strand a stale (already-rotated) pair in the
- * keychain while the MMKV fallback holds the newer one; restoring the stale pair
- * would present an already-rotated token and 401 → logout. Ties and undecodable
- * tokens favor `primary` (the keychain, the canonical tier).
+ * The fresher of two token pairs, by refresh-token issue time. A failed keychain
+ * write can strand an already-rotated pair there while MMKV holds the newer one,
+ * and restoring the stale pair 401s into a logout. Ties favour `primary`.
  */
 export const pickFresherSessionTokens = (
   primary: SessionTokens,

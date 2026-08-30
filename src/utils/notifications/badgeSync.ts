@@ -1,24 +1,8 @@
 /**
- * Keeps the OS app-icon badge in sync with the server's unread count.
- *
- * The server sets the badge on each alert push (`aps.badge` on iOS,
- * `notification_count` on Android), but only *on delivery* — it cannot clear it
- * when the user reads notifications in-app. This closes that gap: whenever the
- * cached `User.unreadNotificationCount` changes (including to 0 on read or
- * logout), the OS badge is set to match.
- *
- * It watches the Apollo cache, which is where that count lives. It used to
- * watch a Zustand mirror of it, and needed an `isHydrated` gate so a
- * pre-hydration `0` could not stomp a server-set badge at every JS start.
- * That gate is gone and not replaced: "the count has not loaded yet" is
- * directly observable here as a cache read with no data BEFORE any count has
- * been applied, so there is no window in which a default value looks like a
- * real one. Once a count has been applied, the same empty read means the store
- * was cleared — sign-out — and the badge is zeroed.
- *
- * Notifee's `setBadgeCount` is cross-platform — the iOS app-icon badge and,
- * best-effort, Android launchers that support badging. Call once at app entry
- * (`index.js`); returns an unsubscribe.
+ * Keeps the OS app-icon badge in sync with `User.unreadNotificationCount`: the
+ * server sets it on push delivery but cannot clear it when the user reads
+ * in-app. Watching the Apollo CACHE, not a Zustand mirror, removes the need for
+ * a hydration gate — a miss reads null, distinguishable from a real 0.
  */
 
 import notifee from '@notifee/react-native';
@@ -36,15 +20,14 @@ export const setupBadgeSync = (): (() => void) => {
   let lastApplied: number | null = null;
 
   const readAndApply = (): void => {
-    // `cache-only`, and a miss reads as null rather than 0 — that distinction
-    // is the whole reason the hydration gate is unnecessary.
+    // A miss reads as null rather than 0; that distinction is what removes the
+    // need for a hydration gate.
     const data = client.cache.readQuery({
       query: GetUnreadNotificationsDocument,
     }) as { me?: { unreadNotificationCount?: number } | null } | null;
 
     const count = data?.me?.unreadNotificationCount;
-    // A miss before anything has been applied is "not loaded yet" — the case
-    // the hydration gate used to cover. A miss AFTER a count was applied is
+    // A miss before anything is applied means "not loaded yet"; a miss AFTER is
     // `clearStore()` on sign-out, and the badge has to come off the icon.
     const next =
       typeof count === 'number' ? count : lastApplied === null ? null : 0;

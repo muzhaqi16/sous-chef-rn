@@ -39,17 +39,10 @@ const FULL_PERMISSIONS: PantryPermissions = {
 };
 
 /**
- * Get pantry permissions based on home membership.
- *
- * Rules per API sharing guide:
- * - OWNER/ADMIN: Full permissions always
- * - MEMBER: Permissive defaults (!== false) — has access unless explicitly denied
- * - GUEST: Restrictive defaults (=== true) — no access unless explicitly granted
- *
- * Creating a pantry and editing one share a single API gate — an ACTIVE
- * membership with `canEditPantry` — so `canCreatePantry` tracks `canEditItems`
- * rather than the home-management flag. Deleting is the one that needs
- * `canManageHome`, which defaults to false for every role.
+ * Per the API sharing guide: MEMBER defaults permissive (`!== false`), GUEST
+ * restrictive (`=== true`). Creating and editing a pantry share ONE API gate —
+ * an active membership with `canEditPantry` — so `canCreatePantry` tracks
+ * `canEditItems`. Only deleting needs `canManageHome`, false for every role.
  */
 export function getPantryPermissions(
   membership: HomeMembership | null | undefined,

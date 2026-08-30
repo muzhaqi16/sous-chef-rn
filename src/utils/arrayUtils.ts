@@ -1,10 +1,6 @@
 /**
- * Dedupe a list by `id`, keeping the first occurrence of each id (input order
- * is preserved). Optionally cap the result to the first `max` unique items.
- *
- * Used both for the seen-items LRU merge (`appSlice.addCachedItemSuggestions`,
- * with a cap) and the brand autocomplete fallback merge (suggested + warmed
- * cache, no cap).
+ * Dedupe by `id`, keeping the first occurrence and input order; `max` caps the
+ * result. Used by the seen-items LRU merge and the brand autocomplete fallback.
  */
 export function dedupeById<T extends { id: string }>(
   items: readonly T[],
@@ -21,11 +17,7 @@ export function dedupeById<T extends { id: string }>(
   return result;
 }
 
-/**
- * Case-insensitive "name contains term" filter — the shared `filterFallback`
- * for the autocomplete hooks (store / category / brand / item). Matches when an
- * item's `name` includes `term`, both lowercased.
- */
+/** The shared `filterFallback` for the autocomplete hooks. */
 export function filterByName<T extends { name: string }>(
   term: string,
   items: readonly T[],

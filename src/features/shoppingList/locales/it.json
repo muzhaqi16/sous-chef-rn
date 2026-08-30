@@ -128,7 +128,6 @@
     "currentMembers": "Membri attuali",
     "manageHome": "Gestisci casa",
     "shareHomeLinkedNotice": "Questa lista appartiene alla casa \"{{name}}\". I membri si gestiscono dalle impostazioni della casa.",
-    "removeMemberTitle": "Rimuovi membro",
     "removeMemberA11y": "Rimuovi membro",
     "cannotLeaveOwnerMessage": "I proprietari non possono abbandonare la lista. Trasferisci la proprietà a un altro membro o elimina la lista.",
     "failedToUpdateShareSettings": "Impossibile aggiornare le impostazioni di condivisione",

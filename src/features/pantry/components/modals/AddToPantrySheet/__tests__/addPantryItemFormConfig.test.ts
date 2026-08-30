@@ -11,7 +11,7 @@ import {
  *
  * A schema, reported on the field, rather than `alertService.alert` calls: a
  * modal covers the form, has to be dismissed before the field can be corrected,
- * and once dismissed no longer says which of the four pages the offending input
+ * and once dismissed cannot say which of the four pages the offending input
  * was on. This is where the rules themselves are pinned.
  */
 

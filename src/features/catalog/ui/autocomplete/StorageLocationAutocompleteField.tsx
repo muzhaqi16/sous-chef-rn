@@ -57,20 +57,10 @@ export const StorageLocationAutocompleteField: React.FC<
   };
 
   /**
-   * The field's text is the location's OWN name, never a parent-decorated
-   * label.
-   *
-   * That text is not just display: when the selection is cleared — which any
-   * keystroke does, via `handleTextChange` — the submit paths fall back to
-   * sending it as `storage.storageLocationName`, and the server resolves that
-   * name at the ROOT level only (it never matches a nested location). So a
-   * decorated `"Freezer (Kitchen Fridge)"` could not match the location it
-   * named; it find-or-created a new root location called exactly that, in the
-   * shared home, permanently. The nested location is reachable only by id,
-   * which `onStorageLocationSelected` carries.
-   *
-   * Which parent a location sits under is shown on the row while choosing
-   * (see `renderItem`), where it disambiguates without entering form state.
+   * The text must be the location's OWN name: a keystroke clears the selection
+   * and submit then sends it as `storage.storageLocationName`, which the server
+   * resolves at ROOT level only — a decorated `"Freezer (Kitchen Fridge)"`
+   * find-or-creates a permanent root location of that name.
    */
   const handleSelect = (item: StorageLocation) => {
     hasSelectionRef.current = true;

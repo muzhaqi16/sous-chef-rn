@@ -3,7 +3,10 @@
 import React from 'react';
 import { userEvent, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  statesFutureSchemaValues,
+} from '#/test-utils/apolloMockProvider';
 import {
   GetHomesDocument,
   GetMyPendingInvitesDocument,
@@ -399,7 +402,10 @@ function buildGetMyPendingInvitesMock(): MockedResponse {
 }
 
 function buildCreateHomeMock(): MockedResponse {
-  return {
+  // One case here states an `ErrorCode` the schema does not have, because every
+  // member it does have is mapped to copy — so nothing valid reaches the
+  // caller-fallback branch this screen relies on.
+  return statesFutureSchemaValues({
     request: {
       query: CreateHomeDocument,
       variables: variables => {
@@ -411,7 +417,7 @@ function buildCreateHomeMock(): MockedResponse {
     ...(mockCreateHomeError
       ? { error: mockCreateHomeError }
       : { result: () => ({ data: mockCreateHomeResponse }) }),
-  };
+  });
 }
 
 function buildCreatePantryMock(): MockedResponse {
@@ -1181,7 +1187,7 @@ describe('CreateHomeScreen', () => {
     mockCreateHomeResponse = {
       createHome: {
         __typename: 'ValidationError',
-        code: 'VALIDATION_ERROR',
+        code: 'VALIDATION_FAILED',
         message: 'Home limit reached',
         field: null,
       },
@@ -1208,9 +1214,9 @@ describe('CreateHomeScreen', () => {
     const { findByTestId, findByText } = renderScreen();
     await user.press(await findByTestId('submit-button'));
 
-    // Never the refusal's `message` — that text is English by construction, and
-    // it used to be rendered verbatim. The CODE is what selects the copy, so an
-    // empty message changes nothing while a code is present.
+    // Never the refusal's `message` — that text is English by construction, so
+    // rendering it verbatim would ship English. The CODE is what selects the
+    // copy, so an empty message changes nothing while a code is present.
     //
     // This asserted the generic fallback until the test cache started loading
     // the production `possibleTypes`. Without them `... on Error { code }` did

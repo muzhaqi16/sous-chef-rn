@@ -61,7 +61,7 @@ describe('useDataState', () => {
     });
 
     it('is an error when the request failed, not empty', () => {
-      // The defect this replaces: a failed fetch rendered "No recipes yet"
+      // The defect this prevents: a failed fetch rendering "No recipes yet"
       // alongside a button offering to create the recipes you already own.
       expect(
         classify({

@@ -5,13 +5,8 @@ import { PantryItemSkeleton } from '#features/pantry/components/skeletons/Pantry
 
 const ITEM_COUNT = 10;
 
-/**
- * Skeleton for the PantryContent list portion.
- *
- * The list's header renders as the FlashList's ListHeaderComponent and stays
- * visible during loading. This skeleton is rendered as ListEmptyComponent,
- * covering only the item rows below the header.
- */
+// Covers only the rows: it reaches the list through `PantryEmptyState` in
+// `ListFooterComponent`, below the header chrome, which stays visible.
 export const PantryScreenSkeleton: React.FC = () => (
   <View testID="pantry-loading" style={styles.container}>
     {Array.from({ length: ITEM_COUNT }, (_, index) => (

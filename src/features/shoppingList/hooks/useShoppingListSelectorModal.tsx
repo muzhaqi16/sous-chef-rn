@@ -22,7 +22,6 @@ import { SelectorItemContainer } from '#components/organisms/AnimatedItemSelecto
 import type { ShoppingListFromQuery } from './useShoppingListsQuery';
 import { Text } from '#components/atoms/Text';
 
-/** Shopping list enriched with ownership flag */
 export type ShoppingListSelectorItem = ShoppingListFromQuery & {
   _isOwner: boolean;
 };
@@ -33,7 +32,6 @@ interface UseShoppingListSelectorOptions {
   setSelectedShoppingListId: (id: string) => void;
 }
 
-// Type for section headers in the grouped list
 interface SectionHeader {
   _isHeader: true;
   id: string;
@@ -42,18 +40,6 @@ interface SectionHeader {
 
 type ListItemOrHeader = ShoppingListSelectorItem | SectionHeader;
 
-/**
- * Shopping List Selector Modal Hook
- * Extracts list selector modal logic from ShoppingListMain
- *
- * Handles:
- * - Selector ref management
- * - List config creation
- * - List actions (create, share, settings)
- * - Render list item
- * - Overlay coordination
- * - Multi-delete mode
- */
 export function useShoppingListSelectorModal({
   listDataWithOwnership,
   currentListId,
@@ -64,7 +50,6 @@ export function useShoppingListSelectorModal({
 
   const selectorRef = useRef<ItemSelectorRef>(null);
 
-  // Manage selector with overlay coordination
   const {
     handleOpenSelector: baseOpenSelector,
     handleOverlayOpen,
@@ -74,13 +59,12 @@ export function useShoppingListSelectorModal({
     setOverlayOpen,
   });
 
-  // --- Delete mode state & mutation ---
   const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [selectedForDeletion, setSelectedForDeletion] = useState<Set<string>>(
     () => new Set(),
   );
 
-  // Refs mirroring volatile state — allows renderListItem to stay stable
+  // Mirrored into refs so `onSelect` below can stay a stable identity.
   const isDeleteModeRef = useRef(isDeleteMode);
   const selectedForDeletionRef = useRef(selectedForDeletion);
   useEffect(() => {
@@ -90,7 +74,6 @@ export function useShoppingListSelectorModal({
   const longPressItemRef = useRef<string | null>(null);
   const { deleteShoppingList } = useDeleteShoppingList();
 
-  // --- Delete mode handlers ---
   const exitDeleteMode = () => {
     setIsDeleteMode(false);
     setSelectedForDeletion(new Set());
@@ -170,13 +153,11 @@ export function useShoppingListSelectorModal({
     );
   };
 
-  // Wrap overlay close to also exit delete mode
   const handleOverlayClose = () => {
     baseOverlayClose();
     exitDeleteMode();
   };
 
-  // --- Delete header right element ---
   const deleteHeaderRight = (() => {
     if (!isDeleteMode) return undefined;
     const count = selectedForDeletion.size;
@@ -252,7 +233,6 @@ export function useShoppingListSelectorModal({
     isSelected: boolean,
     onPress: () => void,
   ) => {
-    // Render section header (non-selectable)
     if ('_isHeader' in item && item._isHeader) {
       return (
         <View style={styles.sectionHeader}>
@@ -273,10 +253,9 @@ export function useShoppingListSelectorModal({
       );
     }
 
-    // After the header guard above, item is always a ShoppingListSelectorItem
+    // Narrowed by the header guard above.
     const list = item as ShoppingListSelectorItem;
 
-    // Delete mode rendering — read from state for re-render on toggle
     if (isDeleteMode) {
       const isSelectedForDelete = selectedForDeletion.has(list.id);
       const canDelete = !!list._isOwner;
@@ -319,7 +298,6 @@ export function useShoppingListSelectorModal({
       );
     }
 
-    // Normal mode rendering
     return (
       <SelectorItemContainer
         state={isSelected ? 'selected' : 'default'}
@@ -361,8 +339,7 @@ export function useShoppingListSelectorModal({
     );
   };
 
-  // PERFORMANCE: Memoize actions array separately
-  // Note: setOverlayOpen(false) called before navigate to ensure overlay closes immediately
+  // `setOverlayOpen(false)` runs before navigating, so the overlay closes at once.
   const listActions = [
     {
       icon: 'add',
@@ -403,17 +380,15 @@ export function useShoppingListSelectorModal({
   // extraData signals FlashList to re-render items when delete state changes
   const selectorExtraData = { isDeleteMode, selectedForDeletion };
 
-  // PERFORMANCE: Stable onSelect — reads volatile state from refs + store
+  // Stable identity: volatile state is read from the refs and the store directly,
+  // never from a closure this function would have to be rebuilt for.
   const onSelect = (id: string) => {
     if (isDeleteModeRef.current) return;
-    // Skip selection for section headers
     if (id.startsWith('header-')) return;
-    // Use direct store access to bypass any potential stale closure issues
     useStore.getState().setSelectedShoppingListId(id);
     selectorRef.current?.close();
   };
 
-  // PERFORMANCE: Combine memoized parts into final config
   const listConfig: SelectorConfig<ListItemOrHeader> = {
     title: selectorExtraData.isDeleteMode
       ? t('shoppingListSelector.deleteModeTitle', {
@@ -441,7 +416,6 @@ export function useShoppingListSelectorModal({
   };
 }
 
-// Styles for the selector items
 const styles = StyleSheet.create(theme => ({
   selectorItemInfo: {
     flex: 1,

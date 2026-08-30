@@ -3,51 +3,18 @@ import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { Telemetry } from '#/services/telemetry';
 
-/**
- * Options for useAddItemSheet hook
- */
 export interface UseAddItemSheetOptions {
-  /** Current shopping list ID (required to add items) */
   currentListId: string | undefined;
-  /** Callback to navigate to list settings */
   onNavigateToListSettings?: () => void;
 }
 
-/**
- * Return value from useAddItemSheet hook
- */
 export interface UseAddItemSheetResult {
-  /** Whether the sheet is visible */
   visible: boolean;
-  /** Open the sheet (validates list is selected first) */
+  /** Opens only once a list is selected; otherwise offers to create one. */
   open: () => void;
-  /** Close the sheet */
   close: () => void;
 }
 
-/**
- * Hook to manage AddToShoppingListSheet state.
- *
- * Handles:
- * - Sheet visibility state
- * - Validation that a list is selected before opening
- * - Telemetry tracking
- *
- * @example
- * ```tsx
- * const addItemSheet = useAddItemSheet({
- *   currentListId,
- *   onNavigateToListSettings: () => navigate('ListSettings'),
- * });
- *
- * // In render:
- * <AddToShoppingListSheet
- *   visible={addItemSheet.visible}
- *   onClose={addItemSheet.close}
- *   shoppingListId={currentListId}
- * />
- * ```
- */
 export function useAddItemSheet(
   options: UseAddItemSheetOptions,
 ): UseAddItemSheetResult {

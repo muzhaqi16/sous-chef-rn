@@ -6,15 +6,9 @@ import { authService } from '#/services/authService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 
 /**
- * The three contexts a biometric enrollment card can appear in. They differ
- * only in copy, where the password comes from, and what completion does — the
- * actual UI + storeCredentials logic is identical, which is why it lives here.
- *
- * - `onboarding` — last step of the registration flow (full screen).
- * - `postLogin`  — returning-user enrollment gate shown after a fresh login,
- *                  before the main app (full screen). Availability is
- *                  pre-checked by `shouldShowPostLoginBiometricPrompt`.
- * - `settings`   — manual enable/disable from Profile → Security (modal).
+ * The three contexts a biometric enrollment card appears in. They differ only in
+ * copy, where the password comes from, and what completion does — the UI and
+ * `storeCredentials` logic are identical, which is why they live here.
  */
 export type BiometricSetupMode = 'onboarding' | 'postLogin' | 'settings';
 
@@ -28,7 +22,7 @@ interface UseBiometricSetupParams {
   userEmail: string;
   /** Pre-supplied password (registration password / fresh login password). */
   presetPassword?: string;
-  /** When false the card is dormant and skips the availability probe (modal). */
+  /** False leaves the card dormant and skips the availability probe. */
   active?: boolean;
   onComplete: (enabled: boolean, declined?: boolean) => void;
 }
@@ -46,9 +40,8 @@ const biometryIcon = (type: string | null): string => {
 };
 
 /**
- * Module-level loader — keeps the try/catch out of the hook body so the React
- * Compiler doesn't bail out of auto-memoization (see CLAUDE.md). Returns a safe
- * "unavailable" snapshot on error.
+ * Module-level so the try/catch stays out of the hook body, which would bail the
+ * React Compiler out. Returns a safe "unavailable" snapshot on error.
  */
 async function loadBiometricSnapshot(
   mode: BiometricSetupMode,
@@ -72,11 +65,9 @@ async function loadBiometricSnapshot(
 }
 
 /**
- * Centralized biometric-enrollment logic. Shared by every enrollment surface
- * (onboarding step, post-login gate, settings modal) so copy, the
- * availability probe, the password requirement, and the `storeCredentials`
- * call live in exactly one place. Render the returned values with
- * `BiometricSetupView`.
+ * Shared by every enrollment surface so copy, the availability probe, the password
+ * requirement and the `storeCredentials` call live in one place. Render the
+ * result with `BiometricSetupView`.
  */
 export const useBiometricSetup = ({
   mode,
@@ -86,8 +77,8 @@ export const useBiometricSetup = ({
   onComplete,
 }: UseBiometricSetupParams) => {
   const { t } = useTranslation();
-  // postLogin availability is pre-checked upstream, so default to available
-  // there to avoid a blank flash before the probe resolves.
+  // postLogin availability is pre-checked upstream, so default to available there
+  // and avoid a blank flash before the probe resolves.
   const [info, setInfo] = useState<BiometricInfo>({
     isAvailable: mode === 'postLogin',
     biometryType: null,
@@ -97,18 +88,16 @@ export const useBiometricSetup = ({
   const [password, setPassword] = useState(presetPassword ?? '');
   const [hasExistingCredentials, setHasExistingCredentials] = useState(false);
 
-  // Adopt a preset password that resolves after mount (e.g. onboarding loading
-  // the temp password from the keychain). "Adjusting state during render" per
-  // CLAUDE.md instead of an effect — no ref, no extra commit.
+  // Adopts a preset password resolving after mount (onboarding reads it from the
+  // keychain). Adjusted during render rather than in an effect — no extra commit.
   const [lastPreset, setLastPreset] = useState(presetPassword);
   if (presetPassword !== lastPreset) {
     setLastPreset(presetPassword);
     if (presetPassword) setPassword(presetPassword);
   }
 
-  // Probe device capability whenever the card becomes active. State is only
-  // set from the async callback (never synchronously in the effect body) so we
-  // don't trigger cascading renders.
+  // State is set only from the async callback, never synchronously in the effect
+  // body, so this cannot cascade renders.
   useEffect(() => {
     if (!active) return;
     let cancelled = false;
@@ -125,15 +114,15 @@ export const useBiometricSetup = ({
     };
   }, [active, mode, userEmail]);
 
-  // Device can't do biometrics → quietly complete (NOT a user decline).
+  // Completing quietly here is NOT a user decline.
   useEffect(() => {
     if (active && checked && !info.isAvailable) {
       onComplete(false);
     }
   }, [active, checked, info.isAvailable, onComplete]);
 
-  // Settings re-enable when credentials already exist is a re-auth, not a
-  // store; everywhere else we need a password to write credentials.
+  // Re-enabling in settings with credentials already stored is a re-auth, not a
+  // store; every other path needs a password to write them.
   const needsPassword =
     mode === 'settings' ? !hasExistingCredentials : !presetPassword;
 
@@ -142,7 +131,6 @@ export const useBiometricSetup = ({
 
     executeWithLoadingState(
       async () => {
-        // Settings + existing credentials: just re-authenticate via biometrics.
         if (mode === 'settings' && hasExistingCredentials) {
           const credentials = await authService.loadStoredCredentials(
             userEmail,
@@ -198,8 +186,8 @@ export const useBiometricSetup = ({
     );
   };
 
-  // "Set up later" / "Not now" — an explicit decline everywhere except
-  // settings (where dismissing the modal isn't a permanent "don't ask again").
+  // An explicit decline everywhere except settings, where dismissing the modal is
+  // not a permanent "don't ask again".
   const handleSkip = () => {
     onComplete(false, mode !== 'settings');
   };

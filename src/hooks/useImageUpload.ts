@@ -42,25 +42,10 @@ class UserFacingUploadError extends Error {
 }
 
 /**
- * Turns an upload failure into copy a user can act on.
- *
- * `error.message` is never shown. Those strings are internal control-flow
- * signals — 'Failed to get upload URL', 'Upload request timed out', 'File too
- * large. Maximum size: 2MB' — written in English and never translated, so
- * surfacing them both leaks implementation detail and defeats localization.
- * `logger.error` already records the real one for debugging.
- *
- * `ImageValidationError.code` is the only reliable discriminator. Matching the
- * message instead (`message.includes('INVALID_TYPE')`) could never fire: the
- * code lives on `error.code` while the message reads 'Only JPEG, PNG, and WebP
- * images are allowed'. Only the 'file size' test ever matched, and it caught
- * UNKNOWN_ERROR ("couldn't determine the size") while claiming the image was
- * "too large or corrupted".
- *
- * Exported because the same three codes are raised BEFORE any upload starts, by
- * `validateImageFile` at pick time, and the pickers that call it were showing
- * `error.message` verbatim — the English above, under a translated title. There
- * is one mapping from these codes to copy, and this is it.
+ * The ONE mapping from an upload failure to copy a user can act on — exported
+ * because `validateImageFile` raises the same codes at pick time. `error.message`
+ * is NEVER shown: those are English control-flow signals. Branch on
+ * `ImageValidationError.code`, never on message text, which shares no wording.
  */
 export const imageErrorMessage = (
   t: Translate,
@@ -124,14 +109,10 @@ export interface ItemImageUploadOptions extends ImageUploadOptions {
    */
   perspective?: string;
   /**
-   * Ask for this photo to become the item's hero, demoting the incumbent.
-   *
-   * Honoured only once the photo is APPROVED and only if the caller may edit
-   * the item, so a submission to someone else's catalog item (which lands
-   * PENDING) silently keeps the existing hero. An item's *first* photo becomes
-   * primary on its own, so this only matters when repointing a gallery that
-   * already has one — which is why the picker exposes it rather than the
-   * upload defaulting it to the first file.
+   * Make this photo the item's hero. Honoured only once APPROVED and only if
+   * the caller may edit the item, so a PENDING submission to someone else's
+   * catalog item keeps the existing hero. A first photo becomes primary anyway,
+   * so this only matters when repointing a gallery that already has one.
    */
   makePrimary?: boolean;
 }
@@ -141,10 +122,9 @@ export const useImageUpload = () => {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  // Track active XHR to cancel on unmount (prevents memory leaks)
   const activeXhrRef = useRef<XMLHttpRequest | null>(null);
 
-  // Cleanup: abort any pending upload when component unmounts
+  // Abort any pending upload on unmount.
   useEffect(() => {
     return () => {
       if (activeXhrRef.current) {
@@ -160,12 +140,10 @@ export const useImageUpload = () => {
   const [updateProfile] = useMutation(UpdateUserProfileDocument);
 
   /**
-   * Uploads the bytes to object storage with the server's presigned POST.
-   *
-   * The policy in `uploadData.fields` must be appended before the file, and the
-   * file part must be named `file` and come last — object storage enforces both
-   * and answers 400 otherwise. The Content-Type header is deliberately not set:
-   * the runtime has to author it so the multipart boundary matches the body.
+   * Presigned POST to object storage. `uploadData.fields` MUST be appended
+   * before the file, and the file part must be named `file` and come last —
+   * storage answers 400 otherwise. Content-Type is deliberately unset, so the
+   * runtime authors a boundary matching the body.
    */
   const uploadToObjectStorage = async (
     file: ImageFile,
@@ -436,17 +414,10 @@ export const useImageUpload = () => {
   };
 
   /**
-   * Upload several angles of one item, sequentially.
-   *
-   * Presign has a 20/minute and a 100/hour per-user ceiling, and a six-photo
-   * batch can hit either; being offline is the same shape of problem. Once one
-   * of those trips, every remaining photo is guaranteed to fail the same way, so
-   * the run stops and reports once — looping on would stack an alert per photo
-   * and burn the user's hourly budget for nothing. Any other failure (one
-   * unreadable file) only skips that photo.
-   *
-   * Returns the photos that actually uploaded, so callers MUST compare the
-   * length against what they passed before reporting success.
+   * Sequential multi-angle upload. Presign caps at 20/minute and 100/hour, and a
+   * rate-limit or an outage means every remaining photo fails identically — so
+   * the run stops and reports ONCE; any other failure just skips that photo.
+   * Returns what actually uploaded, so callers MUST check the length.
    */
   const uploadItemImages = async (
     files: Array<ImageFile & { perspective?: string; isPrimary?: boolean }>,

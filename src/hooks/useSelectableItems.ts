@@ -23,22 +23,9 @@ interface UseSelectableItemsReturn<T extends SelectableItem> {
 const NO_OVERRIDES: ReadonlyMap<string, boolean> = new Map();
 
 /**
- * Custom hook for managing multi-select state with optional max selection limit
- *
- * State holds the user's explicit choices only. Any item the user hasn't
- * touched reads its `selected` flag straight off `initialItems`, so a refreshed
- * seed — a background refetch, a subscription push — updates untouched rows
- * without discarding taps the user already made.
- *
- * @param initialItems - Array of items with `id` and `selected` properties
- * @param maxSelection - Optional maximum number of items that can be selected
- * @returns Object containing items, selectedItems, toggleItem function, and isMaxReached flag
- *
- * @example
- * const { items, selectedItems, toggleItem, isMaxReached } = useSelectableItems({
- *   initialItems: myItems,
- *   maxSelection: 5
- * });
+ * Multi-select state with an optional cap. State holds only the user's EXPLICIT
+ * choices; an untouched item reads `selected` off `initialItems`, so a refreshed
+ * seed updates untouched rows without discarding taps already made.
  */
 export function useSelectableItems<T extends SelectableItem>({
   initialItems,

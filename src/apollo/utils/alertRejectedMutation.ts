@@ -5,44 +5,21 @@ import { errorService } from '#/services/errorService';
 import { t } from '#/i18n';
 
 /**
- * What to show for a refusal: copy for the input it named, or the caller's own.
- *
- * A field-specific `ValidationError` says WHICH input was refused, and that is
- * the actionable part — a caller alerting "Failed to update item" for four
- * different sub-inputs in one mutation tells the user nothing. So `field`
- * selects a string from `errors.field.*`, and an unmapped field falls back to
- * the caller's copy, which means adding a mapping is opt-in and never breaks a
- * site that has not got one.
- *
- * The server's `message` is deliberately not used, however specific it is. It
- * is English — the client sends no `Accept-Language` and the token carries no
- * locale, so the server has nothing to localize against — and the API's own
- * guidance is to map codes to localized copy client-side rather than display
- * its strings. Showing it would put English in front of every es / it / sq
- * user and skip every i18n guard the app applies to its own copy.
- *
- * The cost, recorded honestly: one field can carry more than one rule. `unit`
- * refuses both "batches still exist" and "no conversion path", so its string
- * has to name both remedies rather than the one that applies.
- *
- * Derived here rather than at each call site because both helpers already hold
- * the result, and every rejected mutation passes through one of them.
+ * Copy for a refusal: a `ValidationError`'s field selects `errors.field.*`, else
+ * the caller's fallback. The server's `message` is never shown — it is
+ * unlocalizable English. Unlike {@link localizedRefusalMessage} this does NOT
+ * fall through to `code`: an alert's caller already names the failed operation.
  */
 const rejectionMessage = (result: { data?: unknown }, fallback: string) => {
   const field = validationFieldName(result.data);
   if (!field) return fallback;
-  // i18next resolves the fallback itself, so an unmapped field is not an error
-  // and never renders a raw key.
+  // i18next resolves defaultValue, so an unmapped field never renders a raw key.
   return t(`errors.field.${field}`, { defaultValue: fallback });
 };
 
 /**
- * The same resolution, for a refusal PAYLOAD held directly rather than a
- * mutation result — the shape a toast-based caller has.
- *
- * Field first (the actionable part), then the error code, then the caller's
- * localized fallback. The payload's own `message` is never a candidate, for the
- * reasons above: it is unlocalizable English by construction.
+ * The same resolution for a refusal PAYLOAD held directly: field, then code, then
+ * the caller's fallback. The payload's `message` is never a candidate.
  */
 export function localizedRefusalMessage(
   payload:
@@ -63,21 +40,10 @@ export function localizedRefusalMessage(
 }
 
 /**
- * Surface a user-facing alert when a local-first mutation is classified as
- * `'rejected'` by {@link classifyCreateResult}.
- *
- * A transport/GraphQL error already reaches the user through the mutation's
- * `onError`. A non-success union payload (`ValidationError` / `ForbiddenError` /
- * `NotFoundError` / `ConflictError`) resolves with HTTP 200 and no `error`, so
- * `onError` never fires — without this the optimistic revert happens silently
- * and the change just snaps back with no explanation.
- *
- * Call only on the `'rejected'` branch, and ONLY from a hook whose same-mutation
- * `onError` handles the transport-error case (the `onError` callback DOES fire for
- * a resolved `result.error` under `errorPolicy:'all'`, per AC4). This alerts solely
- * when there is no `error`, so the two never double-alert. If the site has NO
- * mutation `onError`, use {@link alertIfRejected} instead — it surfaces the
- * `result.error` case too. Mixing the wrong one either double-alerts or goes silent.
+ * Alert on a `'rejected'` result: a non-success union payload resolves with HTTP
+ * 200 and no `error`, so the mutation's `onError` never fires. Alerts ONLY when
+ * there is no `error`, so a caller keeping its own `onError` cannot double-alert.
+ * A site without one uses {@link alertIfRejected}; mixing them goes silent.
  */
 export function alertRejectedMutation(
   result: { data?: unknown; error?: unknown } | null | undefined,
@@ -92,43 +58,16 @@ export function alertRejectedMutation(
 }
 
 /**
- * Classify a resolved mutation result and, if it's a rejection, alert `message`
- * and return `true`. Returns `false` for the success and offline-queued cases.
- *
- * "Rejection" covers BOTH a resolved `*Error` union member AND a resolved
- * transport/GraphQL error (`{ data: undefined, error }` — under `errorPolicy:
- * 'all'` mutations resolve with the error rather than throwing). It alerts
- * **unconditionally** (unlike {@link alertRejectedMutation}, which suppresses the
- * `result.error` case for callers that keep a mutation `onError`). Use this at
- * sites WITHOUT a mutation `onError` so there is exactly one alerter — the
- * `executeMutation` callback only fires on a real throw, which `errorPolicy:'all'`
- * makes rare, and is mutually exclusive with this (an early `if (!result) return`
- * runs first on a throw).
- *
- * Packages the `classifyCreateResult(...) === 'rejected'` check + the alert so the
- * rejected branch is a single call:
- *
- * ```ts
- * if (alertIfRejected(result, t('errors.updateMemberRoleFailed'))) {
- *   revertSnapshot();   // site-specific cleanup
- *   return false;
- * }
- * ```
- *
- * **A falsy result returns `false` here, where `classifyCreateResult` returns
- * `'rejected'`.** The two answer different questions and the split is load-bearing,
- * not an oversight: `classifyCreateResult` asks "did the write land?" (a throw
- * means it didn't), while this asks "does the user still need telling?" — and on
- * a throw they don't, because `executeMutation`'s own `onError` already reported
- * it. Collapsing the two contracts would double-alert at every call site. That is
- * why callers keep an `if (!result) return …` guard above this call: it isn't
- * redundant, it distinguishes "already reported" from "reverted silently".
+ * Alert on a rejection and return `true`. Rejection covers a resolved `*Error`
+ * member AND a resolved transport error, alerted UNCONDITIONALLY — for sites with
+ * no mutation `onError`. A falsy result returns `false` where
+ * {@link classifyCreateResult} returns `'rejected'`: a throw was already reported.
  */
 export function alertIfRejected(
   result: { data?: unknown; error?: unknown } | null | undefined | false,
   message: string,
 ): boolean {
-  // Already surfaced by executeMutation's onError — see the contract note above.
+  // Already surfaced by executeMutation's onError.
   if (!result) return false;
   if (classifyCreateResult(result) !== 'rejected') {
     return false;

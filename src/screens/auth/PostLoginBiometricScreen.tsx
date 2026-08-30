@@ -11,12 +11,9 @@ import { BiometricSetupView } from '#components/organisms/biometric/BiometricSet
 import { useBiometricSetup } from '#components/organisms/biometric/useBiometricSetup';
 
 /**
- * Post-login biometric enrollment gate. Shown as its OWN screen (via the
- * `biometric_setup` navigation state) immediately after a returning user logs
- * in and before the main app mounts — so the prompt never renders as a modal
- * over PantryMain. New users are handled inside onboarding instead; settings
- * uses `BiometricSetupModal`. All three share `BiometricSetupView` +
- * `useBiometricSetup`.
+ * Post-login biometric enrollment, as its OWN screen between login and the main
+ * app so the prompt never renders as a modal over PantryMain. New users enroll in
+ * onboarding, settings uses `BiometricSetupModal`; all three share the same view.
  */
 export const PostLoginBiometricScreen = () => {
   useScreenTransition('PostLoginBiometricScreen');
@@ -48,8 +45,7 @@ export const PostLoginBiometricScreen = () => {
     onComplete: handleComplete,
   });
 
-  // Defensive: if we ever land here without the credentials needed to enroll,
-  // there's nothing to set up — proceed straight into the app.
+  // Landing here without credentials leaves nothing to set up.
   useEffect(() => {
     if (!postLoginCredentials) {
       setNavigationState('main_app');

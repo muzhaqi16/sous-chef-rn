@@ -11,12 +11,9 @@ import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import { useBottomSheetBackdropClaim } from '#hooks/useBottomSheetBackdropClaim';
 
 /**
- * Theme-reactive `BottomSheetModal` — applies `backgroundStyle` and
- * `handleIndicatorStyle` defaults from the theme via `withUnistyles`. Re-exported
- * as `BottomSheetModal` so callers swap their import source from
- * `@gorhom/bottom-sheet` to `#hooks/useStandardBottomSheet` without other code
- * changes. The wrap means theme updates flow through the C++ ShadowTree —
- * callers don't need to re-render to see the new colors.
+ * Theme-reactive `BottomSheetModal`: theme updates flow through the ShadowTree,
+ * so callers never re-render for new colors. Re-exported under the gorhom name
+ * so only the import source changes at a call site.
  */
 const ThemedBottomSheetModal = withUnistyles(GorhomBottomSheetModal, theme => ({
   backgroundStyle: { backgroundColor: theme.colors.surface },
@@ -26,11 +23,9 @@ const ThemedBottomSheetModal = withUnistyles(GorhomBottomSheetModal, theme => ({
 export { ThemedBottomSheetModal as BottomSheetModal };
 
 /**
- * Type re-export for `useRef<BottomSheetModal>(null)` callsites — points at the
- * underlying gorhom class, since the wrapped component's value type isn't a
- * usable type position. The `unknown` type argument matches the ref type the
- * wrapped component expects (gorhom 5.2.14 defaults the `present(data)` payload
- * generic to `never`, which a bare `BottomSheetModal` ref no longer satisfies).
+ * Ref type for callsites — the gorhom class, since the wrapped component's value
+ * type is not a usable type position. `unknown` because gorhom 5.2.14 defaults
+ * the `present(data)` payload generic to `never`.
  */
 export type BottomSheetModalRef = GorhomBottomSheetModal<unknown>;
 
@@ -41,12 +36,9 @@ export interface UseStandardBottomSheetOptions {
   snapPoints: (string | number)[];
   keyboardBehavior?: 'extend' | 'fillParent' | 'interactive';
   enableDynamicSizing?: boolean;
-  /** Optional user-supplied onChange — wrapped so the hook can drive the
-   *  global backdrop slot off gorhom's authoritative index transitions. */
+  /** Wrapped, so the hook drives the backdrop slot off gorhom's index. */
   onChange?: (index: number, position: number, type: number) => void;
-  /** Optional user-supplied onAnimate — wrapped so the hook can claim the
-   *  global backdrop at the START of the open animation (gorhom fires this
-   *  before onChange). */
+  /** Wrapped, so the hook claims the backdrop at the open-animation start. */
   onAnimate?: (
     fromIndex: number,
     toIndex: number,
@@ -60,47 +52,11 @@ type SnapPointType = Parameters<
   NonNullable<BottomSheetModalProps['onChange']>
 >[2];
 
-// `backdropComponent` is intentionally omitted from `modalProps` below. The
-// dim overlay is painted by `GlobalBackdrop` (rendered once at App level
-// inside the `BottomSheetModalProvider`), and its lifetime is driven by a
-// claim/release from this hook: the slot is claimed on gorhom's `onAnimate`
-// (open-animation start, so the lockstep opacity ramp drives a registered
-// slot for the whole open) and released on `onChange(-1)` (settled-closed).
-// That decouples the backdrop's slot from the contributor component's
-// mount/unmount inside gorhom's portal, which was the source of stuck-overlay
-// races after sheet dismiss and on the AddToPantrySheet → BarcodeStack round
-// trip. Gorhom renders nothing when `backdropComponent` is undefined
-// (BottomSheet.tsx:1784).
-
 /**
- * Consolidates BottomSheetModal boilerplate shared across all modals:
- * ref, insets, animation configs, back handler, present/dismiss effect, and common props.
- *
- * The global dim layer is claimed imperatively against `OverlayBackdropProvider`:
- * claimed on gorhom's `onAnimate` when the target index is ≥0 (open-animation
- * start) and released on `onChange(-1)` (settled-closed). Claiming at the start
- * is what keeps the dim in lockstep with the sheet on the way in. A defensive
- * release runs on hook unmount in case the sheet is torn down by its parent's
- * conditional render before reaching index -1 (gorhom's portal can in that
- * case skip firing `onClose`, so we never rely on it).
- *
- * Usage (auto-managed presentation):
- * ```
- * const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
- *   visible, onDismiss: onClose, snapPoints: ['60%'],
- * });
- * ```
- *
- * Usage (manual presentation — for modals that check extra conditions):
- * ```
- * const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
- *   onDismiss: onClose, snapPoints: ['60%'],
- * });
- * useEffect(() => {
- *   if (visible && item) ref.current?.present();
- *   else ref.current?.dismiss();
- * }, [visible, item]);
- * ```
+ * BottomSheetModal boilerplate: ref, insets, configs, back handler,
+ * present/dismiss reconciliation, common props. `backdropComponent` is
+ * deliberately ABSENT — the dim is the app-level `GlobalBackdrop`, claimed and
+ * released here, decoupling the slot from the portal's mount.
  */
 export function useStandardBottomSheet({
   visible,
@@ -115,13 +71,6 @@ export function useStandardBottomSheet({
   const ref = useRef<GorhomBottomSheetModal<unknown>>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
 
-  // Backdrop integration. The hook creates an `animatedIndex` SharedValue
-  // we pass to gorhom (gorhom drives it as the sheet animates), derives an
-  // opacity SV from it via `interpolate`, and claims the global backdrop
-  // with that SV — meaning the dim layer ramps in/out in lockstep with
-  // the sheet on the UI thread, zero JS-thread delay. The slot is claimed
-  // from `onAnimate` (open-animation start) so the lockstep ramp drives a
-  // registered slot for the whole open; release stays on `onChange(-1)`.
   const {
     animatedIndex,
     onChange: handleBackdrop,
@@ -129,47 +78,18 @@ export function useStandardBottomSheet({
     release: releaseBackdrop,
   } = useBottomSheetBackdropClaim(ref);
 
-  // 'interactive' fits the vast majority of input-bearing sheets; callers
-  // can still pass 'extend' or 'fillParent' explicitly when needed.
-  //
-  // It lifts the sheet by the keyboard height measured from the sheet's
-  // TALLEST snap point, not from wherever it currently sits
-  // (`BottomSheet.tsx`: `max(0, highestDetentPosition - keyboardHeight)`).
-  // So every snap point a sheet declares is added to how far the keyboard
-  // pushes it up. A `keyboardAware` option here used to append a '95%' point
-  // on top of the caller's own, which drove that expression straight to 0 —
-  // the sheet went full screen the instant a field was focused, content
-  // pinned to the top over half a screen of blank surface. Declare only the
-  // snap points the sheet actually wants; the lift follows from them.
+  // 'interactive' lifts the sheet by the keyboard height measured from its
+  // TALLEST snap point (`max(0, highestDetentPosition - keyboardHeight)`), so a
+  // tall extra snap point drives that to 0 and the sheet goes full screen the
+  // instant a field is focused. Declare only the snap points the sheet wants.
   const resolvedKeyboardBehavior = keyboardBehavior ?? 'interactive';
 
-  // ── Auto present/dismiss — single source of truth ──
-  //
-  // The sheet should be on screen when it's both wanted open (`visible`) AND its
-  // owning screen is focused: `active = visible && isFocused`. ONE effect
-  // reconciles that against `isPresentedRef`, so `present()` / `dismiss()` each
-  // have exactly one call site. (This collapses the former separate
-  // visible-effect + focus/blur listeners, which each maintained the flag by
-  // hand and were the source of the redundant-dismiss bug.)
-  //
-  // The blur-dismiss is REQUIRED: `BottomSheetModal` renders into the app-root
-  // portal ABOVE the navigation container, so an open sheet would otherwise
-  // obscure a newly-pushed screen (e.g. a Scan button inside the sheet pushing
-  // the barcode screen).
-  //
-  // `isPresentedRef` tracks the CURRENT presented state (not "ever presented"),
-  // which dodges two @gorhom/bottom-sheet 5.2.14 hazards:
-  //  1. `dismiss()` on a never-presented (INITIAL) modal flips it to DISMISSING,
-  //     and `handlePortalRender` then skips every later `present()`. The
-  //     `!active && isPresentedRef` guard never dismisses before the first present.
-  //  2. When the user closes the sheet itself, gorhom fires `onDismiss` → parent
-  //     sets `visible=false`; `safeOnDismiss` clears `isPresentedRef` FIRST, so
-  //     this effect skips a redundant `dismiss()` that would re-trip hazard #1
-  //     (the "opens once, never reopens" bug).
-  //
-  // Manual-presentation callers (`visible === undefined`) own their lifecycle —
-  // the effect short-circuits and the focus state is ignored. No-ops without a
-  // NavigationContext.
+  // ONE effect reconciles `active = visible && isFocused` against
+  // `isPresentedRef`. The blur-dismiss is REQUIRED: the modal portals ABOVE the
+  // navigation container, so an open sheet obscures a newly-pushed screen.
+  // `isPresentedRef` is the CURRENT state, not "ever presented", which dodges
+  // gorhom 5.2.14's wedge: `dismiss()` on a never-presented modal flips it to
+  // DISMISSING and every later `present()` is skipped.
   const navigation = useContext(NavigationContext);
   const [isFocused, setIsFocused] = useState(
     () => navigation?.isFocused() ?? true,
@@ -187,29 +107,22 @@ export function useStandardBottomSheet({
     };
   }, [navigation]);
 
-  // Hardware back closes the sheet only while it is actually on screen. `visible`
-  // stays true across a navigation away so the sheet can restore on return, so a
-  // handler enabled by `visible` alone remains subscribed on the pushed screen
-  // and swallows the press there — back does nothing until every such handler
-  // has been exhausted.
+  // Only while actually on screen: `visible` stays true across a navigation
+  // away, so a handler gated on it alone stays subscribed on the pushed screen
+  // and swallows back there.
   useBottomSheetBackHandler(ref, (visible ?? false) && isFocused);
 
   const isPresentedRef = useRef(false);
-  // Set when the upcoming dismiss is caused purely by the screen losing focus
-  // (the consumer still wants the sheet open, `visible` is still true). Read and
-  // cleared in `safeOnDismiss` so a blur-close doesn't notify the consumer —
-  // otherwise `visible` would be cleared and the sheet couldn't re-present on
-  // refocus.
+  // Marks a dismiss caused purely by blur, so `safeOnDismiss` does not notify
+  // the consumer — clearing `visible` would stop the sheet re-presenting.
   const blurDismissRef = useRef(false);
   useEffect(() => {
     if (visible === undefined) return;
     const active = visible && isFocused;
     if (active && !isPresentedRef.current) {
       isPresentedRef.current = true;
-      // Re-presenting makes any pending blur-dismiss moot. If the blur-path
-      // close never settled (rapid blur → refocus interrupts it, so gorhom
-      // never fires onDismiss), a stale flag here would swallow the NEXT
-      // genuine dismiss's onDismiss — clear it so that can't happen.
+      // A rapid blur → refocus interrupts the close, so gorhom never fires
+      // onDismiss and a stale flag would swallow the next genuine one.
       blurDismissRef.current = false;
       ref.current?.present();
     } else if (!active && isPresentedRef.current) {
@@ -221,21 +134,16 @@ export function useStandardBottomSheet({
       }
       ref.current?.dismiss();
       if (visible) {
-        // Blur path only. A modal dismiss can unmount the portal before
-        // `onChange(-1)` or `onDismiss` reach JS, stranding the claim as an
-        // invisible full-screen tap blocker; the incoming screen covers the dim,
-        // so releasing it now is not visible. A consumer close keeps the fade —
-        // there those callbacks do arrive.
+        // Blur path only: a dismiss can unmount the portal before `onChange(-1)`
+        // reaches JS, stranding the claim as an invisible tap blocker. The
+        // incoming screen covers the dim, so an instant release is invisible.
         releaseBackdrop();
       }
     }
   }, [visible, isFocused, releaseBackdrop]);
 
-  // Compose the backdrop claim with the caller's onChange. The current
-  // user-supplied onChange is held in a ref so its identity changing across
-  // renders doesn't churn `handleChange` (and force gorhom to rewire). The
-  // React Compiler auto-memoizes `handleChange` based on its stable-ref
-  // closure (no try-catch in this hook).
+  // The caller's onChange lives in a ref, so a changing identity does not churn
+  // `handleChange` and force gorhom to rewire.
   const userOnChangeRef = useRef(userOnChange);
   useEffect(() => {
     userOnChangeRef.current = userOnChange;
@@ -250,9 +158,8 @@ export function useStandardBottomSheet({
     userOnChangeRef.current?.(index, position, type);
   };
 
-  // Same composition pattern for onAnimate — held in a ref so a changing
-  // user callback identity doesn't churn `handleAnimate`. This is what fires
-  // the backdrop claim at the open-animation start (see useBottomSheetBackdropClaim).
+  // Same for onAnimate, which is what fires the backdrop claim at the
+  // open-animation start.
   const userOnAnimateRef = useRef(userOnAnimate);
   useEffect(() => {
     userOnAnimateRef.current = userOnAnimate;
@@ -268,22 +175,16 @@ export function useStandardBottomSheet({
     userOnAnimateRef.current?.(fromIndex, toIndex, fromPosition, toPosition);
   };
 
-  // Gorhom fires `onClose` and `onChange(-1)` from separate animated
-  // reactions. If `onClose` wins the race it calls `unmount()` — tearing
-  // down the portal before `onChange(-1)` reaches JS — so our
-  // `handleBackdrop(-1)` never runs and the backdrop claim leaks.
-  // Defensive release here guarantees the claim is freed; calling
-  // `handleBackdrop(-1)` when the claim is already released is a no-op.
+  // Gorhom fires `onClose` and `onChange(-1)` from separate animated reactions;
+  // if `onClose` wins it unmounts the portal first and the claim leaks, so the
+  // release is repeated here (idempotent).
   const safeOnDismiss = () => {
-    // The sheet has dismissed (self-close or programmatic) — clear the
-    // presented flag BEFORE `onDismiss` runs (it sets the parent's `visible`
-    // false), so the `visible` effect skips a redundant `dismiss()` that would
-    // wedge gorhom and break the next `present()`.
+    // BEFORE `onDismiss` runs and clears the parent's `visible`, so the effect
+    // skips a redundant `dismiss()` that would wedge the next `present()`.
     isPresentedRef.current = false;
     handleBackdrop(-1);
-    // A blur-triggered dismiss releases the backdrop (above) but must NOT notify
-    // the consumer: keeping `visible` true lets the focus effect re-present the
-    // sheet with its typed state when the screen regains focus.
+    // A blur dismiss must NOT notify the consumer: `visible` staying true is
+    // what lets the focus effect re-present the sheet with its typed state.
     if (blurDismissRef.current) {
       blurDismissRef.current = false;
       return;
@@ -291,9 +192,8 @@ export function useStandardBottomSheet({
     onDismiss();
   };
 
-  // All standard BottomSheetModal props as a spread-ready object.
   // Theme-derived `backgroundStyle` / `handleIndicatorStyle` come from the
-  // wrapped `BottomSheetModal` re-exported above — no theme reads here.
+  // wrapped `BottomSheetModal` above — no theme reads here.
   const modalProps: Partial<BottomSheetModalProps> = {
     snapPoints,
     enablePanDownToClose: true,
@@ -309,13 +209,10 @@ export function useStandardBottomSheet({
     android_keyboardInputMode: 'adjustPan',
   };
 
-  // Standard content container padding
   const contentContainerStyle = { paddingBottom: insets.bottom + 16 };
 
-  // Imperative helpers — prefer these over `ref.current?.dismiss()` etc.
-  // For state-driven control, pass the `visible` option above and let the
-  // hook handle present/dismiss for you. These helpers are for cases where
-  // an event handler (e.g. an onPress) needs to imperatively close the sheet.
+  // For an event handler that must close the sheet directly; state-driven
+  // control goes through the `visible` option instead.
   const present = () => ref.current?.present();
   const dismiss = () => ref.current?.dismiss();
   const close = () => ref.current?.close();

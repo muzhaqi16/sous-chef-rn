@@ -50,21 +50,11 @@ class RefreshRejectedError extends Error {
   }
 }
 
-// One refusal, two carriers: the same server response reaches this module as an
-// AC4 `CombinedGraphQLErrors` and as the legacy AC3 `graphQLErrors` array, so
-// both run through this predicate rather than each keeping its own copy of the
-// code list (they had drifted to matching only AUTH_TOKEN_EXPIRED, missing
-// AUTH_TOKEN_MISSING and AUTH_REFRESH_TOKEN_INVALID).
-//
-// `UNAUTHENTICATED` is tested on its own because it reaches clients only on the
-// top-level channel, so it lives in `TopLevelErrorCode` rather than the
-// `ErrorCode` enum that isSessionEndingAuthCode is built from.
-//
-// Classified by code only. This used to fall back to matching 'expired' in the
-// message for a server that described an expiry without attaching a code; every
-// auth refusal now carries one, and the fallback caught unrelated refusals whose
-// prose happened to mention expiry — an expired invite or share link reaching
-// this path would have been read as a dead session.
+// One refusal reaches this module through two carriers, so both run through
+// this one predicate rather than keeping separate code lists that drift.
+// `UNAUTHENTICATED` is tested separately: it arrives only on the top-level
+// channel, so it lives in `TopLevelErrorCode`. Classified by CODE only — never
+// by message prose, which would read an expired invite as a dead session.
 const isSessionEndingGraphQLError = (e: {
   extensions?: { code?: unknown };
   message?: string;
@@ -177,19 +167,10 @@ const calculateRetryDelay = (retryCount: number): number => {
 };
 
 /**
- * Recover from a rotation we lost.
- *
- * Our token was spent by a rotation that got there first — the socket's
- * handshake, or a request whose response we never saw. The session is intact, so
- * the exchange is retryable, but ONLY with a different token: re-sending the
- * spent one loops until the server's reuse grace window elapses, and a replay
- * past it is read as compromise and revokes the entire lineage.
- *
- * So the successor has to actually be there. Usually it is — the winner writes
- * it through `setTokens` as it resolves — but a concurrent race can settle this
- * loser first, hence the one delayed re-check. Still unchanged after that means
- * the winner was us and our own response went missing, leaving no successor
- * anywhere: defer rather than spend the lineage looking for one.
+ * Recover from a rotation we lost. The session is intact so the exchange is
+ * retryable, but ONLY once a DIFFERENT token is stored: re-sending the spent one
+ * is read as compromise past the reuse grace window and revokes the whole
+ * lineage. Hence the one delayed re-check, then defer rather than spend it.
  */
 const retryWithSuccessorToken = async (
   presentedToken: string,
@@ -279,10 +260,8 @@ const performTokenRefresh = async (): Promise<string | null> => {
     // Update tokens in store
     state.setTokens({ accessToken: newToken, refreshToken: newRefreshToken });
 
-    // Force the socket to re-dial so it presents the token just stored.
-    // `reconnectWebSocket` debounces on its own; the guard that used to stand
-    // here read a flag that was set and cleared inside one synchronous block,
-    // so it was never anything but true.
+    // Re-dial so the socket presents the token just stored.
+    // `reconnectWebSocket` debounces on its own; no guard is needed here.
     try {
       reconnectWebSocket();
     } catch (wsError) {
@@ -463,19 +442,9 @@ export const isRefreshTokenValid = (refreshToken: string | null): boolean =>
   !!refreshToken && !isTokenExpiringSoon(refreshToken);
 
 /**
- * Proactive token refresh - called by scheduler before token expires
- * This is the recommended approach to prevent user-facing 401 errors
- *
- * Benefits over reactive refresh:
- * - Zero user-facing errors (refresh before expiration)
- * - Smoother UX (no momentary failures or loading states)
- * - Fewer concurrent refresh requests (scheduled instead of burst on expiration)
- * - Cleaner logs (no expected 401 errors)
- *
- * Fallback: If this fails, reactive refresh (errorLink) will still handle
- * token expiration when the next request fails with 401
- *
- * @returns The new access token on success, null on failure
+ * Proactive refresh, driven by the scheduler before expiry so a 401 never
+ * reaches the user. If it fails, the reactive path (errorLink) still handles
+ * expiry on the next request.
  */
 export const proactiveTokenRefresh = async (): Promise<string | null> => {
   logger.info('[ProactiveRefresh] Starting proactive token refresh');

@@ -32,9 +32,8 @@ export function ForgotPasswordScreen() {
   const toast = useToast();
   const { countdown, canResend, registerAttempt } = useResendBackoff();
 
-  // The address the link went to. Non-null once the server has confirmed a
-  // send, which is also what switches this screen to its confirmation state —
-  // the user stays put and leaves under their own steam.
+  // Non-null once the server confirms a send, which is also what switches this
+  // screen to its confirmation state.
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -48,11 +47,8 @@ export function ForgotPasswordScreen() {
   });
 
   /**
-   * Returns true only when the server confirmed the send.
-   * `requestPasswordReset` returns a `RequestPasswordResetResult` union, so a
-   * refusal resolves 200 with an error member and no transport error —
-   * treating any resolved response as success would report a send that never
-   * happened.
+   * True only when the server CONFIRMED the send: `requestPasswordReset` returns a
+   * union, so a refusal resolves 200 with an error member and no transport error.
    */
   const requestResetLink = async (email: string): Promise<boolean> => {
     let response;
@@ -65,13 +61,11 @@ export function ForgotPasswordScreen() {
         operation: 'ForgotPassword.requestPasswordReset',
       });
     }
-    // `false` means the mutation threw — already reported above.
     if (!response) {
       toast({ message: t('errors.codes.genericRetry'), type: 'error' });
       return false;
     }
 
-    // Rate-limit arrives as a top-level GraphQL error, not a union member.
     if (isRateLimitError(response.error)) {
       toast({ message: getRateLimitMessage(response.error), type: 'error' });
       return false;
@@ -97,7 +91,7 @@ export function ForgotPasswordScreen() {
   };
 
   // Both senders count the attempt BEFORE firing, so the cooldown opens
-  // synchronously and a failing address can't be hammered by repeated taps.
+  // synchronously and repeated taps cannot hammer a failing address.
   const onSendResetLink = (data: ForgotPasswordValues) => {
     registerAttempt();
     return executeWithLoadingState(async () => {
@@ -120,11 +114,11 @@ export function ForgotPasswordScreen() {
 
   if (sentTo !== null) {
     return (
-      <AuthWrapper testID="forgot-password-screen">
+      <AuthWrapper testID="forgot-password-sent">
         <AuthFormTemplate<ForgotPasswordValues>
           title={t('auth.resetLinkSentTitle')}
-          // Existence-blind by contract: the API returns SENT whether or not
-          // the address has an account, so this must not imply one exists.
+          // Existence-blind by contract: the API returns SENT whether or not the
+          // address has an account, so this must not imply one exists.
           subtitle={
             <>
               {t('auth.resetLinkSentPrefix')}
@@ -135,6 +129,7 @@ export function ForgotPasswordScreen() {
           fields={[]}
           control={control}
           errors={errors}
+          contentPlacement="top"
           submitText={t('auth.backToSignIn')}
           submitButtonTestID="forgot-password-back-to-login-button"
           onSubmit={() => navigateToLogin()}
@@ -165,6 +160,7 @@ export function ForgotPasswordScreen() {
         ]}
         control={control}
         errors={errors}
+        contentPlacement="top"
         submitText={t('auth.sendResetLink')}
         submitButtonTestID="forgot-password-submit-button"
         onSubmit={handleSubmit(onSendResetLink, logValidationErrors)}

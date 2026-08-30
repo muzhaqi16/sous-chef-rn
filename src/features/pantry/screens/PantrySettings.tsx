@@ -52,19 +52,15 @@ import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermission
 import { Text } from '#components/atoms/Text';
 import { logger } from '#/utils/environment';
 
-/** Module-level cache update closure for `useDeletePantryMutation`.
- *  Extracted from the component body so the surrounding try/catch does not
- *  trigger a React Compiler bailout. */
+/** Module-level so the try/catch does not bail the component out of the compiler. */
 function buildDeletePantryUpdater(selectedHomeId: string | null | undefined) {
   return function deletePantryUpdater(
     cache: ApolloCache,
     { data }: { data?: DeletePantryMutation | null },
     { variables }: { variables?: DeletePantryMutationVariables },
   ) {
-    // Keyed off the VARIABLES, not the payload: `DeletePantryPayload.pantry` is
-    // nullable — it is null when the server converges a replay on an
-    // already-deleted row — so a guard on it would skip the cache update for
-    // precisely the replay case this has to handle.
+    // Keyed off the VARIABLES: `DeletePantryPayload.pantry` is null when the
+    // server converges a replay, exactly the case this has to handle.
     const isDeletePayload =
       data?.deletePantry?.__typename === 'DeletePantryPayload';
     if (!isDeletePayload || !variables?.input?.id || !selectedHomeId) return;
@@ -76,10 +72,8 @@ function buildDeletePantryUpdater(selectedHomeId: string | null | undefined) {
   };
 }
 
-/** Module-level cache update closure for `useCreatePantryMutation`.
- *  Extracted from the component body so the surrounding try/catch does not
- *  trigger a React Compiler bailout. Idempotent by pantry id — the
- *  local-first pre-fire write already inserted the same client-minted id. */
+/** Module-level so the try/catch does not bail the component out of the compiler.
+ *  Idempotent by pantry id — the pre-fire write already inserted the same one. */
 function buildCreatePantryUpdater(selectedHomeId: string | null | undefined) {
   return function createPantryUpdater(
     cache: ApolloCache,
@@ -98,9 +92,7 @@ function buildCreatePantryUpdater(selectedHomeId: string | null | undefined) {
   };
 }
 
-/** Module-level wrapper for `setDefaultPantry` mutation that swallows
- *  errors via errorService — extracted to keep try/catch out of the
- *  component body (React Compiler bailout). */
+/** Module-level so the try/catch does not bail the component out of the compiler. */
 async function safeSetDefaultPantry(
   setDefaultPantry: (opts: {
     variables: { input: { id: string } };
@@ -111,9 +103,7 @@ async function safeSetDefaultPantry(
   try {
     await setDefaultPantry({
       variables: { input: { id: pantryId } },
-      // Absolute flag on an existing row: replaying sets it again, which is the
-      // same state. The server clears the previous holder; the cached flag on
-      // that row corrects on the next fetch.
+      // Absolute flag on an existing row, so a replay lands the same state.
       context: { localFirst: true },
     });
   } catch (error) {
@@ -123,7 +113,6 @@ async function safeSetDefaultPantry(
   }
 }
 
-/** Module-level helper to sync pantry form state from loaded data */
 function syncPantryFormState(
   pantry:
     | {
@@ -171,10 +160,9 @@ export const PantrySettings: React.FC<
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Explicit validation - only execute query when pantryId is genuinely valid
+  // Gates the `pantryId!` assertion below.
   const hasValidPantryId = !!pantryId?.trim();
 
-  // skip controls execution - when skip is false, pantryId is guaranteed valid
   const {
     data: pantryData,
     loading: loadingPantry,
@@ -188,19 +176,17 @@ export const PantrySettings: React.FC<
     skip: !hasValidPantryId,
   });
 
-  // Pantry data — read directly; consumers below use items count from connection
   const pantry = pantryData?.pantry;
   const pantryItemCount = pantry?.itemsConnection?.totalCount ?? 0;
 
   const [updatePantry] = useMutation(UpdatePantryDocument, {
-    // Update cache directly - Apollo automatically merges the Pantry entity
-    // No need to update home's pantries array since the pantry is just updated, not added/removed
+    // No `update`: Apollo merges the returned Pantry entity, and membership
+    // lists are unchanged by an edit.
   });
 
   const [setDefaultPantry] = useMutation(MarkPantryAsDefaultDocument, {
     onError: error => {
       handleMutationError(error, { operation: 'Set Default Pantry' });
-      // Revert the toggle on error
       setIsDefault(!isDefault);
     },
   });
@@ -209,23 +195,18 @@ export const PantrySettings: React.FC<
     onError: error => {
       handleMutationError(error, { operation: 'Delete Pantry' });
     },
-    // Update cache directly instead of refetching. Builder is module-scope to
-    // keep try/catch out of the component body (React Compiler bailout).
     update: buildDeletePantryUpdater(selectedHomeId),
   });
 
   const [createPantry] = useMutation(CreatePantryDocument, {
-    // Update cache directly instead of refetching. Builder is module-scope to
-    // keep try/catch out of the component body (React Compiler bailout).
     update: buildCreatePantryUpdater(selectedHomeId),
     onError: () => {
       alertService.alert(t('labels.error'), t('pantrySettings.createFailed'));
     },
   });
 
-  // Report + announce a failed load. Kept apart from the form sync below: `t`
-  // is a dependency here, and a language change must not re-run the sync and
-  // overwrite whatever the user has typed.
+  // Kept apart from the form sync below: `t` is a dependency here, and a language
+  // change must not re-run the sync over whatever the user has typed.
   useEffect(() => {
     if (!pantryError || !pantryId) return;
     errorService.reportError(pantryError, {
@@ -249,16 +230,12 @@ export const PantrySettings: React.FC<
   }, [pantry, pantryId, pantryError]);
 
   const handleToggleDefault = async (newValue: boolean) => {
-    // Only call mutation if editing existing pantry
     if (!pantryId) {
       setIsDefault(newValue);
       return;
     }
 
-    // Optimistically update UI
     setIsDefault(newValue);
-
-    // Module-level helper keeps try/catch out of the component body.
     await safeSetDefaultPantry(setDefaultPantry, pantryId);
   };
 
@@ -276,10 +253,8 @@ export const PantrySettings: React.FC<
     executeWithLoadingState(
       async () => {
         if (!pantryId) {
-          // Local-first: mint the permanent cuid (the row's real PK) and
-          // write the pantry — entity, zeroed stats, empty item/storage
-          // connections, home membership lists — before firing, so creation
-          // works fully offline and items can be added to it immediately.
+          // Local-first: mint the row's real PK and write the complete pantry
+          // before firing, so creation works offline and takes items at once.
           const id = generateEntityId();
           const input = {
             id,
@@ -317,9 +292,8 @@ export const PantrySettings: React.FC<
                 operation: 'Revert rejected Pantry create',
               });
             }
-            // The mutation's onError already alerts on a transport error
-            // (`result.error`); alert here only for a resolved error-union
-            // payload so exactly one alert fires.
+            // `onError` already alerts on a transport error, so this covers only
+            // a resolved error-union payload — exactly one alert either way.
             const payload = result.data?.createPantry;
             const message =
               payload && 'message' in payload ? payload.message : null;
@@ -329,13 +303,13 @@ export const PantrySettings: React.FC<
             );
             return;
           }
-          // Online success echoes the same id; queued keeps the local entity
-          // and replays keyed by it — select it and leave either way.
+          // Online echoes the same id, queued replays keyed by it — select and
+          // leave either way.
           setSelectedPantryId(id);
           goBack();
         } else {
           // Absolute field write on an existing row, so a replay lands the same
-          // state twice — safe to queue, and the rename shows immediately.
+          // state — safe to queue, and the rename shows immediately.
           const updates = {
             name: name.trim(),
             description: description.trim(),
@@ -344,10 +318,9 @@ export const PantrySettings: React.FC<
             cache: apolloClient.cache,
             entity: { __typename: 'Pantry', id: pantryId },
             updates,
-            // Not `pantry?.name ?? ''`: `pantry` is optional here, so that
-            // coercion wrote an EMPTY NAME over the real one whenever a refusal
-            // landed before the query had resolved. A key the read did not
-            // carry is omitted instead, and the revert leaves it alone.
+            // Omits keys the read did not carry, so a refusal arriving before
+            // the query resolves reverts nothing. `pantry?.name ?? ''` would
+            // instead write an empty name over the real one.
             previous: snapshotFields(pantry, updates),
             logLabel: 'PantrySettings.updatePantry',
             mutate: () =>
@@ -382,20 +355,16 @@ export const PantrySettings: React.FC<
           text: t('labels.delete'),
           style: 'destructive',
           onPress: () => {
-            // Register parent deletion to prevent subscription race conditions
+            // Stops the subscription racing the delete.
             subscriptionService.registerParentDeletion(pantryId);
 
             executeAsyncWithCleanup(
               async () => {
-                // Local-first means the cache is written HERE, before firing.
-                // `buildDeletePantryUpdater` runs only for a real
-                // `DeletePantryPayload`, and offline there is none — the queue
-                // completes with a null result and the replay carries no
-                // `update` at all — so the caller returned to a home that still
-                // listed the pantry it had just deleted, with none selected.
-                //
-                // Unlinks without evicting: the entity has to survive a refusal
-                // so `restorePantryToHomeCache` can put the row back.
+                // Written HERE, before firing: offline there is no
+                // `DeletePantryPayload`, so `buildDeletePantryUpdater` never
+                // runs and the queued replay carries no `update` at all.
+                // Unlinks without evicting — the entity must survive a refusal
+                // for `restorePantryToHomeCache` to put the row back.
                 if (selectedHomeId) {
                   try {
                     removeOptimisticPantry(
@@ -411,9 +380,8 @@ export const PantrySettings: React.FC<
                   }
                 }
 
-                // Queued when offline: the delete converges server-side on
-                // replay (`converged: true` for an already-deleted row), so
-                // re-sending it is safe rather than a permanent failure.
+                // Safe to queue: the delete converges server-side on replay
+                // (`converged: true` for an already-deleted row).
                 const result = await deletePantry({
                   variables: { input: { id: pantryId } },
                   context: { localFirst: true },
@@ -440,7 +408,6 @@ export const PantrySettings: React.FC<
                 setSelectedPantryId(null);
                 goBack();
               },
-              // Cleanup (timeout in service provides fallback)
               () => {
                 subscriptionService.unregisterParentDeletion(pantryId);
               },
@@ -451,7 +418,7 @@ export const PantrySettings: React.FC<
     );
   };
 
-  // Show loading state while fetching pantry data
+  // `loading && !pantry` — a cached copy renders instead of blanking the screen.
   if (pantryId && loadingPantry && !pantry) {
     return (
       <View style={styles.container}>

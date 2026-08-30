@@ -47,11 +47,8 @@ export function buildOptimisticUnit(
 }
 
 /**
- * Build dirty input for update mutation (only changed fields).
- *
- * `version` is excluded: it is not a field the form can dirty. The caller adds
- * it from the entity it is updating — the server requires it for the
- * optimistic-concurrency check.
+ * `version` is excluded because the form cannot dirty it; the caller adds it
+ * from the entity being updated for the server's concurrency check.
  */
 type DirtyUpdateInput = Omit<UpdatePantryItemInput, 'id' | 'version'>;
 

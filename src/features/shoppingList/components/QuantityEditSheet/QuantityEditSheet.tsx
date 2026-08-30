@@ -1,9 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-// TextInput type comes from RNGH because @gorhom/bottom-sheet's
-// BottomSheetTextInput is typed against RNGH's TextInput (it uses RNGH
-// internally for gesture coordination inside the sheet).
+// The TextInput TYPE comes from RNGH: gorhom's BottomSheetTextInput is typed
+// against it, since the sheet coordinates gestures through RNGH.
 import { TextInput } from 'react-native-gesture-handler';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
@@ -29,7 +28,6 @@ interface ItemUnit {
   name: string;
   isDefault?: boolean;
   isPreferred?: boolean;
-  // Item-specific unit display names for better UX
   displayNameSingular?: string | null;
   displayNamePlural?: string | null;
 }
@@ -59,15 +57,6 @@ interface QuantityEditSheetProps {
   loading?: boolean;
 }
 
-/**
- * QuantityEditSheet - Bottom sheet for editing item quantity and unit
- *
- * Layout:
- * - Header: Item name + category
- * - Quantity: Label + Large counter (+/-)
- * - Unit: Label + Chip selector
- * - Footer: "Save Changes" button
- */
 export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   visible,
   item,
@@ -77,8 +66,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 }) => {
   const { t } = useTranslation();
   // No snap points: the sheet measures its own content, so the keyboard lift
-  // seats that content directly on top of the keyboard instead of stretching a
-  // fixed-height sheet up the screen and leaving the difference blank.
+  // seats it on the keyboard instead of stretching a fixed height up the screen.
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible: visible && !!item,
     onDismiss: onClose,
@@ -86,18 +74,16 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     enableDynamicSizing: true,
   });
 
-  // Local state for editing
   const [quantityInput, setQuantityInput] = useState('');
   const [unitName, setUnitName] = useState<string | null>(null);
   const [unitId, setUnitId] = useState<string | null>(null);
 
-  // Whether the large number is currently a focused text field. The typed text
-  // itself lives in `quantityInput` — the single value the save button reads —
-  // so a quantity typed and saved without leaving the field is not lost.
+  // Focus state only. The text lives in `quantityInput`, the one value save
+  // reads, so typing and saving without leaving the field loses nothing.
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
-  // Use item-specific units if available (sorted: preferred first, then default, then alphabetically)
+  // Sorted preferred first, then default, then alphabetically.
   const itemUnits =
     item?.itemUnits?.slice().sort((a, b) => {
       if (a.isPreferred !== b.isPreferred) return a.isPreferred ? -1 : 1;
@@ -105,21 +91,19 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
       return a.symbol.localeCompare(b.symbol);
     }) || [];
 
-  // Initialize state only when sheet opens or item ID changes (render-time state update)
-  // NOT when item properties change (to prevent flash-back during save)
+  // Seed on open / item-id change only (render-time state update); seeding on
+  // item-property changes flashes the old values back during a save.
   const [prevVisible, setPrevVisible] = useState(visible);
   const [prevItemId, setPrevItemId] = useState(item?.id);
   if (visible !== prevVisible || item?.id !== prevItemId) {
     setPrevVisible(visible);
     setPrevItemId(item?.id);
     if (visible && item) {
-      // Initialize from quantityInput (user's original input) or fall back to formatted quantity
       const initialInput =
         item.quantityInput || formatQuantity(item.quantity ?? 0);
       setQuantityInput(initialInput);
 
-      // Sync unit with available item units (case-insensitive match)
-      // This ensures consistent display (e.g., "Tbsps" -> "tbsp" if chip exists)
+      // Case-insensitive match against the chips, so "Tbsps" displays as "tbsp".
       const storedUnit = item.unitName;
       if (storedUnit && item.itemUnits && item.itemUnits.length > 0) {
         const matchingUnit = item.itemUnits.find(
@@ -131,12 +115,10 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
           setUnitName(matchingUnit.symbol);
           setUnitId(matchingUnit.id);
         } else {
-          // No matching chip - use lowercase of stored value
           setUnitName(storedUnit.toLowerCase());
           setUnitId(item.unitId ?? null);
         }
       } else {
-        // No item units available - use lowercase of stored value
         setUnitName(storedUnit ? storedUnit.toLowerCase() : null);
         setUnitId(item.unitId ?? null);
       }
@@ -149,12 +131,9 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   // half-typed `1 1/4` does not come back from the + button as `2.25`.
   const parsedQuantity = parseFractionalInput(quantityInput);
 
-  // What `+`/`-` step FROM. An empty field is "nothing typed yet", so it steps
-  // from zero — tapping `+` on a blank field giving 1 is the point of the
-  // control. Text that is present but unreadable is different: stepping it
-  // would overwrite what the user typed with a formatted number and lose it,
-  // with no undo. So the buttons go inert instead, which is also what the
-  // format hint below is already telling them.
+  // What `+`/`-` step FROM. An empty field steps from zero; unreadable text
+  // makes the buttons inert, because stepping it would overwrite what the user
+  // typed with a formatted number, with no undo.
   const stepBase = quantityInput.trim() === '' ? 0 : parsedQuantity;
   const stepDisabled = stepBase === null;
 
@@ -176,24 +155,21 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     stepTo(Math.max(0, stepBase - 1));
   };
 
-  // Handle unit chip selection
   const handleUnitChipPress = (unit: ItemUnit) => {
     setUnitName(unit.symbol);
     setUnitId(unit.id);
   };
 
-  // Handle tap on quantity to enter edit mode
   const handleQuantityPress = () => {
     setIsEditing(true);
-    // Focus after render paint when input is focusable
+    // Focus after the paint that makes the input focusable.
     requestAnimationFrame(() => {
       inputRef.current?.focus();
     });
   };
 
-  // No sanitization while typing — that moves the caret mid-word. `1 1/4` and
-  // `2 1/3` are only whole values on the last keystroke, so what is typed is
-  // kept as typed and `parsedQuantity` decides whether it can be saved.
+  // No sanitizing while typing — it moves the caret mid-word, and `1 1/4` is
+  // only a whole value on its last keystroke. `parsedQuantity` judges it later.
   const handleInputChange = (text: string) => {
     setQuantityInput(text);
   };
@@ -205,12 +181,10 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     }
   };
 
-  // Handle save
   const handleSave = () => {
     onSave(quantityInput, unitName, unitId);
   };
 
-  // Check if values changed
   const originalQuantityInput =
     item?.quantityInput || formatQuantity(item?.quantity ?? 0);
   const hasChanges =
@@ -229,9 +203,8 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      {/* One measured container: `BottomSheetView` reports its own height as
-          the sheet's content height, so everything the sheet shows — header
-          included — has to sit inside it. */}
+      {/* `BottomSheetView` reports its own height as the sheet's content
+          height, so everything the sheet shows must sit inside this one. */}
       <BottomSheetView style={[styles.content, contentContainerStyle]}>
         <Header
           title={t('quantityEditSheet.title')}
@@ -249,10 +222,9 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
           ]}
         />
         <View style={styles.headerSpacer} />
-        {/* The header spans the sheet's full width; only the fields below it are
-          inset, so the padding lives here rather than on the measured view. */}
+        {/* The header spans the full width and only the fields are inset, so
+          the padding lives here rather than on the measured view. */}
         <View style={styles.sections}>
-          {/* Quantity Section */}
           <View style={styles.section}>
             <Text
               size="sm"
@@ -263,7 +235,6 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               {t('labels.quantity')}
             </Text>
             <View style={styles.counterContainer}>
-              {/* Decrement Button */}
               <AppPressable
                 testID="quantity-edit-decrement"
                 style={styles.counterButton}
@@ -277,7 +248,6 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                 />
               </AppPressable>
 
-              {/* Quantity Display - Tappable for direct input */}
               <AppPressable
                 testID="quantity-edit-value"
                 style={styles.quantityDisplay}
@@ -290,9 +260,8 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                     value={quantityInput}
                     onChangeText={handleInputChange}
                     onBlur={handleInputBlur}
-                    // A digits-only pad has no `/` and no space, so `1/4` and
-                    // `2 1/3` — quantities the server accepts — could not be
-                    // typed at all. Same keyboard as `FractionInput`.
+                    // A digits-only pad has no `/` or space, so `1 1/3` could
+                    // not be typed. Same keyboard as `FractionInput`.
                     keyboardType="numbers-and-punctuation"
                     selectTextOnFocus
                     maxLength={10}
@@ -305,7 +274,6 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                 )}
               </AppPressable>
 
-              {/* Increment Button */}
               <AppPressable
                 testID="quantity-edit-increment"
                 style={styles.incrementButton}
@@ -330,7 +298,6 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             )}
           </View>
 
-          {/* Unit Section */}
           <View style={styles.section}>
             <Text
               size="sm"
@@ -341,8 +308,6 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               {t('storageLocationForm.unit')}
             </Text>
 
-            {/* Item-specific Units Chips - only show if available */}
-            {/* Use displayNamePlural for better UX (e.g., "pineapples" instead of "count") */}
             {itemUnits.length > 0 && (
               <View style={styles.chipsContainer}>
                 {itemUnits.map(unit => (
@@ -356,7 +321,6 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               </View>
             )}
 
-            {/* Autocomplete for custom/search */}
             <UnitAutocompleteField
               variant="inline"
               // The sheet is sized to its content, so the absolutely-positioned
@@ -364,13 +328,10 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               reserveDropdownSpace
               value={unitName || ''}
               onChangeText={text => {
-                // Convert empty string to null to properly clear the unit
                 setUnitName(text || null);
-                // Clear unitId when user types custom text
                 setUnitId(null);
               }}
               onUnitSelected={(selectedUnitId, selectedUnitName) => {
-                // Only update unitName when a unit is actually selected, not when clearing
                 if (selectedUnitName !== null) {
                   setUnitName(selectedUnitName);
                 }

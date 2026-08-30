@@ -62,9 +62,7 @@ import { useRecipeSuggestionsForItem } from '#features/pantry/hooks/useRecipeSug
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
 
 /**
- * Expiry column text. Extracted so `styles.useVariants` is called once per
- * instance — combining `styles.X` references in an array would violate the
- * project's no-restricted-syntax rule.
+ * Extracted so `styles.useVariants` is called once per instance.
  */
 const ExpiryColumnText: React.FC<{
   text: string;
@@ -98,20 +96,14 @@ export const PantryItemDetail: React.FC<
   const [refreshing, setRefreshing] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
-  // A pantry item created here owns its id before the server does: the create
-  // mints the cuid and publishes it to `Pantry.itemsConnection` BEFORE firing,
-  // which is what makes the row tappable offline — and tapping it lands that
-  // id here. Reading the server in that window is a race the client can only
-  // lose: the row is the client's until the create (or its queued replay)
-  // lands, so the read returns RESOURCE_NOT_FOUND however honestly the server
-  // answers, and the error state never retries on its own. Skipping until the
-  // create is acknowledged turns that acknowledgement into the fetch trigger;
-  // the optimistic entity renders the screen meanwhile.
+  // A locally-created item owns its id before the server does, so a fetch before
+  // the create is acknowledged can only return RESOURCE_NOT_FOUND — and that
+  // error state never retries itself. Skipping makes the acknowledgement the
+  // fetch trigger; the optimistic entity renders the screen meanwhile.
   const isUnconfirmed = useIsCreateUnconfirmed(itemId);
 
-  // `data` is deliberately unused: the screen renders from the cache entity
-  // below, and this query exists to FETCH and reconcile, not to be read. Its
-  // result lands in the same normalized entity the render path reads.
+  // `data` is deliberately unused: this query exists to FETCH and reconcile into
+  // the normalized entity the render path below reads.
   const {
     refetch,
     loading: itemLoading,
@@ -122,24 +114,19 @@ export const PantryItemDetail: React.FC<
   });
   const client = useApolloClient();
 
-  // Batches are no longer an inline field on PantryItem — they're a Relay
-  // connection. Fetch all of them (no status filter) so the active list AND the
-  // "show all inactive" affordance in BatchSection both have their data.
-  // `cache-and-network` paints from the persisted cache on cold start and
-  // refreshes after a batch is opened/wasted.
+  // No status filter: BatchSection's active list AND its "show all inactive"
+  // affordance both read from this one fetch.
   const { data: batchesData, refetch: refetchBatches } = useQuery(
     GetPantryItemBatchesDocument,
     {
       variables: { pantryItemId: itemId },
       fetchPolicy: 'cache-and-network',
-      // Same race as the item query above — this one resolves the pantry item
-      // first, so it 404s on an unacknowledged id too.
+      // Resolves the pantry item first, so it 404s on an unconfirmed id too.
       skip: isUnconfirmed,
     },
   );
 
-  // Batches live in their own query, so pull-to-refresh must refetch both —
-  // refetching only the item would leave another member's batch changes stale.
+  // Batches are a separate query, so pull-to-refresh must refetch both.
   const handleRefresh = () => {
     executeRefreshWithFinally(
       () => Promise.all([refetch(), refetchBatches()]),
@@ -149,38 +136,22 @@ export const PantryItemDetail: React.FC<
 
   const permissions = usePantryPermissions();
 
-  // Live binding to the PantryItem entity. `livePantryItem.data` gets a fresh
-  // reference whenever the entity's PantryItemDetail_pantryItem fields change
-  // in the cache (quantity adjust, condition change, etc.). Under
-  // `dataMasking: true` the `useQuery` result's `data.pantryItem` is a masked
-  // ref whose identity is stable across those changes, so it cannot serve as
-  // the reactivity signal on its own.
-  //
-  // Keyed by ENTITY, not by the query result. Chaining off `data.pantryItem`
-  // made the screen unrenderable without a server round trip: while the query
-  // is skipped (or offline, or simply not back yet) `data` is undefined and
-  // the screen fell through to its empty state even though the row was sitting
-  // in the cache. Reading by cache key is what makes a locally-created item
-  // render with no API at all — the same form `useMealPlan` uses.
+  // Keyed by ENTITY, not by the query result: that is what lets a locally-created
+  // item render with no API at all, since `data` is undefined while the query is
+  // skipped. It is also the only reactivity signal available — under
+  // `dataMasking` the query's `data.pantryItem` is a masked ref whose identity is
+  // stable across field changes.
   const livePantryItem = useFragment({
     fragment: PantryItemDetail_PantryItemFragmentDoc,
     fragmentName: 'PantryItemDetail_pantryItem',
     from: { __typename: 'PantryItem', id: itemId },
   });
 
-  // Materialize the masked PantryItem ref into a fully unmasked entity.
-  // `cache.readFragment` returns the unmasked shape (Apollo's signature),
-  // inlining nested fragment fields so the screen and downstream components
-  // can access them directly.
-  //
-  // `readFragment` reads the mutable cache during render, so the React Compiler
-  // memoizes this derivation against the reactive values referenced here. The
-  // `livePantryItem.data` guard is the load-bearing dependency: gating only on
-  // the masked `data.pantryItem` (stable across field changes) would pin this
-  // read to a stale snapshot until a refetch, so in-place edits (quantity,
-  // condition, expiry) wouldn't surface until pull-to-refresh. Referencing
-  // `livePantryItem.data` (fresh on every relevant cache write) forces the
-  // unmasked read to re-run immediately.
+  // Materializes the masked ref into the unmasked entity. `readFragment` reads
+  // the mutable cache during render, so the compiler memoizes it against the
+  // reactive values named here — the `livePantryItem.data` guard is load-bearing:
+  // gating on the masked ref instead would pin this to a stale snapshot until a
+  // refetch, hiding in-place edits.
   const item =
     livePantryItem.complete && livePantryItem.data
       ? client.cache.readFragment<PantryItemDetail_PantryItemFragment>({
@@ -190,15 +161,12 @@ export const PantryItemDetail: React.FC<
         }) ?? null
       : null;
 
-  // The server says this row is gone — deleted on another device. Unlike a
-  // meal plan (whose by-id query returns null data), the pantry resolver
-  // throws, so the miss arrives as a RESOURCE_NOT_FOUND field error. Only
-  // trust it once the create is acknowledged: while unconfirmed the identical
-  // error just means the server has not been told about the row yet.
+  // The pantry resolver throws rather than returning null, so a row deleted on
+  // another device arrives as RESOURCE_NOT_FOUND. Only trust it once the create
+  // is acknowledged — the identical error means "not told yet" while unconfirmed.
   const deletedOnServer = !isUnconfirmed && isResourceNotFoundError(itemError);
 
-  // Connection edges arrive as masked refs — materialize each into the full
-  // PantryItemBatchFragment via cache.readFragment so status/expiresAt reads and
+  // Edges arrive masked; materialize each so status/expiresAt reads and
   // BatchSection's sort/filter work directly.
   const batches: PantryItemBatchFragment[] =
     batchesData?.pantryItemBatchesConnection?.edges
@@ -246,7 +214,6 @@ export const PantryItemDetail: React.FC<
     });
   };
 
-  // Computed display values
   const imageUrl = resolveImageUrl(item, 'large');
   const expiryInfo = getExpiryInfo(item?.expiresAt);
   const daysInPantry = getDaysInPantry(item?.createdAt);
@@ -272,21 +239,16 @@ export const PantryItemDetail: React.FC<
     item?.quantityBreakdown,
   );
 
-  // Without this the screen rendered a bare loader whenever `item` was falsy,
-  // so an offline cache miss span forever with no error, no explanation and no
-  // retry — the query's `loading` and `error` were never read at all.
+  // Classified so an offline cache miss reports itself instead of spinning
+  // forever on a bare loader.
   const itemState = useDataState({
-    // An unacknowledged create IS a load in progress — the query is skipped
-    // and fires the moment the create lands. Without this the skip reads as
-    // "empty", which is the same lie the RESOURCE_NOT_FOUND error told.
+    // An unconfirmed create IS a load in progress: the query is skipped and
+    // fires the moment the create lands, so the skip must not read as empty.
     loading: itemLoading || isUnconfirmed,
     error: itemError,
-    // The cache, not the query, is what the screen renders from — so
-    // "we have something to show" is `item`, not `data`. `deletedOnServer`
-    // overrides a cached copy: the server has confirmed the row is gone, and
-    // rendering it anyway would show a phantom. Deliberately narrow — only an
-    // explicit RESOURCE_NOT_FOUND on an acknowledged row qualifies, so merely
-    // going offline never hides anything.
+    // "Something to show" is the cache entity, not `data`. `deletedOnServer`
+    // overrides it, and is deliberately narrow — only an explicit
+    // RESOURCE_NOT_FOUND on an acknowledged row, so offline hides nothing.
     hasResult: !!item && !deletedOnServer,
     isEmpty: !item || deletedOnServer,
   });
@@ -301,8 +263,6 @@ export const PantryItemDetail: React.FC<
     );
   }
 
-  // `batches` are already materialized above — inspect status/expiresAt for the
-  // discard-expired affordance.
   const hasExpiredBatches =
     (item.condition === 'EXPIRED' && item.quantity > 0) ||
     batches.some(

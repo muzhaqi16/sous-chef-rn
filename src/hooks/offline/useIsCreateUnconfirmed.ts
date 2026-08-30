@@ -5,15 +5,9 @@ const subscribe = (onStoreChange: () => void) =>
   unconfirmedCreates.subscribe(onStoreChange);
 
 /**
- * Whether `id` names a local-first create the server hasn't acknowledged yet —
- * either still in flight or sitting in the offline queue.
- *
- * Detail queries keyed on a client-minted id pass this to `skip`: the row
- * doesn't exist server-side until the create lands, so the read can only come
- * back `RESOURCE_NOT_FOUND`. Flipping back to false unskips the query, which
- * fetches the server's copy at the first moment there is one.
- *
- * @param id entity id, or null/undefined when there is nothing to query
+ * Whether `id` names a local-first create the server hasn't acknowledged. Detail
+ * queries on a client-minted id pass this to `skip` — the row does not exist
+ * server-side yet, so the read could only come back `RESOURCE_NOT_FOUND`.
  */
 export const useIsCreateUnconfirmed = (
   id: string | null | undefined,

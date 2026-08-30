@@ -10,15 +10,10 @@ import {
 export function useMealPlan(id: string | null) {
   const client = useApolloClient();
 
-  // A plan created here owns its id before the server does: `createMealPlan`
-  // mints the cuid and writes the plan to the cache first, which is what makes
-  // it the active plan. Reading the server in that window is a race the client
-  // can only lose — the row is the client's until the create (or its queued
-  // replay) lands, so the read returns null no matter how honestly the server
-  // answers. Worse, `planNotFound` below reads that null as "deleted". Skipping
-  // until the create is acknowledged is what makes the distinction sound, and
-  // it turns the acknowledgement into the fetch trigger. The optimistic write
-  // plus detail stub render the screen meanwhile.
+  // `createMealPlan` mints the cuid and writes the plan locally, so until the
+  // create is acknowledged a server read returns null however honestly it
+  // answers — and `planNotFound` would read that null as "deleted". Skipping is
+  // what keeps the distinction sound, and makes the ack the fetch trigger.
   const isUnconfirmed = useIsCreateUnconfirmed(id);
 
   const { data, loading, error, refetch } = useQuery(GetMealPlanDocument, {
@@ -28,34 +23,22 @@ export function useMealPlan(id: string | null) {
 
   useApolloErrorLogger('GetMealPlan', error);
 
-  // Live binding to the MealPlan entity. `liveMealPlan.data` gets a fresh
-  // reference whenever the MealPlan's selected fields change in the cache —
-  // including `mealPlanItems` membership when an item is added or removed.
-  // Under `dataMasking: true` the parent useQuery's `data.mealPlan` is a
-  // masked ref whose identity is stable when only deeply-nested fragment-spread
-  // fields change, so it cannot serve as that reactivity signal.
+  // Live binding: `liveMealPlan.data` takes a fresh reference on every relevant
+  // cache write, `mealPlanItems` membership included. Under `dataMasking` the
+  // parent query's `data.mealPlan` is a masked ref whose identity is stable
+  // across nested changes, so it cannot serve as that signal.
   const liveMealPlan = useFragment({
     fragment: MealPlanMain_MealPlanFragmentDoc,
     fragmentName: 'MealPlanMain_mealPlan',
     from: id ? { __typename: 'MealPlan', id } : null,
   });
 
-  // Materialize the unmasked MealPlanMain_mealPlan shape (cache.readFragment
-  // returns `Unmasked<TData>`; useFragment returns `MaybeMasked<TData>`, which
-  // would force the screen to drill into `$fragmentRefs` to read
-  // item.id/date/etc.). Cache-key `from` form — the masked-ref form silently
-  // returns partial/null data under dataMasking. The settings sheet does its
-  // own useFragment on the ref passed down to it.
-  //
-  // `readFragment` reads the mutable cache during render, so the React Compiler
-  // memoizes this derivation against the reactive values referenced here. The
-  // `liveMealPlan.data` guard is the load-bearing dependency: because
-  // useQuery's masked `data.mealPlan` ref is stable across mealPlanItems
-  // add/remove, gating only on `data.mealPlan` would pin this read to a stale
-  // snapshot until a refetch produced a new reference — added items wouldn't
-  // appear and deleted items wouldn't disappear until pull-to-refresh.
-  // Referencing `liveMealPlan.data` (fresh on every relevant cache write)
-  // forces the unmasked read to re-run immediately.
+  // Materializes the UNMASKED shape: `readFragment` returns `Unmasked<TData>`
+  // where `useFragment` returns a masked one the screen would have to drill
+  // `$fragmentRefs` for. Cache-key `from` form — the masked-ref form silently
+  // returns partial data. The `liveMealPlan.data` guard is the load-bearing
+  // dependency the compiler memoizes against; gating on the stable masked
+  // `data.mealPlan` pins this read to a stale snapshot until a refetch.
   const mealPlan =
     id && liveMealPlan.complete && liveMealPlan.data
       ? client.cache.readFragment<MealPlanMain_MealPlanFragment>({

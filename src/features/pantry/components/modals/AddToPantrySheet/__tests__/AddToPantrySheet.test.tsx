@@ -185,10 +185,10 @@ describe('AddToPantrySheet', () => {
   /**
    * Every business failure of `createPantryItem` is a member of the result
    * union, and under `errorPolicy: 'all'` it RESOLVES — `{ data, error:
-   * undefined }`. Quick-add used to read `result.error` alone, so a refusal
-   * counted as success: the success toast stood, `onItemAdded` fired, and the
-   * optimistic row stayed in the pantry pointing at an id the server never
-   * created.
+   * undefined }`. Reading `result.error` alone counts a refusal as success:
+   * the success toast stands, `onItemAdded` fires, and the optimistic row stays
+   * in the pantry pointing at an id the server never created. Quick-add has to
+   * read the union member.
    */
   describe('a resolved refusal is not a success', () => {
     const forbidden: MockedResponse = {

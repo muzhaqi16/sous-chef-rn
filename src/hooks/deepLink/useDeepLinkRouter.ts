@@ -15,13 +15,7 @@ interface DeepLinkTokenPayload {
   [key: string]: unknown;
 }
 
-/**
- * Validates a JWT token for deep links
- *
- * @param token - JWT token string
- * @param expectedType - Optional expected token type for additional validation
- * @returns { valid: boolean, payload?: DeepLinkTokenPayload, error?: string }
- */
+/** Validates a deep-link JWT, optionally asserting its `type` claim. */
 const validateDeepLinkToken = (
   token: string,
   expectedType?: string,

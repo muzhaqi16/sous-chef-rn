@@ -2,28 +2,22 @@ import { useSharedValue } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
 import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 
-/**
- * Offset past which scrolling down may hide the tab bar.
- */
+/** Offset past which scrolling down may hide the tab bar. */
 const COLLAPSE_DISTANCE = 120;
 
 /**
- * Offset below which the bar is always revealed, whatever moved the list. Held
- * clear of COLLAPSE_DISTANCE so the hide gate and the reveal gate are separate
- * boundaries — a single shared threshold chatters when the offset sits on it.
+ * Offset below which the bar always reveals. Held clear of COLLAPSE_DISTANCE:
+ * one shared threshold chatters when the offset sits on it.
  */
 const REVEAL_DISTANCE = 72;
 
 /**
- * Travel (px) a direction must accumulate before the bar follows it. A finger
- * makes constant sub-50px corrections mid-scroll, so a per-event direction read
- * flips the bar several times a second; the bar tracks sustained travel instead.
+ * Travel a direction must accumulate before the bar follows. A per-event
+ * direction read flips it several times a second on ordinary finger jitter.
  */
 const DIRECTION_TRAVEL = 48;
 
-/**
- * Per-event delta small enough to be touch noise rather than a direction.
- */
+/** Per-event delta small enough to be touch noise rather than a direction. */
 const DIRECTION_THRESHOLD = 4;
 
 export interface UseCollapsibleScrollReturn {
@@ -40,9 +34,8 @@ export interface UseCollapsibleScrollReturn {
   /** true when scrolling down past the threshold — drive tab bar hide. */
   isScrolledDown: SharedValue<boolean>;
   /**
-   * true while a finger is driving the scroll. Exposed so screens can clear it
-   * on focus/blur — a fling interrupted by a tab switch would otherwise leave
-   * it stuck, letting a later programmatic scroll hide the bar.
+   * True while a finger drives the scroll. Screens clear it on focus/blur — a
+   * fling interrupted by a tab switch would otherwise leave it stuck.
    */
   isUserDragging: SharedValue<boolean>;
   /** Current scroll offset. */
@@ -50,14 +43,9 @@ export interface UseCollapsibleScrollReturn {
 }
 
 /**
- * Direction-based tab bar hide on scroll.
- *
- * Stripped-down version: no animated height/collapse styles. The collapsible
- * header is handled by the FlashList's native scroll + stickyHeaderIndices.
- * This hook only tracks scroll direction to drive tab bar visibility.
- *
- * Direction is hysteretic: the bar changes state only once one direction has
- * travelled DIRECTION_TRAVEL, so an unsustained reversal cannot toggle it.
+ * Drives tab-bar visibility from scroll direction. Hysteretic: the bar moves
+ * only once a direction has travelled DIRECTION_TRAVEL, so an unsustained
+ * reversal cannot toggle it.
  */
 export function useCollapsibleScroll(): UseCollapsibleScrollReturn {
   const scrollY = useSharedValue(0);
@@ -67,13 +55,9 @@ export function useCollapsibleScroll(): UseCollapsibleScrollReturn {
   const travelAnchor = useSharedValue(0);
   /** Sign of the current direction run: 1 down, -1 up, 0 unset. */
   const travelDirection = useSharedValue(0);
-  // True only while a finger is driving the scroll — set on onScrollBeginDrag
-  // and cleared when the scroll comes to rest. Programmatic and layout scrolls
-  // (FlashList's maintainVisibleContentPosition after a focus refetch, lazy
-  // mounts, and scrollToOffset — including when a paused tab resumes and
-  // re-runs its focus refetch) fire onScroll WITHOUT a preceding
-  // onScrollBeginDrag, so this stays false for them and they can never hide the
-  // tab bar.
+  // Programmatic and layout scrolls (maintainVisibleContentPosition, lazy
+  // mounts, scrollToOffset) fire onScroll with no preceding onScrollBeginDrag,
+  // so this stays false for them and they can never hide the tab bar.
   const isUserDragging = useSharedValue(false);
 
   const scrollBeginDragHandler = () => {
@@ -132,8 +116,7 @@ export function useCollapsibleScroll(): UseCollapsibleScrollReturn {
   const scrollEndDragHandler = (
     event: NativeSyntheticEvent<NativeScrollEvent>,
   ) => {
-    // If velocity is near zero, no momentum will follow — the gesture is over,
-    // so the drag ends and the tab bar is shown.
+    // Near-zero velocity means no momentum follows: the gesture is over.
     const velocity = event.nativeEvent.velocity?.y ?? 0;
     if (Math.abs(velocity) < 0.5) {
       isUserDragging.set(false);

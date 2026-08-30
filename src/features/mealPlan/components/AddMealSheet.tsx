@@ -142,13 +142,10 @@ const getItemType = () => 'item';
 const keyExtractor = (savedRecipe: SavedRecipeNode) => savedRecipe.id;
 
 /**
- * Per-row leaf that subscribes to a single SavedRecipe via the colocated
- * `AddMealSheet_savedRecipe` fragment. `useFragment` reads these scalars
- * straight from the normalized cache (populated by the MySavedRecipes query),
- * so the row stays independent of the recipes feature's internal fragments.
- *
- * Search filtering is the parent's job — a row that rendered `null` would
- * still occupy a slot in the list's item count and leave a blank gap.
+ * Per-row leaf subscribing to one SavedRecipe via its colocated fragment, which
+ * keeps it independent of the recipes feature's internals. Search filtering is
+ * the PARENT's job — a row rendering `null` still occupies a slot in the list's
+ * item count and leaves a blank gap.
  */
 interface SavedRecipeRowProps {
   savedRecipeRef: SavedRecipeNode;

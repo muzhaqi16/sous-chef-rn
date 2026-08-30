@@ -5,15 +5,9 @@ const DEVICE_ID_KEY = 'device_id';
 let cachedDeviceId: string | null = null;
 
 /**
- * Get or create a unique device identifier.
- * Persisted to MMKV to survive app restarts.
- *
- * Used for subscription self-echo prevention: when this device makes a mutation,
- * the server includes our deviceId in the subscription payload, allowing us
- * to skip processing our own updates (which were already handled by the mutation).
- *
- * If storage isn't initialized yet (early startup race), returns a transient ID.
- * `initializeDeviceId()` reconciles with storage once hydration completes.
+ * A per-device id persisted to MMKV, used for subscription self-echo detection.
+ * Before storage is ready this returns a TRANSIENT id; `initializeDeviceId()`
+ * reconciles with storage once hydration completes.
  */
 export function getDeviceId(): string {
   if (cachedDeviceId) return cachedDeviceId;
@@ -33,21 +27,13 @@ export function getDeviceId(): string {
 }
 
 /**
- * Synchronous getter for cached device ID.
- * Returns null if getDeviceId() hasn't been called yet.
- *
- * Use this in hot paths (like subscription handlers) where we want to
- * avoid redundant storage reads.
+ * For hot paths that must not touch storage; null until `getDeviceId()` has run.
  */
 export function getDeviceIdSync(): string | null {
   return cachedDeviceId;
 }
 
-/**
- * Initialize the device ID cache from storage.
- * Call this early in app startup after hydration (e.g., in useStartupInit).
- * Clears any transient ID so the persisted value is used going forward.
- */
+/** Call after hydration; drops any transient id in favour of the stored one. */
 export function initializeDeviceId(): string {
   cachedDeviceId = null;
   return getDeviceId();

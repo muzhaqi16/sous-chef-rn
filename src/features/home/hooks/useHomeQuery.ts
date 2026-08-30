@@ -1,11 +1,4 @@
-/**
- * useHomeQuery - Query hook for fetching user's homes
- *
- * Single responsibility:
- * - Fetch homes with cache-and-network policy
- * - Preserve data during failures
- * - Compute statistics
- */
+/** Fetches the user's homes, preserves them across failures, computes stats. */
 
 import { useState } from 'react';
 import { useQuery } from '@apollo/client/react';
@@ -14,31 +7,19 @@ import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 import { getConnectionTotalCount } from '#/utils/connectionUtils';
 
 /**
- * Hook for fetching and managing homes query
- *
- * PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
- * - cache-and-network: Shows cached data immediately, fetches fresh in background
- * - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders
- * - errorPolicy: 'ignore' returns cached data when network fails (offline graceful degradation)
- *
- * Returns connection-shape home nodes (each carries `id`, `name`, `isDefault`,
- * `myMembership`, `pantriesConnection`, plus a masked `HomeCard_home` ref).
- * Consumers that need a flat array of pantries call
- * `extractNodes(home.pantriesConnection)` directly.
- *
- * @example
- * ```tsx
- * const { homes, loading, stats, refetch } = useHomeQuery();
- * ```
+ * `errorPolicy: 'ignore'` so a failed fetch yields the cached homes rather than
+ * nothing; the client defaults supply the fetch policy. Returns connection-shape
+ * nodes, so a consumer wanting a flat pantry array calls
+ * `extractNodes(home.pantriesConnection)` itself.
  */
 export function useHomeQuery() {
   const { data, loading, error, refetch } = useQuery(GetHomesDocument, {
     errorPolicy: 'ignore',
   });
 
-  // Preserve homes data even when query fails to prevent cascade failures.
-  // Each node carries `id` + `isDefault` directly plus masked refs for the
-  // leaf fragments (`HomeCard_home`, `HomeForHookLogic_home`).
+  // Preserve homes data even when the query fails, to prevent cascade
+  // failures. Each node carries `id` + `isDefault` directly plus a masked ref
+  // for `HomeCard_home`.
   const homes = usePreservedNodes(data?.homes);
 
   // Derive default home from isDefault field (no separate query needed)

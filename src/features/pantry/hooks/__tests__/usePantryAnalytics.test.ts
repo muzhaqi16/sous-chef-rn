@@ -7,6 +7,7 @@ import {
 } from '#features/pantry/graphql/pantry.generated';
 import { PeriodGranularity, DateRange } from '#/graphql/generated/schemaTypes';
 import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
 import { usePantryAnalytics } from '../usePantryAnalytics';
 
 jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
@@ -232,6 +233,47 @@ describe('usePantryAnalytics', () => {
 
       expect(result.current.loading).toBe(true);
       await waitFor(() => expect(result.current.loading).toBe(false));
+    });
+
+    /**
+     * The charts take these flags straight into `ChartSection`, which swaps the
+     * chart for a spinner while one is true. Apollo's raw `loading` is true for
+     * the whole network leg on EVERY mount under `cache-and-network` —
+     * `nextFetchPolicy` lives on the ObservableQuery and useQuery builds a new
+     * one per mount — so forwarding it un-guarded blanked already-drawn charts
+     * on every visit to the tab.
+     */
+    it('stays false on a remount that the cache can already answer', async () => {
+      const cache = makeCache();
+
+      const first = renderHook(
+        () => usePantryAnalytics({ pantryId: 'pantry-1' }),
+        {
+          wrapper: createApolloTestWrapper({
+            operationMocks: defaultMocks(),
+            cache,
+          }),
+        },
+      );
+      await waitFor(() => expect(first.result.current.loading).toBe(false));
+      first.unmount();
+
+      // Same cache, fresh mocks — a second visit to the tab.
+      const second = renderHook(
+        () => usePantryAnalytics({ pantryId: 'pantry-1' }),
+        {
+          wrapper: createApolloTestWrapper({
+            operationMocks: defaultMocks(),
+            cache,
+          }),
+        },
+      );
+
+      expect(second.result.current.usageData).toMatchObject(usageData);
+      expect(second.result.current.usageLoading).toBe(false);
+      expect(second.result.current.wasteLoading).toBe(false);
+      expect(second.result.current.ledgerLoading).toBe(false);
+      expect(second.result.current.loading).toBe(false);
     });
 
     it('is false when pantryId is invalid (queries skipped)', () => {

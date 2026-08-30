@@ -257,9 +257,9 @@ describe('useRecipeForm', () => {
   });
 
   it('buildUpdateInput carries nutrition and dietary edits', () => {
-    // Regression: the update input used to omit nutrition/dietary entirely, so
-    // calories and diet edits made in edit mode were silently discarded on
-    // save (create sent them, update did not).
+    // Pins: the update input carries nutrition/dietary, as the create input
+    // does. Omitting them silently discards calories and diet edits made in
+    // edit mode on save.
     const { result } = renderHook(() => useRecipeForm());
 
     act(() => {
@@ -337,8 +337,8 @@ describe('useRecipeForm', () => {
     expect(result.current.state.ingredients).toHaveLength(1);
     expect(result.current.state.steps).toHaveLength(1);
     expect(result.current.state.steps[0].instruction).toBe('Add salt');
-    // Regression: editing a recipe must preserve its dietary classification
-    // (previously hardcoded to [] on populate, wiping tags on the next save).
+    // Pins: editing a recipe preserves its dietary classification. Hardcoding
+    // [] on populate wipes the tags on the next save.
     expect(result.current.state.diets).toEqual([Diet.Keto]);
     expect(result.current.state.healthGoals).toEqual([HealthGoal.HighProtein]);
     expect(result.current.state.intolerances).toEqual([Intolerance.Dairy]);

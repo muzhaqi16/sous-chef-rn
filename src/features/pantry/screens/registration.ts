@@ -7,40 +7,21 @@ import { FilteredPantryItems } from './FilteredPantryItems';
 import { PantrySettings } from './PantrySettings';
 import { NutritionScreen } from './NutritionScreen';
 
-// Lazy-load PantryAnalytics to defer Skia + victory-native JS loading.
+// Lazy so Skia + victory-native are not in the startup bundle.
 const PantryAnalytics = React.lazy(() =>
   import('./PantryAnalytics').then(m => ({ default: m.PantryAnalytics })),
 );
 
-// Mirrors the per-feature stack options these screens used to inherit
-// (full-screen swipe-back + 250ms slide), so their feel is unchanged.
 const detailScreenOptions = {
   fullScreenGestureEnabled: true,
   animationDuration: 250,
 };
 
 /**
- * Pantry's detail/sub screens, registered as siblings of `Home` (the tab
- * navigator) rather than nested inside the Pantry tab's own stack — see
- * RootNavigator, which spreads this object into its `MainApp` group.
- *
- * Siblings of `Home` is react-navigation's documented shape for "the tab bar
- * must not appear on this screen" (docs: Hiding tab bar in screens). The
- * pushed screen covers the tab navigator, so the bar is structurally absent
- * — there is no visibility rule for a new screen to opt into or forget.
- *
- * Owned by the feature rather than written inline in RootNavigator so adding
- * a pantry screen is a one-line change in this file. A plain object spread
- * preserves react-navigation's `StaticParamList` inference (unlike building
- * the map dynamically from the feature registry, which erases it) — the
- * per-screen param types in `useAppNavigation`'s pantry methods are what
- * prove it: they resolve through `RootStackParamList`.
- *
- * `linking: null` on every screen is required, not decorative. The app passes
- * `linking={{ prefixes }}` with no `enabled`, and react-navigation treats
- * `enabled == null` as `'auto'` (createStaticNavigation.js), so any leaf
- * screen without an explicit opt-out gets a deep-linkable path generated from
- * its route name. These are in-app destinations, never link targets.
+ * Spread into RootNavigator's `MainApp` group as siblings of `Home`, not nested in
+ * the Pantry tab: the pushed screen covers the tab navigator, so the tab bar is
+ * structurally absent. Keep it a plain object literal — that preserves
+ * `StaticParamList` inference. `linking: null` opts each out of `'auto'` linking.
  */
 export const pantryDetailScreens = {
   PantryItem: createNativeStackScreen({

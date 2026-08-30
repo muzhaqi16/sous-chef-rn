@@ -1,13 +1,3 @@
-/**
- * usePantryQuery - Query hook for fetching pantry data
- *
- * Single responsibility:
- * - Fetch pantry with items
- * - Normalize data structure
- * - Handle pagination
- * - Preserve data during failures
- */
-
 import { useEffect, useState } from 'react';
 import { NetworkStatus } from '@apollo/client';
 import type { WatchQueryFetchPolicy } from '@apollo/client';
@@ -32,43 +22,18 @@ import {
 import { PAGE_SIZE } from '#/constants/pagination';
 
 /**
- * Type of each pantry item node returned by `usePantryQuery`. It mirrors the
- * `GetPantry` query selection: direct fields the screen-level hooks need plus
- * an opaque `PantryItemCard_pantryItem` fragment ref that the leaf cell
- * unmasks via `useFragment`.
+ * Direct fields the screen-level hooks need, plus an opaque
+ * `PantryItemCard_pantryItem` ref the leaf cell unmasks via `useFragment`.
  */
 export type PantryListItemNode = NonNullable<
   NonNullable<GetPantryQuery['pantry']>['itemsConnection']['edges'][number]
 >['node'];
 
 /**
- * Fetches pantry data with items, storage locations, and pagination.
- *
- * The Apollo cache is the single source of truth:
- * - Mutations update `itemsConnection.edges` and `totalCount` together via
- *   `removeFromPantryItemsCache` / `addToPantryItemsCache`.
- * - Subscription echoes for pending-delete items are skipped at the
- *   subscription-handler level (`usePantrySubscriptions.ts`), so the cache
- *   never drifts from the rendered list.
- *
- * @param pantryId - The pantry to fetch
- * @param itemsFilter - Optional filter for pantry items
- * @param itemsOrderBy - Optional sort order for pantry items
- * @returns `{ state, actions }` — state contains pantryItems, storageLocations, stats,
- *   loading/error flags, and pagination indicators; actions contains refetch and loadMore
- */
-/**
- * Consumer-side controls for the pantry watch.
- *
- * The Pantry tab is the primary consumer and keeps the cache current (its
- * watcher stays mounted under `inactiveBehavior: 'none'`, and the PantryEvents
- * subscription writes through). A secondary consumer on another tab should not
- * keep a second watcher live while its screen is blurred — every pantry write
- * would re-render that hidden screen — so it passes `skip` while blurred and
- * `fetchPolicy: 'cache-first'` so resuming reads the cache the primary keeps
- * fresh instead of firing a network request per focus. Note Apollo resets a
- * re-enabled query to its initial fetch policy, so a consumer that toggles
- * `skip` without `cache-first` pays a `cache-and-network` round-trip each time.
+ * A secondary consumer on another tab stands its watcher down while blurred via
+ * `skip`, and must pair that with `fetchPolicy: 'cache-first'`: Apollo resets a
+ * re-enabled query to its INITIAL policy, so toggling `skip` alone pays a
+ * `cache-and-network` round-trip on every focus.
  */
 export interface PantryQueryOptions {
   skip?: boolean;
@@ -79,9 +44,8 @@ export function usePantryQuery(
   pantryId: string | undefined,
   itemsFilter?: PantryItemFilters | null,
   itemsOrderBy?: PantryItemOrderBy | null,
-  // Page size for the initial fetch. Defaults to the API max (100) so typical
-  // pantries arrive in one page for instant client-side sort/filter/search;
-  // a consumer that only needs a sample can pass a smaller value.
+  // Defaults to the API max so a typical pantry arrives in one page, making
+  // client-side sort/filter/search instant.
   itemsFirst: number = PAGE_SIZE.MAX,
   options?: PantryQueryOptions,
 ) {
@@ -93,18 +57,10 @@ export function usePantryQuery(
   const hasValidPantryId =
     !!pantryId?.trim() && !isLoggedOut && isHomeSelectionReady;
 
-  // ── Query activation latch ──
-  // During startup initialization, upstream state churn (isHomeSelectionReady,
-  // selectedHomeId) can cause hasValidPantryId to flicker. Each skip toggle
-  // (true→false) resets Apollo's fetchPolicy to the initial cache-and-network,
-  // firing a duplicate network request.
-  //
-  // Once the query activates for a given pantryId, latch it active so transient
-  // state changes don't re-skip it. The latch auto-resets when:
-  //  • pantryId changes (user switches pantries → fresh fetch needed)
-  //  • user logs out (query must stop)
-  //
-  // Uses "adjusting state during render" pattern (no ref.current reads).
+  // Activation latch: startup churn in isHomeSelectionReady/selectedHomeId makes
+  // hasValidPantryId flicker, and each skip toggle resets Apollo's fetchPolicy to
+  // cache-and-network, firing a duplicate request. Latched per pantryId, released
+  // on logout, via adjusting-state-during-render (no ref.current reads).
   const [activatedForId, setActivatedForId] = useState<string | null>(null);
 
   // Latch: once validation passes for this pantryId, keep the query active
@@ -117,11 +73,9 @@ export function usePantryQuery(
     setActivatedForId(null);
   }
 
-  // The query should run when EITHER:
-  // 1. hasValidPantryId is currently true (normal path), OR
-  // 2. We previously activated for this exact pantryId (latch prevents flickering)
-  // — unless the consumer asked to stand down (`options.skip`), which the latch
-  // deliberately does not override: that skip is the consumer's own decision.
+  // Runs when validation passes OR the latch already holds this pantryId. The
+  // latch deliberately does not override `options.skip` — that is the consumer's
+  // own decision to stand down.
   const isLatched = activatedForId === pantryId && !!pantryId;
   const shouldSkip =
     (!hasValidPantryId && !isLatched) || options?.skip === true;
@@ -160,17 +114,10 @@ export function usePantryQuery(
 
   const pantry = data?.pantry;
 
-  // Preserve the connections BEFORE extracting nodes. With `errorPolicy: 'ignore'`,
-  // a transient network failure surfaces `data === undefined` even though the
-  // persisted cache still holds the items; extracting first would flatten that
-  // to `[]` and silently wipe the list (count, list, AND pagination state) while
-  // `stats` below survives. See `usePreservedConnection` for the full rationale.
-  //
-  // Each node is passed through as an opaque fragment ref — the leaf cell unmasks
-  // its own slice via `useFragment` inside `PantryItemCard`. The parent operation
-  // also selects screen-level fields (id, itemName, quantity, expiresAt,
-  // storageState, storageLocation.id, createdAt, updatedAt, isLowStock) directly
-  // on each node, so local sort/search and hook logic don't need to materialize.
+  // Preserve the connections BEFORE extracting nodes: under `errorPolicy:
+  // 'ignore'` a transient failure surfaces `data === undefined` even though the
+  // persisted cache holds the items, and extracting first flattens that to `[]`,
+  // wiping list, count and pagination state.
   const items = usePreservedConnection(pantry?.itemsConnection);
   const storageLocations = usePreservedConnection(
     pantry?.storageLocationsConnection,
@@ -198,10 +145,8 @@ export function usePantryQuery(
 
   const setIsPantryQueryComplete = useSetIsPantryQueryComplete();
 
-  // Signal to useDataPreloading that GetPantry has settled.
-  // Fires on first load completion (cache hit or network response).
-  // Resets when the query becomes invalid (logout / home switch) so the gate
-  // re-arms if pantry queries restart.
+  // Signals useDataPreloading that GetPantry has settled; resets on logout /
+  // home switch so the gate re-arms when pantry queries restart.
   useEffect(() => {
     if (!loading && hasValidPantryId) {
       setIsPantryQueryComplete(true);
@@ -229,10 +174,8 @@ export function usePantryQuery(
       loading,
       isRefreshing,
       error,
-      // Whether we have an answer at all. `errorPolicy: 'ignore'` swallows the
-      // error and leaves `data === undefined`, so absence is the only evidence
-      // a failure leaves behind — but a preserved connection from the persisted
-      // cache still counts as an answer, which is why this is not `!!data`.
+      // `errorPolicy: 'ignore'` leaves `data === undefined` on failure, but a
+      // preserved connection still counts as an answer — hence not `!!data`.
       hasResult: data !== undefined || items.pageInfo !== undefined,
       // No pantry to ask about yet — the same predicate given to `skip` above,
       // so a screen classifying this cannot mistake "not asked" for "failed".

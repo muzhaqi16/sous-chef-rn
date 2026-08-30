@@ -15,16 +15,9 @@ interface StaggeredEntryProviderProps {
 }
 
 /**
- * StaggeredEntryProvider
- *
- * Provides staggered entry animation delays for list items during initial render.
- * After initial render completes, delays are disabled to prevent animation
- * on scroll (FlashList recycles views).
- *
- * Usage:
- * 1. Wrap list content with StaggeredEntryProvider
- * 2. Call markInitialRenderComplete after initial items render
- * 3. Items call getEntryDelay(index) to get their delay
+ * Staggered entry delays for list items during the INITIAL render only — after
+ * `markInitialRenderComplete` they are disabled, or FlashList's view recycling
+ * would replay the animation on every scroll.
  */
 export const StaggeredEntryProvider: React.FC<StaggeredEntryProviderProps> = ({
   children,
@@ -56,10 +49,7 @@ export const StaggeredEntryProvider: React.FC<StaggeredEntryProviderProps> = ({
   );
 };
 
-/**
- * Hook to access staggered entry animation context.
- * Returns null if not within provider (safe for components outside stagger context).
- */
+/** Returns null outside a provider. */
 export const useStaggeredEntry = (): StaggeredEntryContextType | null => {
   return useContext(StaggeredEntryContext);
 };
