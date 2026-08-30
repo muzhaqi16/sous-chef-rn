@@ -18,6 +18,8 @@ import {
 import { useNotificationPermissions } from '#features/notifications/hooks/useNotificationPermissions';
 import { useNotificationSync } from '#features/notifications/hooks/useNotificationSync';
 import { ExpirationFrequency } from '#/graphql/generated/schemaTypes';
+import { useDataState } from '#hooks/data/useDataState';
+import { DataStateView } from '#components/molecules/DataStateView';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import {
@@ -174,12 +176,10 @@ const getThresholdOptions = (t: Translate) => [
 ];
 
 /**
- * No `loading` prop: `SettingSwitch` forwards it to `disabled`, and disabling a
- * switch the user has just flipped drops the taps that land while the mutation
- * is in flight — seconds, when the API is unreachable. Nothing waits on that
- * request any more: the change is written to the cache before firing and queued
- * for replay, so the switch reflects it immediately either way. The action rows
- * (send test / reset) keep `loading`, where it debounces a one-shot command.
+ * No `loading` prop: `SettingSwitch` forwards it to `disabled`, which drops taps
+ * landing while the mutation is in flight. Nothing waits on it — the change is
+ * cached before firing and queued for replay. The action rows keep `loading`,
+ * where it debounces a one-shot command.
  */
 const renderSettings = (
   defs: SettingDef[],
@@ -216,11 +216,24 @@ export const NotificationSettingsScreen: React.FC = () => {
     settings,
     loading,
     hasPreferences,
+    skipped,
+    error,
+    refetch,
     updateNotificationSetting,
     resetToDefaults,
     isQuietTime,
   } = useNotificationSettings();
   const { syncSendTest } = useNotificationSync();
+
+  // `settings` always has a value (defaults are filled in), so availability has
+  // to come from `hasPreferences`.
+  const dataState = useDataState({
+    loading,
+    error,
+    hasResult: hasPreferences,
+    isEmpty: false,
+    skipped,
+  });
 
   const handleSendTest = async () => {
     setUpdating('test');
@@ -304,9 +317,8 @@ export const NotificationSettingsScreen: React.FC = () => {
             return;
           }
 
-          // Permission was just granted here (the login flow no longer prompts),
-          // so re-register the device to deliver the now-available push token to
-          // the server.
+          // This is where permission is granted (the login flow does not
+          // prompt), so re-register to deliver the push token to the server.
           authService.registerDeviceInBackground();
         },
         isLoading => setUpdating(isLoading ? key : null),
@@ -385,24 +397,21 @@ export const NotificationSettingsScreen: React.FC = () => {
     );
   };
 
-  // Gate on "nothing to show", not on `loading`. Under `cache-and-network`
-  // Apollo reports `loading: true` for the whole network leg even when the
-  // cache already answered, and it starts a fresh leg on every mount — so a
-  // bare `if (loading)` blanked this screen on every visit for as long as the
-  // request took, up to the 10s httpLink abort deadline. The loading state
-  // stays inside ProfileScreenWrapper so the title and back button remain:
-  // without them the screen could not be left while it waited.
-  if (loading && !hasPreferences) {
+  // Inside the wrapper so the back button survives: the screen has to be
+  // leavable while it waits.
+  if (dataState !== 'ready') {
     return (
       <ProfileScreenWrapper
         title={t('notifications.title')}
         scrollEnabled={false}
       >
-        <View style={styles.loadingContainer}>
-          <Text size="md" tone="secondary">
-            {t('settings.loadingSettings')}
-          </Text>
-        </View>
+        <DataStateView
+          state={dataState}
+          onRetry={() => {
+            refetch();
+          }}
+          testID="notification-settings-state"
+        />
       </ProfileScreenWrapper>
     );
   }

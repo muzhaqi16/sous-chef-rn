@@ -26,10 +26,10 @@ export const isEditMode = (mode: AddItemFormMode): boolean =>
   mode === 'edit' || mode === 'directEdit';
 
 /**
- * Only the review path needs — or can send — a note. `CreateItemSuggestionInput.note`
- * is `String!` and the admin has nothing else to judge the diff against. A direct
- * edit has no reviewer and `UpdateItemInput` no longer accepts a note, so its form
- * omits the field entirely.
+ * Only the review path needs — or can send — a note:
+ * `CreateItemSuggestionInput.note` is `String!` and is the admin's sole context
+ * for the diff. A direct edit has no reviewer and `UpdateItemInput` takes no
+ * note, so that form omits the field.
  */
 export const requiresEditNote = (mode: AddItemFormMode): boolean =>
   mode === 'edit';
@@ -267,9 +267,8 @@ export const buildTabFieldGroups = (
     component: FormCheckbox,
     props: { componentType: 'checkbox' },
   };
-  // Shown only on the review path, where the note is the admin's sole context
-  // for the diff (required). The direct-edit path writes straight through and
-  // the server no longer accepts a note there, so the field is omitted below.
+  // Review path only: the note is required there and `UpdateItemInput` has no
+  // place for one on the direct-edit path.
   const noteRequired = requiresEditNote(mode);
   const editReasonField: FieldDef<CreateItemFormData> = {
     name: 'editReason',

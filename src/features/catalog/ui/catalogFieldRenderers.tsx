@@ -8,15 +8,10 @@ import { StorageLocationAutocompleteField } from './autocomplete/StorageLocation
 import { StoreAutocompleteField } from './autocomplete/StoreAutocompleteField';
 
 /**
- * The catalog's named form fields, for `DynamicFormFields`.
- *
- * A `FieldDef` names one of these as a string (`component: 'brandAutocomplete'`)
- * and the form looks it up here. That indirection is what keeps the grocery
- * catalog out of the kit: the form renders whatever the app registered, and an
- * app without a grocery catalog registers something else.
- *
- * Field-specific callbacks (`onSelectItem`, `onUnitSelected`, …) arrive in
- * `props` and spread through untouched.
+ * The catalog's named form fields for `DynamicFormFields`: a `FieldDef` names
+ * one as a string and the form looks it up here, which is what keeps the
+ * grocery catalog out of the kit. Field-specific callbacks arrive in `props`
+ * and spread through untouched.
  */
 export const catalogFieldRenderers: FieldRendererRegistry = {
   itemAutocomplete: {

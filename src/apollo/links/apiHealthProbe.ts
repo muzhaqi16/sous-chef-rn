@@ -14,15 +14,10 @@ export const getHealthUrl = (): string => {
 };
 
 /**
- * One cheap reachability probe: a plain GET of the API's `/health` endpoint —
- * no GraphQL parsing, no auth, no Apollo link chain. Used by
- * `apiReachabilityBreaker` to actively re-check an open circuit instead of
- * waiting for user traffic (which `offlineModeLink` is blocking precisely
- * because the circuit is open).
- *
- * `true` means the API answered 2xx — transport is up and the server is
- * healthy enough to take traffic. Any network error, timeout, or non-2xx
- * counts as unreachable (conservative: a 5xx keeps the app serving cache).
+ * A plain GET of `/health` — no GraphQL, no auth, no link chain. Lets
+ * `apiReachabilityBreaker` re-check an open circuit rather than wait for
+ * traffic `offlineModeLink` is blocking. Only 2xx counts as reachable; a 5xx
+ * keeps the app serving cache.
  */
 export async function probeApiHealth(): Promise<boolean> {
   const url = getHealthUrl();

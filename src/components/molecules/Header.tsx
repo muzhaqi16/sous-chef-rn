@@ -179,11 +179,9 @@ export const Header: React.FC<HeaderProps> = ({
       ) : (
         <View style={styles.titleSpacer} />
       )}
-      {/* Right side. The offline pill leads the action group so every screen
-          using this header carries the signal — previously only the four tab
-          headers did, so pushing into any detail screen silently dropped it and
-          the app looked online while it was not. Renders null when online, so
-          screens with no actions are unaffected. */}
+      {/* The offline pill leads the action group, so every screen using this
+          header carries the signal rather than just the tab headers. Renders
+          null when online, so screens with no actions are unaffected. */}
       <View style={styles.actions}>
         <OfflineStatusPill size={22} />
         {rightActions.map(renderAction)}

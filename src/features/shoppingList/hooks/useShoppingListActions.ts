@@ -29,8 +29,8 @@ interface UseShoppingListActionsOptions {
   setSearchQuery: (query: string) => void;
 }
 
-// --- Module-level helpers (outside hook body for React Compiler) ---
-
+// Module-level: their try bodies would otherwise bail the hook out of the
+// React Compiler.
 async function executeQuantityUpdate(
   updateFn: () => Promise<{ error?: unknown } | undefined>,
   revertCache: () => void,
@@ -55,10 +55,9 @@ async function executeQuantityUpdate(
     return;
   }
 
-  // `errorPolicy: 'all'` RESOLVES a failed mutation with `error` set instead of
-  // rejecting, so the catch above only sees a link-level throw. Both outcomes
-  // must revert the optimistic quantity — without this a refused update stayed
-  // on screen with no message and no version-conflict refresh.
+  // `errorPolicy: 'all'` RESOLVES a failed mutation with `error` set, so the
+  // catch above sees only a link-level throw. Both outcomes must revert the
+  // optimistic quantity and run the version-conflict check.
   if (result?.error) fail(result.error);
 }
 
@@ -110,11 +109,7 @@ async function executeClearItems(
     await clearItems(purchased);
   } catch {
     haptic.error();
-    toastService.error(
-      purchased
-        ? 'Failed to clear purchased items'
-        : 'Failed to clear shopping items',
-    );
+    toastService.error(t('shoppingListScreens.failedToClear'));
   }
 }
 
@@ -151,19 +146,7 @@ async function executeAddItemFromSearch(
   }
 }
 
-/**
- * Shopping List Actions Hook
- * Extracts mutation handlers from ShoppingListMain for better separation of concerns
- *
- * Handles:
- * - Quantity increment/decrement
- * - Toggle purchase status
- * - Delete item
- * - Clear all purchased
- * - Add item from search
- *
- * Note: Sort order updates are handled by useItemReordering (canonical handler)
- */
+/** Sort-order updates are NOT here — `useItemReordering` is the one handler. */
 export function useShoppingListActions({
   currentListId,
   unpurchasedItems,
@@ -183,17 +166,9 @@ export function useShoppingListActions({
   );
 
   /**
-   * Move an item's quantity by a delta, optimistically.
-   *
-   * Increment and decrement were two copies of this, identical but for the
-   * arithmetic and the word in the warning — which is how they came to
-   * disagree on what an absent quantity means (`|| 0` on one side, `?? 1` on
-   * the other). Neither reading was visible in behaviour, because both landed
-   * on 1 for every input.
-   *
-   * It reads as 0 here because that is what the row shows: `SortableItem`
-   * renders `quantity ?? 0`. Reading an absent quantity as 1 would make "+"
-   * jump from the 0 on screen straight to 2.
+   * Move an item's quantity by a delta, optimistically. An absent quantity reads
+   * as 0 to match what the row shows (`SortableItem` renders `quantity ?? 0`);
+   * reading it as 1 would make "+" jump from the 0 on screen straight to 2.
    */
   const adjustQuantity = async (itemId: string, delta: number) => {
     const cacheId = client.cache.identify({
@@ -274,19 +249,16 @@ export function useShoppingListActions({
   const handleDecrementQuantity = (itemId: string) =>
     adjustQuantity(itemId, -1);
 
-  // Toggle purchase handler
   const handleTogglePurchase = async (itemId: string) => {
     Telemetry.trackEvent('toggle_item_purchase', { item_id: itemId });
     await executeTogglePurchase(haptic, toggleItem, itemId);
   };
 
-  // Delete item handler
   const handleDeleteItem = async (itemId: string) => {
     Telemetry.trackEvent('delete_item', { item_id: itemId });
     await executeDeleteItem(haptic, removeItem, itemId);
   };
 
-  // Clear items handler - uses optimistic cache clearing for instant UI
   const { clearItems } = useClearShoppingListItems({
     listId: currentListId,
     unpurchasedItems,
@@ -299,13 +271,11 @@ export function useShoppingListActions({
     await executeClearItems(haptic, clearItems, true);
   };
 
-  // Clear all shopping (unpurchased) items handler
   const handleClearAllShopping = async () => {
     if (unpurchasedItems.length === 0) return;
     await executeClearItems(haptic, clearItems, false);
   };
 
-  // Add item from search handler
   const handleAddItemFromSearch = async (itemName: string) => {
     if (!currentListId) {
       toastService.error(t('toasts.selectShoppingListFirst'));
@@ -317,18 +287,15 @@ export function useShoppingListActions({
       item_name_length: itemName.trim().length,
     });
 
-    // Clear search input immediately for instant feedback
+    // Cleared up front; `executeAddItemFromSearch` puts the text back on failure.
     setSearchQuery('');
 
     await executeAddItemFromSearch(addItem, haptic, itemName, setSearchQuery);
   };
 
   return {
-    // Quantity
     handleIncrementQuantity,
     handleDecrementQuantity,
-
-    // Item actions
     handleTogglePurchase,
     handleDeleteItem,
     handleClearAllPurchased,

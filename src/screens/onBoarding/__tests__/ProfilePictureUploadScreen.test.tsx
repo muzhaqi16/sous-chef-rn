@@ -33,8 +33,12 @@ jest.mock('#hooks/useImageUpload', () => ({
   }),
 }));
 
+const mockProfileData = {
+  profile: { avatar: null } as { avatar: string | null } | null,
+  loading: false,
+};
 jest.mock('#features/profile/hooks/useProfileData', () => ({
-  useProfileData: () => ({ profile: { avatar: null }, loading: false }),
+  useProfileData: () => mockProfileData,
 }));
 
 jest.mock('#hooks/performance/useScreenTransition');
@@ -116,5 +120,31 @@ describe('ProfilePictureUploadScreen', () => {
     render(<ProfilePictureUploadScreen />);
     expect(screen.getByTestId('upload-button')).toBeTruthy();
     expect(screen.getByText('Upload & Continue')).toBeTruthy();
+  });
+
+  describe('while the profile request is in flight', () => {
+    afterEach(() => {
+      mockProfileData.profile = { avatar: null };
+      mockProfileData.loading = false;
+    });
+
+    it('keeps the photo-picker actions available with no answer yet', () => {
+      // `cache-and-network` reports loading for the whole network leg, so
+      // gating on it alone removes the only way forward for up to ~30s.
+      mockProfileData.profile = null;
+      mockProfileData.loading = true;
+
+      render(<ProfilePictureUploadScreen />);
+
+      expect(screen.queryByText('Choose from Gallery')).toBeTruthy();
+    });
+
+    it('keeps them available while refreshing an answer it already has', () => {
+      mockProfileData.loading = true;
+
+      render(<ProfilePictureUploadScreen />);
+
+      expect(screen.queryByText('Choose from Gallery')).toBeTruthy();
+    });
   });
 });

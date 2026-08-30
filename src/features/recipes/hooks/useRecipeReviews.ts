@@ -32,13 +32,7 @@ interface UseRecipeReviewsOptions {
   backendRecipe: MaterializedRecipe | null | undefined;
 }
 
-/**
- * Manages recipe reviews — fetching, creating, updating, deleting, and helpfulness voting.
- *
- * @param options.recipeId - The recipe ID to fetch/manage reviews for
- * @param options.backendRecipe - The recipe fragment for ownership checks
- * @returns `{ state, actions }` — review data/stats in state, mutation functions in actions
- */
+/** Recipe reviews: fetch, create, update, delete, and helpfulness voting. */
 export function useRecipeReviews({
   recipeId,
   backendRecipe,
@@ -268,12 +262,10 @@ export function useRecipeReviews({
     });
   };
 
-  // Server-computed per requesting user. Previously derived by looking for our
-  // own id in `review.helpfulVotes` — that list is windowed, so past the window
-  // our own vote was invisible and the button both rendered un-voted and sent
-  // `isHelpful: true` again instead of un-voting. The `userId` guard stays:
-  // the field is false for an anonymous viewer, but a null `userId` also means
-  // there is no vote to toggle.
+  // Server-computed per requesting user — never derive it from
+  // `review.helpfulVotes`, which is windowed, so a vote past the window reads
+  // as un-voted. The `userId` guard is separate: the field is false for an
+  // anonymous viewer, and a null id also means there is no vote to toggle.
   const hasVotedHelpful = (review: RecipeReviewFragment) =>
     !!userId && review.viewerHasVotedHelpful;
 

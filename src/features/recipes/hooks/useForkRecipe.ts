@@ -1,10 +1,7 @@
 /**
- * useForkRecipe — fork a recipe into an editable copy the user owns.
- *
- * Online-only: the server mints the forked recipe's id (no client id to key an
- * offline replay on), so a forked copy can't be queued. The created recipe is
- * added to the MyRecipes overview connection; the fork's id is returned so the
- * caller can navigate to the new editable recipe.
+ * Forks a recipe into an editable copy. Online-only — the server mints the
+ * fork's id, so there is nothing to key an offline replay on. Returns that id
+ * for navigation and adds the recipe to the MyRecipes connection.
  */
 
 import { useMutation } from '@apollo/client/react';

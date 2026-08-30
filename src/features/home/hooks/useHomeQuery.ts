@@ -36,9 +36,9 @@ export function useHomeQuery() {
     errorPolicy: 'ignore',
   });
 
-  // Preserve homes data even when query fails to prevent cascade failures.
-  // Each node carries `id` + `isDefault` directly plus masked refs for the
-  // leaf fragments (`HomeCard_home`, `HomeForHookLogic_home`).
+  // Preserve homes data even when the query fails, to prevent cascade
+  // failures. Each node carries `id` + `isDefault` directly plus a masked ref
+  // for `HomeCard_home`.
   const homes = usePreservedNodes(data?.homes);
 
   // Derive default home from isDefault field (no separate query needed)

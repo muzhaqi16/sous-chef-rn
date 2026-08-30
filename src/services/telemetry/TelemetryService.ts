@@ -27,18 +27,10 @@ import { useStore } from '#store';
 const SESSION_ID = generateId();
 
 /**
- * The app version, as a metric label.
- *
- * BOUNDED on purpose. Every unique label combination is a new Prometheus series,
- * multiplied again by histogram buckets, so the commit SHA must never go here —
- * it is unbounded and is the textbook cardinality bomb. The SHA travels on LOGS
- * instead (a body field, see `log()` below), which is where per-run identity
- * already lives.
- *
- * Without this, nothing on a metric said which build produced it: the only
- * version-bearing dimension was `service.instance.id`, and every Grafana startup
- * panel collapsed it with `sum(...) by (le)`. A regression could not be
- * attributed to a release even in principle.
+ * The app version, as a metric label — the dimension that attributes a
+ * regression to a release. BOUNDED on purpose: every label combination is a new
+ * Prometheus series times its buckets, so the unbounded commit SHA must never be
+ * a label. It travels on LOGS instead, as a body field (see `log()`).
  */
 let appVersion: string | undefined;
 function resolveAppVersion(): string {
@@ -47,16 +39,10 @@ function resolveAppVersion(): string {
 }
 
 /**
- * Whether this build is running on an emulator or on real hardware.
- *
- * BOUNDED like the app version: exactly two values. `device_model` would be the
- * obvious label and is the same cardinality bomb as a commit SHA — thousands of
- * Android models in the field, multiplied again by histogram buckets.
- *
- * Without it, an emulator run and a phone run are the SAME series: `instance`
- * is only `android_<version>`. Measured 2026-08-25, the two disagree by 1.4-2x
- * on startup marks and by 10-20x on `flashlist_initial_load_ms`, so mixing them
- * silently poisons any baseline you try to compare a release against.
+ * Emulator or real hardware — two values, deliberately not `device_model`, which
+ * is the same cardinality bomb as a commit SHA. Without it both run under one
+ * series while disagreeing by 1.4-2x on startup marks and 10-20x on
+ * `flashlist_initial_load_ms`, poisoning any release baseline.
  */
 let deviceType: string | undefined;
 function resolveDeviceType(): string {
@@ -68,17 +54,10 @@ function resolveDeviceType(): string {
 }
 
 /**
- * Read a process-constant value from a native module, once, without letting a
- * failure escape.
- *
- * Both readers below are blocking SYNCHRONOUS bridge calls, and
- * `isEmulatorSync` in particular enumerates every installed input method on
- * Android (`getEnabledInputMethodList`, a binder IPC) on real hardware. Run at
- * module scope they landed inside the startup window this service exists to
- * measure — the instrument charging itself to the number it reports — and a
- * throw there took down every `import { Telemetry }` rather than costing one
- * label. Resolved lazily and memoized instead: the values never change within a
- * process, so one call apiece is all that is owed.
+ * Both readers are blocking SYNCHRONOUS bridge calls — `isEmulatorSync` is a
+ * binder IPC on Android hardware — so they must stay lazy and memoized rather
+ * than run at module scope, inside the startup window this service measures. A
+ * throw is swallowed: a missing label beats breaking every `import { Telemetry }`.
  */
 function safeNativeRead<T>(read: () => T, fallback: T): T {
   let value;
@@ -97,19 +76,14 @@ const LOG_LEVEL_PRIORITY: Record<LogEntry['level'], number> = {
   error: 3,
 };
 
-// Cap the in-memory log retry buffer so a downed OTLP gateway cannot grow
-// memory without bound on a phone. Oldest entries are dropped first.
+// Bounded retry buffers: a downed OTLP gateway must not grow memory on a phone.
+// Oldest first, so a very long outage slightly undercounts metric totals.
 const MAX_LOG_BUFFER = 1000;
-// Same guard for metrics: entries pile up while flushes are skipped (device
-// offline, backoff window). Dropping the oldest increments slightly
-// undercounts totals during a very long outage — bounded memory wins.
 const MAX_METRIC_BUFFER = 2000;
 
-// Exponential backoff between failed flush attempts. Without it a dead
-// endpoint is retried on every interval tick (2s in dev) PLUS on every
-// error-level log's immediate flush. 5s → 10s → … capped at 5 minutes.
-// Recovery is lazy (the next allowed flush) — telemetry is fire-and-forget,
-// so it doesn't need the active /health probing the GraphQL breaker has.
+// Backoff between failed flushes; without it a dead endpoint is retried on every
+// interval tick plus every error log's immediate flush. Recovery is lazy — the
+// next allowed flush — since telemetry is fire-and-forget.
 const INITIAL_FLUSH_BACKOFF_MS = 5_000;
 const MAX_FLUSH_BACKOFF_MS = 300_000;
 
@@ -175,16 +149,11 @@ export class TelemetryService {
       enabled_transports: this.transports.filter(t => t.isAvailable()).length,
     });
 
-    // `app_starts_total` is emitted by `useStartupInit`'s idle callback, NOT
-    // here. This method is called synchronously from the hydration effect, so
-    // a metric emitted from it is the FIRST labelled metric of a cold start —
-    // and resolving `device_type` means `isEmulatorSync()`, a binder IPC on
-    // Android hardware. That landed inside the very window
-    // `app_startup_duration_ms` and `app_fully_drawn_ms` measure, and only on
-    // real devices (emulators short-circuit on `Build.FINGERPRINT`), so it
-    // biased the comparison the label exists to enable. Making the accessors
-    // lazy moved the read later within the same window; moving its only caller
-    // is what takes it out.
+    // `app_starts_total` belongs in `useStartupInit`'s idle callback, NOT here:
+    // this runs synchronously from the hydration effect, so its metric would be
+    // the first labelled one of a cold start and would resolve `device_type`
+    // (a binder IPC on Android hardware) inside the window the startup metrics
+    // measure — biasing them on real devices only.
   }
 
   updateConfig(newConfig: Partial<TelemetryConfig>): void {
@@ -197,12 +166,9 @@ export class TelemetryService {
   }
 
   /**
-   * Whether a log at `level` would survive the gates in {@link log}. Exposed so
-   * a caller on a hot path can skip BUILDING a payload that `log` would discard
-   * on the next line — the floor is `warn` in production, so a `debug`
-   * breadcrumb there allocates its message and `extra` object for nothing.
-   * Matters most where the payload is non-trivial (`telemetryLink` reads
-   * `Object.keys(operation.variables)` on every GraphQL operation).
+   * Whether a log at `level` would survive the gates in {@link log}. Lets a hot
+   * path skip BUILDING a payload that would be discarded — the production floor
+   * is `warn`, so a debug breadcrumb allocates its `extra` object for nothing.
    */
   isLevelEnabled(level: LogEntry['level']): boolean {
     if (
@@ -231,8 +197,7 @@ export class TelemetryService {
       return;
     }
 
-    // Drop entries below the configured floor (e.g. debug/info in production)
-    // so they never reach the buffer or get shipped to Loki.
+    // Below the floor: never buffered, never shipped.
     if (
       LOG_LEVEL_PRIORITY[level] < LOG_LEVEL_PRIORITY[this.config.minLogLevel]
     ) {
@@ -248,19 +213,13 @@ export class TelemetryService {
         env: this.config.environment,
         ...scrubLogExtra(extra),
         // Attribution, applied last so a caller's `extra` cannot shadow it.
-        // These are BODY fields, not Loki stream labels: a label per device or
-        // per run would multiply the stream count, while a body field stays
-        // searchable with `| json | device_id="..."`.
-        //
-        // Without them every device reported under the same stream, so logs
-        // from two emulators (or two app runs) were indistinguishable — which
-        // made several readings during the 2026-08-24 audit ambiguous.
+        // BODY fields, not Loki stream labels — a label per device or run would
+        // multiply the stream count, while a body field stays searchable with
+        // `| json | device_id="..."`.
         device_id: getDeviceIdSync() ?? 'unknown',
         session_id: SESSION_ID,
-        // The commit the build came from. A body field, never a label, for the
-        // cardinality reason above — but it is what lets a measurement be traced
-        // back to code. `-dirty` means the tree had uncommitted changes, so the
-        // build is not reproducible.
+        // The commit the build came from; a body field, never a label. `-dirty`
+        // means uncommitted changes, so the build is not reproducible.
         git_sha: buildEnv.GIT_SHA ?? 'unknown',
       },
     };

@@ -7,12 +7,8 @@ import { useStore } from '#store';
 import { logger } from '#/utils/environment';
 
 /**
- * Haptic Feedback Types
- *
- * Mapped to react-native-haptic-feedback's native iOS Haptic Feedback
- * Generator and Android equivalents. iOS produces real haptics (not just
- * vibrations); Android falls back to vibration patterns when the device
- * has no haptic actuator.
+ * iOS produces real haptics; Android falls back to vibration patterns when the
+ * device has no haptic actuator.
  */
 export enum HapticFeedbackType {
   LIGHT = 'light',
@@ -47,10 +43,7 @@ class HapticFeedbackService {
   private enabledPreference: boolean | undefined;
   private unsubscribe: (() => void) | undefined;
 
-  /**
-   * Cache the user preference and subscribe to future changes. Call once
-   * after store hydration in App.tsx.
-   */
+  /** Caches the preference and subscribes to changes; idempotent. */
   initialize(): void {
     if (this.initialized) return;
     this.enabledPreference = useStore.getState().hapticFeedbackEnabled ?? true;
@@ -68,12 +61,8 @@ class HapticFeedbackService {
   }
 
   isEnabled(): boolean {
-    // `initialize()` is deliberately deferred to the idle queue in
-    // useStartupInit (haptics aren't needed for first paint), so an early tap
-    // — e.g. a tab press that beats the idle callback — can reach here before
-    // init. Self-initialize on first use so the preference is cached and the
-    // store subscription is wired up, rather than reading a one-off uncached
-    // value on every early call. `initialize()` is idempotent.
+    // useStartupInit defers initialize() to the idle queue, so an early tap can
+    // beat it — self-initialize rather than read an uncached value each time.
     if (!this.initialized) {
       this.initialize();
     }
@@ -93,11 +82,7 @@ class HapticFeedbackService {
     }
   }
 
-  /**
-   * Native-iOS haptics don't support cancellation (each tap is a discrete
-   * event). Kept as a no-op so existing callsites compile; the Android
-   * fallback also can't be cancelled mid-pulse through this library.
-   */
+  /** No-op: neither platform can cancel a haptic mid-pulse through this library. */
   cancel(): void {}
 
   light() {

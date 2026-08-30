@@ -99,16 +99,9 @@ export function getPantryItemDuplicateInfo(
 }
 
 /**
- * Extract duplicate info from a `DuplicatePantryItemError` union payload.
- *
- * The server returns the duplicate two ways: as a GraphQL error carrying the
- * `PANTRY_ITEM_ALREADY_EXISTS` code (handled by `getPantryItemDuplicateInfo`
- * above), or — per the regenerated schema — as a typed member of the
- * `CreatePantryItemResult` union in `data`. This reads the latter. The restock
- * action targets a single item, so the first id is used as `existingPantryItemId`.
- *
- * @param payload - the `createPantryItem` union payload
- * @returns Duplicate info, or null if the payload carries no existing ids
+ * Reads the union-member form of a duplicate; `getPantryItemDuplicateInfo` above
+ * reads the GraphQL-error form. Restock targets one item, so the first id
+ * becomes `existingPantryItemId`.
  */
 export function getPantryItemDuplicateInfoFromPayload(
   payload:
@@ -124,21 +117,10 @@ export function getPantryItemDuplicateInfoFromPayload(
 }
 
 /**
- * Resolve duplicate info from a `createPantryItem` mutation result, checking
- * BOTH ways the server can report a duplicate:
- *
- * 1. As a typed `DuplicatePantryItemError` member of the result union (in
- *    `data.createPantryItem`) — the current contract.
- * 2. As a GraphQL error carrying the `PANTRY_ITEM_ALREADY_EXISTS` code (in
- *    `result.error`) — the legacy shape.
- *
- * Every add surface should call this so a duplicate routes to the restock /
- * add-anyway prompt regardless of which shape the server uses. Returns null
- * when the result isn't a duplicate.
- *
- * The `payload` param is typed loosely (`{ __typename?, existingPantryItemIds? }`)
- * so every operation's generated `createPantryItem` union — even ones whose
- * `DuplicatePantryItemError` selection is minimal — is structurally assignable.
+ * Checks BOTH shapes a duplicate can arrive in — a `DuplicatePantryItemError`
+ * union member, and a GraphQL error carrying `PANTRY_ITEM_ALREADY_EXISTS` — so
+ * every add surface routes to the restock prompt either way. `payload` is typed
+ * loosely so every operation's generated union is structurally assignable.
  */
 export function getPantryItemDuplicateFromResult(
   payload:
@@ -158,13 +140,9 @@ export function getPantryItemDuplicateFromResult(
 }
 
 /**
- * Standard "Item Already in Pantry" recovery prompt shown when a create is
- * refused as a duplicate. The title, message, and Cancel / Restock / Add Anyway
- * buttons are identical across every add surface (create form, multi-page
- * submission, barcode scan), so the copy lives here once and can't drift. The
- * Restock and Add Anyway actions are genuinely site-specific — different
- * mutations, loading state, and success UX — so the caller supplies them.
- * `onCancel` is optional, for sites that resolve a promise when dismissed.
+ * The shared "Item Already in Pantry" prompt: copy lives here once so it cannot
+ * drift across the add surfaces. Restock and Add Anyway are site-specific
+ * (different mutations and success UX), so the caller supplies them.
  */
 export function promptPantryDuplicate(opts: {
   onRestock: () => void;

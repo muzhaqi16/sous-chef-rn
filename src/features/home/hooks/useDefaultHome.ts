@@ -1,12 +1,8 @@
 import { useEffect, useRef } from 'react';
-import {
-  useApolloClient,
-  useLazyQuery,
-  useMutation,
-} from '@apollo/client/react';
+import { gql, type ApolloCache } from '@apollo/client';
+import { useApolloClient, useLazyQuery } from '@apollo/client/react';
 import { safeEvictMany } from '#/apollo/utils/cacheUpdaters';
 import { GetHomesDocument } from '#operations/home/home.generated';
-import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import {
   usePantryState,
   useIsHomeSelectionReady,
@@ -16,23 +12,103 @@ import {
 } from '#store/useAppStore';
 import { useStore } from '#store';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
-import { extractNodes } from '#/utils/connectionUtils';
-import { pantriesOf } from '#features/home/utils/homePantries';
+import { useMarkHomeAsDefault } from '#features/home/hooks/useMarkHomeAsDefault';
+import { isDefaultHomeSyncPending } from '#features/home/store/useDefaultHomeSyncStore';
+import { handleMutationError } from '#/utils/errorHandlers';
+import {
+  pantriesOf,
+  defaultPantryOf,
+  type HomePantries,
+} from '#features/home/utils/homePantries';
 import { logger } from '#/utils/environment';
 
-// Minimal connection shape getDefaultPantry reads — satisfied by both the
-// GetHomes node and GetHome's home (both select pantriesConnection).
-type HomePantries = {
+/**
+ * Narrow on purpose: a `readQuery` of the whole `GetHomes` document is
+ * all-or-nothing, so one unrelated evicted record makes the check unanswerable.
+ */
+const SELECTED_HOME_PANTRIES = gql`
+  fragment SelectedHomePantries_home on Home {
+    id
+    pantriesConnection {
+      totalCount
+      edges {
+        node {
+          id
+        }
+      }
+    }
+  }
+`;
+
+/** What the fragment above reads back. */
+type SelectedHomePantries = {
   pantriesConnection?: {
-    edges?: Array<{
-      node?: { id: string; isDefault?: boolean } | null;
-    } | null>;
+    totalCount?: number | null;
+    edges?: Array<{ node?: { id: string } | null } | null> | null;
   } | null;
 };
 
-// Flat home shape some callers (and tests) hand in instead of the
-// connection-shaped node.
-type FlatHome = { pantries?: Array<{ id: string; isDefault?: boolean }> };
+/**
+ * True only when the cached connection holds the whole set. `GetHomes` pages
+ * pantries at `first: 10`, so absence from a partial page proves nothing.
+ */
+const isConnectionComplete = (connection: {
+  totalCount?: number | null;
+  edges?: readonly unknown[] | null;
+}) =>
+  typeof connection.totalCount === 'number' &&
+  (connection.edges?.length ?? 0) === connection.totalCount;
+
+/** The three answers a validation can have. `unknown` is not `invalid`. */
+type SelectionCheck = 'valid' | 'invalid' | 'unknown';
+
+/**
+ * Adopts the pantry the server names, and reports a failed sync — a new user
+ * left with no default home is invisible otherwise.
+ */
+const syncAsAccountDefault = (
+  markAsDefault: ReturnType<typeof useMarkHomeAsDefault>['markAsDefault'],
+  setSelectedPantryId: (id: string | null) => void,
+  homeId: string,
+  localPantryId: string | null,
+) => {
+  void markAsDefault(homeId).then(({ status, serverPantry }) => {
+    if (status === 'confirmed' && serverPantry?.id) {
+      setSelectedPantryId(serverPantry.id);
+      return;
+    }
+    if (status === 'refused' || status === 'failed') {
+      handleMutationError(new Error(`markHomeAsDefault ${status}`), {
+        operation: 'Set First Home as Default',
+        showAlert: false,
+      });
+      if (localPantryId) setSelectedPantryId(localPantryId);
+    }
+  });
+};
+
+/** `unknown` when the cache holds too little to convict the selection. */
+const checkPantryBelongsToHome = (
+  cache: ApolloCache,
+  homeId: string,
+  pantryId: string,
+): SelectionCheck => {
+  const cacheId = cache.identify({ __typename: 'Home', id: homeId });
+  const home =
+    cacheId &&
+    cache.readFragment<SelectedHomePantries>({
+      id: cacheId,
+      fragment: SELECTED_HOME_PANTRIES,
+    });
+
+  const connection = home ? home.pantriesConnection : null;
+  if (!connection) return 'unknown';
+  if (!isConnectionComplete(connection)) return 'unknown';
+
+  return (connection.edges ?? []).some(edge => edge?.node?.id === pantryId)
+    ? 'valid'
+    : 'invalid';
+};
 
 /**
  * Manages home selection, default home resolution, and pantry ID tracking.
@@ -75,8 +151,7 @@ export const useDefaultHome = () => {
   const isHomeSelectionReady = useIsHomeSelectionReady();
   const setIsHomeSelectionReady = useSetIsHomeSelectionReady();
 
-  // SetDefaultHome mutation for syncing auto-selection to server
-  const [setDefaultHomeMutation] = useMutation(MarkHomeAsDefaultDocument, {});
+  const { markAsDefault } = useMarkHomeAsDefault();
 
   // PERFORMANCE: Use lazy queries with STABLE options to control when they execute
   // Using hardcoded 'cache-first' instead of dynamic policy prevents function recreation
@@ -89,20 +164,10 @@ export const useDefaultHome = () => {
     errorPolicy: 'ignore',
   });
 
-  // Allow pantry query to start immediately when persisted selections exist.
-  // This runs in parallel with GetHomes instead of waiting for selection init.
-  // Both cache partitions are restored synchronously in initializeClient()
-  // before React mounts, so the pair can be CHECKED here without a round-trip —
-  // and it has to be. Restored is not the same as valid: the user may have left
-  // or deleted that home since, on this device or another, and this flag is
-  // precisely what opens `usePantryQuery`'s gate. Trusting the pair outright
-  // sent `GetPantry` for a pantry the user can no longer read, which comes back
-  // "Access denied to this pantry" on every cold start until the selection is
-  // reconciled.
-  //
-  // A cache that cannot answer (fresh install, version purge) simply doesn't
-  // take the shortcut — the pantry query would be waiting on the network there
-  // regardless.
+  // Opens the pantry query in parallel with GetHomes when the persisted pair
+  // still checks out against the synchronously restored cache. `unknown` takes
+  // no shortcut and repairs nothing — the ready effect below re-answers it once
+  // GetHomes lands.
   useEffect(() => {
     if (
       !canAttemptQueries ||
@@ -113,14 +178,15 @@ export const useDefaultHome = () => {
       return;
     }
 
-    const cached = client.cache.readQuery({ query: GetHomesDocument });
-    const cachedHome = extractNodes(cached?.homes).find(
-      h => h.id === selectedHomeId,
-    );
-    const belongsToSelectedHome = pantriesOf(
-      cachedHome as HomeNode | undefined,
-    ).some(p => p.id === selectedPantryId);
-    if (!belongsToSelectedHome) return;
+    if (
+      checkPantryBelongsToHome(
+        client.cache,
+        selectedHomeId,
+        selectedPantryId,
+      ) !== 'valid'
+    ) {
+      return;
+    }
 
     logger.debug('⚡ Early ready: using persisted home/pantry IDs');
     setIsHomeSelectionReady(true);
@@ -194,16 +260,20 @@ export const useDefaultHome = () => {
   // read ("Access denied to this pantry"). `useCurrentPantry` repoints it, but
   // one render too late: the request is already in flight.
   //
-  // Judged only when the home's pantries are actually known: `homesList` can be
-  // a partially cached shape, and an empty list there means "not loaded", not
-  // "no pantries".
-  const selectedHomePantries = pantriesOf(
-    homesList?.find(h => h.id === selectedHomeId) as HomeNode | undefined,
+  // Judged only against a connection known to be complete: an empty list means
+  // "not loaded", and a page means "not on this page".
+  const selectedHome = homesList?.find(h => h.id === selectedHomeId) as
+    | HomeNode
+    | undefined;
+  const selectedHomePantries = pantriesOf(selectedHome);
+  const selectedHomeHasCompletePantries = !!(
+    selectedHome?.pantriesConnection &&
+    isConnectionComplete(selectedHome.pantriesConnection)
   );
   const isSelectedPantryStale = !!(
     selectedPantryId &&
     isSelectedHomeValid &&
-    selectedHomePantries.length > 0 &&
+    selectedHomeHasCompletePantries &&
     !selectedHomePantries.some(p => p.id === selectedPantryId)
   );
 
@@ -249,26 +319,25 @@ export const useDefaultHome = () => {
     client,
   ]);
 
-  // Repoint a stale pantry at the selected home's own default. Runs before the
-  // ready flag flips (that effect is gated on `isSelectedPantryStale` too), so
-  // the pantry query's gate never opens on the dead id.
+  // Repointed, never evicted: a pantry outside the selected home is usually a
+  // live pantry of another home, and evicting it drops the edge from THAT
+  // home's connection too (the self-healing read in `mergeConnectionByNodeId`).
+  // Eviction stays with `needsClearing`, where the server has confirmed the
+  // home is gone. The gate is lowered rather than withheld so a mid-session
+  // removal closes an already-open gate.
   const staleSelectedPantryId = isSelectedPantryStale ? selectedPantryId : null;
   useEffect(() => {
     if (!staleSelectedPantryId) return;
     logger.warn(
       '[HomeSelector] Selected pantry does not belong to the selected home, repointing',
     );
-    safeEvictMany(client.cache, [
-      { typename: 'Pantry', id: staleSelectedPantryId },
-    ]);
-    const replacement =
-      selectedHomePantries.find(p => p.isDefault) ?? selectedHomePantries[0];
-    setSelectedPantryId(replacement?.id ?? null);
+    setIsHomeSelectionReady(false);
+    setSelectedPantryId(defaultPantryOf(selectedHome)?.id ?? null);
   }, [
     staleSelectedPantryId,
-    selectedHomePantries,
+    selectedHome,
     setSelectedPantryId,
-    client,
+    setIsHomeSelectionReady,
   ]);
 
   // Complementary case to `needsClearing` above: a home is selected but the
@@ -347,80 +416,33 @@ export const useDefaultHome = () => {
     setSelectedPantryId,
   ]);
 
-  // AUTO-SELECT FIRST HOME: When no server default exists but homes are available
-  // This handles the case where user has homes but none is marked as default
+  // AUTO-SELECT FIRST HOME: homes exist but none is the account default.
   useEffect(() => {
-    // Skip if already auto-selected or query not complete
     if (hasAutoSelectedRef.current || loading || !called) return;
-
-    // Skip if there are no homes or a home is already selected
     if (!homesList || homesList.length === 0 || selectedHomeId) return;
+    // A default written locally but not yet confirmed does not count as the
+    // server having one.
+    if (remoteDefaultHomeId && !isDefaultHomeSyncPending(remoteDefaultHomeId)) {
+      return;
+    }
 
-    // Skip if server has a default (will be handled by the other effect)
-    if (remoteDefaultHomeId) return;
-
-    // Auto-select first home
     const firstHome = homesList[0] as HomeNode;
-    logger.debug(
-      '🏠 No default home on server, auto-selecting first home:',
-      firstHome.id,
-    );
+    logger.debug('🏠 Auto-selecting first home:', firstHome.id);
 
     hasAutoSelectedRef.current = true;
     setSelectedHomeId(firstHome.id);
 
-    // Set pantry immediately from local data (mutation will confirm/update later)
-    const firstHomePantries = pantriesOf(firstHome);
-    const localDefaultPantry =
-      firstHomePantries.find(p => p.isDefault) ?? firstHomePantries[0];
+    const localDefaultPantry = defaultPantryOf(firstHome);
     if (localDefaultPantry?.id && !selectedPantryId) {
       setSelectedPantryId(localDefaultPantry.id);
     }
 
-    // Sync to server - set this home as the default
-    // The mutation returns the default pantry, which we use to set selectedPantryId
-    setDefaultHomeMutation({
-      variables: { input: { homeId: firstHome.id } },
-    })
-      .then(result => {
-        // Use pantry from mutation response (eliminates race condition)
-        const returnedPantry =
-          result.data?.markHomeAsDefault?.__typename ===
-          'MarkHomeAsDefaultPayload'
-            ? result.data.markHomeAsDefault.defaultPantry
-            : null;
-        if (returnedPantry?.id && !selectedPantryId) {
-          setSelectedPantryId(returnedPantry.id);
-          logger.debug(
-            '🏠 Set pantry from SetDefaultHome response:',
-            returnedPantry.id,
-          );
-        } else if (!selectedPantryId) {
-          const firstHomePantry =
-            firstHomePantries.find(p => p.isDefault) ?? firstHomePantries[0];
-          if (firstHomePantry?.id) {
-            setSelectedPantryId(firstHomePantry.id);
-            logger.debug(
-              '🏠 Auto-selected first home pantry (fallback):',
-              firstHomePantry.id,
-            );
-          }
-        }
-      })
-      .catch(err => {
-        logger.warn('Failed to set first home as default on server:', err);
-        if (!selectedPantryId) {
-          const firstHomePantry =
-            firstHomePantries.find(p => p.isDefault) ?? firstHomePantries[0];
-          if (firstHomePantry?.id) {
-            setSelectedPantryId(firstHomePantry.id);
-            logger.debug(
-              '🏠 Auto-selected first home pantry (error fallback):',
-              firstHomePantry.id,
-            );
-          }
-        }
-      });
+    syncAsAccountDefault(
+      markAsDefault,
+      setSelectedPantryId,
+      firstHome.id,
+      localDefaultPantry?.id ?? null,
+    );
 
     hasInitializedRef.current = true;
   }, [
@@ -432,50 +454,33 @@ export const useDefaultHome = () => {
     remoteDefaultHomeId,
     setSelectedHomeId,
     setSelectedPantryId,
-    setDefaultHomeMutation,
+    markAsDefault,
   ]);
 
-  // FIRST HOME VIA INVITATION: When a user with no homes accepts their first invitation,
-  // selectedHomeId is set but no server default exists. Sync the accepted home as default.
+  // FIRST HOME VIA INVITATION: a single home is selected but is not the
+  // account default, which is what accepting a first invitation leaves behind.
   useEffect(() => {
     if (!homesList || homesList.length !== 1) return;
     if (!selectedHomeId || selectedHomeId !== homesList[0].id) return;
-    if (remoteDefaultHomeId) return;
+    if (remoteDefaultHomeId && !isDefaultHomeSyncPending(remoteDefaultHomeId)) {
+      return;
+    }
     if (loading || !called) return;
 
-    logger.debug(
-      '🏠 First home via invitation, syncing as server default:',
+    logger.debug('🏠 Syncing first home as account default:', selectedHomeId);
+    syncAsAccountDefault(
+      markAsDefault,
+      setSelectedPantryId,
       selectedHomeId,
+      null,
     );
-
-    setDefaultHomeMutation({
-      variables: { input: { homeId: selectedHomeId } },
-    })
-      .then(result => {
-        const returnedPantry =
-          result.data?.markHomeAsDefault?.__typename ===
-          'MarkHomeAsDefaultPayload'
-            ? result.data.markHomeAsDefault.defaultPantry
-            : null;
-        if (returnedPantry?.id && !selectedPantryId) {
-          setSelectedPantryId(returnedPantry.id);
-          logger.debug(
-            '🏠 Set pantry from SetDefaultHome response:',
-            returnedPantry.id,
-          );
-        }
-      })
-      .catch(err => {
-        logger.warn('Failed to set first invitation home as default:', err);
-      });
   }, [
     homesList,
     selectedHomeId,
-    selectedPantryId,
     remoteDefaultHomeId,
     loading,
     called,
-    setDefaultHomeMutation,
+    markAsDefault,
     setSelectedPantryId,
   ]);
 
@@ -495,8 +500,26 @@ export const useDefaultHome = () => {
     // lets `usePantryQuery` fire on it.
     if (isSelectedPantryStale) return;
 
-    // Case 1: No homes exist - ready with no selection
+    // Case 1: no homes. `errorPolicy: 'ignore'` makes "no homes" and "the list
+    // failed to load" the same empty array, so a selection that this list
+    // cannot convict waits for the refetch below to settle — and no longer.
     if (!homesList || homesList.length === 0) {
+      // Nothing can validate a pantry with no home, and `usePantryQuery` gates
+      // on this flag alone.
+      if (selectedPantryId && !selectedHomeId) {
+        logger.warn(
+          '[HomeSelector] Pantry selected with no home, clearing before ready',
+        );
+        setSelectedPantryId(null);
+        return;
+      }
+
+      if (selectedHomeId) {
+        const refetchSettled =
+          refetchedForHomeIdRef.current === selectedHomeId && !loading;
+        if (!refetchSettled) return;
+      }
+
       if (!isHomeSelectionReady) {
         setIsHomeSelectionReady(true);
       }
@@ -520,10 +543,12 @@ export const useDefaultHome = () => {
     loading,
     homesList,
     selectedHomeId,
+    selectedPantryId,
     isHomeSelectionReady,
     needsClearing,
     isSelectedPantryStale,
     setIsHomeSelectionReady,
+    setSelectedPantryId,
   ]);
 
   // Recovery: if ready but no home selected and homes exist, allow auto-select retry
@@ -546,19 +571,9 @@ export const useDefaultHome = () => {
     needsClearing,
   ]);
 
-  // Picks a home's default pantry from its pantries connection (or the flat
-  // `{ pantries }` shape). Callers holding a `{ home }` query result pass
-  // `result.home`.
-  const getDefaultPantry = (
-    home: HomePantries | FlatHome | null | undefined,
-  ) => {
-    const pantries = pantriesOf(home ?? undefined);
-
-    if (!pantries.length) {
-      return null;
-    }
-    return pantries.find(p => p.isDefault) ?? pantries[0] ?? null;
-  };
+  // Callers holding a `{ home }` query result pass `result.home`.
+  const getDefaultPantry = (home: HomePantries | null | undefined) =>
+    defaultPantryOf(home ?? undefined) ?? null;
 
   // Provide the most appropriate home ID (prefer Zustand store, fallback to remote default)
   // This ensures instant UI updates after mutations while still syncing from server on initial load

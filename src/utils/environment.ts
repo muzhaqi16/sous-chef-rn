@@ -83,51 +83,25 @@ export class Environment {
     return Environment.getConfig().isStaging;
   }
 
-  /**
-   * Check if we're in testing mode
-   */
   static isTesting(): boolean {
     return Environment.getConfig().isTesting;
   }
 
   /**
-   * Whether this build accepts an auth state handed to it through launch
-   * arguments (`simctl launch --args`, `am start --es`).
-   *
-   * A NAMED capability with its own build flag, default off, rather than
-   * something inherited from an environment designation. The property "a build
-   * people receive does not accept an injected session" previously held by
-   * three unrelated mechanisms agreeing — CI writing `NODE_ENV=production` for
-   * prod, `NODE_ENV=staging` for stg, and the `dev` branch writing no NODE_ENV
-   * and being saved only by `__DEV__` being false in a release bundle. None of
-   * them is about this capability, so a build path added later inherits it
-   * silently. `.env` carries `NODE_ENV=development`, which every LOCAL release
-   * variant falls through to, so `isDevelopment()` is not the gate either.
-   *
-   * Set it only for a local measuring build (`MODE=release npm run ios`,
-   * Android `localRelease`). `scripts/check-launch-arg-auth.mjs` fails the
-   * build if it is ever on alongside a production or staging NODE_ENV.
+   * Whether this build accepts an auth state from launch arguments: a NAMED
+   * capability with its own build flag, default off, NOT inherited from a
+   * NODE_ENV (every LOCAL release variant falls through to `development`). Set
+   * it only for a local measuring build; `check-launch-arg-auth.mjs` enforces.
    */
   static allowsLaunchArgAuth(): boolean {
-    // `__DEV__` covers every debug build, including Detox's. It is a
-    // COMPILE-TIME constant that the bundler eliminates from release output,
-    // so it cannot leak the capability into a shipped binary — unlike
-    // `isDevelopment()`, which reads `NODE_ENV` from the bundled env and is
-    // therefore true in a local RELEASE build too. That difference is the
-    // whole reason this gate exists.
-    //
-    // Without this clause the flag had to reach Metro, and for a debug build
-    // Metro is a separate process started by `npm start` that no build command
-    // can hand a variable to — so Detox token injection broke silently: an
-    // ignored launch arg looks exactly like one that was never passed.
-    //
-    // The build flag remains the ONLY way a release build gets the capability.
+    // `__DEV__` covers every debug build, Detox's included, and is a
+    // COMPILE-TIME constant the bundler strips from release output — so unlike
+    // `isDevelopment()` it cannot leak the capability into a shipped binary.
+    // It is also the only way a debug build gets it: Metro is a separate
+    // process no build command can hand a variable to.
     return __DEV__ || env.ALLOW_LAUNCH_ARG_AUTH === 'true';
   }
 
-  /**
-   * Get current platform
-   */
   static getPlatform(): 'ios' | 'android' | 'web' {
     return Environment.getConfig().platform;
   }
@@ -239,18 +213,10 @@ export class Environment {
 }
 
 /**
- * Log-level-gated console wrapper for local/device diagnostics only.
- *
- * This writes to the device console and nothing else — it does NOT reach the
- * telemetry pipeline (Loki/Grafana). It intentionally cannot: the telemetry
- * service imports this module, so routing `logger` through `Telemetry` would
- * create a circular dependency.
- *
- * For anything that must be observable in production (caught errors in
- * mutations, data fetches, action handlers), use
- * `errorService.reportError(error, { operation })` instead — it logs in dev
- * AND forwards to telemetry. Reserve `logger` for developer-facing trace/debug
- * output.
+ * Device console only — this does NOT reach telemetry, and cannot: the telemetry
+ * service imports this module. For anything that must be observable in
+ * production use `errorService.reportError(error, { operation })`, which logs in
+ * dev AND forwards. Reserve `logger` for developer-facing trace output.
  */
 export const logger = {
   debug: (...args: unknown[]) => {

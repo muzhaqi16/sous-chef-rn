@@ -36,13 +36,10 @@ interface AlertMutationFailureOptions {
 }
 
 /**
- * Surfaces a report-item / suggest-edit mutation failure as a single alert. A
- * top-level rate-limit error wins over any payload branch; otherwise a per-flow
- * `extraCases` entry, then the shared not-found / validation / generic branches,
- * resolve their copy under `keyPrefix`.
- *
- * Every `t()` below composes its whole key inline as `<keyPrefix>.<suffix>` —
- * the bare suffixes here and on `extraCases` are never keys on their own.
+ * Surfaces a report-item / suggest-edit failure as a single alert. Top-level
+ * rate-limit wins, then `extraCases`, then the shared not-found / validation /
+ * generic branches. Every `t()` composes `<keyPrefix>.<suffix>` inline — the
+ * bare suffixes are never keys on their own.
  */
 export function alertMutationFailure(
   t: Translate,

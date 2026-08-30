@@ -1,17 +1,9 @@
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
 /**
- * Get the roles that a user can invite to a home based on their own role
- * and the granular `canInviteOthers` permission field.
- *
- * Permission rules (mirrors the API's HomeAccessControl invite check —
- * OWNER/ADMIN may always invite; `canInviteOthers` only escalates MEMBER):
- * - GUEST: Cannot invite anyone (regardless of canInviteOthers)
- * - MEMBER: Can invite if canInviteOthers !== false (only MEMBER role)
- * - ADMIN: Can invite MEMBER or ADMIN (even with canInviteOthers false)
- * - OWNER: Can invite GUEST, MEMBER, or ADMIN (even with canInviteOthers false)
- *
- * Note: OWNER role is reserved for home creators and cannot be assigned via invitation
+ * Mirrors the API's HomeAccessControl invite check: OWNER/ADMIN may always
+ * invite, so `canInviteOthers` gates MEMBER only. OWNER is never invitable — it
+ * is reserved for home creators.
  */
 export function getInvitableRoles(
   userRole: MembershipRole,
@@ -44,10 +36,6 @@ export function getInvitableRoles(
   }
 }
 
-/**
- * Check if a user can invite others to a home based on their role
- * and the granular `canInviteOthers` permission field.
- */
 export function canInviteToHome(
   userRole: MembershipRole,
   canInviteOthers?: boolean,
@@ -55,10 +43,7 @@ export function canInviteToHome(
   return getInvitableRoles(userRole, canInviteOthers).length > 0;
 }
 
-/**
- * Find the current user's membership in a home by matching userId
- * Returns null if the user is not a member
- */
+/** null when the user is not a member. */
 export function findUserMembership(
   members:
     | Array<{ id: string; userId?: string; role: string; status: string }>

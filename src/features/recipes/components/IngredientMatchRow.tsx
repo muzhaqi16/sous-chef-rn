@@ -31,12 +31,9 @@ const BADGE_CONFIG: Record<string, { labelKey: string; color: BadgeColor }> = {
 };
 
 /**
- * The availability badge, owning the `badgeColor` variant and its
- * `useVariants` call.
- *
- * Extracted so the row itself keeps compiling — Unistyles' variant transform
- * makes the React Compiler bail out of the containing function, and this row
- * renders once per recipe ingredient.
+ * Owns the `badgeColor` variant and its `useVariants` call. Extracted so the
+ * row itself keeps compiling: Unistyles' variant transform bails the React
+ * Compiler out of the containing function, and this row renders per ingredient.
  */
 const AvailabilityBadge: React.FC<{
   badgeColor: BadgeColor;

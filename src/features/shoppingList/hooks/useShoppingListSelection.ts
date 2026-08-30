@@ -5,22 +5,10 @@ import type { ShoppingListFromQuery } from './useShoppingListsQuery';
 const EMPTY_DENIED: ReadonlySet<string> = new Set();
 
 /**
- * useShoppingListSelection - Centralized shopping list selection
- *
- * Shows all shopping lists (no home-based filtering).
- * Grouping by home is handled in the UI layer (selector modal).
- *
- * Handles:
- * - Auto-selecting a default list when selection is null
- * - Pending selections: when the user switches to a newly created list that
- *   hasn't appeared in query results yet, the auto-select is suppressed
- * - Stale detection: when a list is removed (subscription/deletion), auto-select fires
- * - Denied lists: ids the caller knows the user can no longer access (a read
- *   returned FORBIDDEN, or null data for a deleted/unshared list) are
- *   excluded from selection so auto-select never re-picks a dead list while its
- *   cache entry lingers.
- *
- * Deletion callers should set selectedShoppingListId to null — auto-select handles the rest.
+ * Selection over ALL the user's lists; grouping by home is the selector modal's
+ * job. Auto-select fills a null selection (so a delete just sets the id to
+ * null); a PENDING id — created but not yet in query results — suppresses it,
+ * and a DENIED id (FORBIDDEN read, or null data) is excluded for good.
  */
 export function useShoppingListSelection(
   allLists: ShoppingListFromQuery[],
@@ -35,26 +23,23 @@ export function useShoppingListSelection(
     ? allLists.filter(l => !deniedListIds.has(l.id))
     : allLists;
 
-  // Default: first with isDefault flag, or first list
   const defaultList = lists.find(list => list.isDefault) || lists[0];
 
   const isInLists =
     !!selectedShoppingListId &&
     lists.some(l => l.id === selectedShoppingListId);
 
-  // --- Pending selection tracking ---
-  // When the user explicitly switches from one list to another (e.g., creates a new
-  // list), the target may not be in query results yet. We track this as "pending" so
-  // the auto-select effect doesn't override it.
-  // Uses "adjusting state during render" pattern per project conventions.
+  // An explicit switch (creating a list, say) can target a list the query results
+  // do not hold yet; tracking it as pending stops auto-select overriding it.
+  // Adjusting state during render, not an effect.
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [prevSelectedId, setPrevSelectedId] = useState(selectedShoppingListId);
 
   if (selectedShoppingListId !== prevSelectedId) {
     setPrevSelectedId(selectedShoppingListId);
-    // Only mark pending for explicit list switches (non-null → non-null, target not
-    // yet in results). Null → non-null (hydration/bootstrap) and anything → null
-    // (deletion) are NOT pending, preserving stale-ID correction and auto-select.
+    // Only non-null → non-null is a switch. Null → non-null (hydration) and
+    // anything → null (deletion) must stay non-pending, or stale-id correction
+    // and auto-select never run.
     if (
       prevSelectedId !== null &&
       selectedShoppingListId !== null &&
@@ -71,10 +56,8 @@ export function useShoppingListSelection(
     setPendingId(null);
   }
 
-  // Derive currentListId: use selected if valid, otherwise use default
   const currentListId = isInLists ? selectedShoppingListId : defaultList?.id;
 
-  // Current list object
   const currentList =
     lists.find(list => list.id === currentListId) || defaultList;
 
@@ -96,11 +79,9 @@ export function useShoppingListSelection(
     }
   }, [lists, selectedShoppingListId, pendingId, setSelectedShoppingListId]);
 
-  // PERF: Trust persisted Zustand ID for queries before lists finish loading.
-  // This breaks the query waterfall: detail/items queries fire immediately
-  // instead of waiting for GetShoppingListsLite to resolve first.
-  // If the ID is stale (list was deleted), the detail query returns null
-  // and we fall back to the default list reactively via the auto-select effect.
+  // The persisted id is trusted before the lists load, so the detail/items
+  // queries need not wait on GetShoppingListsLite. A stale id reads as null data
+  // and the auto-select effect falls back to the default list.
   const optimisticListId = selectedShoppingListId ?? currentListId;
 
   return {

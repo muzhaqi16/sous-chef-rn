@@ -1,23 +1,18 @@
 import { DocumentNode } from 'graphql';
 import type { DefaultContext, OperationVariables } from '@apollo/client';
 
-/**
- * Status of a queued mutation
- */
 export enum QueueStatus {
-  PENDING = 'pending', // Waiting to be processed
-  PROCESSING = 'processing', // Currently being sent to server
-  FAILED = 'failed', // Failed after retries (network/server error)
-  AUTH_ERROR = 'auth_error', // Failed due to authentication issues
-  SUCCESS = 'success', // Successfully processed (kept briefly for reconciliation)
+  PENDING = 'pending',
+  PROCESSING = 'processing',
+  FAILED = 'failed',
+  AUTH_ERROR = 'auth_error',
+  SUCCESS = 'success', // Kept briefly after replay, for reconciliation.
 }
 
 /**
- * Thrown by `queueStore.addMutation` when the queue is at capacity and holds no
- * terminal (SUCCESS/FAILED) entry to evict — i.e. it is full of un-synced work.
- * Rejecting the enqueue is deliberate: silently dropping the oldest PENDING op
- * would break create→update dependency chains. Callers can surface this as a
- * "too many unsynced changes" message.
+ * The queue is at capacity with nothing terminal to evict — full of un-synced
+ * work. Refusing the enqueue is deliberate: dropping the oldest PENDING op
+ * instead would break create→update dependency chains.
  */
 export class QueueCapacityError extends Error {
   constructor(
@@ -28,9 +23,6 @@ export class QueueCapacityError extends Error {
   }
 }
 
-/**
- * Error information for failed mutations
- */
 export interface QueueError {
   type: 'network' | 'auth' | 'server' | 'unknown';
   message: string;
@@ -39,38 +31,27 @@ export interface QueueError {
   retryable: boolean;
 }
 
-/**
- * A queued mutation waiting to be processed
- */
 export interface QueuedMutation {
-  // Identification
-  id: string; // UUID for tracking
-  userId: string; // User who created the mutation (critical for auth)
-  operationName: string; // GraphQL operation name for debugging
+  id: string; // UUID of the queue entry itself, not of any entity.
+  userId: string; // Scopes replay; a queue is never drained for another user.
+  operationName: string;
 
-  // Mutation details
-  mutation: DocumentNode; // GraphQL mutation document
-  variables: OperationVariables; // Mutation variables
-  context?: DefaultContext; // Allowlisted replay context (localFirst)
+  mutation: DocumentNode;
+  variables: OperationVariables;
+  context?: DefaultContext; // Allowlisted replay context (localFirst only).
 
-  // Status tracking
   status: QueueStatus;
-  createdAt: number; // Timestamp when added to queue
-  updatedAt: number; // Last status update timestamp
-  processedAt?: number; // When successfully processed
+  createdAt: number;
+  updatedAt: number;
+  processedAt?: number;
 
-  // Retry logic
-  retryCount: number; // Number of retry attempts
-  maxRetries: number; // Maximum retries before marking as failed
-  lastError?: QueueError; // Last error encountered
+  retryCount: number;
+  maxRetries: number;
+  lastError?: QueueError;
 
-  // Auth
-  requiresAuth: boolean; // Whether mutation requires authentication
+  requiresAuth: boolean;
 }
 
-/**
- * Statistics about the mutation queue
- */
 export interface QueueStats {
   total: number;
   pending: number;
@@ -80,49 +61,34 @@ export interface QueueStats {
   oldestMutationAge?: number; // Age of oldest pending mutation in ms
 }
 
-/**
- * Configuration for the queue manager. (Queue size is bounded in queueStore;
- * per-mutation max retries ride on each QueuedMutation.)
- */
+/** Queue size is bounded in queueStore; max retries ride on each mutation. */
 export interface QueueConfig {
-  retryDelayMs: number; // Delay between retries (with exponential backoff)
-  processingTimeoutMs: number; // Timeout for individual mutation processing
+  retryDelayMs: number; // Base for the exponential backoff.
+  processingTimeoutMs: number;
 }
 
-/**
- * Result of processing a queued mutation
- */
 export interface ProcessingResult {
   success: boolean;
   mutationId: string;
   error?: QueueError;
   serverResponse?: Record<string, unknown>;
-  // Set when a transient (network/server) error returned the mutation to
-  // PENDING. Signals the drain loop to stop rather than replay later
-  // mutations ahead of this un-synced one.
+  // A transient error returned the mutation to PENDING: the drain loop must
+  // stop rather than replay later mutations ahead of this un-synced one.
   deferred?: boolean;
 }
 
-/**
- * Information about a permanently failed mutation, passed to the failure handler
- */
 export interface FailedMutationInfo {
   mutationId: string;
   operationName: string;
   entityType: string | null;
   entityId: string | null;
   /**
-   * The refused write's own variables. The generic withdrawal is an evict of
-   * `entityType`/`entityId`, which covers a create — the entity only ever
-   * existed locally. An operation that also UNLINKED something (a move, which
-   * takes a row out of one parent) needs its own withdrawal, and that
-   * withdrawal needs to know which row.
+   * The refused write's own variables. The generic evict of
+   * `entityType`/`entityId` covers a create; an operation that also UNLINKED
+   * something needs its own withdrawal, which needs to know which row.
    */
   variables: OperationVariables;
   error: QueueError;
 }
 
-/**
- * Callback invoked when a mutation permanently fails after exhausting retries
- */
 export type FailureHandler = (info: FailedMutationInfo) => void;

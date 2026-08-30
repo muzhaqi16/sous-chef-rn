@@ -6,10 +6,6 @@ import type { IconName, IconLibrary, IconTone } from '#utils/iconUtils';
 
 const ThemedActivityIndicator = withUnistyles(ActivityIndicator);
 
-/**
- * Semantic color variants for header actions
- * Maps to theme colors for consistent styling
- */
 export type ActionVariant =
   | 'default'
   | 'primary'
@@ -19,36 +15,27 @@ export type ActionVariant =
   | 'warning';
 
 /**
- * One action rendered in a screen-level action bar. The contract is shared by
- * every bar renderer — `Header` (flat icons with badge / spotlight support)
- * and `CollapsingHeroDetail` (circular chips) — and `HeaderActionIcon` below
- * is the single icon/spinner renderer both consume, so color precedence and
- * loading/disabled treatment cannot drift between bars.
+ * One action in a screen-level action bar, shared by every bar renderer
+ * (`Header`, `CollapsingHeroDetail`) so color precedence and loading/disabled
+ * treatment cannot drift between them.
  */
 export interface HeaderAction {
   icon: IconName;
   onPress: () => void;
-  /** Semantic color variant (maps to theme colors) */
   variant?: ActionVariant;
-  /** Direct color override (takes precedence over tone and variant) */
+  /** Beats `tone` and `variant`. */
   color?: string;
-  /** Theme tone for the icon (takes precedence over variant) */
+  /** Beats `variant`. */
   tone?: IconTone;
-  /** Disable the action */
   disabled?: boolean;
-  /** Show loading spinner instead of icon */
   loading?: boolean;
-  /** Accessibility label for screen readers */
   accessibilityLabel?: string;
-  /** Badge count to display (Header bars) */
+  /** Header bars only. */
   badge?: number;
-  /** Icon size (default: renderer-specific) */
   size?: number;
-  /** Icon library */
   library?: IconLibrary;
-  /** Test ID for automation */
   testID?: string;
-  /** Layout measurement callback for positioning spotlight tutorials */
+  /** Layout measurement for positioning spotlight tutorials. */
   onMeasure?: (rect: {
     x: number;
     y: number;
@@ -96,11 +83,9 @@ interface HeaderActionIconProps {
 }
 
 /**
- * The icon-or-spinner of a HeaderAction, with the shared appearance rules:
- * disabled renders tertiary; explicit `color` beats `tone` beats `variant`;
- * the loading spinner takes the same resolved color. Theme colors resolve
- * through withUnistyles so they stay live across theme changes without
- * re-rendering the parent bar.
+ * Shared appearance rules: disabled renders tertiary, `color` beats `tone` beats
+ * `variant`, the spinner takes the same resolved color. Colors resolve through
+ * withUnistyles so a theme change doesn't re-render the parent bar.
  */
 export const HeaderActionIcon: React.FC<HeaderActionIconProps> = ({
   action,

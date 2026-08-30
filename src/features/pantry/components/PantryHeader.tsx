@@ -16,27 +16,20 @@ const ICON_SIZE_LG = 18;
 // has to subtract this from the ring's corner radius, so the two live together.
 const AVATAR_BORDER_WIDTH = 2;
 
-// Sentinel used to split a translated greeting around the user's name without
-// false matches if the name itself appears in the surrounding text.
+// Splits a translated greeting around the user's name without false matches
+// when the name also appears in the surrounding text.
 const GREETING_NAME_TOKEN = 'NAME';
 
 interface PantryHeaderProps {
-  /** User's display name */
   /** Omitted when the account has no name yet — see `greetingNoName`. */
   userName?: string;
-  /** Current household name */
   householdName: string;
-  /** Optional avatar URL */
   avatarUrl?: string | null;
-  /** Number of unread notifications */
   notificationCount?: number;
-  /** Callback when avatar is pressed */
   onAvatarPress?: () => void;
-  /** Callback when household badge is pressed */
   onHomePress?: () => void;
-  /** Callback when notification bell is pressed */
   onNotificationPress?: () => void;
-  /** Callback with screen-coordinate rect when the home badge lays out */
+  /** Screen-coordinate rect, measured after native layout settles. */
   onHomeBadgeLayout?: (rect: {
     x: number;
     y: number;
@@ -45,14 +38,6 @@ interface PantryHeaderProps {
   }) => void;
 }
 
-/**
- * PantryHeader - Greeting row with user info and avatar
- *
- * Displays:
- * - Personalized greeting with user name
- * - Household badge with name and navigation
- * - Avatar with optional notification badge
- */
 export const PantryHeader: React.FC<PantryHeaderProps> = ({
   userName,
   householdName,
@@ -66,9 +51,8 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
   const { t } = useTranslation();
   const badgeRef = useRef<View>(null);
 
-  // With no name to show, use a whole greeting written for that case rather
-  // than interpolating a filler word into the named one — "Hello, there!"
-  // does not translate ("¡Hola, hola!").
+  // A whole greeting written for the no-name case, not a filler word
+  // interpolated into the named one — "Hello, there!" does not translate.
   const greetingTemplate = userName
     ? t('pantryHeader.greeting', { name: GREETING_NAME_TOKEN })
     : t('pantryHeader.greetingNoName');
@@ -108,7 +92,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
             style={styles.householdBadgeInner}
             onLayout={() => {
               if (onHomeBadgeLayout) {
-                // Delay measurement to ensure Android native layout is settled
+                // Android native layout has to settle before measuring.
                 requestAnimationFrame(() => {
                   badgeRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
                     if (w > 0 && h > 0) {
@@ -166,11 +150,9 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
         accessibilityRole="button"
       >
         {avatarUrl ? (
-          // Border lives on this wrapper View (auto-patched by the Unistyles
-          // babel plugin) instead of on the inner CachedImage — TurboImage is
-          // a third-party native component whose `style` prop isn't subscribed
-          // to ShadowTree updates, so a primary-color border there goes stale
-          // on App Color changes.
+          // Border on this wrapper View, not the inner CachedImage: TurboImage's
+          // `style` prop isn't ShadowTree-subscribed, so a primary-color border
+          // there goes stale on App Color changes.
           <View style={styles.avatarBorder}>
             <CachedImage
               uri={avatarUrl}
@@ -207,13 +189,9 @@ const styles = StyleSheet.create(theme => ({
   },
   greeting: {
     fontSize: theme.typography.fontSize['2xl'] + 2,
-    // Leading has to come with the font size. `Text` gives a size its own
-    // leading only when it is chosen through the `size` PROP; setting
-    // `fontSize` in a style leaves the variant's line box in place — here the
-    // `body` default's 24 — so 26px glyphs are clipped top and bottom. In
-    // English that trims nothing visible; in a locale with diacritics above the
-    // cap height it eats them, which is how "Përshëndetje" lost the dots on
-    // both of its ë.
+    // Leading must come with the font size: `Text` only pairs the two via its
+    // `size` PROP, so a style-set `fontSize` keeps the variant's line box and
+    // clips glyphs — visible on diacritics above the cap height.
     lineHeight: theme.typography.lineHeight.loose,
     color: theme.colors.textPrimary,
   },
@@ -241,9 +219,8 @@ const styles = StyleSheet.create(theme => ({
     width: 10,
     height: 10,
     borderRadius: theme.radii.full,
-    // Accent (primary) so the unread dot tracks the user's App Color instead of
-    // always being red. It's a standalone host View, so the ShadowTree pushes
-    // the color update on theme/App-Color change without a re-render.
+    // Primary so the unread dot tracks the user's App Color; a standalone host
+    // View, so the ShadowTree pushes the change without a re-render.
     backgroundColor: theme.colors.primary,
     borderWidth: 2,
     borderColor: theme.colors.background,
@@ -262,8 +239,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // RN View — auto-bound to the ShadowTree so the primary-color border
-  // updates instantly on App Color changes.
+  // RN View, so the ShadowTree updates the border on App Color changes.
   avatarBorder: {
     width: 48,
     height: 48,

@@ -14,17 +14,13 @@ import { QueueCapacityError } from './types';
 import { QueuedMutation, QueueStatus } from './types';
 
 /**
- * Why a mutation was queued instead of fired. Carried on the queued result as
- * `extensions.queuedReason` so `networkStatusLink` can tell a REAL network
- * failure (`'network-error'` — evidence the API is unreachable) from a
- * preemptive queue decision (`'offline'` / `'api-unreachable'` — the mutation
- * never touched the network, so it proves nothing about the API).
+ * Rides the queued result as `extensions.queuedReason` so `networkStatusLink`
+ * can tell a REAL network failure (`'network-error'`, evidence the API is
+ * unreachable) from a preemptive queue decision, which never touched the wire.
  */
 export type QueuedReason = 'offline' | 'api-unreachable' | 'network-error';
 
-/**
- * Operations that should never be queued (even when offline)
- */
+/** Never queued, even offline. */
 const NEVER_QUEUE_OPERATIONS = [
   'RefreshToken',
   'Login',
@@ -35,44 +31,22 @@ const NEVER_QUEUE_OPERATIONS = [
 ];
 
 /**
- * Queue Link - Intercepts mutations and queues them for replay.
- *
- * Behavior:
- * - **Offline** (`isOnline === false`): queue immediately and complete without
- *   hitting the network — but ONLY for mutations on the replay allowlist:
- *   `context.localFirst` opt-ins (their hooks wrote the change to the cache
- *   permanently and treat the queued result as success) or operations with a
- *   `Sync*` replay mapping (idempotent upserts, safe even without the opt-in).
- *   Every other mutation fails fast with a network error so its hook surfaces
- *   an HONEST failure — queueing it would show a failure toast and then
- *   ghost-execute the change on reconnect (reviews, invites, etc.).
- * - **Online but the request fails with a NETWORK error** (API unreachable while
- *   the device still reports "online" — API down, timeout, captive portal): queue
- *   the mutation for replay instead of surfacing the error — but ONLY for the same
- *   replay allowlist as the offline path (`context.localFirst` opt-ins or
- *   `Sync*`-mapped idempotent operations). Un-migrated mutations keep their
- *   current behavior (blocking alert + revert). Creates are safe to queue because
- *   each carries a client-generated permanent id (CUID2) as its primary key, so
- *   a re-sent create resolves to the same row server-side (find-by-id → update)
- *   rather than duplicating — see docs/local-first-architecture.md.
- * - **Online + success / GraphQL (non-network) error**: pass through normally so
- *   real validation/permission errors still reach the hook.
- * - Auth-aware (associates mutations with the current user) and idempotent
- *   (skips replays via `skipQueueLink`).
+ * Intercepts mutations and queues them for replay, but only those on the
+ * `replayable` allowlist below: queuing anything else would toast a failure and
+ * then ghost-execute the change on reconnect. A re-sent create is safe — its
+ * client-minted CUID2 primary key resolves server-side to the same row.
  */
 export const createQueueLink = () => {
   return new ApolloLink((operation, forward) => {
-    // Only process mutations
     if (!isMutation(operation)) {
       return forward(operation);
     }
 
-    // Skip if explicitly told to skip queue (for replays)
+    // `skipQueueLink` is how a replay avoids re-queuing itself.
     if (operation.getContext().skipQueueLink) {
       return forward(operation);
     }
 
-    // Skip operations that should never be queued
     if (
       operation.operationName &&
       NEVER_QUEUE_OPERATIONS.includes(operation.operationName)
@@ -82,25 +56,20 @@ export const createQueueLink = () => {
 
     const state = useStore.getState();
     const localFirst = operation.getContext().localFirst === true;
-    // Replay allowlist: local-first opt-ins (their hooks already wrote the change
-    // to the cache and treat the queued result as success) and Sync*-mapped
-    // operations (idempotent upserts, safe to auto-replay even without the
-    // opt-in). Applied identically to the offline and breaker-open paths below.
+    // Replay allowlist: local-first opt-ins (their hooks already wrote the
+    // change to the cache and read the queued result as success) plus
+    // Sync*-mapped idempotent upserts, which are safe without the opt-in.
     const replayable =
       localFirst || hasSyncMapping(operation.operationName ?? '');
 
-    // Device offline — queue only mutations on the replay allowlist. Anything
-    // else fails fast with a network-shaped error (instant honest toast, no
-    // doomed request, and no ghost replay on reconnect).
     if (shouldTreatAsOffline(state)) {
       if (!replayable) {
         logger.info(
           `Queue Link: Offline, rejecting online-only mutation ${operation.operationName}`,
         );
         return new Observable(observer => {
-          // A named error so the reachability breaker and network-error
-          // telemetry can skip it — this preemptive rejection never touched the
-          // network and proves nothing about the API.
+          // Named so the reachability breaker and network-error telemetry skip
+          // it: this rejection never touched the wire and proves nothing.
           observer.error(new OfflineRejectedError(operation.operationName));
         });
       }
@@ -112,10 +81,8 @@ export const createQueueLink = () => {
       });
     }
 
-    // API unreachable while the device is online (reachability circuit breaker
-    // open) — queue replay-allowlisted mutations immediately instead of firing a
-    // doomed request, matching the offline path. Everything else falls through
-    // and fires (and surfaces its error) as before; it isn't safe to auto-replay.
+    // Breaker open while the device is online: queue instead of firing a doomed
+    // request. Everything else falls through and surfaces its own error.
     if (state.apiReachable === false && replayable) {
       logger.info(
         `Queue Link: API unreachable, queuing replayable mutation ${operation.operationName}`,
@@ -125,27 +92,22 @@ export const createQueueLink = () => {
       });
     }
 
-    // Online — pass through, UNLESS the mutation opts into local-first. Without
-    // the opt-in we keep current behavior (so un-migrated mutations and creates
-    // are unaffected).
     if (!localFirst) {
       return forward(operation);
     }
 
-    // Local-first online path: forward, but fall back to queuing on a genuine
-    // network failure (no result received) so the change replays later instead
-    // of erroring out. A GraphQL/validation error (or any result) propagates
-    // normally.
+    // Local-first online: forward, but fall back to queuing on a genuine network
+    // failure (no result received) so the change replays later. Any result — a
+    // GraphQL or validation error included — propagates normally.
     return new Observable(observer => {
       let received = false;
       const subscription = forward(operation).subscribe({
         next: result => {
           received = true;
           observer.next(result);
-          // A successful network response proves the API is reachable — drain any
-          // queued local-first changes now. Covers the API-down-while-"online"
-          // recovery case the offline→online trigger misses (isOnline never
-          // flipped). Debounced + no-ops when the queue is empty.
+          // Proof the API is reachable, covering the API-down-while-online
+          // recovery the offline→online trigger misses. Debounced, and a no-op
+          // on an empty queue.
           queueManager.requestDrain();
         },
         error: error => {
@@ -166,11 +128,9 @@ export const createQueueLink = () => {
 };
 
 /**
- * Enqueue a mutation and complete the observable with a null-field result
- * (marked `queued`) — the UI change comes from the hook's own permanent cache
- * write, made before firing (the house local-first pattern; Apollo's
- * `optimisticResponse` is never used here and never reaches link context).
- * Shared by the offline and online-network-error paths.
+ * Enqueues, then completes with a null-field result marked `queued`. The UI
+ * change comes from the hook's own permanent cache write made before firing;
+ * Apollo's `optimisticResponse` is never used here and never reaches a link.
  */
 function enqueueAndComplete(
   operation: ApolloLink.Operation,
@@ -210,11 +170,9 @@ function enqueueAndComplete(
       queueStore.addMutation(queuedMutation);
     } catch (error) {
       if (!(error instanceof QueueCapacityError)) throw error;
-      // The local-first cache write has already landed — that is the whole
-      // pattern: write, then fire. With the enqueue refused, the change is on
-      // screen and in the persisted cache with nothing that will ever send it.
-      // Withdraw it the same way a refused replay is withdrawn, so the user
-      // sees it undone rather than trusting a change that will never sync.
+      // The local-first cache write already landed (write, then fire), so a
+      // refused enqueue leaves the change on screen with nothing to send it.
+      // Withdraw it as a refused replay would be.
       queueManager.withdrawUnqueueableWrite(queuedMutation, {
         type: 'unknown',
         message: 'Offline queue is full — change could not be queued',
@@ -225,12 +183,9 @@ function enqueueAndComplete(
       return;
     }
 
-    // Apollo writes a mutation's result into the cache against its selection set.
-    // A bare `null`/`{}` result makes InMemoryCache warn "Missing field <field>
-    // while writing result {}", so emit each top-level field as `null` instead —
-    // a present-but-null field is a valid, quiet write (Apollo doesn't recurse
-    // into the unselected subfields). The actual UI change comes from each hook's
-    // own optimistic cache write; the `queued` extension marks this as deferred.
+    // Apollo writes a mutation result against its selection set, and a bare
+    // `null`/`{}` makes InMemoryCache warn "Missing field <field>". A
+    // present-but-null top-level field is a valid, quiet write instead.
     observer.next({
       data: buildQueuedResultData(operation.query),
       errors: undefined,
@@ -245,14 +200,10 @@ function enqueueAndComplete(
 }
 
 /**
- * The only context key a replay reads is `localFirst` (marks the entry as an
- * opt-in). Idempotency for granular pantry deltas now rides on
- * `input.idempotencyKey` inside the persisted variables, not on the context, so
- * there's nothing else to carry here. The full Apollo operation context also
- * carries client internals that don't survive persistence — functions are
- * silently dropped by JSON serialization, and a circular value would make the
- * MMKV write throw inside `saveQueue`, silently losing the enqueue. Persist only
- * the fixed, serializable subset.
+ * `localFirst` is the only context key a replay reads — idempotency rides on
+ * `input.idempotencyKey` in the variables. Persisting the full Apollo context
+ * would carry client internals that JSON silently drops, and a circular value
+ * makes the MMKV write throw inside `saveQueue`, losing the enqueue.
  */
 function pickPersistedContext(context: DefaultContext): DefaultContext {
   const persisted: DefaultContext = {};
@@ -263,10 +214,8 @@ function pickPersistedContext(context: DefaultContext): DefaultContext {
 }
 
 /**
- * Build a queued mutation's result `data`: each top-level field set to `null`.
- * See the call site for why a present-but-null field is required (avoids Apollo's
- * "Missing field" cache-write warning). The classifier treats a `null` payload
- * field as "queued" and a non-null non-success payload as "rejected".
+ * Each top-level field set to `null` — see the call site. The classifier reads
+ * a null payload field as "queued", a non-null non-success one as "rejected".
  */
 function buildQueuedResultData(query: DocumentNode): Record<string, null> {
   const definition = getMainDefinition(query);
@@ -281,9 +230,6 @@ function buildQueuedResultData(query: DocumentNode): Record<string, null> {
   return data;
 }
 
-/**
- * Check if operation is a mutation
- */
 function isMutation(operation: { query: DocumentNode }): boolean {
   const definition = getMainDefinition(operation.query);
   return (

@@ -1,11 +1,7 @@
 /**
- * useDeleteShoppingList - Delete a shopping list (local-first).
- *
- * Removes the list from the cache BEFORE firing (overview edge + entity), so
- * the deletion sticks when the request is queued offline — the replay deletes
- * server-side, and a duplicate replay surfaces as NotFound, which the queue
- * drops. A server rejection restores the snapshotted list (its items
- * repopulate on the next visit's refetch).
+ * Local-first: the list leaves the cache PERMANENTLY before firing, so the delete
+ * survives an offline queue — a duplicate replay surfaces as NotFound, which the
+ * queue drops. A rejection restores the snapshot (items repopulate on refetch).
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -25,9 +21,8 @@ export function useDeleteShoppingList() {
 
   const [mutate, { loading }] = useMutation(DeleteShoppingListDocument, {
     onError: error => {
-      // Resolved from the error's CODE, never from the server's message — that
-      // text is English by construction and would reach every non-English user
-      // verbatim, under a translated title.
+      // Resolved from the error's CODE: the server's `message` is unlocalizable
+      // English by construction and must never be displayed.
       toastService.error(
         localizedErrorMessage(error, t('errors.deleteShoppingListFailed')),
       );
@@ -38,8 +33,6 @@ export function useDeleteShoppingList() {
     // Snapshot first so a server rejection can restore the list.
     const snapshot = readShoppingListSnapshot(client.cache, id);
 
-    // Local-first: remove from the cache BEFORE firing, so the deletion is
-    // visible immediately and survives an offline queue.
     try {
       removeShoppingListFromCache(client.cache, id);
     } catch (cacheError) {
@@ -60,9 +53,8 @@ export function useDeleteShoppingList() {
       });
     }
 
-    // 'queued' (null payload, no error) keeps the removal — the delete replays
-    // later. A rejection restores the snapshot; without one (incomplete cache
-    // copy) the next overview refetch restores the authoritative state.
+    // 'queued' (null payload, no error) keeps the removal and replays later. A
+    // rejection restores the snapshot, or the next overview refetch does.
     const rejected = classifyCreateResult(result) === 'rejected';
     if (rejected && snapshot) {
       try {

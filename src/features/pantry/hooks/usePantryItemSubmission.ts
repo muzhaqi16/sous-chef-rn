@@ -302,13 +302,9 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       },
       client.cache,
     );
-    // The detail screens read a wider fragment than the list does, so the
-    // optimistic entity has to be materialized for both or a freshly added row
-    // dead-ends the moment it is tapped. Built out here for the same reason as
-    // the entity above: value blocks inside a try body bail the compiler.
-    // `brand` is a free-text name (the server mints the Brand) and `store` has
-    // no name at this call site, so both stay null and the detail query fills
-    // them in on acknowledgement.
+    // The detail screens read a wider fragment than the list, so the optimistic
+    // entity is materialized for both or a fresh row dead-ends on tap. Built out
+    // here because a value block inside a try body bails the compiler.
     const detailStubFields = {
       itemName: itemName.trim(),
       condition,
@@ -333,11 +329,9 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       try {
         addToPantryItemsCache(client.cache, pantryId, optimisticItem);
         writePantryItemDetailStub(client.cache, id, detailStubFields);
-        // Beside the optimistic row, not in the mutation's `update:` callback:
-        // that callback only runs with a server payload, so offline the row
-        // appeared while the header kept the old count. This is the add path the
-        // AddToPantry sheet actually uses — `useCreatePantryItem` is a separate
-        // entry point with its own copy of this.
+        // Beside the optimistic row, not in the mutation's `update:` callback
+        // — that callback only runs with a server payload, so offline the row
+        // would appear while the header kept the old count.
         adjustPantryItemCount(client.cache, pantryId, 1);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
@@ -471,15 +465,10 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
             );
             return;
           }
-          // `alertIfRejected`, not a bare payload-typename check: a retry
-          // reusing this id after the first attempt did commit (a lost
-          // response) comes back as ConflictError(IDEMPOTENT_REPLAY), which the
-          // contract says to treat as a successful no-op — a typename check
-          // calls that a failure. It also keeps the row when the create was
-          // queued rather than answered, and routes a ValidationError's `field`
-          // to localized copy. `alertIfRejected` rather than
-          // `alertRejectedMutation` because this mutation has no `onError`, so
-          // the resolved-`error` case would otherwise go unreported.
+          // `alertIfRejected`, not a payload-typename check: a retry whose first
+          // attempt did commit answers ConflictError(IDEMPOTENT_REPLAY), a
+          // successful no-op. Not `alertRejectedMutation` either — this mutation
+          // has no `onError`, so the resolved-`error` case would go unreported.
           if (alertIfRejected(retryResult, t('errors.addItemFailedRetry'))) {
             revertOptimisticItem();
             return;

@@ -62,14 +62,10 @@ import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle'
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 
 /**
- * Outer component that gates heavy work behind DeferredScreen.
- * Skeleton paints instantly; MealPlanMainInner mounts on the deferred re-render.
- *
- * Uses `tGlobal` (i18next instance directly) instead of `useTranslation()` so this
- * wrapper does not subscribe to language changes. Subscribing here would re-render
- * the wrapper just to flip skeleton labels that MealPlanMainInner replaces on
- * mount anyway, defeating the point of the deferred split. All translations inside
- * MealPlanMainInner go through `t` from `useTranslation()`.
+ * Gates the heavy work behind DeferredScreen: the skeleton paints instantly and
+ * MealPlanMainInner mounts on the deferred re-render. `tGlobal` here on purpose
+ * — subscribing to language changes would re-render this wrapper to flip
+ * skeleton labels the inner screen replaces anyway.
  */
 export const MealPlanMain: React.FC = () => (
   <DeferredScreen
@@ -157,8 +153,8 @@ const MealPlanMainInner: React.FC = () => {
   // so an online, plan-less header doesn't emit an empty action row.
   const isOfflineVisible = useIsOfflineBannerVisible();
 
-  // Resolve the active plan and fetch it. Owns the fallback when the selected
-  // plan turns out to be gone or no longer shared with this user.
+  // Resolves and fetches the active plan, and owns the fallback when the
+  // selected one turns out to be deleted or unshared.
   const {
     activePlanId,
     mealPlan: activeMealPlan,

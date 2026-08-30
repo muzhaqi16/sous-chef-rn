@@ -197,16 +197,10 @@ export function useHybridSearch<TQuery, TItem extends { id: string }>(
     let cancelled = false;
 
     const run = async () => {
-      // `result.data ?? null` is deliberately OUTSIDE the try: the React
-      // Compiler bails out of the whole hook when a `??`/`?.`/ternary appears
-      // inside a try block ("Support value blocks … within a try/catch
-      // statement"). Keeping the try body to plain statements keeps this hook
-      // compiled. See scripts/probe-compiler-try-forms.mjs.
-      // PARAMETERIZED on TQuery. `ReturnType<typeof client.query>` is the
-      // un-instantiated return, whose `TData` defaults to `unknown` — the
-      // annotation on `data` below then narrowed that with no check of what the
-      // document actually returns, so `extractItems` was typed against a shape
-      // nothing verified.
+      // `result.data ?? null` stays OUTSIDE the try: a value block (`??`/`?.`/
+      // ternary) inside one bails the React Compiler out of the whole hook.
+      // Parameterized on TQuery — `ReturnType<typeof client.query>` defaults
+      // `TData` to `unknown`, which would type `extractItems` against nothing.
       let result: ApolloClient.QueryResult<TQuery> | undefined;
       try {
         // The document is a plain `DocumentNode` here (callers pass concrete

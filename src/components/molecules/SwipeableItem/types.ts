@@ -8,13 +8,9 @@ export type SwipeableRef = React.RefObject<ComponentRef<
 > | null>;
 
 /**
- * One revealed action on a swipeable row.
- *
- * A descriptor rather than a named callback: this component used to take seven
- * (`onConsume`, `onWaste`, `onRestock`, `onTogglePurchase`, …) plus a
- * `swipeMode: 'shopping' | 'pantry'`, with the icon for each verb hardcoded in
- * the action components. Adding an action to a new screen — or a new app — meant
- * editing this molecule. Now the caller says what its actions are.
+ * One revealed action on a swipeable row. A DESCRIPTOR, never a named callback:
+ * the caller declares its own verbs, so a new action never means editing this
+ * molecule.
  */
 export interface SwipeAction {
   /** Stable identity. Doubles as the accessibility action name. */
@@ -24,28 +20,19 @@ export interface SwipeAction {
   labelKey: string;
   onPress: () => void;
   testID?: string;
-  /**
-   * Fire a light haptic before the press. Defaults to true.
-   *
-   * The pantry's consume/waste/restock actions pass `false` — they have never
-   * buzzed, unlike edit/delete/toggle-purchase. Preserved as a per-action
-   * choice rather than silently unified.
-   */
+  /** Light haptic before the press; default true. Per-action on purpose — the
+   *  pantry's consume/waste/restock pass `false`. */
   haptic?: boolean;
   /**
-   * This action removes the row, so a card that animates removals should slide
-   * out before running it.
-   *
-   * Read by the ROW renderer (`ItemCard`, `SortableItem`), not by
-   * `SwipeableItem` — the swipe molecule has no opinion about what an action
-   * does to the list around it.
+   * The action removes the row, so an animating card slides out before running it.
+   * Read by the ROW renderer (`ItemCard`, `SortableItem`), never by `SwipeableItem`.
    */
   removesRow?: boolean;
 }
 
 export interface SwipeableItemProps {
   children: React.ReactNode;
-  /** Item ID for FlashList recycling reset — closes swipeable when cell is reused */
+  /** Drives the FlashList recycling reset — closes the swipeable on cell reuse. */
   itemId?: string;
   onPress?: () => void;
   onLongPress?: () => void;
@@ -60,12 +47,8 @@ export interface SwipeableItemProps {
   onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   onSwipeableClose?: () => void;
   testIDPrefix?: string;
-  /** Disables swipe gestures when false (e.g. during tutorial spotlight steps) */
   enabled?: boolean;
-  /**
-   * Horizontal travel (dp) before the row starts following the finger. Raise it
-   * if scrolling still opens rows; lower it for a more eager swipe.
-   */
+  /** Horizontal travel (dp) before the row follows the finger. */
   dragOffset?: number;
 }
 
@@ -81,16 +64,10 @@ export interface ActionButtonProps {
 }
 
 /**
- * Builds the swipe actions for one row.
- *
- * A DERIVATION, not a command: a row calls it while rendering and renders what
- * it returns. It therefore travels as a context VALUE, never through
+ * Builds one row's swipe actions. A DERIVATION, not a command — a row calls it
+ * while rendering — so it travels as a context VALUE, never through
  * `createActionsContext`, whose members are voided precisely so a derivation
  * cannot be stabilised behind a ref and go stale.
- *
- * Declared once here because it is the handshake between a screen that supplies
- * row actions and the list that renders them — it was written out at six sites,
- * in two shapes that disagreed about whether `undefined` was a legal return.
  */
 export type ItemSwipeActionsFactory = (id: string) =>
   | {
@@ -101,7 +78,7 @@ export type ItemSwipeActionsFactory = (id: string) =>
 
 export interface SwipeActionsProps {
   actions: SwipeAction[];
-  /** Which edge these sit on — decides the container style only. */
+  /** Which edge these sit on; decides the container style only. */
   side: 'left' | 'right';
   swipeableRef?: SwipeableRef;
   progress?: SharedValue<number>;

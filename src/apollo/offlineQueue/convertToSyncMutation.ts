@@ -6,26 +6,10 @@ import type { SyncBuilderTable, SyncConversion } from './syncBuilder';
 import { logger } from '#/utils/environment';
 
 /**
- * Two-tier offline replay mapping.
- *
- * Entity create/update/delete/move ops are replayed through a dedicated `Sync*`
- * mutation that is idempotent by the client-minted cuid (which rides the replay
- * as `clientId`), so an online success and a queued replay converge on one row.
- * Everything else falls through to {@link convertToSyncMutation}'s default,
- * which re-sends the original mutation. That covers the granular pantry deltas
- * (restock / consume / waste / adjust / open-batch / convert-expired): they no
- * longer have `sync*` twins — instead each carries a client-minted
- * `input.idempotencyKey`, so re-sending the canonical mutation is itself
- * at-most-once (the server returns `ConflictError(code: IDEMPOTENT_REPLAY)` on a
- * replay, which the queue treats as converged). See docs/api/offline-sync.md.
- *
- * The builders themselves live with the features whose inputs they read — only
- * the feature knows what its mutation's variables mean. This module is the
- * dispatch: one static import per participating feature, composed into a data
- * table so adding a queued op is a one-line entry in that feature. The
- * imports are static rather than registered lazily because the queue must know
- * every replayable op before the first mutation, which no feature-mount-driven
- * registration can guarantee.
+ * Two-tier replay mapping: entity CRUD/move ops replay through a `Sync*`
+ * mutation idempotent by the client-minted cuid, everything else re-sends the
+ * original, made at-most-once by its own `input.idempotencyKey`. Imports are
+ * STATIC — the queue must know every replayable op before the first mutation.
  */
 const SYNC_REGISTRY: SyncBuilderTable = {
   ...PANTRY_SYNC_BUILDERS,
@@ -33,10 +17,8 @@ const SYNC_REGISTRY: SyncBuilderTable = {
 };
 
 /**
- * Whether an operation has a `Sync*` replay mapping. Used by queueLink as the
- * "replay-safe even without an explicit `context.localFirst` opt-in" half of
- * the offline queueing allowlist — these ops replay through idempotent
- * `Sync*` upserts, so queueing them can never ghost-duplicate.
+ * queueLink's "replay-safe without an explicit `context.localFirst` opt-in"
+ * half of the allowlist: an idempotent `Sync*` upsert cannot ghost-duplicate.
  */
 export function hasSyncMapping(operationName: string): boolean {
   return SYNC_REGISTRY[operationName] != null;
@@ -48,9 +30,8 @@ export function syncMappedOperations(): string[] {
 }
 
 /**
- * Convert a queued mutation to its sync replay. Falls back to replaying the
- * original mutation for operations without a `Sync*` mapping (their server
- * create path is itself id-idempotent, so re-sending is duplicate-safe).
+ * Falls back to the original mutation when there is no `Sync*` mapping — those
+ * server paths are id-idempotent, so re-sending is duplicate-safe.
  */
 export function convertToSyncMutation(
   mutation: QueuedMutation,

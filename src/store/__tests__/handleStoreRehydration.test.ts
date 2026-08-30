@@ -28,3 +28,23 @@ describe('handleStoreRehydration', () => {
     expect(useStore.getState().isHydrated).toBe(true);
   });
 });
+
+describe('home selection readiness', () => {
+  it('does not raise the flag from a restored home/pantry pair', () => {
+    const setIsHomeSelectionReady = jest.fn();
+
+    handleStoreRehydration(
+      {
+        ...useStore.getState(),
+        selectedHomeId: 'home-1',
+        selectedPantryId: 'pantry-1',
+        setIsHomeSelectionReady,
+      },
+      undefined,
+    );
+
+    // Restored is not valid: the pair may name a home the account has since
+    // left, and this flag is what opens the pantry query's gate.
+    expect(setIsHomeSelectionReady).not.toHaveBeenCalled();
+  });
+});

@@ -1,17 +1,10 @@
 import type { ApolloCache } from '@apollo/client';
 
 /**
- * Keeps the server-authoritative badge aggregates on the cached `User` entity
- * (`unreadNotificationCount`, `hasUrgentNotifications`) in step with the
- * notification state mutations. Those mutations select only
- * `notification { id status }`, so without these updaters a mark-read writes
- * `Notification.status` — re-broadcasting the watched notification queries —
- * while the cached count stays at its fetch-time value, and the badge seed in
- * `useNotificationHistory` / `useNotificationsOnLaunch` re-applies the stale
+ * Keeps the badge aggregates on the cached `User` in step with the notification
+ * mutations, which select only `notification { id status }`. Without these the
+ * count stays at its fetch-time value and the badge seed re-applies that stale
  * number over the local decrement.
- *
- * If the API ever adds the updated count to these mutation payloads, response
- * write-through should replace these manual adjustments.
  */
 
 interface BadgeAggregates {
@@ -20,11 +13,9 @@ interface BadgeAggregates {
 }
 
 /**
- * Shift `User.unreadNotificationCount` by `delta`, clamped at zero. When the
- * count lands at zero there is nothing urgent left outstanding, so
- * `hasUrgentNotifications` is cleared too. No-ops (without throwing) for a
- * falsy user id, an unidentifiable entity, a zero delta, or a cache entity
- * that never fetched the field (cache.modify skips absent fields).
+ * Shifts `unreadNotificationCount` by `delta`, clamped at zero, clearing
+ * `hasUrgentNotifications` when it lands there. No-ops without throwing for a
+ * falsy user id, a zero delta, or an entity that never fetched the field.
  */
 export function adjustUnreadNotificationCount(
   cache: ApolloCache,

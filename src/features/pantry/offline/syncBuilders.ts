@@ -15,14 +15,11 @@ import {
 } from '#/apollo/offlineQueue/syncBuilder';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 
-/**
- * How the offline queue replays a pantry write. The contract, and why replay is
- * split two ways at all, is in `#/apollo/offlineQueue/syncBuilder`.
- */
+// How the offline queue replays a pantry write; contract in
+// `#/apollo/offlineQueue/syncBuilder`.
 
 /**
- * Reads a PantryItem's `pantryId` from cache during queue processing.
- * `UpdatePantryItemInput` carries no `pantryId`, but `SyncPantryItemInput`
+ * `UpdatePantryItemInput` carries no `pantryId` but `SyncPantryItemInput`
  * requires it, so the update→sync replay backfills it from the cached entity.
  */
 const QUEUE_PANTRY_ITEM_FRAGMENT = gql`
@@ -46,23 +43,16 @@ const readPantryId = (
 
 /**
  * PantryItem create/update sync. `SyncPantryItemInput` mirrors
- * `CreatePantryItemInput` with `id` → `clientId` (pantry quantity is a plain
- * Float). `BarcodeCreatePantryItem` creates the same entity from the same input
- * shape, so it syncs through here too.
- *
- * The remaining create-input fields pass straight through (their names align with
- * `SyncPantryItemInput`); the object stays loosely typed because the queued input
- * is untyped persisted data and a strict annotation would force a field-by-field
- * rewrite with per-field casts — risking a dropped field on the critical replay
- * path. `pantryId`, `item`, and `clientId` are set explicitly.
+ * `CreatePantryItemInput` with `id` → `clientId`; remaining fields pass straight
+ * through by name, loosely typed because the queued input is untyped persisted
+ * data and a strict annotation would need per-field casts on the replay path.
  */
 const buildPantryItemSync: SyncBuilder = (mutation, cache) => {
   const input = getQueuedInput(mutation);
   const clientId = getClientId(mutation, input);
   const { id: _omitId, itemName, ...rest } = input;
 
-  // SyncPantryItemInput requires `pantryId`. Create inputs already carry it;
-  // `UpdatePantryItemInput` does not — backfill from the cached PantryItem.
+  // Create inputs carry `pantryId`; `UpdatePantryItemInput` does not.
   const pantryId =
     (rest.pantryId as string | undefined) ?? readPantryId(cache, clientId);
   if (!pantryId) {
@@ -71,9 +61,8 @@ const buildPantryItemSync: SyncBuilder = (mutation, cache) => {
     );
   }
 
-  // SyncPantryItemInput has no flat `itemName` — it takes `item: InlineItemInput`
-  // ({ name }). `UpdatePantryItem` sends a flat `itemName`; fold it into `item` so
-  // a rename syncs. Create inputs already use `item`, so this preserves it.
+  // `SyncPantryItemInput` takes `item: InlineItemInput`, not a flat `itemName`:
+  // fold `UpdatePantryItem`'s flat name in so a rename syncs.
   const existingItem = rest.item as Record<string, unknown> | undefined;
   const item =
     itemName != null
@@ -94,11 +83,9 @@ const buildPantryItemSync: SyncBuilder = (mutation, cache) => {
 };
 
 /**
- * Pantry quantity sync. `UpdatePantryItemQuantityInput` doesn't align with
- * `SyncPantryItemInput`: the item id rides as `pantryItemId` (not `id`), the
- * quantity is a string (the raw quantity-box value), and the unit is a flat
- * `unitId`. Map each explicitly; `pantryId` is backfilled from the cached
- * PantryItem like the other pantry syncs.
+ * `UpdatePantryItemQuantityInput` does not align with `SyncPantryItemInput`: the
+ * id rides as `pantryItemId`, the quantity is the raw string from the quantity
+ * box, and the unit is a flat `unitId`. Map each explicitly.
  */
 const buildPantryItemQuantitySync: SyncBuilder = (mutation, cache) => {
   const input = getQueuedInput(mutation);
@@ -111,8 +98,7 @@ const buildPantryItemQuantitySync: SyncBuilder = (mutation, cache) => {
     );
   }
 
-  // Fraction-aware: the queued mutation carries whatever the person typed into
-  // a quantity field, which may be `1 1/4`.
+  // The queued mutation carries whatever was typed, which may be `1 1/4`.
   const quantity =
     typeof input.quantity === 'string'
       ? parseFractionalInput(input.quantity) ?? NaN
@@ -145,15 +131,10 @@ const buildDeletePantryItemSync: SyncBuilder = mutation => {
 };
 
 /**
- * The specialized single-item create maps onto the same builder as its
- * canonical counterpart because it produces the same entity from the same
- * input fields.
- *
- * The granular deltas (adjust / restock / consume / open-batch / waste /
- * convert-expired) have NO entry: they replay as the original canonical
- * mutation, made at-most-once by a client-minted `input.idempotencyKey` (the
- * server returns ConflictError(code: IDEMPOTENT_REPLAY) on a replay). They
- * queue via their explicit `context.localFirst`, not through this table.
+ * `BarcodeCreatePantryItem` shares the create builder — same entity, same fields.
+ * The granular deltas (adjust / restock / consume / waste / …) have NO entry: they
+ * queue via their own `context.localFirst` and replay as the original mutation,
+ * made at-most-once by a client-minted `input.idempotencyKey`.
  */
 export const PANTRY_SYNC_BUILDERS: SyncBuilderTable = {
   CreatePantryItem: buildPantryItemSync,

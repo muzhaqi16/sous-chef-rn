@@ -28,10 +28,9 @@ const webSocketImpl =
 // Use env.WEB_SOCKET_URL from .env if set, otherwise use environment-specific default
 const WS_URL = env.WEB_SOCKET_URL || Environment.getApiConfig().wsUrl;
 
-// The live graphql-ws client. Replaceable, because `dispose()` is one-way:
-// it latches `disposed` inside the client with no reset, after which every
-// retry silently gives up. A session that ends must therefore drop the client
-// rather than keep a poisoned one for the next sign-in.
+// Replaceable because `dispose()` is one-way: it latches `disposed` with no
+// reset, after which every retry silently gives up. A session end must drop
+// the client rather than hand the next sign-in a poisoned one.
 let currentClient: Client | null = null;
 let lastReconnectTime = 0;
 const RECONNECT_DEBOUNCE_MS = 2000; // 2 seconds debounce for reconnections
@@ -58,24 +57,12 @@ function notifyReconnectListeners(): void {
   });
 }
 
-// Reconnection is graphql-ws's loop, not ours. It re-dials on its own after
-// every retryable close, re-evaluating `connectionParams` each attempt.
-//
-// This module used to run a SECOND backoff beside it whose only action was
-// `wsClient.terminate()` — which is `if (connecting) emit('closed')` and so
-// does nothing once a socket has closed (graphql-ws clears `connecting` in its
-// own close handler). It could interrupt a live connection; it could never
-// dial one. Everything that looked like recovery went through it.
-//
-// What we DO own is the pacing, and it is deliberately not driven by the
-// library's own `retries` argument. That counter means "consecutive FAILED
-// dials" — graphql-ws resets it to 0 on every `connection_ack`
-// (`dist/client.js:233`, commit "Lazy connects after successful reconnects are
-// not retries"), which is correct for its purpose and useless for ours: a
-// server that accepts the handshake and then immediately closes is not a
-// failed dial, so the curve would never escalate. That is precisely the
-// subscription-cap case CONNECTION_STABLE_MS exists for. So the count below is
-// ours, and only a connection that proves stable clears it.
+// Re-dialling is graphql-ws's loop; never add a second one beside it. We own
+// only the pacing, and this counter is ours rather than the library's `retries`
+// argument: that one means "consecutive FAILED dials" and resets on every
+// `connection_ack`, so a server accepting the handshake and closing straight
+// after would never escalate the curve. Only a connection that proves stable
+// clears this one.
 let dialAttempts = 0;
 const BASE_RECONNECT_DELAY_MS = 1000;
 const MAX_RECONNECT_DELAY_MS = 30000;
@@ -86,14 +73,10 @@ let shouldAutoReconnect = true;
 // radio for nothing, so the wait is gated rather than timed.
 let onlineWaiters: Array<() => void> = [];
 
-// A connection is only treated as "healthy" — and the exponential-backoff
-// counter reset — once it has stayed open for this long. Critical: when the
-// server rejects subscriptions over its concurrent-subscription cap it closes
-// the whole socket (code 1000) right after the handshake. Resetting the
-// counter on the bare `connected` event lets that connect→close→reconnect
-// cycle repeat at the 1s base delay forever (a re-subscribe-everything loop).
-// Deferring the reset until the socket proves stable means such a cycle keeps
-// escalating the backoff and eventually stops, instead of hammering the server.
+// How long a socket must stay open before the backoff counter resets. Over its
+// concurrent-subscription cap the server closes the whole socket (code 1000)
+// right after the handshake, so resetting on the bare `connected` event would
+// loop connect→close→reconnect at the 1s base delay forever.
 const CONNECTION_STABLE_MS = 10_000;
 
 // One-shot guard for 4403: set when a close already triggered a token refresh,
@@ -101,10 +84,8 @@ const CONNECTION_STABLE_MS = 10_000;
 // fix from spending one refresh per close.
 let sessionAuthRefreshAttempted = false;
 
-// The 4403 fast path needs proactiveTokenRefresh, but refreshToken.ts already
-// imports this module, so importing it back would be a cycle. It registers the
-// function here at its own module init, which the link chain always runs before
-// any socket exists.
+// Registered by refreshToken.ts at its module init — importing it here would
+// be a cycle, since it already imports this module.
 let refreshAccessToken: (() => Promise<string | null>) | null = null;
 export const registerTokenRefresh = (
   refresh: () => Promise<string | null>,
@@ -138,10 +119,8 @@ const sleep = (ms: number) =>
   new Promise<void>(resolve => setTimeout(resolve, ms));
 
 /**
- * Park a pending retry until the device is back online.
- *
- * Strict `=== false` mirrors isOnline's err-toward-online semantics: unknown
- * connectivity dials rather than stalling.
+ * Park a pending retry until the device is back online. Strict `=== false`
+ * mirrors isOnline: unknown connectivity dials rather than stalling.
  */
 const waitUntilOnline = (): Promise<void> => {
   if (useStore.getState().isOnline !== false) return Promise.resolve();
@@ -162,45 +141,19 @@ const releaseOnlineWaiters = () => {
 };
 
 /**
- * Drop every parked retry WITHOUT letting it dial.
- *
- * Resolving a waiter is the dial: graphql-ws constructs the socket on the line
- * after `await url()` (`dist/client.js`, inside the `connecting` promise) with
- * no `disposed` check in between, so a session end that released its waiters
- * opened one connection against credentials the server has already refused.
- *
- * Rejecting instead is worse, not better: that `await` sits in an async IIFE
- * inside a `new Promise` executor, so a rejection there is unhandled AND leaves
- * `connecting` permanently unsettled.
- *
- * So the promise is simply abandoned along with the client that owns it —
- * `disposeWebSocket` drops that reference, and the next sign-in builds a fresh
- * client. The cost is that a `dispose()` awaiting such a `connecting` never
- * settles; it is called un-awaited and immediately dereferenced, so nothing
- * observes it. Re-check on a graphql-ws upgrade: a `disposed` check between
- * `await url()` and the socket construction would make releasing correct again.
+ * Drop every parked retry WITHOUT letting it dial. Resolving a waiter IS the
+ * dial — graphql-ws builds the socket right after `await url()` with no
+ * `disposed` check — and rejecting leaves `connecting` permanently unsettled.
+ * So the promise is abandoned with the client that owns it.
  */
 const abandonOnlineWaiters = () => {
   onlineWaiters = [];
 };
 
 /**
- * Hold every dial until it is allowed to proceed, then count it.
- *
- * This runs from `url()`, which graphql-ws documents as "called on every
- * WebSocket connection attempt", stalling the connecting phase until it
- * resolves. That is the only hook that sees EVERY dial. `retryWait` — the
- * library's dedicated pacing hook, and where this logic would otherwise belong
- * — is skipped entirely for a close of 1000: `shouldRetryConnectOrThrow`
- * returns `locks > 0` before `retrying` is ever set, so `connect()` never
- * enters its wait. Code 1000 right after the handshake is exactly how this
- * server refuses a subscription over the per-user cap, so pacing that lives in
- * `retryWait` would not cover the one case it was written for. Measured against
- * the installed graphql-ws: an unpaced 1000 flap dials ~1259 times in 4s; the
- * same flap through this gate dials 8.
- *
- * The first dial after a stable connection is immediate — this only paces a
- * socket that keeps coming back.
+ * Hold every dial until allowed, then count it. Pacing lives in `url()` because
+ * `retryWait` is skipped entirely for a close of 1000 — exactly how the server
+ * refuses a subscription over the per-user cap.
  */
 const awaitDialPermission = async (): Promise<void> => {
   if (dialAttempts > 0) {
@@ -238,13 +191,9 @@ const getKeepAliveInterval = (): number => {
 };
 
 /**
- * Persist a token pair the server rotated during the handshake.
- *
- * The ack carries `tokenRefreshed: true` and a new pair whenever the server
- * rotated our expired access token, and it is the only delivery of that pair —
- * dropping it would leave HTTP on a token the socket has already replaced, and
- * strand a refresh token nothing can recover. An ordinary accept acks with no
- * payload, so absence means nothing changed rather than something failed.
+ * Persist a token pair the server rotated during the handshake. The ack is the
+ * ONLY delivery of that pair; an ordinary accept carries no payload, so absence
+ * means nothing changed rather than something failed.
  */
 const persistRotatedTokensFromAck = (payload: unknown): void => {
   if (!payload || typeof payload !== 'object') return;
@@ -291,21 +240,17 @@ const createWsClient = () => {
     connectionParams: () => {
       const { accessToken: token, refreshToken } = useStore.getState();
       const apiKey = env.API_KEY;
-      // Read the persisted id (not the nullable sync cache): this runs once
-      // per connect, and a stable per-install deviceId is what lets the server
-      // supersede our prior connection and reclaim its subscriptions on
-      // reconnect. A null/changing id here forfeits that and leaves the old
-      // subscriptions counting against the per-user cap until the heartbeat
-      // reaps them.
+      // The persisted id, not the nullable sync cache: a stable per-install
+      // deviceId is what lets the server supersede our prior connection and
+      // reclaim its subscriptions. A null or changing one leaves them counting
+      // against the per-user cap until the heartbeat reaps them.
       const deviceId = getDeviceId();
 
       const params: Record<string, string | undefined> = {};
 
-      // Identify the build. Apollo's clientAwareness config only produces HTTP
-      // headers, and the socket upgrade carries none — so the same name/version
-      // pair is sent by hand here. Without it the server can't tell this build
-      // apart from an outdated one and closes with 4411 once a minimum version
-      // is configured.
+      // Sent by hand because Apollo's clientAwareness only produces HTTP
+      // headers and the socket upgrade carries none. Without it the server
+      // closes 4411 once a minimum version is configured.
       params['apollographql-client-name'] = CLIENT_NAME;
       params['apollographql-client-version'] = CLIENT_VERSION;
 
@@ -319,29 +264,19 @@ const createWsClient = () => {
         params.authorization = `Bearer ${token}`;
       }
 
-      // The refresh token rides along so the handshake can rotate an expired
-      // access token itself and be accepted, instead of being refused 4403 and
-      // needing a whole refresh-and-reconnect round trip first. The new pair
-      // comes back in the ack (persistRotatedTokensFromAck).
-      //
-      // This is also what makes a 4403 recoverable by a plain re-dial: the
-      // retry re-runs this function, so the attempt after a stale-token close
-      // presents whatever is stored now and can rotate server-side.
-      //
-      // It is only spent when the access token has actually expired — a valid
-      // one is accepted before the server ever reads this field. And racing the
-      // HTTP path is safe: whichever rotation loses is refused as superseded,
-      // which retries with the winner's successor rather than ending the
-      // session.
+      // Rides along so the handshake can rotate an expired access token itself
+      // rather than being refused 4403; the new pair returns in the ack. This
+      // is what makes 4403 recoverable by a plain re-dial, since the retry
+      // re-runs this function. Racing the HTTP path is safe — the losing
+      // rotation is refused as superseded and retries with the winner's
+      // successor.
       if (refreshToken) {
         params.refreshToken = refreshToken;
       }
 
-      // deviceId does double duty: the server echoes it back as
-      // originatorClientId so we can skip our own mutations' subscription
-      // pushes, and it keys connection supersession — a new socket with this
-      // same id terminates the still-tracked predecessor (old socket sees 1006)
-      // and frees its subscriptions immediately.
+      // Double duty: echoed back as originatorClientId so we skip our own
+      // mutations' pushes, and it keys supersession — a new socket with the
+      // same id terminates its predecessor and frees those subscriptions.
       if (deviceId) {
         params.deviceId = deviceId;
       }
@@ -370,18 +305,14 @@ const createWsClient = () => {
         }
         hasConnectedBefore = true;
 
-        // Defer the backoff reset until the connection proves stable. If the
-        // server closes the socket before this fires (e.g. concurrent-
-        // subscription cap rejection → code 1000), the `closed` handler clears
-        // this timer so the library's own retry counter keeps escalating the
-        // backoff instead of looping at the 1s base delay.
+        // Deferred until the connection proves stable: a close before this
+        // fires (cap rejection → 1000) clears the timer, so the backoff keeps
+        // escalating instead of looping at the 1s base delay.
         clearConnectionStableTimer();
         connectionStableTimeoutId = setTimeout(() => {
           connectionStableTimeoutId = null;
-          // The ONLY place the curve resets. Not on `connected` — a socket that
-          // is accepted and then closed straight away has not proved anything,
-          // and resetting there is what let the cap-rejection cycle repeat at
-          // the base delay forever.
+          // The ONLY place the curve resets. Not on `connected`: a socket
+          // accepted and closed straight away has proved nothing.
           dialAttempts = 0;
           // The connection held with the current token — a future 4403 is a
           // fresh expiry, so the one-shot refresh fast path re-arms.
@@ -408,9 +339,8 @@ const createWsClient = () => {
         const reason =
           typeof closeEvent?.reason === 'string' ? closeEvent.reason : '';
 
-        // Everything below either records a verdict or spends one fast-path
-        // refresh. None of it dials: `shouldRetry` + `retryWait` own that, and
-        // a second mechanism here is what previously made "recovery" a no-op.
+        // Everything below records a verdict or spends one fast-path refresh.
+        // None of it dials — `shouldRetry` + `retryWait` own that.
 
         // This build is below the server's minimum version. Reconnecting sends
         // the same version and closes identically, so stop the cycle entirely
@@ -452,16 +382,10 @@ const createWsClient = () => {
           return;
         }
 
-        // The access token is stale — expired, or superseded by a rotation
-        // another request won. Never terminal: anything unrecoverable arrives as
-        // 4412 above, and the retry re-runs connectionParams, so the next
-        // attempt presents whatever is stored by then and the server can rotate
-        // it during the handshake.
-        //
-        // The HTTP refresh here is a FAST PATH, not the recovery: it gets a
-        // fresh access token into the store before the backoff elapses. It is
-        // spent once per unstable connection because a socket the refresh
-        // cannot fix must not spend one per close.
+        // Stale access token. Never terminal — anything unrecoverable arrives
+        // as 4412 above, and the retry re-runs connectionParams. The HTTP
+        // refresh is a FAST PATH, not the recovery, and is spent once per
+        // unstable connection.
         if (code === WS_CLOSE_SESSION_AUTH) {
           if (!sessionAuthRefreshAttempted) {
             sessionAuthRefreshAttempted = true;
@@ -509,15 +433,11 @@ const createWsClient = () => {
           });
         }
 
-        // Everything left — 4500, 4429, 1006, 1000 — is transient. Auth
-        // refusals no longer reach here: the server names each one with its own
-        // code above, so nothing has to be inferred from a close reason, which
-        // is truncated in production anyway.
-        //
-        // 4429 and 4500 are the exception the subscription layer covers:
-        // graphql-ws refuses to retry them whatever `shouldRetry` says
-        // (isLibraryFatalCloseCode), so their subscriptions end and only a
-        // re-subscribe brings delivery back.
+        // Everything left — 4500, 4429, 1006, 1000 — is transient; each auth
+        // refusal has its own code above, so nothing is inferred from a close
+        // reason. 4429 and 4500 are the exception the subscription layer
+        // covers: graphql-ws refuses to retry them, so their subscriptions end
+        // and only a re-subscribe brings delivery back.
       },
       error: (error: unknown) => {
         const message =
@@ -570,35 +490,10 @@ const getOrCreateClient = (): Client => {
 currentClient = createWsClient();
 
 /**
- * A stable stand-in for the client, so the real one can be replaced.
- *
- * `GraphQLWsLink` captures whatever it is constructed with and only ever calls
- * `subscribe`, so handing it the client directly would pin the first instance
- * for the life of the process — including after `dispose()` has latched it
- * shut. Every method forwards to whichever client is current, creating one if
- * a session end dropped it.
- */
-/**
- * Dispose a client without letting its rejection escape.
- *
- * `dispose()` is **async** and awaits graphql-ws's internal `connecting`
- * promise, which the library rejects with the RAW WebSocket event — a bare
- * `Event` when the upgrade fails (`websocketFailed`), a `CloseEvent` when the
- * socket closes. Neither carries a `message`, so an escaped one is reported as
- * `Unhandled Promise Rejection: Unknown error (Event; props: _defaultPrevented,
- * …)` with the close code stranded inside an object nothing reads.
- *
- * A synchronous `try`/`catch` around the call cannot see that: the promise
- * leaves the frame the moment `dispose()` returns. The window is widest exactly
- * when it matters — `url()` paces reconnects with a sleep of up to
- * `MAX_RECONNECT_DELAY_MS` INSIDE `connecting`, so while the API is unreachable
- * that promise is pending almost continuously, and a session end during an
- * outage is the common case rather than the rare one.
- *
- * The call itself stays synchronous — teardown must not be deferred a tick —
- * and only its result is normalized, covering both halves of the declared
- * `void | Promise<void>`. The assignment is the whole `try` body on purpose:
- * a value block inside one bails the React Compiler out of the function.
+ * Dispose without letting the rejection escape: `dispose()` rejects with the
+ * RAW WebSocket event, which has no `message`, and a synchronous try/catch
+ * cannot see it. The bare assignment in the `try` is deliberate — a value
+ * block inside one bails the React Compiler out of the function.
  */
 const disposeSafely = (client: Client): Promise<void> => {
   let pending: void | Promise<void>;
@@ -613,6 +508,11 @@ const disposeSafely = (client: Client): Promise<void> => {
   });
 };
 
+/**
+ * A stable stand-in so the real client can be replaced: `GraphQLWsLink` captures
+ * whatever it is constructed with, which would pin the first instance for the
+ * process's life — including after `dispose()` latched it shut.
+ */
 const wsClientFacade: Client = {
   on: (...args: Parameters<Client['on']>) => getOrCreateClient().on(...args),
   subscribe: (...args: Parameters<Client['subscribe']>) =>
@@ -628,13 +528,9 @@ const wsClientFacade: Client = {
 export const wsLink = new GraphQLWsLink(wsClientFacade);
 
 /**
- * Force the socket to re-dial so it picks up a token that just changed.
- *
- * `terminate()` closes a live connection, which starts the library's retry —
- * and that retry re-runs `connectionParams`, which is the point. It does
- * nothing when no socket is open, which is correct rather than a gap: with no
- * connection there is also no subscription waiting on one, and the subscription
- * layer re-subscribing is what dials again.
+ * Force a re-dial so the socket picks up a token that just changed; the retry
+ * re-runs `connectionParams`. A no-op with no socket open — correct, since the
+ * subscription layer re-subscribing is what dials again.
  */
 export const reconnectWebSocket = () => {
   const now = Date.now();
@@ -669,11 +565,8 @@ export const resumeWebSocketAfterOnline = () => {
 };
 
 /**
- * Disable automatic WebSocket reconnection.
- * Call this during logout to prevent reconnection attempts.
- *
- * `shouldRetry` reads this flag, so it stops the library's loop as well as any
- * retry currently parked waiting to come back online.
+ * Disable automatic reconnection, on logout. `shouldRetry` reads this flag, so
+ * it stops the library's loop and any retry parked waiting to come online.
  */
 export const disableAutoReconnect = () => {
   shouldAutoReconnect = false;
@@ -685,12 +578,8 @@ export const disableAutoReconnect = () => {
 };
 
 /**
- * Enable automatic WebSocket reconnection.
- * Call this after login to allow reconnection on socket close.
- *
- * Also restores a client if the previous session's teardown disposed one: a
- * disposed client connects once and then silently refuses every retry, so it
- * must not be inherited by a new session.
+ * Enable automatic reconnection, after login. Also restores a client if the last
+ * session's teardown disposed one — a disposed one silently refuses every retry.
  */
 export const enableAutoReconnect = () => {
   shouldAutoReconnect = true;
@@ -703,17 +592,12 @@ export const disposeWebSocket = () => {
   disableAutoReconnect();
 
   const client = currentClient;
-  // Dropped BEFORE the dispose can throw. `dispose()` is one-way inside
-  // graphql-ws — a client that has been asked to dispose can only ever be a
-  // client that silently refuses to retry — so a failed dispose is the one
-  // case where keeping the reference is worst: it hands the next sign-in a
-  // socket that connects once and then goes quiet.
+  // Dropped BEFORE the dispose can throw: a client asked to dispose silently
+  // refuses every retry, so keeping the reference on failure is worst of all.
   currentClient = null;
-  // Module state, not client state. Reset whether or not there was a client to
-  // dispose, so two session ends in a row leave the same thing behind as one.
-  // Next session's first connect is a fresh connection, not a reconnect:
-  // without this reset it would fire the reconnect listeners and trigger a
-  // spurious notifications backfill.
+  // Module state, reset whether or not there was a client, so the next
+  // session's first connect counts as fresh rather than firing the reconnect
+  // listeners and triggering a spurious notifications backfill.
   lastReconnectTime = 0;
   hasConnectedBefore = false;
 

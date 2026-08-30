@@ -82,18 +82,6 @@ export const inviteMembersSchema = object({
 
 export const getInviteMembersSchema = () => inviteMembersSchema;
 
-// usage in InviteMemberScreen (for individual email validation):
-// const validateEmail = (email: string) => {
-//   try {
-//     inviteMembersSchema.validateSync({ email });
-//     return true;
-//   } catch {
-//     return false;
-//   }
-// }
-
-// ----------------------------------------------------------------------------
-
 // 9) select pantry items schema (optional selection)
 export const selectPantryItemsSchema = object({
   selectedItems: array()

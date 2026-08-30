@@ -62,27 +62,22 @@ import {
 import { formatNumberForInput } from '#/utils/formatters/number';
 
 export interface PantryItemFormData {
-  // Item information
   itemName?: string;
   selectedItemId?: string;
   brand?: string;
 
-  // Quantity fields
   quantityInput?: string;
   unit: string; // Tracking unit (for counting items)
 
   tags?: string[];
 
-  // Low stock settings
   minQuantity?: string;
   restockQuantity?: string;
 
-  // Net weight
   netWeight?: string;
   netWeightUnit?: string;
   netWeightUnitId?: string;
 
-  // Storage fields
   storageState: StorageState;
   condition: ItemCondition;
   location: string;
@@ -98,19 +93,9 @@ interface PantryItemFormProps {
 }
 
 /**
- * Edits an existing pantry item.
- *
- * This used to carry an `add` mode too — a second create path with its own
- * schema, defaults, item-picker and `useCreatePantryItem` hook. Nothing could
- * reach it: `PantryItem` registers with `linking: null`, and both callers of
- * `toPantryItem` pass an `itemId`. Adding goes through `AddToPantrySheet` →
- * `AddDetailsSheet` instead.
- *
- * It was not harmless while it sat there. Its create did its cache work in the
- * mutation's `update:` callback, which never runs when a write is queued
- * offline — the same defect that made offline adds invisible on the live path.
- * Two creates that disagree is how that class of bug survives a fix to one of
- * them.
+ * Edits an existing pantry item. Edit-only, deliberately: adding goes through
+ * `AddToPantrySheet` → `AddDetailsSheet`, and a second create path here would
+ * be a second set of cache writes to keep offline-correct.
  */
 export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   itemId,
@@ -119,7 +104,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const { t } = useTranslation();
   const { goBack } = useNavigation();
 
-  // Consolidated unit state using UnitSelection type
   const [trackingUnit, setTrackingUnit] =
     useState<UnitSelection>(emptyUnitSelection);
 
@@ -141,10 +125,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const [tagsExpanded, setTagsExpanded] = useState(false);
 
   const selectedPantryId = useSelectedPantryId();
-  // Get selectedHomeId from Zustand (no GraphQL query triggered)
   const selectedHomeId = useSelectedHomeId();
 
-  // Helper to get default pantry (inline to avoid useDefaultHome dependency)
+  // Inline, to avoid a `useDefaultHome` dependency.
   const getDefaultPantry = (home: PantryItemForm_HomeFragment | null) => {
     const pantries = extractNodes(home?.pantriesConnection);
     if (!pantries.length) return null;
@@ -156,7 +139,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     skip: !selectedHomeId,
   });
 
-  // Load the item being edited
   const isUnconfirmed = useIsCreateUnconfirmed(itemId);
   const {
     data: existingItemData,
@@ -164,19 +146,15 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     refetch: refetchItem,
   } = useQuery(GetPantryItemDocument, {
     variables: { id: itemId ?? '' },
-    // A client-minted id is in the cache — and reachable by the edit swipe
-    // action — before the server has the row. Reading it in that window can
-    // only return RESOURCE_NOT_FOUND, which this form renders as the dead-end
-    // "item not found" state. See `unconfirmedCreates`.
+    // A client-minted id is cached (and edit-swipeable) before the server has
+    // the row; querying in that window can only return RESOURCE_NOT_FOUND,
+    // which renders as the dead-end "item not found" state.
     skip: !itemId || isUnconfirmed,
   });
 
-  // Materialize the form's own narrow fragment from the cache. The screen's
-  // `GetPantryItem` query selects this fragment via `...PantryItemForm_pantryItem`
-  // in `PantryItemDetail_pantryItem`, so the cache is already populated.
-  // Read by ENTITY key, not off the query result: an item created locally is
-  // in the cache before any server round trip, and chaining off
-  // `existingItemData` made the form unopenable until one completed.
+  // Materialized by ENTITY key, not off the query result: a locally created
+  // item is in the cache before any round trip, so chaining off
+  // `existingItemData` would keep the form shut until one completed.
   const apolloClient = useApolloClient();
   const existingPantryItem = itemId
     ? apolloClient.cache.readFragment<PantryItemForm_PantryItemFragment>({
@@ -186,8 +164,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       })
     : null;
 
-  // Resolve the masked `home` ref to the form's own fragment so we can read
-  // pantriesConnection (data masking hides it on the raw query result).
+  // Masking hides `pantriesConnection` on the raw query result.
   const home = homeData?.home
     ? apolloClient.cache.readFragment<PantryItemForm_HomeFragment>({
         fragment: PantryItemForm_HomeFragmentDoc,
@@ -199,7 +176,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const currentPantryId =
     selectedPantryId || pantry?.id || existingPantryItem?.pantryId;
 
-  // Fetch pantry details to get storage locations
   const { data: pantryData } = useQuery(GetPantryDocument, {
     variables: { id: currentPantryId ?? '' },
     skip: !currentPantryId,
@@ -210,7 +186,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     pantryData?.pantry?.storageLocationsConnection,
   ) as StorageLocation[];
 
-  // Mutation hooks - modular pattern for maintainability
   const { updatePantryItemFields } = useUpdatePantryItem({
     onSuccess,
     refetch: refetchItem,
@@ -226,7 +201,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const getInitialValues = (): PantryItemFormData => {
     if (existingPantryItem) {
       const item = existingPantryItem;
-      // Tracking unit (for counting items) - from item.unit or item.unitName
       const trackingUnitSymbol = item.unit?.symbol || '';
       return {
         itemName: item.itemName || '',
@@ -314,7 +288,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       category: item.item?.categories?.[0]?.category?.name || '',
       tags: item.tags || [],
     });
-    // Initialize tracking unit state from existing item
     if (item.unit) {
       setTrackingUnit({
         id: item.unit.id,
@@ -323,7 +296,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         type: item.unit.type ?? null,
       });
     }
-    // Initialize net weight unit ID from existing item
     if (item.netWeightUnit?.id) {
       setNetWeightUnitId(item.netWeightUnit.id);
     }
@@ -358,12 +330,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     }
   };
 
-  // Handler for adding a new storage location (user typed a custom name).
-  // createPantryItem and updatePantryItem both find-or-create the location by
-  // name on save (case-insensitive within the home, else a new CUSTOM location)
-  // and return its id — so just record the typed name and clear any selected
-  // id. Creating it server-side on save (vs eagerly) avoids orphaning a location
-  // if the user cancels the edit.
+  // The save mutation find-or-creates the location by name, so record the typed
+  // name and clear the selected id. Creating it eagerly instead would orphan a
+  // location whenever the user cancels the edit.
   const handleAddNewLocation = (name: string) => {
     setValue('location', name, { shouldDirty: true });
     setSelectedLocationId(null);
@@ -409,10 +378,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     onSuccess,
   });
 
-  // Cache first. A locally-created item is fully readable before any round
-  // trip, so a spinner here would hide a form that is ready to edit; only fall
-  // back to one when there is genuinely nothing to show yet. `isUnconfirmed`
-  // counts as loading rather than "missing" — the create is in flight.
+  // Cache first: a locally created item is readable before any round trip, so
+  // spin only when there is genuinely nothing to show. `isUnconfirmed` counts
+  // as loading, not missing — the create is in flight.
   if (!existingPantryItem && (itemLoading || isUnconfirmed)) {
     return (
       <View style={[commonStyles.container, commonStyles.center]}>
@@ -429,7 +397,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     );
   }
 
-  // Tags section fields
   const tagsFields: FieldDef<PantryItemFormData>[] = [
     {
       name: 'tags',
@@ -454,8 +421,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   const formTestID = 'edit-pantry-item-modal';
 
-  // Per-tab error detection — drives the red dot on PageIndicator and
-  // auto-expansion of "More options" when an errored field lives inside it.
+  // Drives the red dot on PageIndicator, and auto-expands "More options" when
+  // an errored field lives inside it.
   const fieldHasError = (name: string) =>
     !!(errors as Record<string, unknown>)[name];
   const tabHasError = (page: PageName) => {
@@ -468,9 +435,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const inventoryAdvancedHasError =
     INVENTORY_ADVANCED_FIELDS.some(fieldHasError);
   const showTags = tagsExpanded || inventoryAdvancedHasError;
-  // `page` is the identifier, not the copy. Passing it straight through as the
-  // label put "Basics / Product / Storage / Inventory" in the tab bar in every
-  // language.
+  // `page` is the identifier, not the copy — resolve it to a label key.
   const indicatorPages = PAGES.map(page => ({
     label: t(PAGE_LABEL_KEYS[page]),
     hasError: tabHasError(page),
@@ -592,9 +557,7 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.lg,
     color: theme.colors.error,
   },
-  // Even page rhythm: matched side padding, a little room under the page
-  // indicator, and generous space below the last field so it clears the
-  // keyboard without feeling cramped.
+  // Generous bottom padding so the last field clears the keyboard.
   pageContent: {
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.md,

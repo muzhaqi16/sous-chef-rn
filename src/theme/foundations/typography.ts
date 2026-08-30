@@ -33,15 +33,8 @@ export const typography = {
 };
 
 /**
- * Canonical typography API - preferred access path: `theme.fonts.*`
- *
- * Usage:
- *   theme.fonts.size.md      // fontSize
- *   theme.fonts.weight.semibold  // fontWeight
- *
- * For lineHeight and letterSpacing, use `theme.typography.*`:
- *   theme.typography.lineHeight.normal
- *   theme.typography.letterSpacing.tight
+ * Canonical typography API: `theme.fonts.size.*` / `theme.fonts.weight.*`.
+ * lineHeight and letterSpacing live on `theme.typography.*` instead.
  */
 /** Explicit type keeps literal font-weight values without `as const`. */
 interface FontWeights {

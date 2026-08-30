@@ -1,51 +1,21 @@
-/**
- * Subscription Service Type Definitions
- *
- * Centralized type definitions for the unified subscription architecture.
- * These types support configuration-driven subscription management across
- * all domains (shopping lists, pantry, home, notifications).
- */
+/** Types for the configuration-driven subscription service. */
 
 import type { ApolloClient, ErrorLike } from '@apollo/client';
 import type { useSubscription } from '@apollo/client/react';
 import { type MutationType } from '#/graphql/generated/schemaTypes';
 
-/**
- * Apollo client passed to subscription customOnData handlers.
- * Typed so cache reads/writes get full IntelliSense and compile-time
- * checking instead of being lost in `any`.
- *
- * Apollo Client 4 dropped the cache-shape generic; the cache type is
- * inferred from the client instance.
- */
+/** Apollo Client 4 dropped the cache-shape generic; the cache type is inferred. */
 export type SubscriptionApolloClient = ApolloClient;
 
-/**
- * Cache update strategies for handling subscription data
- */
 export enum CacheStrategy {
-  /**
-   * Let Apollo handle cache updates automatically via normalization
-   * Best for: UPDATE operations with full fragment data
-   */
+  /** Apollo normalizes the payload; for UPDATEs carrying full fragment data. */
   AUTOMATIC = 'automatic',
-
-  /**
-   * Manually update cache using cache.modify()
-   * Best for: CREATE/DELETE operations on arrays
-   */
+  /** `cache.modify()`; for CREATE/DELETE on arrays. */
   MANUAL = 'manual',
-
-  /**
-   * Don't update cache at all
-   * Best for: Notifications or events that don't need cache persistence
-   */
+  /** No cache write; for events that need no persistence. */
   NONE = 'none',
 }
 
-/**
- * Log levels for subscription events
- */
 export enum LogLevel {
   DEBUG = 'debug',
   INFO = 'info',
@@ -53,10 +23,6 @@ export enum LogLevel {
   ERROR = 'error',
 }
 
-/**
- * Standard subscription payload structure
- * Most subscriptions follow this pattern
- */
 export interface SubscriptionPayload<T = unknown> {
   mutation?: MutationType | string;
   userId?: string;
@@ -70,104 +36,55 @@ export interface SubscriptionPayload<T = unknown> {
   subtype?: string;
 }
 
-/**
- * Configuration for registering a subscription with the service
- */
 export interface SubscriptionConfig<TData = unknown> {
-  /**
-   * Unique name for this subscription (e.g., 'ShoppingListItemsChanged')
-   * Used for logging and debugging
-   */
+  /** Unique name for logging (e.g. 'MyShoppingListsEvents'). */
   subscriptionName: string;
 
-  /**
-   * GraphQL typename for cache operations (e.g., 'ShoppingListItem')
-   * Required for cache.modify() and cache.evict()
-   */
+  /** GraphQL typename; required for cache.modify() and cache.evict(). */
   entityType: string;
 
-  /**
-   * Primary mutation type this subscription handles
-   * Can be overridden by payload.mutation at runtime
-   */
+  /** Default mutation type; `payload.mutation` overrides it at runtime. */
   mutation?: MutationType;
 
-  /**
-   * Enable deduplication filtering
-   * - Filters self-echo (updates from current user)
-   * - Filters duplicate updates (same timestamp + mutation)
-   * @default true
-   */
+  /** Filter self-echo and same timestamp+mutation duplicates. @default true */
   enableDeduplication?: boolean;
 
-  /**
-   * Current user ID for self-echo filtering
-   * Required if enableDeduplication is true
-   */
+  /** Required when `enableDeduplication` is true. */
   userId?: string;
 
-  /**
-   * Strategy for updating Apollo cache
-   * @default CacheStrategy.AUTOMATIC
-   */
+  /** @default CacheStrategy.AUTOMATIC */
   cacheUpdateStrategy?: CacheStrategy;
 
-  /**
-   * Cache field name for array updates (e.g., 'shoppingListItems')
-   * Required for CacheStrategy.MANUAL with CREATE/DELETE operations
-   */
+  /** Required for CacheStrategy.MANUAL on CREATE/DELETE. */
   cacheFieldName?: string;
 
   /**
-   * Custom onData handler for additional logic.
-   * Called after standard processing (deduplication, cache update, logging).
-   *
-   * Pass a concrete `TData` (typically a generated subscription payload type
-   * like `PantryChangesSubscription['pantryChanges']`) at the call site to
-   * eliminate the `any` shape and get type checking inside the handler.
+   * Runs after dedup, cache update and logging. Pass a concrete `TData` at the
+   * call site to get type checking inside the handler.
    */
   customOnData?: (data: TData, client: SubscriptionApolloClient) => void;
 
-  /**
-   * Custom onError handler
-   * If not provided, uses standard error handling
-   */
   customOnError?: (error: ErrorLike) => void;
 
-  /**
-   * Custom onComplete handler
-   * Called when subscription connection is established
-   */
+  /** Called once the subscription connection is established. */
   customOnComplete?: () => void;
 
-  /**
-   * Enable logging for this subscription
-   * @default true in development, false in production
-   */
+  /** @default true in development, false in production */
   enableLogging?: boolean;
 
-  /**
-   * Log level for this subscription
-   * @default LogLevel.INFO
-   */
+  /** @default LogLevel.INFO */
   logLevel?: LogLevel;
 
-  /**
-   * Additional context for logging
-   */
+  /** Additional logging context. */
   entityId?: string;
 }
 
 /**
- * Return type from SubscriptionService.register()
- * Contains configured handlers ready to spread into Apollo subscription hooks
+ * Spread into `useSubscription(DOC, { ...handlers })`, so these match Apollo's
+ * own handler types. `onData` takes the FULL result and the service extracts the
+ * payload field generically, hence the open `Record<string, unknown>` shape.
  */
 export interface SubscriptionHandlers {
-  // Spread directly into `useSubscription(DOC, { ...handlers })`, so these match
-  // Apollo's own handler types. `onData` receives the FULL subscription result
-  // (`{ data: { data?: <subscription> } }`); the service extracts the payload
-  // field generically, so the data shape is the open `Record<string, unknown>`
-  // form (assignable from any concrete `OnDataOptions<TSubscription>`).
   onData: (
     options: useSubscription.OnDataOptions<Record<string, unknown>>,
   ) => void;
@@ -175,10 +92,6 @@ export interface SubscriptionHandlers {
   onComplete: () => void;
 }
 
-/**
- * Internal subscription registry entry
- * Tracks active subscriptions for lifecycle management
- */
 export interface SubscriptionEntry {
   subscriptionName: string;
   entityType: string;
@@ -190,9 +103,6 @@ export interface SubscriptionEntry {
   errorCount: number;
 }
 
-/**
- * Subscription statistics for monitoring
- */
 export interface SubscriptionStats {
   totalSubscriptions: number;
   activeSubscriptions: SubscriptionEntry[];

@@ -4,13 +4,9 @@ import { NotificationDetailScreen } from './NotificationDetailScreen';
 import { NotificationSettingsScreen } from './NotificationSettingsScreen';
 
 /**
- * The notifications feature's screens, composed into `NotificationStack`.
- *
- * Declared here rather than inline in the stack so the feature owns its own
- * screen list. The stack keeps the presentation decisions (animation, insets).
- *
- * A literal object, spread by the stack — see `barcodeScreens` for why that
- * matters to react-navigation's param inference.
+ * The notifications feature's screens, spread into `NotificationStack` (which
+ * keeps the presentation decisions). Must stay a literal — see `barcodeScreens`
+ * for react-navigation's param inference.
  */
 export const notificationScreens = {
   NotificationList: createNativeStackScreen({

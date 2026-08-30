@@ -44,10 +44,8 @@ import type { Unmasked } from '@apollo/client/masking';
 import { makeCache } from '#/apollo/cache';
 import {
   GetUserProfileDocument,
-  GetMeDocument,
   UserEventsDocument,
   type GetUserProfileQuery,
-  type GetMeQuery,
   type UserEventsSubscription,
 } from '#operations/auth/user.generated';
 import {
@@ -211,7 +209,6 @@ describe('current user profile cache completeness', () => {
   describe('every writer selects the shape GetUserProfile reads', () => {
     it.each([
       ['Login (LoginUser fragment)', LoginDocument],
-      ['GetMe (PartialUser fragment)', GetMeDocument],
       ['UserEvents (UserProfile node)', UserEventsDocument],
     ])('%s', (_label, document) => {
       const written = profileFieldsWrittenBy(document);
@@ -244,20 +241,6 @@ describe('current user profile cache completeness', () => {
       query: LinkMeDocument,
       data: { me: { __typename: 'User', id: data.login.user.id } },
     });
-
-    const diff = cache.diff<Unmasked<GetUserProfileQuery>>({
-      query: GetUserProfileDocument,
-      optimistic: true,
-      returnPartialData: true,
-    });
-    expect(describeMissing(diff.missing)).toBe('none');
-    expect(diff.complete).toBe(true);
-  });
-
-  it('a GetMe response alone makes GetUserProfile read complete', async () => {
-    const cache = makeCache();
-    const data = await runAgainstSchema<Unmasked<GetMeQuery>>(GetMeDocument);
-    cache.writeQuery({ query: GetMeDocument, data });
 
     const diff = cache.diff<Unmasked<GetUserProfileQuery>>({
       query: GetUserProfileDocument,

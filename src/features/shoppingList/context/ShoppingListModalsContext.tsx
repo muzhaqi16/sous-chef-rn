@@ -23,42 +23,16 @@ import {
 } from '#features/shoppingList/hooks/useMoveToPantryModal';
 import { useShoppingListTutorialActions } from '#features/shoppingList/context/ShoppingListTutorialContext';
 
-/**
- * Context value for shopping list modals.
- * Provides access to all modal state and actions.
- */
 interface ShoppingListModalsContextValue {
-  /** Add item sheet state and actions */
   addItemSheet: UseAddItemSheetResult;
-  /** Quantity edit modal state and actions */
   quantityEdit: UseQuantityEditModalResult;
-  /** Purchase amount modal state and actions */
   purchaseAmount: UsePurchaseAmountModalResult;
-  /** Move to pantry modal state and actions */
   moveToPantry: UseMoveToPantryModalResult;
 }
 
 const ShoppingListModalsContext =
   createContext<ShoppingListModalsContextValue | null>(null);
 
-/**
- * Hook to access shopping list modals from context.
- * Must be used within ShoppingListModalsProvider.
- *
- * @example
- * ```tsx
- * const { addItemSheet, quantityEdit, moveToPantry } = useShoppingListModals();
- *
- * // Open add item sheet
- * addItemSheet.open();
- *
- * // Open quantity edit for an item
- * quantityEdit.openForItem(itemId);
- *
- * // Open move to pantry for an item
- * moveToPantry.openForItem(itemId);
- * ```
- */
 export function useShoppingListModals() {
   const context = useContext(ShoppingListModalsContext);
   if (!context) {
@@ -71,62 +45,19 @@ export function useShoppingListModals() {
 
 interface ShoppingListModalsProviderProps {
   children: ReactNode;
-  /** Current shopping list ID */
   currentListId: string | undefined;
-  /** Items array for modal item lookup */
   items: ShoppingListItemDisplayFragment[];
-  /**
-   * Records actual purchase amounts. Owned by `useToggleShoppingItem`, threaded
-   * down via the screen facade — the PurchaseAmountSheet calls this on confirm.
-   */
+  /** Owned by `useToggleShoppingItem`, threaded down via the screen facade. */
   recordPurchase: (
     itemId: string,
     amounts: RecordPurchaseAmounts,
   ) => Promise<boolean>;
-  /** Current search query (for AddToShoppingListSheet) */
   searchQuery: string;
-  /** Callback when search query should be cleared */
   onSearchQueryClear: () => void;
-  /** Callback to navigate to list settings */
   onNavigateToListSettings: () => void;
 }
 
-/**
- * ShoppingListModalsProvider - Consolidated provider for shopping list modals
- *
- * Combines all three modal hooks into a single provider:
- * - AddToShoppingListSheet
- * - QuantityEditSheet
- * - MoveToPantryModal
- *
- * Benefits:
- * - Single source of truth for modal state
- * - Modals render inside provider (not in ShoppingListMain)
- * - Prevents multiple modals opening simultaneously
- * - Reduces hook count in consuming component
- *
- * @example
- * ```tsx
- * // In ShoppingListMain.tsx
- * return (
- *   <ShoppingListModalsProvider
- *     currentListId={currentListId}
- *     items={items}
- *     searchQuery={searchQuery}
- *     onSearchQueryClear={() => setSearchQuery('')}
- *     onNavigateToListSettings={() => navigate('ListSettings')}
- *   >
- *     <View>
- *       {/* Screen content - modals render inside provider *\/}
- *     </View>
- *   </ShoppingListModalsProvider>
- * );
- *
- * // In child component
- * const { addItemSheet } = useShoppingListModals();
- * <Button onPress={addItemSheet.open}>Add Item</Button>
- * ```
- */
+/** Owns every shopping-list modal's state, and renders the modals itself. */
 export function ShoppingListModalsProvider({
   children,
   currentListId,
@@ -138,7 +69,6 @@ export function ShoppingListModalsProvider({
 }: ShoppingListModalsProviderProps) {
   const tutorial = useShoppingListTutorialActions();
 
-  // Initialize all modal hooks
   const addItemSheet = useAddItemSheet({
     currentListId,
     onNavigateToListSettings,
@@ -169,7 +99,6 @@ export function ShoppingListModalsProvider({
     <ShoppingListModalsContext.Provider value={value}>
       {children}
 
-      {/* Move to Pantry Modal */}
       <MoveToPantryModal
         visible={moveToPantry.visible}
         shoppingListItemId={moveToPantry.selectedItemId}
@@ -179,7 +108,6 @@ export function ShoppingListModalsProvider({
         onConfirm={moveToPantry.confirm}
       />
 
-      {/* Add to Shopping List Sheet */}
       <AddToShoppingListSheet
         visible={addItemSheet.visible}
         shoppingListId={currentListId}
@@ -191,7 +119,6 @@ export function ShoppingListModalsProvider({
         onItemAdded={onSearchQueryClear}
       />
 
-      {/* Quantity Edit Sheet */}
       <QuantityEditSheet
         visible={quantityEdit.visible}
         item={quantityEdit.selectedItem}
@@ -200,7 +127,6 @@ export function ShoppingListModalsProvider({
         loading={quantityEdit.isLoading}
       />
 
-      {/* Purchase Amount Sheet */}
       <PurchaseAmountSheet
         visible={purchaseAmount.visible}
         item={purchaseAmount.selectedItem}

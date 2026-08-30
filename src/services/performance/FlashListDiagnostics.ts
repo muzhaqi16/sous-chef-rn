@@ -1,11 +1,6 @@
 /**
- * FlashList Diagnostic Service
- *
- * Instance-based diagnostics — each list gets its own instance with independent
- * state. Tracks FlashList recycling behavior, blank cell detection, frame gap
- * jank, and predictive blank risk assessment.
- *
- * Entirely guarded by __DEV__ — all methods are no-ops in production builds.
+ * Per-list diagnostics instance: recycling, blank cells, frame-gap jank and
+ * blank-risk assessment. Guarded by __DEV__ — every method no-ops in production.
  */
 import type {
   ScrollFrameMetric,

@@ -1,8 +1,5 @@
 import chroma from 'chroma-js';
 
-/**
- * Shade keys matching the existing color palette structure (jaffa, charade).
- */
 export type PaletteShade =
   | '50'
   | '100'
@@ -33,11 +30,8 @@ const SHADE_KEYS: PaletteShade[] = [
 ];
 
 /**
- * Generate an 11-stop color palette (50–950) from a single hex color.
- *
- * Uses LCH color space for perceptually uniform lightness transitions.
- * The input color anchors the 500 position; lighter and darker shades
- * are derived by scaling luminance.
+ * An 11-stop palette (50–950) from one hex color, in LCH so lightness steps are
+ * perceptually uniform. The input anchors 500.
  */
 export function derivePalette(hex: string): DerivedPalette {
   const lightest = chroma(hex).luminance(0.95);

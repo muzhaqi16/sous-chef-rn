@@ -11,17 +11,10 @@ interface DeferredScreenProps {
 }
 
 /**
- * Wraps a heavy screen component with deferred rendering.
- *
- * Shows `fallback` (skeleton) instantly; mounts `component` only after
- * `useDeferredRender()` returns true — structurally preventing heavy hooks
- * from running before the skeleton paints.
- *
- * The skeleton sits in an absolute overlay and leaves via Reanimated's
- * `exiting={FadeOut}` once the real component is mounted underneath, so the
- * skeleton→content swap is a crossfade rather than a hard cut. The real
- * component is still gated behind `isReady`, so deferral semantics are
- * unchanged — only the visual transition is softened.
+ * Shows `fallback` instantly and mounts `component` only once
+ * `useDeferredRender()` is true, so heavy hooks structurally cannot run before
+ * the skeleton paints. The skeleton overlays absolutely and leaves via
+ * `exiting={FadeOut}`, making the swap a crossfade rather than a hard cut.
  */
 export function DeferredScreen({
   fallback,

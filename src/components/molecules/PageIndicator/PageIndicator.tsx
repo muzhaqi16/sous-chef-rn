@@ -37,11 +37,8 @@ const PageIndicatorItemRow: React.FC<{
 
   return (
     <AppPressable
-      // Indexed rather than label-derived: the labels are translated, so a
-      // test targeting them would pass in English and fail in every other
-      // locale. Pages this component drives (the pantry item form's
-      // Main/Details/Storage/Stock) were previously unreachable from a test at
-      // all, so a field on a later page read as "no elements found".
+      // Indexed, not label-derived: the labels are translated, so a test
+      // targeting them would pass in English and fail in every other locale.
       testID={`page-indicator-${index}`}
       onPress={onPress}
       accessibilityRole="tab"

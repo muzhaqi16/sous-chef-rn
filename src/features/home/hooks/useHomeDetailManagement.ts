@@ -16,7 +16,7 @@ import {
   LeaveHomeDocument,
   GetHomesDocument,
 } from '#operations/home/home.generated';
-import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
+import { useMarkHomeAsDefault } from '#features/home/hooks/useMarkHomeAsDefault';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
 /** The per-member permission overrides `updateMembership` accepts. */
@@ -49,7 +49,6 @@ import {
   useSetSelectedPantryId,
 } from '#store/useAppStore';
 import { errorService } from '#/services/errorService';
-import { logger } from '#/utils/environment';
 
 export interface RolePickerState {
   visible: boolean;
@@ -204,7 +203,7 @@ export function useHomeDetailManagement(homeId: string) {
     },
   });
 
-  const [setDefaultHomeMutation] = useMutation(MarkHomeAsDefaultDocument);
+  const { markAsDefault } = useMarkHomeAsDefault();
 
   const [leaveHomeMutation, { loading: leaving, client: leaveClient }] =
     useMutation(LeaveHomeDocument, {
@@ -234,10 +233,13 @@ export function useHomeDetailManagement(homeId: string) {
             const newDefaultHome = remainingHomes[0];
             setSelectedHomeId(newDefaultHome.id);
             setSelectedPantryId(null);
-            setDefaultHomeMutation({
-              variables: { input: { homeId: newDefaultHome.id } },
-            }).catch(err => {
-              logger.warn('Failed to set new default home after leave:', err);
+            void markAsDefault(newDefaultHome.id).then(({ status }) => {
+              if (status === 'refused' || status === 'failed') {
+                handleMutationError(new Error(`markHomeAsDefault ${status}`), {
+                  operation: 'Set Default Home After Leave',
+                  showAlert: false,
+                });
+              }
             });
           } else {
             setSelectedHomeId(null);

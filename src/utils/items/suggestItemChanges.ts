@@ -12,30 +12,22 @@ import type { AddItemFormData } from './createItemMapping';
 import type { AddItemFormInitialData } from '#features/catalog/ui/AddItemForm/AddItemForm';
 
 /**
- * The pre-edit original — the only thing `buildSuggestibleItemChanges` diffs
- * against. Sourced exclusively from the `useItemForEdit_item` fragment.
- *
- * Never build this from `ScannedItem` or `ItemSuggestion`: both are lossy
- * projections, and a field they drop reads as "the user cleared it".
+ * The pre-edit original `buildSuggestibleItemChanges` diffs against. Source it
+ * ONLY from the `useItemForEdit_item` fragment — `ScannedItem` and
+ * `ItemSuggestion` are lossy, and a field they drop reads as "user cleared it".
  */
 export interface EditableItemSnapshot {
   id: string;
   /**
-   * Whether this user may write to the item directly with `updateItem`.
-   * Viewer-scoped and resolved server-side against the exact predicate that
-   * mutation enforces — true for the item's creator and for admins.
-   *
-   * `false` does NOT mean "propose a suggestion instead" — check `canSuggest`
-   * for that. The two are independent, and both are false for a read-only item.
+   * May this user write to the item directly with `updateItem`? Viewer-scoped.
+   * `false` does NOT mean "suggest instead" — the two flags are independent, and
+   * both are false for a read-only item.
    */
   canEdit: boolean;
   /**
-   * Whether `createItemSuggestion` accepts this item — true for active PUBLIC
-   * catalog items. Not viewer-scoped: the answer is the same for everyone.
-   *
-   * Structural only. It says the item is a legal target, not that this user has
-   * budget left: the 5-pending cap and the 10/hour limit are transient and come
-   * back as errors on submit.
+   * Does `createItemSuggestion` accept this item? Not viewer-scoped, and
+   * STRUCTURAL only: the 5-pending cap and 10/hour limit come back as errors on
+   * submit, not from here.
    */
   canSuggest: boolean;
   name: string;
@@ -112,36 +104,10 @@ export function itemToEditableSnapshot(
 }
 
 /**
- * Minimal diff of a form submission against the item as it exists today.
- *
- * Emits ONLY changed fields. Absent keys inside a sub-input are left untouched
- * by the server, so there is no need to echo unchanged siblings — and padding
- * the payload would be actively harmful: an unchanged field in `changes` reads
- * to the reviewing admin as something the contributor wants changed.
- *
- * Fields deliberately excluded, and why:
- * - `media`         — photos already go live additively through
- *                     `confirmItemImageUpload` without waiting for review,
- *                     which is what the flow wants, so nothing here needs
- *                     `media.imageUrl` either. (On approval the server appends
- *                     a suggestion's `media.images` rather than set-replacing
- *                     them, so routing photos through the upload flow costs the
- *                     item nothing — but it is still the faster path.)
- * - `tagOps`        — composes with `classification.tags` rather than replacing
- *                     it, but the form prefills the whole tag list, so a plain
- *                     set-replace via `classification.tags` says the same thing
- *                     with one field instead of three.
- * - `categoryOps`   — the form has no category editor, so there is nothing to
- *                     diff against.
- * - `unitConfig` / `unitOps` / `storeSkuOps` / `packageInfo.defaultConsume*` —
- *                     no round-trippable form surface; see the hidden fields in
- *                     AddItemForm's edit modes. An empty array on any of these
- *                     is pruned server-side rather than treated as a change, so
- *                     a payload carrying only one would be refused at submit.
- *
- * Clearing a value is not expressible: an absent key means "no change", so a
- * blanked description or UPC is ignored rather than sent as a deletion. Users
- * asking for a removal say so in the note.
+ * Emits ONLY changed fields — an unchanged one reads to the reviewing admin as a
+ * requested change. An absent key means "no change", so CLEARING is not
+ * expressible; a removal is asked for in the note. `media`, `tagOps`,
+ * `categoryOps`, `unit*`, `storeSkuOps` and `packageInfo.defaultConsume*` never.
  */
 export function buildSuggestibleItemChanges(
   original: EditableItemSnapshot,

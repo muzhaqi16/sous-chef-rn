@@ -13,30 +13,14 @@ import Animated, {
 import { StyleSheet } from 'react-native-unistyles';
 
 interface SkeletonBaseProps {
-  /** Width of the skeleton (number or percentage string) */
   width?: number | string;
-  /** Height of the skeleton */
   height?: number;
-  /** Border radius */
   borderRadius?: number;
-  /** Additional style */
   style?: ViewStyle;
-  /** Whether to show the shimmer animation */
+  /** Shimmer animation; also suppressed under reduced motion. */
   animated?: boolean;
 }
 
-/**
- * Base Skeleton Component
- *
- * Provides a loading placeholder with optional shimmer animation.
- * This is the foundation for all skeleton components.
- *
- * @example
- * ```typescript
- * <SkeletonBase width={200} height={20} borderRadius={4} />
- * <SkeletonBase width="100%" height={40} animated={true} />
- * ```
- */
 export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
   width = '100%',
   height = 20,

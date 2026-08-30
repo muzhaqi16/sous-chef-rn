@@ -72,11 +72,16 @@ export const AcceptInvite: React.FC = () => {
   const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument);
   const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument);
 
-  const loading = tokenHomeInviteLoading || tokenListInviteLoading;
-
   const shoppingListInvite =
     tokenListInviteData?.shoppingListInviteByToken ?? null;
   const homeInvite = tokenHomeInviteData?.homeInviteByToken ?? null;
+
+  // Only when there is nothing to show: a warm cache renders the invite while
+  // the accompanying network leg is still open.
+  const loading =
+    (tokenHomeInviteLoading || tokenListInviteLoading) &&
+    !shoppingListInvite &&
+    !homeInvite;
 
   // Unmask display fields via useFragment (pattern B — resilient fallback).
   // The queries already select these fields, so the cache has them;

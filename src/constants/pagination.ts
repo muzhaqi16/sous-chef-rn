@@ -1,12 +1,6 @@
 /**
- * Pagination Constants
- *
- * API Limits (enforced by server):
- * - Maximum query depth: 10 levels
- * - Maximum fields: 150 fields per query
- * - Maximum pagination: 100 items per request
- *
- * Use these constants to ensure compliance with API limits
+ * Server-enforced limits: query depth 10, 150 fields per query, 100 items per
+ * request. Exceeding any of them is refused, not truncated.
  */
 
 /**
@@ -43,18 +37,7 @@ export const MAX_QUERY_DEPTH = 10;
  */
 export const MAX_QUERY_FIELDS = 150;
 
-/**
- * Validate and cap pagination parameter to API limit
- *
- * @param value - Requested pagination value
- * @returns Capped value (max 100)
- *
- * @example
- * ```typescript
- * const first = capPagination(500); // Returns 100
- * const first = capPagination(50);  // Returns 50
- * ```
- */
+/** Cap a requested page size at the server's per-request maximum. */
 export function capPagination(value: number | undefined): number | undefined {
   if (value === undefined) return undefined;
   return Math.min(value, MAX_PAGINATION_LIMIT);

@@ -1,16 +1,8 @@
 /**
- * useExpirationNotificationSync Hook
- *
- * Provides server-synced actions for expiration notifications:
- * - Mark an expiration action (CONSUMED, COOKED, SHARED, EXTENDED, WASTE, NO_ACTION)
- * - Dismiss an expiration notification
- * - Mark an expiration notification as read
- *
- * Mirrors useNotificationSync pattern: optimistic local update via Zustand,
- * then fire GraphQL mutation with `context: { localFirst: true }` so an offline
- * action is queued and replayed on reconnect (idempotent server-side) instead
- * of being lost. Rollback on server error (not network).
- *
+ * Server-synced actions for expiration notifications. Same shape as
+ * `useNotificationSync`: optimistic Zustand write, then the mutation under
+ * `context: { localFirst: true }` so an offline action queues and replays
+ * (idempotent server-side). Rolled back on a server error, not a network one.
  */
 
 import { useNotificationStore } from '#features/notifications/store/notificationStore';

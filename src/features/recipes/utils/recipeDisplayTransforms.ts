@@ -53,16 +53,12 @@ function spoonacularLikes(recipe: SpoonacularRecipe): number | undefined {
   return 'usedIngredientCount' in recipe ? recipe.likes : recipe.aggregateLikes;
 }
 
-/** Transform local API recipe nodes into display items, mirroring the
- * Spoonacular subtitle format. The `local-` id prefix keeps these
- * collision-free against `spoonacular-<n>` ids and lets the press handler
- * route to the backend recipe detail view.
- *
- * Backend (imported) recipes are missing time/likes — the import only stores
- * Spoonacular's prep/cook breakdown (usually empty) and keeps the like count
- * inside an opaque JSON blob. `enrichmentFor` supplies the matching live
- * Spoonacular result so the row can borrow its `readyInMinutes` + like count
- * and look identical to a native Spoonacular row. */
+/**
+ * Local API recipe nodes as display items, in the Spoonacular subtitle format.
+ * The `local-` id prefix keeps them collision-free against `spoonacular-<n>`
+ * and routes presses to the backend detail view. Imported recipes carry no
+ * time or likes, so `enrichmentFor` lends them the live Spoonacular values.
+ */
 export function toLocalDisplayItems(
   nodes: LocalRecipeNode[],
   enrichmentFor: (node: LocalRecipeNode) => SpoonacularRecipe | undefined,

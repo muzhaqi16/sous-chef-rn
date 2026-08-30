@@ -2,13 +2,9 @@ import { useBlocksCacheMissQueries } from '#hooks/app/useBlocksCacheMissQueries'
 import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
 
 /**
- * Which of the states a data-backed screen is in.
- *
- * `'ready'` means there is something to render; every other value means the
- * screen has to say why there is not, and they are not interchangeable. A screen
- * that collapses `'error'` into `'empty'` tells someone their recipe book is
- * empty when the request simply failed — and then offers to create the recipes
- * they already own.
+ * The states a data-backed screen can be in. NOT interchangeable: collapsing
+ * `'error'` into `'empty'` tells someone their recipe book is empty when the
+ * request merely failed, then offers to recreate what they already own.
  */
 export type DataState = 'loading' | 'error' | 'offline' | 'empty' | 'ready';
 
@@ -18,53 +14,24 @@ interface DataStateInput {
   /** The query failed. Apollo's `error`, or any truthy failure marker. */
   error?: unknown;
   /**
-   * A response was produced — `data !== undefined` — regardless of whether it
-   * contained any items. This is what separates "the server says there is
-   * nothing" from "we never got an answer", and the two must not render alike.
+   * A response was produced (`data !== undefined`), items or not — separating
+   * "the server says nothing" from "we never got an answer".
    */
   hasResult: boolean;
   /** That response contained no items. */
   isEmpty: boolean;
   /**
-   * The query was never asked — Apollo's `skip`. Presents exactly like a
-   * swallowed error (not loading, no error, no data), so without this the two
-   * are indistinguishable and a deliberate non-request reads as a failure.
+   * The query was never asked (Apollo's `skip`). Presents exactly like a
+   * swallowed error, so without it a deliberate non-request reads as a failure.
    */
   skipped?: boolean;
 }
 
 /**
- * Classify a query into the state a person should be shown.
- *
- * The offline/error split is delegated to `useOfflineAwareError`, which already
- * owns that judgment, so the two can never drift apart. See it for why a query
- * whose variables come from an on-screen control is a guaranteed cache miss
- * offline, and why that is "not downloaded yet" rather than a failure.
- *
- * The one case it cannot answer is a query under `errorPolicy: 'ignore'`, where
- * Apollo discards the error and leaves `data === undefined`. Nothing is left to
- * classify, so absence plus the same offline predicate has to stand in.
- *
- * A SKIPPED query looks identical to that — not loading, no error, no data —
- * and must not be read the same way. `skip` means the screen decided not to ask
- * (no pantry selected yet, signed out), which is a question with no answer
- * rather than an answer that failed to arrive. Callers pass the same predicate
- * they gave Apollo's `skip`, so the two cannot drift.
- *
- * Priority is deliberate:
- * 1. Data on screen wins over everything. A background refetch that fails must
- *    not blank out content that is already rendered and still true.
- * 2. Loading, so an in-flight first fetch never flashes an error.
- * 3. A cache miss we never attempted — offline.
- * 4. A genuine failure — error.
- * 5. Never asked: nothing to report, so the screen says what it says when there
- *    is nothing rather than accusing the network. This sits ABOVE the fallback
- *    below on purpose — `skipped` is something the caller knows, while reading
- *    a bare absence as offline is an inference from having no answer, and
- *    knowledge beats inference. A real offline failure is already settled at
- *    step 3, so nothing reportable is lost.
- * 6. No result and no error at all: the swallowed case above.
- * 7. Genuinely empty.
+ * Classify a query into the state a person should be shown. The offline/error
+ * split is delegated to `useOfflineAwareError`; under `errorPolicy: 'ignore'`
+ * Apollo discards the error, so bare absence stands in. `skipped` is checked
+ * ABOVE that fallback — what the caller KNOWS beats inferring from no answer.
  */
 export function useDataState({
   loading,

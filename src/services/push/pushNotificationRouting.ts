@@ -1,22 +1,15 @@
 /**
- * Deep-link routing for a tapped push notification.
- *
- * Platform-agnostic: given the `data` payload carried on a notification (the
- * same string map whether it arrives via Notifee or FCM), it navigates to the
- * matching in-app destination through the imperative NavigationService, so it
- * works from a background/killed launch when there is no React tree to read a
- * navigation hook from. The category → screen mapping mirrors the in-app
- * `handleNotificationPress` routing in NotificationListScreen.
+ * Deep-link routing for a tapped push, platform-agnostic. Uses the imperative
+ * NavigationService because a background/killed launch has no React tree to read
+ * a navigation hook from. The category → screen map mirrors
+ * `handleNotificationPress` in NotificationListScreen.
  */
 
 import NavigationService from '#/services/NavigationService';
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
 
-// FCM/Notifee data payloads are flat string maps; values may be absent. The
-// server sends `category` explicitly on every push and routing keys off it
-// alone. Other fields (`actionUrl` / `notificationId` / `sourceId` /
-// `sourceType`) ride along on the payload for dedup and source correlation but
-// aren't needed to pick the screen, so they aren't modeled here.
+// FCM/Notifee payloads are flat string maps. Routing keys off `category` alone;
+// the other fields ride along for dedup and correlation, so aren't modeled here.
 export interface NotificationTapData {
   category?: string;
 }

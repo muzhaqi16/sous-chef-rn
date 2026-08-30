@@ -95,9 +95,8 @@ const RootStack = createNativeStackNavigator({
     },
     Verification: {
       if: useIsVerification,
-      // Top inset folded into the boundary: a per-screen/group layout REPLACES
-      // (not nests) a parent layout in react-navigation v8, so the inset and
-      // the error boundary must be one function.
+      // A per-screen/group layout REPLACES rather than nests a parent one in
+      // react-navigation v8, so the inset and the boundary must be one function.
       screenLayout: topInsetWith(AuthErrorBoundary),
       screens: {
         Verification: createNativeStackScreen({
@@ -115,9 +114,8 @@ const RootStack = createNativeStackNavigator({
         Onboarding: createNativeStackScreen({ screen: OnboardingStack }),
       },
     },
-    // Post-login biometric enrollment gate for returning users. Its own screen
-    // (not a modal over PantryMain) so it appears between auth and the main app
-    // — see PostLoginBiometricScreen. New users enroll inside Onboarding.
+    // Its own screen, not a modal over PantryMain, so it sits between auth and the
+    // main app. New users enroll inside Onboarding instead.
     BiometricSetup: {
       if: useIsBiometricSetup,
       screenLayout: ({ children }) => (
@@ -126,26 +124,22 @@ const RootStack = createNativeStackNavigator({
       screens: {
         BiometricSetup: createNativeStackScreen({
           screen: PostLoginBiometricScreen,
-          // Not deep-linkable: it is a gate the app decides to show, never a
-          // destination a URL asks for.
+          // A gate the app decides to show, never a destination a URL asks for.
           linking: null,
         }),
       },
     },
     MainApp: {
       if: useIsMainApp,
-      // Nested navigators opt out with `noInsetScreenLayout` — they inset
-      // their own screens and would otherwise double-inset.
+      // Nested navigators opt out with `noInsetScreenLayout`, or they double-inset.
       screenLayout: topInsetScreenLayout,
       screens: {
         Home: createNativeStackScreen({
           screen: HomeTabs,
           layout: noInsetScreenLayout,
-          // Keeps the tab subtree's effects alive while a detail screen is
-          // pushed over it, rather than re-running every layout effect in one
-          // commit on pop. Only bites from the second push down (native-stack
-          // already treats the screen directly under the focused one as
-          // active) — i.e. Home > Profile > HomeManagement > HomeDetail.
+          // Keeps the tab subtree's effects alive under a pushed detail screen
+          // instead of re-running every layout effect in one commit on pop. Only
+          // bites from the second push down.
           options: { inactiveBehavior: 'none' },
         }),
         Barcode: createNativeStackScreen({
@@ -156,12 +150,10 @@ const RootStack = createNativeStackNavigator({
           screen: NotificationStack,
           layout: noInsetScreenLayout,
         }),
-        // Feature-owned detail screens, siblings of `Home` so a pushed screen
-        // covers the tab navigator and the floating tab bar is structurally
-        // absent on it. Each feature owns its own group; the object spread
-        // keeps `StaticParamList` inference, so every `navigate` call site
-        // stays type-checked. One registration per screen — screens opened
-        // from several tabs (RecipeDetail, HomeDetail) have a single copy.
+        // Siblings of `Home`, so a pushed detail screen covers the tab navigator
+        // and the floating tab bar is structurally absent. The object spread keeps
+        // `StaticParamList` inference, so `navigate` stays type-checked. One
+        // registration per screen, even for ones reachable from several tabs.
         ...pantryDetailScreens,
         ...shoppingListDetailScreens,
         ...recipeDetailScreens,
@@ -171,8 +163,7 @@ const RootStack = createNativeStackNavigator({
         ...catalogScreens,
       },
     },
-    // Placed last so the active conditional group's first screen is the
-    // initial route.
+    // Last, so the active conditional group's first screen is the initial route.
     DeepLinks: {
       screenLayout: topInsetScreenLayout,
       screens: {
@@ -196,13 +187,13 @@ const RootStack = createNativeStackNavigator({
           screen: JoinHomeByCodeScreen,
           linking: 'join-home/:joinCode?',
         }),
-        // Generic anyone-with-link entry: resolves the code's type via
-        // resolveShareLink and replaces itself with the matching join screen.
+        // Resolves the code's type via resolveShareLink, then replaces itself with
+        // the matching join screen.
         JoinByLink: createNativeStackScreen({
           screen: JoinByLinkScreen,
           linking: 'join/:code',
         }),
-        // Catch-all (must be last)
+        // Must be last.
         NotFound: createNativeStackScreen({
           screen: NotFoundScreen,
           linking: '*',
@@ -222,16 +213,15 @@ declare module '@react-navigation/core' {
 const StaticNavigation = createStaticNavigation(RootStack);
 
 /**
- * Derive the navigation state implied by the current user plus their stored
- * decision to defer email verification. The post-login `biometric_setup` gate is
- * NOT derivable from either (it depends on device capability + stored
- * credentials), so it's set explicitly by `authService.handleLogin` and must not
- * be clobbered here — see the guard in the user-change effect below.
+ * The navigation state implied by the current user plus their stored decision to
+ * defer email verification. The post-login `biometric_setup` gate is NOT derivable
+ * from either — it depends on device capability and stored credentials, so
+ * `authService.handleLogin` sets it and the effect below must not clobber it.
  */
+
 /**
- * Navigation states that require the user to do something before the app can
- * show content. `app_fully_drawn_ms` is suppressed for a launch that hits one,
- * because the interval would include however long the person took.
+ * States that wait on the user, so `app_fully_drawn_ms` is suppressed for a launch
+ * that hits one — the interval would otherwise include however long they took.
  */
 const INTERACTIVE_GATES = new Set<NavigationState>([
   'auth',
@@ -245,10 +235,9 @@ function resolveNavTarget(
   verificationSkipped: boolean,
 ): NavigationState {
   if (!user) return 'auth';
-  // `verificationSkipped` is what lets an unverified account past this gate.
-  // Re-opening the verification screen from the reminder banner clears the
-  // flag, so the target agrees with where the user already is and this derive
-  // never yanks them back out — no special case needed for either direction.
+  // `verificationSkipped` lets an unverified account past this gate; re-opening
+  // the verification screen clears it, so this derive agrees with where the user
+  // already is in both directions.
   if (!user.emailVerified && !verificationSkipped) return 'verification';
   if (!user.onBoarded) return 'onboarding';
   return 'main_app';
@@ -256,11 +245,9 @@ function resolveNavTarget(
 
 export function Navigation() {
   const { t } = useTranslation();
-  // `useUnistyles()` is required here because the React Navigation `theme`
-  // prop must be a plain object (not a Unistyles StyleSheet). Read access is
-  // narrowed to `theme.colors.*` so Unistyles' Proxy-tracked subscriptions
-  // only fire on color-token changes, not on every runtime tick (insets,
-  // screen size, IME).
+  // React Navigation's `theme` prop must be a plain object, so `useUnistyles()` is
+  // required. Reads are narrowed to `theme.colors.*` so its Proxy subscriptions
+  // fire on color changes only, not on every runtime tick.
   const { theme } = useUnistyles();
   const isHydrated = useIsHydrated();
   const user = useUser();
@@ -268,9 +255,8 @@ export function Navigation() {
     usePostLoginState();
   const verificationSkipped = useVerificationSkipped();
 
-  // Track focused-route changes for screen-view analytics + crash breadcrumbs.
-  // Only emits when the route name actually changes; intermediate state ticks
-  // (animation, gesture, params-only updates) are filtered out.
+  // Emits only when the route NAME changes; animation, gesture and params-only
+  // state ticks are filtered out.
   useEffect(() => {
     let lastRouteName: string | undefined;
     const unsubscribe = navigationRef.addListener('state', () => {
@@ -286,26 +272,19 @@ export function Navigation() {
 
   const hasInitialized = useRef(false);
 
-  // Initialize navigation state after hydration. Cold start never enters the
-  // post-login biometric gate (that's only set by an interactive login), so a
-  // straight derive-from-user is correct here.
+  // A cold start never enters the post-login biometric gate — only an interactive
+  // login sets it — so deriving straight from the user is correct here.
   useEffect(() => {
     if (isHydrated && !hasInitialized.current) {
       hasInitialized.current = true;
       const target = resolveNavTarget(user, verificationSkipped);
 
-      // A launch that stops at one of these waits on a person, and that wait
-      // would otherwise land inside `app_fully_drawn_ms` — a signed-out cold
-      // start would report the sign-in typing time as app startup.
-      //
       // Read from THIS launch's resolved target, never from `navigationState`:
-      // that value is persisted (`PERSISTED_KEYS`) and rehydrated before the
-      // launch resolves its own, so a standalone effect on it saw the PREVIOUS
-      // session's screen. `noteInteractiveGate()` is a one-way process-scoped
-      // latch, so one such read permanently suppressed the metric on launches
-      // that never waited on anyone. A gate entered LATER by an interactive
-      // login is not a launch gate and is deliberately not noted here; the
-      // startup window's own bound covers that interval.
+      // that is persisted and rehydrates before the launch resolves its own, so
+      // reading it sees the PREVIOUS session's screen — and `noteInteractiveGate()`
+      // is a one-way process latch, so one such read suppresses the metric for
+      // good. A gate entered later by an interactive login is not a launch gate and
+      // is deliberately not noted; the startup window's own bound covers it.
       if (INTERACTIVE_GATES.has(target)) {
         NativePerformanceService.noteInteractiveGate();
       }
@@ -317,14 +296,10 @@ export function Navigation() {
   useEffect(() => {
     if (!isHydrated || !hasInitialized.current) return;
     const target = resolveNavTarget(user, verificationSkipped);
-    // Don't let a user-prop change yank the user out of a pending post-login
-    // gate into main_app. Two gates own that transition themselves:
-    //   • biometric enrollment — its own `biometric_setup` screen, and
-    //   • the RememberMe prompt — still on the auth screen, signalled by
-    //     pending `postLoginCredentials` (LoginScreen clears it + routes to
-    //     main_app once the user responds).
-    // (setAuth fires before the gate is committed; without this the main app
-    // would briefly mount behind the gate.)
+    // A user-prop change must not yank the user out of a pending post-login gate
+    // into main_app — biometric enrollment and the RememberMe prompt each own that
+    // transition. setAuth fires before the gate commits, so without this the main
+    // app briefly mounts behind it.
     if (
       target === 'main_app' &&
       (navigationState === 'biometric_setup' || postLoginCredentials != null)

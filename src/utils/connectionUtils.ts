@@ -1,7 +1,3 @@
-// =============================================================================
-// Core Types
-// =============================================================================
-
 type Edge<T> = {
   node?: T | null;
 } | null;
@@ -21,16 +17,10 @@ type Connection<T = unknown> = {
 
 const isDefined = <T>(value: T | null | undefined): value is T => value != null;
 
-// =============================================================================
-// Core Utilities
-// =============================================================================
-
 /**
- * Extracts nodes from a Relay-style connection, filtering out null edges/nodes.
- *
- * PERFORMANCE: WeakMap cache returns the same array when the same edges array
- * reference is passed. This prevents unnecessary re-renders downstream when
- * Apollo re-delivers the same edge objects from its normalized cache.
+ * Nodes from a Relay-style connection, null edges dropped. Keyed by the edges
+ * array REFERENCE, so Apollo re-delivering the same edges returns the same array
+ * and does not re-render everything downstream.
  */
 const extractNodesCache = new WeakMap<readonly unknown[], unknown[]>();
 
@@ -52,10 +42,7 @@ export const extractNodes = <T>(
   return result;
 };
 
-/**
- * Returns the reported totalCount for a connection, falling back to the
- * number of extracted nodes when totalCount is unavailable.
- */
+/** `totalCount`, falling back to the number of extracted nodes. */
 export const getConnectionTotalCount = (
   connection?: {
     totalCount?: number | null;
@@ -69,37 +56,15 @@ export const getConnectionTotalCount = (
   return extractNodes(connection).length;
 };
 
-// =============================================================================
-// Generic Normalization Utilities
-// =============================================================================
-
-/**
- * Configuration for normalizing a single connection field
- */
 export interface ConnectionFieldConfig {
-  /** Name of the connection field (e.g., 'itemsConnection') */
+  /** e.g. 'itemsConnection' */
   connectionField: string;
-  /** Name for the normalized array (e.g., 'items') */
+  /** e.g. 'items'; also prefixes the `…TotalCount` / `…PageInfo` keys. */
   arrayName: string;
-  /** Whether to include totalCount (default: false) */
   includeTotalCount?: boolean;
-  /** Whether to include pageInfo (default: false) */
   includePageInfo?: boolean;
 }
 
-/**
- * Generic function to normalize a single Connection field within an entity
- *
- * @example
- * const config: ConnectionFieldConfig = {
- *   connectionField: 'itemsConnection',
- *   arrayName: 'items',
- *   includeTotalCount: true,
- *   includePageInfo: true,
- * };
- * const result = normalizeConnectionField(pantry, config);
- * // Returns: { items: [...], itemsTotalCount: 10, itemsPageInfo: {...} }
- */
 export function normalizeConnectionField<T extends Record<string, unknown>>(
   entity: T,
   config: ConnectionFieldConfig,
@@ -122,28 +87,12 @@ export function normalizeConnectionField<T extends Record<string, unknown>>(
   return result;
 }
 
-/**
- * Creates a normalization function for entities with multiple Connection fields
- *
- * This factory function eliminates the need for separate normalize functions
- * for each entity type. It generates a type-safe normalizer based on configuration.
- *
- * @example
- * // Create a shopping list normalizer
- * const normalizeShoppingList = createEntityNormalizer<ShoppingListLike>([
- *   { connectionField: 'itemsConnection', arrayName: 'items', includeTotalCount: true, includePageInfo: true },
- * ]);
- *
- * const normalized = normalizeShoppingList(shoppingList);
- * // Returns: { ...shoppingList, items: [...], itemsTotalCount: 10, itemsPageInfo: {...} }
- */
+/** Builds a normalizer for an entity with several Connection fields. */
 export function createEntityNormalizer<T extends Record<string, unknown>>(
   configs: ConnectionFieldConfig[],
 ) {
-  // The returned object adds runtime-keyed array fields (named by each config's
-  // `arrayName`), so those extra keys can't be expressed statically — the
-  // `Record<string, unknown>` intersection covers ergonomic dynamic-key access
-  // by callers, who narrow the value at the read site.
+  // The added fields are keyed by each config's runtime `arrayName`, so they
+  // cannot be typed statically; callers narrow at the read site.
   return (entity?: T | null): (T & Record<string, unknown>) | null => {
     if (!entity) {
       return null;
@@ -160,23 +109,11 @@ export function createEntityNormalizer<T extends Record<string, unknown>>(
   };
 }
 
-/**
- * Normalizes a standalone Connection (not nested in an entity)
- *
- * Use this for query results that return Connection directly:
- * - Query.recipes (returns RecipeConnection)
- * - Any paginated query returning Connection at root level
- *
- * @example
- * const result = normalizeConnection(recipesConnection, 'recipes');
- * // Returns: { recipes: [...], totalCount: 25, pageInfo: {...} }
- */
+/** For a query returning a Connection at the root, not nested in an entity. */
 export function normalizeConnection<T = unknown>(
   connection?: Connection<T> | null,
   arrayName: string = 'items',
-  // The extracted array is keyed under a runtime-provided `arrayName`, so the
-  // dynamic field can't be typed statically — callers narrow the value at the
-  // read site.
+  // Keyed under the runtime `arrayName`, so it cannot be typed statically.
 ): { [key: string]: unknown; totalCount: number; pageInfo?: PageInfo } | null {
   if (!connection) {
     return null;
@@ -189,6 +126,4 @@ export function normalizeConnection<T = unknown>(
   };
 }
 
-// =============================================================================
-// Typed Normalizer Functions
-// =============================================================================
+// --- Typed normalizers ---

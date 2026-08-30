@@ -24,12 +24,9 @@ interface WriteReviewSheetProps {
 }
 
 /**
- * Bottom sheet for writing or editing a recipe review.
- *
- * Reads the existing review (when present) from the Apollo cache via
- * `useFragment` keyed by `existingReviewId`. Form state is seeded from the
- * cached review only when the sheet opens or the id changes — user edits are
- * preserved across cache updates to the same review.
+ * Writes or edits a recipe review, reading the existing one from the cache by
+ * `existingReviewId`. Form state is seeded only when the sheet opens or the id
+ * changes, so a cache update cannot overwrite the user's edits.
  */
 export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
   visible,

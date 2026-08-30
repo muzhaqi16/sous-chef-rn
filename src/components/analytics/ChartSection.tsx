@@ -25,7 +25,9 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 }) => {
   const { t } = useTranslation();
   const renderContent = () => {
-    if (loading) {
+    // Data outranks a request in flight, so a refetch does not blank a chart
+    // that already has something to draw.
+    if (loading && isEmpty) {
       return (
         <View style={styles.stateContainer}>
           <PrimaryActivityIndicator size="large" />

@@ -27,15 +27,10 @@ interface ReportItemFormProps {
 }
 
 /**
- * Reports a catalog item with wrong details — the "report" step of the
- * morphing `AddItemSheet`, not a sheet of its own. Stacking a second
- * `BottomSheetModal` here minimized the host (gorhom's default
- * `stackBehavior: 'switch'`) and stranded the global backdrop.
- *
- * Deliberately not an edit form: from an autocomplete row the user has only
- * seen a name, brand and thumbnail, so a free-text reason is the most they can
- * meaningfully supply. An admin triages from there. The barcode flow, where the
- * full item is on screen, offers structured suggestions instead.
+ * The "report" step of the morphing `AddItemSheet`, not a sheet of its own — a
+ * second `BottomSheetModal` minimizes the host under gorhom's default
+ * `stackBehavior: 'switch'`. Free-text because an autocomplete row shows only
+ * name, brand and thumbnail; the barcode flow suggests structured edits.
  */
 export const ReportItemForm: React.FC<ReportItemFormProps> = ({
   candidates,

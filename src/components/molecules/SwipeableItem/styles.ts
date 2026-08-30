@@ -1,49 +1,31 @@
 import { StyleSheet } from 'react-native-unistyles';
 
-// UNISTYLES FIX: Inline common style properties instead of spreading from commonStyles
-// Spreading from another Unistyles stylesheet can cause "2 unistyles styles" warnings
+// Inline the common style properties; spreading from another Unistyles stylesheet
+// raises "2 unistyles styles" warnings.
 
-// BORDER RADIUS CONVENTION:
-// The card child (BaseItemCard, ListItem, etc.) is the single source of truth for visible
-// borderRadius + borderWidth. SwipeableItem layers must NOT add their own visible radius:
-// - swipeableContainer: keeps borderRadius for shadow shape only (NO backgroundColor)
-// - childrenContainer: overflow:hidden without borderRadius — rectangular clip, child handles rounding
-// - Action containers: use matching radius on their exposed (outer) edges only
-// Adding backgroundColor to swipeableContainer or borderRadius to childrenContainer causes
-// a "double border" artifact where the parent's radius clips/bleeds against the card's.
-//
-// The action containers overhang HORIZONTALLY only (negative marginLeft/Right),
-// so the card covers the overhang while closed. They must NOT overhang
-// vertically: nothing covers that, so a `marginVertical: -xs` painted a dark
-// line above and below every row from the first pixel of a swipe. The corner
-// notches those margins were meant to fill are at the card's left and right
-// rounded corners, which the horizontal overhang already fills.
+// BORDER RADIUS: the card child (BaseItemCard, ListItem) is the single source of
+// visible borderRadius + borderWidth. A backgroundColor on swipeableContainer or
+// a borderRadius on childrenContainer produces a "double border".
+
+// Action containers overhang HORIZONTALLY only — nothing covers a vertical
+// overhang, so it paints a dark line above and below the row on any swipe.
 export const styles = StyleSheet.create(theme => {
-  // Shared border radius for swipeable + action containers.
-  //
-  // MUST match the card's own radius (`BaseItemCard.container`, `radii.xl`).
-  // This was `radii.lg` — 12 against the card's 16 — so the dark action
-  // container's corners were TIGHTER than the card's and poked out around them
-  // instead of tucking under, drawing a square-ish dark edge down the side of a
-  // rounded row the moment a swipe began.
+  // MUST match the card's own radius (`BaseItemCard.container`, `radii.xl`): a
+  // tighter one makes the dark action container's corners poke out around the
+  // card's instead of tucking under.
   const SWIPEABLE_RADIUS = theme.radii.xl;
 
   return {
-    // Container style for Swipeable component (shadow shape only, no visible background)
     swipeableContainer: {
       overflow: 'visible',
       borderRadius: SWIPEABLE_RADIUS,
       borderCurve: 'continuous',
-      // No backgroundColor here — it bleeds through as a thin dark ring behind
-      // the card's rounded border. The action containers have their own dark bg.
+      // No backgroundColor — it bleeds through as a thin dark ring behind the
+      // card's rounded border.
     },
 
-    // Children container style for Swipeable component.
-    // No borderRadius here — the card inside handles its own rounding.
-    // overflow must stay `visible` (like swipeableContainer) so
-    // the card child's soft drop shadow fades to transparent instead of being
-    // clipped to a hard rectangular edge at the card bounds. The card sets its
-    // own borderRadius, so nothing here needs clipping.
+    // No borderRadius — the card handles its own rounding. `overflow` must stay
+    // `visible` so the card's soft drop shadow isn't clipped to a hard rectangle.
     childrenContainer: {
       overflow: 'visible',
     },

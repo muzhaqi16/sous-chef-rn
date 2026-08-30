@@ -255,13 +255,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 
           applyOptimisticPantryItem();
 
-          // Released on every outcome — including a THROW. `confirm` sitting
-          // after a bare `await` was released on the paths that return, and on
-          // none of the paths that don't: a transport throw left the id marked
-          // unconfirmed for the rest of the session, which suppresses the
-          // detail query for a row the user can see. The helper is how a
-          // finalizer is written here at all — a bare `try/finally` bails the
-          // React Compiler out of the whole component.
+          // `confirm` must run on every outcome, throws included, or the id
+          // stays unconfirmed and suppresses the detail query for a visible row.
+          // The helper is how a finalizer is written here: a bare `try/finally`
+          // bails the React Compiler out of the whole component.
           let result!: Awaited<ReturnType<typeof addToPantry>>;
           await executeAsyncWithCleanup(
             async () => {
@@ -325,16 +322,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                   async () => {
                     // The duplicate branch withdrew the optimistic row; put it
                     // back before firing, or a force-add that queues offline
-                    // leaves nothing on screen until the replay lands. Reusing
-                    // the id is deliberate — the duplicate was a refusal, so it
-                    // committed no row, and the id is what makes the replay
-                    // idempotent.
-                    //
-                    // Re-marked, because the first attempt's cleanup already
-                    // confirmed this id. The row is tappable again from the line
-                    // below, and the server does not have it — so without the
-                    // mark, opening it fetches an id that 404s and parks the
-                    // detail screen in an error state that never retries.
+                    // shows nothing until the replay lands. The id is reused on
+                    // purpose — the refusal committed no row, and reusing it is
+                    // what makes the replay idempotent. Re-marking is required
+                    // because the first attempt's cleanup already confirmed it.
                     unconfirmedCreates.mark(id);
                     applyOptimisticPantryItem();
                     const retryResult = await addToPantry({
@@ -345,13 +336,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                       // it the force-add is the one add here that cannot queue.
                       context: { localFirst: true },
                     });
-                    // `alertIfRejected`, not a payload-typename check: a retry
-                    // reusing this id after the first attempt did commit (a lost
-                    // response) returns ConflictError(IDEMPOTENT_REPLAY), which
-                    // the contract says to treat as a successful no-op. It also
-                    // keeps the row when the create was queued rather than
-                    // answered, and routes a ValidationError's `field` to
-                    // localized copy.
+                    // `alertIfRejected`, not a payload-typename check: a reused
+                    // id whose first attempt did commit returns
+                    // ConflictError(IDEMPOTENT_REPLAY), a successful no-op, and
+                    // a queued create must keep its row.
                     if (
                       alertIfRejected(
                         retryResult,
@@ -523,12 +511,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 
       <ActionButtons
         /*
-         * No source means we do not know where the item would go. This screen is
-         * only ever reached from a pantry or a shopping list, both of which pass
-         * one — but the route is deep-linkable (`scan/result`), so a link can
-         * land a user here with nothing to add to. Offering a button that
-         * silently no-ops is worse than offering none; they can still read the
-         * product card and scan another.
+         * No source means no destination for the item. Only a deep link
+         * (`scan/result`) can land here without one, and a button that silently
+         * no-ops is worse than none.
          */
         primaryAction={
           source

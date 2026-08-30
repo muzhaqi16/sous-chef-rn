@@ -1,17 +1,8 @@
 /**
- * The work a session end has to do outside the store: quiet the transports and
- * the offline queue, so nothing keeps talking to a server that has already
- * refused these credentials.
- *
- * The steps live in the Apollo layer while `endSession` lives in the store, and
- * importing across that edge in both directions closes the cycle
- * `store → resetManager → apollo/client → links → store`. So each Apollo module
- * registers its own step here and the store calls the registry — the same
- * hand-off `registerApolloClient` and `registerTokenRefresh` use.
- *
- * Registration happens at module init and every registrant is pulled in by the
- * link chain, so the steps are in place before any session can end. A step that
- * never registered is simply absent; the store still clears.
+ * Quiets the transports and offline queue on session end. A registry rather than
+ * direct calls because importing both ways closes the cycle
+ * `store → resetManager → apollo/client → links → store`; each Apollo module
+ * registers its step at module init, pulled in by the link chain.
  */
 import { logger } from '#/utils/environment';
 

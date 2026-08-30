@@ -21,19 +21,10 @@ interface LocalNotificationParams {
 const BIGTEXT_THRESHOLD = 50;
 
 /**
- * Language the channel was last created under, or null if it has not been
- * created this session.
- *
- * PERFORMANCE: creating the channel is a synchronous native call, so it must not
- * run per notification — but the cache is keyed by language rather than a bare
- * boolean, because the channel `name` is **user-visible copy**. Android lists it
- * under Settings › Apps › Sous Chef › Notifications and shows it when a
- * notification is long-pressed, so it has to follow the active language.
- *
- * Re-calling `createChannel` with an existing id is the documented way to update
- * a channel: name and description are applied, and everything else is left as
- * the user configured it (importance in particular cannot be raised again, which
- * is why the values below are unchanged between calls).
+ * Creating the channel is a synchronous native call, so it must not run per
+ * notification — but the cache keys on LANGUAGE, not a boolean, because the
+ * channel `name` is user-visible copy in Settings. Re-calling `createChannel`
+ * with an existing id updates name and description only.
  */
 let channelLanguage: string | null = null;
 
@@ -120,16 +111,10 @@ export const showLocalNotification = async ({
 };
 
 /**
- * Registers Notifee foreground and background event handlers.
- * Must be called at app entry (index.js) before AppRegistry.registerComponent.
- *
- * A PRESS event on a notification we drew (data-only FCM / local) routes to the
- * matching screen: onForegroundEvent covers a tap while the app is open,
- * onBackgroundEvent covers a tap that brings it from background or cold-launches
- * it from a killed state.
- *
- * Also keeps the Android channel name on the active language. `index.js` imports
- * `src/i18n/config` before calling this, so the instance is initialized here.
+ * MUST be called from index.js before `AppRegistry.registerComponent`. Routes a
+ * PRESS on a notification WE drew (data-only FCM / local): foreground for a tap
+ * while open, background for one that resumes or cold-launches. Also keeps the
+ * Android channel name on the active language (i18n is initialized by now).
  */
 export const setupNotificationHandlers = () => {
   const unsubscribeForeground = notifee.onForegroundEvent(

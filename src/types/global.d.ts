@@ -9,10 +9,7 @@ declare module '*.svg' {
   export default content;
 }
 
-/**
- * Options for requestIdleCallback
- * @see https://reactnative.dev/docs/global-requestIdleCallback
- */
+/** @see https://reactnative.dev/docs/global-requestIdleCallback */
 interface IdleRequestOptions {
   /** Maximum time to wait before forcing callback execution */
   timeout?: number;
@@ -33,18 +30,13 @@ interface IdleDeadline {
  */
 type IdleRequestCallback = (deadline: IdleDeadline) => void;
 
-/**
- * Schedules a callback to run when the JavaScript runtime is idle.
- * @see https://reactnative.dev/docs/global-requestIdleCallback
- */
+/** Schedules a callback for when the JS runtime is idle. */
 declare function requestIdleCallback(
   callback: IdleRequestCallback,
   options?: IdleRequestOptions,
 ): number;
 
-/**
- * Cancels a previously scheduled idle callback.
- */
+/** Cancels a scheduled idle callback. */
 declare function cancelIdleCallback(handle: number): void;
 
 /**
@@ -53,9 +45,8 @@ declare function cancelIdleCallback(handle: number): void;
 declare namespace globalThis {
   var __APP_START_TIMESTAMP: number | undefined;
   /**
-   * Installed by the New Architecture's legacy interop layer. `BridgelessUIManager`
-   * reads it to fetch a native view manager's constants; `viewManagerProbe` wraps
-   * it to time those fetches by name.
+   * Installed by the New Architecture's legacy interop layer;
+   * `viewManagerProbe` wraps it to time constant fetches by name.
    */
   var RN$LegacyInterop_UIManager_getConstantsForViewManager:
     | ((viewManagerName: string) => unknown)

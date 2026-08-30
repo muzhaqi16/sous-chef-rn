@@ -8,12 +8,9 @@ interface NotificationProviderProps {
 }
 
 /**
- * NotificationListener - Handles all notification subscriptions as side effects.
- * Returns null to prevent rendering, ensuring re-renders don't cascade to app tree.
- *
- * PERFORMANCE: This pattern eliminates cascade re-renders. When NotificationListener
- * re-renders due to notification/auth state changes, it doesn't affect siblings
- * since it returns null (no React elements to reconcile).
+ * Holds the notification subscriptions as side effects. Returns null, so
+ * re-rendering on notification/auth state changes reconciles nothing and
+ * cannot cascade into the app tree.
  */
 const NotificationListener: React.FC = () => {
   const user = useUser();
@@ -29,13 +26,7 @@ const NotificationListener: React.FC = () => {
   return null;
 };
 
-/**
- * NotificationProvider - Wraps app to enable notifications without re-rendering children.
- *
- * PERFORMANCE: Provider itself is static (no state/props), so it never re-renders.
- * NotificationListener handles all subscriptions and returns null, preventing
- * cascade re-renders to Navigation + all screens + BottomSheetModalProvider.
- */
+/** Static wrapper — it takes no state, so it never re-renders its children. */
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   children,
 }) => {

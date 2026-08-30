@@ -7,25 +7,10 @@ import { SkeletonRectangle } from '#components/atoms/Skeleton/SkeletonRectangle'
 import { ListItem } from '#/components/molecules/ListItem';
 
 interface ShoppingListItemSkeletonProps {
-  /** Whether to show shimmer animation */
   animated?: boolean;
 }
 
-/**
- * Shopping List Item Skeleton
- *
- * Specialized skeleton for shopping list items with checkbox, image, title, and quantity.
- * Reuses ListItem as wrapper to stay in sync with actual item styles.
- *
- * @example
- * ```typescript
- * // While loading shopping list
- * <FlatList
- *   data={[1, 2, 3, 4, 5]}
- *   renderItem={() => <ShoppingListItemSkeleton />}
- * />
- * ```
- */
+/** Wraps ListItem so the skeleton stays in sync with the real item's styles. */
 export const ShoppingListItemSkeleton: React.FC<
   ShoppingListItemSkeletonProps
 > = ({ animated = true }) => {

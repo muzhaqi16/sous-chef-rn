@@ -12,11 +12,7 @@ import { Text } from '#components/atoms/Text';
 
 export interface SelectedImage extends ImageFile {
   perspective: string;
-  /**
-   * Marks the photo to become the item's hero once uploaded. Only ever set
-   * when the host passes `allowPrimarySelection`; exactly one image in the list
-   * carries it.
-   */
+  /** The hero once uploaded. Set only under `allowPrimarySelection`, on exactly one image. */
   isPrimary?: boolean;
 }
 
@@ -28,21 +24,17 @@ interface MultiImagePickerProps {
   maxImages?: number;
   label?: string;
   /**
-   * Offer a "main photo" star per thumbnail.
-   *
-   * Only pass this where the server will honour the choice: the photos have to
-   * land APPROVED and the user has to be able to edit the item. On the
-   * suggestion path they land PENDING and `makePrimary` is ignored, so the star
+   * Offer a "main photo" star. Only where the server will honour it — on the
+   * suggestion path photos land PENDING and `makePrimary` is ignored, so the star
    * would promise something review might never grant.
    */
   allowPrimarySelection?: boolean;
 }
 
 /**
- * Guarantees exactly one primary once the affordance is live, so the star is
- * never shown with nothing selected. Index 0 is the seed because it is the
- * photo the user picked first — the same one the server would land on for a
- * fresh item, which makes turning the feature on a no-op until they choose.
+ * Guarantees exactly one primary once the affordance is live, so the star is never
+ * shown with nothing selected. Index 0 seeds it, matching what the server would
+ * pick for a fresh item.
  */
 const withPrimary = (
   list: SelectedImage[],
@@ -77,8 +69,8 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
   allowPrimarySelection = false,
 }) => {
   const { t } = useTranslation();
-  // Resolved here rather than as a default parameter: the fallback is
-  // translated, and a default parameter would have to be an English literal.
+  // Not a default parameter: the fallback is translated, and a default would have
+  // to be an English literal.
   const resolvedLabel = label ?? t('imagePicker.productImages');
   const perspectiveOptions = CAPTURE_PERSPECTIVES.map(p => ({
     label: getPerspectiveLabel(p, t),
@@ -89,12 +81,9 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
     const remaining = maxImages - images.length;
     const filesToAdd = newFiles.slice(0, remaining);
 
-    // Assign in one forward pass, feeding each result back in. The previous
-    // version rebuilt the "already taken" set per file and blanked the
-    // perspectives inside it, so every file after the first saw a used-set of
-    // {''} and got 'front' — four photos came out front/back/back/back. Those
-    // labels now reach confirmItemImageUpload, so a collision is persisted
-    // catalog data, not just a mislabeled row.
+    // One forward pass, feeding each result back in, so the "already taken" set
+    // stays accurate across files — these labels reach confirmItemImageUpload, so
+    // a collision is persisted catalog data, not just a mislabeled row.
     const assigned: SelectedImage[] = [];
     for (const file of filesToAdd) {
       assigned.push({
@@ -118,8 +107,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
   };
 
   const handleRemoveImage = (index: number) => {
-    // Dropping the primary leaves the list with none, so re-seed it rather than
-    // uploading a batch that silently keeps the item's existing hero.
+    // Re-seed, or the batch silently keeps the item's existing hero.
     const updated = images.filter((_, i) => i !== index);
     onImagesChanged(withPrimary(updated, allowPrimarySelection));
   };
@@ -325,8 +313,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // Opposite corner from remove: the two are 22pt targets on an 80pt thumbnail,
-  // and adjacent ones would be a coin-flip under a fingertip.
+  // Opposite corner from remove: two 22pt targets on an 80pt thumbnail.
   primaryButton: {
     position: 'absolute',
     bottom: 2,

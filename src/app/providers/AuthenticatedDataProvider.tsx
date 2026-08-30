@@ -6,17 +6,9 @@ interface AuthenticatedDataProviderProps {
 }
 
 /**
- * AuthenticatedDataProvider - Initializes home data for authenticated users
- *
- * This component runs useDefaultHome() ONCE when the user is authenticated,
- * populating the Zustand store with selectedHomeId and selectedPantryId.
- *
- * Why this exists:
- * - Prevents GetHomes/GetDefaultHome from firing on every tab switch
- * - Centralizes home initialization at app level (not screen level)
- * - Follows the same pattern as AuthenticatedSubscriptions
- *
- * @param userId - The authenticated user's ID (required)
+ * Runs `useDefaultHome()` ONCE per authenticated session, seeding the store's
+ * `selectedHomeId` / `selectedPantryId`. At app level rather than per screen, so
+ * `GetHomes` does not re-fire on every tab switch.
  */
 export const AuthenticatedDataProvider: React.FC<
   AuthenticatedDataProviderProps

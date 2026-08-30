@@ -1,9 +1,7 @@
 /**
- * Redaction for telemetry logs. Applied centrally in `TelemetryService.log()`
- * so every path (trackError, errorService, globalErrorHandler, ErrorBoundary,
- * telemetryLink) is scrubbed before anything reaches Loki. Logs can carry error
- * stacks, GraphQL variables, and rejection reasons that may contain emails,
- * tokens, or passwords.
+ * Redaction for telemetry logs, applied centrally in `TelemetryService.log()` so
+ * every path is covered. Stacks, GraphQL variables and rejection reasons can
+ * carry emails, tokens or passwords.
  */
 
 // Object keys whose values are redacted wholesale (case-insensitive substring).

@@ -455,8 +455,7 @@ describe('useCrudOperations', () => {
       const removeOp = result.current.createRemoveOperation({
         mutation: mockMutation,
         itemId: 'item-1',
-        confirmMessage: 'Are you sure you want to delete {name}?',
-        itemName: 'My Item',
+        confirmMessage: 'Are you sure you want to delete My Item?',
         operationName: 'Delete Item',
       });
 

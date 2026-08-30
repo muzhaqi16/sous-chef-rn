@@ -1,15 +1,8 @@
 /**
- * Pantry Subscriptions
- *
- * Centralizes all pantry-related subscriptions using the unified
- * SubscriptionService. Handles real-time updates for:
- * - Pantry events (item changes, pantry updates, usage, alerts) via pantryEvents
- * - Expiration notifications (created + action-taken), folded into the same stream
- *
- * The event carries the envelope plus the changed entity's id — subscriptions
- * are validated against depth 5, which no fragment spread fits under. Values
- * come from `PantryItemForEvent` and friends, fired only where needed: never
- * for a self-echo, a delete, or a row this device isn't holding.
+ * The event carries the envelope plus the changed entity's id only —
+ * subscriptions are validated against depth 5, which no fragment spread fits
+ * under. Handlers read values back via `PantryItemForEvent` and friends, and
+ * only where needed: never for a self-echo, a delete, or an unheld row.
  */
 
 import { useLinkExpirationData } from '#features/notifications/hooks/useLinkExpirationData';
@@ -85,11 +78,9 @@ function isItemCached(
 }
 
 /**
- * Coalesced pantry summary read-back.
- *
- * The server can emit PANTRY_UPDATED per item change, since the stats are
- * derived — one read per event would be a request per remote add. The values
- * are aggregates, so the last read wins and the intermediate ones are waste.
+ * The server emits PANTRY_UPDATED per item change because the stats are derived.
+ * The values are aggregates, so the last read wins — coalesce instead of firing
+ * one request per remote add.
  */
 const SUMMARY_REFRESH_DELAY_MS = 400;
 let summaryRefreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -164,16 +155,10 @@ async function handleItemChanged(
 }
 
 /**
- * Initialize pantry subscriptions for the current user.
- *
- * Subscribes to a single consolidated `pantryEvents` stream carrying every
- * pantry-domain event, discriminated by `subtype`: item changes, pantry/usage
- * updates, low-stock/expiration alerts, and the expiration-notification events
- * (EXPIRATION_NOTIFICATION_CREATED / EXPIRATION_ACTION_TAKEN) that were
- * formerly their own subscriptions. One stream keeps the per-user concurrent-
- * subscription count low (the server caps it cluster-wide).
- *
- * @param userId - Current user ID for deduplication
+ * One consolidated `pantryEvents` stream carries every pantry-domain event,
+ * discriminated by `subtype` (item changes, pantry/usage updates, low-stock and
+ * expiration alerts). Keeping it to one stream holds the per-user concurrent-
+ * subscription count under the server's cluster-wide cap.
  */
 export function usePantrySubscriptions(userId?: string) {
   const selectedPantryId = useSelectedPantryId() || undefined;
@@ -297,14 +282,10 @@ export function usePantrySubscriptions(userId?: string) {
   const pantryEvents = useSubscription(PantryEventsDocument, {
     variables: { pantryId: selectedPantryId! },
     skip: pantrySkip,
-    // The envelope's `node` carries only `__typename` + `id`, and every handler
-    // reads the entity back with a query, so nothing needs it in the cache.
-    // Writing it is actively harmful: `removeItem` evicts the row before the
-    // delete mutation fires and the server pushes this event before the
-    // mutation resolves, so the write re-created the evicted PantryItem as a
-    // bare `{ id }`. Its connection edge stopped dangling, the node now lacked
-    // every other field, and Apollo repaired the incomplete GetPantry result
-    // by refetching the whole page — one network round-trip per delete.
+    // The envelope's `node` is only `__typename` + `id` and every handler reads
+    // the entity back, so caching it is pure harm: it re-creates a just-evicted
+    // PantryItem as a bare `{ id }`, which makes GetPantry incomplete and costs
+    // a full-page refetch per delete.
     fetchPolicy: 'no-cache',
     ...eventHandlers,
   });

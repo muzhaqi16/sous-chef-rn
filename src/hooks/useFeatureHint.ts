@@ -17,7 +17,7 @@ const buildStorageKey = (userId: string | undefined, featureId: string) =>
 export interface UseFeatureHintOptions {
   /** Unique identifier for this feature hint */
   featureId: string;
-  /** Whether to show the hint immediately on mount (if not previously shown) */
+  /** Show the hint on mount, unless it has already been shown. */
   showOnMount?: boolean;
   /** Delay in milliseconds before showing the hint */
   delay?: number;
@@ -44,37 +44,10 @@ export interface UseFeatureHintReturn {
 }
 
 /**
- * Reusable hook for managing feature hints with MMKV persistence
- *
- * Returns `{ isVisible, hasBeenShown, actions }` where `actions` is a stable
- * object (reference never changes) containing `show`, `dismiss`, `hide`, `reset`.
- * Consumers should use `hint.actions` in effect deps instead of individual
- * callbacks to avoid re-triggers when visibility state changes.
- *
- * Storage keys are scoped per-account, so each user gets independent hint
- * state — logging in with a different account resets the tutorials for that
- * account.
- *
- * @example
- * const swipeHint = useFeatureHint({
- *   featureId: 'shopping_list_swipe',
- *   showOnMount: true,
- *   delay: 1000,
- * });
- *
- * // In effects — use actions (stable reference)
- * useEffect(() => {
- *   if (ready) swipeHint.actions.show();
- * }, [ready, swipeHint.actions]);
- *
- * // In JSX — use top-level state
- * return (
- *   <>
- *     {swipeHint.isVisible && (
- *       <YourHintOverlay onDismiss={swipeHint.actions.dismiss} />
- *     )}
- *   </>
- * );
+ * Feature hints, persisted in MMKV under PER-ACCOUNT keys, so each user has
+ * independent hint state. `actions` has a stable identity — put it in effect
+ * deps rather than the individual callbacks, or visibility changes re-trigger
+ * the effect.
  */
 export const useFeatureHint = ({
   featureId,
@@ -158,21 +131,10 @@ export const useFeatureHint = ({
 };
 
 /**
- * Check if a specific feature hint has been shown
- */
-/**
- * Under Detox, every hint reports as already shown.
- *
- * The tutorial overlay dims the screen and swallows taps, and it appears on a
- * 2s delay after the pantry mounts — i.e. after any post-login dismissal helper
- * has finished. The result is `View is not hittable at its visible point` on
- * every tab, minutes into a run, for a reason that has nothing to do with what
- * is being tested. Set by `injectDetoxLaunchArgs`, the same place LogBox is
- * silenced for the same reason.
- *
- * Deliberately not persisted: it suppresses display for this process only, so
- * the stored per-user state is untouched and a test that wants to assert the
- * tutorial can still reset and drive it.
+ * Under Detox every hint reports as already shown: the overlay dims the screen
+ * and swallows taps on a 2s delay, producing `View is not hittable` on every
+ * tab. Deliberately NOT persisted — it suppresses display for this process only,
+ * so a test that wants to assert the tutorial can still reset and drive it.
  */
 let suppressedForE2E = false;
 
@@ -198,17 +160,11 @@ export const markFeatureHintAsShown = (
   storage.set(buildStorageKey(userId, featureId), true);
 };
 
-/**
- * Reset a feature hint (will show again next time)
- */
 export const resetFeatureHint = (featureId: string, userId?: string): void => {
   storage.remove(buildStorageKey(userId, featureId));
 };
 
-/**
- * Reset all feature hints (useful for debugging or settings)
- * Clears all hints regardless of user prefix.
- */
+/** Clears every hint, for all users. */
 export const resetAllFeatureHints = (): void => {
   const allKeys = storage.getAllKeys();
   allKeys.forEach(key => {
@@ -216,15 +172,13 @@ export const resetAllFeatureHints = (): void => {
       storage.remove(key);
     }
   });
-  // Ensure tutorials-enabled is immediately consistent for hooks that re-read MMKV
-  // (the GraphQL → MMKV sync is async via useEffect, so set it synchronously here)
+  // Set synchronously — the GraphQL → MMKV sync is async, and hooks re-read the
+  // key the moment the generation below bumps.
   storage.set('user_show_tutorials', true);
-  // Signal all mounted tutorial hooks to re-read from MMKV
   useStore.getState().bumpTutorialResetGeneration();
 };
 
-// --- Login count tracking (used to space out post-login modals) ---
-
+// Login count, for spacing out post-login modals.
 const LOGIN_COUNT_PREFIX = 'login_count_';
 
 export const getLoginCount = (userId: string): number => {

@@ -76,18 +76,9 @@ export function BottomSheetAutocompleteInput<T>({
   title,
   searchPlaceholder,
   minSearchLength = 2,
-  // Taller than the hosts this picker is usually presented over — most sit at
-  // 70% — so it reads as a separate surface stacked over one, rather than the
-  // host redrawing itself. gorhom supports stacking (its own reference is the
-  // Apple Maps clone), where the sheets are told apart by their heights.
-  //
-  // It cannot be taller than EVERY host: several reach 85-95%
-  // (`CorrectWeightModal` expands to 85%, `MoveToPantryModal` and
-  // `ManageRecipeSheet` to 95%). Over those, what distinguishes the picker is
-  // the push animation and the backdrop dimming the host, not its height. Pass
-  // `snapPoint` explicitly at such a call site if the stack needs to read more
-  // clearly there — it is a prop precisely because one number cannot be right
-  // for every host.
+  // Taller than the ~70% hosts this is usually pushed over, so it reads as a
+  // separate stacked surface. It cannot clear every host (several reach 85-95%),
+  // hence the prop: override `snapPoint` at those call sites.
   snapPoint = '85%',
 
   // Data props
@@ -112,13 +103,10 @@ export function BottomSheetAutocompleteInput<T>({
   onModalClose,
 }: BottomSheetAutocompleteInputProps<T>) {
   const { t } = useTranslation();
-  // The trigger is a real, typeable field, so gorhom has to see it focus:
-  // `BottomSheetTextInput` is what sets `animatedKeyboardState.target`, and
-  // without a target gorhom caches the keyboard-shown event and discards it —
-  // `keyboardBehavior` then never fires and the host sheet sits still while the
-  // keyboard covers this field. It cannot be `BottomSheetTextInput`
-  // unconditionally: that component reads the sheet's internal context, which
-  // throws outside a sheet, and this field is also used on full screens.
+  // Only `BottomSheetTextInput` sets `animatedKeyboardState.target`; without it
+  // gorhom discards the keyboard-shown event and the host sheet never moves out
+  // from under the keyboard. It can't be unconditional — that component reads
+  // the sheet context and throws on the full screens this field also serves.
   const InputComponent = useIsBottomSheetInput()
     ? ThemedBottomSheetTextInput
     : ThemedTextInput;
@@ -141,11 +129,9 @@ export function BottomSheetAutocompleteInput<T>({
   });
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
-  // Check online status to prevent autocomplete when offline
   const isOnline = useIsOnline();
 
-  // Sync searchTerm with external value changes only when modal is closed (render-time state update)
-  // When modal is open, searchTerm is the source of truth to avoid cursor jumping
+  // While the modal is open `searchTerm` is the source of truth, or the cursor jumps.
   const [prevValue, setPrevValue] = useState(value);
   const [prevShowAutocomplete, setPrevShowAutocomplete] =
     useState(showAutocomplete);
@@ -157,7 +143,6 @@ export function BottomSheetAutocompleteInput<T>({
     }
   }
 
-  // Auto-open when data arrives and conditions are met (render-time state adjustment)
   const shouldAutoOpen =
     data.length > 0 &&
     searchTerm.length >= minSearchLength &&
@@ -168,7 +153,6 @@ export function BottomSheetAutocompleteInput<T>({
     setShowAutocomplete(true);
   }
 
-  // Call onModalOpen when showAutocomplete transitions to true (render-time state adjustment)
   const [prevShowAutoForCallback, setPrevShowAutoForCallback] = useState(false);
   if (showAutocomplete && !prevShowAutoForCallback) {
     onModalOpen?.();
@@ -177,10 +161,7 @@ export function BottomSheetAutocompleteInput<T>({
     setPrevShowAutoForCallback(showAutocomplete);
   }
 
-  // Modal only closes via explicit user action:
-  // - handleSelectItem (user selects an item)
-  // - handleDismiss (user taps backdrop)
-  // - handleSubmitCustomValue (user presses return/done)
+  // The modal closes only on explicit user action: select, backdrop tap, or return.
 
   const handleTextChange = (text: string) => {
     setHasInteracted(true);
@@ -215,14 +196,12 @@ export function BottomSheetAutocompleteInput<T>({
     dismissPicker();
   };
 
-  // The header's close button. Nothing to commit: `handleBottomSheetTextChange`
-  // already wrote every keystroke back through `onChangeText`, so the field
-  // holds whatever was typed. Content panning is disabled on this sheet, so
-  // without this button the only ways out are the backdrop and the return key.
+  // Nothing to commit — every keystroke already went back through `onChangeText`.
+  // Content panning is off here, so without this button the only ways out are the
+  // backdrop and the return key.
   const handleClose = dismissPicker;
 
   const defaultEmptyComponent = () => {
-    // Show offline-specific message when not online
     if (!isOnline) {
       return (
         <View style={styles.messageContainer}>
@@ -269,14 +248,9 @@ export function BottomSheetAutocompleteInput<T>({
     index: number;
   }) => (
     <Pressable
-      // Index-keyed off the field's own testID, because the row's CONTENT is
-      // per-field (a unit symbol, a brand name) and often translated.
-      //
-      // Selecting a suggestion is not the same action as typing the same text:
-      // `onSelect` hands back the entity (`onUnitSelected(item.id, …)`), while
-      // committing the text via the search field's return key only calls
-      // `onChangeText`. Without a handle here a test could only do the latter,
-      // so it exercised the free-text path and never the resolution one.
+      // Index-keyed off the field's testID: row content is per-field and often
+      // translated. Selecting a suggestion hands back the ENTITY, where committing
+      // the same text via return only calls `onChangeText` — different paths.
       testID={testID ? `${testID}-suggestion-${index}` : undefined}
       onPress={() => handleSelectItem(item)}
       style={({ pressed }) => pressed && styles.pressed}
@@ -307,24 +281,16 @@ export function BottomSheetAutocompleteInput<T>({
       <BottomSheetModal
         ref={bottomSheetRef}
         {...modalProps}
-        // 'push' stacks this picker on top of a host sheet (e.g. the Add-item
-        // sheet). The default 'switch' would minimize the host — it slides to
-        // the closed position and the whole flow appears to dismiss.
+        // 'push' stacks over a host sheet; the default 'switch' minimizes the
+        // host, so the whole flow appears to dismiss.
         stackBehavior="push"
         keyboardBlurBehavior="none"
         enableContentPanningGesture={false}
       >
-        {/* A plain View, deliberately not gorhom's `BottomSheetView`. That
-            component is styled `position: 'absolute'` with `top/left/right`
-            but no `bottom` (bottomSheetView/styles.ts in 5.2.14), so its
-            height is its content's and a `flex: 1` on it does nothing — the
-            FlashList below was never bounded, grew to every row, and could
-            not scroll. The sheet's content region has an explicit animated
-            height (BottomSheetContent.tsx), so a flex child IS bounded.
-            `BottomSheetView` also re-registers the sheet's scrollable as a
-            plain view after the FlashList registers itself, since a parent's
-            effects run after its children's. It is meant for static content
-            that the sheet sizes itself to, not as a wrapper around a list. */}
+        {/* A plain View, NOT gorhom's `BottomSheetView`: that is absolutely
+            positioned with no bottom, so `flex: 1` cannot bound the FlashList
+            and it also re-registers the sheet's scrollable as a plain view
+            after the list registers itself. It is for static content. */}
         <View style={styles.sheetBody}>
           <Header title={title} centerTitle onClose={handleClose} borderless />
           <View style={styles.headerSection}>

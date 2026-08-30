@@ -13,12 +13,9 @@ export interface ExpirationLinkData {
 export const NOTIFICATION_CATEGORIES = Object.values(NotificationCategory);
 
 /**
- * Typed shape of a notification's JSON payload. The server delivers this as a
- * `JSON` scalar (untyped), but every payload is an object map whose well-known
- * keys are read across the notification UI. Declaring those keys here gives the
- * consumers (NotificationActionHandler, InvitationAcceptanceModal,
- * NotificationDetailScreen) real types instead of `any`; the index signature
- * keeps room for notification-type-specific keys read dynamically.
+ * The server delivers a notification's payload as an untyped `JSON` scalar.
+ * Declaring the well-known keys here gives consumers real types; the index
+ * signature keeps room for the ones read dynamically per notification type.
  */
 export interface NotificationPayload {
   inviteId?: string;

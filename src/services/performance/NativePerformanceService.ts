@@ -1,9 +1,6 @@
 /**
- * Native Performance Service
- *
- * Central observer that captures native startup metrics, routes custom
- * marks/measures to telemetry, and tracks HTTP resource timing using
- * `react-native-performance`.
+ * Captures native startup metrics, routes custom marks/measures to telemetry,
+ * and tracks HTTP resource timing via `react-native-performance`.
  */
 import performance, {
   PerformanceObserver,
@@ -38,30 +35,18 @@ let reportedContentAppeared = false;
 let reportedFullyDrawn = false;
 
 /**
- * Whether this launch stopped to ask the user for something before it could
- * show content — sign-in, email verification, onboarding, biometric setup.
- *
- * `app_fully_drawn_ms` measures how long the APP took, and these gates put an
- * unbounded human interval inside that window: a signed-out cold start where
- * someone spends 45 s typing credentials landed ~47,000 ms in the same
- * unlabelled series as genuine ~2,000 ms launches. The flag is process-scoped
- * because the metric is, and it is set by the navigator rather than by any one
- * screen so that every gate is covered by one decision.
+ * Whether this launch stopped for user input (sign-in, verification, onboarding,
+ * biometric setup) before showing content. Those gates put an unbounded human
+ * interval inside `app_fully_drawn_ms`, so it is suppressed. Process-scoped like
+ * the metric, and set by the navigator so one decision covers every gate.
  */
 let sawInteractiveGate = false;
 
 /**
- * Startup marks observed so far, retained ACROSS observer notifications.
- *
- * The observer drains its buffer on every emission (`takeRecords()` in
- * react-native-performance's performance-observer), so `list.getEntries()` is
- * only the marks that arrived since the last callback — not everything seen. A
- * metric derived from two marks therefore required them to land in the same
- * notification, which is a fact about when the observer was constructed, not
- * about the marks. `contentAppeared` is emitted on RN's own content-appeared
- * signal, independently of the startup mark flush, so it is the one most likely
- * to arrive alone: the metric was then lost for the whole session, because the
- * one-shot guard stayed false while `nativeLaunchStart` never came back.
+ * Startup marks retained ACROSS observer notifications: the observer drains its
+ * buffer on every emission, so `list.getEntries()` holds only what arrived since
+ * the last callback. Without this, a metric derived from two marks needs both in
+ * the same notification — `contentAppeared` routinely arrives alone.
  */
 const observedMarks = new Map<string, number>();
 
@@ -104,17 +89,10 @@ function handleNativeMarks(entries: PerformanceEntry[]) {
     }
   }
 
-  // First frame. `contentAppeared` is React Native's own signal that the root
-  // component's view is on screen — `RCTContentDidAppearNotification` on iOS,
-  // `ReactMarker.CONTENT_APPEARED` on Android — so it means the same thing on
-  // both platforms. `react-native-performance` has always emitted it and this
-  // app never read it, which left us with no first-frame number at all: every
-  // other startup metric here begins at JS-bundle entry, so none of them can
-  // see a frame.
-  //
-  // Measured from `nativeLaunchStart` so it shares an origin with
-  // `app_native_launch_ms` and the two are subtractable. Note the iOS origin is
-  // an approximation — see the contract row in docs/telemetry-setup.md.
+  // First frame: `contentAppeared` is RN's own root-view-on-screen signal and
+  // means the same on both platforms. Measured from `nativeLaunchStart` so it
+  // shares an origin with `app_native_launch_ms` and the two are subtractable;
+  // the iOS origin is an approximation (contract row in docs/telemetry-setup.md).
   if (!reportedContentAppeared) {
     const launchStart = find('nativeLaunchStart');
     const contentAppeared = find('contentAppeared');
@@ -137,11 +115,8 @@ function handleMeasure(entry: PerformanceEntry) {
     const screen = parts[1];
     const phase = parts[2];
 
-    // Only `interactive` is routed. `mount` and `transition` used to be too:
-    // `mount` timed two effects in the same commit and read ~0 on every screen,
-    // and `transition` was measured from the identical marks as `interactive`,
-    // so it was a duplicate series under a second name. See
-    // `useScreenTransition`.
+    // Only `interactive` is routed: `mount` times two effects in the same commit
+    // and reads ~0 everywhere, `transition` uses marks identical to this one.
     if (phase === 'interactive') {
       Telemetry.histogram('screen_interactive_duration_ms', duration, {
         screen,
@@ -150,12 +125,9 @@ function handleMeasure(entry: PerformanceEntry) {
     return;
   }
 
-  // component:<name>:render → route to component render histogram.
-  // No producer today: nothing emits a `component:*:render` measure, so this
-  // metric is never written. Kept because the name is correct for what it would
-  // carry — a true render duration. `useCommitTracking` reports the different,
-  // weaker `component_commit_gap_ms` instead, because React strips
-  // `<Profiler onRender>` from ReactFabric-prod.
+  // component:<name>:render → component render histogram. No producer today:
+  // React strips `<Profiler onRender>` from ReactFabric-prod, so `useCommitTracking`
+  // reports the weaker `component_commit_gap_ms` instead.
   if (name.startsWith('component:')) {
     const component = name.split(':')[1];
     Telemetry.histogram('component_render_duration_ms', duration, {
@@ -223,12 +195,9 @@ export const NativePerformanceService = {
     });
     resourceObserver.observe({ type: 'resource', buffered: true });
 
-    // 4. Stop an armed profiler if the app leaves the foreground before any
-    // list reports first meaningful paint. Registered here, where React Native
-    // is already loaded — the arming module runs as the bundle's second
-    // require, where importing RN would reorder evaluation ahead of the
-    // startup origin. The time-based fallback covers runs where this never
-    // runs at all.
+    // 4. Stop an armed profiler if the app backgrounds before first meaningful
+    // paint. Registered here because RN is loaded — the arming module cannot
+    // import it without reordering the startup origin.
     if (isStartupProfilerArmed()) {
       appStateSubscription = AppState.addEventListener('change', state => {
         if (state === 'background') {
@@ -253,41 +222,18 @@ export const NativePerformanceService = {
     reportedContentAppeared = false;
     observedMarks.clear();
 
-    // `reportedFullyDrawn` and `sawInteractiveGate` are deliberately NOT reset.
-    // They are scoped to the PROCESS, like the origin they are measured against
-    // (`__APP_START_TIMESTAMP`, which nothing clears). Resetting them while the
-    // origin stood made a remount — App unmount, Fast Refresh, any remount of
-    // the hook that owns this cleanup — emit a second `app_fully_drawn_ms`
-    // measured from the original JS entry, i.e. minutes of session time in a
-    // series documented as at most once per process; clearing the gate flag
-    // additionally let a re-fired run report a launch that DID stop at sign-in
-    // as though it had not. Between no measurement after a remount and a wrong
-    // one, only the first is acceptable. `useStartupInit.ts` makes the same
-    // choice for `reportedStartupDuration`.
+    // `reportedFullyDrawn` and `sawInteractiveGate` are deliberately NOT reset:
+    // they are PROCESS-scoped, like the `__APP_START_TIMESTAMP` they measure
+    // against. Resetting them lets a remount emit a second `app_fully_drawn_ms`
+    // measured from the original JS entry. `useStartupInit.ts` does the same for
+    // `reportedStartupDuration`.
   },
 
   /**
-   * The app is showing real content — not just RN's first frame.
-   *
-   * `app_content_appeared_ms` is TTID: React Native's root view is mounted,
-   * which says nothing about whether the screen's data has arrived. On the
-   * pantry those are ~500 ms apart on a real device, and the gap is the part
-   * users actually notice — the header paints while the list is still empty.
-   *
-   * Called from `useFlashListPerformance`, by the effect that fires once
-   * `hasFinishedLayout && hasRealContent` — layout has committed AND what was
-   * laid out is data, not a skeleton. Whichever instrumented list the launch
-   * lands on first claims it, so it means "first meaningful paint, whichever
-   * screen that was". One-shot: a session has exactly one.
-   *
-   * NOT `onLoad`: that fires once per mount, and a sentinel-only skeleton
-   * layout consumes it before any row exists.
-   *
-   * KNOWN SCOPE: a launch that never renders a list — signed out, or straight
-   * into a non-list detail screen — never fires this, so the metric describes
-   * signed-in launches. That is the right scope for a cold-start baseline of a
-   * list-first app; firing it on any screen instead would make the number mean
-   * different things on different launches, which is worse than a gap.
+   * First meaningful paint — real content, not RN's first frame. Fired once per
+   * session by `useFlashListPerformance` on `hasFinishedLayout && hasRealContent`;
+   * NOT `onLoad`, which a sentinel-only skeleton layout consumes. Known scope: a
+   * launch that never renders an instrumented list never fires this.
    */
   markFullyDrawn() {
     const startTs = (globalThis as { __APP_START_TIMESTAMP?: number })
@@ -297,15 +243,9 @@ export const NativePerformanceService = {
 
     const elapsed = Date.now() - startTs;
 
-    // Past the window this is not a launch any more. `HomeTabs` is lazy, so at
-    // cold start only the Pantry tab mounts — the other two instrumented lists
-    // can ONLY latch after a navigation, and `__APP_START_TIMESTAMP` is never
-    // cleared. Without this bound, opening the shopping list twenty seconds in
-    // wrote ~20,000 ms into the same series as ~2,000 ms launches.
-    //
-    // Counted rather than dropped in silence: an absent value and an excluded
-    // one read identically on a dashboard, and the rate here is the evidence
-    // for whether `STARTUP_WINDOW_MS` is set right.
+    // Past the window this is not a launch: `HomeTabs` is lazy, so the other
+    // instrumented lists can only latch after a navigation. Counted rather than
+    // dropped in silence — absent and excluded read alike on a dashboard.
     if (elapsed > STARTUP_WINDOW_MS) {
       Telemetry.increment('startup_window_exceeded_total');
       logger.info(
@@ -319,39 +259,26 @@ export const NativePerformanceService = {
       return;
     }
 
-    // Keyed on whether the profiler ARMED, not on the build flag. Both
-    // platforms can profile, but neither always succeeds — so a flagged build
-    // that armed nothing would otherwise lose the metric and gain no trace.
+    // Keyed on whether the profiler ARMED, not on the build flag: a flagged
+    // build that armed nothing would lose the metric and gain no trace.
     if (isStartupProfilerArmed()) {
-      // Deliberately NO histogram on a profiled run. Sampling inflates the very
-      // interval being measured, and one poisoned sample in a series whose
-      // whole purpose is build-over-build comparison is worse than a gap.
-      // This is the profile whose window really is `app_fully_drawn_ms`'s;
-      // every other stop path writes under a different name.
+      // No histogram on a profiled run — sampling inflates the interval being
+      // measured. This is the one profile whose window is `app_fully_drawn_ms`'s.
       captureStartupProfile(STARTUP_PROFILE_FILENAME);
     } else if (sawInteractiveGate) {
-      // The window contains time spent waiting on a person, not on the app.
-      // Suppressed rather than labelled: the metric is unlabelled by design and
-      // both the contract row and the dashboards assume that, so a gap here is
-      // cheaper than a dimension everything downstream has to learn.
+      // Suppressed, not labelled: the metric is unlabelled by design.
       logger.info('app_fully_drawn_ms suppressed: launch required user input');
     } else {
       Telemetry.histogram('app_fully_drawn_ms', elapsed);
     }
 
-    // Same moment, reported to the platform's own tooling — Android only.
-    // Fires either way: it is the marker, not the measurement.
+    // Android-only platform marker; fires either way — marker, not measurement.
     StartupMark.reportFullyDrawn();
   },
 
   /**
-   * Test seam for the two PROCESS-scoped startup latches.
-   *
-   * Deliberately separate from `cleanup()`: production teardown must not reset
-   * these, or a remount re-emits a once-per-process metric measured from the
-   * original JS entry (see the note in `cleanup`). A test needs a fresh process
-   * per case and has no other way to get one, so it says so explicitly here
-   * rather than borrowing a production path that must not do this.
+   * Test seam for the two PROCESS-scoped latches. Separate from `cleanup()`,
+   * which must not reset them (see the note there).
    */
   resetStartupLatchesForTesting() {
     reportedFullyDrawn = false;
@@ -359,12 +286,8 @@ export const NativePerformanceService = {
   },
 
   /**
-   * Record that this launch stopped for user input before showing content.
-   *
-   * Called by the navigator for every gate that does so (auth, verification,
-   * onboarding, biometric setup). Must be able to arrive AFTER `markFullyDrawn`
-   * in principle, so it is not a precondition of anything — but in practice the
-   * gate renders long before any instrumented list does.
+   * Called by the navigator for every gate that stops for user input. May in
+   * principle arrive after `markFullyDrawn`, so it gates nothing.
    */
   noteInteractiveGate() {
     sawInteractiveGate = true;

@@ -1,11 +1,9 @@
 import { Diet } from '#/graphql/generated/schemaTypes';
 
 /**
- * Stackable dietary constraints. These layer on top of any lifestyle diet
- * (e.g. a "gluten-free vegetarian"), so they remain multi-select. Every other
- * member of the `Diet` enum is a mutually-exclusive lifestyle diet, of which a
- * user may hold at most one. Single source of truth for both the recipe filter
- * sheet and the dietary-profile selector so the two stay in sync.
+ * Stackable dietary constraints — they layer on a lifestyle diet, so they stay
+ * multi-select, while every other `Diet` member is mutually exclusive. One
+ * source for both the recipe filter sheet and the dietary-profile selector.
  */
 export const CONSTRAINT_DIETS: ReadonlySet<Diet> = new Set([
   Diet.GlutenFree,

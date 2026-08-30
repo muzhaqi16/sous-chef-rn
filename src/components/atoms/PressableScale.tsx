@@ -23,10 +23,8 @@ export type PressableScaleHaptic = 'light' | 'medium' | 'selection' | 'none';
 
 export interface PressableScaleProps extends Omit<PressableProps, 'style'> {
   /**
-   * Caller style — static or array form only. The animated scale transform is
-   * appended via the array pattern, preserving caller-owned themed/`useVariants`
-   * styles. (The `({ pressed }) => …` function form is intentionally unsupported:
-   * a Reanimated animated style cannot live inside a function-style callback.)
+   * Static or array form only — a Reanimated animated style cannot live inside
+   * the `({ pressed }) => …` callback form.
    */
   style?: StyleProp<ViewStyle>;
   /** Pressed scale target. Default `0.97` (the app's button standard). */
@@ -36,15 +34,10 @@ export interface PressableScaleProps extends Omit<PressableProps, 'style'> {
 }
 
 /**
- * Canonical scale press-feedback surface: springs to `activeScale` on press-in
- * and back on release, on the UI thread. The scale sibling of `AppPressable`
- * (which does opacity). Use for buttons/FABs that should "press in" rather than
- * dim.
- *
- * `onPressIn`/`onPressOut`/`onPress` are JS-thread RN events (not worklets), so
- * `scale.set(withSpring(...))` and the haptic run on the JS thread — no
- * `scheduleOnRN`, no worklet boundary. Do NOT use inside a Swipeable underlay or
- * `GestureDetector` chain (use RNGH's `Pressable` there instead).
+ * Scale sibling of `AppPressable`: springs to `activeScale` on the UI thread.
+ * The press handlers are JS-thread RN events, not worklets, so no `scheduleOnRN`
+ * is involved. Do NOT use inside a Swipeable underlay or `GestureDetector`
+ * chain — RNGH's own `Pressable` belongs there.
  */
 export const PressableScale: React.FC<PressableScaleProps> = ({
   style,

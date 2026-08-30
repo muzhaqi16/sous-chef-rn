@@ -31,9 +31,8 @@ import {
 
 export const TAB_BAR_HEIGHT = 65;
 
-// Dark translucent tint layered over the liquid-glass material so the bar keeps
-// its dark identity and white icons/labels stay legible while list content
-// refracts softly through it. Static — the bar is dark in both themes.
+// Static: the bar is dark in both themes, so white icons/labels stay legible over
+// the liquid-glass material.
 const GLASS_TINT = 'rgba(28, 27, 32, 0.4)';
 
 export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
@@ -51,21 +50,16 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     addButtonDisabledMessage,
   } = useTabBarState();
 
-  // "An overlay is dimming the screen" — true for every backdrop claim (sheets
-  // and selectors alike), derived from the global backdrop's slot count. This
-  // replaces the selector-only `isOverlayOpen` for the scroll-hide reset so the
-  // reset now covers sheets too.
+  // True for every backdrop claim, sheets and selectors alike, from the global
+  // backdrop's slot count — broader than the selector-only `isOverlayOpen`.
   const overlayPresent = useOverlayBackdropPresence();
   const { setActiveTab, setAddButtonRect, scrollTabBarHidden } =
     useTabBarSetters();
 
-  // Ref for measuring add button position (for tutorial spotlight)
   const addButtonRef = useRef<View>(null);
 
-  // Navigation labels preference
   const showNavigationLabels = useShowNavigationLabels();
 
-  // Handle add button press - show toast if disabled
   const handleAddPress = () => {
     if (isAddButtonDisabled) {
       toastService.info(
@@ -78,43 +72,34 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   const { bottom: safeBottom } = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
 
-  // Memoize tab bar width calculation
   const tabBarWidth = screenWidth * 0.95;
 
-  // Shared value for immediate tab icon feedback (UI thread)
   const activeTabIndex = useSharedValue(state.index);
 
-  // Sync shared value with React Navigation state
   useLayoutEffect(() => {
     activeTabIndex.set(state.index);
   }, [state.index, activeTabIndex]);
 
-  // Bar visibility is the max of two independent hide sources, both 0…1:
-  // - Overlay coverage: the global dim opacity (driven on the UI thread by the
-  //   open sheet's `animatedIndex`), normalized back to 0…1. Reading the same
-  //   SharedValue as the backdrop keeps the bar in lockstep with the sheet —
-  //   it slides back AS the sheet slides down, with no settled-closed callback.
-  // - Scroll hide: a spring toggled by scroll direction.
-  // Detail screens don't factor in here: they're siblings of the tab navigator
-  // (see RootNavigator), so the pushed screen covers the bar entirely.
+  // Visibility is the max of two 0…1 hide sources: overlay coverage (the global
+  // dim opacity, so the bar moves in lockstep with the sheet's own
+  // `animatedIndex` rather than waiting on a settled-closed callback) and the
+  // scroll-hide spring. Detail screens are siblings of the tab navigator, so they
+  // cover the bar outright and never factor in.
   const overlayOpacity = useOverlayBackdropOpacity();
   const scrollHide = useSharedValue(0);
 
-  // Track active tab for scanner visibility
   useEffect(() => {
     const activeRoute = state.routes[state.index];
     setActiveTab(activeRoute.name);
   }, [state.index, state.routes, setActiveTab]);
 
-  // Clear any scroll-hidden state when an overlay opens so the bar returns to a
-  // known (visible) state once the overlay closes.
+  // Clear scroll-hidden state on overlay open, so the bar returns visible.
   useLayoutEffect(() => {
     if (overlayPresent) {
       scrollTabBarHidden.set(false);
     }
   }, [overlayPresent, scrollTabBarHidden]);
 
-  // Scroll hide animates with a spring (toggled by scroll direction).
   useAnimatedReaction(
     () => scrollTabBarHidden.get(),
     (hidden, prevHidden) => {
@@ -124,9 +109,8 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   );
 
   const animatedStyle = useAnimatedStyle(() => {
-    // Sheets contribute dim opacity as `interpolate(animatedIndex, [-1,0], [0,
-    // BACKDROP_OPACITY])`; dividing by `BACKDROP_OPACITY` inverts that back to
-    // overlay coverage, 0 (closed) → 1 (fully open).
+    // Sheets contribute dim opacity scaled by BACKDROP_OPACITY; dividing inverts
+    // it back to coverage, 0 (closed) → 1 (fully open).
     const overlayHide = overlayOpacity
       ? Math.min(1, overlayOpacity.get() / SHEET.BACKDROP_OPACITY)
       : 0;
@@ -137,7 +121,6 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     };
   });
 
-  // Memoize container style
   const containerStyle = {
     width: tabBarWidth,
     bottom:
@@ -146,16 +129,13 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
         : Math.max(safeBottom, 16),
   };
 
-  // Split tabs: first half before add button, second half after
   const middleIndex = Math.floor(state.routes.length / 2);
 
-  // Create press handler for each tab
   const handleTabPress = (
     route: { key: string; name: string; params?: object },
     isFocused: boolean,
     targetIndex: number,
   ) => {
-    // Set shared value immediately for instant UI-thread icon feedback
     activeTabIndex.set(targetIndex);
     HapticService.selection();
 
@@ -168,19 +148,14 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     if (!event.defaultPrevented) {
       const mainScreen = tabs[route.name]?.mainScreen;
 
-      // Dispatched as a normal (not startTransition) update: as a low-priority
-      // transition this update had no scheduling deadline, so a steady stream
-      // of unrelated Immediate-priority renders elsewhere in the app could
-      // starve it for many seconds — the tab icon would flip instantly (a
-      // Reanimated shared value) while the actual screen stayed frozen on the
-      // old route until the transition finally got a turn.
+      // A NORMAL update, never a transition: with no scheduling deadline a stream
+      // of Immediate-priority renders elsewhere can starve it for seconds, leaving
+      // the icon flipped while the screen stays on the old route.
       if (!isFocused) {
-        // Switching tabs: just focus the tab. HomeTabs runs
-        // `inactiveBehavior: 'none'`, so the blurred tab's tree was never torn
-        // down and there's nothing to remount.
+        // HomeTabs runs `inactiveBehavior: 'none'`, so the blurred tab's tree is
+        // still mounted and focusing it is all that's needed.
         navigation.navigate(route.name);
       } else if (mainScreen) {
-        // Re-tapping the active tab: reset stack to root (standard iOS/Android pattern)
         navigation.navigate(route.name, {
           screen: mainScreen,
           initial: false,
@@ -209,7 +184,6 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
         />
       ) : null}
       <View style={styles.tabsRow}>
-        {/* First half of tabs (Pantry, ShoppingList) */}
         {state.routes.slice(0, middleIndex).map((route, index) => {
           const { options } = descriptors[route.key];
           const isFocused = state.index === index;
@@ -228,7 +202,6 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
           );
         })}
 
-        {/* Center Add Button - always visible on allowed tabs */}
         {showAddButton ? (
           <View
             ref={addButtonRef}
@@ -260,7 +233,6 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
           <View style={styles.addButtonPlaceholder} />
         )}
 
-        {/* Second half of tabs (Recipe, Profile) */}
         {state.routes.slice(middleIndex).map((route, index) => {
           const actualIndex = middleIndex + index;
           const { options } = descriptors[route.key];
@@ -304,13 +276,11 @@ const styles = StyleSheet.create(theme => ({
     ],
     zIndex: theme.zIndex.overlay,
   },
-  // iOS 26 Liquid Glass: drop the solid fill so the glass material shows
-  // through. (Android / iOS < 26 keep the solid `secondaryDark` above.)
+  // iOS 26 Liquid Glass drops the solid fill; Android / iOS < 26 keep it.
   containerGlass: {
     backgroundColor: 'transparent',
   },
-  // Glass material layer behind the tabs; self-clips to the bar radius and
-  // ignores touches so taps reach the tab buttons.
+  // Self-clips to the bar radius and ignores touches so taps reach the buttons.
   glassFill: {
     position: 'absolute',
     top: 0,

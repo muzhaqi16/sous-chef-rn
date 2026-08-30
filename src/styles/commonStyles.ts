@@ -1,24 +1,13 @@
 import { StyleSheet } from 'react-native-unistyles';
 
 /**
- * Shared style primitives for the app.
- *
- * Architectural note — single inline `StyleSheet.create` factory:
- *   The Unistyles v3 babel plugin AST-analyzes the factory body to discover
- *   `theme.*` accesses and wire them to the C++ ShadowTree. Theme reads
- *   inside imported helper functions (e.g. an `XDefs(theme)` returning a
- *   plain object) are opaque to that analyzer — the resulting styles get
- *   their initial values but never refresh when `UnistylesRuntime.updateTheme`
- *   fires (e.g. when a user picks a new App Color in AppearanceScreen).
- *
- *   Every style below is therefore defined directly inside the factory so
- *   the plugin can see every `theme.*` access. Don't refactor this back to
- *   split-file helpers without verifying that the babel plugin's tracking
- *   still propagates updates to consumers.
+ * All primitives live INSIDE one `StyleSheet.create` factory: the Unistyles
+ * babel plugin AST-analyzes the factory body for `theme.*` reads, and a read
+ * inside an imported helper is opaque to it — those styles freeze at their
+ * initial values. Do not split this into helper files.
  */
 
 export const commonStyles = StyleSheet.create(theme => ({
-  // ── Containers ─────────────────────────────────────────────────────────
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -35,7 +24,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
 
-  // ── Surfaces & cards ───────────────────────────────────────────────────
   surface: {
     backgroundColor: theme.colors.surface,
   },
@@ -72,7 +60,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     borderBottomColor: theme.colors.border,
   },
 
-  // ── Flex patterns ──────────────────────────────────────────────────────
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -98,7 +85,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
 
-  // ── Spacing helpers ────────────────────────────────────────────────────
   paddingHorizontal: {
     paddingHorizontal: theme.spacing.md,
   },
@@ -133,7 +119,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     gap: theme.spacing.lg,
   },
 
-  // ── Headers ────────────────────────────────────────────────────────────
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -162,7 +147,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     width: 24,
   },
 
-  // ── Dividers & utility ─────────────────────────────────────────────────
   divider: {
     height: 1,
     backgroundColor: theme.colors.divider,
@@ -186,7 +170,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     flexGrow: 1,
   },
 
-  // ── Forms ──────────────────────────────────────────────────────────────
   input: {
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -223,7 +206,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     textAlignVertical: 'top',
   },
 
-  // ── Buttons ────────────────────────────────────────────────────────────
   button: {
     paddingVertical: {
       xs: theme.spacing.sm,
@@ -269,7 +251,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
 
-  // ── Settings shared (PantrySettings, ListSettings, etc.) ───────────────
   settingsSection: {
     padding: theme.spacing.md,
     borderBottomWidth: 1,
@@ -311,7 +292,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
   },
 
-  // ── List items ─────────────────────────────────────────────────────────
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -362,9 +342,8 @@ export const commonStyles = StyleSheet.create(theme => ({
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    // Hairline neutral border (was a hard orange outline, which read heavy and
-    // dated on every thumbnail) + a tinted fill so empty placeholder tiles read
-    // as a deliberate thumbnail rather than a gap.
+    // Hairline border + tinted fill, so an empty placeholder tile reads as a
+    // deliberate thumbnail rather than a gap.
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
     backgroundColor: theme.colors.surfaceVariant,
@@ -379,7 +358,6 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
   shadow: theme.shadows.card,
 
-  // ── Empty / loading states ─────────────────────────────────────────────
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -414,7 +392,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
 
-  // ── Modals & bottom sheets ─────────────────────────────────────────────
   modalContainer: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -523,7 +500,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.semibold,
   },
 
-  // ── Components (badge, chip, FAB) ──────────────────────────────────────
   badge: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
@@ -553,7 +529,6 @@ export const commonStyles = StyleSheet.create(theme => ({
   chipTextSelected: {
     color: theme.colors.chipSelectedText,
   },
-  // ── Typography presets ─────────────────────────────────────────────────
   body: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.regular,
@@ -584,7 +559,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     textDecorationLine: 'underline',
   },
 
-  // ── Interaction states ─────────────────────────────────────────────────
   pressed: {
     opacity: theme.opacity.pressed,
   },

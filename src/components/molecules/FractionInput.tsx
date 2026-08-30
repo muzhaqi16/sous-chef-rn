@@ -23,22 +23,11 @@ interface FractionInputProps {
     | 'numeric'
     | 'decimal-pad'
     | 'numbers-and-punctuation';
-  /** Use BottomSheetTextInput for proper keyboard handling inside bottom sheets */
   useBottomSheetInput?: boolean;
-  /** Show red asterisk to indicate required field */
   required?: boolean;
 }
 
-/**
- * FractionInput component for accepting fractional quantities
- *
- * Accepts formats:
- * - Decimals: "1.5", "0.75", "2"
- * - Simple fractions: "1/4", "3/4", "1/2"
- * - Mixed numbers: "1 1/4", "2 3/4"
- *
- * Validation pattern: ^\d+(\s+\d+\/\d+)?$|^\d+\/\d+$|^\d+\.?\d*$
- */
+/** Accepts decimals ("1.5"), simple fractions ("1/4") and mixed numbers ("1 1/4"). */
 export const FractionInput: React.FC<FractionInputProps> = ({
   value,
   onChangeText,
@@ -59,17 +48,15 @@ export const FractionInput: React.FC<FractionInputProps> = ({
       : ThemedTextInput;
   const [isFocused, setIsFocused] = useState(false);
 
-  // Validation regex for fraction input
   const isValidFormat = (text: string): boolean => {
     if (!text || text.trim() === '') return true; // Empty is valid
 
-    // Pattern: whole numbers, decimals, simple fractions (1/4), or mixed numbers (1 1/4)
     const pattern = /^\d+(\s+\d+\/\d+)?$|^\d+\/\d+$|^\d+\.?\d*$/;
     return pattern.test(text.trim());
   };
 
   const handleChangeText = (text: string) => {
-    // Allow typing even if invalid (for better UX), but validate on blur
+    // Typing an invalid value is allowed; validation happens on blur.
     onChangeText(text);
   };
 

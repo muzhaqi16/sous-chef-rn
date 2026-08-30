@@ -114,7 +114,7 @@ describe('NotificationSettingsScreen', () => {
     });
 
     const tree = render(<NotificationSettingsScreen />);
-    expect(tree.getByText('Loading settings...')).toBeTruthy();
+    expect(tree.getByTestId('notification-settings-state')).toBeTruthy();
   });
 
   /**

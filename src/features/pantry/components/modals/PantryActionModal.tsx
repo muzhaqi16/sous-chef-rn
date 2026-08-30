@@ -28,37 +28,27 @@ export interface PantryActionSharedState {
   setSelectedUnitInfo: (unit: SelectedUnitInfo) => void;
   notes: string;
   setNotes: (notes: string) => void;
-  /** Available quantity in the tracking unit (always the base) */
+  /** Available quantity in the tracking unit, which is always the base. */
   trackingQuantity: number;
-  /** The tracking unit's symbol */
   trackingUnitSymbol: string;
-  /** The tracking unit's ID */
   trackingUnitId: string | undefined;
-  /** The active unit symbol (selected unit or tracking unit fallback) */
+  /** Selected unit, falling back to the tracking unit. */
   activeUnitSymbol: string;
-  /** The active unit ID (selected unit or tracking unit fallback) */
   activeUnitId: string | undefined;
-  /** Whether a non-tracking unit is selected (needs conversion) */
+  /** A non-tracking unit is selected, so quantities need conversion. */
   isConvertedUnit: boolean;
-  /** The pantry item's own ID for conversion queries */
   pantryItemId: string | undefined;
-  /** Default unit resolved from ranked units */
+  /** Resolved from the ranked-units API, along with the two below. */
   defaultUnit: SelectedUnitInfo | null;
-  /** Default increment from the ranked unit API for the selected unit */
   defaultIncrement: number | null;
-  /** Common fractions from the ranked unit API for the selected unit */
   commonFractions: number[] | null;
-  /** Available quantity converted to the selected unit (null if same unit or failed) */
+  /** Null when the unit is the same or the conversion failed. */
   availableInSelectedUnit: number | null;
-  /** Whether the available quantity conversion is still loading */
   availableLoading: boolean;
-  /** For dual-tracked items: remaining quantity in net weight units */
+  /** Dual-tracked items only. */
   remainingNetWeight: number | null;
-  /** For dual-tracked items: net weight unit symbol (e.g. "g") */
   netWeightUnitSymbol: string | undefined;
-  /** For dual-tracked items: net weight unit ID */
   netWeightUnitId: string | undefined;
-  /** Whether the item has dual-tracking (net weight + net weight unit) */
   isDualTracked: boolean;
 }
 
@@ -72,10 +62,10 @@ interface PantryActionModalProps {
   snapPoints?: (string | number)[];
   unitToggleLabel?: string;
   currentQuantityLabel?: string;
-  /** The operation type determines which unit eligibility query to use */
+  /** Selects which unit-eligibility query runs. */
   operation: PantryOperation;
   onConfirm: (shared: PantryActionSharedState) => void;
-  /** Called when the modal opens with a valid pantryItem. Use to reset consumer-specific state. */
+  /** Fires when the modal opens; reset consumer-specific state here. */
   onReset?: (
     pantryItem: PantryActionModal_PantryItemFragment,
     defaultUnit: SelectedUnitInfo | null,
@@ -88,15 +78,10 @@ interface PantryActionModalProps {
 }
 
 /**
- * Shared base component for pantry action modals (Consume, RecordWaste, Restock).
- *
- * Manages common state (selectedUnit, notes) and renders the shared shell
- * (header, item info, unit picker). Action-specific form fields are
- * rendered via the `renderActionFields` prop.
- *
- * Reads the pantry item live from the Apollo cache via `useFragment` keyed
- * by `pantryItemId` so any cache update (e.g. an in-flight mutation) is
- * reflected in the open modal without re-snapshotting state.
+ * Shared shell for the pantry action modals (Consume, RecordWaste, Restock);
+ * action-specific fields arrive through `renderActionFields`. Reads the item
+ * live via `useFragment` keyed by `pantryItemId`, so a cache update reaches
+ * the open modal without re-snapshotting state.
  */
 export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   visible,
@@ -124,10 +109,9 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     snapPoints,
   });
 
-  // Guarantee the modal's full read shape is in the cache regardless of how
-  // the item arrived (list query, create mutation, subscription push).
-  // `cache-first` is a no-op when the cache already satisfies the fragment and
-  // only fetches when a field is missing — so partial entries self-heal.
+  // Guarantees the modal's full read shape however the item arrived (list
+  // query, create mutation, subscription push): `cache-first` is a no-op when
+  // the cache satisfies it, so partial entries self-heal.
   const { loading: itemQueryLoading } = useQuery(GetPantryActionItemDocument, {
     variables: { id: pantryItemId ?? '' },
     skip: !pantryItemId,
@@ -146,7 +130,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     useState<SelectedUnitInfo | null>(null);
   const [notes, setNotes] = useState('');
 
-  // Fetch operation-specific eligible units for the item
   const {
     groups,
     allUnits,
@@ -163,8 +146,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     operation,
   });
 
-  // Dual-tracking info (kept for the item info display)
-  // Matches API lazy init: quantity × netWeight (see pantry-quantity-engine.md)
+  // Matches the API's lazy init: quantity × netWeight.
   const effectiveNetWeight =
     pantryItem?.remainingNetWeight ??
     (pantryItem?.netWeight != null
@@ -172,8 +154,8 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
       : null);
   const isDualTracked =
     effectiveNetWeight != null && pantryItem?.netWeightUnit != null;
-  // When tracking unit equals net-weight unit, the tracking count is redundant
-  // (e.g. "1 g (100 g remaining)") — collapse the display to just the net weight.
+  // Same unit both sides makes the tracking count redundant ("1 g (100 g
+  // remaining)") — collapse to the net weight alone.
   const isSingleUnitDualTracked =
     isDualTracked && pantryItem?.unit?.id === pantryItem?.netWeightUnit?.id;
   const hasContentUnit =
@@ -195,7 +177,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   const trackingUnitSymbol = pantryItem?.unit?.symbol || '';
   const trackingUnitId = pantryItem?.unit?.id;
 
-  // Fallback: net weight unit for dual-tracked items, then tracking unit
   const fallbackUnitSymbol =
     pantryItem?.netWeightUnit?.symbol || trackingUnitSymbol;
   const fallbackUnitId = pantryItem?.netWeightUnit?.id || trackingUnitId;
@@ -204,7 +185,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   const isConvertedUnit =
     selectedUnitInfo != null && !selectedUnitInfo.isTrackingUnit;
 
-  // Convert available quantity to the selected unit for display & validation
   const { availableInSelectedUnit, availableLoading } =
     useConvertAvailableQuantity({
       pantryItemId: pantryItem?.id,
@@ -216,7 +196,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
       netWeightUnitId: pantryItem?.netWeightUnit?.id,
     });
 
-  // Reset state when modal opens (render-time state update)
   const [prevVisible, setPrevVisible] = useState(visible);
   const [prevPantryItemId, setPrevPantryItemId] = useState(pantryItem?.id);
   if (visible !== prevVisible || pantryItem?.id !== prevPantryItemId) {
@@ -229,7 +208,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     }
   }
 
-  // Also set default unit once it loads if we haven't selected anything yet
+  // Also picks up the default unit once it loads, if nothing is selected yet.
   const [prevDefaultUnitId, setPrevDefaultUnitId] = useState(
     defaultUnit?.unitId,
   );

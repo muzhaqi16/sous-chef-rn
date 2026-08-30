@@ -1,18 +1,7 @@
 /**
- * Apollo Client Memory Management Configuration
- *
- * Per Apollo docs: "Set before loading @apollo/client"
- * This file MUST be imported in index.js before any Apollo Client imports
- *
- * Mobile-optimized cache sizes for React Native
- * Default values are tuned for desktop/web with much larger memory footprints
- *
- * LRU Cache Configuration:
- * - Core caches sized for mobile (typical queries visible on screen at once)
- * - Document caches sized for typical app operations
- * - Fragment registry sized conservatively
- * - Query manager sized for typical concurrent queries
- *
+ * Apollo LRU cache sizes, tuned down from Apollo's desktop defaults for mobile.
+ * MUST be imported in index.js before any @apollo/client import — Apollo reads
+ * this symbol once, at load.
  * @see https://www.apollographql.com/docs/react/caching/memory-management
  */
 

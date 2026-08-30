@@ -1,18 +1,8 @@
 /**
- * Declarative structure of the profile and personal-information screens.
- *
- * Every user-facing string here is an i18n KEY, resolved by the screen that
- * renders it. It used to be English text, translated afterwards by five lookup
- * maps spread across two screens — three of them keyed on the English string
- * itself, so renaming a section title in this file silently fell back to
- * rendering that title untranslated, in every language, with nothing failing.
- *
- * Keys rather than resolved strings for the usual reason: this module is
- * evaluated at import, before the stored language is applied.
- *
- * There is deliberately no subtitle field. The old config carried two, and
- * nothing ever read them — the biometric row builds its subtitle at runtime
- * from the device's capability, and the change-password row shows none.
+ * Declarative structure of the profile screens. Every user-facing string is an
+ * i18n KEY, resolved by the screen that renders it — keys and not resolved
+ * strings because this module is evaluated at import, before the stored
+ * language is applied. There is deliberately no subtitle field.
  */
 
 import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
@@ -30,12 +20,9 @@ export interface SettingItemConfig {
 }
 
 /**
- * The developer section's id, exported so the screens that gate on it import
- * the identity rather than repeating a literal.
- *
- * A literal is what let the gate fail open: the section's key changed from the
- * English title to this id, and the comparison against `'Developer'` silently
- * stopped matching, so the section rendered for every user in every build.
+ * The developer section's id, exported so screens gating on it import the
+ * identity rather than repeating a literal — a literal comparison fails OPEN,
+ * rendering the section for every user in every build.
  */
 export const DEVELOPER_SECTION_ID = 'developer';
 

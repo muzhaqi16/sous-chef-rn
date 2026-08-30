@@ -1,29 +1,8 @@
 /**
- * buildOptimisticPantryItem — shared optimistic entity builder for pantry creates.
- *
- * Every pantry "create" site (the two add sheets, the form-submission hooks,
- * onboarding) writes the new item to
- * the cache PERMANENTLY before firing the mutation so it survives a fully-offline
- * / API-down create (the queue replays via SyncPantryItem(clientId = id)). They
- * all need the same complete `PantryItem` shape — a single source of truth here
- * keeps the optimistic entity in lockstep with the `CreatePantryItem` selection
- * (an incomplete shape makes list cells' `useFragment` report `complete: false`
- * and blank the row).
- *
- * **Completeness is load-bearing, not cosmetic.** `GetPantry` reads every field
- * below off each list node. One missing field makes the whole query's cache read
- * incomplete, and Apollo then hands `useQuery` no data at all (there is no
- * `returnPartialData`) and goes to the network. Online that is invisible — the
- * refetch returns the full node a moment later. Offline there is no refetch:
- * `offlineModeLink` re-reads the same incomplete cache, reports a miss, and the
- * pantry falls back to its pre-add snapshot via `usePreservedConnection`. The
- * item is queued and replays correctly on reconnect, but it stays INVISIBLE for
- * the whole offline session. `__tests__/apollo/optimisticEntityCompleteness.test.ts`
- * locks this invariant in.
- *
- * The returned object is a valid `PantryItem` node for
- * `addToPantryItemsCache` (which writes the entity via `toReference(item, true)`
- * and adds the connection edge).
+ * The one optimistic `PantryItem` builder for local-first creates; it must stay
+ * in lockstep with the `CreatePantryItem` selection. COMPLETENESS is
+ * load-bearing: one field `GetPantry` selects but this omits makes the cache read
+ * incomplete, so the item stays INVISIBLE for the whole offline session.
  */
 
 import { gql, type ApolloCache } from '@apollo/client';
@@ -72,27 +51,10 @@ const OptimisticUnitFragment = gql`
 `;
 
 /**
- * Resolve the optimistic item's `unit` from the cache.
- *
- * Reading the real unit — rather than writing a hand-built `{id, name, symbol}`
- * stub — is what keeps `type`/`displayAsFraction` readable. A stub without them
- * strands the whole pantry query (see the module doc), and it also puts the
- * unit's real `symbol` on the row instead of a placeholder.
- *
- * (It is NOT about protecting the shared `Unit` entity from the stub. The
- * writer, `addToPantryItemsCache`, calls `toReference(item, true)`, which
- * normalizes only the top-level `PantryItem`; nested objects are stored
- * embedded on it, so a stub could never have reached `Unit:<id>` to overwrite
- * anything.)
- *
- * A unit id at an add site comes from something already fetched, but "fetched"
- * has to mean *these five fields* — `readFragment` returns null on a partial
- * entity just as it does on a missing one. The unit autocomplete
- * (`SearchUnits` / `GetCommonUnits`) and an item's `displayUnit`
- * (`item.graphql`) all select them. Anything narrower silently lands in the
- * null branch below: the optimistic item carries no unit and the quantity
- * renders bare until the create response or replay supplies the real one —
- * which still beats stranding the whole list.
+ * Reads the real unit rather than writing a `{id, name, symbol}` stub, so
+ * `type`/`displayAsFraction` stay readable. `readFragment` returns null on a
+ * PARTIALLY cached entity exactly as on a missing one, so any caller fetching
+ * fewer than these five fields silently lands in the null branch.
  */
 function readCachedUnit(
   cache: ApolloCache | undefined,
@@ -109,15 +71,10 @@ function readCachedUnit(
 }
 
 /**
- * Build a complete optimistic `PantryItem` for local-first creates.
- *
- * @param id - the client-minted cuid (the row's real PK once synced)
- * @param fields - the core fields available at the call site; everything the
- *   `CreatePantryItem` selection requires but isn't predictable client-side
- *   (batch counts, breakdowns, derived weights) defaults to a neutral value and
- *   is replaced by the authoritative server entity on response / replay.
- * @param cache - used to resolve `fields.unitId` to the cached `Unit`
- *   ({@link readCachedUnit}). Omit only where no unit id is passed.
+ * `id` is the client-minted cuid (the row's real PK once synced). Everything the
+ * `CreatePantryItem` selection requires but is unpredictable client-side (batch
+ * counts, breakdowns, derived weights) gets a neutral default, replaced by the
+ * server entity on response / replay.
  */
 export function buildOptimisticPantryItem(
   id: string,
@@ -126,9 +83,8 @@ export function buildOptimisticPantryItem(
 ): OptimisticPantryItem {
   const catalogItemId = fields.itemId ?? '';
   return createOptimisticEntity<OptimisticPantryItem>('PantryItem', id, {
-    // Selected by GetPantry on every node (the screen's local sort comparators
-    // read it) — a missing createdAt is enough to strand the whole list
-    // offline. The server value replaces this on response / replay.
+    // Selected by GetPantry on every node and read by the local sort
+    // comparators — omitting it strands the whole list offline.
     createdAt: new Date().toISOString(),
     pantryId: fields.pantryId,
     itemId: catalogItemId,

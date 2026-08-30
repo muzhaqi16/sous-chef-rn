@@ -1,12 +1,8 @@
 /**
- * useUpdateShoppingList - Rename / settings update for a shopping list
- * (local-first).
- *
- * Writes the changed fields to the cache PERMANENTLY before firing, so the
- * update survives an offline / API-down queue (the replay re-sends the
- * original mutation — absolute field sets keyed by the list id, idempotent).
- * A real rejection restores the pre-edit snapshot and throws the precise
- * domain error for the caller's toast.
+ * Local-first: the changed fields are written to the cache PERMANENTLY before
+ * firing, so the update survives an offline queue — the replay re-sends absolute
+ * field sets keyed by the list id, idempotent. A rejection restores the pre-edit
+ * snapshot and throws the precise domain error for the caller's toast.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -53,11 +49,9 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
         data,
       });
 
-    // Permanent write BEFORE firing — survives an offline/API-down queue
-    // (where no response ever arrives to materialize the change).
     if (snapshot) {
-      // Built before the try — conditional spreads inside a try body make the
-      // React Compiler bail out of this hook.
+      // Built before the try — a conditional spread inside a try body bails the
+      // React Compiler out of this hook.
       const optimisticList = {
         ...snapshot,
         ...(updates.name !== undefined && { name: updates.name }),
@@ -88,9 +82,8 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
       }
     };
 
-    // The server requires the version: an update sent without one reports
-    // success while overwriting a concurrent edit. The snapshot is the row this
-    // write is based on, so its version is the one to check against.
+    // The server requires the version: an update sent without one reports success
+    // while overwriting a concurrent edit. The snapshot's is the one to send.
     if (!snapshot) {
       throw new GraphQLNetworkError(fallbackErrorMessage);
     }
@@ -116,7 +109,7 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
     const outcome = classifyCreateResult(result);
     if (outcome === 'queued') {
       // Offline / API down: the permanent write stands and the update replays
-      // keyed by the list id — report success with the local state.
+      // keyed by the list id; there is no server entity to return.
       return null;
     }
     if (outcome === 'rejected') {

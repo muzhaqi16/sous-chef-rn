@@ -6,15 +6,9 @@ import { useCurrentHome } from '#features/pantry/hooks/useCurrentHome';
 type PantryNode = { id: string; name?: string; isDefault?: boolean };
 
 /**
- * Hook for resolving the current pantry with fallback chain:
- * 1. Selected pantry (from Zustand - what user is currently viewing)
- * 2. Home's default pantry (isDefault=true set by owner)
- * 3. First pantry (if no default marked)
- * 4. Minimal object (during loading/network errors)
- *
- * PERFORMANCE: Uses cache-only — useDefaultHome already fetches fresh data with
- * network-only and populates the cache. This hook reads from cache to avoid a
- * duplicate GetHomes network request during startup.
+ * Resolution order: the selected pantry, the home's default, the first, then a
+ * minimal object. Reads cache-only — `useDefaultHome` owns the network fetch, so
+ * querying here duplicates a GetHomes request during startup.
  */
 export function useCurrentPantry() {
   const { selectedPantryId, setSelectedPantryId } = usePantryState();
@@ -50,7 +44,10 @@ export function useCurrentPantry() {
     return null;
   })();
 
-  // Keep selectedPantryId valid for the current home (stale → default in one render).
+  // Post-gate reconciler, gated on `isHomeSelectionReady`. The pre-gate repair
+  // in `useDefaultHome` is what closes the gate before a bad id is queried;
+  // this one fixes the selection once queries are already allowed. Not a
+  // duplicate of it.
   useEffect(() => {
     if (!isHomeSelectionReady || !currentHome) return;
     const isValid =

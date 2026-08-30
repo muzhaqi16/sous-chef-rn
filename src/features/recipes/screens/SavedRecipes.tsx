@@ -111,13 +111,10 @@ export const SavedRecipes: React.FC = () => {
     return result;
   })();
 
-  // Instrumented like PantryContent/SortableList so this list reports
-  // `flashlist_initial_load_ms` and blank-cell episodes instead of being
-  // invisible to every metric we have.
-  // Folder, tags and search can all empty this list while the library itself is
-  // full. Saying "you haven't saved any recipes" then would be false and would
-  // hide that a filter is what emptied it — `isEmpty` above reads the
-  // UNFILTERED list, so the two cases have to be told apart here.
+  // Folder, tags and search can each empty this list while the library is full,
+  // so "you haven't saved any recipes" would be false and would hide the
+  // filter. `isEmpty` above reads the UNFILTERED list; the two cases are told
+  // apart here.
   const savedSearchTerm = searchQuery.trim();
   const emptyProps =
     recipes.length > 0

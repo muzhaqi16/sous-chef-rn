@@ -9,16 +9,10 @@ import type { SlideAnimationConfig } from '#hooks/animations/types';
 // Note: DRAG_ITEM_HEIGHT and other drag constants are in './drag.ts'
 // Import directly: import { DRAG_ITEM_HEIGHT } from '#/constants/drag';
 
-/**
- * Standard cubic bezier easing function for smooth animations
- * Equivalent to CSS ease-in-out with custom curve
- */
+/** CSS ease-in-out equivalent. */
 export const standardEasing = Easing.bezier(0.25, 0.1, 0.25, 1);
 
-/**
- * Named spring animation presets.
- * Replaces hardcoded {damping, stiffness, mass} objects across the codebase.
- */
+/** Named spring presets, in place of inline {damping, stiffness, mass}. */
 export const SPRING = {
   DEFAULT: { damping: 15, stiffness: 150, mass: 0.4 },
   SNAPPY: { damping: 10, stiffness: 400 },
@@ -30,9 +24,7 @@ export const SPRING = {
   TOAST_DISMISS: { damping: 25, stiffness: 200 },
 };
 
-/**
- * Alert modal animation constants.
- */
+/** Alert modal animation. */
 export const ALERT = {
   ENTER_SCALE_FROM: 0.85,
   EXIT_SCALE_TO: 0.9,
@@ -43,9 +35,7 @@ export const ALERT = {
   MAX_VISIBLE: 2,
 };
 
-/**
- * Bottom-sheet / modal animation constants.
- */
+/** Bottom-sheet / modal animation. */
 export const SHEET = {
   SLIDE_DISTANCE: 300,
   BACKDROP_OPACITY: 0.5,
@@ -53,53 +43,35 @@ export const SHEET = {
   BACKDROP_FADE_OUT: 300,
 };
 
-/**
- * Toast animation constants.
- */
+/** Toast animation. */
 export const TOAST = {
   /**
-   * Default hold, and what nearly every toast gets — the short confirmations
-   * ("Item added", "Review submitted") that make up most of them.
-   *
-   * The hold is armed on the same tick the enter animation starts, so it spans
-   * the `TIMING.FAST` fade-in; add `TIMING.STANDARD` for the fade-out to get
-   * total time on screen (~1.6s here).
+   * The default hold. Armed on the same tick the enter animation starts, so it
+   * spans the fade-in; add `TIMING.STANDARD` for total time on screen.
    */
   AUTO_DISMISS_SHORT: 1400,
-  /**
-   * For toasts carrying a full sentence rather than a confirmation — currently
-   * only the connectivity announcements (`OfflineStatusPill`,
-   * `OfflineTransitionToaster`), which need reading time.
-   */
+  /** For a full sentence rather than a confirmation — reading time. */
   AUTO_DISMISS_LONG: 2600,
   SWIPE_THRESHOLD: 50,
-  /**
-   * Dismissal travel, relative to the resting position (laid out at
-   * `spacing.md` below the container's origin — see `Toast.tsx`). Far enough to
-   * carry the tallest two-line toast off the top of the screen.
-   */
+  /** Dismissal travel from rest — clears the tallest two-line toast. */
   OFFSCREEN_Y: -150,
   /**
-   * Entry travel, also relative to the resting position. Deliberately short:
-   * entering from OFFSCREEN_Y spent the first frames of every appearance under
-   * the status bar / Dynamic Island, which reads as a clipped banner.
+   * Entry travel from rest. Short on purpose — entering from OFFSCREEN_Y puts
+   * the first frames under the Dynamic Island, reading as a clipped banner.
    */
   ENTER_FROM_Y: -24,
   QUEUE_DELAY: 300,
 };
 
-/**
- * Floating tab bar animation constants.
- */
+/** Floating tab bar animation. */
 export const TAB_BAR = {
   // Distance (px) the bar slides below its resting position when fully hidden.
   HIDDEN_TRANSLATE_Y: 150,
 };
 
 /**
- * Distance-scaled scroll-slide tuning for the Reanimated-driven centering in
- * `useCenterActiveItem`: the glide duration grows with distance but is clamped,
- * so a near jump is snappy and a far one eases in.
+ * Scroll-slide tuning for `useCenterActiveItem`: duration grows with distance
+ * but is clamped, so a near jump stays snappy and a far one eases in.
  */
 export const SCROLL_SLIDE = {
   // Milliseconds of animation per px of distance, before clamping.
@@ -109,9 +81,7 @@ export const SCROLL_SLIDE = {
   MAX_MS: 500,
 };
 
-/**
- * Named timing duration presets (in ms).
- */
+/** Named timing presets, in ms. */
 export const TIMING = {
   // Sub-perceptible bounce for press feedback (squeeze in / out).
   MICRO: 75,
@@ -122,42 +92,21 @@ export const TIMING = {
   SLOW: 300,
 };
 
-/**
- * Reusable slide animation presets for common patterns.
- *
- * @example
- * ```tsx
- * import { SLIDE_PRESETS } from '#/constants/animations';
- *
- * const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
- *   itemId,
- *   ...SLIDE_PRESETS.exitWithFade, // or .fullExit / .subtle
- * });
- * ```
- */
+/** Slide presets, spread into `useSlideAnimation`. */
 export const SLIDE_PRESETS = {
-  /**
-   * Full exit slide (shopping list purchase toggle)
-   * Slides completely off screen to the right
-   */
+  /** Full exit: off screen to the right. */
   fullExit: {
     slideDistance: 'screenWidth',
     duration: 250,
     withOpacity: false,
   },
-  /**
-   * Subtle feedback slide
-   * Small slide for visual feedback without full exit
-   */
+  /** Feedback only, no exit. */
   subtle: {
     slideDistance: 50,
     duration: 200,
     withOpacity: false,
   },
-  /**
-   * Exit with fade (for deletions)
-   * Combines slide with opacity fade for smoother deletion effect
-   */
+  /** Exit with fade, for deletions. */
   exitWithFade: {
     slideDistance: 200,
     duration: 250,
@@ -166,25 +115,7 @@ export const SLIDE_PRESETS = {
   },
 } satisfies Record<string, SlideAnimationConfig>;
 
-/**
- * Animation preset for form show/hide transitions
- * Used for expandable forms, modals, and collapsible sections
- *
- * Features:
- * - Fade in: 300ms with standard easing
- * - Fade out: 200ms with standard easing
- * - Layout transition: 250ms for smooth reflows
- *
- * @example
- * ```tsx
- * <Animated.View
- *   {...formAnimationPreset}
- *   style={[commonStyles.shadow, styles.formContainer]}
- * >
- *   <YourForm />
- * </Animated.View>
- * ```
- */
+/** Show/hide transition for expandable forms and collapsible sections. */
 export const getFormAnimationPreset = () => ({
   entering: FadeIn.duration(300).easing(standardEasing),
   exiting: FadeOut.duration(200).easing(standardEasing),
@@ -192,17 +123,8 @@ export const getFormAnimationPreset = () => ({
 });
 
 /**
- * Animation preset for list item exit transitions
- * Used when items are toggled between purchased/unpurchased states
- *
- * Timeline (300ms total):
- * - 0-300ms: Slide (300px right)
- * - 50-300ms: Scale to 0.95
- * - 100-300ms: Fade out
- * - 300ms: Mutation fires, list reflows
- *
- * The removalDelay matches slide duration so animation completes
- * before the item is removed and list reflows.
+ * List item exit, for a purchased/unpurchased toggle. `removalDelay` MUST match
+ * the slide duration, so the animation finishes before the list reflows.
  */
 export const listItemExitAnimation = {
   slide: {
@@ -228,18 +150,8 @@ export const listItemExitAnimation = {
 };
 
 /**
- * PERFORMANCE: Faster exit animation for checkbox toggles
- *
- * When a user taps a checkbox, they expect immediate feedback.
- * This faster animation (200ms vs 300ms) provides snappier UX while
- * still maintaining visual continuity.
- *
- * Timeline (200ms total):
- * - 0-200ms: Slide (200px right) - 33% faster
- * - 0-200ms: Fade out - starts immediately
- * - 0-200ms: Scale to 0.97 - subtle scale for less jarring effect
- *
- * Used by SortableItem when checkbox is toggled (vs swipe/delete actions)
+ * The faster exit `SortableItem` uses for a checkbox toggle, where the tap
+ * expects immediate feedback — swipe and delete keep the slower one above.
  */
 export const listItemFastExitAnimation = {
   slide: {
@@ -261,42 +173,31 @@ export const listItemFastExitAnimation = {
   },
 };
 
-/**
- * Animation preset for list item entry transitions
- * Used when items appear in destination tab after toggle
- */
+/** Entry for an item appearing in the destination tab after a toggle. */
 export const listItemEntryAnimation = {
   fade: { duration: 250 },
   slide: { distance: 50, duration: 300 },
 };
 
-/**
- * Layout animation for list items
- * Used when items shift position (e.g., when another item is removed)
- * Fast duration for snappy feel after exit animation
- */
+/** Shift for items repositioning after another is removed. */
 export const getListItemLayoutAnimation = () =>
   LinearTransition.duration(150).easing(standardEasing);
 
 /**
- * Staggered list entry animation preset
- * Used for skeleton-to-content transitions (cascade/waterfall effect)
- *
- * After skeleton loading completes, items fade in sequentially.
- * Stagger is disabled after initial render to prevent animation
- * during scroll (FlashList recycles views).
+ * Skeleton-to-content entry. At `delayPerItem: 0` every item fades in together;
+ * raising it restores a cascade. Applied on the initial render only, so
+ * FlashList's recycling cannot re-animate rows mid-scroll.
  */
 export const staggeredEntryAnimation = {
-  delayPerItem: 0, // All items fade in together (simultaneous)
-  maxItems: 6, // Cap stagger for long lists (reduced from 8)
-  duration: 200, // Individual item fade duration (reduced from 250ms)
-  initialDelay: 30, // Delay before first item for smoother skeleton→content transition
+  delayPerItem: 0,
+  maxItems: 6,
+  duration: 200,
+  initialDelay: 30,
 };
 
 /**
- * Screen content entry animation preset.
- * Apply `FadeIn.delay(index * delayPerItem)` to visible list items
- * on initial mount only (track with ref to prevent re-animation on scroll).
+ * Apply `FadeIn.delay(index * delayPerItem)` on initial mount ONLY — track with
+ * a ref, or recycling re-animates rows during scroll.
  */
 export const screenEntryAnimation = {
   delayPerItem: 50,

@@ -157,12 +157,9 @@ export const editReasonRule = string()
   .optional();
 
 /**
- * Floor for any free-text moderation reason a human has to act on — the
- * suggest-edit note and the item report both apply it, so the two stay in step.
- *
- * The server only trims and checks for emptiness, with no length floor, so the
- * minimum is ours to set. 10 characters turns away "fix" / "wrong" / "."
- * without being onerous.
+ * Floor for any free-text moderation reason a human acts on; the suggest-edit
+ * note and the item report share it. The server only checks for emptiness, so
+ * the minimum is ours: 10 characters turns away "fix" and "." .
  */
 export const MIN_EDIT_REASON_LENGTH = 10;
 
@@ -242,13 +239,10 @@ export const createItemSchema = object({
 export type CreateItemFormData = InferType<typeof createItemSchema>;
 
 /**
- * Suggestion schema: identical to create, except the note is mandatory.
- * `CreateItemSuggestionInput.note` is `String!`, and the reviewing admin has nothing
- * but the note to judge the diff against.
- *
- * Only for the suggestion path. The direct-edit path has no reviewer and the
- * server no longer accepts a note on `UpdateItemInput`, so it keeps
- * `createItemSchema` and its form omits the note field entirely.
+ * Create, plus a MANDATORY note: `CreateItemSuggestionInput.note` is `String!`,
+ * and the reviewing admin has nothing else to judge the diff against. The
+ * direct-edit path has no reviewer and `UpdateItemInput` takes no note, so it
+ * keeps `createItemSchema` and omits the field.
  */
 export const suggestItemEditSchema = createItemSchema.shape({
   editReason: editReasonRequiredRule,

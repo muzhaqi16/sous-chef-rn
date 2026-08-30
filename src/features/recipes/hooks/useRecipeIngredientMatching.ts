@@ -227,8 +227,8 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     }
 
     const payload = result.data?.confirmRecipeConsumption;
-    // The success union member no longer carries a `success` flag — reaching it
-    // IS the success case (partial failures surface via `totalFailed`).
+    // The success union member carries no `success` flag — reaching it IS the
+    // success case; partial failures surface via `totalFailed`.
     const data =
       payload?.__typename === 'ConfirmRecipeConsumptionPayload'
         ? payload

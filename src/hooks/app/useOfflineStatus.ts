@@ -17,15 +17,10 @@ export interface OfflineStatus {
 }
 
 /**
- * Resolves the current offline cause into the icon + message shown by the
- * offline indicator (`OfflineStatusPill`) and announced by the transition
- * toaster (`OfflineTransitionToaster`). Keeping both readers on one hook stops
- * the icon/message logic from drifting between them.
- *
- * The cause comes from the store's debounced `offlineBannerCause`, not from the
- * live flags — during the minimum-visible window after a recovery the live flags
- * already read "online", and re-deriving from them would rewrite the message
- * under the user mid-display.
+ * The icon + message for the current offline cause, shared by the pill and the
+ * transition toaster so the two cannot drift. The cause is the store's DEBOUNCED
+ * `offlineBannerCause`: during the minimum-visible window the live flags already
+ * read "online", so re-deriving would rewrite the message mid-display.
  */
 export const useOfflineStatus = (): OfflineStatus => {
   const { t } = useTranslation();

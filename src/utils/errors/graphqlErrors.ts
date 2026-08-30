@@ -1,9 +1,7 @@
 /**
- * Typed error classes for GraphQL mutation payload discrimination.
- *
- * unwrapPayload() throws these instead of generic Error so callers and
- * error boundaries can distinguish transport failures (GraphQLNetworkError)
- * from server-rejected domain errors (GraphQLDomainError).
+ * `unwrapPayload()` throws these rather than a generic Error, so callers and
+ * error boundaries can tell a transport failure (GraphQLNetworkError) from a
+ * server-rejected domain error (GraphQLDomainError).
  */
 
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
@@ -57,22 +55,14 @@ export function getTopLevelGraphQLError(
   };
 }
 
-// The code the API returns when a read is rejected because access was revoked
-// (e.g. a collaborator on a list that became home-linked; collaborators are
-// ignored on home-linked lists). FORBIDDEN is the single authorization code and
-// travels on both channels — the top-level `extensions.code` on rejected reads,
-// and the mutation result-union member's code.
-// A missing record is NOT here, and never arrives as an error on this channel:
-// a by-id QUERY reports a miss as null data, so callers detect that case via a
-// null field. RESOURCE_NOT_FOUND is the MUTATION spelling of the same
-// condition — a write naming a row that isn't there.
+// FORBIDDEN is the single authorization code, on both channels. A MISSING record
+// is deliberately not here: a by-id query reports a miss as null data, and
+// RESOURCE_NOT_FOUND is the mutation spelling of that same condition.
 const RESOURCE_ACCESS_LOST_CODES = new Set<string>([ErrorCode.Forbidden]);
 
-/** True when a query error means the requesting user has lost access to a
- *  resource (access revoked) — the row exists and is no longer theirs, which
- *  is what separates it from a miss (null data). Network and other errors
- *  return false, so callers won't evict cached data merely because the device
- *  went offline. */
+/** True when a query error means access was revoked: the row exists but is not
+ *  the caller's, which is what separates it from a miss (null data). Network
+ *  errors return false, so an offline device does not evict cached data. */
 export function isResourceAccessLostError(error: unknown): boolean {
   const top = getTopLevelGraphQLError(error);
   return top !== null && RESOURCE_ACCESS_LOST_CODES.has(top.code);

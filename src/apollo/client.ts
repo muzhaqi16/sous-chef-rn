@@ -46,20 +46,10 @@ let cacheInstance: ReturnType<typeof makeCache> | null = null;
 let cacheRestored = false;
 
 /**
- * Restore the persisted Apollo cache into the live cache instance.
- *
- * Idempotent, and deliberately callable more than once — the first call that
- * finds storage ready performs the restore.
- *
- * This cannot be done once at module load. `initializeSecureStorage()` is async
- * (keychain-backed) and `index.js` does not await it, while this module is
- * imported inside that window: `isStorageReady()` is false, `load()` returns
- * null, and the cache is written every session but never restored — so offline
- * reads did not survive a relaunch.
- *
- * It must also run BEFORE `ApolloProvider` mounts. `cache.restore()` replaces
- * cache contents wholesale, so restoring after the first queries have run would
- * discard their results and any optimistic writes.
+ * Restore the persisted cache. Idempotent — the first call finding storage ready
+ * does the work; it cannot run at module load, since `initializeSecureStorage()`
+ * is async and this module is imported inside that window. Must run BEFORE
+ * `ApolloProvider` mounts, as `restore()` replaces contents wholesale.
  */
 export function restorePersistedCache(): void {
   if (cacheRestored || !cacheInstance || !isStorageReady()) {
@@ -150,15 +140,10 @@ export function flushCachePersistence() {
 }
 
 /**
- * Set up automatic cache persistence
- *
- * Wraps cache methods to persist after each operation.
- *
- * Deliberately hand-rolled on `cache.extract()` / `cache.restore()` rather than
- * using `apollo3-cache-persist`: that package is pinned to
- * `@apollo/client ^3.7.17`, has no Apollo Client 4 support and is unmaintained.
- * It was only ever a debounce plus a storage adapter over these same two
- * methods, which is what `ApolloCachePersistence` provides against MMKV.
+ * Wrap cache methods so writes persist. Hand-rolled on `extract()`/`restore()`
+ * rather than `apollo3-cache-persist`, which is pinned to `@apollo/client ^3.7`
+ * and unmaintained — it was only a debounce plus a storage adapter over these
+ * same two methods, which `ApolloCachePersistence` provides against MMKV.
  */
 function setupCachePersistence(client: ApolloClient) {
   // Helper to schedule cache persistence
@@ -191,15 +176,10 @@ function setupCachePersistence(client: ApolloClient) {
   const originalModify = cache.modify.bind(cache);
   const originalGc = cache.gc ? cache.gc.bind(cache) : null;
 
-  // Wrap cache methods to persist after writes. `write`/`modify` keep their
-  // generic method signatures so the wrappers stay assignable back to the
-  // (generic) cache methods. `evict` is non-generic, so it stays fully typed
-  // via Parameters<>.
-  //
-  // These report nothing as "dirty": a written id is never the complete set of
-  // what changed — a query result names only `ROOT_QUERY` while normalizing new
-  // field values into any number of entities. Change detection scans the whole
-  // extracted cache by object identity instead.
+  // `write`/`modify` keep their generic signatures so the wrappers stay
+  // assignable; `evict` is non-generic and typed via Parameters<>. None report
+  // a dirty id — a query result names only `ROOT_QUERY` while normalizing into
+  // any number of entities, so change detection scans the whole cache instead.
   cache.write = function <
     TData = unknown,
     TVariables extends OperationVariables = OperationVariables,

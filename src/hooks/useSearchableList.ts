@@ -11,13 +11,7 @@ export interface SearchableListOptions {
   caseSensitive?: boolean;
 }
 
-/**
- * A custom hook that provides a searchable list functionality.
- *
- * @param items - The list of items to filter (can be undefined or null).
- * @param filterFn - A function that determines if an item matches the search query.
- * @param options - Optional configuration for search behavior.
- */
+/** Filters `items` by a debounced query using the caller's `filterFn`. */
 export function useSearchableList<T>(
   items: T[] | null | undefined,
   filterFn: (item: T, query: string) => boolean,

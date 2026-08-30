@@ -3,9 +3,8 @@ import { View, ScrollView } from 'react-native';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-// Themed wrapper rather than gorhom's raw `BottomSheetTextInput`: the raw one
-// sets no `placeholderTextColor`, so it fell back to the OS default and ignored
-// the app theme entirely (visibly wrong against the dark theme).
+// Themed wrapper, not gorhom's raw `BottomSheetTextInput`: the raw one sets no
+// `placeholderTextColor` and falls back to the OS default, ignoring the theme.
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Label } from '#components/atoms/Label';
 import { Text } from '#components/atoms/Text';
@@ -45,38 +44,19 @@ export interface InlineAutocompleteProps<T> {
   // Input
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
 
-  /**
-   * Reserve in-flow space for the open dropdown.
-   *
-   * The suggestion list is absolutely positioned, so it adds nothing to the
-   * height its parent measures. In a sheet sized to its own content
-   * (`enableDynamicSizing`) that means the list opens past the sheet's bottom
-   * edge — and with the keyboard up, straight into the keyboard. Setting this
-   * renders a spacer of the list's height beneath the input while it is open,
-   * so the measured content grows and the sheet grows with it.
-   *
-   * Off by default: in a fixed-height container the surrounding layout already
-   * has the room, and a spacer there would just push the following fields down.
-   */
+  // Renders a spacer of the list's height while open. The list is absolutely
+  // positioned, so it adds nothing to the height its parent measures — in an
+  // `enableDynamicSizing` sheet it otherwise opens past the sheet's bottom edge,
+  // into the keyboard. Off by default: a fixed-height container has the room.
   reserveDropdownSpace?: boolean;
 }
 
-/**
- * InlineAutocomplete - Generic autocomplete component for bottom sheets.
- *
- * Anti-flicker is handled upstream by useAutocompleteSearch — this component
- * receives stable, pre-processed items and focuses on presentation only.
- *
- * **Stacking contract:** the suggestion list is an absolutely-positioned
- * overlay, and RN `zIndex` only orders siblings — so every sibling this
- * dropdown can overlap, at every ancestor level up to where the overlap
- * happens, needs an explicit non-zero zIndex (descending top-to-bottom) on a
- * `collapsable={false}` view. Wrap vertically stacked form rows in
- * `DropdownStack` (`#components/atoms/DropdownStack`), which applies both
- * automatically — do not hand-roll zIndex chains. Miss a level and the
- * dropdown paints UNDER the inputs below it (Android view flattening can also
- * silently discard a layout-only wrapper's zIndex).
- */
+// Presentation only — anti-flicker lives upstream in `useAutocompleteSearch`.
+//
+// Stacking contract: the suggestion list is an absolutely-positioned overlay and
+// RN `zIndex` orders SIBLINGS only, so every level up to the overlap needs an
+// explicit descending zIndex on a `collapsable={false}` view. Wrap stacked form
+// rows in `DropdownStack`, which applies both; never hand-roll a zIndex chain.
 export function InlineAutocomplete<T>({
   label,
   value,
@@ -97,37 +77,30 @@ export function InlineAutocomplete<T>({
   autoCapitalize = 'none',
   reserveDropdownSpace = false,
 }: InlineAutocompleteProps<T>) {
-  // Track internal search term for visibility logic
   const [searchTerm, setSearchTerm] = useState(value);
   const [showDropdown, setShowDropdown] = useState(false);
-  // Space the open dropdown needs — its measured height plus the gap above it.
-  // Starts at the list's own maximum so the first frame reserves too much
-  // rather than too little: settling down into place reads better than growing
-  // into it.
+  // Starts at the list's maximum so the first frame reserves too much rather than
+  // too little — settling down reads better than growing into place.
   const [dropdownHeight, setDropdownHeight] = useState(
     DROPDOWN_MAX_HEIGHT + DROPDOWN_GAP,
   );
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Items sliced to max results
   const slicedItems = items.slice(0, maxResults);
 
-  // Smart visibility logic
   const hasSearchQuery = searchTerm.length >= minSearchLength;
   const hasData = slicedItems.length > 0 || (hasSearchQuery && !loading);
   const shouldShowDropdown = showDropdown && hasSearchQuery && hasData;
-  // `shouldShowDropdown` is true for a settled search that matched NOTHING
-  // (`hasData` counts "done looking" as data), and with no footer there is then
-  // nothing to render. One condition for the list and the reserved space, so
-  // the space can never be held open for a list that is not there.
+  // `shouldShowDropdown` is also true for a settled search that matched NOTHING,
+  // so one condition drives both the list and its reserved space — the space can
+  // never be held open for a list that isn't there.
   const isDropdownOpen =
     shouldShowDropdown && (slicedItems.length > 0 || !!footerComponent);
 
-  // Forget the last list's height when the dropdown closes, so reopening with
-  // fewer results does not reserve the taller list's space until `onLayout`
-  // corrects it. Adjusting state during render rather than in an effect keeps
-  // the reset in the commit that closed the dropdown.
+  // Forget the last height on close, or reopening with fewer results reserves the
+  // taller list's space until `onLayout` corrects it. Adjusted during render so
+  // the reset lands in the commit that closed the dropdown.
   const [wasDropdownOpen, setWasDropdownOpen] = useState(isDropdownOpen);
   if (isDropdownOpen !== wasDropdownOpen) {
     setWasDropdownOpen(isDropdownOpen);
@@ -136,7 +109,6 @@ export function InlineAutocomplete<T>({
     }
   }
 
-  // Cleanup debounce timer on unmount
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {
@@ -145,24 +117,17 @@ export function InlineAutocomplete<T>({
     };
   }, []);
 
-  // Sync local state when value prop changes externally (render-time state update)
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
     setPrevValue(value);
     setSearchTerm(value);
   }
 
-  // The debounced notify below fires up to `debounceMs` AFTER the keystroke, by
-  // which time the parent may have rebuilt `onChangeText` around newer state —
-  // an entry list whose callback closes over its rows array is the common case.
-  // Invoking the captured prop would map over the stale array and silently drop
-  // whatever changed in between (e.g. a row added while the user was typing), so
-  // always call the latest one.
-  //
-  // This has to be a LAYOUT effect: a passive effect is flushed in a separate
-  // task after the commit, and an already-due debounce timer can run inside that
-  // gap — reading the very stale callback this ref exists to avoid. Layout
-  // effects run synchronously during the commit, so no timer can interleave.
+  // The debounced notify fires up to `debounceMs` after the keystroke, by which
+  // time the parent may have rebuilt `onChangeText` around newer state, so always
+  // call the latest one. It must be a LAYOUT effect: a passive one flushes in a
+  // separate task, and an already-due debounce timer can run in that gap and read
+  // the stale callback this ref exists to avoid.
   const onChangeTextRef = useRef(onChangeText);
   useLayoutEffect(() => {
     onChangeTextRef.current = onChangeText;
@@ -274,16 +239,11 @@ export function InlineAutocomplete<T>({
           </View>
         )}
       </View>
-      {/* Sibling, not a child: the list is anchored at `top: '100%'` of the
-          container above, so a spacer inside it would push the list down by
-          its own height instead of making room for it.
-
-          Being a sibling is also why it needs an explicit zIndex and
-          `collapsable={false}`: it occupies exactly the region the dropdown
-          paints into, and RN orders siblings by zIndex only — leaving this one
-          at the default would put a transparent view over every suggestion,
-          swallowing the taps. Android-only, and invisible to typecheck, lint
-          and jest. */}
+      {/* A sibling, not a child: the list is anchored at `top: '100%'`, so a
+          spacer inside would push it down instead of making room. That is also
+          why it needs an explicit zIndex and `collapsable={false}` — it covers
+          exactly the dropdown's region, and at the default it swallows every
+          suggestion tap. Android-only, invisible to typecheck/lint/jest. */}
       {!!isDropdownOpen && !!reserveDropdownSpace && (
         <View
           collapsable={false}

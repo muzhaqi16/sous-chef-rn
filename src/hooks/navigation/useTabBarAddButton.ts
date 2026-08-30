@@ -3,27 +3,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 
 /**
- * Register a handler for the tab bar add button when the screen is focused.
- * Automatically cleans up when unfocused or unmounted.
- *
- * Uses useFocusEffect instead of useIsFocused to avoid breaking screen pausing (inactiveBehavior).
- *
- * @param handler - Function to call when add button is pressed
- * @param disabled - Whether the button should be disabled (default: false)
- * @param disabledTooltip - Tooltip to show when button is disabled
- *
- * @example
- * ```tsx
- * // Simple usage
- * useTabBarAddButton(() => setAddSheetVisible(true));
- *
- * // With disabled state
- * useTabBarAddButton(
- *   () => handleAddItem(),
- *   !hasPermission,
- *   "You don't have permission to add items"
- * );
- * ```
+ * Registers the tab bar's add-button handler while the screen is focused, and
+ * clears it on blur or unmount. `useFocusEffect`, not `useIsFocused`, so screen
+ * pausing (`inactiveBehavior`) keeps working.
  */
 export const useTabBarAddButton = (
   handler: (() => void) | undefined,
@@ -33,15 +15,12 @@ export const useTabBarAddButton = (
   const { setAddProps } = useTabBarSetters();
   const setAddPropsRef = useRef(setAddProps);
 
-  // Store handler in ref to avoid stale closures
+  // Refs, so a changed handler or disabled state does not re-register.
   const handlerRef = useRef(handler);
-
-  // Store disabled state in ref to avoid unnecessary re-registrations
   const disabledRef = useRef(disabled);
   const tooltipRef = useRef(disabledTooltip);
   const isFocusedRef = useRef(false);
 
-  // Keep refs up to date
   useEffect(() => {
     handlerRef.current = handler;
     disabledRef.current = disabled;
@@ -52,7 +31,7 @@ export const useTabBarAddButton = (
     setAddPropsRef.current = setAddProps;
   }, [setAddProps]);
 
-  // Create stable wrapper that always calls the latest handler
+  // Stable identity, always calling the latest handler.
   const [stableHandler] = useState(() => () => {
     if (handlerRef.current) {
       handlerRef.current();

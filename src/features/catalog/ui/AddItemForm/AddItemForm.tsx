@@ -76,12 +76,9 @@ export interface AddItemFormInitialData {
 }
 
 /**
- * The assembled item payload AddItemForm emits on submit: the flat
- * `AddItemFormData` fields the consumers read (typed with codegen types, e.g.
- * `ItemType` / `StorageState` / `ItemNetWeightInput`) plus the picked images.
- * `mapFormToCreateItemInput` turns this flat shape into the nested
- * `CreateItemInput`. `AddItemFormData` keeps a `[key: string]: unknown` index
- * signature, so extra fields (e.g. `editReason`) still pass through.
+ * The flat payload AddItemForm emits on submit; `mapFormToCreateItemInput`
+ * turns it into the nested `CreateItemInput`. `AddItemFormData`'s index
+ * signature is what lets extra fields (e.g. `editReason`) pass through.
  */
 export type AddItemSubmitPayload = AddItemFormData & {
   selectedImages: SelectedImage[];

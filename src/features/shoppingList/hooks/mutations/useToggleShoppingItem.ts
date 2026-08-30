@@ -1,12 +1,8 @@
 /**
- * useToggleShoppingItem - Toggle purchase status mutation for shopping list
- *
- * Optimistic pattern: apply the cache changes (flip purchaseInfo,
- * move between purchased/unpurchased connections, persist for offline)
- * synchronously *before* firing the mutation. On error, revert from
- * the snapshot. Apollo auto-normalizes the server's authoritative
- * payload on success. No `optimisticResponse` callback — masking stays
- * load-bearing and no `@unmask` is needed.
+ * Local-first: the flip, the connection move and the offline marker land in the
+ * cache before firing — an `optimisticResponse` rolls back on the queue's null
+ * result. `purchaseInfo` carries a write-time invariant in its merge policy, so it
+ * goes through `writePurchaseInfo` (cache.writeFragment), never `cache.modify`.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -42,9 +38,6 @@ interface UseToggleShoppingItemOptions {
   refetch: () => Promise<unknown>;
 }
 
-/**
- * Hook for toggling the purchased status of shopping list items
- */
 export function useToggleShoppingItem({
   listId,
   refetch,
@@ -55,9 +48,8 @@ export function useToggleShoppingItem({
     ToggleShoppingListItemPurchasedDocument,
   );
 
-  // Recording a purchase WITH amounts goes through updateShoppingListItem — the
-  // toggle input can't carry purchaseTracking. Offline-capable: UpdateShoppingListItem
-  // replays via SyncShoppingListItem, which forwards purchaseTracking.
+  // Amounts go through updateShoppingListItem — the toggle input can't carry
+  // purchaseTracking. Its replay fragment SyncShoppingListItem forwards it.
   const [updatePurchaseMutation] = useMutation(UpdateShoppingListItemDocument);
 
   const toggleItem = async (itemId: string) => {
@@ -80,13 +72,11 @@ export function useToggleShoppingItem({
     const previousIsPurchased = snapshot.purchaseInfo?.isPurchased ?? false;
     const newStatus = !previousIsPurchased;
     const previousUpdatedAt = snapshot.updatedAt;
-    // The flip clears this, so the snapshot is the only record of it once the
-    // write lands. A refusal that cannot put it back leaves the row offering
-    // move-to-pantry for a line the server still considers stocked.
+    // The flip clears this, so the snapshot is its only record — a refusal that
+    // cannot put it back offers move-to-pantry for an already-stocked line.
     const previousMovedToPantryAt =
       snapshot.purchaseInfo?.movedToPantryAt ?? null;
 
-    // 1. Flip purchaseInfo + bump updatedAt on the entity
     writePurchaseInfo(
       client.cache,
       itemId,
@@ -94,19 +84,16 @@ export function useToggleShoppingItem({
       { updatedAt: new Date().toISOString() },
     );
 
-    // 2. Move the item between the purchased/unpurchased connections
     if (newStatus) {
       moveShoppingListItemToPurchased(client.cache, listId, { id: itemId });
     } else {
       moveShoppingListItemToUnpurchased(client.cache, listId, { id: itemId });
     }
 
-    // 3. Persist optimistic state so it survives app restarts while offline.
-    //    The persisted field name must be a field the entity actually has:
-    //    `isPurchased` lives inside `purchaseInfo`, and `cache.modify` silently
-    //    ignores a modifier for a field the entity does not have — so persisting
-    //    it under `isPurchased` restored nothing at all. Restoration
-    //    shallow-merges object values, so a partial `purchaseInfo` is enough.
+    // Survives an app restart while offline. The tracked field must be one the
+    // entity actually has (`isPurchased` lives inside `purchaseInfo`) — restoration
+    // goes through `cache.modify`, which ignores a modifier for a missing field.
+    // It shallow-merges object values, so a partial `purchaseInfo` is enough.
     const clearPersistence = optimisticDataPersistence.track(
       'ShoppingListItem',
       itemId,
@@ -122,9 +109,8 @@ export function useToggleShoppingItem({
           isPurchased: previousIsPurchased,
           movedToPantryAt: previousMovedToPantryAt,
         },
-        // Restoring, not flipping: the server never saw the change, so it still
-        // holds the stamp. Treated as a flip, the revert cleared it a second
-        // time and the snapshot's value was discarded.
+        // Restoring, not flipping: the server never saw the change and still holds
+        // the stamp, which a flip would clear again over the snapshot's value.
         { updatedAt: previousUpdatedAt, restoring: true },
       );
       if (previousIsPurchased) {
@@ -140,14 +126,12 @@ export function useToggleShoppingItem({
       typeof togglePurchasedMutation
     >[0] = {
       variables: { input: { id: itemId, purchased: newStatus } },
-      // Local-first: if the API is unreachable while "online", queueLink
-      // queues this for replay (toggle is idempotent on a real id) instead
-      // of surfacing a blocking error. Offline already queues via queueLink.
+      // An API unreachable while "online" queues for replay rather than raising a
+      // blocking error; the toggle is idempotent on a real id.
       context: { localFirst: true },
       onCompleted: data => {
-        // Drop the offline-survival marker only once the server confirms;
-        // a queued completion resolves with a null payload — keep it so the
-        // optimistic state survives an app-kill before replay.
+        // Drop the offline marker only once the server confirms — a queued
+        // completion resolves with a null payload and must keep it.
         if (
           isSuccessPayload(
             data?.toggleShoppingListItemPurchased,
@@ -157,9 +141,8 @@ export function useToggleShoppingItem({
           clearPersistence();
         }
 
-        // Depletion recovery: if the source connection (the tab we toggled
-        // FROM) is now empty but totalCount > 0, server has unfetched
-        // items — refetch.
+        // Depletion recovery: an empty source connection with totalCount > 0 means
+        // the server holds unfetched items for the tab we toggled FROM.
         const sourceQuery = client.cache.readQuery<
           GetShoppingListItemsFilteredQuery,
           GetShoppingListItemsFilteredQueryVariables
@@ -177,8 +160,7 @@ export function useToggleShoppingItem({
         }
       },
       onError: error => {
-        // For network errors, the queue handles retry — keep optimistic
-        // UI intact while offline.
+        // The queue handles the retry — keep the optimistic UI while offline.
         if (isNetworkError(error)) {
           logger.debug('Toggle purchase queued for retry (network error)');
           return;
@@ -198,11 +180,8 @@ export function useToggleShoppingItem({
     }
     if (!result) return false;
 
-    // A resolved error-union member (ValidationError/ConflictError/…) doesn't
-    // fire the mutation `onError`, so surface + revert it here — same
-    // post-result guard recordPurchase uses. When `result.error` is set,
-    // `onError` already ran and decided (network errors keep the flip for the
-    // queue's retry; other errors reverted + alerted) — don't second-guess it.
+    // A refusal arrives as DATA under errorPolicy:'all' and never fires `onError`,
+    // so revert it here. A set `result.error` was already routed by `onError`, and
     // 'queued' (null payload, offline) keeps the optimistic flip.
     if (!result.error && classifyCreateResult(result) === 'rejected') {
       revert();
@@ -219,16 +198,10 @@ export function useToggleShoppingItem({
   };
 
   /**
-   * Mark an item purchased AND record the actual quantity/price the user entered
-   * at purchase time. Mirrors toggleItem's optimistic move-to-purchased +
-   * offline persistence, but fires updateShoppingListItem with `purchaseTracking`
-   * (the toggle input can't carry amounts). `purchasedPrice` is omitted when null
-   * so the server falls back to its own auto-derivation.
-   *
-   * `purchasedPrice` is PER UNIT: the server records
-   * `Purchase.totalPrice = purchasedPrice × purchasedQuantity`, and move-to-pantry
-   * derives its per-unit cost from it. The Mark Purchased sheet collects the
-   * total paid; `usePurchaseAmountModal` divides before calling this.
+   * `purchasedPrice` is PER UNIT — the server records
+   * `Purchase.totalPrice = purchasedPrice × purchasedQuantity` and move-to-pantry
+   * derives its per-unit cost from it. The Mark Purchased sheet collects the TOTAL
+   * paid, so `usePurchaseAmountModal` divides first; null omits it (server derives).
    */
   const recordPurchase = async (
     itemId: string,
@@ -256,9 +229,8 @@ export function useToggleShoppingItem({
       snapshot.purchaseInfo?.movedToPantryAt ?? null;
     const now = new Date().toISOString();
 
-    // 1. Optimistically mark purchased (same as toggleItem). The entered amounts
-    //    ride on the mutation's purchaseTracking; the detail screen's
-    //    cache-and-network query reflects the server's recorded values.
+    // The entered amounts ride on the mutation's purchaseTracking; the detail
+    // screen's cache-and-network query reflects the server's recorded values.
     writePurchaseInfo(
       client.cache,
       itemId,
@@ -336,9 +308,8 @@ export function useToggleShoppingItem({
     }
     if (!result) return false;
 
-    // Same contract as toggleItem's guard: only handle the resolved
-    // error-union case here; `result.error` was already routed by `onError`,
-    // and a field-specific ValidationError routes to localized `errors.field.*`.
+    // Same contract as toggleItem's guard: only the resolved refusal is handled
+    // here, and a field-specific ValidationError routes to `errors.field.*`.
     if (!result.error && classifyCreateResult(result) === 'rejected') {
       revert();
       alertRejectedMutation(result, t('errors.updateItemFailed'));

@@ -10,21 +10,6 @@ import { FilterTabsItem } from './FilterTabsItem';
 import type { FilterTabConfig, FilterTabsProps } from './types';
 import { Text } from '#components/atoms/Text';
 
-/**
- * Generic configurable tab filter component
- *
- * @example
- * // Pantry location filter
- * <FilterTabs
- *   tabs={[
- *     { id: 'all', label: 'All' },
- *     { id: 'fridge', label: 'Fridge', icon: '🧊' },
- *   ]}
- *   activeTabId={locationFilter}
- *   onTabChange={setLocationFilter}
- *   counts={locationCounts}
- * />
- */
 function FilterTabsComponent<T extends string = string>({
   tabs,
   activeTabId,
@@ -36,18 +21,13 @@ function FilterTabsComponent<T extends string = string>({
   actionButton,
   filteredTabIds,
 }: FilterTabsProps<T>): React.ReactElement {
-  // ── Scroll-edge fades ──
-  // Show a soft fade on whichever side has more content scrolled off, so chips
-  // read as scrollable instead of hard-clipped at the viewport edge. The hook
-  // also exposes the live viewport/content widths in `metrics`, reused by the
-  // centering hook below so the same numbers aren't measured twice.
+  // `metrics` carries the live viewport/content widths, reused by the centering
+  // hook below so the same numbers aren't measured twice.
   const { edges, metrics, onScroll, onContentSizeChange, onLayout } =
     useScrollEdgeFades();
 
-  // ── Auto-center the active tab ──
-  // `cacheKey` (the testID prefix) lets a sticky-header copy of this strip
-  // start at the right offset without flicker by sharing the first instance's
-  // measurements.
+  // `cacheKey` shares measurements, so a sticky-header copy of this strip starts
+  // at the right offset without flicker.
   const {
     onItemLayout,
     onScrollViewLayout,

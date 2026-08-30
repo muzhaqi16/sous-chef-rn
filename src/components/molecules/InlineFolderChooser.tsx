@@ -16,18 +16,10 @@ interface InlineFolderChooserProps {
 }
 
 /**
- * The folder section of a recipe sheet: pick one, or make one.
- *
- * Distinct from `molecules/FolderPicker`, which is a bottom-sheet modal of its
- * own. `SaveRecipeSheet` and `ManageRecipeSheet` need this as a section INSIDE
- * their own sheet, and reaching for the modal there would stack a second sheet
- * over the first — a change to how the screen behaves, not a deduplication.
- * So the shape both sheets already had is what moved here; they had it twice,
- * JSX and styles alike.
- *
- * The "create" affordance keeps its own open/closed and draft-name state,
- * because nothing outside needs to read it: the caller hears about a folder
- * only once there is a name to add.
+ * The folder section of a recipe sheet: pick one, or make one. Deliberately NOT
+ * `molecules/FolderPicker`, which is a modal of its own — using it here would
+ * stack a second sheet over the host. The create affordance keeps its own
+ * open/draft state; the caller hears about a folder only once it has a name.
  */
 export const InlineFolderChooser: React.FC<InlineFolderChooserProps> = ({
   folders,

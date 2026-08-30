@@ -106,6 +106,8 @@ function buildHomeNode(args: {
   id: string;
   isDefault?: boolean;
   pantries?: Array<{ id: string; isDefault?: boolean }>;
+  /** Set above `pantries.length` to express a truncated page. */
+  totalCount?: number;
 }) {
   return {
     __typename: 'Home',
@@ -128,7 +130,9 @@ function buildHomeNode(args: {
     // the hook to read.
     pantriesConnection: {
       __typename: 'PantryConnection',
-      totalCount: args.pantries?.length ?? 0,
+      // Overridable so a test can express a TRUNCATED page: `GetHomes` selects
+      // `pantriesConnection(first: 10)`, so totalCount can exceed the edges.
+      totalCount: args.totalCount ?? args.pantries?.length ?? 0,
       edges: (args.pantries ?? []).map(p => ({
         __typename: 'PantryEdge',
         node: {
@@ -341,10 +345,12 @@ describe('useDefaultHome', () => {
       });
 
       const home = {
-        pantries: [
-          { id: 'p-1', isDefault: false },
-          { id: 'p-2', isDefault: true },
-        ],
+        pantriesConnection: {
+          edges: [
+            { node: { id: 'p-1', isDefault: false } },
+            { node: { id: 'p-2', isDefault: true } },
+          ],
+        },
       };
 
       const pantry = result.current.actions.getDefaultPantry(home);
@@ -357,10 +363,12 @@ describe('useDefaultHome', () => {
       });
 
       const home = {
-        pantries: [
-          { id: 'p-1', isDefault: false },
-          { id: 'p-2', isDefault: false },
-        ],
+        pantriesConnection: {
+          edges: [
+            { node: { id: 'p-1', isDefault: false } },
+            { node: { id: 'p-2', isDefault: false } },
+          ],
+        },
       };
 
       const pantry = result.current.actions.getDefaultPantry(home);
@@ -372,7 +380,9 @@ describe('useDefaultHome', () => {
         operationMocks: [buildGetHomesMock([])],
       });
 
-      const pantry = result.current.actions.getDefaultPantry({ pantries: [] });
+      const pantry = result.current.actions.getDefaultPantry({
+        pantriesConnection: { edges: [] },
+      });
       expect(pantry).toBeNull();
     });
 
@@ -503,6 +513,40 @@ describe('useDefaultHome', () => {
       );
     });
 
+    it('does not repoint a pantry merely missing from a TRUNCATED page', async () => {
+      // A page answers "is it on this page", not "does it exist". Judged
+      // against the page, a home's eleventh pantry was stale on every launch.
+      mockStoreState.selectedHomeId = 'home-1';
+      mockStoreState.selectedPantryId = 'pantry-11';
+
+      renderHookWithApollo(() => useDefaultHome(), {
+        operationMocks: [
+          buildGetHomesMock([
+            buildHomeNode({
+              id: 'home-1',
+              isDefault: true,
+              pantries: [
+                { id: 'pantry-1', isDefault: true },
+                { id: 'pantry-2', isDefault: false },
+              ],
+              totalCount: 12,
+            }),
+          ]),
+          buildSetDefaultHomeMock('home-1'),
+        ],
+      });
+
+      await waitFor(() =>
+        expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(
+          true,
+        ),
+      );
+
+      expect(mockStoreState.setSelectedPantryId).not.toHaveBeenCalledWith(
+        'pantry-1',
+      );
+    });
+
     it('repoints a persisted pantry that belongs to another home, and holds ready until it does', async () => {
       // `selectedPantryId` is persisted next to `selectedHomeId`, so a cold
       // start can restore a pantry from a home the user has since left. Ready
@@ -532,6 +576,18 @@ describe('useDefaultHome', () => {
         expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
           'pantry-2',
         ),
+      );
+
+      // Repointed, never evicted: that pantry is usually a live pantry of
+      // another home, and evicting it empties THAT home's connection.
+      const { safeEvictMany } = jest.requireMock(
+        '#/apollo/utils/cacheUpdaters',
+      ) as { safeEvictMany: jest.Mock };
+      expect(safeEvictMany).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.arrayContaining([
+          expect.objectContaining({ id: 'pantry-from-a-home-i-left' }),
+        ]),
       );
 
       // And ready was never flipped while the stale id was still in place.

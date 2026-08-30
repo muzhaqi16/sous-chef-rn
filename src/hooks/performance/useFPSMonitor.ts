@@ -1,19 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 
-/**
- * FPS Monitor Hook for Development
- *
- * Tracks frames per second during scroll and interaction to identify
- * performance bottlenecks. Only active in __DEV__ mode.
- *
- * Usage:
- * ```tsx
- * const { fps, isLowFPS, startMonitoring, stopMonitoring } = useFPSMonitor();
- *
- * // Display FPS in dev UI
- * {__DEV__ && <Text>FPS: {fps}</Text>}
- * ```
- */
+/** Frames per second during scroll and interaction. `__DEV__` only. */
 
 interface FPSMonitorOptions {
   /** Threshold below which FPS is considered "low" (default: 30) */

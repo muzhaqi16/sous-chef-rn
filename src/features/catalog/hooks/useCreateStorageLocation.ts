@@ -148,16 +148,10 @@ function revertOptimisticLocation(
 }
 
 /**
- * Lightweight hook for creating a storage location (local-first).
- *
- * Mints the location's id client-side and writes it into the cache before
- * firing, so it appears as a FilterTab instantly and survives an
- * offline/queued create — the server stores `input.id` as the primary key and
- * the queue replays the create keyed by that same id (a duplicate replay
- * surfaces as a ConflictError, which the queue drops). Both the
- * StorageLocationsScreen cache (`storageLocations` query) and PantryMain's
- * `Pantry.storageLocationsConnection` are updated. On a real rejection the
- * optimistic location is reverted.
+ * Creates a storage location local-first: the client-minted id is written to
+ * the `storageLocations` query and `Pantry.storageLocationsConnection` before
+ * firing, so a queued create replays under the same primary key. Reverted on a
+ * real rejection.
  */
 export function useCreateStorageLocation(
   homeId: string | undefined,

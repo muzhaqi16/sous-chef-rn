@@ -1,14 +1,8 @@
 /**
- * Shopping List Cache Updaters
- *
- * Reusable cache update utilities for shopping list items.
- * Used by both mutations and subscriptions to ensure consistent cache updates
- * when items move between purchased/unpurchased states.
- *
- * Apollo stores aliased fields under the actual field name with serialized
- * keyArgs (e.g. `itemsConnection:{"isPurchased":true}`), NOT under the alias
- * name. All cache updates therefore target `itemsConnection` and use
- * `storeFieldName` to distinguish filtered variants.
+ * Cache updaters for shopping list items, shared by mutations and subscriptions.
+ * Apollo stores an ALIASED field under its real name with serialized keyArgs
+ * (`itemsConnection:{"isPurchased":true}`), not under the alias — so every update
+ * targets `itemsConnection` and tells variants apart by `storeFieldName`.
  */
 
 import { gql, isReference, type ApolloCache } from '@apollo/client';
@@ -36,10 +30,8 @@ import { logger } from '#/utils/environment';
 
 export interface OptimisticShoppingListItemFields {
   /**
-   * The list this row belongs to. Required, not optional: it is what the
-   * offline queue reads back to build a toggle/quantity/update replay, and a
-   * row written without it makes that replay fail permanently — so the type
-   * forces every caller to supply it rather than letting one forget.
+   * Required, not optional: the offline queue reads it back to build a
+   * toggle/quantity/update replay, and a row written without it fails permanently.
    */
   shoppingListId: string;
   itemName: string;
@@ -52,19 +44,10 @@ export interface OptimisticShoppingListItemFields {
 }
 
 /**
- * Build a complete optimistic `ShoppingListItem` for local-first creates.
- *
- * `id` is the client-minted cuid (the row's real PK), baked straight into the
- * entity so the online create and the queued replay converge on one row. The
- * full display shape is mandatory offline, where no server response arrives to
- * materialize the row (an incomplete shape makes a list cell's `useFragment`
- * report `complete: false` and blank the row). Pass the result to
- * {@link addOptimisticShoppingListItem}.
- *
- * Lives here (a shared apollo util) rather than inside the shoppingList feature
- * so every add surface — including ones in other features (barcode,
- * pantry-detail, filtered-pantry) — can build the same entity without crossing
- * a feature boundary.
+ * Build a complete optimistic `ShoppingListItem` for local-first creates. `id` is
+ * the client-minted cuid (the row's PK), so the online create and the queued replay
+ * converge on one row. The full display shape is mandatory offline — an incomplete
+ * one makes a cell's `useFragment` report `complete: false` and blank the row.
  */
 export function createOptimisticShoppingListItem(
   id: string,
@@ -86,15 +69,13 @@ export function createOptimisticShoppingListItem(
       category: fields.category ?? null,
       notes: null,
       sortOrder: '',
-      // Builds the record whole rather than going through `writePurchaseInfo`,
-      // which patches an existing one. A line that was just created has no
-      // prior purchase to preserve and no flag to flip.
+      // Built whole rather than through `writePurchaseInfo`, which patches an
+      // existing record. A just-created line has no prior purchase to preserve.
       purchaseInfo: {
         __typename: 'ShoppingListItemPurchaseInfo',
         isPurchased: false,
-        // A line that was just created has not been purchased, so it cannot
-        // have reached the pantry. Present rather than omitted because the row
-        // reads it, and one absent field makes the whole list read incomplete.
+        // Present rather than omitted: the row reads it, and one absent field
+        // makes the whole list read incomplete.
         movedToPantryAt: null,
       },
       item: fields.itemId
@@ -120,23 +101,6 @@ const ShoppingListStatsForOptimisticAddFragment = gql`
   }
 `;
 
-// =============================================================================
-// storeFieldName filter detection
-// =============================================================================
-
-/**
- * Check whether an Apollo `storeFieldName` matches a specific filter value.
- *
- * Apollo serializes `keyArgs` into storeFieldName, e.g.:
- *   `itemsConnection:{"filters":{"isPurchased":true}}`
- *
- * This helper avoids brittle `.includes()` string matching by encoding the
- * expected JSON fragment consistently.
- *
- * @example
- * matchesFilter(storeFieldName, 'isPurchased', true)
- * matchesFilter(storeFieldName, 'isPurchased', false)
- */
 /** What a caller may change about a line's purchase record. */
 export interface PurchaseInfoPatch {
   isPurchased?: boolean;
@@ -144,11 +108,9 @@ export interface PurchaseInfoPatch {
 }
 
 /**
- * The stamp a cached line already carries, or null.
- *
- * The counterpart to the writer above, here for the same reason: a caller
- * deciding whether to stamp a line has to know whether it is already stamped,
- * and reaching into the record from outside this module is how the two drift.
+ * The stamp a cached line already carries, or null — the read counterpart to
+ * {@link writePurchaseInfo}, so a caller deciding whether to stamp a line never
+ * reaches into the record itself.
  */
 export function readMovedToPantryAt(
   cache: ApolloCache,
@@ -175,12 +137,9 @@ export function readMovedToPantryAt(
 }
 
 /**
- * Every field of `ShoppingListItemPurchaseInfo`.
- *
- * Must stay complete against the SDL type, which
- * `__tests__/graphql/purchaseInfoWriterCoversType.test.ts` enforces — a field
- * missing here is a field a local write silently drops, for the reason in
- * {@link writePurchaseInfo}.
+ * Every field of `ShoppingListItemPurchaseInfo`; must stay complete against the
+ * SDL, which `__tests__/graphql/purchaseInfoWriterCoversType.test.ts` enforces —
+ * a field missing here is one a local write silently drops.
  */
 const PURCHASE_INFO_FIELDS = `
       __typename
@@ -222,39 +181,10 @@ type CachedPurchaseInfo = Record<string, unknown> & {
 };
 
 /**
- * The only writer of `ShoppingListItem.purchaseInfo`.
- *
- * The record has two properties no call site should have to remember.
- *
- * Its type policy CLEARS every field a write omits whenever `isPurchased`
- * changes — deliberately, because inheriting a previous purchase's amounts
- * beside a new flag once showed a collaborator's name and price on someone
- * else's purchase. A write that asserts a flag it does not own can therefore
- * destroy the record: asserting `isPurchased: true` over a cached `false`
- * cleared the quantity, price, date and purchaser.
- *
- * And `movedToPantryAt` is derived from the flag: the server clears the stamp
- * on exactly the transition that ends a purchase cycle, so a local write that
- * flips the flag must clear it too. Otherwise a re-purchased line keeps a stamp
- * saying it is already stocked, and its row withholds the move-to-pantry action
- * for a line the bulk move will act on.
- *
- * Both rules live here so a sixth writer cannot drift from them. Callers say
- * what they are changing; they do not restate the rules.
- *
- * **Goes through `writeFragment`, not `cache.modify`.** `cache.modify` does not
- * run type-policy merges and cannot introduce a field the cached record does
- * not already carry, so the rules above were being asserted by a mechanism that
- * could not enforce either of them. `writeFragment` runs the policy.
- *
- * **And it carries the cached record forward.** The policy's clearing exists for
- * a narrow SERVER response, which describes a different purchase and must not
- * inherit the last one's amounts. A LOCAL flip is not that: the SDL documents a
- * clearing contract for `movedToPantryAt` alone, and the amounts belong to the
- * purchase the server recorded and are not this write's to discard. So every
- * field the record already holds is written back explicitly, leaving the policy
- * nothing to clear — the mechanism is honest, and the outcome is the one the
- * schema describes.
+ * The ONLY writer of `ShoppingListItem.purchaseInfo`. Its type policy CLEARS every
+ * field a write omits whenever `isPurchased` changes, so a write asserting a flag
+ * it does not own destroys the record; and `movedToPantryAt` is derived from the
+ * flag, so a local flip must clear the stamp. Callers say only what they change.
  */
 export function writePurchaseInfo(
   cache: ApolloCache,
@@ -296,6 +226,10 @@ export function writePurchaseInfo(
     restoring: options.restoring === true,
   });
 
+  // `writeFragment`, not `cache.modify`: modify runs no type-policy merge and
+  // cannot introduce a field the record lacks. Every cached field is written back
+  // explicitly, so the policy's clear-on-flip has nothing to clear on a LOCAL
+  // write — the amounts belong to the purchase the server recorded.
   const purchaseInfo = {
     ...carriedForward(cached),
     __typename: 'ShoppingListItemPurchaseInfo',
@@ -326,11 +260,9 @@ export function writePurchaseInfo(
 }
 
 /**
- * The record's other fields, exactly as cached.
- *
- * A field the cache does not hold is left OUT rather than written as null: the
- * write must not invent a value, and a key absent from both sides is one the
- * policy has nothing to clear either.
+ * The record's other fields, exactly as cached. A field the cache does not hold is
+ * left OUT rather than written as null: the write must not invent a value, and an
+ * absent key is one the policy has nothing to clear either.
  */
 function carriedForward(
   cached: CachedPurchaseInfo | undefined,
@@ -347,39 +279,20 @@ function carriedForward(
 }
 
 /**
- * The write fragment narrowed to exactly the fields a write supplies.
- *
- * `writeFragment` reports every field its fragment SELECTS and the data OMITS.
- * Normally that is a defect: an operation asked for a field the payload does
- * not carry, and the read it feeds goes incomplete. Here it was neither. The
- * record's cached shape is whatever the READING operation selected,
- * {@link carriedForward} passes exactly that through, and the store ends up
- * right. What was wrong was the assertion — the writer named the whole type
- * while supplying the part of it the cache holds, so every toggle from the list
- * screen reported five missing fields. That screen's
- * `ShoppingListItemDisplayFragment` caches `isPurchased` and `movedToPantryAt`
- * and nothing else, which is the correct thing for it to cache.
- *
- * The console noise was the cheap half. The expensive half was that the
- * suite-wide missing-field guard had to be taught to ignore those five pairs,
- * and a hole cut in a guard is open to whatever else falls through it.
- *
- * So the fragment narrows to the write instead. The store outcome is unchanged,
- * the type policy included: Apollo drops a field the data lacks BEFORE the
- * merge runs, so `incoming` — which is what the clear-on-flip loop in
- * `cache.ts` tests with `field in incoming` — is identical either way.
- *
- * Built by filtering the read fragment's AST rather than from a second field
- * list, so the two cannot drift. Each field set gets its own fragment NAME:
- * Apollo caches a parsed document by name, and two documents sharing one would
- * serve each other's selections. Memoized, since a toggle rebuilds this on
- * every tap and there are two shapes in practice.
+ * The write fragment narrowed to exactly the fields a write supplies:
+ * `writeFragment` reports every field its fragment SELECTS and the data OMITS, and
+ * the record's cached shape is whatever the READING operation selected. The store
+ * outcome is unchanged — Apollo drops a missing field BEFORE the merge runs.
  */
 const purchaseInfoWriteDocs = new Map<
   string,
   { doc: DocumentNode; name: string }
 >();
 
+// Built by filtering the read fragment's AST rather than a second field list, so
+// the two cannot drift. Each field set gets its own NAME: Apollo caches a parsed
+// document by name, and two documents sharing one would serve each other's
+// selections.
 function purchaseInfoWriteFragment(
   fields: readonly string[],
   withUpdatedAt: boolean,
@@ -446,14 +359,10 @@ function purchaseInfoWriteFragment(
 }
 
 /**
- * The stamp a write should leave behind.
- *
- * Restoring is not flipping. A revert re-asserts the flag the row had before
- * the user touched it, which looks like a flip from the cache's side and is
- * not one: the server never saw the change, so it still holds the stamp. Left
- * as a flip, the revert cleared a stamp the snapshot had no way to restore —
- * the row then re-offered move-to-pantry and a bulk move sent the line to the
- * pantry a second time.
+ * The stamp a write should leave behind. Restoring is not flipping: a revert
+ * re-asserts the flag the row had before the user touched it, which looks like a
+ * flip from the cache's side. The server never saw the change, so it still holds
+ * the stamp, and clearing it would re-offer a move-to-pantry already done.
  */
 function resolveStamp({
   patch,
@@ -474,6 +383,10 @@ function resolveStamp({
   return cached;
 }
 
+/**
+ * Does `storeFieldName`'s serialized keyArgs carry `key: value`? Apollo encodes
+ * them as `itemsConnection:{"filters":{"isPurchased":true}}`.
+ */
 export function matchesFilter(
   storeFieldName: string,
   key: string,
@@ -492,10 +405,7 @@ export function isUnpurchasedVariant(storeFieldName: string): boolean {
   return matchesFilter(storeFieldName, 'isPurchased', false);
 }
 
-/**
- * Remove item from ShoppingList.itemsConnection (all variants).
- * Correct for deletion — runs on every storeFieldName variant.
- */
+/** Remove an item from EVERY `ShoppingList.itemsConnection` variant — deletion. */
 export const removeFromShoppingListItemsConnection =
   createRemoveFromParentConnectionUpdater(
     'ShoppingList',
@@ -503,15 +413,7 @@ export const removeFromShoppingListItemsConnection =
     'ShoppingListItem',
   );
 
-/**
- * Clear ALL items of a given purchase status from cache in a single atomic operation.
- * Used by "Clear All" buttons for instant UI feedback.
- *
- * @param cache - Apollo cache instance
- * @param listId - Shopping list ID
- * @param itemIds - Array of item IDs being cleared
- * @param isPurchased - Whether clearing purchased (true) or unpurchased (false) items
- */
+/** Clear every item of one purchase status from the cache in a single write. */
 function clearItemsFromCache(
   cache: ApolloCache,
   listId: string,
@@ -554,7 +456,6 @@ function clearItemsFromCache(
     },
   });
 
-  // Evict all deleted items from cache
   safeEvictMany(
     cache,
     itemIds.map(id => ({ typename: 'ShoppingListItem', id })),
@@ -579,9 +480,6 @@ export function clearAllUnpurchasedItemsFromCache(
   clearItemsFromCache(cache, listId, itemIds, false);
 }
 
-/**
- * Helper to update itemsConnection filtered variants when purchase status changes
- */
 function updateItemsConnectionForPurchaseStatusChange(
   cache: ApolloCache,
   listId: string,
@@ -608,7 +506,6 @@ function updateItemsConnectionForPurchaseStatusChange(
           existing: ConnectionData | undefined,
           { readField, storeFieldName, toReference },
         ) {
-          // Detect which filtered variant this is by checking storeFieldName
           const isUnpurchasedConnection = isUnpurchasedVariant(storeFieldName);
           const isPurchasedConnection = isPurchasedVariant(storeFieldName);
 
@@ -645,11 +542,9 @@ function updateItemsConnectionForPurchaseStatusChange(
           };
 
           if (movingToPurchased) {
-            // Moving to purchased: remove from unpurchased, add to purchased
             if (isUnpurchasedConnection) return removeItemEdges();
             if (isPurchasedConnection) return addItemEdge();
           } else {
-            // Moving to unpurchased: remove from purchased, add to unpurchased
             if (isPurchasedConnection) return removeItemEdges();
             if (isUnpurchasedConnection) return addItemEdge();
           }
@@ -681,10 +576,7 @@ function updateItemsConnectionForPurchaseStatusChange(
   }
 }
 
-/**
- * Move a shopping list item to purchased state.
- * Updates itemsConnection filtered variants via storeFieldName detection.
- */
+/** Move a row to purchased, rewiring the filtered `itemsConnection` variants. */
 export function moveShoppingListItemToPurchased(
   cache: ApolloCache,
   listId: string,
@@ -693,10 +585,7 @@ export function moveShoppingListItemToPurchased(
   updateItemsConnectionForPurchaseStatusChange(cache, listId, item.id, true);
 }
 
-/**
- * Move a shopping list item to unpurchased state.
- * Updates itemsConnection filtered variants via storeFieldName detection.
- */
+/** Move a row to unpurchased, rewiring the filtered `itemsConnection` variants. */
 export function moveShoppingListItemToUnpurchased(
   cache: ApolloCache,
   listId: string,
@@ -706,15 +595,10 @@ export function moveShoppingListItemToUnpurchased(
 }
 
 /**
- * Add a new item to shopping list cache.
- *
- * Uses storeFieldName detection to correctly update filtered itemsConnection variants:
- * - isPurchased:true variant → REMOVE the item (handles re-add of previously purchased item)
- * - All other variants (unfiltered, isPurchased:false) → ADD the item
- *
- * Pass `bumpTotalItems: false` when running after a local-first
- * {@link addOptimisticShoppingListItem} already counted the item — see
- * {@link reconcileShoppingItemCreateUpdate}.
+ * Add an item to a shopping list's cache. The `isPurchased:true` variant REMOVES
+ * the row (re-adding a purchased item); every other variant adds it. Pass
+ * `bumpTotalItems: false` when a local-first
+ * {@link addOptimisticShoppingListItem} has already counted it.
  */
 export function addNewItemToShoppingListCache(
   cache: ApolloCache,
@@ -739,7 +623,7 @@ export function addNewItemToShoppingListCache(
           if (!existing?.edges) return existing;
 
           if (isPurchasedVariant(storeFieldName)) {
-            // REMOVE from purchased variant (handles re-add of previously purchased item)
+            // Re-adding a purchased row: drop it from the purchased variant.
             const hadItem = existing.edges.some(
               edge => readField<string>('id', edge?.node) === item.id,
             );
@@ -753,7 +637,6 @@ export function addNewItemToShoppingListCache(
             };
           }
 
-          // ADD to unfiltered and unpurchased variants
           const alreadyExists = existing.edges.some(
             edge => readField<string>('id', edge?.node) === item.id,
           );
@@ -788,11 +671,10 @@ export function addNewItemToShoppingListCache(
 }
 
 /**
- * Reconcile a local-first item create's server response from the mutation's
- * `update` callback: adopt the server id (evicting the optimistic cuid on a
- * catalog-merge) and re-wire the edge without re-counting — the optimistic add
- * already bumped `totalItems`. Pass `clientId` from the mutation's own
- * `variables` (never a shared ref) so it stays correct when adds overlap.
+ * Reconcile a local-first create from the mutation's `update`: adopt the server id
+ * and re-wire the edge WITHOUT re-counting — the optimistic add already bumped
+ * `totalItems`. `clientId` comes from the mutation's own `variables`, never a
+ * shared ref, so overlapping adds stay correct.
  */
 export function reconcileShoppingItemCreateUpdate(
   cache: ApolloCache,
@@ -804,9 +686,8 @@ export function reconcileShoppingItemCreateUpdate(
   addNewItemToShoppingListCache(cache, listId, serverItem, false);
 }
 
-// Structural slices of the add-items mutation result/variables the builder
-// below reads. Kept loose so every add-to-shopping-list mutation document
-// (plain, from-pantry-item, from-filtered-pantry) satisfies the shape.
+// Structural slices the builder below reads, kept loose so every
+// add-to-shopping-list mutation document satisfies the shape.
 interface AddItemsReconcilePayloadLike {
   __typename?: string;
   results?: readonly ({ item?: { id: string } | null } | null)[] | null;
@@ -834,11 +715,9 @@ interface BuildAddItemsReconcileUpdateOptions {
 }
 
 /**
- * Builds the mutation `update` callback shared by every add-to-shopping-list
- * entry point: guard the `AddItemsToShoppingListPayload`, take the single
- * created/merged row, adopt the server id over the client id, and reconcile it
- * into the target list's cache. The list id comes from `listId` when supplied,
- * otherwise from the mutation's own `variables.input.shoppingListId`.
+ * The mutation `update` shared by every add-to-shopping-list entry point: guard the
+ * payload, take the single created/merged row, adopt the server id, reconcile into
+ * the list. List id from `listId`, else `variables.input.shoppingListId`.
  */
 export function buildAddItemsReconcileUpdate({
   listId,
@@ -879,27 +758,17 @@ export function buildAddItemsReconcileUpdate({
 }
 
 /**
- * Local-first optimistic add: write a new ShoppingListItem to the cache
- * PERMANENTLY (full entity + connection edge + recomputed list stats) BEFORE the
- * create mutation fires, so it survives a fully-offline / API-down create (the
- * queue replays via `SyncShoppingListItem(clientId = id)`).
- *
- * Unlike {@link addNewItemToShoppingListCache} — which only wires a bare-ref
- * edge and relies on the mutation *response* to materialize the entity — this
- * `writeFragment`s the full display entity first. That step is mandatory
- * offline, where no response ever arrives to fill the entity's fields (without
- * it the row renders blank).
- *
- * `item.id` MUST be the client-minted cuid sent as `input.id`, so the online
- * create and the queued replay converge on the same row (no duplicate).
+ * Local-first optimistic add: writes the FULL display entity, the connection edge
+ * and recomputed stats PERMANENTLY before the create fires, so it survives a
+ * fully-offline create (the queue replays `SyncShoppingListItem(clientId = id)`).
+ * `item.id` MUST be the client-minted cuid sent as `input.id`, or the replay dupes.
  */
 export function addOptimisticShoppingListItem(
   cache: ApolloCache,
   listId: string,
   item: ShoppingListItemDisplayFragment,
 ): void {
-  // 1. Write the full entity so the (bare-ref) edge resolves with display
-  //    fields even fully offline.
+  // 1. Full entity, so the bare-ref edge resolves with display fields offline.
   cache.writeFragment({
     id: cache.identify(item),
     fragment: ShoppingListItemDisplayFragmentDoc,
@@ -912,8 +781,8 @@ export function addOptimisticShoppingListItem(
     id: listId,
   });
 
-  // 2. Snapshot completedItems BEFORE the add (new items are unpurchased, so
-  //    completedItems is unchanged; remaining/completion derive from it).
+  // 2. Snapshot completedItems BEFORE the add — a new row is unpurchased, so it
+  //    is unchanged, and remaining/completion derive from it.
   const stats = parentCacheId
     ? cache.readFragment<{ completedItems: number }>({
         id: parentCacheId,
@@ -944,17 +813,10 @@ export function addOptimisticShoppingListItem(
 }
 
 /**
- * Reverse {@link addOptimisticShoppingListItem} when a local-first create is
- * rejected by the server (e.g. `ValidationError` / `ConflictError`).
- *
- * Evicting the entity alone is NOT a full revert: `addOptimisticShoppingListItem`
- * also bumped the `ShoppingList.totalItems` / `remainingItems` / `completionRate`
- * scalars, and the self-healing `itemsConnection` read only repairs the
- * connection's own `totalCount` — not those sibling scalars. So an evict-only
- * revert leaves the list header showing an inflated count until the next stats
- * refetch. This reverses the scalar bump too (the item was unpurchased, so
- * `completedItems` is unchanged). The dangling connection edge is dropped by the
- * self-healing read.
+ * Reverse {@link addOptimisticShoppingListItem} on a rejected create. Evicting the
+ * entity alone is NOT enough: the optimistic add also bumped `totalItems` /
+ * `remainingItems` / `completionRate`, and the self-healing `itemsConnection` read
+ * repairs only its own `totalCount`. That read drops the dangling edge.
  */
 export function revertOptimisticShoppingListItem(
   cache: ApolloCache,
@@ -991,16 +853,10 @@ export function revertOptimisticShoppingListItem(
 }
 
 /**
- * Reconcile a local-first shopping-list create after its mutation resolves.
- *
- * Every shopping add surface writes the item to the cache before firing and
- * shares one keep/revert rule: a `'rejected'` result (a real error, or a
- * non-success payload such as ConflictError/ValidationError) discards the
- * optimistic item; `'created'` / `'queued'` keep it — a queued create replays
- * later, keyed by the same `id`. Centralizing the payload key, success typename,
- * and the stat-aware revert here keeps them in one place so they can't drift
- * across the many add sites. Returns whether the optimistic item was kept or
- * reverted so the caller can drive its own success / error UX.
+ * Reconcile a local-first item create once the mutation resolves: `'rejected'`
+ * discards the optimistic row, `'created'` / `'queued'` keep it — a queued create
+ * replays later, keyed by the same `id`. Returns which happened, so the caller can
+ * drive its own success / error UX.
  */
 export function reconcileShoppingCreate(
   cache: ApolloCache,
@@ -1009,10 +865,9 @@ export function reconcileShoppingCreate(
   result: { data?: unknown; error?: unknown } | null | undefined,
 ): 'kept' | 'reverted' {
   const outcome = classifyCreateResult(result);
-  // Each add fires the batch mutation with a single item. The batch can resolve
-  // successfully while that one item fails (`results[0].success === false`, e.g.
-  // a per-item validation error reported inside the batch rather than as a
-  // top-level error member). Revert the optimistic row in that case too.
+  // The batch can resolve successfully while its single item fails
+  // (`results[0].success === false` — a per-item validation error reported inside
+  // the batch rather than as a top-level error member). Revert that too.
   const payload = (
     result as
       | {
@@ -1043,14 +898,10 @@ export function reconcileShoppingCreate(
 }
 
 /**
- * Catalog-merge reconciliation: when the server merges a client-created item
- * into an existing catalog row, the returned id differs from the client cuid we
- * wrote optimistically. Evict the stale cuid entity so its (now-dangling)
- * connection edge is dropped by the self-healing read and the server row stands.
- *
- * `clientId` is read off the mutation's own `variables` at the call site (never a
- * shared ref), so this stays correct when adds overlap. A no-op when the server
- * echoed the same id (no merge).
+ * Catalog merge: when the server resolves the create to an EXISTING row, evict the
+ * stale client cuid so its dangling edge is dropped by the self-healing read and
+ * the server row stands. `clientId` comes off the mutation's own `variables`, never
+ * a shared ref. A no-op when the server echoed the same id.
  */
 export function adoptServerShoppingListItemId(
   cache: ApolloCache,
@@ -1063,9 +914,8 @@ export function adoptServerShoppingListItemId(
 }
 
 /**
- * The row's own record of where it belongs, read at withdrawal time by
- * {@link restoreItemToShoppingListAfterMoveToPantry}. Selects only what the
- * restore needs — which list, and which filtered variant of its connection.
+ * What {@link restoreItemToShoppingListAfterMoveToPantry} needs at withdrawal time:
+ * which list, and which filtered variant of its connection.
  */
 const RESTORE_MOVED_ITEM_FRAGMENT = gql`
   fragment RestoreMovedShoppingListItem on ShoppingListItem {
@@ -1080,14 +930,9 @@ const RESTORE_MOVED_ITEM_FRAGMENT = gql`
 `;
 
 /**
- * Remove a single item from ShoppingList cache when moving to pantry.
- *
- * Unlike the generic `createRemoveFromParentConnectionUpdater`, this only
- * modifies the correct filtered variant (purchased or unpurchased) based on
- * the item's purchase status, preventing incorrect totalCount decrements
- * on the other tab.
- *
- * Also updates `completedItems` and `totalItems` counters on the ShoppingList.
+ * Remove one item when moving it to the pantry. Unlike the generic remover this
+ * touches ONLY the matching purchased/unpurchased variant, so the other tab's
+ * `totalCount` is not decremented, and it updates `completedItems`/`totalItems`.
  */
 export function removeItemFromShoppingListForMoveToPantry(
   cache: ApolloCache,
@@ -1104,13 +949,10 @@ export function removeItemFromShoppingListForMoveToPantry(
 
     if (!parentCacheId) return;
 
-    // The edge operation first, on its own, recording whether it changed
-    // anything. The counters follow from that rather than assuming it — this
-    // helper runs TWICE for one online move (the eager pre-fire unlink, then
-    // the mutation's update callback), and `edges.filter` is idempotent while
-    // `-1` is not. Two passes because `cache.modify` visits an entity's fields
-    // in the STORE's order, so a flag set by one modifier cannot be read by
-    // another in the same call.
+    // The edge write first, recording whether it changed anything; the counters
+    // follow from that. This helper runs TWICE for one online move (eager unlink,
+    // then the update callback) and `edges.filter` is idempotent while `-1` is not.
+    // Two passes because `cache.modify` visits fields in the STORE's order.
     let removed = false;
 
     cache.modify({
@@ -1157,11 +999,9 @@ export function removeItemFromShoppingListForMoveToPantry(
       });
     }
 
-    // Evicting is for the CONFIRMED move: once the server has the row, the
-    // local entity is dead weight. The eager (pre-fire) call keeps it, because
-    // a permanently-refused replay has to put the row back and there is no
-    // snapshot to rebuild it from — see
-    // {@link restoreItemToShoppingListAfterMoveToPantry}.
+    // Evicting is for the CONFIRMED move. The eager (pre-fire) call keeps the
+    // entity, because a permanently-refused replay must put the row back and there
+    // is no snapshot to rebuild it from.
     if (options.evictEntity !== false) {
       safeEvict(cache, 'ShoppingListItem', itemId);
     }
@@ -1174,19 +1014,10 @@ export function removeItemFromShoppingListForMoveToPantry(
 }
 
 /**
- * Put a shopping row back after a move to the pantry was permanently refused.
- *
- * The mirror of {@link removeItemFromShoppingListForMoveToPantry}'s non-evicting
- * form. The row is unlinked from its list connection before the mutation fires,
- * so the move is visible with no network; if the queue then gives up on the
- * write, the pantry side is withdrawn by the generic evict and this restores the
- * shopping side. Without it the item would be in neither list — observed on
- * device on a move that timed out, retried, and came back NotFound.
- *
- * Reads the list id and purchase state from the still-cached entity rather than
- * taking them as arguments: the withdrawal runs long after the call site is
- * gone, and the entity is the only surviving record of where the row belongs.
- * A no-op when the entity is gone (already evicted, or never written).
+ * Put a shopping row back after a move to the pantry is permanently refused —
+ * without it the item is in neither list. Reads the list id and purchase state from
+ * the still-cached entity rather than arguments: the withdrawal runs long after the
+ * call site is gone. A no-op when the entity is gone.
  */
 export function restoreItemToShoppingListAfterMoveToPantry(
   cache: ApolloCache,
@@ -1219,9 +1050,7 @@ export function restoreItemToShoppingListAfterMoveToPantry(
     if (!parentCacheId) return;
 
     // Same two-pass shape as the remove: the counters follow the edge insert
-    // rather than assuming it. This runs from the queue's withdrawal AND from
-    // the call site's own revert, and guarding only the insert made it
-    // idempotent in the one effect a test could see.
+    // rather than assuming it, since this runs from the withdrawal AND the revert.
     let restored = false;
 
     cache.modify({
@@ -1285,15 +1114,9 @@ export function restoreItemToShoppingListAfterMoveToPantry(
   }
 }
 
-// =============================================================================
-// Shopping list local-first create (the list itself, not its items)
-// =============================================================================
-
 /**
- * Display shape of the optimistic `ShoppingList` entity written by
- * {@link addOptimisticShoppingList}. Mirrors what the lists-overview query
- * (`GetShoppingListsLite`) selects per node, so the overview reads complete
- * from cache while fully offline.
+ * Display shape of the optimistic `ShoppingList`, mirroring what the overview query
+ * `GetShoppingListsLite` selects per node so it reads complete from cache offline.
  */
 export type OptimisticShoppingList = {
   __typename: 'ShoppingList';
@@ -1319,10 +1142,9 @@ export type OptimisticShoppingList = {
 type OptimisticShoppingListUser = {
   __typename: 'User';
   id: string;
-  // Nullable per the schema: `User.email` only resolves for the caller's own
-  // record. The optimistic row is always the creator's, so it is populated
-  // here, but the cache shape has to match what the server write-through
-  // carries or the entity would be overwritten with a type mismatch.
+  // Nullable per the schema: `User.email` resolves only for the caller's own
+  // record. Populated here (the row is always the creator's), but the shape must
+  // match what the server write-through carries or the entity type-mismatches.
   email: string | null;
   profile: {
     __typename: 'UserProfile';
@@ -1411,12 +1233,9 @@ const addToShoppingListsQueryCache = createAddToQueryConnectionUpdater(
 );
 
 /**
- * A list arriving through any create path is never a template, so the
- * `filters: { isTemplate: true }` variant GetShoppingListTemplates reads is the
- * one place it must not land. Beyond showing a plain list in the template
- * picker, that variant selects `templateName` — a field an optimistic list
- * doesn't carry — and one edge missing it makes the whole query read
- * incomplete, blanking the picker until the next network response.
+ * A created list is never a template, so the `filters: { isTemplate: true }` variant
+ * must not take it: that variant selects `templateName`, which an optimistic list
+ * lacks, and one edge missing it makes the whole picker query read incomplete.
  */
 const isTemplateListVariant = (storeFieldName: string) =>
   matchesFilter(storeFieldName, 'isTemplate', true);
@@ -1441,16 +1260,10 @@ const removeShoppingListFromQueryCache = createRemoveFromQueryConnectionUpdater(
 );
 
 /**
- * Build a complete optimistic `ShoppingList` for a local-first create.
- *
- * `id` is the client-minted cuid sent as `input.id` — the row's permanent PK —
- * so the online create and the queued offline replay converge on one row.
- * Owner display data (avatar, display name) comes from the cache's canonical
- * `User` entity; when that copy is incomplete, falls back to the auth-store
- * identity with a `null` profile rather than risk clobbering cached profile
- * fields with stubs — the post-replay refetch heals the gap. The home chip is
- * resolved the same way and degrades to `null` when the `Home` entity isn't
- * cached.
+ * Build a complete optimistic `ShoppingList`. `id` is the client-minted cuid sent as
+ * `input.id`, so create and replay converge on one row. Owner data comes from the
+ * cached `User`; an incomplete copy falls back to the auth identity with a `null`
+ * profile rather than clobbering cached fields. The home chip degrades to null.
  */
 export function buildOptimisticShoppingList(
   cache: ApolloCache,
@@ -1509,21 +1322,10 @@ export function buildOptimisticShoppingList(
 }
 
 /**
- * Local-first optimistic add: write a new ShoppingList to the cache
- * PERMANENTLY (full entity + overview connection edge + empty filtered
- * `itemsConnection` variants) BEFORE the create mutation fires, so it survives
- * a fully-offline / API-down create. The queue replays the original
- * `CreateShoppingList` keyed by `input.id`; a duplicate replay surfaces as a
- * ConflictError, which the queue drops — the first attempt's row stands.
- *
- * Seeding both `filters: { isPurchased }` variants empty is what makes the
- * fresh list immediately usable offline: the items screen reads complete from
- * cache, and local-first item adds have an existing variant for their
- * `cache.modify` edge writes (a modifier never creates a missing variant).
- *
- * Caveat: `isDefault: true` doesn't clear the flag on other cached lists; the
- * server resolves the single-default rule on replay and the next refetch
- * reconciles the flags.
+ * Local-first optimistic add of the LIST: full entity, both empty filtered
+ * `itemsConnection` variants and the overview edge, written PERMANENTLY before the
+ * create fires. Seeding the variants is what makes it usable offline — a
+ * `cache.modify` modifier never creates a missing variant. `isDefault` is server-resolved.
  */
 export function addOptimisticShoppingList(
   cache: ApolloCache,
@@ -1567,12 +1369,9 @@ export function addOptimisticShoppingList(
     fragment: ShoppingListCacheUpdaters_ListDetailFragmentDoc,
     fragmentName: 'shoppingListCacheUpdaters_listDetail',
     data: {
-      // Neutral base derived from the SDL (see
-      // scripts/generate-optimistic-fillers.mjs) so a field added to the
-      // fragment cannot be forgotten here — that omission is invisible until
-      // the detail screen blanks offline. A brand-new list is neutral in every
-      // one of these: no template, no recurrence, no reminder, nothing spent,
-      // no collaborators, and nothing to move to a pantry until it has items.
+      // Neutral base derived from the SDL (scripts/generate-optimistic-fillers.mjs)
+      // so a field added to the fragment cannot be forgotten here — that omission
+      // is invisible until the detail screen blanks offline.
       ...NEUTRAL_SHOPPING_LIST_DETAIL,
       id: list.id,
     },
@@ -1583,11 +1382,9 @@ export function addOptimisticShoppingList(
 }
 
 /**
- * Remove a list from the cache entirely: the overview connection edge is
- * filtered + `totalCount` decremented explicitly (`Query.shoppingLists` has no
- * dangling-edge read filter, unlike `itemsConnection`'s self-healing read),
- * then the entity is evicted. Used both to revert a rejected optimistic create
- * and as the local-first removal for a list delete.
+ * Remove a list entirely: `Query.shoppingLists` has no dangling-edge read filter
+ * (unlike `itemsConnection`), so the edge is filtered and `totalCount` decremented
+ * explicitly before the entity is evicted. Also the local-first list delete.
  */
 export function removeShoppingListFromCache(
   cache: ApolloCache,
@@ -1606,10 +1403,9 @@ export function revertOptimisticShoppingList(
 }
 
 /**
- * Snapshot a list's display shape before a local-first delete, so a server
- * rejection can restore it via {@link addOptimisticShoppingList} (items
- * repopulate on the next visit's refetch). Null when the cache copy is
- * incomplete — the caller then relies on the next overview refetch instead.
+ * Snapshot a list's display shape before a local-first delete so a rejection can
+ * restore it via {@link addOptimisticShoppingList}. Null when the cache copy is
+ * incomplete — the caller then relies on the next overview refetch.
  */
 export function readShoppingListSnapshot(
   cache: ApolloCache,
@@ -1625,11 +1421,9 @@ export function readShoppingListSnapshot(
 }
 
 /**
- * Reconcile a local-first list create after its mutation resolves. Same
- * keep/revert rule as {@link reconcileShoppingCreate}: a `'rejected'` result
- * (a surfaced error, or a non-success payload such as
- * ConflictError/ValidationError) discards the optimistic list; `'created'` /
- * `'queued'` keep it — a queued create replays later, keyed by the same `id`.
+ * Reconcile a local-first list create: the keep/revert rule of
+ * {@link reconcileShoppingCreate} — `'rejected'` discards, `'created'`/`'queued'`
+ * keep, a queued create replaying later keyed by the same `id`.
  */
 export function reconcileShoppingListCreate(
   cache: ApolloCache,

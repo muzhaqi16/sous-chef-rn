@@ -6,24 +6,10 @@ interface DropdownStackProps {
 }
 
 /**
- * Vertical stack for form content where any child may render an
- * `InlineAutocomplete` suggestion overlay.
- *
- * Wraps each child in a `View` with an explicit, non-zero, descending
- * `zIndex` and `collapsable={false}` so a child's dropdown always paints
- * above every sibling below it. Both halves are required:
- *
- * - RN `zIndex` only orders SIBLINGS. A dropdown nested inside a row can
- *   never paint above the row's later siblings unless the row itself is
- *   raised — every sibling in the overlap chain needs an explicit zIndex.
- * - `collapsable={false}` stops Android view flattening from pruning a
- *   layout-only wrapper, which silently discards its zIndex (the classic
- *   "zIndex randomly stops working on Android").
- *
- * Use for vertically stacked children only — each wrapper is a plain
- * full-width View, so rows keep their own margins/styles. Falsy conditional
- * children (`{cond && <X />}`) are skipped. Nest a second `DropdownStack`
- * when a child has internal rows of its own (see `UnitEntryList`).
+ * Vertical stack for form rows that may open an `InlineAutocomplete` overlay. RN
+ * `zIndex` orders SIBLINGS only, so every row in the chain needs an explicit
+ * descending one, and `collapsable={false}` stops Android view flattening from
+ * pruning the wrapper and discarding it. Nest a second stack for nested rows.
  */
 export const DropdownStack: React.FC<DropdownStackProps> = ({ children }) => {
   const items = React.Children.toArray(children);

@@ -9,11 +9,9 @@ import { getVersion } from 'react-native-device-info';
 export const CLIENT_NAME = 'sous-chef-app';
 
 /**
- * Native build version (Android versionName / iOS MARKETING_VERSION) rather
- * than the package.json version. The server decides whether the *installed*
- * app is below its minimum, and a store update is what moves this number;
- * package.json can advance in the repo without any user's install changing.
- * Must parse as semver — the server treats an unparseable value as absent and
- * refuses the request once a minimum is configured.
+ * Native build version (Android versionName / iOS MARKETING_VERSION), not the
+ * package.json one — the server gates the INSTALLED app, and only a store
+ * update moves this. Must parse as semver: an unparseable value reads as
+ * absent, and the request is refused once a minimum is configured.
  */
 export const CLIENT_VERSION = getVersion();

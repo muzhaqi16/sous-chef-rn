@@ -1,17 +1,8 @@
 /**
- * Meal Plan Subscriptions
- *
- * Opens the consolidated `mealPlanEvents(homeId)` stream for the selected home
- * and applies plan / plan-item / template changes made by other members —
- * previously invisible to this client until a refetch happened to land.
- *
- * A personal plan (`homeId: null`) can only be changed by this device, so it
- * emits no events and needs none.
- *
- * The event carries the envelope plus the changed entity's id — subscriptions
- * are validated against depth 5, which no fragment spread fits under. Deletes
- * work from the id alone; creates read the entity back first; plan-item changes
- * ride the debounced `refreshPlanAggregates` read.
+ * Opens `mealPlanEvents(homeId)` and applies other members' changes; a personal
+ * plan (`homeId: null`) emits none. The payload is an envelope plus an id —
+ * subscriptions validate against depth 5, which no fragment spread fits — so
+ * creates read the entity back and item changes ride `refreshPlanAggregates`.
  */
 
 import { useSubscription } from '@apollo/client/react';
@@ -53,16 +44,10 @@ import { useSubscriptionTransportRecovery } from '#hooks/subscriptions/useSubscr
 type MealPlanEventsPayload = MealPlanEventsSubscription['mealPlanEvents'];
 
 /**
- * The add updaters take an id, never a read-back object.
- *
- * They call `toReference(item, true)`, which merges whatever it is handed over
- * the stored entity, preferring the incoming value on every key. A denormalized
- * `readFragment` result would therefore overwrite nested entity references
- * (`MealPlan.home`, `MealPlanItem.recipe`) with inline snapshots, silently
- * un-normalizing them — the card would stop tracking the Recipe entity, and a
- * later query selecting a field outside the snapshot would read incomplete.
- * The read-back query has already written the entity, so the ref is all these
- * need; the `readFragment` call below is a completeness probe only.
+ * The add updaters take an id, NEVER a read-back object: `toReference(item,
+ * true)` merges what it is handed over the stored entity, so a denormalized
+ * result would replace nested references with inline snapshots and un-normalize
+ * them. The `readFragment` below is a completeness probe only.
  */
 type EntityRef = { __typename: string; id: string };
 
@@ -122,8 +107,8 @@ async function handlePlanChanged(
   if (isDelete(payload.mutation)) {
     removeFromMealPlans(client.cache, planId, { evictItem: true });
 
-    // Same reasoning as useActiveMealPlan: the pick is persisted, so left set
-    // it survives into the next session naming a plan that no longer exists.
+    // The pick is persisted: left set, it survives into the next session
+    // naming a deleted plan. Same reasoning as useActiveMealPlan.
     const store = useStore.getState();
     if (store.selectedMealPlanId === planId) {
       store.setSelectedMealPlanId(null);
@@ -167,22 +152,10 @@ const AGGREGATE_REFRESH_MAX_ATTEMPTS = 80;
 let aggregateRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 
 /**
- * Re-read the plan so its server-computed nutrition totals catch up.
- *
- * The totals are their own fields, so changing `mealPlanItems` leaves them
- * describing the old set. They can't be evicted — `MealPlanMain_mealPlan`
- * selects them, and an evicted field makes that read incomplete and blanks the
- * screen — so the only fix is a re-read. Refetches only what is mounted;
- * offline the totals stay stale until the next successful read, which beats
- * blanking.
- *
- * Coalesced and delete-aware, because a naive refetch-per-event is wrong twice
- * over. Applying a 7-day template pushes ~21 item events, and one full plan
- * query each is 21 round-trips for one final answer. Worse, a refetch landing
- * while a delete is still in flight writes the server's copy of the row the
- * user just removed straight back into the cache — the deleted meal reappears,
- * then vanishes again when the delete's own echo arrives. So: debounce, and
- * hold off entirely until no delete is pending.
+ * Re-reads the plan so its server-computed nutrition totals catch up; evicting
+ * them instead makes `MealPlanMain_mealPlan` incomplete and blanks the screen.
+ * Debounced (a 7-day template pushes ~21 events) and held off while a delete is
+ * pending — a refetch landing mid-delete writes the removed row back in.
  */
 function refreshPlanAggregates(
   client: SubscriptionApolloClient,

@@ -8,13 +8,9 @@ type Props = ScrollViewProps &
   KeyboardAwareScrollViewProps & { children: React.ReactNode };
 
 /**
- * Drop-in replacement for `BottomSheetScrollView` in sheets that contain inputs.
- *
- * - Wraps `BottomSheetKeyboardAwareScrollView` for keyboard-aware scrolling
- *   (which defaults `bottomOffset` to the density-scaled `theme.spacing.md` —
- *   don't restate it here or at call sites).
- * - Provides `BottomSheetInputContext = true` so `FormInput`, `FractionInput`,
- *   and `FormTextArea` automatically use `BottomSheetTextInput`.
+ * `BottomSheetScrollView` replacement for sheets containing inputs: adds
+ * keyboard-aware scrolling and the context that makes `FormInput` /
+ * `FractionInput` / `FormTextArea` resolve to `BottomSheetTextInput`.
  */
 export const BottomSheetFormScrollView: React.FC<Props> = ({
   children,

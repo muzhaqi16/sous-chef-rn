@@ -1,13 +1,8 @@
 /**
- * Android ripple presets for `Pressable.android_ripple`.
- *
- * Ripples render natively on Android, so the press feedback stays responsive
- * even when the JS thread is busy. iOS ignores `android_ripple`; consumers
- * should keep their `({ pressed }) => ...` style callback for iOS feedback.
- *
- * Colors are hardcoded translucent black/white rather than theme tokens because
- * `android_ripple` is a plain config object passed to native, not a style.
- * Translucent black/white reads acceptably in both light and dark mode.
+ * Ripples render natively, so press feedback survives a busy JS thread. iOS
+ * ignores `android_ripple` — keep a `({ pressed }) => …` callback for it.
+ * Colors are literal, not theme tokens: this is a config object passed to
+ * native, not a style, and translucent black/white reads in both schemes.
  */
 export const RIPPLE = {
   /** Cards, list rows, navigation rows — quiet feedback for large surfaces. */

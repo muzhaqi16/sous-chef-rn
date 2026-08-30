@@ -42,8 +42,6 @@ export function useHomeManagement() {
   // Selection hook - handles default home logic
   const {
     selectedHomeId,
-    selectedHome,
-    isSynced,
     setDefaultHome,
     setSelectedHomeId,
     setSelectedPantryId,
@@ -53,12 +51,11 @@ export function useHomeManagement() {
   });
 
   // Mutations hook - CRUD operations
-  const { createHome, updateHome, deleteHome, creating, updating, deleting } =
-    useHomeMutations({
-      refetch,
-      setDefaultHome,
-      setSelectedPantryId,
-    });
+  const { createHome, deleteHome, creating, deleting } = useHomeMutations({
+    refetch,
+    setDefaultHome,
+    setSelectedPantryId,
+  });
 
   // Invitations hook - invite and join operations
   const {
@@ -80,14 +77,8 @@ export function useHomeManagement() {
     // Data
     homes,
     allHomes: homes,
-    // Which home the user is VIEWING, and which one the account defaults to.
-    // These are different questions and `defaultHomeId` used to answer the
-    // first — so the "Default" chip followed the local selection and could
-    // point at one home while the server said another.
-    selectedHome,
     selectedHomeId,
     remoteDefaultHomeId,
-    isSynced,
     loading,
     initialLoading,
     error,
@@ -96,7 +87,6 @@ export function useHomeManagement() {
 
     // Loading states
     creating,
-    updating,
     deleting,
     inviting,
     joiningByCode,
@@ -104,7 +94,6 @@ export function useHomeManagement() {
 
     // Actions
     createHome,
-    updateHome,
     deleteHome,
     setDefaultHome,
     inviteUserToHome,

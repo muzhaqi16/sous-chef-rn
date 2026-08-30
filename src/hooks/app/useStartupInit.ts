@@ -20,9 +20,9 @@ import { authService } from '#services/authService';
 import { registerQueueFailureHandler } from '#/apollo/offlineQueue/queueFailureHandler';
 
 /**
- * DEV-only: read launch arguments injected by Detox to bypass the login UI
- * during E2E runs. Module-level so try-catch is safe (React Compiler doesn't
- * apply outside hook bodies).
+ * Reads Detox-injected launch arguments to bypass the login UI in E2E runs.
+ * Module-level so the try/catch is safe — the React Compiler does not reach
+ * outside hook bodies.
  */
 function injectDetoxLaunchArgs(
   detoxBackgroundServicesDisabledRef: React.RefObject<boolean>,
@@ -42,12 +42,10 @@ function injectDetoxLaunchArgs(
       detoxPantrySortOption?: string;
       detoxPantrySortDirection?: string;
     }>();
-    // Under Detox the LogBox dev-warning toast overlays the floating tab bar and
-    // breaks screenshot/visibility checks — silence it for E2E runs only.
+    // LogBox overlays the floating tab bar and breaks visibility checks; the
+    // feature-hint tutorial dims the screen and swallows taps on a 2s delay.
     if (args.detoxServer) {
       LogBox.ignoreAllLogs();
-      // The feature-hint tutorial dims the screen and swallows taps, on a 2s
-      // delay that lands after any post-login dismissal helper has run.
       suppressFeatureHintsForE2E();
     }
     if (args.detoxUserToken && args.detoxRefreshToken && args.detoxUser) {
@@ -57,17 +55,13 @@ function injectDetoxLaunchArgs(
           : args.detoxUser;
       const store = useStore.getState();
       store.setAuth(user, args.detoxUserToken, args.detoxRefreshToken);
-      // The root navigator gates its groups on navigationState, which the
-      // real login flow sets separately from setAuth (handleLogin) — without
-      // this the injected session renders the auth group anyway.
+      // The root navigator gates on navigationState, which the real login flow
+      // sets separately from setAuth — without this the auth group renders.
       store.setNavigationState('main_app');
       logger.debug('[Detox] Auth injected via launchArgs');
     }
-    // Seed the pantry sort so a test does not have to drive the sort modal to
-    // reach a known order. That control renders under `{!!stats && …}`, so it
-    // only exists once the stats query resolves — driving it means waiting on
-    // the network for a value the test already knows. Seeding it here means the
-    // list is in the requested order from the first frame.
+    // Seeded rather than driven through the sort modal, which renders under
+    // `{!!stats && …}` and so only exists once the stats query resolves.
     if (args.detoxPantrySortOption) {
       const store = useStore.getState();
       store.setPantrySortOption(args.detoxPantrySortOption as PantrySortOption);
@@ -82,36 +76,27 @@ function injectDetoxLaunchArgs(
       detoxBackgroundServicesDisabledRef.current = true;
       logger.debug('[Detox] Background services disabled for E2E tests');
     }
-    // Opt-in, and separate from the flag above, because the two answer
-    // different questions. `detoxDisableBackgroundServices` exists to stop
-    // timers that block Detox's idle detection; it was ALSO switching telemetry
-    // off, which made the e2e suite — the only deterministic workload in the
-    // repo — incapable of producing a measurement. A run that wants numbers
-    // passes both. Opt-in rather than on-by-default so existing suites are
-    // unaffected.
+    // Separate from the flag above: that one stops timers blocking Detox's idle
+    // detection, while this keeps the e2e suite — the repo's only deterministic
+    // workload — able to produce a measurement. A measuring run passes both.
     if (args.detoxEnableTelemetry) {
       detoxTelemetryEnabledRef.current = true;
       logger.debug('[Detox] Telemetry kept ON for this E2E run');
     }
   } catch (error) {
-    // A real injection failure must be loud (dev log level always shows
-    // warn), or E2E auth silently degrades to the slow UI-login fallback.
+    // Loud on purpose, or E2E auth silently degrades to the slow UI login.
     logger.warn('[Detox] Launch-arg injection failed:', error);
   }
 }
 
-/**
- * One-time bootstrap that runs after Zustand hydration completes:
- *   device ID → stored credentials → offline mode flag → telemetry →
- *   idle-deferred haptics + native performance + memory monitor →
- *   startup duration histograms → app_launched event.
- *
- * Guarded by an internal ref so the heavy services don't restart when the
- * effect re-runs (e.g., theme changes that touch UnistylesRuntime).
- */
 /** One-shot guard for `app_startup_duration_ms` across Fast Refresh remounts. */
 let reportedStartupDuration = false;
 
+/**
+ * One-time bootstrap after Zustand hydration. Ref-guarded so the heavy services
+ * do not restart when the effect re-runs (a theme change touching
+ * `UnistylesRuntime`, for one).
+ */
 export function useStartupInit(): void {
   const isHydrated = useIsHydrated();
   const setHasStoredCredentials = useAppStore(
@@ -127,13 +112,10 @@ export function useStartupInit(): void {
     if (isHydrated && !hydrationInitializedRef.current) {
       hydrationInitializedRef.current = true;
 
-      // A NAMED capability, default off — not an environment designation.
-      // Accepting an auth state handed in through `am start --es` is its own
-      // decision, and a gate that reads some OTHER property is one a new build
-      // path inherits without anyone choosing it. `isDevelopment()` was exactly
-      // that: `.env` carries `NODE_ENV=development` and every local release
-      // variant falls through to it, so a Release-configuration binary honoured
-      // injected sessions. See `Environment.allowsLaunchArgAuth`.
+      // A NAMED capability, default off — never an environment test. `.env`
+      // carries `NODE_ENV=development` and every local release variant falls
+      // through to it, so `isDevelopment()` would let a Release-configuration
+      // binary honour injected sessions.
       if (Environment.allowsLaunchArgAuth()) {
         injectDetoxLaunchArgs(
           detoxBackgroundServicesDisabledRef,
@@ -141,20 +123,18 @@ export function useStartupInit(): void {
         );
       }
 
-      // Capture AFTER Detox injection has had a chance to mutate the ref,
-      // so the value reflects whatever Detox actually requested.
+      // AFTER injection, so the value reflects what Detox requested.
       const detoxDisabled = detoxBackgroundServicesDisabledRef.current;
 
-      // Initialize device ID early — needed for WebSocket subscription self-echo filtering
+      // Early — WebSocket self-echo filtering needs it.
       initializeDeviceId();
 
-      // Local-first writes land in the cache before the server sees them, so
-      // something has to withdraw them when the server refuses. Registered
+      // Withdraws local-first cache writes the server refuses. Must be in place
       // before any queue drain can run.
       registerQueueFailureHandler();
 
-      // Credentials are scoped per account; the most-recently-enrolled account
-      // is the one the login screen offers, so report on that account.
+      // Credentials are per account, and the login screen offers the
+      // most-recently-enrolled one.
       getLastBiometricEmail().then(email => {
         if (!email) {
           setHasStoredCredentials(false);
@@ -163,14 +143,9 @@ export function useStartupInit(): void {
         hasCredentials(email).then(setHasStoredCredentials);
       });
 
-      // offlineModeEnabled is hydrated from MMKV in the persist
-      // onRehydrateStorage callback (see src/store/index.ts), which runs
-      // before `isHydrated` flips — so by the time this effect fires the
-      // value is already correct.
-
       const telemetryConfig = getTelemetryConfig();
-      // A run that asked for telemetry keeps it, even with background services
-      // off — those flags answer different questions (see injectDetoxLaunchArgs).
+      // A run that asked for telemetry keeps it even with background services
+      // off — see injectDetoxLaunchArgs.
       if (detoxDisabled && !detoxTelemetryEnabledRef.current) {
         telemetryConfig.enableLogs = false;
         telemetryConfig.enableMetrics = false;
@@ -178,56 +153,40 @@ export function useStartupInit(): void {
       Telemetry.updateConfig(telemetryConfig);
       Telemetry.initialize();
 
-      // Defer non-first-paint work to the idle queue. Haptics caches user
-      // preferences but isn't needed until the first tap; native perf and
-      // memory monitor are observation-only and benefit from running off
-      // the navigation-mount critical path.
+      // Off the navigation-mount critical path: haptics isn't needed until the
+      // first tap, and the perf/memory services are observation-only.
       requestIdleCallback(() => {
-        // The session's first labelled metric, deliberately emitted HERE rather
-        // than from `Telemetry.initialize()`. Its `device_type` label resolves
-        // `isEmulatorSync()` — a binder IPC on Android hardware, free on an
-        // emulator — so emitting it on the critical path charged the startup
-        // window it labels, on real devices only. A counter has no timestamp
-        // semantics a few ms of deferral can damage.
+        // Deferred, not emitted from `Telemetry.initialize()`: its `device_type`
+        // label resolves `isEmulatorSync()`, a binder IPC on Android hardware,
+        // which would charge the very startup window it labels.
         Telemetry.increment('app_starts_total');
 
         HapticService.initialize();
         if (!detoxDisabled || detoxTelemetryEnabledRef.current) {
-          // Startup marks come from here; without it a measuring run reports
-          // no `app_native_launch_ms` / `app_js_bundle_load_ms`. Observation
-          // only — it attaches observers and installs no timer.
+          // Startup marks come from here — without it a measuring run reports no
+          // `app_native_launch_ms` / `app_js_bundle_load_ms`. Installs no timer.
           NativePerformanceService.initialize();
         }
 
-        // Gated on `detoxDisabled` ALONE, unlike the block above. This installs
-        // a 10 s snapshot interval — the only repeating timer NOT needed to
-        // produce a measurement, which is exactly what
-        // `detoxDisableBackgroundServices` exists to stop, because it blocks
-        // Detox's idle detection. (`TelemetryService` keeps its own log and
-        // metric flush timers on a measuring run; those ARE the measurement
-        // getting out, so they stay.) A measuring run sets that flag AND
-        // `detoxEnableTelemetry`, so widening this to match the telemetry gate
-        // put the timer back on precisely the runs meant to be free of it.
+        // On `detoxDisabled` ALONE, unlike the block above: this installs a 10 s
+        // snapshot interval, the one repeating timer NOT needed for a
+        // measurement and exactly what blocks Detox's idle detection.
         if (!detoxDisabled && !__DEV__) {
           MemoryMonitor.start();
         }
       });
 
-      // A keychain-restored session skips the login path, which is where
-      // device registration normally happens — without this, the push-token
-      // rotation listener is never subscribed and an OS token rotation
-      // silently kills push until the next manual login. registerDeviceOnce
-      // permission-gates token acquisition, so this never prompts.
+      // A keychain-restored session skips the login path where device
+      // registration happens, so the push-token rotation listener would never
+      // subscribe. `registerDeviceOnce` permission-gates, so this never prompts.
       const { user, accessToken } = useStore.getState();
       if (user && accessToken && !detoxDisabled) {
         requestIdleCallback(() => authService.registerDeviceInBackground());
       }
 
-      // A module-scope latch, NOT `global.__APP_START_TIMESTAMP = undefined`.
-      // That global is the shared JS-entry origin — `store/index.ts` and
-      // `NativePerformanceService.markFullyDrawn()` both measure from it, and
-      // the latter runs when the first list finishes loading, long after this.
-      // Clearing it here to get an HMR guard silently zeroed those consumers.
+      // A module-scope latch, NEVER `global.__APP_START_TIMESTAMP = undefined`:
+      // that global is the shared JS-entry origin, still read by
+      // `markFullyDrawn()` long after this runs.
       if (global.__APP_START_TIMESTAMP && !reportedStartupDuration) {
         reportedStartupDuration = true;
         const startupDuration = Date.now() - global.__APP_START_TIMESTAMP;
@@ -242,15 +201,12 @@ export function useStartupInit(): void {
       });
     }
 
-    // Snapshot the ref AFTER the if-block above has run (and any Detox
-    // injection inside it has mutated the ref). This local — not a direct
-    // ref read inside cleanup — keeps react-hooks/exhaustive-deps happy
-    // and reflects the post-injection value.
+    // Snapshot AFTER injection has mutated the ref; a local rather than a ref
+    // read inside cleanup keeps `react-hooks/exhaustive-deps` satisfied.
     const detoxDisabledAtCleanup = detoxBackgroundServicesDisabledRef.current;
     const detoxTelemetryEnabledAtCleanup = detoxTelemetryEnabledRef.current;
     return () => {
-      // Mirrors the init guard above — a measuring run initializes both, so it
-      // has to tear both down.
+      // Mirrors the init guard — a measuring run initializes both.
       if (!detoxDisabledAtCleanup || detoxTelemetryEnabledAtCleanup) {
         NativePerformanceService.cleanup();
         MemoryMonitor.stop();

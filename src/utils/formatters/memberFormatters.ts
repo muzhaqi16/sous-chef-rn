@@ -6,12 +6,8 @@ import {
 import { t } from '#/i18n';
 
 /**
- * Loose `Membership` shape used by home-membership UI helpers.
- *
- * Different queries select different subsets of `Membership` (per-row card
- * fragment, page-level summary, `myMembership`, the `MembersList` slim
- * selection). Every field beyond the always-present `id`/`role`/`status` is
- * optional so callers can pass any of these shapes interchangeably.
+ * Loose `Membership` shape: different queries select different subsets, so every
+ * field beyond `id`/`role`/`status` is optional and the shapes interchange.
  */
 export type Member = {
   id: string;
@@ -35,22 +31,7 @@ export type Member = {
   } | null;
 };
 
-/**
- * Get display name for a member with comprehensive fallback logic
- * Handles current user detection and multiple fallback strategies
- *
- * @param member - Member object with user and profile information
- * @param currentUserId - Optional current user ID for "You" detection
- * @returns Display name string
- *
- * Priority order:
- * 1. "You" if current user
- * 2. member.displayName
- * 3. user.profile.displayName
- * 4. email username (part before @)
- * 5. full email
- * 6. "Unknown Member"
- */
+/** Resolves to "You" for `currentUserId`, else the first non-empty name source. */
 export function getMemberDisplayName(
   member: Member,
   currentUserId?: string,
@@ -64,34 +45,19 @@ export function getMemberDisplayName(
     member.user?.profile?.displayName ||
     member.user?.email?.split('@')[0] ||
     member.user?.email ||
-    'Unknown Member'
+    t('labels.unknown')
   );
 }
 
-/**
- * Minimal shape needed to resolve a shopping list collaborator's display name.
- * Picked from the generated `ShoppingListCollaboratorFragment` so the function
- * stays in sync with the GraphQL schema and accepts any object that matches
- * what the fragment queries.
- */
+/** Picked from the generated fragment, so it tracks the schema. */
 export type CollaboratorDisplayShape = Pick<
   ShoppingListCollaboratorFragment,
   'email' | 'collaboratorId' | 'collaborator'
 >;
 
 /**
- * Display name for a ShoppingListCollaborator.
- *
- * Unlike `getMemberDisplayName`, this reads from the `collaborator` sub-object
- * (matching the GraphQL fragment shape) and only uses `displayName` from the
- * profile — firstName/lastName aren't queried for shopping list collaborators.
- *
- * Priority order:
- * 1. "You" if current user
- * 2. collaborator.profile.displayName
- * 3. email username (part before @)
- * 4. full email
- * 5. "Unknown"
+ * Unlike `getMemberDisplayName` this reads the `collaborator` sub-object and
+ * only its `displayName` — firstName/lastName are not queried for collaborators.
  */
 export function getCollaboratorDisplayName(
   collaborator: CollaboratorDisplayShape,
@@ -107,6 +73,6 @@ export function getCollaboratorDisplayName(
     collaborator.collaborator?.profile?.displayName ||
     email?.split('@')[0] ||
     email ||
-    'Unknown'
+    t('labels.unknown')
   );
 }

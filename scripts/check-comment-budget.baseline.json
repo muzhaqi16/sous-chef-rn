@@ -1,0 +1,23 @@
+{
+  "findings": [
+    "src/features/home/components/HomeInviteCard.tsx#block",
+    "src/features/home/components/HomeMemberCard.tsx#block",
+    "src/features/home/components/HomeMemberCard.tsx#history",
+    "src/features/home/hooks/useDefaultHome.ts#block",
+    "src/features/home/hooks/useDefaultHome.ts#history",
+    "src/features/home/hooks/useHomeDetailManagement.ts#block",
+    "src/features/home/hooks/useHomeInvitations.ts#block",
+    "src/features/home/hooks/useHomeManagement.ts#block",
+    "src/features/home/hooks/useHomeMutations.ts#block",
+    "src/features/home/hooks/useHomeQuery.ts#block",
+    "src/features/home/hooks/useHomeSelection.ts#block",
+    "src/features/home/hooks/useHomeSubscriptions.ts#block",
+    "src/features/home/hooks/useHomeSubscriptions.ts#history",
+    "src/features/home/hooks/useHomeSubscriptions.ts#ratio",
+    "src/features/home/screens/HomeDetailScreen.tsx#history",
+    "src/features/home/screens/JoinByLinkScreen.tsx#block",
+    "src/features/home/screens/JoinHomeByCodeScreen.tsx#block",
+    "src/features/home/screens/registration.ts#block"
+  ],
+  "scannedFiles": 975
+}

@@ -10,25 +10,9 @@ import { serializeError } from '#/utils/errorSerialization';
 import { logger } from '#/utils/environment';
 
 /**
- * Apollo Cache Update Utilities
- *
- * Generic, reusable functions for common cache operations.
- * Eliminates duplicate cache.modify() implementations across the codebase.
- *
- * @module apollo/utils/cacheUpdaters
- */
-
-// =============================================================================
-// Helpers
-// =============================================================================
-
-/**
- * Run garbage collection with `resetResultCache` so stale query results
- * referencing evicted entities are discarded immediately.
- *
- * `ApolloCache.gc()` doesn't expose the `resetResultCache` option in its
- * abstract type signature, but `InMemoryCache` (the runtime type) does.
- * We use `instanceof` to narrow safely.
+ * gc with `resetResultCache`, so stale results referencing evicted entities are
+ * discarded immediately. Only `InMemoryCache` exposes the option, hence the
+ * `instanceof` narrowing — `ApolloCache.gc()`'s abstract signature omits it.
  */
 export function gcResetResultCache(cache: ApolloCache): string[] {
   if (cache instanceof InMemoryCache) {
@@ -37,14 +21,10 @@ export function gcResetResultCache(cache: ApolloCache): string[] {
   return cache.gc();
 }
 
-// =============================================================================
-// Types
-// =============================================================================
-
 /**
- * Shape of a Connection field value in cache.modify() callbacks.
- * Apollo wraps field values as `Reference | AsStoreObject<T>`, so
- * the optional `__ref` makes this structurally compatible with `Reference`.
+ * A Connection field value inside `cache.modify`. Apollo wraps field values as
+ * `Reference | AsStoreObject<T>`, so the optional `__ref` keeps this structurally
+ * compatible with `Reference`.
  */
 export type ConnectionData = {
   edges?: ReadonlyArray<{ node: Reference }>;
@@ -52,14 +32,8 @@ export type ConnectionData = {
   readonly __ref?: string;
 };
 
-/**
- * Position where new items should be added in arrays/connections
- */
 export type InsertPosition = 'start' | 'end';
 
-/**
- * Options for adding items to cache arrays
- */
 export interface AddToArrayOptions {
   /** Position to insert the item (default: 'start') */
   position?: InsertPosition;
@@ -67,24 +41,17 @@ export interface AddToArrayOptions {
   checkDuplicates?: boolean;
 }
 
-/**
- * Options for adding items to Connection fields
- */
 export interface AddToConnectionOptions extends AddToArrayOptions {
   /** Update totalCount field (default: true) */
   updateTotalCount?: boolean;
   /**
-   * Leave a cached variant untouched, matched on its `storeFieldName` (e.g.
-   * `shoppingLists({"filters":{"isTemplate":true}})`). A `cache.modify` write
-   * fans out across every `keyArgs` variant of the field, so this is how a
-   * filtered variant the new item doesn't belong to opts out.
+   * Leave a cached variant untouched, matched on its `storeFieldName`. A
+   * `cache.modify` write fans out across every `keyArgs` variant of the field,
+   * so this is how a variant the new item doesn't belong to opts out.
    */
   skipStoreField?: (storeFieldName: string) => boolean;
 }
 
-/**
- * Options for removing items from arrays/connections
- */
 export interface RemoveFromArrayOptions {
   /** Whether to evict the item from cache entirely (default: false) */
   evictItem?: boolean;
@@ -93,47 +60,11 @@ export interface RemoveFromArrayOptions {
   gc?: boolean;
 }
 
-// =============================================================================
-// Query Root Connection Updaters
-// =============================================================================
-
 /**
- * Build a `skipStoreField` guard for a connection keyed on a `filters` argument.
- *
- * A `cache.modify` runs its modifier against every cached variant of the field,
- * so writing a new entity fans it out into filtered views it does not belong to
- * — a DINNER template lands in the BREAKFAST list and in whatever search results
- * happen to be cached.
- *
- * The unfiltered variant always takes the write. A filtered one takes it only
- * when every active filter is a key in `equals` and matches. Anything else — a
- * search string, a tag set, a duration range — skips: replicating the server's
- * matching here is how a cache write starts disagreeing with the next read, and
- * a briefly-missing row heals on that read while a wrongly-placed one does not.
- *
- * @example
- * addToMealTemplates(cache, template, {
- *   skipStoreField: skipUnmatchedFilterVariants({ category: template.category }),
- * });
- */
-/**
- * The serialized arguments inside a `storeFieldName`, or null when it has none.
- *
- * Apollo writes them TWO ways, decided by how the field is keyed:
- *
- *   storageLocations:{"homeId":"A"}        keyArgs: ['homeId']   COLON form
- *   things({"filters":{"category":"x"}})   no keyArgs            PAREN form
- *
- * A guard that locates them by searching for `(` therefore sees nothing at all
- * on an array-`keyArgs` field, which is how a scope guard came to return "do
- * not skip" for every variant it was given. Splitting on `:` instead fails the
- * other way, because the paren form's JSON contains colons of its own — so the
- * delimiter that comes FIRST is the one that decides the form.
- *
- * Verified 2026-08-29 vs `@apollo/client@4.2.12`, which exports no parser of
- * its own for this — re-check: `node scripts/probe-apollo-cache-shapes.mjs`;
- * mechanism:
- * `docs/verified-library-behaviour.md#apollo-storefieldname-has-two-serialized-forms`.
+ * The serialized args inside a `storeFieldName`, or null. Apollo writes them two
+ * ways — `storageLocations:{"homeId":"A"}` (array `keyArgs`) vs
+ * `things({"filters":…})` (none) — so the FIRST delimiter decides the form.
+ * `docs/verified-library-behaviour.md#apollo-storefieldname-has-two-serialized-forms`
  */
 function storeFieldArgs(storeFieldName: string): string | null {
   const paren = storeFieldName.indexOf('(');
@@ -149,25 +80,10 @@ function storeFieldArgs(storeFieldName: string): string | null {
 }
 
 /**
- * Skip cached variants whose TOP-LEVEL arguments do not match.
- *
- * The sibling {@link skipUnmatchedFilterVariants} reads a nested `filters`
- * object, which is the shape most of this app's connections are keyed by. A
- * field keyed on a plain argument — `storageLocations(homeId:)` — puts that
- * argument at the top level instead, so the filters matcher finds nothing to
- * compare and lets every variant through: a location restored after a refused
- * delete in home A reappeared in home B's list too.
- *
- * Two cases go opposite ways on purpose, because they are not the same
- * question:
- *
- * - A variant carrying NONE of the named arguments is left alone. It cannot be
- *   proven not to match, and a briefly-missing row heals on the next read while
- *   a wrongly-placed one does not.
- * - A variant whose arguments cannot be PARSED is skipped. Here the guard has
- *   been asked to scope a write and cannot, so writing anyway is the one
- *   outcome it can be sure is unjustified — the same direction
- *   {@link skipUnmatchedFilterVariants} takes.
+ * Skip cached variants whose TOP-LEVEL arguments do not match — for a field keyed
+ * on a plain argument (`storageLocations(homeId:)`), where the nested-`filters`
+ * sibling finds nothing to compare and lets every variant through. A variant
+ * carrying NONE of the named args is left alone; unparseable args are skipped.
  */
 export function skipUnmatchedArgVariants(
   equals: Record<string, unknown>,
@@ -191,6 +107,12 @@ export function skipUnmatchedArgVariants(
   };
 }
 
+/**
+ * Skip cached variants whose nested `filters` argument does not match. The
+ * unfiltered variant always takes the write; a filtered one only when every active
+ * filter is a key in `equals` and matches. Anything else — search text, a tag set,
+ * a range — skips: a briefly-missing row heals on the next read, a misplaced one does not.
+ */
 export function skipUnmatchedFilterVariants(
   equals: Record<string, unknown>,
 ): (storeFieldName: string) => boolean {
@@ -205,8 +127,7 @@ export function skipUnmatchedFilterVariants(
     try {
       parsed = JSON.parse(args);
     } catch {
-      // Unparseable args mean we cannot prove the variant matches, and the
-      // safe direction is to leave it for the next read.
+      // Cannot prove the variant matches — skip and let the next read fix it.
       return true;
     }
 
@@ -226,32 +147,10 @@ export function skipUnmatchedFilterVariants(
 }
 
 /**
- * Creates a function to add items to a Query root Connection field
- *
- * Use this for Query fields that return Connection objects (with edges/pageInfo):
- * - Query.shoppingLists (ShoppingListConnection)
- * - Query.recipes (RecipeConnection)
- *
- * Handles the Connection pattern with edges (not flat arrays).
- *
- * **keyArgs gotcha:** `cache.modify` fires the field modifier for *every*
- * cached variant of `fieldName` (one per `keyArgs` combination). On a
- * connection with `keyArgs: ['category', 'difficulty']`, the new item lands
- * in every cached filter view — even ones whose filter shouldn't include
- * it. If membership depends on filters/orderBy, prefer a targeted refetch
- * over this helper.
- *
- * **Edge typename:** assumes Relay convention (`Foo` → `FooEdge`). The
- * codegen schema follows this today; a non-Relay edge typename will
- * produce wrong values silently.
- *
- * @example
- * const addToShoppingLists = createAddToQueryConnectionUpdater('shoppingLists', 'ShoppingList');
- * addToShoppingLists(cache, newList);
- *
- * @param fieldName - Query field name (e.g., 'shoppingLists')
- * @param itemTypename - GraphQL typename for edge creation (e.g., 'ShoppingList')
- * @returns Function to add items to the Connection field
+ * Add an item to a Query root Connection field (edges, not a flat array).
+ * `cache.modify` fires for EVERY cached `keyArgs` variant, so an item whose
+ * membership depends on filters/orderBy needs `skipStoreField` or a refetch.
+ * Edge typename assumes Relay (`Foo` → `FooEdge`); anything else is wrong silently.
  */
 export function createAddToQueryConnectionUpdater<T extends { id: string }>(
   fieldName: string,
@@ -283,7 +182,6 @@ export function createAddToQueryConnectionUpdater<T extends { id: string }>(
 
             const existingEdges = existingConnection?.edges || [];
 
-            // Check for duplicates if enabled
             if (checkDuplicates) {
               const exists = existingEdges.some(
                 edge => readField('id', edge?.node) === newItem.id,
@@ -291,20 +189,17 @@ export function createAddToQueryConnectionUpdater<T extends { id: string }>(
               if (exists) return existingConnection;
             }
 
-            // Create new edge
             const newEdge = {
               __typename: `${itemTypename}Edge`,
               node: newItemRef,
               cursor: '', // Will be populated on next fetch
             };
 
-            // Add edge at specified position
             const edges =
               position === 'start'
                 ? [newEdge, ...existingEdges]
                 : [...existingEdges, newEdge];
 
-            // Update totalCount if enabled
             const totalCount = updateTotalCount
               ? (existingConnection?.totalCount || 0) + 1
               : existingConnection?.totalCount;
@@ -328,28 +223,10 @@ export function createAddToQueryConnectionUpdater<T extends { id: string }>(
 }
 
 /**
- * Creates a function to remove items from a Query root Connection field.
- *
- * Mirrors {@link createRemoveFromParentConnectionUpdater}'s two-mode design:
- *
- * - `evictItem: true` (the common "delete entity" path): just evicts the
- *   entity and runs gc. The connection's `read` field policy filters the
- *   now-dangling edge and decrements `totalCount` on next read.
- *
- * - `evictItem: false` (the rare "remove from this connection only" path):
- *   the entity stays in cache, so we manually filter the edge and decrement
- *   `totalCount` here.
- *
- * Use this for Query fields that return Connection objects (with edges/pageInfo):
- * - Query.recipes (RecipeConnection)
- *
- * @example
- * const removeFromRecipes = createRemoveFromQueryConnectionUpdater('recipes', 'Recipe');
- * removeFromRecipes(cache, deletedRecipeId, { evictItem: true });
- *
- * @param fieldName - Query field name (e.g., 'recipes')
- * @param typename - GraphQL typename for eviction (e.g., 'Recipe')
- * @returns Function to remove items from the Connection field
+ * Remove an item from a Query root Connection field. `evictItem: true` evicts the
+ * entity and gcs — the connection's `read` policy then drops the dangling edge and
+ * decrements `totalCount` on the next read. `evictItem: false` keeps the entity
+ * and filters the edge here instead.
  */
 export function createRemoveFromQueryConnectionUpdater(
   fieldName: string,
@@ -401,40 +278,11 @@ export function createRemoveFromQueryConnectionUpdater(
   };
 }
 
-// =============================================================================
-// Parent Entity Field Updaters (for nested arrays/connections)
-// =============================================================================
-
 /**
- * Creates a function to add items to a parent entity's Connection field
- *
- * Use this for Connection fields nested in entities:
- * - Pantry.itemsConnection
- * - ShoppingList.itemsConnection
- * - Home.membersConnection
- * - Home.invitesConnection
- *
- * ⚠️ **Keyed connections:** when the field has `keyArgs` (e.g.
- * `Pantry.itemsConnection` keys on `['filters', 'orderBy']` in
- * `src/apollo/cache.ts`), `cache.modify` runs the modifier for **every**
- * cached `(filters, orderBy)` variant — the new edge is appended to every
- * filtered/sorted view, even ones whose filter would logically exclude the
- * item. `position` is also applied uniformly and ignores each variant's
- * `orderBy`. For filter-sensitive inserts, refetch the affected view or
- * target a single `storeFieldName` manually.
- *
- * **Edge typename:** assumes Relay convention (`Foo` → `FooEdge`). The
- * codegen schema follows this today; a non-Relay edge typename will
- * produce wrong values silently.
- *
- * @example
- * const addToPantryItems = createAddToParentConnectionUpdater('Pantry', 'itemsConnection', 'PantryItem');
- * addToPantryItems(cache, pantryId, newItem);
- *
- * @param parentTypename - Parent entity typename (e.g., 'Pantry', 'ShoppingList')
- * @param connectionField - Connection field name (e.g., 'itemsConnection')
- * @param itemTypename - Item typename for edge creation (e.g., 'PantryItem')
- * @returns Function to add items to the connection
+ * Add an item to a Connection field nested in a parent entity. With `keyArgs`
+ * (e.g. `Pantry.itemsConnection` on `['filters','orderBy']`) `cache.modify` runs
+ * for EVERY cached variant and `position` ignores each variant's `orderBy` — scope
+ * it with `skipStoreField`. Edge typename assumes Relay (`Foo` → `FooEdge`).
  */
 export function createAddToParentConnectionUpdater<T extends { id: string }>(
   parentTypename: string,
@@ -455,7 +303,6 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
     } = options;
 
     try {
-      // Get parent entity's cache ID
       const parentCacheId = cache.identify({
         __typename: parentTypename,
         id: parentId,
@@ -475,10 +322,8 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
             existingConnection: ConnectionData = {},
             { readField, toReference, storeFieldName },
           ) {
-            // `cache.modify` runs this for EVERY cached variant of a keyed
-            // field, so a filtered variant the item does not belong to opts out
-            // here. Without it a PANTRY notification lands in the RECIPES feed
-            // and stays there until that variant is refetched.
+            // `cache.modify` runs this for EVERY cached variant of a keyed field;
+            // without the opt-out a pantry notification lands in the recipes feed.
             if (skipStoreField?.(storeFieldName)) return existingConnection;
 
             const newItemRef = toReference(newItem, true);
@@ -487,7 +332,6 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
 
             const existingEdges = existingConnection?.edges || [];
 
-            // Check for duplicates if enabled
             if (checkDuplicates) {
               const exists = existingEdges.some(
                 edge => readField('id', edge?.node) === newItem.id,
@@ -498,20 +342,17 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
               }
             }
 
-            // Create new edge
             const newEdge = {
               __typename: `${itemTypename}Edge`,
               node: newItemRef,
               cursor: '', // Will be populated on next fetch
             };
 
-            // Add edge at specified position
             const edges =
               position === 'start'
                 ? [newEdge, ...existingEdges]
                 : [...existingEdges, newEdge];
 
-            // Update totalCount if enabled
             const totalCount = updateTotalCount
               ? (existingConnection?.totalCount || 0) + 1
               : existingConnection?.totalCount;
@@ -535,22 +376,9 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
 }
 
 /**
- * Creates a function to add items to a parent entity's flat array field
- *
- * Use this for non-Connection array fields nested in entities.
- *
- * ⚠️ **Keyed fields:** when the field has `keyArgs`, `cache.modify` runs the
- * modifier for every cached variant — the new ref is inserted into every
- * variant, regardless of each variant's filter/sort. Same caveat as
- * {@link createAddToParentConnectionUpdater}.
- *
- * @example
- * const addToPantryItems = createAddToParentArrayUpdater('Pantry', 'items');
- * addToPantryItems(cache, pantryId, newItem);
- *
- * @param parentTypename - Parent entity typename
- * @param arrayField - Array field name
- * @returns Function to add items to the array
+ * Add an item to a non-Connection array field nested in an entity. With `keyArgs`
+ * the ref is inserted into every cached variant regardless of its filter/sort —
+ * the same caveat as {@link createAddToParentConnectionUpdater}.
  */
 export function createAddToParentArrayUpdater<T extends { id: string }>(
   parentTypename: string,
@@ -588,7 +416,6 @@ export function createAddToParentArrayUpdater<T extends { id: string }>(
 
             if (!newItemRef) return existingItems;
 
-            // Check for duplicates if enabled
             if (checkDuplicates) {
               const exists = existingItems.some(
                 itemRef => readField('id', itemRef) === newItem.id,
@@ -597,7 +424,6 @@ export function createAddToParentArrayUpdater<T extends { id: string }>(
               if (exists) return existingItems;
             }
 
-            // Add at specified position
             return position === 'start'
               ? [newItemRef, ...existingItems]
               : [...existingItems, newItemRef];
@@ -615,37 +441,10 @@ export function createAddToParentArrayUpdater<T extends { id: string }>(
 }
 
 /**
- * Creates a function to remove items from a parent entity's Connection field.
- *
- * Two modes:
- *
- * - `evictItem: true` (the common "delete entity" path): just evicts the
- *   entity and runs gc. The connection's `read` field policy
- *   (`itemsConnectionFieldPolicy` / `mergeConnectionByNodeId` in
- *   `src/apollo/cache.ts`) filters the now-dangling edge from `edges` and
- *   decrements `totalCount` on next read. This is Apollo's recommended
- *   `canRead`-based self-healing pattern for Relay connections.
- *
- * - `evictItem: false` (the rare "remove from this connection only" path):
- *   the entity stays in cache, so no edge becomes dangling — we manually
- *   filter the edge via `cache.modify` and decrement `totalCount` here.
- *   ⚠️ For keyed connections (e.g. `Pantry.itemsConnection` with `keyArgs:
- *   ['filters', 'orderBy']`), this filter+decrement runs for every cached
- *   variant. `evictItem: true` doesn't have this caveat because evicting
- *   the entity self-heals every variant via the field policy's `read`.
- *
- * @example
- * const removeFromPantryItems = createRemoveFromParentConnectionUpdater(
- *   'Pantry',
- *   'itemsConnection',
- *   'PantryItem'
- * );
- * removeFromPantryItems(cache, pantryId, itemId, { evictItem: true });
- *
- * @param parentTypename - Parent entity typename
- * @param connectionField - Connection field name
- * @param itemTypename - Item typename for eviction
- * @returns Function to remove items from the connection
+ * Remove an item from a parent entity's Connection field. `evictItem: true` evicts
+ * and gcs, letting the connection's `read` policy drop the dangling edge and
+ * decrement `totalCount` — self-healing across every keyed variant.
+ * `evictItem: false` filters here instead, which runs for every cached variant.
  */
 export function createRemoveFromParentConnectionUpdater(
   parentTypename: string,
@@ -657,10 +456,8 @@ export function createRemoveFromParentConnectionUpdater(
     parentId: string,
     itemId: string,
     options: RemoveFromArrayOptions & { updateTotalCount?: boolean } = {},
-    // Reports whether an edge was actually removed, so a caller pairing this
-    // with a counter adjusts it only when the membership really changed.
-    // `totalCount` follows the same rule: subtracting for a row that was not in
-    // the connection is how a count drifts below the rows beneath it.
+    // Reports whether an edge was actually removed, so a caller pairing this with
+    // a counter — or `totalCount` — adjusts only on a real membership change.
   ): boolean => {
     const { evictItem = false, gc = true, updateTotalCount = true } = options;
 
@@ -732,20 +529,9 @@ export function createRemoveFromParentConnectionUpdater(
 }
 
 /**
- * Creates a function to remove items from a parent entity's flat array field
- *
- * ⚠️ **Keyed fields:** when the array field has `keyArgs`, `cache.modify`
- * runs the filter for every cached variant. Same caveat as
+ * Remove an item from a parent entity's flat array field. With `keyArgs` the filter
+ * runs for every cached variant — the same caveat as
  * {@link createRemoveFromParentConnectionUpdater}.
- *
- * @example
- * const removeFromPantryItems = createRemoveFromParentArrayUpdater('Pantry', 'items', 'PantryItem');
- * removeFromPantryItems(cache, pantryId, itemId, { evictItem: true });
- *
- * @param parentTypename - Parent entity typename
- * @param arrayField - Array field name
- * @param itemTypename - Item typename for eviction
- * @returns Function to remove items from the array
  */
 export function createRemoveFromParentArrayUpdater(
   parentTypename: string,
@@ -787,7 +573,6 @@ export function createRemoveFromParentArrayUpdater(
         },
       });
 
-      // Optionally evict the item itself from cache
       if (evictItem) {
         const itemCacheId = cache.identify({
           __typename: itemTypename,
@@ -809,23 +594,10 @@ export function createRemoveFromParentArrayUpdater(
   };
 }
 
-// =============================================================================
-// Entity Field Updaters
-// =============================================================================
-
 /**
- * Set one or more fields on a cached entity to specific values.
- *
- * Wraps the identify → modify → error-handling boilerplate.
- * Use for simple field replacements (quantity, role, timestamps).
- *
- * The value type is intentionally narrow (scalar | null | undefined). For
- * objects, arrays, or `Reference` writes — call `cache.modify` directly so
- * the field modifier can compose the new value from `existing` + helpers.
- *
- * @example
- * setCachedFields(cache, 'ShoppingListItem', itemId, { quantity: 5 });
- * setCachedFields(cache, 'Membership', id, { role: 'ADMIN', updatedAt: new Date().toISOString() });
+ * Set scalar fields on a cached entity. The value type is deliberately narrow: for
+ * objects, arrays or `Reference` writes call `cache.modify` directly, so the field
+ * modifier can compose the new value from `existing` plus its helpers.
  */
 export function setCachedFields(
   cache: ApolloCache,
@@ -855,18 +627,10 @@ export function setCachedFields(
 }
 
 /**
- * Snapshot a cached entity via its fragment, write `patch` over it PERMANENTLY
- * (a plain write, not Apollo's transient optimistic layer — it survives an
- * offline/queued mutation where no response ever arrives), and return a revert
- * that restores the snapshot.
- *
- * Contract for the fragment: it must select every field the patch writes plus
- * `updatedAt` (bumped on write so watchers re-render), and every field it
- * selects must be cached by the query that loads the entity — `readFragment`
- * returns null on ANY missing field, in which case both the write and the
- * revert silently no-op (the mutation response then becomes the only UI
- * update). The local-first list-settings hooks (complete / recurring / budget /
- * reminder / template) all share this shape.
+ * Snapshot an entity via its fragment, write `patch` over it PERMANENTLY (not
+ * Apollo's transient optimistic layer, so it survives a queued mutation), and
+ * return a revert. The fragment must select every patched field plus `updatedAt`,
+ * and `readFragment` returns null on ANY missing one — write and revert then no-op.
  */
 export function applyOptimisticFragmentPatch<TFragment>(
   cache: ApolloCache,
@@ -882,9 +646,8 @@ export function applyOptimisticFragmentPatch<TFragment>(
     __typename: entity.typename,
     id: entity.id,
   });
-  // readFragment/writeFragment operate on Unmasked<TFragment> — that's
-  // Apollo's own signature for the round trip, not a mask bypass; the snapshot
-  // fragments here are flat (no nested spreads), so the shape is unchanged.
+  // readFragment/writeFragment operate on Unmasked<TFragment> — Apollo's own
+  // signature for the round trip, not a mask bypass; these fragments are flat.
   const snapshot = cacheId
     ? cache.readFragment<TFragment>({
         id: cacheId,
@@ -923,19 +686,7 @@ export function applyOptimisticFragmentPatch<TFragment>(
   };
 }
 
-// =============================================================================
-// Direct Item Eviction
-// =============================================================================
-
-/**
- * Safely evict a single entity from cache and run garbage collection.
- *
- * Centralizes the identify → evict → gc(resetResultCache) pattern.
- * Use this instead of calling cache.evict() + cache.gc() directly.
- *
- * @example
- * safeEvict(cache, 'ShoppingListItem', itemId);
- */
+/** Evict one entity and gc(resetResultCache); use instead of evict + gc. */
 export function safeEvict(
   cache: ApolloCache,
   typename: string,
@@ -955,21 +706,10 @@ export function safeEvict(
 }
 
 /**
- * Reconcile a client-minted id with the server-assigned id after a create.
- *
- * When a mutation sends a client-minted PK (`input.id`) but the server resolves
- * the create to an *existing* row (already created elsewhere / catalog merge),
- * the returned id differs from the client cuid we wrote optimistically. Evict
- * the stale client-id entity so its now-dangling connection edge is dropped by
- * the self-healing read and the single server row stands — no duplicate rows,
- * no phantom entity.
- *
- * `clientId` MUST be read off the mutation's own `variables` at the call site
- * (never a shared ref) so this stays correct when creates overlap. A no-op when
- * the server echoed the same id (the honored-client-id path).
- *
- * @example
- * adoptServerEntityId(cache, 'SavedRecipe', savedRecipe.id, variables?.input?.id);
+ * Reconcile a client-minted id with the server's after a create: when the server
+ * resolves to an EXISTING row, evict the stale client-id entity so its dangling
+ * edge is dropped and one row stands. `clientId` MUST come off the mutation's own
+ * `variables` at the call site, never a shared ref, so overlapping creates hold.
  */
 export function adoptServerEntityId(
   cache: ApolloCache,
@@ -982,17 +722,7 @@ export function adoptServerEntityId(
   }
 }
 
-/**
- * Safely evict multiple entities from cache, running GC once at the end.
- *
- * More efficient than calling safeEvict() in a loop (single GC pass).
- *
- * @example
- * safeEvictMany(cache, [
- *   { typename: 'ShoppingListItem', id: 'item-1' },
- *   { typename: 'ShoppingListItem', id: 'item-2' },
- * ]);
- */
+/** Evict several entities with a single gc pass. */
 export function safeEvictMany(
   cache: ApolloCache,
   items: ReadonlyArray<{ typename: string; id: string }>,

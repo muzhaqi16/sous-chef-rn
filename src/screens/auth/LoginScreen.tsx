@@ -225,6 +225,7 @@ export function LoginScreen(): React.JSX.Element {
   return (
     <AuthWrapper testID="login-screen">
       <AuthFormTemplate<LoginInput>
+        contentPlacement="center"
         title={t('auth.loginTitle')}
         subtitle={t('auth.loginSubtitle')}
         fields={[

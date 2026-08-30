@@ -4,13 +4,9 @@ import {
 } from '#store/slices/preferenceTypes';
 
 /**
- * Per-member appearance metadata — the single source for each density / font
- * scale option's runtime multiplier and its i18n label key.
- *
- * `applyAppearance` reads `.multiplier`; `AppearanceScreen` derives its option
- * lists from these tables. Because the maps are keyed by the enum, adding or
- * removing a member updates both the theme math and the UI without editing
- * them in separate places.
+ * The single source for each density / font-scale option's runtime multiplier and
+ * i18n label key. Keyed by the enum, so adding a member updates both the theme
+ * math (`applyAppearance`) and the UI (`AppearanceScreen`) at once.
  */
 export const DENSITY_META: Record<
   DensityPreference,

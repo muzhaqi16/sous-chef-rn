@@ -16,21 +16,10 @@ import {
 import { errorService } from '#/services/errorService';
 
 /**
- * Preloads reference data for offline-first autocomplete.
- *
- * Units, categories, brands, and stores are small, slow-changing reference sets
- * that the add/edit forms autocomplete against. We warm them into the Zustand
- * cache while online so the autocomplete hooks can serve matches locally when
- * the device later goes offline (see useUnitAutocomplete and friends, which
- * read these via `localFirst`).
- *
- * Warming is gated on core data having loaded (`hasInitializedHomeData` — set
- * app-wide once the home query fires, or `isPantryQueryComplete` for the pantry
- * tab) so it runs AFTER the important first-paint data, and on `isOnline` so it
- * never fires a doomed request. Using the home signal (not only the pantry one)
- * means a user who lands on the shopping or recipes tab still gets the
- * category/brand/store caches warmed. Each set is refreshed at most once per TTL
- * and is fetched on the idle queue to stay off the interaction path.
+ * Warms units, categories, brands and stores into the Zustand cache so the
+ * autocomplete hooks can serve matches offline via `localFirst`. Gated on core
+ * data having loaded (so it runs after first paint) and on `isOnline`; the home
+ * signal, not only the pantry one, so any landing tab warms the caches.
  */
 const REFERENCE_DATA_TTL = 24 * 60 * 60 * 1000; // 24h
 
@@ -39,11 +28,9 @@ function isStale(lastFetchedAt: number | null, now: number): boolean {
 }
 
 /**
- * Commit a warmed reference dataset to the Zustand cache. A failed fetch
- * (`rows === undefined`) leaves the timestamp null so the next online tick
- * retries; otherwise the cache is replaced (only when non-empty) and the TTL is
- * stamped. `setCached` drives the element type (`NoInfer` on `rows`) so an
- * inline `__typename` literal narrows against the setter's parameter type.
+ * A failed fetch (`rows === undefined`) leaves the timestamp null so the next
+ * online tick retries. `setCached` drives the element type (`NoInfer` on `rows`)
+ * so an inline `__typename` narrows against the setter's parameter type.
  */
 function commitWarm<T>(
   rows: NoInfer<T>[] | undefined,

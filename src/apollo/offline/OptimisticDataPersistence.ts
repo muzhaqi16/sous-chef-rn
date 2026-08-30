@@ -12,47 +12,19 @@ interface OptimisticFieldUpdate {
 }
 
 /**
- * Generic optimistic data persistence layer
- *
- * Stores ANY field for ANY entity type that should survive app restarts.
- * This is a reusable foundation for offline-first features across the entire app.
- *
- * Use cases:
- * - Shopping list sortOrder
- * - Pantry item quantities
- * - Recipe ratings
- * - Any field that should persist during offline operations
- *
- * @example
- * ```typescript
- * // Save
- * optimisticDataPersistence.save('ShoppingListItem', itemId, 'sortOrder', 'a5');
- * optimisticDataPersistence.save('PantryItem', itemId, 'quantity', 3);
- *
- * // Restore
- * const updates = optimisticDataPersistence.get('ShoppingListItem', itemId);
- * // { sortOrder: 'a5' }
- *
- * // Clear after sync
- * optimisticDataPersistence.clear('ShoppingListItem', itemId, 'sortOrder');
- * ```
+ * Persists an arbitrary field of an arbitrary entity type across app restarts,
+ * so an offline change (sortOrder, quantity, a rating) survives a cold start
+ * until its queued mutation lands. Keyed `entityType:entityId:field`.
  */
 class OptimisticDataPersistence {
   private flushScheduled = false;
   private pendingUpdates: Record<string, OptimisticFieldUpdate> = {};
 
-  // PERFORMANCE: In-memory cache to avoid repeated MMKV reads and JSON parsing
-  // Cache is invalidated on writes and has no TTL (data is small and static until updated)
+  // Kept in sync on every write, so no TTL: the data is small and only changes
+  // through this class.
   private cache: Record<string, OptimisticFieldUpdate> | null = null;
 
-  /**
-   * Save an optimistic field update (batched for performance)
-   *
-   * @param entityType - Type of entity (e.g., 'ShoppingListItem', 'ShoppingList')
-   * @param entityId - ID of the entity
-   * @param field - Field name (e.g., 'sortOrder', 'quantity', 'name')
-   * @param value - The optimistic value to persist
-   */
+  /** Batched — the write lands on the next microtask. */
   save(
     entityType: string,
     entityId: string,
@@ -62,7 +34,6 @@ class OptimisticDataPersistence {
     try {
       const key = `${entityType}:${entityId}:${field}`;
 
-      // Add to pending batch
       this.pendingUpdates[key] = {
         entityType,
         entityId,
@@ -78,9 +49,8 @@ class OptimisticDataPersistence {
         );
       }
 
-      // PERFORMANCE: Coalesce synchronous saves into a single storage write
-      // by flushing on the next microtask. This batches all saves within the
-      // current tick without leaving a pending timer across async boundaries.
+      // A microtask coalesces every save in this tick into one storage write,
+      // without leaving a timer pending across an async boundary.
       if (!this.flushScheduled) {
         this.flushScheduled = true;
         queueMicrotask(() => {
@@ -93,19 +63,11 @@ class OptimisticDataPersistence {
     }
   }
 
-  /**
-   * Synchronously drain any pending batched updates to storage.
-   * Useful for tests and for code paths that need a guaranteed write
-   * before reading (e.g., logout flows).
-   */
+  /** Synchronous drain, for a path needing a guaranteed write before a read. */
   flush(): void {
     this.flushPendingUpdates();
   }
 
-  /**
-   * Flush pending updates to storage
-   * @private
-   */
   private flushPendingUpdates(): void {
     try {
       if (Object.keys(this.pendingUpdates).length === 0) return;
@@ -122,7 +84,6 @@ class OptimisticDataPersistence {
         );
       }
 
-      // Invalidate cache after write
       this.cache = merged;
 
       this.pendingUpdates = {};
@@ -131,19 +92,7 @@ class OptimisticDataPersistence {
     }
   }
 
-  /**
-   * Get all optimistic updates for a specific entity instance
-   *
-   * @param entityType - Type of entity
-   * @param entityId - ID of the entity
-   * @returns Object with field names as keys and optimistic values
-   *
-   * @example
-   * ```typescript
-   * const updates = optimisticDataPersistence.get('ShoppingListItem', '123');
-   * // { sortOrder: 'a5', quantity: 2 }
-   * ```
-   */
+  /** Persisted field values for one entity instance, keyed by field name. */
   get(entityType: string, entityId: string): Record<string, unknown> {
     const all = this.loadAll();
     const updates: Record<string, unknown> = {};
@@ -157,22 +106,7 @@ class OptimisticDataPersistence {
     return updates;
   }
 
-  /**
-   * Get all optimistic updates for an entity type
-   * Groups updates by entity ID
-   *
-   * @param entityType - Type of entity
-   * @returns Map of entity ID to field updates
-   *
-   * @example
-   * ```typescript
-   * const allUpdates = optimisticDataPersistence.getAllForType('ShoppingListItem');
-   * // Map {
-   * //   '123' => { sortOrder: 'a5' },
-   * //   '456' => { sortOrder: 'b3', quantity: 2 }
-   * // }
-   * ```
-   */
+  /** Every persisted field of an entity type, grouped by entity id. */
   getAllForType(entityType: string): Map<string, Record<string, unknown>> {
     const all = this.loadAll();
     const byEntity = new Map<string, Record<string, unknown>>();
@@ -189,17 +123,7 @@ class OptimisticDataPersistence {
     return byEntity;
   }
 
-  /**
-   * Save an optimistic field and return a cleanup function.
-   * Simplifies the save-before-mutation / clear-after pattern.
-   *
-   * @example
-   * ```ts
-   * const clearPersistence = optimisticDataPersistence.track('PantryItemBatch', id, 'isOpened', true);
-   * const result = await mutation(...);
-   * clearPersistence();
-   * ```
-   */
+  /** `save` plus the matching `clear`, for the save-then-mutate pattern. */
   track(
     entityType: string,
     entityId: string,
@@ -210,14 +134,7 @@ class OptimisticDataPersistence {
     return () => this.clear(entityType, entityId, field);
   }
 
-  /**
-   * Clear optimistic data for a specific field
-   * Called after successful mutation sync
-   *
-   * @param entityType - Type of entity
-   * @param entityId - ID of the entity
-   * @param field - Field name to clear
-   */
+  /** Drops one persisted field, once its mutation has synced. */
   clear(entityType: string, entityId: string, field: string): void {
     try {
       const existing = this.loadAll();
@@ -228,13 +145,13 @@ class OptimisticDataPersistence {
 
       if (Object.keys(existing).length === 0) {
         storage.remove(OPTIMISTIC_DATA_KEY);
-        this.cache = {}; // Invalidate cache
+        this.cache = {};
         if (__DEV__) {
           logger.debug('🧹 Optimistic: Cleared all data (storage empty)');
         }
       } else {
         storage.set(OPTIMISTIC_DATA_KEY, JSON.stringify(existing));
-        this.cache = existing; // Update cache
+        this.cache = existing;
         if (__DEV__ && hadData) {
           logger.debug(
             `🧹 Optimistic: Cleared ${entityType}.${field} for ${entityId}`,
@@ -246,13 +163,7 @@ class OptimisticDataPersistence {
     }
   }
 
-  /**
-   * Clear all optimistic data for a specific entity instance
-   * Useful when an entity is deleted or fully synced
-   *
-   * @param entityType - Type of entity
-   * @param entityId - ID of the entity
-   */
+  /** Drops every persisted field of one entity — deleted, or fully synced. */
   clearEntity(entityType: string, entityId: string): void {
     try {
       const all = this.loadAll();
@@ -268,10 +179,10 @@ class OptimisticDataPersistence {
 
       if (Object.keys(filtered).length === 0) {
         storage.remove(OPTIMISTIC_DATA_KEY);
-        this.cache = {}; // Invalidate cache
+        this.cache = {};
       } else {
         storage.set(OPTIMISTIC_DATA_KEY, JSON.stringify(filtered));
-        this.cache = filtered; // Update cache
+        this.cache = filtered;
       }
 
       if (__DEV__ && clearedCount > 0) {
@@ -284,12 +195,7 @@ class OptimisticDataPersistence {
     }
   }
 
-  /**
-   * Clear all optimistic data for an entity type
-   * Useful when signing out or clearing cache
-   *
-   * @param entityType - Type of entity
-   */
+  /** Drops every persisted field of an entity type. */
   clearType(entityType: string): void {
     try {
       const all = this.loadAll();
@@ -305,10 +211,10 @@ class OptimisticDataPersistence {
 
       if (Object.keys(filtered).length === 0) {
         storage.remove(OPTIMISTIC_DATA_KEY);
-        this.cache = {}; // Invalidate cache
+        this.cache = {};
       } else {
         storage.set(OPTIMISTIC_DATA_KEY, JSON.stringify(filtered));
-        this.cache = filtered; // Update cache
+        this.cache = filtered;
       }
 
       if (__DEV__ && clearedCount > 0) {
@@ -321,16 +227,13 @@ class OptimisticDataPersistence {
     }
   }
 
-  /**
-   * Clear all optimistic data (called on logout or cache reset)
-   */
+  /** Everything, for a sign-out or cache reset. Drops the pending batch too. */
   clearAll(): void {
     try {
-      // Drop any pending batch flush
       this.pendingUpdates = {};
 
       storage.remove(OPTIMISTIC_DATA_KEY);
-      this.cache = null; // Invalidate cache
+      this.cache = null;
       if (__DEV__) {
         logger.debug('🧹 Optimistic: Cleared all persisted data');
       }
@@ -339,10 +242,6 @@ class OptimisticDataPersistence {
     }
   }
 
-  /**
-   * Get statistics about stored optimistic data
-   * Useful for debugging and monitoring
-   */
   getStats(): {
     totalUpdates: number;
     entityTypes: string[];
@@ -364,23 +263,15 @@ class OptimisticDataPersistence {
     };
   }
 
-  /**
-   * Load all persisted optimistic data from storage
-   * Uses in-memory cache to avoid repeated MMKV reads and JSON parsing
-   * @private
-   */
   private loadAll(): Record<string, OptimisticFieldUpdate> {
     try {
-      // Return cached data if available
       if (this.cache !== null) {
         return this.cache;
       }
 
-      // Cache miss - load from storage
       const data = storage.getString(OPTIMISTIC_DATA_KEY);
       const parsed = data ? JSON.parse(data) : {};
 
-      // Populate cache for future reads
       this.cache = parsed;
 
       return parsed;
@@ -391,7 +282,4 @@ class OptimisticDataPersistence {
   }
 }
 
-/**
- * Singleton instance for global access
- */
 export const optimisticDataPersistence = new OptimisticDataPersistence();

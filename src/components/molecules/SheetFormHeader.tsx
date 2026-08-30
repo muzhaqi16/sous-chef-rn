@@ -7,31 +7,23 @@ import { Text } from '#components/atoms/Text';
 interface SheetFormHeaderProps {
   title: string;
   cancelLabel: string;
-  /**
-   * Defaults to the submit id with `-submit-button` swapped for
-   * `-cancel-button`, so a sheet that already names its submit gets a matching
-   * cancel for free rather than every caller inventing one.
-   */
+  /** Defaults to the submit id with `-submit-button` swapped for `-cancel-button`. */
   cancelTestID?: string;
   saveLabel: string;
   onCancel: () => void;
   onSave: () => void;
   saving?: boolean;
   /**
-   * Save is unavailable because the form is incomplete — distinct from
-   * `saving`, which means a submission is in flight. Both dim and disable the
-   * button; only `saving` is the caller's cue to swap in a progress label.
+   * The form is incomplete — distinct from `saving`, a submission in flight. Both
+   * dim and disable; only `saving` cues the caller to swap in a progress label.
    */
   disabled?: boolean;
   submitTestID?: string;
 }
 
 /**
- * Cancel / title / Save header for the in-sheet "details" form steps of the
- * morphing AddItemSheet. Shared by the pantry (`AddDetailsSheet`) and
- * shopping-list (`ShoppingListDetailsStep`) flows so the layout and the
- * disabled/saving styling stay identical. The caller computes `saveLabel`
- * (e.g. swapping in an "Adding…" label while `saving`).
+ * Cancel / title / Save header for the AddItemSheet details steps, shared by the
+ * pantry and shopping-list flows so the disabled/saving styling cannot drift.
  */
 export const SheetFormHeader: React.FC<SheetFormHeaderProps> = ({
   title,
@@ -44,10 +36,8 @@ export const SheetFormHeader: React.FC<SheetFormHeaderProps> = ({
   submitTestID,
   cancelTestID,
 }) => {
-  // Derived here rather than in a default parameter: a ternary in a default
-  // makes the React Compiler bail out of this whole component
-  // ("Expression type `ConditionalExpression` cannot be safely reordered"),
-  // which `scripts/check-compiler-bailouts.mjs` catches.
+  // Not a default parameter: a ternary in one bails the React Compiler out of the
+  // whole component ("ConditionalExpression cannot be safely reordered").
   const resolvedCancelTestID =
     cancelTestID ??
     (submitTestID
@@ -58,9 +48,7 @@ export const SheetFormHeader: React.FC<SheetFormHeaderProps> = ({
     <View style={styles.header}>
       <AppPressable
         onPress={onCancel}
-        // The only way to dismiss these sheets. Without it a test had to fall
-        // back on `header-back-button`, which belongs to `Header` — a different
-        // component these sheets do not render.
+        // The only way to dismiss these sheets.
         testID={resolvedCancelTestID}
         style={styles.cancelButton}
       >

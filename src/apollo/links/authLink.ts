@@ -43,14 +43,10 @@ export const authLink = new SetContextLink(async ({ headers }, operation) => {
   // Get the access token for authentication (if available)
   const token = useStore.getState().accessToken;
 
-  // Pre-request token validation: if the access token is expiring/expired, try
-  // a server refresh before sending the request. We deliberately do NOT decide
-  // locally that the session is dead (e.g. by checking the refresh token's exp
-  // and wiping the cache) — a local-clock guess misfires on clock skew, and
-  // during an API outage the device still reports `isOnline` even though the
-  // server is unreachable. The session's fate is confirmed server-side in
-  // refreshToken.ts, which preserves the cache on a network failure and only
-  // triggers a cache-clearing logout on a genuine 401 / UNAUTHENTICATED.
+  // Refresh ahead of the request when the access token is near expiry. Never
+  // decide LOCALLY that a session is dead — a clock-skew guess misfires, and an
+  // API outage still reports `isOnline`. Only refreshToken.ts confirms it,
+  // server-side, and it preserves the cache on a network failure.
   if (token && isTokenExpiringSoon(token, REFRESH_BUFFER_MS)) {
     if (!useStore.getState().isOnline) {
       // Offline: skip the refresh attempt (it would only retry-and-fail, adding
@@ -58,21 +54,10 @@ export const authLink = new SetContextLink(async ({ headers }, operation) => {
       // the network layer, and we re-auth when back online.
       useStore.getState().setNeedsTokenRefresh(true);
     } else {
-      // Fire-and-forget — do NOT await. The token is still valid for another
-      // REFRESH_BUFFER_MS (only approaching expiry, not expired), so there is
-      // no correctness reason to block this request on a refresh completing.
-      // Awaiting here used to stall every request whose token entered this
-      // window behind performTokenRefresh()'s own retry loop (up to 3 attempts
-      // with exponential backoff on network failure) — on a slow connection
-      // that is tens of seconds, and since proactiveTokenRefresh() dedupes
-      // concurrent callers onto one shared promise, EVERY concurrent request
-      // (e.g. a screen's paired queries firing together) piled up behind that
-      // single slow refresh, freezing the whole app for its entire duration.
-      // Firing it without awaiting keeps the safety-net behavior (this is the
-      // fallback for tokenScheduler.ts's own 10-minutes-ahead background
-      // refresh missing its window) without blocking anything on it; if it
-      // fails, the reactive 401 path (errorLink → refreshToken) is the
-      // documented fallback.
+      // Fire-and-forget — do NOT await. The token is still valid, so nothing
+      // needs the refresh to finish, and awaiting stalls EVERY concurrent
+      // request behind one shared retry loop (dedupe means they all queue on
+      // it). If it fails, the reactive 401 path is the fallback.
       void proactiveTokenRefresh();
     }
   }

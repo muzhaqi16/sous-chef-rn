@@ -13,19 +13,13 @@ import {
 } from '#store/slices/preferenceTypes';
 
 interface PantrySortModalProps {
-  /** Whether the modal is visible */
   visible: boolean;
-  /** Current sort option */
   sortOption: SortOption;
-  /** Current sort direction */
   sortDirection: SortDirection;
-  /** Callback when a sort option is selected */
   onSelect: (option: SortOption) => void;
-  /** Callback when modal is closed */
   onClose: () => void;
 }
 
-// Sort option configuration
 const SORT_OPTIONS: Array<{
   key: SortOption;
   labelKey: string;
@@ -54,14 +48,6 @@ const SORT_OPTIONS: Array<{
   },
 ];
 
-/**
- * PantrySortModal - Modal for selecting pantry item sort order
- *
- * Displays:
- * - List of sort options (Name, Expiry, Quantity, Recent)
- * - Visual indicator for current selection
- * - Direction indicator (ascending/descending)
- */
 export const PantrySortModal: React.FC<PantrySortModalProps> = ({
   visible,
   sortOption,
@@ -90,10 +76,8 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
           {SORT_OPTIONS.map(option => (
             <AppPressable
               key={option.key}
-              // Derived from the option key so a new sort option is reachable
-              // from a test the moment it is added. The e2e suite previously
-              // looked for `sort-by-name`, which never existed — this modal had
-              // no testIDs at all, so those tests could not have passed.
+              // Derived from the option key, so a new sort option is reachable
+              // from a test the moment it is added.
               testID={`pantry-sort-option-${option.key}`}
               style={[
                 styles.sortOption,

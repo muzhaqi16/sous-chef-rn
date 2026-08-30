@@ -178,7 +178,15 @@ const appTestIds = (): {
     //   - Templates whose interpolation IS a declared prefix are expanded into
     //     concrete ids above; re-adding them here as `.+` would only widen what
     //     the expansion already covers exactly.
-    for (const m of source.matchAll(/testID=\{`([^`]+)`\}/g)) {
+    // Both the bare form `` testID={`a-${b}`} `` and the conditional one
+    // `` testID={cond ? `a-${b}` : undefined} ``. Only the bare form used to be
+    // read, so `alert-button-${index}` in `AlertProvider` was invisible here and
+    // the spec's `alert-button-0` passed only because the id also appeared,
+    // backtick-quoted, in a comment two lines above — which the literal scan
+    // picks up. Deleting that prose failed this test on a testID that renders.
+    for (const m of source.matchAll(
+      /testID=\{(?:[^`{}]*\?\s*)?`([^`]+)`/g,
+    )) {
       const template = m[1];
       if (!template.includes('${')) continue;
       if (/\$\{(?:config\.)?testIDPrefix\}/.test(template)) continue;

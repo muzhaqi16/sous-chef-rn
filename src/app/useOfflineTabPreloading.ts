@@ -12,32 +12,15 @@ import {
 import { errorService } from '#/services/errorService';
 
 /**
- * Warms the sibling tabs' first-screen queries into the Apollo cache.
- *
- * `HomeTabs` sets `lazy: true`, which is correct — an offscreen tab should not
- * mount. But lazy mounting also means its query never runs, so a tab the user
- * has not visited while online has nothing cached and is unusable offline. On
- * device that showed as Pantry rendering 63 items with no network while
- * Shopping List said "Not available offline".
- *
- * Rendering and fetching are separate concerns: the tab stays unmounted and only
- * its data is warmed. Same gating as `useDataPreloading`, which does this for
- * autocomplete reference data — online only, after first-paint data has landed,
- * dispatched on the idle queue, and `cache-first` so a warm cache is a no-op.
- *
- * This matters more than it looks because the persisted cache is purged on every
- * app version change: without it, every update leaves the user with no offline
- * data for any tab until they visit each one online again.
- *
- * Recipes is deliberately excluded — its tab is backed by Spoonacular, not
- * Apollo, so there is no Apollo cache entry to warm.
+ * Warms sibling tabs' queries into the cache. `HomeTabs` is lazy, so an
+ * unvisited tab has nothing cached and is unusable offline — and the persisted
+ * cache is purged on every version change. The tab stays unmounted; only data is
+ * warmed, online-only and `cache-first`. Recipes is excluded (Spoonacular).
  */
 
 /**
- * Variables here MUST match the consuming hooks exactly or the warm populates a
- * different cache entry and buys nothing:
- *   - `useShoppingListsQuery`  -> GetShoppingListsLite { first: 50 }
- *   - `useMealPlans()` (no args, as MealPlanMain calls it) -> GetMealPlans
+ * Variables MUST match the consuming hooks exactly, or the warm populates a
+ * different cache entry and buys nothing.
  */
 // One-shot `query` defaults to network-only, so `cache-first` must be explicit
 // — otherwise every launch refetches what is already cached.
@@ -48,11 +31,9 @@ const WARM_OPTIONS: { fetchPolicy: 'cache-first'; errorPolicy: 'all' } = {
 
 /**
  * Each target owns its own call so the document and its variables stay paired.
- * They were a `{ document, variables }` array iterated in a loop, which unions
- * the operations together — under Apollo 4.2's modern signatures that pairing
- * is type-checked, and a union of documents no longer matches a union of
- * variables. Closing over both here is also what makes a mismatched pair a
- * compile error rather than a silently-warmed wrong cache entry.
+ * Iterating a `{ document, variables }` array unions the operations, and under
+ * Apollo's modern signatures a union of documents does not match a union of
+ * variables — so a mismatched pair is a compile error here, not a wrong warm.
  */
 const WARM_TARGETS: Array<{
   name: string;

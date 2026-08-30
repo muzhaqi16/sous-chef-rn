@@ -12,11 +12,9 @@ import { useWastePantryItemBatch } from '#features/pantry/hooks/mutations/useWas
 import { Text } from '#components/atoms/Text';
 
 /**
- * `batches` arrive already unmasked from the parent (PantryItemDetail fetches
- * them via the GetPantryItemBatches connection query with NO status filter — so
- * active AND inactive batches are already present — and materializes each edge
- * node through `cache.readFragment`). `BatchListItem` then runs its own
- * `useFragment` for reactive per-row updates.
+ * `batches` arrive unmasked from the parent, which queries with NO status
+ * filter — active AND inactive are already present. `BatchListItem` runs its
+ * own `useFragment` for reactive per-row updates.
  */
 interface BatchSectionProps {
   batches: ReadonlyArray<PantryItemBatchFragment>;
@@ -44,8 +42,6 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
       return new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime();
     });
 
-  // The parent already fetched every batch (no status filter), so inactive
-  // batches are present in `batches` — just filter them out of the prop.
   const inactiveBatches: PantryItemBatchFragment[] = showAll
     ? batches.filter(b => b.status !== BatchStatus.Active)
     : [];

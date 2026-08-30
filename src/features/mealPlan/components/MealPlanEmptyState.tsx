@@ -7,13 +7,6 @@ interface MealPlanEmptyStateProps {
   onCreateFromTemplate?: () => void;
 }
 
-/**
- * The meal-plan tab's empty state.
- *
- * A thin wrapper over `EmptyState`. It used to reimplement it — its own icon,
- * title, subtitle and two buttons, with its own stylesheet — which is why the
- * spacing drifted from every other empty state in the app.
- */
 export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = ({
   onCreatePlan,
   onCreateFromTemplate,

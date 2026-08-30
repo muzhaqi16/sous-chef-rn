@@ -50,21 +50,15 @@ interface ExistingPantryIndex {
   existingCatalogIds: Set<string>;
 }
 
-// Keyed on the connection object Apollo hands back, which keeps its identity
-// until the pantry's item set actually changes. Mirrors the WeakMap in
-// `connectionUtils.extractNodes`. Only identity fields are read below
-// (`id`, `itemId`, `item.id`), and those never change for a given pantry item,
-// so a hit can't go stale while the connection stays the same object.
+// Keyed on the connection object, whose identity holds until the item set
+// changes. Only identity fields are read below, and those never change for a
+// given pantry item, so a hit cannot go stale.
 const existingPantryIndexCache = new WeakMap<object, ExistingPantryIndex>();
 
 /**
- * Index the pantry's existing items by catalog id.
- *
- * Each row arrives as a masked ref, so resolving it costs one cache read —
- * up to `itemsFirst` of them per call. The React Compiler leaves this
- * derivation uncached in the component body (verified against the compiled
- * output), which would re-read every row on each render, including every chip
- * tap, so the result is cached explicitly here instead.
+ * Indexes the pantry's items by catalog id. Each row is a masked ref, so resolving
+ * costs one cache read apiece; the React Compiler leaves this derivation uncached
+ * in the component body, so the result is cached explicitly here.
  */
 function buildExistingPantryIndex(
   cache: ApolloCache,
@@ -141,15 +135,12 @@ export const SelectPantryItems = () => {
 
   const [isSaving, setIsSaving] = useState(false);
 
-  // Map catalog item IDs to pantry item IDs for existing pantry items, via a
-  // narrow `SelectPantryItems_pantryItem` fragment selecting only `id`,
-  // `itemId`, and `item.id`.
+  // Via a narrow `SelectPantryItems_pantryItem` fragment: `id`, `itemId`, `item.id`.
   const { existingItemMap, existingCatalogIds } = buildExistingPantryIndex(
     apolloClient.cache,
     pantryData?.pantry?.itemsConnection,
   );
 
-  // Transform onboarding items into selectable items, pre-selecting existing pantry items
   const selectableItems = (
     data?.items?.edges?.map(edge => edge.node) || []
   ).map(item => ({
@@ -157,7 +148,6 @@ export const SelectPantryItems = () => {
     selected: existingCatalogIds.has(item.id),
   }));
 
-  // Use the custom hook for managing selection state
   const { items, selectedItems, toggleItem, isMaxReached } = useSelectableItems(
     {
       initialItems: selectableItems,
@@ -165,13 +155,11 @@ export const SelectPantryItems = () => {
     },
   );
 
-  // Gate on the absence of data, not on `loading`. Under `cache-and-network`
-  // Apollo reports `loading: true` for the whole network leg on EVERY mount —
-  // `nextFetchPolicy` lives on the ObservableQuery and useQuery builds a new
-  // one each time — so stepping back into this screen re-showed the loader over
-  // a warm cache, for as long as the request took. `useSelectableItems` keeps
-  // only the user's overrides and re-derives the rest from `initialItems`, so a
-  // late `pantryData` still lands the pre-selection without discarding a tap.
+  // Gate on the absence of DATA, not on `loading`: under `cache-and-network`
+  // Apollo reports `loading: true` for the whole network leg on every mount, so
+  // `if (loading)` blanks a warm cache for the length of the request.
+  // `useSelectableItems` keeps only the user's overrides, so a late `pantryData`
+  // still lands the pre-selection without discarding a tap.
   if ((loading && !data) || (pantryLoading && !pantryData)) {
     return (
       <OnBoardingWrapper
@@ -249,11 +237,9 @@ export const SelectPantryItems = () => {
                 },
                 context: { localFirst: true },
               });
-              // The list is pre-filtered by existingCatalogIds, but a race
-              // (another device adding the same item) can still surface the
-              // DuplicatePantryItemError member. The item is already in the
-              // pantry — exactly the onboarding goal — so classify it as a
-              // per-item success-skip rather than leaving it unexamined.
+              // A race with another device can still surface
+              // DuplicatePantryItemError. The item is already in the pantry, which
+              // is the onboarding goal, so it counts as a per-item success-skip.
               if (
                 getPantryItemDuplicateFromResult(
                   result.data?.createPantryItem,

@@ -1,23 +1,8 @@
 /**
- * Local-first field updates for "settings-shaped" mutations: a normalized entity
- * whose field names mirror a flat settings object, updated one or several fields
- * at a time.
- *
- * The pattern these encode (see docs/local-first-architecture.md §4):
- *
- *  1. write the change into the cached entity PERMANENTLY, before firing;
- *  2. fire the mutation with `context: { localFirst: true }`;
- *  3. treat "queued" as success — it replays later, keyed by the same input;
- *  4. revert from a snapshot only when the server genuinely refuses it.
- *
- * Step 1 is what an `optimisticResponse` cannot do here. Apollo discards an
- * optimistic layer as soon as the mutation completes, and offline that
- * completion is `queueLink`'s null result — so the control flips, the queued
- * result lands, the layer rolls back, and the change visually reverts while
- * sitting in the queue waiting to replay. That is the bug the notification
- * settings screen had. App settings had no optimistic layer at all, so its
- * controls simply didn't move until the round trip returned — the same symptom
- * ("takes two taps"), reached from the other direction, and the same fix.
+ * Local-first field updates for settings-shaped mutations: write the cached entity
+ * PERMANENTLY, fire with `context: { localFirst: true }`, treat "queued" as
+ * success, revert from a snapshot only on refusal. An `optimisticResponse` cannot:
+ * Apollo tears its layer down on the queue's null result, reverting while queued.
  */
 
 import { gql, type ApolloCache, type StoreObject } from '@apollo/client';
@@ -26,18 +11,14 @@ import { classifyCreateResult } from './classifyCreateResult';
 import { errorService } from '#/services/errorService';
 
 /**
- * Identifies the normalized entity holding the fields. Its field names must
- * match the keys of `TFields` — true for `UserSettings` / `NotificationPreferences`,
- * whose GraphQL fields are the flat setting names.
- *
- * Intersected with `StoreObject` so it satisfies `cache.identify` directly.
+ * The normalized entity holding the fields; its GraphQL field names must match the
+ * keys of `TFields`. Intersected with `StoreObject` to satisfy `cache.identify`.
  */
 export type FieldsEntityRef = StoreObject & {
   __typename: string;
   id: string;
 };
 
-/** The shape of an awaited Apollo mutation result this module reads. */
 type MutationResultLike = { data?: unknown; error?: unknown };
 
 /** An object the cache should normalize rather than store inline. */
@@ -51,11 +32,9 @@ function isEntityLike(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * The selection a value needs, as GraphQL source. Empty for a leaf.
- *
- * A `__typename` is what separates a nested ENTITY from a JSON-scalar field that
- * merely happens to be an object, and selecting through it is what makes the
- * cache normalize the value instead of storing a private copy of it.
+ * The selection a value needs, as GraphQL source; empty for a leaf. `__typename`
+ * separates a nested ENTITY from an object-shaped JSON scalar, and selecting
+ * through it is what makes the cache normalize rather than store a private copy.
  */
 function selectionFor(value: unknown): string {
   if (Array.isArray(value)) {
@@ -82,22 +61,6 @@ function selectionFor(value: unknown): string {
  * Write flat fields onto a cached entity. `undefined` values are skipped so a
  * partial update never blanks a field, and an unidentifiable entity is a no-op
  * rather than a write against ROOT_QUERY.
- *
- * Goes through `writeFragment`, not `cache.modify`, for two reasons:
- *
- * - **`cache.modify` cannot INTRODUCE a field.** It runs a modifier only for a
- *   field the store object already holds, so writing one the cached entity has
- *   never carried is silently dropped — no error, no warning. Which fields an
- *   entity carries is decided by whichever query loaded it, so this bites
- *   exactly where it is hardest to see: `GetMealTemplateForEdit` selects no
- *   `recipe`, so picking a recipe for a row that query loaded cleared the custom
- *   name (a field it DOES carry) and dropped the recipe, leaving the row with
- *   neither. Verified 2026-08-29 vs `@apollo/client@4.1`:
- *   `docs/verified-library-behaviour.md#cache-modify-cannot-add-a-field`.
- * - **`cache.modify` stores what it is handed.** A nested `{ __typename, id,
- *   name }` becomes a private copy, so renaming that entity later moves the
- *   original and leaves every copy stale. `writeFragment` normalizes it to a
- *   reference and merges the nested entity's own fields into its own record.
  */
 export function writeEntityFields<TFields extends object>(
   cache: ApolloCache,
@@ -117,6 +80,11 @@ export function writeEntityFields<TFields extends object>(
     .map(([field, value]) => `${field}${selectionFor(value)}`)
     .join('\n    ');
 
+  // `writeFragment`, not `cache.modify`: modify cannot INTRODUCE a field the cached
+  // record lacks (silently dropped, no error — and which fields it carries depends
+  // on whichever query loaded it), and it stores a nested entity as a private copy
+  // rather than a reference. Verified vs `@apollo/client@4.2.12`:
+  // `docs/verified-library-behaviour.md#cache-modify-cannot-add-a-field`.
   cache.writeFragment({
     id: cacheId,
     fragment: localFirstFragment(entity.__typename, selections),
@@ -125,18 +93,9 @@ export function writeEntityFields<TFields extends object>(
 }
 
 /**
- * The runtime fragment for one (type, field-shape) pair, built at most once.
- *
- * The fragment is generated from the update's keys, so its content differs per
- * call site and per partial update. Under a FIXED name, graphql-tag is handed
- * different content under one name every time: it warns once per distinct
- * shape, and it keeps each document in a module-scope cache that then grows for
- * the life of the process without ever serving a hit.
- *
- * The name is derived from the content instead, and the built document is
- * memoized here — so a repeated write of the same shape reuses one document and
- * two different shapes never collide. `writePantryItemDetailStub` satisfies the
- * same constraint by filtering an already-parsed AST rather than re-parsing.
+ * The runtime fragment for one (type, field-shape) pair, memoized. Content varies
+ * per call site, so a FIXED fragment name makes graphql-tag warn per shape and
+ * grow a module-scope cache that never hits; the name is derived from the content.
  */
 const localFirstFragments = new Map<string, DocumentNode>();
 
@@ -161,11 +120,8 @@ function localFirstFragment(
 }
 
 /**
- * A short, stable, alphanumeric digest of a field shape.
- *
- * Only needs to make a GraphQL-legal name unique per shape within one process —
- * not to resist collision by an adversary — so djb2 over the shape key is
- * enough, rendered base-36 so the result is always name-safe.
+ * A short, stable digest of a field shape — djb2 in base-36, so the result is
+ * name-safe. Only needs uniqueness per shape within one process.
  */
 function shapeHash(input: string): string {
   let hash = 5381;
@@ -176,25 +132,14 @@ function shapeHash(input: string): string {
 }
 
 /**
- * The pre-write values for exactly the keys an update will write.
- *
- * A key the source does not CARRY is omitted rather than recorded as null.
- * `writeEntityFields` skips `undefined`, so an omitted key is a field the
- * revert leaves alone — which is the only correct treatment for a field the
- * snapshot's read never selected. Coercing that absence to `null` writes
- * emptiness over a value the snapshot never saw, and on the local-first path
- * there is no next fetch to repair it: an incomplete read that would have
- * refetched becomes a definite null that will not.
- *
- * A key the source carries as `null` IS recorded, so a genuinely-empty field is
- * still restored as empty. That is the distinction — absent from the read is not
- * the same fact as empty in the store, and one `??` collapses them.
+ * The pre-write values for exactly the keys an update will write. A key the source
+ * does not CARRY is OMITTED, not null — `writeEntityFields` skips `undefined`, so
+ * the revert leaves it alone; a key carried AS null IS recorded. Absent from the
+ * read is not the same fact as empty in the store, and one `??` collapses them.
  */
 export function snapshotFields<TFields extends object>(
-  // `object` rather than `Record<string, unknown>`: an interface without an
-  // index signature is not assignable to that, and forcing one at every call
-  // site would mean a double cast at each. The read's shape is whatever the
-  // query carried, which is exactly the fact this inspects.
+  // `object`, not `Record<string, unknown>`: an interface without an index
+  // signature is not assignable to that, forcing a cast at every call site.
   source: object | null | undefined,
   updates: Partial<TFields>,
 ): Partial<TFields> {
@@ -229,10 +174,8 @@ export interface LocalFirstFieldsResult {
 }
 
 /**
- * Apply a local-first field update. Returns the outcome rather than reporting
- * it — the two call sites differ in how they surface a refusal (one alerts, one
- * logs and lets its screen alert), and duplicating that decision here is what
- * produces double alerts.
+ * Apply a local-first field update, returning the outcome rather than reporting it
+ * — the call sites surface a refusal differently, and deciding here double-alerts.
  */
 export async function updateEntityFieldsLocalFirst<TFields extends object>({
   cache,

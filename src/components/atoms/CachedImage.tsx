@@ -1,13 +1,5 @@
-/**
- * CachedImage - TurboImage wrapper with sensible caching defaults
- *
- * Replaces RN's <Image> for network images with native disk+memory caching
- * powered by Nuke (iOS) and Glide (Android). Uses dataCache policy by default
- * for aggressive caching.
- *
- * Shows a shimmer skeleton while loading, a placeholder icon when no URI,
- * and a fallback icon on error.
- */
+// TurboImage wrapper for network images: native disk+memory caching, a shimmer
+// while loading, a placeholder icon with no URI, a fallback icon on error.
 import React from 'react';
 import { View } from 'react-native';
 import TurboImage from 'react-native-turbo-image';
@@ -24,39 +16,26 @@ import { SkeletonBase } from '#components/atoms/Skeleton/SkeletonBase';
 
 export interface CachedImageProps
   extends Omit<TurboImageProps, 'source' | 'style'> {
-  /** Image URI (string | null | undefined) */
   uri: string | null | undefined;
-  /** Style applied to the image */
   style?: StyleProp<ImageStyle>;
-  /** Cache policy (default: 'dataCache' for aggressive caching) */
   cachePolicy?: CachePolicy;
-  /** Style for the placeholder/fallback container */
+  /** Style for the placeholder/fallback container. */
   containerStyle?: StyleProp<ViewStyle>;
-  /**
-   * Display size in logical pixels (e.g. 48 for a 48x48 container).
-   * TurboImage will decode the image at 2x this size for Retina sharpness,
-   * dramatically reducing decoded bitmap memory for large source images.
-   */
+  /** Display size in logical px; decoding happens at 2x it, capping bitmap memory. */
   displaySize?: number;
-  /**
-   * Called when the image fails to load (broken/unreachable URI). Runs
-   * alongside the internal error overlay so a parent can react — e.g. collapse
-   * a hero rather than show the broken-image placeholder.
-   */
+  /** Runs alongside the internal error overlay so a parent can react (e.g. collapse a hero). */
   onError?: () => void;
 }
 
 type LoadState = 'idle' | 'loading' | 'success' | 'error';
 
-// Module-level cache — tracks URIs that have loaded successfully.
-// Survives component unmount/remount so scrolling back to a previously-loaded
+// Module-level so it survives unmount: scrolling back to an already-decoded
 // image skips the shimmer entirely.
 const loadedUris = new Set<string>();
 const MAX_LOADED_URIS = 500;
 
-// Cross-fade duration for a freshly-decoded image. Applied only on first load;
-// images already in `loadedUris` (e.g. scrolled back into view) render instantly
-// so the list doesn't flicker on recycle.
+// First decode only; images already in `loadedUris` render instantly so the list
+// doesn't flicker on recycle.
 const IMAGE_FADE_MS = 200;
 
 export const CachedImage = ({
@@ -69,8 +48,8 @@ export const CachedImage = ({
   onError,
   ...rest
 }: CachedImageProps) => {
-  // useRecyclingState resets synchronously when `uri` changes (cell recycle).
-  // If the URI was previously loaded, start in 'success' to skip shimmer.
+  // useRecyclingState resets synchronously on `uri` change (cell recycle); a URI
+  // already in `loadedUris` starts in 'success' and skips the shimmer.
   const [loadState, setLoadState] = useRecyclingState<LoadState>(
     () => (uri ? (loadedUris.has(uri) ? 'success' : 'loading') : 'idle'),
     [uri],
@@ -80,9 +59,8 @@ export const CachedImage = ({
     if (uri) {
       loadedUris.add(uri);
       if (loadedUris.size > MAX_LOADED_URIS) {
-        // Evict oldest half — Set iterates in insertion order, so
-        // the first entries are the least recently added (oldest scroll positions).
-        // Preserves recently-loaded URIs (currently visible + nearby items).
+        // Set iterates in insertion order, so dropping the first half evicts the
+        // oldest scroll positions and keeps what is on or near screen.
         const deleteCount = Math.floor(MAX_LOADED_URIS / 2);
         let i = 0;
         for (const key of loadedUris) {
@@ -100,7 +78,6 @@ export const CachedImage = ({
     setLoadState('error', true);
   };
 
-  // No URI: show placeholder
   if (!uri) {
     return (
       <View
@@ -116,7 +93,6 @@ export const CachedImage = ({
   }
 
   const source = { uri };
-  // Fade in only the first time this URI decodes; cached re-appearances are instant.
   const isPreloaded = loadedUris.has(uri);
 
   const flat = StyleSheet.flatten(style as StyleProp<ViewStyle>);
@@ -141,12 +117,8 @@ export const CachedImage = ({
         onFailure={handleFailure}
         {...rest}
       />
-      {/* Overlays mount only in their own state. Both are absolutely
-          positioned, so dropping them is layout-neutral, and a settled image is
-          the steady state for every row in a list — leaving them mounted cost
-          two views and an icon per row for nothing. `useRecyclingState` still
-          resets loadState on recycle, so a reused cell re-enters 'loading' and
-          the skeleton comes back. */}
+      {/* Both overlays are absolutely positioned, so mounting them only in their
+          own state is layout-neutral and saves two views per settled row. */}
       {loadState === 'loading' && (
         <View style={[styles.overlay, radiusOverride]}>
           <SkeletonBase
@@ -198,10 +170,6 @@ const styles = StyleSheet.create(theme => ({
   },
 }));
 
-/**
- * Preload images into the disk cache.
- * Call before navigating to a screen to warm the cache.
- */
 export function preloadImages(uris: string[]): void {
   const sources: Source[] = uris
     .filter(u => u && !loadedUris.has(u))

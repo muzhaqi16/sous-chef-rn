@@ -21,6 +21,8 @@ import { useUserPreferences } from '#hooks/settings/useUserPreferences';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { Telemetry } from '#services/telemetry';
 import { Text } from '#components/atoms/Text';
+import { useDataState } from '#hooks/data/useDataState';
+import { DataStateView } from '#components/molecules/DataStateView';
 
 export const AppSettingsScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -31,9 +33,20 @@ export const AppSettingsScreen: React.FC = () => {
     settings,
     loading,
     hasLoadedSettings,
+    error,
+    refetch,
     updateAppSetting,
     resetToDefaults,
   } = useAppSettings();
+
+  // `settings` always has a value (defaults are filled in), so availability has
+  // to come from `hasLoadedSettings`.
+  const dataState = useDataState({
+    loading,
+    error,
+    hasResult: hasLoadedSettings,
+    isEmpty: false,
+  });
 
   // Offline mode renders from the STORE, not from `settings`. The store is what
   // actually drives the policy (`offlineModeLink` reads it, and it's the value
@@ -77,12 +90,10 @@ export const AppSettingsScreen: React.FC = () => {
   };
 
   /**
-   * No `loading` on the switches: `SettingSwitch` forwards it to `disabled`, so
-   * the control went dead on the frame after the tap and every tap landing in
-   * that window was dropped — which is what "takes two taps" was. Nothing waits
-   * on the request now: the change is written to the cache before firing and
-   * queues for replay if the API is unreachable. `updating` is still tracked for
-   * the reset row, where it debounces a one-shot command.
+   * No `loading` on the switches: `SettingSwitch` forwards it to `disabled`,
+   * which kills the control for a frame and drops the taps landing there.
+   * Nothing waits on the request — the change is cached before firing and
+   * queues for replay. `updating` is kept for the reset row, a one-shot command.
    */
   const handleSettingChange = <K extends keyof AppSettings>(
     key: K,
@@ -90,8 +101,7 @@ export const AppSettingsScreen: React.FC = () => {
   ) => {
     setUpdating(key);
     // No alert here: `updateAppSetting` is the single alerter for its own
-    // failure (see `alertIfRejected`'s contract). Alerting again on `!success`
-    // stacked a second dialog on every failed toggle.
+    // failure, and a second one on `!success` stacks two dialogs.
     executeAsyncWithCleanup(
       () => updateAppSetting(key, value),
       () => setUpdating(null),
@@ -99,15 +109,10 @@ export const AppSettingsScreen: React.FC = () => {
   };
 
   /**
-   * Offline mode applies locally first, then mirrors to the server. The local
-   * write is the one that matters: it drives the link policy and persists to
-   * MMKV, and it must not depend on a round-trip that is unavailable precisely
-   * when the user reaches for this switch. The mirror rides `localFirst`, so an
-   * unreachable API queues it for replay rather than failing it.
-   *
-   * `immediate` on the store write: this is the one caller that IS a user
-   * gesture, so the offline banner should announce it without the dwell/hold
-   * those debounces exist to absorb flapping, and a switch isn't flapping.
+   * The LOCAL write is the one that matters — it drives the link policy and
+   * persists to MMKV, and cannot depend on a round-trip unavailable exactly
+   * when this switch is reached for. `immediate` because this is the one caller
+   * that IS a user gesture: a switch is not flapping, so no dwell is needed.
    */
   const handleOfflineModeChange = (value: boolean) => {
     setOfflineModeEnabled(value, true);
@@ -152,13 +157,10 @@ export const AppSettingsScreen: React.FC = () => {
     );
   };
 
-  // In-app `ModalPicker`, NOT `@react-native-picker/picker`. On Android the
-  // native picker's dropdown is an Android DIALOG, themed from the Activity
-  // theme — `Theme.EdgeToEdge` with no `values-night` override — so it follows
-  // the OS `uiMode` and ignores the app's own light/dark preference entirely.
-  // A user on the light in-app theme with the OS in dark mode got a dark popup
-  // over a light screen, and nothing on the RN side can reach it. The same
-  // limit applies to `Alert.alert` and the date pickers.
+  // In-app `ModalPicker`, NOT `@react-native-picker/picker`: on Android that
+  // one's dropdown is a DIALOG themed from the Activity theme, so it follows
+  // the OS `uiMode` and ignores the app's light/dark preference, unreachable
+  // from RN. `Alert.alert` and the date pickers share the limit.
   const unitSystemOptions = [
     { label: t('settings.unitMetric'), value: UnitSystem.Metric },
     { label: t('settings.unitImperial'), value: UnitSystem.Imperial },
@@ -168,25 +170,22 @@ export const AppSettingsScreen: React.FC = () => {
     unitSystemOptions.find(o => o.value === settings.preferredUnitSystem)
       ?.label ?? t('labels.select');
 
-  // Gate on "nothing to show", not on `loading`. Under `cache-and-network`
-  // Apollo reports `loading: true` for the whole network leg even when the
-  // cache already answered, and it starts a fresh leg on every mount — so a
-  // bare `if (loading)` blanked this screen on every visit for as long as the
-  // request took, up to the 10s httpLink abort deadline. The loading state
-  // stays inside ProfileScreenWrapper so the title and back button remain:
-  // without them the screen could not be left while it waited.
-  if (loading && !hasLoadedSettings) {
+  // Inside the wrapper so the back button survives: the screen has to be
+  // leavable while it waits.
+  if (dataState !== 'ready') {
     return (
       <ProfileScreenWrapper
         title={t('labels.appSettings')}
         testID="settings-screen"
         scrollEnabled={false}
       >
-        <View style={commonStyles.loadingContainer}>
-          <Text style={commonStyles.loadingText}>
-            {t('settings.loadingSettings')}
-          </Text>
-        </View>
+        <DataStateView
+          state={dataState}
+          onRetry={() => {
+            refetch();
+          }}
+          testID="settings-state"
+        />
       </ProfileScreenWrapper>
     );
   }

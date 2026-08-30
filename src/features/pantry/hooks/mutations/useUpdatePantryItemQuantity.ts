@@ -1,15 +1,8 @@
 /**
- * useUpdatePantryItemQuantity - Update mutation for pantry item quantity/unit
- * (local-first).
- *
- * Single responsibility:
- * - Update quantity and unit fields via dedicated endpoint
- * - Version conflict handling
- * - Writes the updated quantity/unit to the cache PERMANENTLY before firing
- *   (an `optimisticResponse` would roll back the moment the offline queue
- *   completes the request with a null result). A queued update stays visible
- *   and replays via the idempotent `SyncPantryItem` upsert; a real rejection
- *   restores the pre-edit snapshot.
+ * Local-first: the updated quantity/unit is written to the cache PERMANENTLY
+ * before firing (an `optimisticResponse` would roll back on the offline queue's
+ * null result), so a queued update stays visible and replays via the idempotent
+ * `SyncPantryItem` upsert; a real rejection restores the pre-edit snapshot.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';

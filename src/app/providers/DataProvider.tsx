@@ -11,24 +11,10 @@ interface DataProviderProps {
 }
 
 /**
- * DataProvider - Preloads essential reference data for offline access
- *
- * This component wraps the app to preload reference data (units, etc.)
- * into the cache when the user is authenticated. This ensures:
- * - Zero loading states when adding shopping list items
- * - Full offline functionality for shopping lists
- * - Data is cached and available across app restarts
- *
- * Additionally, this component fetches ALL pending invitations (home + shopping list)
- * on app startup to ensure users don't miss invitations even if they didn't receive
- * the real-time notification. All invitations appear in the notification center.
- *
- * The preloading hook runs silently in the background and only activates
- * when the user is authenticated. It leverages Apollo cache persistence
- * to maintain data across sessions.
- *
- * This component should be placed inside ApolloProvider but before
- * the main navigation to ensure data is loaded early in the app lifecycle.
+ * Warms reference data (units, …) and pending invitations into the cache once
+ * authenticated, so adding an item has no loading state and works offline.
+ * Must sit inside `ApolloProvider` but ABOVE navigation, or the warm-up starts
+ * after the screens that need it.
  */
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const user = useUser();

@@ -54,22 +54,10 @@ interface UseCenterActiveItemParams<K> {
 }
 
 /**
- * Keeps the active item of a horizontal scroller centered: instantly on first
- * paint, then glided on later selection changes. Attach the returned
- * `animatedRef` to the scroller (an `Animated.ScrollView` or any
- * `Animated.createAnimatedComponent(ScrollView)`), wire `onItemLayout` onto
- * each item, `onScrollViewLayout` onto the scroller, and pass
- * `initialContentOffset` as its `contentOffset`.
- *
- * The glide runs on the UI thread via Reanimated's `scrollTo` (no per-frame JS
- * round-trip): `target` holds the destination offset and the reaction below
- * pushes it to the native scroller. `driving` gates that push so a manual user
- * scroll — which never writes `target` — is never fought, and the first paint
- * isn't yanked to 0 before the row is measured.
- *
- * The centering effect retries across a few frames because layout can land
- * after mount (or after a sticky copy remounts), and clamps to the real scroll
- * range so end items settle flush against the edge instead of over-scrolling.
+ * Centers a horizontal scroller's active item: instantly on first paint, glided
+ * afterwards. Wire `animatedRef`, `onItemLayout`, `onScrollViewLayout`,
+ * `initialContentOffset`. The UI-thread glide is gated by `driving`, so a manual
+ * scroll is never fought and the first paint is not yanked to 0 pre-measurement.
  */
 export function useCenterActiveItem<
   K,

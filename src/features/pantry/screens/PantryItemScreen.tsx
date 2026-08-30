@@ -8,11 +8,8 @@ type PantryItemScreenParams = {
 };
 
 /**
- * Edits one pantry item.
- *
- * `itemId` is required — this route registers with `linking: null` and both
- * callers of `toPantryItem` pass one. Adding goes through `AddToPantrySheet`
- * → `AddDetailsSheet`.
+ * Edits one pantry item; `itemId` is always present (both callers of
+ * `toPantryItem` pass one). Adding goes through `AddToPantrySheet`.
  */
 export const PantryItemScreen: React.FC<
   StaticScreenProps<PantryItemScreenParams>

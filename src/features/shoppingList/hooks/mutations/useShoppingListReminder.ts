@@ -1,9 +1,7 @@
 /**
- * useShoppingListReminder — set / clear a shopping-list reminder (local-first).
- *
- * The reminder fields are absolute sets keyed by the list id, so both directions
- * write to the cache before firing and a queued replay re-applies the same state
- * idempotently. A real rejection restores the pre-change snapshot and alerts.
+ * Local-first: the reminder fields are absolute sets keyed by the list id, written
+ * to the cache before firing and idempotent on a queued replay. A rejection
+ * restores the pre-change snapshot and alerts.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';

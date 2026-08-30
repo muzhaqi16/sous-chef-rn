@@ -21,7 +21,6 @@ import { handleMutationError } from '#/utils/errorHandlers';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { t } from '#/i18n';
 import { errorService } from '#/services/errorService';
-import { logger } from '#/utils/environment';
 
 const addInviteToHomeCache = createAddToParentConnectionUpdater(
   'Home',
@@ -117,8 +116,17 @@ export function useHomeInvitations({
           const homesBeforeJoin = homes || [];
           if (homesBeforeJoin.length === 0) {
             setSelectedHomeId(homeId);
-            setDefaultHome(homeId).catch((error: unknown) => {
-              logger.warn('Failed to set default home after join:', error);
+            // Resolves false on a refusal rather than rejecting.
+            void setDefaultHome(homeId).then(ok => {
+              if (!ok) {
+                handleMutationError(
+                  new Error('markHomeAsDefault refused after join'),
+                  {
+                    operation: 'Set Default Home After Join',
+                    showAlert: false,
+                  },
+                );
+              }
             });
           }
 

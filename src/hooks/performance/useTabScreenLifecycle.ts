@@ -5,14 +5,9 @@ import { useScreenTransition } from '#/hooks/performance/useScreenTransition';
 import { useScreenTelemetry } from '#/hooks/performance/useScreenTelemetry';
 
 /**
- * Module-scope focus callback shared by all tab screens.
- *
- * Pauses Apollo cache persistence on blur (so heavy serialization doesn't
- * fire during the next screen's scroll) and resumes on focus to flush
- * pending saves.
- *
- * Defined at module scope (not inside the hook) so the reference is stable
- * and React Compiler doesn't need to memoize it.
+ * Resumes Apollo cache persistence on focus and pauses it on blur, so heavy
+ * serialization cannot fire during the next screen's scroll. At module scope so
+ * the reference is stable without memoization.
  */
 const onScreenFocus = () => {
   apolloCachePersistence.resume();
@@ -27,30 +22,7 @@ interface UseTabScreenLifecycleOptions {
   telemetryProperties: () => Record<string, unknown>;
 }
 
-/**
- * Consolidates the four hooks that every tab screen calls identically:
- *
- * 1. `useOptimisticDataRestorationMultiple` -- restores persisted optimistic data
- * 2. `useFocusEffect(onScreenFocus)` -- pauses/resumes cache persistence
- * 3. `useScreenTransition` -- measures navigation performance
- * 4. `useScreenTelemetry` -- tracks screen view once
- *
- * @example
- * ```tsx
- * function PantryMainInner() {
- *   useTabScreenLifecycle({
- *     screenName: 'PantryMain',
- *     optimisticTypes: ['Pantry', 'PantryItem'],
- *     telemetryProperties: () => ({
- *       home_id: selectedHomeId,
- *       pantry_id: pantry?.id,
- *       item_count: pantryItems.length,
- *     }),
- *   });
- *   // ...
- * }
- * ```
- */
+/** The four lifecycle hooks every tab screen calls identically. */
 export function useTabScreenLifecycle({
   screenName,
   optimisticTypes,

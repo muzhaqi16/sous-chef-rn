@@ -2,15 +2,9 @@ import { useNotificationStore } from '#features/notifications/store/notification
 import type { ExpirationLinkData } from '#features/notifications/types';
 
 /**
- * Attach expiration enrichment to a generic notification.
- *
- * The notifications feature's public write surface for its enrichment buffer.
- * `pantry` needs it because the two events it joins arrive on different
- * subscriptions — `PantryEvents` carries the expiration row, the notification
- * feed carries its partner — so the pantry subscription is where one half lands.
- *
- * A hook rather than a direct store import: `store/` is feature-private, and
- * top-level `hooks/` is a feature's public surface.
+ * The feature's public write surface for its enrichment buffer — a hook rather
+ * than a store import because `store/` is feature-private. `pantry` needs it:
+ * the two events being joined arrive on different subscriptions.
  */
 export const useLinkExpirationData = (): ((
   genericNotificationId: string,

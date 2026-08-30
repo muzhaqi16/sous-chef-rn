@@ -1,10 +1,7 @@
 /**
- * Read-back for thin subscription events.
- *
- * Subscription documents are validated against depth 5 / cost 500, so the
- * events carry an envelope and an id and the values come from here — an
- * ordinary query, over HTTP, fired only where one is needed. `client.query`
- * normalizes the result, leaving the handler only connection membership.
+ * Read-back for thin subscription events. Subscription documents are validated
+ * against depth 5 / cost 500, so events carry only an envelope and an id and the
+ * values come from an ordinary HTTP query here.
  */
 
 import type { OperationVariables, TypedDocumentNode } from '@apollo/client';
@@ -12,12 +9,9 @@ import { logger } from '#/utils/environment';
 import type { SubscriptionApolloClient } from './types';
 
 /**
- * Fetch one entity named by an event and write it into the cache.
- *
- * Returns `null` when the read produced no data — offline, a transport failure,
- * or the entity deleted between the event and this call. All three mean the
- * same to a caller: nothing to add to a connection, and not a failure. The list
- * self-corrects on its next `cache-and-network` read.
+ * `null` covers offline, transport failure and an entity deleted since the event
+ * — all mean "nothing to add", not a failure; the list self-corrects on its next
+ * `cache-and-network` read.
  */
 export async function fetchEventEntity<
   TData,

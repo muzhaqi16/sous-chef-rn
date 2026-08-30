@@ -29,11 +29,9 @@ export const FLASHLIST_DEFAULTS: Record<string, FlashListPerformanceProps> = {
   },
 };
 
-// ── Sticky header sentinel pattern ──
-// Used to prepend a "sticky tab" item to FlashList data arrays so that
-// stickyHeaderIndices pins it at the top natively (UI thread, no JS bridge).
-// Screens provide their own renderItem that checks isStickyHeaderSentinel()
-// and renders their specific tab component for sentinel items.
+// Sticky header sentinel: prepended to a FlashList's data so
+// stickyHeaderIndices pins it natively (UI thread, no JS bridge). A screen's
+// renderItem checks isStickyHeaderSentinel() and draws its own tab component.
 
 /** Discriminator for sentinel items prepended to FlashList data arrays. */
 export interface StickyHeaderSentinel {

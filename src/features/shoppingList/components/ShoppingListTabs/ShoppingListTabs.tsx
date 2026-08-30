@@ -42,13 +42,12 @@ interface TabRoute extends Route {
 
 interface ShoppingListTabsProps {
   items?: ShoppingListRowItem[];
-  // PERFORMANCE: Pre-filtered items with stable references from useShoppingListScreen
-  // When provided, skip internal filtering to prevent new array references
+  // Pre-filtered upstream so the references stay stable; filtering here would
+  // hand FlashList a new array every render.
   unpurchasedItems?: ShoppingListRowItem[];
   purchasedItems?: ShoppingListRowItem[];
-  /** Whether row cells render product images (threaded into tab data context) */
   showImages?: boolean;
-  // Total counts from GraphQL (not array length) for accurate tab badge counts
+  // From GraphQL, not array length, so the badges survive pagination.
   totalCountUnpurchased?: number;
   totalCountPurchased?: number;
   onItemPress: (id: string) => void;
@@ -71,32 +70,25 @@ interface ShoppingListTabsProps {
   onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   onSwipeableClose?: () => void;
   onCloseAllSwipeables?: () => void;
-  // Pagination props for shopping tab
   onEndReachedUnpurchased?: () => void;
   hasMoreUnpurchased?: boolean;
   isLoadingMoreUnpurchased?: boolean;
-  // Pagination props for purchased tab
   onEndReachedPurchased?: () => void;
   hasMorePurchased?: boolean;
   isLoadingMorePurchased?: boolean;
-  // Permission flags for conditional rendering of item actions
   canAddItems?: boolean;
   canRemoveItems?: boolean;
   canEditItems?: boolean;
   canMarkPurchased?: boolean;
   canReorderItems?: boolean;
-  // Transition state for showing skeletons during list switches
+  /** Drives the skeletons shown while switching lists. */
   isTransitioning?: boolean;
-  // Batch move purchased items to pantry
   onBatchMoveToPantry?: () => void;
   batchMoveToPantryLoading?: boolean;
-  // Server unreachable (offline / API down) — the batch move has no offline
-  // replay path, so disable the trigger instead of failing the call.
-  // List header (e.g. SearchBar) rendered inside FlashList for correct RefreshControl position
+  // Rendered inside FlashList so the RefreshControl sits in the right place.
   listHeaderComponent?: React.ReactElement | null;
-  // Current search query for search-aware empty states in tabs
   searchQuery?: string;
-  // Collapsible scroll handlers — threaded to FlashList via data context
+  // Collapsible scroll handlers — threaded to FlashList via data context.
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onScrollBeginDrag?: () => void;
   onScrollEndDrag?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
@@ -142,32 +134,25 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   onSwipeableWillOpen,
   onSwipeableClose,
   onCloseAllSwipeables,
-  // Pagination props
   onEndReachedUnpurchased,
   hasMoreUnpurchased,
   isLoadingMoreUnpurchased,
   onEndReachedPurchased,
   hasMorePurchased,
   isLoadingMorePurchased,
-  // Permission props - default to true for backward compatibility
   canRemoveItems = true,
   canEditItems = true,
   canMarkPurchased = true,
   canReorderItems = false,
-  // Transition state
   isTransitioning = false,
-  // Batch move to pantry
   onBatchMoveToPantry,
   batchMoveToPantryLoading = false,
-  // Search query
   searchQuery,
-  // Scroll direction tracking
   onScroll,
   onScrollBeginDrag,
   onScrollEndDrag,
   onMomentumScrollEnd,
   scrollEventThrottle,
-  // Scrollable header content
   listHeaderComponent,
   showImages,
 }) => {
@@ -181,39 +166,34 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     { key: 'purchased', title: t('shoppingListScreen.tabPurchased') },
   ];
 
-  // TabView navigation state
   const [index, setIndex] = useState(0);
   /** Which scene the finger can actually reach — `swipeEnabled` is off. */
   const shoppingTabActive = index === 0;
 
-  // PERFORMANCE: Use pre-filtered items when provided (stable references from useShoppingListScreen)
-  // Fall back to internal filtering for backwards compatibility
+  // Filtering here is the fallback; pre-filtered props keep stable references.
   const unpurchasedItems =
     preFilteredUnpurchased ?? (items?.filter(item => !item.isPurchased) || []);
 
   const purchasedItems =
     preFilteredPurchased ?? (items?.filter(item => item.isPurchased) || []);
 
-  // Use GraphQL totalCount for accurate counts (handles pagination)
-  // Fall back to array length for backwards compatibility
+  // Array length is the fallback; it only counts the loaded page.
   const unpurchasedCount = totalCountUnpurchased ?? unpurchasedItems.length;
   const purchasedCount = totalCountPurchased ?? purchasedItems.length;
 
-  // Handle tab change - close any open swipeable via external coordinator
   const handleIndexChange = (newIndex: number) => {
     onCloseAllSwipeables?.();
-    // The outgoing list can no longer report the end of a drag in flight, which
-    // would leave the tab bar following a list the finger has left.
+    // The outgoing list cannot report the end of a drag in flight, so end it
+    // here or the tab bar keeps following a list the finger has left.
     onMomentumScrollEnd?.();
     setIndex(newIndex);
-    // Notify tutorial when user switches to Purchased tab
     if (newIndex === 1) {
       tutorial?.notifyPurchasedTabTapped();
     }
   };
 
-  // Auto-switch to purchased tab when tutorial advances to move-to-pantry step.
-  // Uses the "adjusting state during render" pattern to avoid setState-in-effect.
+  // Auto-switch to the purchased tab on the move-to-pantry step, via the
+  // adjusting-state-during-render pattern rather than setState-in-effect.
   const [prevTutorialStep, setPrevTutorialStep] = useState(
     tutorial?.currentStep,
   );
@@ -227,7 +207,6 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     }
   }
 
-  // Determine if we need to measure the purchased tab for tutorial spotlight
   const shouldMeasurePurchasedTab =
     tutorial?.isActive &&
     tutorial.currentStep === ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB;
@@ -241,7 +220,6 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     }
   };
 
-  // Action callbacks for context provider — consumed by ShoppingTab/PurchasedTab
   const tabActions: ShoppingListTabsActions = {
     onItemPress,
     onTogglePurchase,
@@ -307,32 +285,26 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     );
   };
 
-  // Get the current clear handler based on active tab (by index)
   const currentClearHandler =
     index === 0
       ? handleClearAllShoppingWithConfirmation
       : handleClearAllWithConfirmation;
 
-  // Get current items count for the active tab
   const currentItems = index === 0 ? unpurchasedItems : purchasedItems;
   const showClear = canRemoveItems && currentItems.length > 0;
 
-  // Tab badge counts
   const counts = {
     shopping: unpurchasedCount,
     purchased: purchasedCount,
   };
 
-  // Standalone jumpTo for FilterTabBar inside ListHeaderComponent
   const jumpTo = (key: string) => {
     const routeIndex = ROUTE_KEYS.indexOf(key as ShoppingListTabId);
     if (routeIndex >= 0) handleIndexChange(routeIndex);
   };
 
-  // Build action buttons array: pantry icon (purchased tab only) + clear
   const actionButtons: FilterTabActionButton[] = [];
 
-  // Show pantry move icon on purchased tab when there are items and handler exists
   if (index === 1 && purchasedItems.length > 0 && onBatchMoveToPantry) {
     actionButtons.push({
       icon: 'archive-outline',
@@ -350,8 +322,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     });
   }
 
-  // Render FilterTabBar as the TabView's tab bar so it's always visible,
-  // even when a tab's FlashList is replaced by an empty state
+  // The TabView's own tab bar, so it survives a tab falling back to its empty
+  // state.
   const renderTabBar = () => (
     <View ref={tabBarRef} collapsable={false}>
       <FilterTabBar
@@ -365,8 +337,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     </View>
   );
 
-  // Per-tab data for context — decoupled from renderScene so TabView doesn't
-  // re-call renderScene on data changes (which would destroy FlashList recycling pools)
+  // Kept out of renderScene so TabView never re-calls it on a data change,
+  // which would destroy the FlashList recycling pools.
   const shoppingTabData: ShoppingListTabData = {
     items: unpurchasedItems,
     showImages,
@@ -422,9 +394,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     searchQuery: searchQuery ?? '',
   };
 
-  // Empty state: shown after loading completes with zero items across both tabs.
-  // During transitions (list switches), items may briefly be empty — skip empty state.
-  // When search is active, let per-tab empty states handle messaging instead.
+  // Only once loading settles with both tabs empty: a list switch empties them
+  // briefly, and an active search has its own per-tab messaging.
   const showEmptyState =
     !loading &&
     !refreshing &&
@@ -436,8 +407,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 
   return (
     <ShoppingListTabsActionsProvider actions={tabActions}>
-      {/* A derivation, so it travels as a value: the rows call it while
-          rendering and must get the current one. */}
+      {/* A value, not a ref: rows call it while rendering. */}
       <ItemSwipeActionsProvider value={itemSwipeActions}>
         <ShoppingListDataProvider data={tabData}>
           <View

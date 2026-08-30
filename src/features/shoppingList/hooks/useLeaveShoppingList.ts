@@ -6,10 +6,8 @@ import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 
 /**
- * Removes a collaborator from a shopping list's cached `collaboratorsConnection`.
  * Shared by the leave-list flow (removing yourself) and the remove-member flow
- * (removing others) so both keep the cache consistent — previously ListSettings'
- * leave flow omitted this, leaving a stale collaborator in the cache.
+ * (removing others), so both keep `collaboratorsConnection` consistent.
  */
 export const removeCollaboratorFromShoppingListCache =
   createRemoveFromParentConnectionUpdater(
@@ -25,9 +23,7 @@ interface LeaveCallbacks {
 
 /**
  * Leave a shopping list (removes the current user's own collaborator entry).
- * Owns the RemoveCollaborator mutation, the loading state, and the cache
- * removal so ShareList and ListSettings share one implementation instead of
- * reimplementing — and diverging on — the flow.
+ * One implementation shared by ShareList and ListSettings.
  */
 export function useLeaveShoppingList(listId: string) {
   const [removeMember] = useMutation(RemoveCollaboratorDocument);
@@ -58,9 +54,9 @@ export function useLeaveShoppingList(listId: string) {
             );
           },
         });
-        // Surfacing is delegated to callbacks.onError (the callers alert/toast) —
-        // don't alert here too. classifyCreateResult treats the offline-queued
-        // null as success; a resolved error member or transport error → rejected.
+        // Callers alert/toast via callbacks.onError, so nothing is surfaced here.
+        // classifyCreateResult treats the offline-queued null as success; a
+        // resolved error member or a transport error is 'rejected'.
         if (classifyCreateResult(result) === 'rejected') {
           callbacks?.onError?.(new Error('Leave Shopping List'));
           return;

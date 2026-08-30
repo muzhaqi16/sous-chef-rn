@@ -45,7 +45,6 @@ import {
   STICKY_HEADER_CONFIG,
 } from '#utils/flashListDefaults';
 
-// Extracted modules
 import {
   DRAW_DISTANCE,
   MVCP_DISABLED,
@@ -67,15 +66,9 @@ import type {
   PantryContentRef,
 } from './pantryDisplay/types';
 
-// Module-level flag: once pantry content has been shown, skip skeletons on remount.
-// Persists across component unmount/remount (stack navigation), resets on app restart.
+// Survives unmount/remount (stack navigation) so a return visit skips the
+// skeletons; resets on app restart.
 let hasEverShownContent = false;
-
-// The list is a heterogeneous array: a single sticky sentinel at index 0 (the
-// filter tabs, pinned natively via `stickyHeaderIndices`) followed by item rows.
-// `PantryListItem` is declared alongside the renderer in `pantryDisplay/renderItem`.
-
-// --- Main component ---
 
 export const PantryContent = React.forwardRef<
   PantryContentRef,
@@ -141,8 +134,6 @@ export const PantryContent = React.forwardRef<
     useCommitTracking('PantryContent');
     const { t } = useTranslation();
     const { bottom: safeBottom } = useSafeAreaInsets();
-    // Apollo cache reads run inside the image-preload effect; each leaf
-    // computes its own display data via `useFragment`.
     const client = useApolloClient();
     const flashListRef = useRef<FlashListRef<PantryListItem>>(null);
     const settingsIconRef = useRef<View>(null);
@@ -155,7 +146,6 @@ export const PantryContent = React.forwardRef<
       },
     }));
 
-    // Derive latch from module-level flag + current conditions — no setState needed.
     const hasShownContent =
       hasEverShownContent || (!loading && items.length > 0);
 
@@ -165,22 +155,16 @@ export const PantryContent = React.forwardRef<
       }
     }, [hasShownContent]);
 
-    // Expected item count for the ACTIVE tab, read from the stats-backed
-    // `locationCounts`. `pantry.stats` is a separate field that survives when
-    // `itemsConnection` reads empty (the connection's own `totalCount` is 0 in
-    // that case — e.g. dangling edge refs filtered by the cache read policy, or
-    // an offline cold-start — so it can't be the wait signal).
+    // Stats-backed: `pantry.stats` survives when `itemsConnection` reads empty
+    // (dangling edge refs, offline cold start), where its `totalCount` is 0 —
+    // so the connection's own count can't be the wait signal.
     const expectedCount = locationCounts?.[locationFilter] ?? totalCount ?? 0;
 
-    // "Items are expected here but haven't arrived yet" — show skeletons while
-    // the query is still settling (`loading` is `isLoadingInitial`: true only
-    // while items are empty AND the query is in-flight/not-ready). Gating on
-    // `loading` is what keeps this from sticking: once the query settles the
-    // list is authoritative, so an emptied tab (e.g. last item removed offline,
-    // where stale stats still report a count) falls through to the real empty
-    // state instead of skeletons forever. Excluded: an active search (empty =
-    // "no results") and the no-home/no-pantry states (their own empty states
-    // must win even if stale stats linger).
+    // "Expected here but not arrived yet". Gating on `loading` is what stops
+    // this sticking: once the query settles the list is authoritative, so an
+    // emptied tab whose stale stats still report a count reaches the real empty
+    // state. Search and the no-home/no-pantry states are excluded — their own
+    // empty states must win.
     const awaitingItems =
       loading &&
       items.length === 0 &&
@@ -218,37 +202,25 @@ export const PantryContent = React.forwardRef<
       onItemRestock,
     };
 
+    // Goes to FlashList whole, and never through `useDeferredValue`: FlashList
+    // truncates its layout table during render and re-indexes cells only at
+    // commit, so an interruptible render lets a native `onLayout` land between
+    // the two and throw "index out of bounds, not enough layouts" — fatal in
+    // release (docs/flashlist-layout-index-race.md). There is deliberately no
+    // local render window either; DRAW_DISTANCE alone bounds the mounted set.
     const sortedItems = useServerSort ? items : sortItems(items);
-    // Handed to FlashList as-is — never through `useDeferredValue`. FlashList
-    // truncates its layout table while *rendering* (`processDataUpdate` runs in
-    // a `useMemo`) and only gives cells their new index at commit. A deferred
-    // (transition) render can be interrupted between those two points, and a
-    // native `onLayout` that lands in the gap looks up a stale index and throws
-    // "index out of bounds, not enough layouts" — fatal in release. A normal
-    // render cannot be interrupted, so the shrink and the re-index are atomic.
-    // See docs/flashlist-layout-index-race.md.
 
-    // `sortedItems` goes to FlashList whole. There is deliberately NO local
-    // render window here: FlashList already virtualizes, and the window that
-    // used to sit alongside it was a SECOND virtualization doing the same job.
-    // Growing it changed both the data array and `handleEndReached`'s identity,
-    // which re-rendered every mounted cell — measured at 597 ms / 2203 fibers
-    // per growth, twice per scroll-through. Bounding the mounted set is
-    // DRAW_DISTANCE's job alone (see pantryDisplay/constants.ts).
-
-    // A tab switch whose new page is still fetching (server mode only): armed on
-    // press, cleared once `fetching` transitions true→false. Cleared only on
-    // that transition (not when fetching was already false at press time) to
-    // avoid a race where the Apollo refetch is one render behind setSwitching.
+    // A tab switch whose new page is still fetching (server mode only). Cleared
+    // only on a true→false `fetching` transition, never when fetching was
+    // already false at press time — the Apollo refetch is one render behind.
     const [switching, setSwitching] = useState(false);
     const [prevFetching, setPrevFetching] = useState(fetching);
     if (prevFetching !== fetching) {
       setPrevFetching(fetching);
       if (switching && prevFetching && !fetching) setSwitching(false);
     }
-    // Client mode never fetches on switch, so an armed latch could only clear
-    // via a fetching transition that never comes — and would then blank a
-    // valid list when server mode kicks in later. Drop it outside server mode.
+    // Client mode never fetches on switch, so an armed latch would wait on a
+    // transition that never comes and blank a valid list later. Drop it.
     if (switching && !serverMode) {
       setSwitching(false);
     }
@@ -262,11 +234,9 @@ export const PantryContent = React.forwardRef<
       if (serverMode) setSwitching(true);
     }
 
-    // A sort change rebuilds the row order and collapses the client render
-    // window, so a kept scroll offset would land on an arbitrary slice —
-    // restart from the top. Tab switches intentionally keep their position
-    // (rows swap in place under the sticky tabs). The mount run is a no-op
-    // (offset is already 0).
+    // A sort change rebuilds the row order, so a kept offset would land on an
+    // arbitrary slice. Tab switches intentionally keep their position instead
+    // (rows swap in place under the sticky tabs).
     useEffect(() => {
       const handle = requestAnimationFrame(() => {
         flashListRef.current?.scrollToOffset({ offset: 0, animated: false });
@@ -274,19 +244,15 @@ export const PantryContent = React.forwardRef<
       return () => cancelAnimationFrame(handle);
     }, [sortOption, sortDirection]);
 
-    // Data handoff is gated on the UN-SMOOTHED loading signal: the moment items
-    // exist they go to FlashList, which needs its 300 ms+ progressive first
-    // layout before any cell is visible anyway (see the overlay below). The
-    // anti-flash minimum lives on the overlay, not here, so a fast load is not
-    // delayed by presentation smoothing while the list sits idle. The switch overlay (`switching && fetching`) keeps its
-    // own arm/lift timing so a freshly fetched tab/sort isn't held back.
+    // Gated on the UN-SMOOTHED loading signal: items reach FlashList the moment
+    // they exist, and the anti-flash minimum lives on the overlay instead, so a
+    // fast load is never delayed by presentation smoothing.
     const initialSkeletons = awaitingItems || (!hasShownContent && loading);
     const switchSkeletons = switching && fetching;
     const showSkeletons = initialSkeletons || switchSkeletons;
 
-    // While skeletons show, hand the list only the sticky tabs so the chrome +
-    // tabs stay visible with skeleton rows below (PantryEmptyState) — and any
-    // stale rows from a previous tab don't flash through.
+    // While skeletons show, hand the list only the sticky tabs: chrome and tabs
+    // stay visible, and stale rows from a previous tab can't flash through.
     const bodyItems = showSkeletons ? [] : sortedItems;
     const nextListData: PantryListItem[] = [
       STICKY_HEADER_SENTINEL,
@@ -294,20 +260,12 @@ export const PantryContent = React.forwardRef<
     ];
     const isEmpty = bodyItems.length === 0;
 
-    // Hold the ROWS still while a sheet covers them. Every pantry write flips
-    // this array's identity and FlashList answers that by re-rendering every
-    // mounted cell — measured at ~2 full passes per quick-add, all of it behind
-    // the Add sheet where nothing is visible. Five adds in a row is what turns
-    // that into the freeze users report.
-    //
-    // Only the rows freeze: the header above the sheet (item count, filter
-    // tabs, alert bar) reads `bodyItems`/`stats` directly, so the count still
-    // ticks up live as items are added.
-    //
-    // Ordinary state, deliberately NOT `useDeferredValue`/`startTransition` —
-    // an interruptible render is what produces "index out of bounds, not enough
-    // layouts" (docs/flashlist-layout-index-race.md). This changes only WHEN
-    // the prop updates, never how.
+    // Hold the ROWS still while a sheet covers them: every pantry write flips
+    // this array's identity and FlashList re-renders every mounted cell for it,
+    // invisibly behind the sheet. Only the rows freeze — the header reads
+    // `bodyItems`/`stats` directly, so counts still tick up live. Ordinary
+    // state, deliberately NOT `useDeferredValue`/`startTransition` (see the
+    // layout-index race above): this changes WHEN the prop updates, not how.
     const overlayCoversRows = useOverlayBackdropPresence();
     const [heldListData, setHeldListData] = useState(nextListData);
     if (!overlayCoversRows && heldListData !== nextListData) {
@@ -315,34 +273,20 @@ export const PantryContent = React.forwardRef<
     }
     const listData = overlayCoversRows ? heldListData : nextListData;
 
-    // `hasRealContent` decides when `app_fully_drawn_ms` latches, and it reads
-    // the UN-SMOOTHED `initialSkeletons` — never a presentation flag.
-    //
-    // MEASUREMENT IS NOT PRESENTATION. Feeding a presentation flag (overlay
-    // visibility, exit-fade timing) here would put presentation smoothing
-    // under the metric as a floor — the historical version of this defect
-    // reported ~280 ms for a warm-cache launch whose items resolved at
-    // 150 ms, making any improvement under the hold structurally
-    // unmeasurable (the threshold-gated-counter defect CLAUDE.md forbids).
-    // It would also DEADLOCK the overlay: its release depends on the
-    // `hasContentLayout` latch, and the latch only arms while
-    // `hasRealContent` is true, so `hasRealContent` must never be derived
-    // from overlay visibility.
-    //
-    // While initial skeletons show, the list is handed exactly one
-    // sticky-header sentinel — enough for FlashList to report `onLoad`, and
-    // nothing a user would call content. A settled empty tab IS content:
-    // `initialSkeletons` is already false by then.
+    // `hasRealContent` latches `app_fully_drawn_ms`, so it reads the UN-SMOOTHED
+    // `initialSkeletons`, never a presentation flag: a presentation flag would
+    // put smoothing under the metric as a floor, and would deadlock the overlay
+    // (its release needs `hasContentLayout`, which only arms while this is
+    // true). A settled empty tab counts as content — `initialSkeletons` is
+    // false by then.
     const perfCallbacks = useFlashListPerformance(flashListRef, {
       componentName: 'PantryContent',
       reportInterval: 10000,
       hasRealContent: !initialSkeletons,
     });
-    // FlashList re-renders EVERY mounted cell when this prop's identity changes
-    // (its own re-render reason names it), so it must never change. The live
-    // handler is read from a ref at call time — an event, never during render —
-    // because the prop itself flips between `screen.loadMore` and `undefined`
-    // as `hasMore` changes. Calling it with nothing to fetch no-ops.
+    // FlashList re-renders EVERY mounted cell when this prop's identity changes,
+    // so it must never change: the live handler (which flips to `undefined` as
+    // `hasMore` changes) is read from a ref at call time, never during render.
     const onEndReachedRef = useRef(onEndReached);
     useEffect(() => {
       onEndReachedRef.current = onEndReached;
@@ -357,22 +301,12 @@ export const PantryContent = React.forwardRef<
       perfCallbacks.onDataReferenceChange,
     );
 
-    // The blank-window cover. FlashList keeps every cell (sticky tabs row
-    // included) invisible until its progressive first layout commits, while
-    // the ListHeaderComponent chrome paints immediately — on a mid-range
-    // device that is a 300 ms+ header-only frame between skeleton and rows.
-    // The cover renders inside the ListHeaderComponent from the FIRST commit
-    // (see PantryListSkeletonOverlay for why it cannot wait on any measured
-    // state), and releases the moment `hasContentLayout` reports the commit
-    // whose cells are actually visible. No `useMinimumVisible` here: the
-    // 200 ms exit fade is the anti-flash smoothing, and the latch itself
-    // cannot fire before the rows exist — an artificial minimum would only
-    // delay genuinely-fast reveals.
+    // The blank-window cover: FlashList holds every cell invisible until its
+    // first layout commits while the header chrome paints immediately, so the
+    // cover mounts inside ListHeaderComponent from the FIRST commit and
+    // releases on `hasContentLayout`. No `useMinimumVisible` — the exit fade is
+    // the anti-flash smoothing, and the latch can't fire before rows exist.
     const overlayVisible = initialSkeletons || !perfCallbacks.hasContentLayout;
-
-    // End-reached: fetch the next server page if one exists, otherwise grow the
-    // local window. `onEndReached` (prop) is defined only when the server has
-    // more pages; below the load window it's undefined and we reveal locally.
 
     useDataReferenceTracker(
       sortedItems,
@@ -380,17 +314,13 @@ export const PantryContent = React.forwardRef<
       perfCallbacks.onDataReferenceChange,
     );
 
-    // Image preloading — fragment refs don't carry field data at runtime
-    // (Apollo masks them), so unmask via `cache.readFragment` here to extract
-    // image URLs. This is a one-shot read inside an idle callback, not a
-    // render-path subscription.
+    // Fragment refs carry no field data at runtime (masked), so image URLs come
+    // from a one-shot `cache.readFragment` inside an idle callback.
     useEffect(() => {
       if (sortedItems.length === 0) return;
 
       const handle = requestIdleCallback(() => {
         const urls: string[] = [];
-        // Only preload images for the items actually rendered (the current
-        // window), not the entire loaded set.
         for (const node of sortedItems.slice(0, IMAGE_PRELOAD_COUNT)) {
           const item =
             client.cache.readFragment<PantryContent_PantryItemFragment>({
@@ -409,9 +339,8 @@ export const PantryContent = React.forwardRef<
       return () => cancelIdleCallback(handle);
     }, [sortedItems, client]);
 
-    // Tab switch maintains the scroll position and swaps the rows below the
-    // sticky tabs in place. The switch skeleton only applies to server-mode
-    // fetches; client-mode switches are instant and never arm the latch.
+    // The switch skeleton applies to server-mode fetches only; client-mode
+    // switches are instant and never arm the latch.
     const handleLocationFilterChange = (id: LocationFilter) => {
       if (id !== locationFilter && serverMode) setSwitching(true);
       onLocationFilterChange(id);
@@ -433,11 +362,9 @@ export const PantryContent = React.forwardRef<
       ];
     })();
 
-    // Re-render rows (and the active-tab highlight) when sort/filter changes.
     // `locationFilter` is deliberately absent: no item cell renders anything
-    // derived from it (the leaf renderer reads only `item`, and PantryItemCard
-    // owns its own `useFragment` subscription), and including it made every
-    // mounted cell re-render on a tab change.
+    // derived from it, and including it re-renders every mounted cell on a tab
+    // change.
     const extraData = `${sortOption}-${sortDirection}`;
 
     const listContentStyle = isEmpty
@@ -447,8 +374,8 @@ export const PantryContent = React.forwardRef<
           paddingBottom: getTabBarBottomPadding(safeBottom),
         };
 
-    // The sticky tabs read this from context rather than from `renderItem`'s
-    // closure — see `PantryStickyTabs` for why that matters to every other cell.
+    // Read from context, not from `renderItem`'s closure — see
+    // `PantryStickyTabs` for why that matters to every other cell.
     const stickyTabs = {
       tabs: tabsWithAddButton,
       activeTabId: locationFilter,
@@ -491,11 +418,8 @@ export const PantryContent = React.forwardRef<
                 ) : undefined
               }
               ListHeaderComponent={
-                // The wrapper is the positioned parent the skeleton flap
-                // anchors to (`top: '100%'` = flush below the chrome). The
-                // header paints outside FlashList's opacity-gated cell
-                // container; everything below it does not — the flap covers
-                // that area until the first content layout commits.
+                // The positioned parent the skeleton flap anchors to
+                // (`top: '100%'`, flush below the chrome).
                 <View>
                   <View style={styles.header}>
                     <PantryHeader
@@ -635,8 +559,8 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     paddingHorizontal: theme.spacing.md,
   },
-  // The sticky tabs row. `stickyHeaderActive` is applied while it's pinned so it
-  // keeps an opaque background and the rows scroll cleanly underneath.
+  // `stickyHeaderActive` applies while pinned, so the row keeps an opaque
+  // background and rows scroll cleanly underneath.
   stickySection: {
     backgroundColor: theme.colors.background,
     zIndex: theme.zIndex.sticky,

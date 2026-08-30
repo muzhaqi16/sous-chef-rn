@@ -17,14 +17,6 @@ interface BottomSheetHeaderProps {
   confirmColor?: 'primary' | 'success' | 'warning' | 'error';
 }
 
-/**
- * BottomSheetHeader - Consistent header for bottom sheets
- *
- * Layout: [Cancel] [Title] [Confirm]
- * - Cancel button on left
- * - Title centered
- * - Confirm button on right with customizable color
- */
 export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
   title,
   onCancel,

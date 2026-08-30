@@ -12,15 +12,9 @@ import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
 import { SLIDE_PRESETS } from '#/constants/animations';
 
 /**
- * Themed list-row card with a built-in full-width slide-out animation on
- * delete/consume/waste, composed from {@link ListItem} + {@link SwipeableItem}.
- *
- * When to use which card:
- * - Use `ItemCard` for the common title/subtitle/badge list row where you want
- *   the standard slide-off-screen exit animation handled for you.
- * - Use {@link BaseItemCard} when you need full slot-based flexibility
- *   (custom left/right slots, counters, purchase toggles) and will own the
- *   exit animation (if any) yourself.
+ * The standard title/subtitle/badge row, with the slide-off-screen exit handled
+ * for you. {@link BaseItemCard} is the slot-flexible one whose caller owns any
+ * exit animation.
  */
 interface ItemCardProps {
   id: string;
@@ -42,13 +36,9 @@ interface ItemCardProps {
 }
 
 /**
- * Interactive variant — owns the swipe gestures and the slide-out exit
- * animation. Split out from {@link ItemCard} so it (and the per-row reanimated
- * shared values + `Animated.View` + `SwipeableItem` it sets up) is mounted
- * ONLY for rows that actually have swipe actions. Read-only lists (recipe
- * discovery, search results) render the lightweight path below instead, which
- * matters at scale: a full screen of ~17 rows would otherwise spin up ~17
- * unused animated styles + gesture handlers on first paint.
+ * The swipe-and-slide variant, split out so its per-row shared values,
+ * `Animated.View` and `SwipeableItem` mount ONLY for rows that have actions —
+ * a read-only screen would otherwise spin up ~17 unused handlers on first paint.
  */
 const SwipeableItemCard: React.FC<ItemCardProps> = ({
   id,
@@ -65,7 +55,6 @@ const SwipeableItemCard: React.FC<ItemCardProps> = ({
 }) => {
   const { width: screenWidth } = useWindowDimensions();
 
-  // Slide animation for delete/consume/waste actions
   const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
     itemId: id,
     slideDistance: screenWidth,
@@ -74,9 +63,7 @@ const SwipeableItemCard: React.FC<ItemCardProps> = ({
     opacityTarget: SLIDE_PRESETS.exitWithFade.opacityTarget,
   });
 
-  // An action that removes the row slides it off screen first. Previously this
-  // was hardcoded for delete/consume/waste and, by omission, not for restock —
-  // now each action says whether it removes the row.
+  // Each action declares whether it removes the row; a removing one slides out first.
   const withSlideOut = (actions?: SwipeAction[]) =>
     actions?.map(action =>
       action.removesRow
@@ -123,9 +110,8 @@ const ItemCardComponent: React.FC<ItemCardProps> = props => {
 
   const hasSwipeActions = !!leftActions?.length || !!rightActions?.length;
 
-  // Lightweight path: a row with no swipe actions can never slide, so skip the
-  // per-row reanimated machinery (3 shared values + an animated style worklet)
-  // and the `Animated.View` wrapper entirely — a plain styled row is enough.
+  // A row with no swipe actions can never slide, so skip the reanimated machinery
+  // and the `Animated.View` wrapper entirely.
   if (!hasSwipeActions) {
     return (
       <View style={styles.container} testID={testID}>
@@ -144,8 +130,6 @@ const ItemCardComponent: React.FC<ItemCardProps> = props => {
   return <SwipeableItemCard {...props} />;
 };
 
-// React Compiler memoizes JSX at the parent call site, so React.memo is
-// redundant on non-FlashList components. Per CLAUDE.md / project memory.
 export const ItemCard = ItemCardComponent;
 
 const styles = StyleSheet.create(theme => ({

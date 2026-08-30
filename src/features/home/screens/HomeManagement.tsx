@@ -176,14 +176,14 @@ export const HomeManagement: React.FC = () => {
   };
 
   const handleSetDefault = async (homeId: string) => {
-    // Clear any existing highlight timeout
     if (highlightTimeoutRef.current) {
       clearTimeout(highlightTimeoutRef.current);
     }
 
-    await setDefaultHome(homeId);
+    // A refusal rolls the chip back, so highlighting anyway leaves the two
+    // pointing at different homes.
+    if (!(await setDefaultHome(homeId))) return;
 
-    // Highlight the newly-set default home
     setHighlightedHomeId(homeId);
 
     // Auto-dismiss highlight after 2 seconds

@@ -1,21 +1,12 @@
 /**
- * Shopping-list purchase price conversions.
- *
- * On the API, a shopping list item's `purchasedPrice` is a PER-UNIT amount:
- * the server records `Purchase.totalPrice = purchasedPrice × purchasedQuantity`
- * (`ShoppingListItemCRUDService.assemblePurchaseData`), and
- * `MoveShoppingItemToPantryInput.actualPrice` documents it as the per-unit price
- * it is derived from. The Mark Purchased sheet asks for the TOTAL the shopper
- * paid — the number on the receipt — so the conversion happens here, at the
- * boundary between what the user typed and what the API stores.
+ * The API's `purchasedPrice` is PER-UNIT (the server records
+ * `totalPrice = purchasedPrice × purchasedQuantity`), while the Mark Purchased
+ * sheet asks for the TOTAL on the receipt. The conversion lives here.
  */
 
 /**
- * Per-unit price to send as `purchasedPrice` for a total the shopper paid.
- *
- * Deliberately NOT rounded to cents. The server rounds the product, not the
- * factor, so an unrounded unit price reproduces the entered total exactly
- * (10 / 3 × 3 → 10.00) where a cent-rounded 3.33 × 3 would record 9.99.
+ * Deliberately NOT rounded to cents: the server rounds the product, not the
+ * factor, so 10/3 × 3 records 10.00 where a rounded 3.33 × 3 records 9.99.
  */
 export const unitPriceFromTotal = (
   total: number | null,
@@ -26,9 +17,8 @@ export const unitPriceFromTotal = (
 };
 
 /**
- * Total to pre-fill the sheet from a per-unit estimate. Rounded to cents so the
- * input shows `14.97`, not the `14.969999999999999` that 4.99 × 3 produces in
- * floating point (`formatNumberForInput` is `String(value)`).
+ * Rounded to cents so the input shows `14.97`, not the 14.969999999999999 that
+ * 4.99 × 3 produces (`formatNumberForInput` is `String(value)`).
  */
 export const totalFromUnitPrice = (
   unitPrice: number | null,

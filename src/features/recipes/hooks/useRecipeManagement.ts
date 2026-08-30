@@ -23,11 +23,9 @@ export type MyRecipeNode = NonNullable<
 >['edges'][number]['node'];
 
 /**
- * Recipe management hook with cursor-based pagination.
- *
- * Returns connection nodes as refs — consumers render them through
- * `<MyRecipeCard recipeRef={node} />` which internally calls `useFragment`
- * for a per-entity cache subscription.
+ * Cursor-paginated recipe management. Returns connection nodes as REFS —
+ * consumers render them through `<MyRecipeCard recipeRef={node} />`, which
+ * takes its own per-entity `useFragment` subscription.
  */
 export function useRecipeManagement(filters?: RecipeFilters) {
   const isLoggedOut = useIsLoggedOut();

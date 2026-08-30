@@ -46,12 +46,11 @@ interface Props<T extends FieldValues> {
   /** Return key moves down the fields instead of just closing the keyboard. */
   focusChaining?: boolean;
   /**
-   * Where the fields sit in the leftover height. `center` splits it evenly with
-   * the button block; `top` parks them below the header and gives the rest to
-   * the button, which reads better on a form too short to fill the screen — a
-   * lone centred input looks stranded between two voids.
+   * Where the fields sit in the leftover height: `center` splits it with the
+   * button block, `top` parks them below the header. Required, because a default
+   * silently re-lays out every screen that predates it.
    */
-  contentPlacement?: 'center' | 'top';
+  contentPlacement: 'center' | 'top';
 }
 export function AuthFormTemplate<T extends FieldValues>({
   title,
@@ -78,33 +77,28 @@ export function AuthFormTemplate<T extends FieldValues>({
   linkCountdown,
   isLoading = false,
   focusChaining = false,
-  contentPlacement = 'center',
+  contentPlacement,
 }: Props<T>) {
   // With the keyboard up the scroll view keeps its full height, so the flexible
-  // slack below would survive and push the fields under the keyboard — far
-  // enough that keeping the focused input visible scrolls the title off screen.
-  // Collapsing the slack and tightening the fixed gaps keeps the whole form,
-  // header included, above the keyboard.
+  // slack survives and pushes the fields under it. Collapsing the slack keeps the
+  // whole form, header included, above the keyboard.
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [transitionMs, setTransitionMs] = useState(TIMING.MODERATE);
 
-  // `onStart` carries the DESTINATION of a movement that is about to begin, so
-  // the layout transition runs alongside the keyboard in both directions.
-  // `useKeyboardState` reports a dismissal only once the keyboard has FINISHED
-  // hiding, which played the expansion after the keyboard had already gone.
-  // `onEnd` settles the flag for a movement that never raises a start, such as
-  // an interactive drag-to-dismiss. `useGenericKeyboardHandler` is the variant
-  // that does not set the Android soft-input mode: the manifest already
-  // declares `adjustResize`, and the enclosing KeyboardAwareScrollView sets it
-  // anyway, so there is nothing here to re-declare.
+  // `onStart` carries the DESTINATION of a movement about to begin, so the layout
+  // transition runs alongside the keyboard in both directions — `useKeyboardState`
+  // only reports a dismissal once hiding has FINISHED. `onEnd` settles movements
+  // that raise no start, like an interactive drag-to-dismiss.
+  // `useGenericKeyboardHandler` is the variant that does not set the Android
+  // soft-input mode, which the manifest and the scroll view already declare.
   useGenericKeyboardHandler(
     {
       onStart: e => {
         'worklet';
 
         scheduleOnRN(setIsKeyboardVisible, e.progress === 1);
-        // The platform reports its own duration; below Android 11 it can come
-        // back as 0, and 250ms is what the library itself substitutes there.
+        // Below Android 11 the reported duration can be 0; 250ms is what the
+        // library itself substitutes there.
         scheduleOnRN(
           setTransitionMs,
           e.duration > 0 ? e.duration : TIMING.MODERATE,
@@ -121,8 +115,7 @@ export function AuthFormTemplate<T extends FieldValues>({
 
   const layoutTransition = LinearTransition.duration(transitionMs);
 
-  // The keyboard overrides the caller's placement: with it up there is no
-  // leftover height worth distributing, and the fields belong under the header.
+  // The keyboard overrides the caller's placement: no leftover height to split.
   styles.useVariants({
     compact: isKeyboardVisible,
     fieldsPlacement: isKeyboardVisible ? 'compact' : contentPlacement,
@@ -131,7 +124,7 @@ export function AuthFormTemplate<T extends FieldValues>({
   return (
     <View style={styles.formContainer}>
       <View>
-        <View style={styles.titleRow}>
+        <View style={styles.titleRow} testID="auth-title-row">
           {!!onBackPress && (
             <ThemedBackButton
               onPress={onBackPress}
@@ -229,7 +222,6 @@ const styles = StyleSheet.create(theme => ({
   fieldsGroup: {
     variants: {
       fieldsPlacement: {
-        // Pairs with the auto margin on `action` to split the leftover height.
         center: { marginTop: 'auto' },
         // A fixed gap instead, so the rest of the height falls below the fields.
         top: { marginTop: theme.spacing['3xl'] },
@@ -239,15 +231,12 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   headerAction: {
-    // Stretched down the title row rather than sitting in flow above it: in
-    // flow it pushed the header down by its own height, so a screen with a back
-    // button started its title lower than one without. Pinning top-to-bottom
-    // centres the arrow on the title instead of aligning their top edges.
-    // Titles here are short and centred, so they clear it at the left edge.
+    // Absolute so a screen with a back button starts its title at the same height
+    // as one without. `start`, not `left`, so it flips under RTL.
     position: 'absolute',
     top: 0,
     bottom: 0,
-    left: 0,
+    start: 0,
     zIndex: 1,
     width: theme.sizes.button.md,
     borderRadius: theme.radii.full,
@@ -256,13 +245,12 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.transparent,
   },
   titleRow: {
-    // The back button is absolute inside this row, so the title is centred
-    // across the FULL width on every screen and starts at the same height
-    // whether or not there is a button. The row keeps the button's height even
-    // without one, so the title does not shift between auth screens.
     minHeight: theme.sizes.button.md,
     justifyContent: 'center',
     marginBottom: theme.spacing.sm,
+    // Clears the absolute back button on both sides, so a long localized title
+    // cannot render underneath it and lose taps to it.
+    paddingHorizontal: theme.sizes.button.md,
   },
   subtitle: {
     variants: {
@@ -276,12 +264,9 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'flex-end',
   },
   action: {
-    // Paired with the same auto margin on `fieldsGroup`: the leftover height is
-    // split equally between the two, so the fields sit mid-screen while the
-    // title stays at the top and the button and footer stay anchored to the
-    // bottom. Both resolve to 0 on a screen too short to have any leftover, and
-    // the compact variant drops them for the same reason when the keyboard is
-    // up. The padding is what keeps a gap above the button in those cases.
+    // Paired with the same auto margin on `fieldsGroup`, splitting the leftover
+    // height so the fields sit mid-screen. Both resolve to 0 on a screen with no
+    // leftover; the padding is what keeps a gap above the button there.
     variants: {
       compact: {
         true: {

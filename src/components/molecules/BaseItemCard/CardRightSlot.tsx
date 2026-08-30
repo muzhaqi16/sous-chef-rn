@@ -1,25 +1,16 @@
 import React from 'react';
 import { View } from 'react-native';
-// RNGH's Pressable (not the themed RN re-export): the counter/drag-handle
-// buttons can be rendered inside a BaseItemCard Swipeable, and RN's Pressable
-// doesn't coordinate with RNGH's gesture arena (swipe blocks / tap double-fires
-// the row). See the SwipeableItem convention in CLAUDE.md.
-//
-// The trade-off is that the Unistyles babel plugin binds React Native's
-// components to the C++ ShadowTree, not this one — so a theme-derived style
-// sitting on this Pressable is resolved once and never updated, and a live
-// theme switch leaves these buttons painted in the previous theme while the
-// row around them changes. Every themed value therefore lives on a wrapping
-// `View`, and this component carries only literals.
+// RNGH's Pressable, not the themed RN re-export: these buttons render inside a
+// BaseItemCard Swipeable, and RN's Pressable doesn't coordinate with RNGH's
+// gesture arena. The trade-off is that the Unistyles plugin does not bind it to
+// the ShadowTree, so a theme-derived style on it freezes at mount — every themed
+// value lives on a wrapping `View` and this component carries only literals.
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { CardRightSlotProps } from './types';
 import { Text } from '#components/atoms/Text';
 
-/**
- * Lightweight meta slot — no useUnistyles, all colors from stylesheet
- */
 const MetaSlot: React.FC<
   Pick<CardRightSlotProps, 'primary' | 'secondary' | 'tertiary' | 'testID'>
 > = ({ primary, secondary, tertiary, testID }) => (
@@ -42,9 +33,6 @@ const MetaSlot: React.FC<
   </View>
 );
 
-/**
- * Interactive slot — uses Icon `tone` for theme-reactive colors
- */
 const InteractiveSlot: React.FC<CardRightSlotProps> = ({
   type,
   quantity,
@@ -119,14 +107,9 @@ const InteractiveSlot: React.FC<CardRightSlotProps> = ({
   );
 };
 
-/**
- * Right slot component for BaseItemCard
- * Renders meta info, counter, drag handle, or custom content
- */
 export const CardRightSlot: React.FC<CardRightSlotProps> = props => {
   const { type } = props;
 
-  // Meta path is lightweight — no useUnistyles needed
   if (type === 'meta' || (!type && !props.children)) {
     return (
       <MetaSlot
@@ -138,7 +121,6 @@ export const CardRightSlot: React.FC<CardRightSlotProps> = props => {
     );
   }
 
-  // All other types need theme access
   return <InteractiveSlot {...props} />;
 };
 
@@ -182,9 +164,8 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.sm,
     marginLeft: theme.spacing.xs,
   },
-  // Literals only: this is the style that lands on RNGH's Pressable, which the
-  // Unistyles plugin does not bind to the ShadowTree. Anything theme-derived
-  // here would freeze at whatever theme was active when the row mounted.
+  // Literals only — this style lands on RNGH's Pressable, which the Unistyles
+  // plugin does not bind to the ShadowTree, so themed values freeze at mount.
   fill: {
     width: '100%',
     height: '100%',

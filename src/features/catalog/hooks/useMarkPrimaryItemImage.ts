@@ -5,14 +5,9 @@ import { alertMutationFailure } from '#features/catalog/hooks/alertMutationFailu
 import { errorService } from '#/services/errorService';
 
 /**
- * Promotes one of an item's photos to its hero.
- *
- * No `update` callback and no optimistic response: the mutation returns the
- * item with its full reordered gallery, so Apollo's normalization writes the
- * new `isPrimary` flags and `imageUrl` through on its own. An optimistic layer
- * would have to reproduce the server's gallery ordering — primary, then
- * featured, then by perspective — to avoid a visible reshuffle when the real
- * response lands, which is exactly the server logic worth not duplicating.
+ * Promotes one of an item's photos to its hero. No `update` and no optimistic
+ * response: the mutation returns the fully reordered gallery, and reproducing
+ * the server's ordering optimistically is the duplication worth avoiding.
  */
 export function useMarkPrimaryItemImage() {
   const { t } = useTranslation();

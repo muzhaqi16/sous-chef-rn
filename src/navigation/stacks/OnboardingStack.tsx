@@ -14,8 +14,7 @@ import { ImageCropScreen } from '#features/profile/screens/ImageCropScreen';
 import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 
 export const OnboardingStack = createNativeStackNavigator({
-  // Top safe-area inset, applied per screen (it's no longer global — see
-  // TopInsetLayout). No immersive screen here, so inset every screen.
+  // Per-screen top inset (see TopInsetLayout); nothing immersive here.
   screenLayout: topInsetScreenLayout,
   screenOptions: ({ theme }) => ({
     headerShown: false,
@@ -41,10 +40,8 @@ export const OnboardingStack = createNativeStackNavigator({
       screen: ProfilePictureUploadScreen,
       linking: 'onboarding/profile-picture',
     }),
-    // `linking: null` — intentionally not deep-linkable; only reachable
-    // mid-onboarding from ProfilePictureUpload. Omitting the key is NOT the
-    // same thing: linking runs in `auto` mode, which hands any screen without
-    // an explicit config a path derived from its name.
+    // `linking: null` is not the same as omitting the key: linking runs in `auto`
+    // mode, which derives a path from the screen name for anything unconfigured.
     ImageCrop: createNativeStackScreen({
       screen: ImageCropScreen,
       linking: null,
@@ -57,10 +54,8 @@ export const OnboardingStack = createNativeStackNavigator({
       screen: OnboardingCompleteScreen,
       linking: 'onboarding/complete',
     }),
-    // `linking: null` — intentionally not deep-linkable; reached only at the end
-    // of the onboarding flow. Without it, auto mode derives `biometric-setup`
-    // here AND on RootNavigator's post-login BiometricSetup screen, and two
-    // screens claiming one pattern make the whole linking config throw.
+    // Without `linking: null`, auto mode derives `biometric-setup` here AND on
+    // RootNavigator's post-login screen, and two claims on one pattern throw.
     BiometricSetup: createNativeStackScreen({
       screen: BiometricSetupScreen,
       linking: null,

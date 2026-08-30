@@ -17,11 +17,9 @@ interface DetailSectionProps {
 }
 
 /**
- * Elevated card grouping a block of detail content with an optional heading.
- * The single detail-card primitive: item detail screens compose it directly
- * and DetailTemplate renders its sections through it, so radius/shadow/
- * heading/rhythm stay identical everywhere. Vertical rhythm (marginBottom)
- * is built in.
+ * The single detail-card primitive: detail screens compose it directly and
+ * DetailTemplate renders its sections through it, so radius/shadow/heading and
+ * the built-in vertical rhythm stay identical everywhere.
  */
 export const DetailSection: React.FC<DetailSectionProps> = ({
   title,

@@ -216,13 +216,11 @@ export const DietaryProfileScreen: React.FC = () => {
     return await updateDietaryProfile({ snacksPerDay: value });
   };
 
-  // Gate on "nothing to show", not on `loading`. Under `cache-and-network`
-  // Apollo reports `loading: true` for the whole network leg even when the
-  // cache already answered, and it starts a fresh leg on every mount — so a
-  // bare `if (loading)` blanked this screen on every visit for as long as the
-  // request took, up to the 10s httpLink abort deadline. Both non-content
-  // states stay inside ProfileScreenWrapper so the title and back button
-  // remain: without them the screen could not be left while it waited.
+  // Gate on "nothing to show", not on `loading` — `cache-and-network` reports
+  // `loading: true` for the whole network leg on every mount, so a bare
+  // `if (loading)` blanks the screen for up to httpLink's 10s abort. Both
+  // non-content states stay inside ProfileScreenWrapper, which is what keeps a
+  // back button on screen while it waits.
   if (loading && !profile) {
     return (
       <ProfileScreenWrapper title={t('dietary.title')} scrollEnabled={false}>

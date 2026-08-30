@@ -1,7 +1,7 @@
 # Sous Chef RN — project instructions
 
 React Native 0.86 (New Architecture) · React 19.2 + React Compiler · Apollo
-Client 4.1 (`dataMasking` on) + GraphQL codegen · Unistyles 3 · FlashList v2 ·
+Client 4.2 (`dataMasking` on) + GraphQL codegen · Unistyles 3 · FlashList v2 ·
 React Navigation 8 · Zustand · i18next · MMKV. Offline-first: writes land in
 the cache immediately and replay through an offline queue.
 
@@ -26,6 +26,7 @@ node scripts/check-unistyles-variant-staleness.mjs   # also in pre-push
 node scripts/check-layer-purity.mjs              # also in pre-commit
 node scripts/check-feature-shape.mjs             # also in pre-commit
 node scripts/check-dead-modules.mjs              # also in pre-commit
+node scripts/check-comment-budget.mjs            # also in pre-commit
 node scripts/check-bundled-secrets.mjs --self-test
 ```
 
@@ -146,6 +147,34 @@ scoping.
 - `__typename: 'Mutation' as any` is never needed.
 - `Unmasked<>` appears ONLY as an `optimisticResponse` callback return type;
   never `@unmask`. HKT registration: `src/types/apollo-masking.d.ts`.
+
+## Comments
+
+A comment earns its place only when the code cannot say it: a library gotcha,
+an invariant a future edit would silently break, a "this looks wrong and is
+deliberate" note. That fits in **one to three lines**. Rationale, evidence and
+alternatives-considered belong in the PR or `docs/`; what the code used to do
+belongs in git.
+
+- **Present tense, current behaviour only.** No "previously", "used to", "old
+  behavior", "was tried", "regressed", "formerly". A comment narrating a fix
+  outlives the fix and then lies — a sweep found 31 wrong comments, one of
+  which described the exact bug the code beneath it had already removed.
+- **No comment run longer than six lines.** A `/** … */` counts its `/**` and
+  `*/`, and an internal blank ` *` line does not split the run, so that is four
+  lines of prose.
+- **No file whose comments exceed half its code** (files of 60+ code lines).
+- Don't restate the identifier (`/** Props for the FooCard component */`), and
+  don't write `@param`/`@returns` that repeat the TypeScript signature. No
+  `@example` blocks for internal helpers.
+- **Attach a doc to the thing it documents.** Ten orphaned JSDoc blocks were
+  found stacked above a *different* declaration than the one they described,
+  sometimes 350 lines away. Use `{@link other}` instead of "the function
+  above/below", which goes stale on a reorder.
+
+Enforced by `node scripts/check-comment-budget.mjs` (pre-commit and CI) against
+a shrink-only baseline. Tool directives — `@ts-expect-error`, generated-file
+banners, `@deprecated`, `@internal` — are never counted and never removed.
 
 ## GraphQL & Apollo
 
@@ -693,7 +722,7 @@ arguments).
   (`numberNounConcatenation.test.ts`; literal `'s'` appends are banned too).
 - **Plural categories are derived, not hand-written** —
   `completePluralCategories` (`src/i18n/config.ts`) fills what a locale's JSON
-  lacks. Verified 2026-08-23 vs `i18next@26.0.10` — a missing category falls
+  lacks. Verified 2026-08-30 vs `i18next@26.4.0` — a missing category falls
   through to `fallbackLng`, not the locale's own `_other`:
   `docs/verified-library-behaviour.md#i18next-plural-category-fallback`.
 - **Never inflect copy for the reader's gender** — use a construction with no
@@ -874,6 +903,7 @@ npm run typecheck && npm run lint && npm test
 npm run check:compiler-bailouts && npm run check:unistyles-variants
 npm run check:layer-purity && npm run check:feature-shape
 npm run check:dead-modules
+npm run check:comment-budget
 ```
 
 `check-compiler-bailouts` guards a file COUNT; separately, WHICH function bails

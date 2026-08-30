@@ -88,17 +88,10 @@ export const IngredientMatchingSheet: React.FC<
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      {/*
-        A plain View, NOT `BottomSheetView`. gorhom composes the caller's style
-        FIRST — `[containerStyle, styles.container]` — and its own
-        `styles.container` is `{ position: 'absolute', left: 0, top: 0, right: 0 }`
-        with no bottom and no height, so the `flex: 1` below loses and the
-        FlashList inside is never height-bounded. The rows past the fold were
-        unreachable, and `handleSettingScrollable` also registered
-        SCROLLABLE_TYPE.VIEW after the list registered itself, so the sheet lost
-        scrollable arbitration too. `BottomSheetAutocompleteInput` records the
-        same observed failure.
-      */}
+      {/* A plain View, NOT `BottomSheetView`: gorhom composes the caller's
+        style FIRST and its own is absolutely positioned with no bottom, so the
+        `flex: 1` below loses and the FlashList is never height-bounded. It also
+        registers SCROLLABLE_TYPE.VIEW after the list, losing arbitration. */}
       <View style={[styles.container, contentContainerStyle]}>
         <BottomSheetHeader
           title={t('ingredientMatching.reviewIngredients')}

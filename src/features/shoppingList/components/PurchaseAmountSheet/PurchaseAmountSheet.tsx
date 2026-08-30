@@ -41,10 +41,7 @@ interface PurchaseAmountSheetProps {
   loading?: boolean;
 }
 
-/**
- * Parse a plain numeric input (decimals or whole numbers) to a number.
- * Returns null for empty/invalid/negative input.
- */
+/** null for empty, invalid or negative input. */
 const parseNumberInput = (input: string): number | null => {
   const trimmed = input.trim();
   if (!trimmed) return null;
@@ -53,21 +50,16 @@ const parseNumberInput = (input: string): number | null => {
 };
 
 /**
- * Format a price for pre-fill — empty string when unknown so the input renders
- * its placeholder rather than "0", and the device's decimal separator so the
- * keypad can retype what it shows.
+ * Empty string when unknown, so the input shows its placeholder rather than
+ * "0", and the device's separator so the keypad can retype what it shows.
  */
 const formatPrice = (price: number | null): string =>
   formatNumberForInput(price);
 
 /**
- * PurchaseAmountSheet - Bottom sheet to record the actual purchased amounts.
- *
- * Opens pre-filled with the requested quantity and the estimated TOTAL
- * (per-unit estimate × quantity) when the user marks an unpurchased item as
- * purchased. The price asked for is the total paid, because that is what a
- * shopper reads off the receipt; a per-unit hint shows how it will be split.
- * Confirm records the amounts; Cancel dismisses without purchasing.
+ * Records the actual purchased amounts, pre-filled with the requested quantity
+ * and the estimated TOTAL (per-unit estimate × quantity). It asks for the total
+ * paid because that is what the receipt shows; a hint gives the per-unit split.
  */
 export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   visible,
@@ -86,9 +78,8 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   const [quantityInput, setQuantityInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
 
-  // Seed the inputs only when the sheet opens or the item changes (render-time
-  // state update), not on every item-field change — prevents a flash-back while
-  // the confirm mutation is in flight.
+  // Seed on open / item change only (render-time state update), or the inputs
+  // flash back while the confirm mutation is in flight.
   const [prevVisible, setPrevVisible] = useState(visible);
   const [prevItemId, setPrevItemId] = useState(item?.id);
   if (visible !== prevVisible || item?.id !== prevItemId) {
@@ -113,14 +104,12 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
       ? unitPriceFromTotal(parsedTotal, parsedQty)
       : null;
 
-  // A quantity the user cannot see is not a quantity of zero. `?? 0` sent an
-  // empty or unparseable field through as a real measurement, and
-  // `unitPriceFromTotal`'s zero-guard then returned the total UN-divided — so
-  // the server recorded `purchasedPrice x 0`, marking the item purchased at
-  // quantity 0 for nothing and discarding the amount the shopper typed.
+  // An empty or unparseable field is NOT a quantity of zero: defaulting it
+  // trips `unitPriceFromTotal`'s zero-guard, which returns the total undivided
+  // and records the purchase at quantity 0.
   const quantityIsUsable = parsedQty != null && parsedQty > 0;
-  // Reported on the field, never through an alert: a modal covers the form and,
-  // once dismissed, no longer says which field it meant.
+  // On the field, never through an alert: an alert covers the form, and once
+  // dismissed it cannot say which field it meant.
   const quantityError = quantityIsUsable
     ? null
     : t('purchaseAmountSheet.quantityRequired');
@@ -152,12 +141,10 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Item being marked purchased */}
         <Text size="lg" weight="semibold" style={styles.itemName}>
           {item?.itemName ?? ''}
         </Text>
 
-        {/* Quantity Section */}
         <View style={styles.section}>
           <Text
             size="sm"
@@ -196,7 +183,6 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
           ) : null}
         </View>
 
-        {/* Price Section */}
         <View style={styles.section}>
           <Text
             size="sm"

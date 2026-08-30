@@ -15,14 +15,10 @@ interface GraphQLTiming {
   startTime: number;
 }
 
-// Fraction of non-dev GraphQL operations that carry telemetry, from
-// `GRAPHQL_TELEMETRY_SAMPLE_RATE` (build-time env). Configurable rather than a
-// constant so the rate can be lowered per environment as the fleet grows —
-// without it, "turn sampling down" was a code change.
-//
-// Defaults to full capture: an unset or unparseable value must not silently
-// discard 90% of production telemetry. Clamped to (0, 1] because
-// `sampleWeight` divides by it.
+// Fraction of non-dev operations carrying telemetry, from
+// `GRAPHQL_TELEMETRY_SAMPLE_RATE`. Defaults to FULL capture — an unset or
+// unparseable value must not silently discard production telemetry. Clamped to
+// (0, 1] because `sampleWeight` divides by it.
 const parseSampleRate = (raw: string | undefined): number => {
   const parsed = Number.parseFloat(raw ?? '');
   if (!Number.isFinite(parsed) || parsed <= 0) return 1;
@@ -80,19 +76,10 @@ export const createTelemetryLink = () => {
 
     const operationId = `${operationName}_${startTime}`;
 
-    // No `performance.mark` / `performance.measure` pair here.
-    //
-    // It existed only "for timeline visibility", and nothing reads a `gql:*`
-    // measure — the Performance Dashboard reads `react-native-mark` and
-    // `resource` entries. Meanwhile it made instrumentation QUADRATIC in session
-    // length: `performance.clearMarks(name)` is implemented as a full-array
-    // `entries.filter()` with a fresh allocation, and every `measure` appended
-    // an entry that was never cleared, so operation k walked k entries
-    // synchronously inside the GraphQL response handler. Measured against the
-    // real buffer semantics, 500 operations cost 1.9 ms of churn and 5,000 cost
-    // 100.4 ms — 10x the operations for 53x the cost, before Hermes.
-    //
-    // `duration` is computed from `startTime` below and never read the mark.
+    // Deliberately no `performance.mark`/`measure` pair: nothing reads a `gql:*`
+    // measure, and it makes instrumentation QUADRATIC in session length —
+    // `clearMarks` is a full-array filter and every `measure` appends an entry
+    // that is never cleared. `duration` comes from `startTime` below.
     timings.set(operationId, {
       operationName,
       operationType,

@@ -12,23 +12,11 @@ import { useShoppingListSelection } from './useShoppingListSelection';
 import { useShoppingListTransformMulti } from './useShoppingListTransform';
 import { useShoppingListManagement } from './useShoppingListManagement';
 
-/**
- * useShoppingListScreen - Composition hook for the shopping list screen
- *
- * This is a facade that orchestrates specialized hooks:
- * 1. useShoppingListsQuery - Fetch all user's shopping lists (independent of home)
- * 2. useShoppingListSelection - Handle list selection and auto-select
- * 3. useShoppingListManagement - Manage items for current list (with pagination)
- * 4. useShoppingListTransform - Transform items for UI consumption
- *
- * Each composed hook has a single responsibility, making the code
- * easier to understand, test, and maintain.
- */
+/** Facade for the shopping list screen: lists, selection, items, transform. */
 export function useShoppingListScreen() {
   const user = useUser();
   const client = useApolloClient();
 
-  // 1. Query: Fetch all user's shopping lists (independent of home)
   const {
     lists,
     loading: listsLoading,
@@ -43,7 +31,6 @@ export function useShoppingListScreen() {
     () => new Set(),
   );
 
-  // 2. Selection: Determine current list with auto-select
   const {
     optimisticListId,
     currentListId,
@@ -53,10 +40,8 @@ export function useShoppingListScreen() {
     setSelectedShoppingListId,
   } = useShoppingListSelection(lists, deniedListIds);
 
-  // 3. Items: Fetch and manage items for current list (with pagination)
-  // Returns paginated unpurchasedItems and purchasedItems
-  // PERF: Use optimisticListId so queries fire immediately with the persisted
-  // Zustand ID, breaking the waterfall that previously waited for lists to load.
+  // `optimisticListId` (the persisted Zustand id) rather than `currentListId`, so
+  // the item queries fire without waiting on the lists query.
   const {
     unpurchasedItems: filteredUnpurchasedItems,
     purchasedItems: filteredPurchasedItems,
@@ -84,14 +69,11 @@ export function useShoppingListScreen() {
     refetch,
   } = useShoppingListManagement(optimisticListId);
 
-  // 3b. Access-loss detection. When the selected list's read no longer reaches a
-  // visible list, record its id. Two causes: (a) access revoked — a collaborator
-  // on a list that became home-linked, surfaced as a FORBIDDEN `error`; or
-  // (b) deleted/unshared — the by-id read resolves to null data (`listNotFound`),
-  // not an error. useShoppingListSelection then excludes the id and auto-selects
-  // the next valid list, instead of the cache-and-network + previousData fallback
-  // keeping the stale, now-inaccessible list on screen.
-  // "Adjusting state during render" (not an effect) per project conventions.
+  // Access loss arrives two ways: revoked access is a FORBIDDEN `error`, while a
+  // deleted/unshared list resolves to null data (`listNotFound`). Recording the
+  // id lets selection auto-pick the next valid list, instead of the
+  // previousData fallback holding a stale, inaccessible one on screen.
+  // Adjusting state during render, not an effect.
   if (
     optimisticListId &&
     !deniedListIds.has(optimisticListId) &&
@@ -113,45 +95,37 @@ export function useShoppingListScreen() {
     client.cache.gc();
   }, [deniedListIds, client]);
 
-  // 4a. Image preference: defer "disable" to pull-to-refresh, apply "enable" immediately
+  // Turning images off waits for pull-to-refresh; turning them on is immediate.
   const showImagesPreference = useShowShoppingListImages();
   const [displayedShowImages, setDisplayedShowImages] =
     useState(showImagesPreference);
 
-  // Immediately propagate enable (false → true); disable (true → false) deferred to refetch
   if (showImagesPreference && !displayedShowImages) {
     setDisplayedShowImages(true);
   }
 
-  // Wrap refetch to sync displayed preference on pull-to-refresh
   const refetchWithImageSync = () => {
     setDisplayedShowImages(showImagesPreference);
     return refetch();
   };
 
-  // 4b. Wrap nodes into FlashList row items. Display data is no longer
-  // pre-computed — each row reads its fields via `useFragment` internally.
-  // These reach FlashList as-is — never through `useDeferredValue`. That
-  // deferral once cut pagination renders from 680ms to 220ms, but FlashList
-  // shrinks its layout table while *rendering* and re-indexes cells only at
-  // commit; a deferred (transition) render can be interrupted between the two,
-  // and a native `onLayout` landing in that gap throws "index out of bounds,
-  // not enough layouts" — fatal in release. A normal render cannot be
-  // interrupted. See docs/flashlist-layout-index-race.md.
+  // These reach FlashList as-is — NEVER through `useDeferredValue` or a
+  // transition. FlashList truncates its layout table during render and re-indexes
+  // at commit; only an interruptible render leaves a gap where a native
+  // `onLayout` throws "index out of bounds, not enough layouts", fatal in
+  // release. See docs/flashlist-layout-index-race.md.
   const { unpurchasedItems, purchasedItems } = useShoppingListTransformMulti({
     rawUnpurchasedItems: filteredUnpurchasedItems,
     rawPurchasedItems: filteredPurchasedItems,
   });
 
-  // 5. Ownership: Enrich lists with ownership info
   const listDataWithOwnership = lists.map(list => ({
     ...list,
     _isOwner: isShoppingListOwner(list, user?.id),
   }));
 
-  // Preload shopping list item images into disk cache for instant display
-  // PERF: Defer to idle to avoid competing with in-flight queries during critical load
-  // Skip preloading when images are disabled to save bandwidth and disk space
+  // Warm the disk cache, deferred to idle so it does not compete with in-flight
+  // queries during the critical load.
   useEffect(() => {
     if (!displayedShowImages) return;
     if (rawUnpurchasedItems.length > 0 || rawPurchasedItems.length > 0) {
@@ -167,23 +141,16 @@ export function useShoppingListScreen() {
     }
   }, [rawUnpurchasedItems, rawPurchasedItems, displayedShowImages]);
 
-  // Derived loading states — single source of truth for all downstream components
   const loading = listsLoading || itemsLoading;
   const hasUIItems = unpurchasedItems.length > 0 || purchasedItems.length > 0;
 
-  // Measured on the rows the list would actually RENDER. A second `||
-  // hasRawData` term counting the unfiltered rows makes a search matching none
-  // of them read as "still loading", showing skeletons for a result that has
-  // already arrived instead of the "nothing matched" state.
-  //
-  // That term was there for the one-render gap while the (since removed)
-  // `useDeferredValue` lagged behind the store. The transform is synchronous
-  // now, so there is no gap left for it to cover.
+  // Measured on the rows the list would actually RENDER: adding a term for the
+  // unfiltered rows makes a search that matches none of them read as "still
+  // loading" and show skeletons over an answer that has already arrived.
   const isLoadingInitial = !hasUIItems && loading;
 
   return {
     state: {
-      // Lists
       lists,
       listDataWithOwnership,
       currentList,
@@ -192,13 +159,11 @@ export function useShoppingListScreen() {
       defaultList,
       selectedShoppingListId,
 
-      // Items (transformed for UI)
       unpurchasedItems,
       purchasedItems,
       rawUnpurchasedItems,
       rawPurchasedItems,
 
-      // Loading states
       loading,
       isLoadingInitial,
       isTransitioning,
@@ -207,20 +172,17 @@ export function useShoppingListScreen() {
       listsError,
       listsHasResult,
 
-      // Total counts
       totalCountUnpurchased,
       totalCountPurchased,
 
-      // Pagination state
       hasMoreUnpurchased,
       isLoadingMoreUnpurchased,
       hasMorePurchased,
       isLoadingMorePurchased,
 
-      // Search
       searchQuery,
 
-      // Row display preference (gated on pull-to-refresh for "disable")
+      /** Lags the stored preference when turning images OFF; see above. */
       showImages: displayedShowImages,
     },
     actions: {

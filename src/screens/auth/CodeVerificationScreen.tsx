@@ -32,21 +32,11 @@ type CodeVerificationValues = {
   code: string;
 };
 
-/**
- * Where this screen was opened from. It decides the exit, whether a skip link
- * shows, and where a successful verification lands — the only three things that
- * differ between the three entry points.
- *
- * - `gate`   — the root navigator's `verification` conditional group, entered by
- *              signing in with an unverified address. There is no app behind it
- *              yet, so the only way out without a code is to sign out (or skip).
- * - `inApp`  — pushed over the app from the profile banner or the collaborate
- *              gate. The user already has a session and a screen to return to,
- *              so back is a plain `goBack()` and backing out IS the skip.
- * - `signup` — rendered by SignUpScreen with NO session, because `register`
- *              issues no tokens. `verifyEmail` is public, so the code still
- *              works; activating simply lands on sign-in.
- */
+// Where this screen was opened from, deciding the exit, whether a skip link
+// shows, and where success lands. `gate` is the root navigator's conditional
+// group with no app behind it; `inApp` is pushed over an existing session, so
+// backing out IS the skip; `signup` has NO session at all, because `register`
+// issues no tokens — `verifyEmail` is public, so the code still works.
 export type VerificationContext = 'gate' | 'inApp' | 'signup';
 
 interface CodeVerificationScreenProps {
@@ -56,14 +46,9 @@ interface CodeVerificationScreenProps {
 }
 
 /**
- * Deps the response interpreters need from the screen.
- *
- * These interpreters are module-level rather than inline because their bodies
- * are full of `?.` / `&&` / ternaries, and the React Compiler bails out of the
- * whole component when a value block appears inside a try/catch. Calling them
- * from inside the try keeps the catch covering them exactly as before, while
- * leaving the try body plain statements.
- * See scripts/probe-compiler-try-forms.mjs.
+ * The interpreters are module-level because their bodies are full of value blocks,
+ * which bail the React Compiler out of the whole component when they sit inside a
+ * try. Calling them from the try keeps the catch's coverage with plain statements.
  */
 interface VerificationResponseDeps {
   onVerified: () => void;
@@ -85,9 +70,9 @@ function interpretVerifyEmailResponse(
     onVerified();
     return;
   }
-  // Auth failures now arrive as top-level GraphQL errors, not an
-  // AuthError union variant. Rate limits and transport failures are not a
-  // field the user can correct, so they stay in a toast.
+  // Auth failures arrive as top-level GraphQL errors, not an AuthError union
+  // variant. Rate limits and transport failures are not a field the user can
+  // correct, so they stay in a toast.
   const topLevelError = getTopLevelGraphQLError(response.error);
   if (topLevelError) {
     toast({
@@ -98,16 +83,11 @@ function interpretVerifyEmailResponse(
       type: 'error',
     });
   } else if (payload) {
-    // The payload's own `message` is never displayed — it is unlocalizable
-    // English by construction.
-    //
-    // A ValidationError takes this screen's own sentence rather than the code
-    // map's. The only ValidationError `verifyEmail` can return IS a bad code,
-    // and the map sends its `VALIDATION_FAILED` to the generic "check your
-    // input and try again" — which tells someone staring at six digits nothing
-    // and never mentions the resend. The server collapses "wrong code",
-    // "already spent" and "expired" into that one error, so the sentence has
-    // to be true of all three and name the recovery.
+    // The payload's `message` is never displayed — unlocalizable English by
+    // construction. A ValidationError takes this screen's own sentence, not the
+    // code map's generic "check your input": the only one `verifyEmail` returns
+    // IS a bad code, and the server collapses wrong/spent/expired into it, so the
+    // sentence must be true of all three and name the resend.
     reportCodeError(
       payload.__typename === 'ValidationError'
         ? t('auth.codeInvalidOrExpired')
@@ -120,7 +100,6 @@ function interpretResendResponse(
   response: { error?: unknown },
   { onVerified, toast, t }: VerificationResponseDeps,
 ): void {
-  // errorPolicy: 'all' returns GraphQL errors on `error.errors`.
   const error = response.error;
   if (!error || !(typeof error === 'object' && 'errors' in error)) {
     logger.debug('Verification email resent');
@@ -159,23 +138,19 @@ export function CodeVerificationScreen({
     ResendVerificationEmailDocument,
   );
 
-  // A `verify-email` link is routed by the navigator's linking config to
-  // EmailVerificationDeepLinkScreen, which owns spending the token. This screen
-  // used to listen for the same URL and verify it too, so one tap spent two of
-  // the ten `verifyEmail` requests an hour allows. Manual code entry below is
-  // the only verification this screen performs.
+  // Manual code entry is the ONLY verification this screen performs: a
+  // `verify-email` link routes to EmailVerificationDeepLinkScreen, which owns
+  // spending the token, and verifying here too would double-spend the hourly
+  // `verifyEmail` budget.
 
-  // Backoff state for resend rate limiting. Registration has just dispatched
-  // the activation mail, so the sign-up path opens already inside the first
-  // cooldown rather than offering an immediate resend.
+  // Registration has just dispatched the activation mail, so the sign-up path
+  // opens inside the first cooldown rather than offering an immediate resend.
   const { countdown, canResend, registerAttempt } = useResendBackoff(
     context === 'signup' ? 1 : 0,
   );
 
-  // Held here rather than in `setError`: this runs inside `handleSubmit`'s
-  // onValid callback, and RHF publishes the form state it captured BEFORE that
-  // callback when the submit settles — wiping an error set inside it. The
-  // refusal simply never appeared. Verified on device 2026-08-29.
+  // Held here rather than in `setError`: RHF publishes the form state captured
+  // BEFORE `onValid` when the submit settles, wiping an error set inside it.
   const [refusal, setRefusal] = useState<string | null>(null);
 
   const {
@@ -188,61 +163,54 @@ export function CodeVerificationScreen({
     defaultValues: { code: '' },
   });
 
-  // `register` opens no session, so the sign-up path has no user to read the
-  // address from and passes it in. The session wins where both exist, so a
-  // stale route value can never redirect a signed-in user's resend.
+  // `register` opens no session, so the sign-up path passes the address in. The
+  // session wins where both exist, so a stale route value cannot redirect a
+  // signed-in user's resend.
   const targetEmail = user?.email ?? email ?? null;
 
-  // Under `gate` the root navigator swaps this screen away the moment the flag
-  // flips; rendering nothing avoids a frame of stale UI. The other two contexts
-  // navigate themselves and must stay mounted long enough to do it.
+  // Under `gate` the root navigator swaps this screen away as the flag flips, so
+  // rendering nothing avoids a stale frame; the other contexts navigate
+  // themselves and must stay mounted to do it.
   if (context === 'gate' && (!user || user.emailVerified)) {
     return null;
   }
 
   const onVerified = () => {
     if (context === 'signup') {
-      // `verifyEmail` returns the user but no tokens, so activating from the
-      // sign-up path leaves no session — signing in is the next step, exactly
-      // as EmailVerificationDeepLinkScreen concludes for its own `!userId` case.
+      // `verifyEmail` returns the user but no tokens, so the sign-up path is left
+      // with no session and signing in is the next step.
       toast({ message: t('auth.emailVerifiedToast'), type: 'success' });
       navigateToLogin();
       return;
     }
 
-    // A patch, not a spread of the whole user: the store's updateUser assigns
-    // the given fields onto the existing user.
+    // A patch: the store's updateUser assigns these fields onto the existing user.
     updateUser({ emailVerified: true });
 
     if (context === 'inApp') {
-      // Pushed over the app, so the screen owns its own dismissal. Leaving it
-      // to the root navigator would remount the MainApp group at its INITIAL
-      // route and drop the user on Home instead of the screen they came from.
+      // Pushed over the app, so it owns its dismissal — leaving it to the root
+      // navigator remounts MainApp at its INITIAL route and lands on Home.
       toast({ message: t('auth.emailVerifiedToast'), type: 'success' });
       goBack();
     }
   };
 
   const reportCodeError = (message: string) => {
-    // Blanking the cells readies them for the retype.
     setValue('code', '');
     setRefusal(message);
   };
 
-  // A server refusal is displayed exactly like a schema error, so the field
-  // renders it in the same place with no special casing downstream.
+  // A server refusal renders exactly like a schema error, in the same place.
   const fieldErrors = refusal
     ? { ...errors, code: { type: 'server', message: refusal } }
     : errors;
 
   const onVerifyCode = async (data: CodeVerificationValues) => {
-    // Last attempt's refusal is stale the moment a new one is in flight.
     setRefusal(null);
     try {
       // The server picks the code index over the token index by testing
-      // `length === 6`, so a stray separator or space silently becomes a token
-      // lookup and comes back "invalid". CodeInput already strips non-digits;
-      // this is defence in depth for any future prefill that bypasses it.
+      // `length === 6`, so a stray space silently becomes a token lookup that
+      // returns "invalid". Defence in depth; CodeInput already strips non-digits.
       const code = data.code.replace(/\D/g, '');
       const response = await verifyEmail({ variables: { input: { code } } });
       interpretVerifyEmailResponse(response, {
@@ -262,13 +230,9 @@ export function CodeVerificationScreen({
     }
   };
 
-  // The only way off the sign-in GATE without a working code. `verification` is
-  // a conditional group holding one headerless screen, and RootNavigator
-  // re-derives that target from `user` on every change — so nothing but
-  // clearing the user can move them. Logout is entirely local (LogoutCleanup
-  // cancels timers and subscriptions; device deregistration is
-  // fire-and-forget), so this still works when the mail server, or the whole
-  // API, is down.
+  // The only way off the sign-in GATE without a working code: RootNavigator
+  // re-derives that target from `user` on every change, so nothing but clearing
+  // the user moves them. Logout is entirely local, so this works with the API down.
   const onSignOut = () => {
     alertService.alert(
       t('auth.exitVerificationTitle'),
@@ -286,8 +250,7 @@ export function CodeVerificationScreen({
     );
   };
 
-  // Deferring is a real choice, not a dismissal, so it states the cost up front
-  // — sharing and collaborating stay unavailable until the address is verified.
+  // Deferring is a real choice, so it states the cost: no sharing until verified.
   const onSkip = () => {
     alertService.alert(
       t('auth.skipVerificationTitle'),
@@ -300,14 +263,12 @@ export function CodeVerificationScreen({
   };
 
   const onResend = async () => {
-    // Prevent resend during countdown. Captured up front because the narrowing
-    // on the address doesn't survive into the async mutation callback.
+    // Captured up front: the address narrowing doesn't survive into the async
+    // mutation callback.
     if (!canResend || !targetEmail) return;
 
-    // Counted BEFORE the request, not after it: the cooldown opens
-    // synchronously, so a second tap lands on a disabled link instead of firing
-    // a duplicate send, and a request that throws can't leave the window open
-    // for a tight retry loop.
+    // Counted BEFORE the request, so the cooldown opens synchronously: a second
+    // tap lands on a disabled link, and a throw cannot leave the window open.
     registerAttempt();
 
     try {
@@ -331,18 +292,14 @@ export function CodeVerificationScreen({
     }
   };
 
-  // Back means something different per context, and on the sign-up path it
-  // means nothing at all — the account already exists, so returning to the
-  // filled form would only offer a submit that is now guaranteed to be refused.
+  // Back means nothing on the sign-up path: the account exists, so the filled
+  // form would only offer a submit now guaranteed to be refused.
   const onBackPress =
     context === 'gate' ? onSignOut : context === 'inApp' ? goBack : undefined;
 
-  // Sign-up has no back button and no skip — the account exists, and skipping
-  // writes a per-user flag that no-ops without a session. So "Already verified?
-  // Sign In" is the ONLY way off this screen for someone who followed the link
-  // in the mail instead of typing the code, and it gets the footer, where the
-  // eye already goes. Resend moves up to the link slot, which is where
-  // "Forgot password?" sits on the sign-in screen.
+  // Sign-up has no back and no skip — skipping writes a per-user flag that no-ops
+  // without a session — so "Already verified? Sign In" is the only way off this
+  // screen for someone who followed the mail link, and it takes the footer.
   const isSignup = context === 'signup';
 
   const canResendNow = !!targetEmail;
@@ -354,6 +311,7 @@ export function CodeVerificationScreen({
   return (
     <AuthWrapper testID="code-verification-screen">
       <AuthFormTemplate
+        contentPlacement="top"
         onBackPress={onBackPress}
         title={t('auth.enterCode')}
         subtitle={
@@ -368,9 +326,8 @@ export function CodeVerificationScreen({
             name: 'code',
             label: '',
             component: CodeInputAdapter,
-            // Auto-submit as soon as the 6th digit lands. RHF applies the
-            // field's onChange synchronously before onComplete fires, so
-            // handleSubmit reads the full code.
+            // RHF applies the field's onChange synchronously before onComplete
+            // fires, so handleSubmit reads the full code.
             props: {
               onComplete: handleSubmit(onVerifyCode, logValidationErrors),
             },
@@ -424,17 +381,13 @@ export function CodeVerificationScreen({
   );
 }
 
-/**
- * The post-login gate, registered in RootNavigator's `verification` group.
- */
 export function VerificationGateScreen(): React.JSX.Element | null {
   return <CodeVerificationScreen context="gate" />;
 }
 
 /**
- * Verification reached from inside the app — the profile banner and the
- * collaborate gate. A pushed screen, not a navigator group swap, so both exits
- * (back, and a successful verify) return the user where they came from.
+ * Verification from inside the app. A pushed screen, not a group swap, so both
+ * exits return the user where they came from.
  */
 export function VerifyEmailScreen(): React.JSX.Element | null {
   return <CodeVerificationScreen context="inApp" />;

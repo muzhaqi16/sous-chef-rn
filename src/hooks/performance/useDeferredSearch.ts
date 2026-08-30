@@ -26,40 +26,10 @@ interface UseDeferredSearchResult<T> {
 }
 
 /**
- * useDeferredSearch - Hook for responsive search without blocking the input
- *
- * Debounces the query and filters synchronously from it. It deliberately does
- * NOT use `useDeferredValue`: the results array becomes a FlashList `data`
- * prop, and a deferred render is interruptible, which is the exact window that
- * produces `index out of bounds, not enough layouts`
- * (docs/flashlist-layout-index-race.md). Debouncing gives the same "don't
- * filter on every keystroke" benefit from an ordinary, uninterruptible render.
- *
- * PERFORMANCE: Ideal for:
- * - Search-as-you-type functionality
- * - Large datasets (100+ items)
- * - Complex search predicates
- *
- * The isStale flag can be used to show a loading indicator while
- * results are being computed.
- *
- * @example
- * ```tsx
- * const { results, isStale } = useDeferredSearch({
- *   items: allItems,
- *   searchQuery,
- *   searchFn: (item, query) =>
- *     item.name.toLowerCase().includes(query.toLowerCase()),
- * });
- *
- * return (
- *   <View>
- *     <TextInput value={searchQuery} onChangeText={setSearchQuery} />
- *     {isStale && <ActivityIndicator />}
- *     <FlatList data={results} ... />
- *   </View>
- * );
- * ```
+ * Search-as-you-type that debounces the query and filters synchronously.
+ * Deliberately NOT `useDeferredValue`: the results become a FlashList `data`
+ * prop, and an interruptible render is the exact window that produces
+ * `index out of bounds, not enough layouts` (docs/flashlist-layout-index-race.md).
  */
 export function useDeferredSearch<T>(
   options: UseDeferredSearchOptions<T>,
@@ -75,20 +45,16 @@ export function useDeferredSearch<T>(
   // Debounced, not deferred — see the note on this hook.
   const deferredQuery = useDebouncedValue(searchQuery, debounceMs);
 
-  // Compute results using deferred query
   const results = (() => {
     const trimmedQuery = deferredQuery.trim();
 
-    // Return all items if query is too short
     if (trimmedQuery.length < minQueryLength) {
       return items;
     }
 
-    // Filter items using search function
     return items.filter(item => searchFn(item, trimmedQuery));
   })();
 
-  // Check if results are stale (query changed but deferred hasn't caught up)
   const isStale = searchQuery !== deferredQuery;
 
   return {
@@ -98,22 +64,7 @@ export function useDeferredSearch<T>(
   };
 }
 
-/**
- * useDeferredSearchWithSort - Extended version with sorting support
- *
- * Combines deferred search with optional sorting of results.
- * Both search and sort operations are deferred together.
- *
- * @example
- * ```tsx
- * const { results, isStale } = useDeferredSearchWithSort({
- *   items: allItems,
- *   searchQuery,
- *   searchFn: (item, query) => item.name.includes(query),
- *   sortFn: (a, b) => a.name.localeCompare(b.name),
- * });
- * ```
- */
+/** `useDeferredSearch` plus an optional sort over the filtered results. */
 export function useDeferredSearchWithSort<T>(
   options: UseDeferredSearchOptions<T> & {
     sortFn?: (a: T, b: T) => number;
@@ -131,11 +82,9 @@ export function useDeferredSearchWithSort<T>(
   // Debounced, not deferred — same FlashList reason as useDeferredSearch.
   const deferredQuery = useDebouncedValue(searchQuery, debounceMs);
 
-  // Compute results using deferred query with optional sorting
   const results = (() => {
     const trimmedQuery = deferredQuery.trim();
 
-    // Start with all items or filtered items
     let filtered: T[];
     if (trimmedQuery.length < minQueryLength) {
       filtered = items;
@@ -143,7 +92,6 @@ export function useDeferredSearchWithSort<T>(
       filtered = items.filter(item => searchFn(item, trimmedQuery));
     }
 
-    // Apply sorting if provided
     if (sortFn) {
       return [...filtered].sort(sortFn);
     }
@@ -151,7 +99,6 @@ export function useDeferredSearchWithSort<T>(
     return filtered;
   })();
 
-  // Check if results are stale
   const isStale = searchQuery !== deferredQuery;
 
   return {

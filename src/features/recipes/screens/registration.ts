@@ -7,14 +7,10 @@ import { SavedRecipes } from './SavedRecipes';
 import { MyRecipes } from './MyRecipes';
 
 /**
- * Recipe's detail/sub screens, registered as siblings of `Home` — see
- * RootNavigator and `pantryDetailScreens` for why the app registers detail
- * screens there rather than inside a tab's stack.
- *
- * A single `RecipeDetail` serves all three tabs that open it (Pantry, Recipe,
- * MealPlan). Because it is root-level rather than duplicated per tab, its own
- * "open the fork I just made" / "edit this recipe" actions stay put instead of
- * jumping the user to a fixed tab.
+ * Recipe's detail/sub screens, siblings of `Home` (see RootNavigator). ONE
+ * `RecipeDetail` serves all three tabs that open it; being root-level rather
+ * than per-tab is what keeps its own navigation actions from jumping the user
+ * to a fixed tab.
  */
 export const recipeDetailScreens = {
   RecipeDetail: createNativeStackScreen({

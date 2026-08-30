@@ -9,16 +9,13 @@ import {
 import { PantryStickyTabs } from './PantryStickyTabs';
 
 /**
- * List item shape consumed by `renderItem` — the `GetPantry` node shape.
- * Carries direct fields the screen-level hooks read (id, itemName, …) plus
- * an opaque `PantryItemCard_pantryItem` fragment ref that the leaf
- * `PantryItemCard` unmasks via `useFragment`.
+ * The `GetPantry` node shape: direct fields the screen-level hooks read, plus
+ * an opaque `PantryItemCard_pantryItem` ref the leaf unmasks via `useFragment`.
  */
 export type PantryListNode = PantryListItemNode;
 
-// Module-scope renderItem — stable reference, no closure recreation per render.
-// Each leaf owns its own cache subscription via useFragment, so the bridge
-// component that previously read from DisplayMapContext is no longer needed.
+// Module scope: stable reference, no closure recreated per render. Each leaf
+// owns its cache subscription via useFragment.
 export const renderItem = ({ item }: ListRenderItemInfo<PantryListNode>) => {
   if (!item) return null;
   return <PantryItemCard pantryItemRef={item} />;
@@ -28,13 +25,10 @@ export const renderItem = ({ item }: ListRenderItemInfo<PantryListNode>) => {
 export type PantryListItem = StickyHeaderSentinel | PantryListNode;
 
 /**
- * The pantry list's renderer, at module scope so its identity never changes.
- *
- * That matters more than it looks: `ViewHolder` in the installed
- * `@shopify/flash-list@2.3.2` memo-compares `renderItem` by reference
- * alongside `extraData`, so an inline renderer re-renders every mounted cell
- * whenever anything it closes over changes. This one closes over nothing — the
- * sticky tabs read their state from `PantryStickyTabsProvider` instead.
+ * Module scope so its identity never changes: `ViewHolder` in flash-list 2.3.2
+ * memo-compares `renderItem` by reference, so an inline renderer re-renders
+ * every mounted cell when anything it closes over changes. This closes over
+ * nothing — the sticky tabs read `PantryStickyTabsProvider` instead.
  */
 export const renderPantryListItem = (
   info: ListRenderItemInfo<PantryListItem>,

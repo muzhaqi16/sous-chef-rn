@@ -99,12 +99,10 @@ export interface TelemetryTransport {
 }
 
 /**
- * Error thrown by a transport when a send fails. `retryable` is the
- * transport's verdict on whether re-sending the same payload can ever
- * succeed — transient failures (network error, timeout, 408/429/5xx) are
- * retryable; other 4xx responses (wrong endpoint, bad auth, oversized
- * payload) are permanent. `TelemetryService` re-buffers retryable batches
- * and drops permanent ones, applying flush backoff either way.
+ * `retryable` is the transport's verdict on whether re-sending the SAME payload
+ * can ever succeed: transient failures (network, timeout, 408/429/5xx) yes,
+ * other 4xx no. `TelemetryService` re-buffers the first and drops the second,
+ * applying flush backoff either way.
  */
 export class TransportSendError extends Error {
   readonly retryable: boolean;

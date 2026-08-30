@@ -1,16 +1,8 @@
 /**
- * useAddShoppingItem - Add item mutation for shopping list (local-first).
- *
- * Generates the item's id client-side and writes the item into the cache before
- * firing the create, leaving it there. The item shows instantly and stays if the
- * create is queued offline or the API is unreachable — the server stores
- * `input.id` as the primary key and the queue replays the create keyed by that
- * same id, so they converge on one row. An `optimisticResponse` can't be used
- * here: Apollo would roll it back the moment the request is queued (null result).
- *
- * Catalog-merge caveat (shopping only): if the server merges the new item into an
- * existing catalog row on the list, the returned `id` differs from our cuid — we
- * adopt the server `serverId` and evict the optimistic cuid entity.
+ * Local-first: the item is written to the cache PERMANENTLY before firing — an
+ * `optimisticResponse` rolls back on the offline queue's null result. `input.id`
+ * is the client-minted PK, so a queued replay converges on one row. If the server
+ * merges into an existing catalog row its id differs: adopt it, evict the cuid.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -40,8 +32,6 @@ export function useAddShoppingItem({
   const client = useApolloClient();
 
   const [addItemMutation] = useMutation(AddItemToShoppingListDocument, {
-    // Reconcile the server response with the item written into the cache before
-    // the create fired; on a cache-update failure fall back to a refetch.
     update: buildAddItemsReconcileUpdate({
       listId,
       wrap: {
@@ -60,19 +50,16 @@ export function useAddShoppingItem({
   const addItem = async (input: ShoppingListItemInput) => {
     if (!listId) return undefined;
 
-    // Local-first: mint the permanent cuid id (the row's real PK).
     const id = generateEntityId();
 
-    // The manual-add form sends a raw FlexibleQuantity string; quick-add sends a
-    // number. Prefer the string when present (the server parses it). The
-    // optimistic entity still needs a numeric quantity — parseFloat takes the
-    // leading number ("1/3" → 1), matching the screen form's optimistic value.
+    // The manual-add form sends a raw FlexibleQuantity string, quick-add a number;
+    // the string wins (the server parses it). The optimistic entity needs a numeric
+    // quantity, so the leading number is taken ("1/3" → 1), as the form does.
     const optimisticQuantity = input.quantityInput
       ? parseDecimalInput(input.quantityInput) || 1
       : input.quantity ?? 1;
 
-    // One item per add — the batch mutation wraps it below. `shoppingListId`
-    // rides on the batch input, not the item.
+    // `shoppingListId` rides on the batch input below, not on the item.
     const itemInput = {
       id,
       item: { itemName: input.itemName },
@@ -119,9 +106,6 @@ export function useAddShoppingItem({
       unitId: input.unitId,
     });
 
-    // Write the item into the cache (full entity + connection edge + recomputed
-    // list stats) before firing, so it shows immediately and stays if the create
-    // is queued offline.
     try {
       addOptimisticShoppingListItem(client.cache, listId, optimisticItem);
     } catch (cacheError) {
@@ -143,11 +127,9 @@ export function useAddShoppingItem({
     }
     if (!result) return undefined;
 
-    // A non-success payload (e.g. ValidationError / ConflictError) resolves under
-    // errorPolicy:'all' with no thrown error, so `onError` never fires — the
-    // reconciler classifies the result and fully reverts the optimistic item
-    // (entity + list stats) on a real rejection. A queued create (offline / API
-    // down) resolves with no data and no error → it stays and replays.
+    // Under errorPolicy:'all' a refusal resolves as DATA with no thrown error, so
+    // `onError` never fires — the reconciler classifies it and fully reverts. A
+    // queued create resolves with no data and no error, so it stays and replays.
     if (
       reconcileShoppingCreate(client.cache, listId, id, result) === 'reverted'
     ) {

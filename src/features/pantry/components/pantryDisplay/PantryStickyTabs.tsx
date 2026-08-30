@@ -5,31 +5,14 @@ import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 
 /**
- * The pantry list's sticky filter tabs, and the context they read from.
- *
- * The tabs are row 0 of the FlashList (pinned via `stickyHeaderIndices`), so
- * they have to come through `renderItem` — but not an inline one closing over
- * the filter state, which re-renders every mounted item cell whenever the
- * filter changes, through BOTH of FlashList's re-render triggers.
- *
- * Verified against the installed `@shopify/flash-list@2.3.2`: `ViewHolder`'s
- * `React.memo` comparator (`src/recyclerview/ViewHolder.tsx`) compares
- * `extraData` AND `renderItem` by reference —
- *
- *     prevProps.extraData === nextProps.extraData &&
- *     prevProps.renderItem === nextProps.renderItem &&
- *
- * — so an inline `renderItem` closing over filter state re-renders every cell
- * even with `extraData` left alone, and vice versa. Both had to go.
- *
- * No item cell reads any of it: the leaf `renderItem` uses only `item`, and
- * `PantryItemCard` owns its own cache subscription through `useFragment`. So
- * the tabs take their state from this context instead of from a closure, which
- * lets `renderPantryListItem` live at module scope with a permanently stable
- * identity, and lets `locationFilter` come out of `extraData`.
+ * The list's sticky filter tabs (row 0, via `stickyHeaderIndices`) and the
+ * context they read from. FlashList 2.3.2's `ViewHolder` memo-compares BOTH
+ * `extraData` and `renderItem` by reference, so tab state must reach them
+ * through context, not a closure — else every cell re-renders on a filter change.
  */
-// Derived from the component rather than restated, so a change to FilterTabs'
-// props reaches this context through typecheck.
+
+// Derived from the component so a FilterTabs prop change reaches this through
+// typecheck.
 type FilterTabsProps = Parameters<typeof FilterTabs<LocationFilter>>[0];
 
 type PantryStickyTabsValue = Pick<

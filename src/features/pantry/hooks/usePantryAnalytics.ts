@@ -110,15 +110,8 @@ export function usePantryAnalytics({
   useApolloErrorLogger('GetPantryLedgerAnalytics', ledgerError);
 
   /**
-   * `allSettled`, not `all`, so a refresh always resolves: callers clear their
-   * spinner in the caller's own `finally`, and each query reports its own
-   * error/offline state.
-   *
-   * Today `all` would behave the same — `watchQuery.errorPolicy: 'all'`
-   * (src/apollo/client.ts) makes a failing refetch resolve with `{data, error}`
-   * rather than reject. That is the only reason `all` was safe, which is a lot
-   * of load for a default to bear when the offline state now offers a Refresh
-   * button that fires exactly when these fail.
+   * `allSettled`, not `all`, so a refresh always resolves whatever the global
+   * `errorPolicy` default happens to be; each query reports its own error state.
    */
   const refetch = async () => {
     await Promise.allSettled([refetchUsage(), refetchWaste(), refetchLedger()]);
@@ -144,14 +137,10 @@ export function usePantryAnalytics({
     ledgerAnalytics !== null,
   );
 
-  // Each `*Loading` is reported to the charts only while its chart has NOTHING
-  // to draw. Apollo's raw `loading` is `true` for the whole network leg on
-  // EVERY mount under `cache-and-network` — `nextFetchPolicy` lives on the
-  // ObservableQuery and useQuery builds a new one each time — so passing it
-  // straight to `ChartSection` replaced already-drawn charts with a spinner on
-  // every visit to the tab, for as long as the request took. A filter change is
-  // still covered: each `dateRange`/`granularity` combination is its own cache
-  // entry, so the new one reads null and the spinner returns.
+  // `loading && !data`, never bare `loading`: under `cache-and-network` Apollo
+  // reports `loading` for the whole network leg on EVERY mount, which would
+  // replace already-drawn charts with a spinner on each visit. A filter change
+  // still spins — each dateRange/granularity is its own cache entry, so null.
   const usageIsBlank = usageLoading && usageAnalytics === null;
   const wasteIsBlank = wasteLoading && wasteAnalytics === null;
   const ledgerIsBlank = ledgerLoading && ledgerAnalytics === null;

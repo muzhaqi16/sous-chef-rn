@@ -79,20 +79,13 @@ describe('useHomeManagement', () => {
 
     // Data from useHomeSelection
     expect(result.current.selectedHomeId).toBe('home-1');
-    expect(result.current.selectedHome).toEqual({
-      id: 'home-1',
-      name: 'Home 1',
-    });
-    expect(result.current.isSynced).toBe(true);
 
     // Functions from useHomeMutations
     expect(result.current.createHome).toBe(mockHomeMutations.createHome);
-    expect(result.current.updateHome).toBe(mockHomeMutations.updateHome);
     expect(result.current.deleteHome).toBe(mockHomeMutations.deleteHome);
 
     // Loading states
     expect(result.current.creating).toBe(false);
-    expect(result.current.updating).toBe(false);
     expect(result.current.deleting).toBe(false);
     expect(result.current.inviting).toBe(false);
     expect(result.current.joiningByCode).toBe(false);

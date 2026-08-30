@@ -30,12 +30,8 @@ interface RecipeCardViewProps {
 }
 
 /**
- * The recipe row, with no knowledge of where its data came from.
- *
- * `MyRecipeCard` and `SavedRecipeCard` were the same 110 lines twice — same
- * JSX, same stylesheet, same comment — differing only in which fragment they
- * read and which trailing icons they showed. Both are now thin fragment
- * readers over this.
+ * The recipe row, with no knowledge of where its data came from. `MyRecipeCard`
+ * and `SavedRecipeCard` are thin fragment readers over it.
  */
 export const RecipeCardView: React.FC<RecipeCardViewProps> = ({
   name,

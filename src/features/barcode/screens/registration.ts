@@ -11,16 +11,9 @@ const BarcodeScannerScreen = React.lazy(() =>
 );
 
 /**
- * The barcode feature's screens, composed into `BarcodeStack`.
- *
- * Declared here rather than inline in the stack so the feature owns its own
- * screen list, like every other feature does. The stack keeps the presentation
- * decisions (modal, insets, options) — those are navigation's, not the
- * feature's.
- *
- * A literal object, spread by the stack: react-navigation infers per-screen
- * param types only from a literal shape, and spreading one preserves that where
- * building the map dynamically would erase it.
+ * The barcode feature's screens, spread into `BarcodeStack` (which keeps the
+ * presentation decisions). Must stay a literal — react-navigation infers
+ * per-screen param types only from a literal shape.
  */
 export const barcodeScreens = {
   BarcodeScanner: createNativeStackScreen({

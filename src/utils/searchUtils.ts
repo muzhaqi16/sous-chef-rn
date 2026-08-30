@@ -1,9 +1,6 @@
 /**
- * Search Utilities — reusable predicates for client-side list filtering.
- *
- * Uses a fast substring check first (the common case when users type
- * what they see), then falls back to a strict Fuse fuzzy match so a
- * one-character typo ("tomatoe" → "Tomato") still finds the item.
+ * Client-side list filtering: a fast substring check first, then a strict Fuse
+ * fuzzy match so a one-character typo ("tomatoe" → "Tomato") still matches.
  */
 
 import Fuse from 'fuse.js';

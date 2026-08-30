@@ -1,11 +1,8 @@
 import { createContext, useContext } from 'react';
 
 /**
- * When `true`, input components (FormInput, FractionInput, FormTextArea)
- * automatically use `BottomSheetTextInput` instead of plain `TextInput`.
- *
- * Provided by `BottomSheetFormScrollView` so individual inputs no longer
- * need the `useBottomSheetInput` prop.
+ * `true` makes `FormInput` / `FractionInput` / `FormTextArea` resolve to
+ * `BottomSheetTextInput`. Provided by `BottomSheetFormScrollView`.
  */
 const BottomSheetInputContext = createContext(false);
 

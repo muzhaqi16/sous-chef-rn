@@ -44,3 +44,10 @@ node scripts/check-dead-modules.mjs || exit 1
 # because lint-staged runs jest only over `src/**` related files and pre-push
 # runs none at all, so as a test it never ran in the loop that would prevent it.
 node scripts/check-test-cache-fidelity.mjs || exit 1
+
+# Comment volume and history narration. Long explanatory blocks rot faster than
+# the code they sit on — a sweep found 31 wrong comments, one describing the
+# very bug the fix beneath it removed. A ratchet rather than a lint rule because
+# 286 files carry narration today and a rule with no baseline would block every
+# commit; move the history half to ESLint's `no-warning-comments` once it hits 0.
+node scripts/check-comment-budget.mjs || exit 1

@@ -47,33 +47,7 @@ export interface UsePaginationReturn extends PaginationState {
   loadMoreError: boolean;
 }
 
-/**
- * Generic pagination hook for cursor-based pagination
- *
- * Extracts common pagination logic from management hooks to eliminate duplication.
- * Works with any Apollo query that uses Connection pattern with pageInfo.
- *
- * @example
- * // In a management hook
- * const { hasMore, loadMore, isLoadingMore } = usePagination({
- *   pageInfo: normalizedData?.itemsPageInfo,
- *   loading,
- *   itemCount: items.length,
- *   fetchMore,
- *   fetchMoreVariables: { id: listId },
- *   cursorVariableName: 'itemsCursor',
- * });
- *
- * @example
- * // For Query.recipes (no parent ID)
- * const { hasMore, loadMore, isLoadingMore } = usePagination({
- *   pageInfo: normalizedRecipes?.pageInfo,
- *   loading,
- *   itemCount: recipes.length,
- *   fetchMore,
- *   cursorVariableName: 'cursor',
- * });
- */
+/** Cursor pagination for any Apollo connection query exposing `pageInfo`. */
 export function usePagination(config: PaginationConfig): UsePaginationReturn {
   const {
     pageInfo,
@@ -86,9 +60,8 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
   const hasMore = pageInfo?.hasNextPage || false;
   const endCursor = pageInfo?.endCursor;
 
-  // Stabilize fetchMoreVariables using a ref with serialization-based comparison
-  // This prevents loadMore from being recreated on every render when callers
-  // pass inline objects as fetchMoreVariables
+  // Serialization-compared, so an inline `fetchMoreVariables` object does not
+  // recreate `loadMore` on every render.
   const fetchMoreVariablesRef = useRef(fetchMoreVariables);
   const serialized = JSON.stringify(fetchMoreVariables);
   const prevSerializedRef = useRef(serialized);
@@ -99,21 +72,17 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     }
   });
 
-  // Ref guard prevents duplicate fetches when two rapid onEndReached calls
-  // both read isFetchingMore as false before React batches the state update
+  // Guards against two rapid `onEndReached` calls both reading `isFetchingMore`
+  // as false before React batches the state update.
   const isFetchingMoreRef = useRef(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
 
-  // Release the guard one frame AFTER the commit that appended the page, not
-  // during it. `fetchMore` resolving, the cache broadcast carrying the new rows
-  // and `setIsFetchingMore(false)` all batch into a single commit, so clearing
-  // the ref in that commit's effect phase re-opens `loadMore` while the page is
-  // still mounting — and `endCursor` has already advanced, so the next
-  // `onEndReached` of a fling starts page N+1 immediately and two pages land
-  // together. The extra frame also preserves the original intent: the ref stays
-  // set until a render has published the updated hasMore/endCursor, so a stale
-  // closure cannot fire loadMore with old values.
+  // Released one frame AFTER the commit that appended the page. Clearing it in
+  // that commit's effect phase re-opens `loadMore` while the page is still
+  // mounting, and `endCursor` has already advanced — so the next `onEndReached`
+  // of a fling starts page N+1 and two pages land together. The extra frame also
+  // guarantees a render has published the new hasMore/endCursor first.
   useEffect(() => {
     if (isFetchingMore) return;
     const handle = requestAnimationFrame(() => {

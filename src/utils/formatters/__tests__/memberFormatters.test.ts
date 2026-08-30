@@ -72,11 +72,11 @@ describe('getMemberDisplayName', () => {
     expect(getMemberDisplayName(member)).toBe('noemail');
   });
 
-  it('returns "Unknown Member" when no info available', () => {
+  it('falls back to the shared unknown label when no info available', () => {
     const member = makeMember({
       user: null,
     });
-    expect(getMemberDisplayName(member)).toBe('Unknown Member');
+    expect(getMemberDisplayName(member)).toBe('Unknown');
   });
 
   it('does not return "You" when no currentUserId provided', () => {

@@ -5,29 +5,22 @@ import { toastService } from '#/services/toastService';
 import { TOAST } from '#/constants/animations';
 
 /**
- * Announces offline/online transitions with a transient toast. Renders nothing.
- *
- * Mounted exactly once at the app root so the toast fires a single time per
- * transition — the persistent, per-screen signal is `OfflineStatusPill`, which
- * lives inline in each screen's header. Isolating the network-state
- * subscription here (a leaf that renders null) keeps offline toggles from
- * re-rendering the whole app tree.
+ * Announces offline/online transitions with a toast; renders nothing. Mounted
+ * exactly once at the app root, so one toast per transition, and the
+ * network-state subscription stays in a leaf instead of re-rendering the tree.
  */
 export const OfflineTransitionToaster: React.FC = () => {
   const { t } = useTranslation();
   const { offline, message } = useOfflineStatus();
 
-  // Announce only the on/off transition. The guard requires `offline` to have
-  // actually flipped, so the effect re-running when `message` changes (e.g. the
-  // pending count ticks) never re-fires the toast.
+  // The guard requires `offline` to have flipped, so a `message` change (the
+  // pending count ticking) re-runs the effect without re-firing the toast.
   const wasOfflineRef = useRef(offline);
   useEffect(() => {
     const wasOffline = wasOfflineRef.current;
     wasOfflineRef.current = offline;
-    // `supersede`: these announce a state, so the newest replaces a displayed or
-    // queued one instead of waiting behind it — otherwise toggling off right
-    // after on showed the second toast only once the first had run its full
-    // duration, seconds after the state it described.
+    // `supersede`: these announce a state, so the newest must replace a displayed
+    // or queued one rather than land seconds after the state it describes.
     if (offline && !wasOffline) {
       toastService.warning(message, {
         duration: TOAST.AUTO_DISMISS_LONG,

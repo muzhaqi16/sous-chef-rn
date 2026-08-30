@@ -32,9 +32,7 @@ export interface BottomSheetSearchBarProps {
   autoCorrect?: boolean;
   returnKeyType?: 'done' | 'go' | 'next' | 'search' | 'send';
   testID?: string;
-  /** Initial value to pre-populate the search input */
   initialValue?: string;
-  /** Show loading indicator in search bar */
   isLoading?: boolean;
 }
 
@@ -47,15 +45,8 @@ export interface BottomSheetSearchBarRef {
 }
 
 /**
- * BottomSheetSearchBar - Search bar designed for bottom sheets
- *
- * Features:
- * - Uses BottomSheetTextInput for proper keyboard handling in bottom sheets
- * - Uncontrolled input with refs to prevent cursor jumping issues
- * - Built-in debouncing for search queries
- * - Clear button when text is present
- * - Optional right action buttons (e.g., scan barcode)
- * - Exposes ref for programmatic control (clear, focus, blur, getValue)
+ * Search bar for bottom sheets. The input is UNCONTROLLED and driven through
+ * refs — a controlled one jumps the cursor while the debounce is in flight.
  */
 export const BottomSheetSearchBar = forwardRef<
   BottomSheetSearchBarRef,
@@ -77,16 +68,13 @@ export const BottomSheetSearchBar = forwardRef<
     },
     ref,
   ) => {
-    // Internal refs for uncontrolled input (fixes cursor jumping)
     const inputRef =
       useRef<React.ComponentRef<typeof BottomSheetTextInput>>(null);
     const inputValueRef = useRef('');
     const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Track if we have text (for showing clear button)
     const [hasText, setHasText] = React.useState(false);
 
-    // Expose methods via ref
     useImperativeHandle(
       ref,
       () => ({
@@ -114,7 +102,6 @@ export const BottomSheetSearchBar = forwardRef<
       [onClear],
     );
 
-    // Set hasText when initialValue changes (render-time state update)
     const [prevInitialValue, setPrevInitialValue] =
       React.useState(initialValue);
     if (initialValue !== prevInitialValue) {
@@ -124,7 +111,6 @@ export const BottomSheetSearchBar = forwardRef<
       }
     }
 
-    // Apply native props, sync ref, and notify parent when initialValue changes
     useEffect(() => {
       if (
         initialValue !== undefined &&
@@ -134,12 +120,10 @@ export const BottomSheetSearchBar = forwardRef<
         if (inputRef.current) {
           inputRef.current.setNativeProps?.({ text: initialValue });
         }
-        // Notify parent of initial value (without debounce)
         onChangeText(initialValue);
       }
     }, [initialValue, onChangeText]);
 
-    // Cleanup debounce timer on unmount
     useEffect(() => {
       return () => {
         if (debounceTimerRef.current) {
@@ -148,30 +132,24 @@ export const BottomSheetSearchBar = forwardRef<
       };
     }, []);
 
-    // Debounced change handler - prevents cursor jumping
     const handleChangeText = (text: string) => {
-      // Store value immediately in ref
       inputValueRef.current = text;
       setHasText(text.length > 0);
 
-      // Clear existing timer
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
 
-      // Notify parent after debounce
       debounceTimerRef.current = setTimeout(() => {
         onChangeText(text);
       }, debounceMs);
     };
 
-    // Handle clear button press
     const handleClear = () => {
       inputRef.current?.clear();
       inputValueRef.current = '';
       setHasText(false);
 
-      // Clear debounce and notify immediately
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }

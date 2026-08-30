@@ -13,13 +13,10 @@ const SIGN_IN_MESSAGE_KEY: Record<JoinLinkType, string> = {
 };
 
 /**
- * Auth gate shared by the anyone-with-link join screens (`JoinHomeByCodeScreen`,
- * `JoinByShareCodeScreen`). Joining requires auth, so when a logged-out user
- * opens a join link this queues the code as a pending deep-link action and
- * sends them to sign in — `useDeepLinkRouter` replays it once authenticated.
- *
- * Returns `isLoggedOut` so the screen can render a loader while the redirect
- * happens and skip its auth-only queries.
+ * Auth gate for the anyone-with-link join screens: a logged-out visitor's code
+ * is queued as a pending deep-link action and replayed by `useDeepLinkRouter`
+ * after sign-in. Returns `isLoggedOut` so the screen can show a loader and skip
+ * its auth-only queries while the redirect happens.
  */
 export function useJoinLinkAuthGate(type: JoinLinkType, code: string): boolean {
   const { t } = useTranslation();

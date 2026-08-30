@@ -10,6 +10,7 @@ import { errorService } from '#/services/errorService';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { createMockHomeNode } from '#/test-utils/mockFactories';
 import { useHomeSelection } from '../useHomeSelection';
+import { useDefaultHomeSyncStore } from '#features/home/store/useDefaultHomeSyncStore';
 
 const mockStoreState = {
   selectedHomeId: null as string | null,
@@ -19,6 +20,14 @@ const mockStoreState = {
   setHomeAndPantry: jest.fn(),
   setIsHomeSelectionReady: jest.fn(),
 };
+
+// `setDefaultHome` snapshots the selection from the live store, not from its
+// render closure — see the rollback comment there.
+jest.mock('#store', () => ({
+  useStore: {
+    getState: () => mockStoreState,
+  },
+}));
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: <T>(selector: (state: RootState) => T): T =>
@@ -44,9 +53,6 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
-// Deliberately the FLAT `pantries` shape: it is what `HomeNode`'s legacy
-// widening exists for, and keeping it here holds the fallback branch of
-// `defaultPantryOf` under test. The connection shape has its own test below.
 const createHomes = () => [
   createMockHomeNode({
     id: 'home-1',
@@ -67,6 +73,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockStoreState.selectedHomeId = null;
   mockStoreState.selectedPantryId = null;
+  useDefaultHomeSyncStore.getState().clearPending();
 });
 
 function setDefaultMock(defaultPantryId: string | null = null) {
@@ -120,7 +127,7 @@ function setDefaultErrorMock() {
 }
 
 describe('useHomeSelection', () => {
-  it('returns selection state', () => {
+  it('returns the selection', () => {
     const { result } = renderHookWithApollo(() =>
       useHomeSelection({
         homes: createHomes(),
@@ -129,49 +136,6 @@ describe('useHomeSelection', () => {
     );
 
     expect(result.current.selectedHomeId).toBeNull();
-    expect(result.current.selectedHome).toBeNull();
-    expect(result.current.isSynced).toBe(false);
-  });
-
-  it('computes selectedHome from selectedHomeId', () => {
-    mockStoreState.selectedHomeId = 'home-1';
-
-    const { result } = renderHookWithApollo(() =>
-      useHomeSelection({
-        homes: createHomes(),
-        remoteDefaultHomeId: 'home-1',
-      }),
-    );
-
-    expect(result.current.selectedHome).toEqual(
-      expect.objectContaining({ id: 'home-1', name: 'Home 1' }),
-    );
-  });
-
-  it('reports isSynced when selectedHomeId matches remoteDefaultHomeId', () => {
-    mockStoreState.selectedHomeId = 'home-1';
-
-    const { result } = renderHookWithApollo(() =>
-      useHomeSelection({
-        homes: createHomes(),
-        remoteDefaultHomeId: 'home-1',
-      }),
-    );
-
-    expect(result.current.isSynced).toBe(true);
-  });
-
-  it('reports not synced when IDs differ', () => {
-    mockStoreState.selectedHomeId = 'home-2';
-
-    const { result } = renderHookWithApollo(() =>
-      useHomeSelection({
-        homes: createHomes(),
-        remoteDefaultHomeId: 'home-1',
-      }),
-    );
-
-    expect(result.current.isSynced).toBe(false);
   });
 
   describe('setDefaultHome', () => {
@@ -195,6 +159,30 @@ describe('useHomeSelection', () => {
 
       expect(success!).toBe(true);
       expect(m.fired).toEqual([]);
+    });
+
+    it('still fires when the flag is default only because we wrote it', async () => {
+      // `remoteDefaultHomeId` is derived from the field the local write sets,
+      // so without the pending marker a queued-then-dropped write leaves the
+      // retry skipping as "already done".
+      mockStoreState.selectedHomeId = 'home-1';
+      useDefaultHomeSyncStore.getState().markPending('home-1');
+      const m = setDefaultMock();
+
+      const { result } = renderHookWithApollo(
+        () =>
+          useHomeSelection({
+            homes: createHomes(),
+            remoteDefaultHomeId: 'home-1',
+          }),
+        { operationMocks: [m.mock] },
+      );
+
+      await act(async () => {
+        await result.current.setDefaultHome('home-1');
+      });
+
+      expect(m.fired).toHaveLength(1);
     });
 
     it('shows error for empty homeId', async () => {

@@ -180,11 +180,9 @@ const buildExpiryReminderMessage = (
 };
 
 /**
- * Resolves the message text shown for a notification. EXPIRY_REMINDER
- * notifications are rebuilt from their structured payload so the batch
- * qualifier date renders in the user's locale and timezone; for every other
- * type — and for legacy expiry payloads missing the structured fields — the
- * server-provided `message` is used as-is.
+ * EXPIRY_REMINDER messages are rebuilt from the structured payload so the batch
+ * qualifier date renders in the user's locale and timezone. Every other type —
+ * and an expiry payload without those fields — uses the server's `message`.
  */
 export const getNotificationDisplayMessage = (
   notification: {

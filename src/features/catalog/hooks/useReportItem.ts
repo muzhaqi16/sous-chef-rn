@@ -6,12 +6,10 @@ import { alertMutationFailure } from '#features/catalog/hooks/alertMutationFailu
 import { errorService } from '#/services/errorService';
 
 /**
- * Flags a catalog item for admin moderation with a free-text reason.
- *
- * This is a REPORT, not an edit proposal. It backs the autocomplete affordance,
- * where the user has only seen a name, brand and thumbnail and so has no basis
- * for filling in a structured diff. The barcode flow, where the user is looking
- * at the item's full details, uses `useSuggestItemEdit` instead.
+ * Flags a catalog item for admin moderation with a free-text reason — a REPORT,
+ * not an edit proposal. Backs the autocomplete affordance, where the user has
+ * seen only a name, brand and thumbnail; the barcode flow uses
+ * `useSuggestItemEdit` instead.
  */
 export function useReportItem() {
   const { t } = useTranslation();

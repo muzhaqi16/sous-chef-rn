@@ -21,20 +21,10 @@ export interface ScrollMetrics {
 }
 
 /**
- * Tracks a horizontal scroller's metrics and reports which edges still have
- * content scrolled out of view, so the caller can render a soft fade there
- * (signalling "more to scroll" instead of a hard clip). The metrics live in a
- * ref written only by the returned handlers; `edges` re-renders only when a
- * fade actually toggles on or off.
- *
- * Wire the handlers onto the `ScrollView` and set `scrollEventThrottle={16}`.
- * `metrics` is exposed for callers that already need the viewport/content
- * widths for other work (e.g. centering an active tab) so they don't have to
- * track the same numbers twice.
- *
- * Pass `enabled = false` to keep tracking `metrics` (so a consumer can still
- * read the live scroll position) while never flipping `edges` — used when a row
- * wants the metrics but not the fade overlay.
+ * Which edges of a horizontal scroller still have content out of view, so the
+ * caller can fade them. `edges` re-renders only when a fade toggles. Wire the
+ * handlers onto the `ScrollView` with `scrollEventThrottle={16}`;
+ * `enabled = false` keeps `metrics` live while never flipping `edges`.
  */
 export function useScrollEdgeFades(enabled = true) {
   const [edges, setEdges] = useState<EdgeState>({ left: false, right: false });

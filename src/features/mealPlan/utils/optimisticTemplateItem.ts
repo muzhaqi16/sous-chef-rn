@@ -7,17 +7,10 @@ import type { AddTemplateItemInput } from '#/graphql/generated/schemaTypes';
 import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
 
 /**
- * Local-first writes for a meal template's items.
- *
- * `addTemplateItem` / `updateTemplateItem` / `removeTemplateItem` return the
- * whole `mealTemplate { items }` and rely on Apollo normalizing it — which
- * means offline, where no response arrives, nothing moves on screen. These
- * writers put the change in the cache before the mutation fires so the builder
- * works with no network; a refusal restores what they replaced.
- *
- * They live at module scope, not inside the hook, because their bodies are full
- * of `?.` / `??` value blocks and the React Compiler bails out of an entire
- * function when one appears inside a try/catch.
+ * Local-first writes for a template's items: the item mutations return the whole
+ * `mealTemplate { items }` and rely on normalization, so offline nothing moves.
+ * Module scope, not inside the hook — a value block inside a try/catch bails
+ * the whole function out of the React Compiler.
  */
 
 /** Display fields the item's row shows for a recipe-backed meal. */
@@ -143,17 +136,10 @@ export function removeTemplateItemFromCache(
 }
 
 /**
- * Complete a {@link readTemplateItem} snapshot into something the cache can be
- * given back, or null when there is nothing to restore.
- *
- * The snapshot is partial by contract — the editor's query does not select
- * `recipe`, so a row loaded there has no recipe in the cache to snapshot. The
- * absent keys become explicit nulls rather than being left undefined: the row
- * has to be a complete entity to go back into `items`, and null is the honest
- * value for a field the cache never held. The next fetch repairs it.
- *
- * Returns null when the snapshot carries no id, which is the one case where a
- * restore would write a row that identifies as nothing.
+ * Completes a partial {@link readTemplateItem} snapshot into a restorable
+ * entity, or null when it carries no id. Absent keys become explicit nulls: the
+ * row must be complete to go back into `items`, and null is the honest value
+ * for a field the cache never held. The next fetch repairs it.
  */
 export function toRestorableTemplateItem(
   snapshot: Partial<MealTemplateItemFragment> | null,
@@ -173,18 +159,10 @@ export function toRestorableTemplateItem(
 }
 
 /**
- * Read an item back, so a rejected update or remove can put it where it was.
- *
- * `returnPartialData` is load-bearing, not defensive. `MealTemplateItemFragment`
- * selects `recipe { … }` and the editor's own query, `GetMealTemplateForEdit`,
- * selects no `recipe` at all — and `readFragment` is all-or-nothing, so without
- * this it returned null for EVERY row the editor had loaded. That made the
- * local-first writes and their reverts silent no-ops: an offline edit reset the
- * form and left the old values on screen with no error, and a refused remove
- * left the row gone under a message saying it had failed.
- *
- * The result is therefore partial by contract. Callers must treat a missing key
- * as "the cache never knew this", not as "the value is empty".
+ * Reads an item back so a rejected update or remove can restore it.
+ * `returnPartialData` is load-bearing: the fragment selects `recipe`, the
+ * editor's query does not, and `readFragment` is all-or-nothing. The result is
+ * partial BY CONTRACT — a missing key means the cache never knew the value.
  */
 export function readTemplateItem(
   cache: ApolloCache,

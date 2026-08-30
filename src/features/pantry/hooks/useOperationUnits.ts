@@ -13,10 +13,6 @@ import {
   UnitRole,
   UnitSource,
 } from '#/graphql/generated/schemaTypes';
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export enum PantryOperation {
   Consume = 'CONSUME',
   Waste = 'WASTE',
@@ -73,10 +69,6 @@ interface UseOperationUnitsResult {
   error: Error | undefined;
 }
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const TYPE_ORDER: UnitType[] = [
   UnitType.Volume,
   UnitType.Weight,
@@ -85,10 +77,6 @@ const TYPE_ORDER: UnitType[] = [
   UnitType.Area,
   UnitType.Time,
 ];
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 type ApiRankedUnit =
   | ConsumptionUnitsForItemQuery['consumptionUnitsForItem'][number]
@@ -161,10 +149,6 @@ function toSelectedUnitInfo(unit: RankedUnitInfo): SelectedUnitInfo {
     conversionConfidence: unit.conversionConfidence,
   };
 }
-
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
 
 export function useOperationUnits({
   itemId,

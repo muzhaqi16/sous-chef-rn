@@ -1,12 +1,9 @@
 import React, { createContext, useContext, type ReactNode } from 'react';
 
 /**
- * Everything a registered field renderer is given.
- *
- * `props` carries the field's own `props` bag verbatim, which is where a
- * renderer's specific callbacks live (`onSelectItem`, `onUnitSelected`, …).
- * Keeping them there rather than as named fields on `FieldDef` is what lets
- * `DynamicFormFields` stay domain-free: it forwards a bag it does not read.
+ * `props` carries the field's own bag verbatim, where a renderer's specific
+ * callbacks live. Keeping them there is what lets `DynamicFormFields` stay
+ * domain-free: it forwards a bag it never reads.
  */
 export interface FieldRenderContext {
   label: string;
@@ -22,14 +19,8 @@ export interface FieldRenderContext {
 export interface FieldRendererEntry {
   render: (ctx: FieldRenderContext) => ReactNode;
   /**
-   * The renderer shows validation errors itself, so `DynamicFormFields` must
-   * not print a second error line beneath it.
-   *
-   * Declared per renderer because the app's renderers genuinely differ: five of
-   * the six catalog pickers own their error display and the storage-location
-   * one does not. That used to live as a five-way `!==` chain in
-   * `DynamicFormFields`, where the sixth was absent by omission and nothing
-   * said whether that was deliberate.
+   * The renderer shows validation errors itself, so `DynamicFormFields` must not
+   * print a second line. Declared per renderer because they genuinely differ.
    */
   ownsErrorDisplay?: boolean;
 }
@@ -39,12 +30,8 @@ export type FieldRendererRegistry = Record<string, FieldRendererEntry>;
 const FieldRendererContext = createContext<FieldRendererRegistry>({});
 
 /**
- * Supplies the renderers a `FieldDef`'s string `component` can name.
- *
- * `DynamicFormFields` is a generic schema-driven form; WHICH named field types
- * exist is an app decision. Mounting this once at the composition root is what
- * keeps the domain pickers out of the kit — and what lets a different app
- * register a different set without editing the form renderer.
+ * Supplies the renderers a `FieldDef`'s string `component` can name. Mounted once
+ * at the composition root, which is what keeps the domain pickers out of the kit.
  */
 export const FieldRendererProvider = ({
   renderers,

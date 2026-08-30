@@ -11,11 +11,8 @@ import { homeFeature } from './home/manifest';
 import { catalogFeature } from './catalog/manifest';
 
 /**
- * Canonical list of all features in the app.
- *
- * Navigation consumers iterate this to build tabs and to gate features. To
- * remove a feature from a fork: set `enabled: false` on its manifest to build
- * without it, or delete its folder and its entry here to remove the code.
+ * Canonical list of all features. Navigation consumers iterate this to build
+ * tabs and to gate features.
  */
 export const FEATURE_REGISTRY: FeatureManifest[] = [
   pantryFeature,
@@ -30,14 +27,9 @@ export const FEATURE_REGISTRY: FeatureManifest[] = [
 ];
 
 /**
- * A feature ships unless something says otherwise. Two independent switches:
- *
- * - the manifest's own `enabled`, which the feature's owner controls;
- * - `appConfig.features[id]`, which the APP controls — the one file a fork
- *   edits to decide what it ships.
- *
- * Either being `false` drops it. Absent means enabled, so only an opt-out is
- * ever written down.
+ * Two independent switches: the manifest's own `enabled` (the feature owner's)
+ * and `appConfig.features[id]` (the app's). Either `false` drops the feature;
+ * absent means enabled.
  */
 const isEnabled = (feature: FeatureManifest) =>
   feature.enabled !== false && appConfig.features[feature.id] !== false;

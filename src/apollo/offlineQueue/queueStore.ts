@@ -18,16 +18,10 @@ const CURRENT_USER_KEY = 'apollo-queue-current-user';
 const MAX_QUEUE_SIZE = 100;
 
 /**
- * Terminal = the queue will not replay it as things stand. SUCCESS replayed;
- * FAILED was refused and its local change already withdrawn.
- *
- * AUTH_ERROR is terminal in the same bookkeeping sense but NOT in meaning: the
- * server never saw the write, so nothing about it was rejected — we just could
- * not authenticate. It is revived by {@link QueueStore.revivePendingAuthErrors}
- * on the next sign-in and its local change stands until it is actually
- * discarded. It counts as terminal here so it stays evictable at capacity:
- * before that, 100 accumulated auth failures wedged the queue permanently, and
- * every later enqueue threw QueueCapacityError with no way back.
+ * Terminal = the queue will not replay it as things stand. AUTH_ERROR counts
+ * as terminal for bookkeeping only ({@link QueueStore.revivePendingAuthErrors}
+ * returns it on sign-in), but it must stay evictable or accumulated auth
+ * failures wedge the queue at capacity.
  */
 function isTerminal(status: QueueStatus): boolean {
   return (
@@ -37,11 +31,9 @@ function isTerminal(status: QueueStatus): boolean {
   );
 }
 
-// The server prunes its idempotency-dedup records after 90 days
-// (docs/api/offline-sync.md "Sync queued cumulative ops within 90 days").
-// Replaying an idempotency-keyed op past that horizon would double-apply —
-// the dedup row that would classify it IDEMPOTENT_REPLAY no longer exists —
-// so PENDING entries older than this are marked FAILED instead of replayed.
+// The server prunes its idempotency-dedup records after 90 days, so a replay
+// past that horizon double-applies instead of classifying as IDEMPOTENT_REPLAY.
+// PENDING entries older than this are marked FAILED rather than replayed.
 const MAX_PENDING_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 
 /**
@@ -53,40 +45,30 @@ type SerializedQueuedMutation = Omit<QueuedMutation, 'mutation'> & {
 };
 
 /**
- * Add `value` to `ids` when it is a non-empty string. Queued variables are
- * duck-typed (`OperationVariables` spans every queued operation and rides a
- * persistence boundary), so client-id extraction guards at runtime instead of
- * trusting a compile-time shape.
+ * Queued variables are duck-typed and ride a persistence boundary, so client-id
+ * extraction guards at runtime instead of trusting a compile-time shape.
  */
 const addIfClientId = (ids: Set<string>, value: unknown): void => {
   if (typeof value === 'string' && value) ids.add(value);
 };
 
-/**
- * Persistent queue store using MMKV
- * Provides user-scoped mutation queuing with atomic operations
- */
+/** User-scoped mutation queue persisted to MMKV. */
 export class QueueStore {
-  // PERFORMANCE: In-memory cache to avoid repeated MMKV reads and JSON parsing
-  // Write-through pattern: cache is updated on every write and invalidated on user change
+  // Write-through in-memory cache: updated on every write, invalidated on a
+  // user change, so MMKV reads and JSON parsing don't repeat.
   private cache: QueuedMutation[] | null = null;
 
-  // In-memory mirror of CURRENT_USER_KEY (undefined = not yet read from
-  // storage) and the memoized pending-ids set. getPendingClientIds() runs on
-  // EVERY itemsConnection merge (cache.ts), so without these each connection
-  // write costs a sync MMKV read plus a Set rebuild.
+  // Mirror of CURRENT_USER_KEY (undefined = not yet read) plus the memoized
+  // pending-ids set. getPendingClientIds() runs on EVERY itemsConnection merge
+  // (cache.ts), so without these each write costs an MMKV read and a rebuild.
   private currentUserId: string | null | undefined = undefined;
   private pendingClientIds: Set<string> | null = null;
 
-  // Subscribers notified on every queue change (add/remove/update/clear and
-  // user switches). Lets UI read live queue state — e.g. the offline banner's
-  // pending-changes count — via useSyncExternalStore without polling MMKV.
+  // Lets UI read live queue state (the offline banner's pending count) through
+  // useSyncExternalStore instead of polling MMKV.
   private listeners = new Set<() => void>();
 
-  /**
-   * Subscribe to queue changes. Returns an unsubscribe function.
-   * `useSyncExternalStore`-compatible.
-   */
+  /** `useSyncExternalStore`-compatible; returns an unsubscribe function. */
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => {
@@ -104,18 +86,12 @@ export class QueueStore {
     });
   }
 
-  /**
-   * Load all mutations from storage
-   * Uses in-memory cache with write-through pattern
-   */
   private loadQueue(): QueuedMutation[] {
     try {
-      // Return cached queue if available
       if (this.cache !== null) {
         return this.cache;
       }
 
-      // Cache miss - load from storage
       const queueJson = storage.getString(QUEUE_STORAGE_KEY);
       if (!queueJson) {
         this.cache = [];
@@ -124,13 +100,11 @@ export class QueueStore {
 
       const parsed = JSON.parse(queueJson) as SerializedQueuedMutation[];
 
-      // Reconstruct DocumentNode from serialized string
       const queue: QueuedMutation[] = parsed.map(item => ({
         ...item,
-        mutation: JSON.parse(item.mutation) as DocumentNode, // Restore the mutation DocumentNode
+        mutation: JSON.parse(item.mutation) as DocumentNode,
       }));
 
-      // Populate cache for future reads
       this.cache = queue;
 
       return queue;
@@ -140,13 +114,9 @@ export class QueueStore {
     }
   }
 
-  /**
-   * Save queue to storage
-   * Uses write-through caching: updates both cache and storage
-   */
   private saveQueue(mutations: QueuedMutation[]): void {
     try {
-      // Serialize DocumentNode to string for storage
+      // The DocumentNode has to be serialized to survive MMKV.
       const serialized = mutations.map(m => ({
         ...m,
         mutation: JSON.stringify({
@@ -158,7 +128,6 @@ export class QueueStore {
 
       storage.set(QUEUE_STORAGE_KEY, JSON.stringify(serialized));
 
-      // Write-through: update cache immediately
       this.cache = mutations;
     } catch (error) {
       logger.error('Failed to save queue to storage:', error);
@@ -167,9 +136,6 @@ export class QueueStore {
     this.notifyListeners();
   }
 
-  /**
-   * Get the current user ID
-   */
   getCurrentUserId(): string | null {
     if (this.currentUserId === undefined) {
       this.currentUserId = storage.getString(CURRENT_USER_KEY) || null;
@@ -177,9 +143,6 @@ export class QueueStore {
     return this.currentUserId;
   }
 
-  /**
-   * Set the current user ID
-   */
   setCurrentUserId(userId: string): void {
     storage.set(CURRENT_USER_KEY, userId);
     this.currentUserId = userId;
@@ -189,9 +152,6 @@ export class QueueStore {
     this.notifyListeners();
   }
 
-  /**
-   * Clear the current user ID
-   */
   clearCurrentUserId(): void {
     storage.remove(CURRENT_USER_KEY);
     this.currentUserId = null;
@@ -200,20 +160,16 @@ export class QueueStore {
   }
 
   /**
-   * Add a mutation to the queue
-   * Implements mutation coalescing for MoveShoppingListItem operations:
-   * - Multiple moves of the same item are merged into a single mutation
-   * - Only the final position is kept, reducing server load
+   * Repeated MoveShoppingListItem ops for one item coalesce into the last
+   * position, so a drag only ever replays where the item finally landed.
    */
   addMutation(mutation: QueuedMutation): void {
     const queue = this.loadQueue();
 
-    // OPTIMIZATION: Coalesce move mutations for the same item
     if (mutation.operationName === 'MoveShoppingListItem') {
       const itemId = mutation.variables?.input?.itemId;
 
       if (itemId) {
-        // Find existing move mutation for same item
         const existingIndex = queue.findIndex(
           m =>
             m.operationName === 'MoveShoppingListItem' &&
@@ -223,7 +179,6 @@ export class QueueStore {
         );
 
         if (existingIndex !== -1) {
-          // Replace existing mutation with new one (final position)
           logger.debug(
             `🔄 Queue: Coalescing move mutations for item ${itemId} - keeping final position`,
           );
@@ -234,18 +189,13 @@ export class QueueStore {
       }
     }
 
-    // Regular add logic for non-move mutations or first move.
-    // Enforce the queue cap without ever silently dropping a PENDING op:
-    // evict the oldest terminal (SUCCESS/FAILED) entry to make room — those are
-    // done and safe to drop. Dropping a PENDING op instead would break a
-    // create→update dependency chain (the update replays against a create that
-    // never happened). If nothing terminal exists, the queue is full of
-    // un-synced work: reject the enqueue honestly.
+    // Enforce the cap without ever dropping a PENDING op: that would break a
+    // create→update chain, replaying the update against a create that never
+    // happened. Prefer an entry already reconciled (SUCCESS replayed, FAILED
+    // withdrawn); an AUTH_ERROR still has its change on screen, so it goes only
+    // when it is all that is left. Nothing terminal at all means the queue is
+    // full of un-synced work and the enqueue is refused.
     if (queue.length >= MAX_QUEUE_SIZE) {
-      // Prefer an entry whose local change is already reconciled — SUCCESS
-      // replayed, FAILED was withdrawn. An AUTH_ERROR still has its change on
-      // screen awaiting a sign-in, so it is evicted only when it is the only
-      // thing left to take.
       const reconciled = (m: QueuedMutation): boolean =>
         m.status === QueueStatus.SUCCESS || m.status === QueueStatus.FAILED;
       const preferred = queue.findIndex(reconciled);
@@ -259,7 +209,7 @@ export class QueueStore {
         );
         throw new QueueCapacityError();
       }
-      queue.splice(evictIndex, 1); // Remove the oldest terminal entry
+      queue.splice(evictIndex, 1);
     }
 
     queue.push(mutation);
@@ -270,9 +220,6 @@ export class QueueStore {
     );
   }
 
-  /**
-   * Remove a mutation from the queue by ID
-   */
   removeMutation(mutationId: string): boolean {
     const queue = this.loadQueue();
     const initialLength = queue.length;
@@ -287,9 +234,6 @@ export class QueueStore {
     return false;
   }
 
-  /**
-   * Update a mutation's status and details
-   */
   updateMutation(
     mutationId: string,
     updates: Partial<Omit<QueuedMutation, 'id' | 'userId' | 'mutation'>>,
@@ -309,9 +253,6 @@ export class QueueStore {
     return true;
   }
 
-  /**
-   * Get all mutations for a specific user
-   */
   getMutationsForUser(userId: string, status?: QueueStatus): QueuedMutation[] {
     const queue = this.loadQueue();
     let filtered = queue.filter(m => m.userId === userId);
@@ -323,9 +264,7 @@ export class QueueStore {
     return filtered;
   }
 
-  /**
-   * Get all pending mutations for a specific user (ordered by creation time)
-   */
+  /** Pending mutations for a user, oldest first. */
   getPendingMutationsForUser(userId: string): QueuedMutation[] {
     return this.getMutationsForUser(userId, QueueStatus.PENDING).sort(
       (a, b) => a.createdAt - b.createdAt,
@@ -333,14 +272,10 @@ export class QueueStore {
   }
 
   /**
-   * Reset stranded PROCESSING entries back to PENDING so the next drain
-   * replays them. Drains are serialized in-process by queueManager's
-   * isProcessing flag, so any PROCESSING entry observed at drain start is
-   * debris from a process killed mid-replay — without this reset it would
-   * never be replayed, never marked failed, and (being non-PENDING) lose
-   * its pending-client-id merge protection. Replaying a possibly-committed
-   * op is safe: replays are idempotent by design (client-minted PKs /
-   * input.idempotencyKey). Returns the number of entries reset.
+   * Drains are serialized, so a PROCESSING entry seen at drain start is debris
+   * from a process killed mid-replay: left alone it is never replayed, never
+   * failed, and loses its pending-client-id merge protection. Re-replaying a
+   * possibly-committed op is safe — replays are idempotent by design.
    */
   resetProcessingToPending(userId: string): number {
     const queue = this.loadQueue();
@@ -361,12 +296,10 @@ export class QueueStore {
   }
 
   /**
-   * Mark PENDING entries older than the server's 90-day idempotency-dedup
-   * horizon as FAILED so they surface through the normal failure UX instead
-   * of replaying into a potential double-apply. Runs at drain start (before
-   * replay ordering) — expiry is age-based, so a FIFO queue can only expire
-   * a prefix, never punch a hole mid dependency chain. Returns the number of
-   * entries expired.
+   * PENDING entries past the 90-day dedup horizon become FAILED so they surface
+   * through the normal failure UX instead of double-applying. Expiry is
+   * age-based, so a FIFO queue can only expire a prefix, never punch a hole
+   * mid dependency chain.
    */
   expireStalePending(userId: string): number {
     const queue = this.loadQueue();
@@ -407,14 +340,10 @@ export class QueueStore {
   }
 
   /**
-   * Client-generated entity ids that still have a PENDING mutation in the
-   * current user's queue. The cache merge uses this to avoid dropping an
-   * un-replayed optimistic item when a first-page background refetch lands
-   * before the queue replays (a server-deleted item, by contrast, has no
-   * pending op and is correctly dropped). Reads ids from every queued input
-   * shape: `input.id`, else `input.itemId`, else top-level `id`, plus every
-   * `input.items[].id` of batch-shaped creates (`AddItemsToShoppingListInput`).
-   * Returns an empty set when no user is set or the queue is empty.
+   * Client ids with a still-PENDING mutation. The cache merge uses this so a
+   * first-page background refetch landing before replay does not drop an
+   * un-replayed optimistic item; a server-deleted item has no pending op and is
+   * correctly dropped. Empty when no user is set.
    */
   getPendingClientIds(): Set<string> {
     if (this.pendingClientIds) return this.pendingClientIds;
@@ -427,9 +356,8 @@ export class QueueStore {
           ids,
           variables?.input?.id ?? variables?.input?.itemId ?? variables?.id,
         );
-        // Batch-shaped creates (AddItemsToShoppingListInput) mint one client
-        // id per item. Array.isArray guards persisted entries from older
-        // builds whose shape may not match what the app enqueues today.
+        // Batch creates mint one client id per item; the isArray guard covers
+        // persisted entries whose shape predates the current enqueue path.
         const items = variables?.input?.items;
         if (Array.isArray(items)) {
           for (const item of items) addIfClientId(ids, item?.id);
@@ -440,17 +368,11 @@ export class QueueStore {
     return ids;
   }
 
-  /**
-   * Get a specific mutation by ID
-   */
   getMutation(mutationId: string): QueuedMutation | null {
     const queue = this.loadQueue();
     return queue.find(m => m.id === mutationId) || null;
   }
 
-  /**
-   * Clear all mutations for a specific user
-   */
   clearQueueForUser(userId: string): number {
     const queue = this.loadQueue();
     const initialLength = queue.length;
@@ -468,31 +390,22 @@ export class QueueStore {
     return removedCount;
   }
 
-  /**
-   * Clear the entire queue (all users)
-   */
+  /** Clears every user's queue. */
   clearAllQueues(): void {
     storage.remove(QUEUE_STORAGE_KEY);
-    this.cache = null; // Invalidate cache
+    this.cache = null;
     this.pendingClientIds = null;
     logger.debug('🧹 Queue: Cleared all mutations');
     this.notifyListeners();
   }
 
-  /**
-   * Number of PENDING mutations for the current user — the "changes waiting
-   * to sync" count surfaced in the offline banner. Returns 0 when no user is
-   * set (logged out).
-   */
+  /** The "changes waiting to sync" count the offline banner shows. */
   getPendingCount(): number {
     const userId = this.getCurrentUserId();
     if (!userId) return 0;
     return this.getMutationsForUser(userId, QueueStatus.PENDING).length;
   }
 
-  /**
-   * Get queue statistics
-   */
   getQueueStats(userId?: string): QueueStats {
     const queue = userId ? this.getMutationsForUser(userId) : this.loadQueue();
 
@@ -504,7 +417,6 @@ export class QueueStore {
       authErrors: queue.filter(m => m.status === QueueStatus.AUTH_ERROR).length,
     };
 
-    // Calculate oldest mutation age
     const pendingMutations = queue.filter(
       m => m.status === QueueStatus.PENDING,
     );
@@ -516,9 +428,6 @@ export class QueueStore {
     return stats;
   }
 
-  /**
-   * Mark a mutation as failed with error details
-   */
   markMutationFailed(
     mutationId: string,
     error: QueuedMutation['lastError'],
@@ -527,28 +436,23 @@ export class QueueStore {
       status:
         error?.type === 'auth' ? QueueStatus.AUTH_ERROR : QueueStatus.FAILED,
       lastError: error,
-      // Stamped so `cleanupTerminal` can age these out. Without it a terminal
-      // failure had no timestamp and lived in the queue forever.
+      // `cleanupTerminal` ages entries out by this stamp; an unstamped terminal
+      // failure lives in the queue forever.
       processedAt: Date.now(),
     });
   }
 
-  /**
-   * Increment retry count for a mutation
-   */
   incrementRetry(mutationId: string): boolean {
     const mutation = this.getMutation(mutationId);
     if (!mutation) return false;
 
     return this.updateMutation(mutationId, {
       retryCount: mutation.retryCount + 1,
-      status: QueueStatus.PENDING, // Reset to pending for retry
+      status: QueueStatus.PENDING,
     });
   }
 
-  /**
-   * Clean up old successful mutations (keep last 24 hours for reconciliation)
-   */
+  /** Ages out terminal entries older than 24h, returning what it discarded. */
   cleanupTerminal(): QueuedMutation[] {
     const queue = this.loadQueue();
     const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
@@ -569,19 +473,15 @@ export class QueueStore {
       );
     }
 
-    // Returned rather than counted because an AUTH_ERROR entry still has its
-    // local change on screen: aging it out is the moment the queue truly gives
-    // up, and the caller withdraws it then.
+    // Returned, not counted: an AUTH_ERROR entry still has its local change on
+    // screen, and ageing it out is when the caller withdraws that change.
     return discarded;
   }
 
   /**
-   * Returns AUTH_ERROR entries to PENDING so the next drain replays them.
-   *
-   * An auth failure is not a refusal — the server never saw the write. The
-   * queue parks it rather than dropping it, and a successful sign-in is the
-   * event that makes it replayable again. Retries start fresh: the previous
-   * count was spent against a token that no longer exists.
+   * An auth failure is not a refusal — the server never saw the write — so the
+   * queue parks it and a successful sign-in makes it replayable again. Retries
+   * start fresh: the spent count belongs to a dead token.
    */
   revivePendingAuthErrors(userId: string): number {
     const queue = this.loadQueue();
@@ -606,9 +506,6 @@ export class QueueStore {
     return revived;
   }
 
-  /**
-   * Invalidate cache (useful when switching users or debugging)
-   */
   invalidateCache(): void {
     this.cache = null;
     this.pendingClientIds = null;
@@ -619,5 +516,4 @@ export class QueueStore {
   }
 }
 
-// Singleton instance
 export const queueStore = new QueueStore();

@@ -6,9 +6,8 @@ import { styles } from './styles';
 import type { SwipeActionsProps } from './types';
 
 /**
- * Width of the revealed tray. Each circular button is ~45dp plus 4dp of margin
- * either side, so the tray is sized in steps rather than measured — the
- * placeholder in `SwipeableItem` has to predict the same number before the real
+ * Width of the revealed tray, sized in steps rather than measured: the
+ * placeholder in `SwipeableItem` must predict the same number before the real
  * tray mounts, and both read it from here.
  */
 export const swipeTrayWidth = (buttonCount: number): number => {
@@ -17,14 +16,7 @@ export const swipeTrayWidth = (buttonCount: number): number => {
   return 180;
 };
 
-/**
- * Renders one edge's action tray.
- *
- * Left and right used to be separate components, ~180 and ~100 lines, each a
- * chain of `if (onConsume && onWaste && onRestock)`-style branches enumerating
- * every combination its two callers happened to use. The tray is the same
- * either side; only the container style differs.
- */
+/** Renders one edge's action tray; only the container style differs by side. */
 export const SwipeActions: React.FC<SwipeActionsProps> = ({
   actions,
   side,

@@ -78,15 +78,9 @@ interface ItemPhotoCarouselProps {
 }
 
 /**
- * Horizontally paged gallery of an item's photos.
- *
- * One page per real photo — `Item.photos` groups size renditions under their
- * source photo, so paging never lands on a thumbnail of the picture you are
- * already looking at.
- *
- * The hero band crops (`resizeMode="cover"`), so a nutrition panel is not
- * readable here; `onPhotoPress` opens the zoomable viewer that is the actual
- * destination for label photos.
+ * Horizontally paged gallery — one page per REAL photo, since `Item.photos`
+ * groups size renditions under their source. The hero band crops, so label
+ * photos are only readable in the zoomable viewer `onPhotoPress` opens.
  */
 export const ItemPhotoCarousel: React.FC<ItemPhotoCarouselProps> = ({
   photos,

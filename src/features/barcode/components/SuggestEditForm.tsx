@@ -19,12 +19,9 @@ interface SuggestEditFormProps {
 }
 
 /**
- * Edit sheet for a scanned catalog item.
- *
- * A separate component so `useItemForEdit` receives a real item id
- * unconditionally, and so AddItemForm only mounts once the snapshot is loaded —
- * react-hook-form reads `defaultValues` on mount, so prefilling later would not
- * take effect.
+ * Edit sheet for a scanned catalog item. Separate so `useItemForEdit` gets a
+ * real id unconditionally and AddItemForm mounts only once the snapshot is in:
+ * react-hook-form reads `defaultValues` on mount, so prefilling later is inert.
  */
 export const SuggestEditForm: React.FC<SuggestEditFormProps> = ({
   itemId,
@@ -70,11 +67,9 @@ export const SuggestEditForm: React.FC<SuggestEditFormProps> = ({
     );
   }
 
-  // Neither write path is open — a PRIVATE item this user doesn't own. Showing
-  // the form would invite an edit that can only be rejected on submit, so say
-  // so up front. The affordance that opened this sheet is hidden for such an
-  // item; this catches the case where the scan result's flags were stale or
-  // absent and only the authoritative snapshot knows.
+  // Neither write path is open — a PRIVATE item this user doesn't own. Catches
+  // a scan result whose flags were stale; the form would only be rejected on
+  // submit.
   if (!snapshot.canEdit && !snapshot.canSuggest) {
     return (
       <ErrorState

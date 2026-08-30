@@ -19,29 +19,10 @@ interface BreakdownPieChartProps {
   colorScale?: string[];
 }
 
-/**
- * Categorical slice colors, brand-first.
- *
- * ONE color comes from the theme, so a rebrand reaches the chart — the literal
- * hexes this replaced (`'#FF8C42' // Primary orange`) meant a fork could change
- * `appConfig.branding.primaryColor` and still get the old orange. The rest are a
- * fixed categorical set: they exist to be DISTINGUISHABLE from the brand and
- * from each other, so deriving them from one hue would defeat the point.
- *
- * Slots 2 and 3 used to be `primaryDark` and `primaryLight`, and both were
- * wrong for a data color:
- *
- *   - `primaryLight` is `brand[400] + '20'` in the dark theme — an 8-digit hex
- *     whose alpha byte is 12.5%, described in `themes.ts` as an "accent
- *     surface". Fed to a Skia slice fill and a legend chip's `backgroundColor`,
- *     the third category simply vanished from both, dark mode only.
- *   - `primary` and `primaryDark` are adjacent steps of one ramp
- *     (brand[500]/brand[600] in dark), which is not the separation a
- *     categorical scale needs.
- *
- * A data color must be opaque and separated in BOTH themes. Anything defined as
- * a translucent surface tint is not a candidate.
- */
+// Only the first color comes from the theme, so a rebrand reaches the chart; the
+// rest are a fixed set that must stay distinguishable from it and each other. A
+// data color must be OPAQUE and separated in both themes — a translucent surface
+// tint like `primaryLight` is not a candidate.
 const brandFirstColors = (theme: { colors: { primary: string } }) => [
   theme.colors.primary,
   '#4ECDC4',

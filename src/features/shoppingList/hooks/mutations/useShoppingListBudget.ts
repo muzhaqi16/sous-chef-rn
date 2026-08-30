@@ -1,13 +1,8 @@
 /**
- * useShoppingListBudget — set a list's budget limit and toggle price tracking
- * (local-first).
- *
- * Both ride on updateShoppingList (budget → the `planning` sub-input, price
- * tracking → the `settings` sub-input) — absolute sets keyed by the list id, so
- * we write to the cache before firing and a queued replay re-applies the same
- * state idempotently. A rejection restores the pre-change snapshot and alerts.
- * totalCost / estimatedTotal are server-derived and reconcile from the response;
- * they're never written optimistically.
+ * Local-first: budget rides on updateShoppingList's `planning` sub-input and price
+ * tracking on `settings` — absolute sets keyed by the list id, written to the cache
+ * before firing and idempotent on a queued replay. totalCost / estimatedTotal are
+ * server-derived and are never written optimistically.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';

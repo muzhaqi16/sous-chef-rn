@@ -1,15 +1,6 @@
-/**
- * Animation Types
- *
- * Shared types for the list animation coordination system.
- * Used across shopping lists, pantry, recipes, and other animated lists.
- */
+/** Shared types for the list animation coordination system. */
 
-/**
- * Direction for animations
- * 1 = forward (right, completed, purchased, starred)
- * -1 = backward (left, uncompleted, unpurchased, unstarred)
- */
+/** 1 = forward (completed / purchased / starred), -1 = backward. */
 export type AnimationDirection = 1 | -1;
 
 /**
@@ -31,14 +22,9 @@ export interface PendingEntryAnimation {
 }
 
 /**
- * Animation context interface (domain-agnostic).
- * Coordinates exit and entry animations between subscription handlers and list items.
- *
- * Pattern:
- * 1. List items register their exit trigger via registerAnimationTrigger
- * 2. Subscription handlers call scheduleAnimation to trigger exit
- * 3. After cache update, scheduleEntryAnimation is called
- * 4. New item mounts and claims entry animation via claimEntryAnimation
+ * Coordinates exit and entry animations between subscription handlers and list
+ * items: items register a trigger, a handler schedules the exit, then the cache
+ * update schedules an entry the newly-mounted item claims.
  */
 export interface ListAnimationContextType {
   /**

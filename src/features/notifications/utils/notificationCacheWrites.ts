@@ -1,16 +1,8 @@
 /**
- * The cache writes that change a notification's state, in one place.
- *
- * Two callers apply the same transitions from different directions: the user
- * acting locally (`useNotificationSync`) and the server pushing an event
- * (`useNotificationListener`). Both go through here, so a mark-read from this
- * device and a `READ` event from another cannot leave the row and the badge
- * disagreeing.
- *
- * Every transition moves the row AND `User.unreadNotificationCount` together,
- * because they are one fact read two ways. The count is only ever adjusted when
- * the row's read-state actually changed, which is what makes a repeated event
- * (a re-delivered subscription push, a replayed offline mutation) safe.
+ * Every cache write that changes a notification's state — local action and
+ * server event both route through here. A transition moves the row AND
+ * `User.unreadNotificationCount` together, and only when the read-state
+ * actually changed, which is what makes a repeated event safe.
  */
 import type { ApolloCache } from '@apollo/client';
 import {
@@ -35,12 +27,10 @@ export const isUnreadStatus = (s: NotificationStatus | undefined): boolean =>
   s === NotificationStatus.Pending || s === NotificationStatus.Sent;
 
 /**
- * Read one notification's cached status, or `undefined` when it is not cached.
- *
- * Uses `cache.modify` as a reader — returning `existing` unchanged is a no-op —
- * because it reports the field's absence, which `readFragment` cannot: a
- * fragment read of a partially-cached entity returns null exactly as a missing
- * one does, and "not cached" and "cached but unread" must not be confused here.
+ * `undefined` when the notification is not cached. `cache.modify` is used as a
+ * reader (returning `existing` unchanged is a no-op) because it reports the
+ * field's ABSENCE — a `readFragment` of a partially-cached entity returns null
+ * exactly as a missing one does, and the two must not be confused here.
  */
 export function readNotificationStatus(
   cache: ApolloCache,
@@ -101,12 +91,9 @@ export function applyNotificationUnread(
 }
 
 /**
- * Remove a notification.
- *
  * Evicting leaves a dangling edge in every connection that held it, which the
- * connection's `read` policy filters and counts down on the next read — the
- * same path the other delete flows rely on, and cheaper than editing each
- * cached variant's edge list.
+ * connection's `read` policy filters and counts down on the next read — cheaper
+ * than editing each cached variant's edge list.
  */
 export function evictNotification(
   cache: ApolloCache,
@@ -128,12 +115,9 @@ export interface CapturedNotification {
 }
 
 /**
- * Read a notification out before eviction; the feed selects this same shape.
- *
- * `returnPartialData`, because a complete read is not the thing being checked:
- * a row that never loaded every field still has to come back exactly as it was
- * if the delete is refused, and a strict read would return null for it and
- * restore nothing.
+ * Reads a notification out before eviction, in the shape the feed selects.
+ * `returnPartialData` on purpose: a row that never loaded every field still has
+ * to be restorable if the delete is refused, and a strict read returns null.
  */
 export function captureNotification(
   cache: ApolloCache,
@@ -188,20 +172,10 @@ const addToNotificationsConnection = createAddToParentConnectionUpdater<{
 }>('User', 'notificationsConnection', 'Notification');
 
 /**
- * Put a newly-arrived notification into the feed.
- *
- * The entity itself is already normalized — the subscription delivered it — so
- * only the connection edge is missing. `notificationsConnection` is keyed on
- * `filters`, and `cache.modify` runs its modifier for EVERY cached variant, so
- * the guard scopes the write: the unfiltered feed and the unread feed take it
- * (a new notification is unread), a variant filtered to another category does
- * not. Getting that wrong puts a pantry notification in the recipes feed, where
- * it stays until that variant is refetched.
- *
- * The badge is deliberately NOT touched here. See `useNotificationListener`:
- * a subscription-delivered event re-seeds the count from the server rather
- * than applying a delta, because the delta cannot be made idempotent on this
- * path.
+ * Adds the edge for an already-normalized notification. `cache.modify` runs for
+ * EVERY cached `notificationsConnection(filters:…)` variant, so `skipStoreField`
+ * keeps a pantry notification out of the recipes feed. The badge is NOT touched
+ * — a subscription event reseeds it (see `useNotificationListener`).
  */
 export function addNotificationToFeed(
   cache: ApolloCache,
@@ -225,13 +199,9 @@ export function addNotificationToFeed(
 }
 
 /**
- * Every cached notification id whose status is still unread.
- *
- * Read from `cache.extract()` rather than from the feed connection, because
- * "mark all read" means every notification the device knows about, not only the
- * page or the filtered variant currently on screen. `MarkAllNotificationsAsRead`
- * returns a summary count and no ids, so the affected rows have to be found
- * locally for the UI to move at all.
+ * Read from `cache.extract()`, not the feed connection: "mark all read" means
+ * every notification the device knows about, not the page on screen. The
+ * mutation returns a summary count and no ids, so the rows must be found here.
  */
 export function cachedUnreadNotificationIds(cache: ApolloCache): string[] {
   const extracted = cache.extract() as Record<

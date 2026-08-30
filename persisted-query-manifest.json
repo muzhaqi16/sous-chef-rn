@@ -531,12 +531,6 @@
       "body": "query GetItemPurchaseHistory($itemId: ID!, $first: Int, $after: String) {\n  shoppingListItem(id: $itemId) {\n    id\n    purchasesConnection(first: $first, after: $after) {\n      edges {\n        node {\n          id\n          purchaseDate\n          quantity\n          unitPrice\n          totalPrice\n          currency {\n            id\n            code\n            __typename\n          }\n          unitSymbol\n          user {\n            id\n            email\n            profile {\n              id\n              displayName\n              __typename\n            }\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n        __typename\n      }\n      totalCount\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
-      "id": "f6e15431f5eaf92163b1427f34db401b99ce8ba51521695808c4e33d9f50870f",
-      "name": "GetMe",
-      "type": "query",
-      "body": "query GetMe {\n  me {\n    id\n    ...PartialUser\n    __typename\n  }\n}\n\nfragment PartialUser on User {\n  id\n  email\n  emailVerified\n  role\n  canAccessDevTools\n  onBoarded\n  timezone\n  defaultShoppingListId\n  defaultHomeId\n  createdAt\n  updatedAt\n  profile {\n    id\n    firstName\n    lastName\n    displayName\n    bio\n    avatar\n    phone\n    dateOfBirth\n    gender\n    profileVisibility\n    showEmail\n    showPhone\n    __typename\n  }\n  settings {\n    id\n    theme\n    showTutorials\n    __typename\n  }\n  __typename\n}"
-    },
-    {
       "id": "24dfbc07e6be1b6555b3b61b15e0d10de5024ec340f37f2b10eb6f8d99c48d60",
       "name": "GetMealPlan",
       "type": "query",

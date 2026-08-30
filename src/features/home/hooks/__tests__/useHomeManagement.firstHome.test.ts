@@ -28,6 +28,8 @@ import {
 } from '#operations/home/home.generated';
 import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import { alertService } from '#/services/alertService';
+import { errorService } from '#/services/errorService';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useHomeManagement } from '../useHomeManagement';
 
 const mockStoreState = {
@@ -104,7 +106,60 @@ const markDefaultMock = (defaultPantryId: string) =>
     },
   });
 
+const markDefaultRefusedMock = () =>
+  recordMock(MarkHomeAsDefaultDocument, {
+    data: {
+      markHomeAsDefault: {
+        __typename: 'NotFoundError',
+        code: ErrorCode.NotFound,
+        message: 'Home not found',
+      },
+    },
+  });
+
 describe('first home becomes the default', () => {
+  it('reports a refused sync, since nothing else can', async () => {
+    // A new user left with no default home is invisible otherwise: the
+    // surviving log call is stripped in release and never reaches errorService.
+    const homes = noHomesMock();
+    const create = recordMock(CreateHomeDocument, {
+      data: {
+        createHome: {
+          __typename: 'CreateHomePayload',
+          home: {
+            __typename: 'Home',
+            id: 'home-new',
+            name: 'First Home',
+            isDefault: false,
+            pantriesConnection: {
+              __typename: 'PantryConnection',
+              edges: [],
+              totalCount: 0,
+            },
+          },
+        },
+      },
+    });
+    const markDefault = markDefaultRefusedMock();
+
+    const { result } = renderHookWithApollo(() => useHomeManagement(), {
+      operationMocks: [homes.mock, create.mock, markDefault.mock],
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.createHome('First Home');
+    });
+
+    await waitFor(() =>
+      expect(errorService.reportError).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({ operation: 'Set First Home as Default' }),
+      ),
+    );
+  });
+
   it('syncs a newly created first home to the server, with no alert', async () => {
     const homes = noHomesMock();
     const create = recordMock(CreateHomeDocument, {

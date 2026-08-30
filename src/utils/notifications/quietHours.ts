@@ -1,11 +1,7 @@
 /**
- * Quiet-hours evaluation, timezone-aware.
- *
- * The server suppresses notifications using the user's configured IANA timezone.
- * The client must evaluate quiet hours in that same zone (not the device's local
- * zone) so local suppression and server suppression agree — otherwise a user who
- * travels, or whose device zone differs from their configured zone, sees the two
- * disagree.
+ * The server suppresses in the user's CONFIGURED IANA zone, so the client must
+ * evaluate in that same zone rather than the device's — otherwise a traveller
+ * sees local and server suppression disagree.
  */
 
 interface QuietHoursConfig {
@@ -16,15 +12,10 @@ interface QuietHoursConfig {
 }
 
 /**
- * The device's IANA zone, or `null` when the engine can't report one.
- *
- * `quietHoursTimezone` is what both the server's suppression and this module's
- * banner evaluate the window in, and the API defaults it to `"UTC"`. Left at
- * that default a 22:00–08:00 window mutes 18:00–04:00 for a New York user, so
- * the client keeps the field pointed at the device's zone — that is what makes
- * the configured window mean the user's own wall clock.
- *
- * (Plain function, not a hook, so the try-catch never sits in a hook body.)
+ * The device's IANA zone, or null. The API defaults `quietHoursTimezone` to
+ * `"UTC"`, where a 22:00–08:00 window mutes 18:00–04:00 in New York — so the
+ * client keeps the field on the device's zone, which is what makes the window
+ * mean the user's own wall clock. Plain function: no try-catch in a hook body.
  */
 export function getDeviceTimezone(): string | null {
   try {

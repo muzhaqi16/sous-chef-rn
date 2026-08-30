@@ -2,11 +2,9 @@ import { useState } from 'react';
 import { useAppStore } from '#store/useAppStore';
 
 /**
- * Returns `true` during the single render pass that detects a tutorial reset
- * (triggered by resetAllFeatureHints → bumpTutorialResetGeneration).
- *
- * Uses the "adjusting state during render" pattern — compiler-safe,
- * no refs, no effects.
+ * `true` for the single render that detects a tutorial reset
+ * (`resetAllFeatureHints` → `bumpTutorialResetGeneration`), via the
+ * adjusting-state-during-render pattern — no refs, no effects.
  */
 export function useTutorialResetSignal(): boolean {
   const gen = useAppStore(state => state.tutorialResetGeneration);

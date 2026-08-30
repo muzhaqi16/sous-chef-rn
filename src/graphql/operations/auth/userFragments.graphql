@@ -59,36 +59,3 @@ fragment LoginUser on User {
 
 # Returned by the GetMe query. Single-operation fragment kept here so the
 # auth-related shape lives alongside LoginUser.
-fragment PartialUser on User {
-  id
-  email
-  emailVerified
-  role
-  canAccessDevTools
-  onBoarded
-  timezone
-  defaultShoppingListId
-  defaultHomeId
-  createdAt
-  updatedAt
-  # Same shape as `GetUserProfile` reads — see the note on LoginUser above.
-  profile {
-    id
-    firstName
-    lastName
-    displayName
-    bio
-    avatar
-    phone
-    dateOfBirth
-    gender
-    profileVisibility
-    showEmail
-    showPhone
-  }
-  settings {
-    id
-    theme
-    showTutorials
-  }
-}

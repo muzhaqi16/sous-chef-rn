@@ -3,13 +3,9 @@ import { isErrorTypename } from './mutationPayload';
 import { t } from '#/i18n';
 import { logger } from '#/utils/environment';
 
-/**
- * Codes that mark an optimistic-concurrency conflict, whether the error arrives
- * as a thrown/top-level GraphQL error (`extensions.code`) or a resolved
- * errors-as-data union member (the member's own `code` field). The API emits
- * `VERSION_CONFLICT` for optimistic-lock failures and `CONFLICT` for other
- * uniqueness/state conflicts — both get the "updated elsewhere" treatment.
- */
+// Conflict codes on BOTH channels — a top-level `extensions.code` and a resolved
+// union member's own `code`. `VERSION_CONFLICT` is the optimistic-lock failure,
+// `CONFLICT` covers uniqueness/state; both get "updated elsewhere".
 const CONFLICT_CODES = new Set<string>([
   ErrorCode.Conflict,
   ErrorCode.VersionConflict,
@@ -22,10 +18,7 @@ interface GraphQLErrorLike {
   extensions?: Record<string, unknown>;
 }
 
-/**
- * Error shapes accepted by the version-conflict helpers: either an Apollo-style
- * error wrapping `graphQLErrors`, or a single GraphQL error with `extensions`.
- */
+/** Either an Apollo error wrapping `graphQLErrors`, or a single GraphQL error. */
 interface ConflictErrorLike extends GraphQLErrorLike {
   graphQLErrors?: GraphQLErrorLike[];
 }
@@ -36,12 +29,6 @@ function asConflictError(error: unknown): ConflictErrorLike | null {
     : null;
 }
 
-/**
- * Check if an error is a CONFLICT error from the API (Apollo error level)
- *
- * @param error - Error object that may contain GraphQL errors
- * @returns True if the error is a version conflict
- */
 export function isVersionConflictError(error: unknown): boolean {
   const err = asConflictError(error);
   if (!err) {
@@ -63,22 +50,15 @@ export function isVersionConflictError(error: unknown): boolean {
   return false;
 }
 
-/**
- * Check if an errors-as-data member's `code` marks a version conflict. The
- * union member carries only `code` + `message` — pass the member's code
- * directly (there is no `success` field on current payloads).
- */
+/** For an errors-as-data member, which carries only `code` + `message`. */
 export function isVersionConflictPayload(code: string): boolean {
   return CONFLICT_CODES.has(code);
 }
 
 /**
- * The `*Error` union member resolved inside a mutation's `data` (errors-as-data)
- * as opposed to a thrown GraphQL error. Under `errorPolicy: 'all'` an error
- * resolves as a truthy `data` member and never throws; a single-mutation payload
- * holds at most one such member. Walks the payload's field values and returns
- * the first whose `__typename` ends in `Error`, exposing its `typename`, `code`,
- * and `message` (each `null` when absent), or `null` when none is present.
+ * The `*Error` union member resolved inside `data` — under `errorPolicy: 'all'`
+ * a refusal resolves as a truthy member and never throws, and a single-mutation
+ * payload holds at most one.
  */
 export function findFirstErrorMember(
   data: unknown,
@@ -100,10 +80,8 @@ export function findFirstErrorMember(
 }
 
 /**
- * Detect a `ConflictError` union member resolved inside a mutation's `data`,
- * so the update path can reach the version-conflict refresh UX instead of a
- * generic alert. Returns the member's message (or `null`) when the resolved
- * error member is a conflict, otherwise `null`.
+ * Routes a resolved `ConflictError` member to the version-conflict refresh UX
+ * rather than a generic alert.
  */
 export function findConflictDataMember(
   data: unknown,
@@ -117,37 +95,16 @@ export function findConflictDataMember(
 }
 
 /**
- * Get the user-friendly message for a version conflict.
- *
- * The errors-as-data contract carries conflict context only in the member's
- * `message` string — the API drops `currentVersion`/`expectedVersion`
- * extensions when mapping to the union member, so there are no typed detail
- * fields to read on either channel. Always the generic "updated elsewhere"
- * body; callers that have the member's message show that instead.
+ * Always the generic "updated elsewhere" body: the API drops the
+ * `currentVersion`/`expectedVersion` extensions when mapping to a union member,
+ * so no typed detail exists on either channel. A caller holding the member's
+ * own `message` shows that instead.
  */
 export function getVersionConflictMessage(): string {
   return t('errors.codes.versionConflict');
 }
 
-/**
- * Handle version conflict errors with user-friendly alerts
- *
- * @param error - Apollo error to check
- * @param onRefresh - Optional callback to refresh data
- * @returns True if error was a version conflict and was handled
- *
- * @example
- * ```typescript
- * try {
- *   await updateQuantity({ id, quantity, version });
- * } catch (error) {
- *   if (handleVersionConflict(error, () => refetch())) {
- *     return; // Error was handled
- *   }
- *   // Handle other errors
- * }
- * ```
- */
+/** @returns true when the error was a version conflict and was handled. */
 export function handleVersionConflict(error: unknown): boolean {
   if (!isVersionConflictError(error)) {
     return false;

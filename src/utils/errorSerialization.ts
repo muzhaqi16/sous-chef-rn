@@ -1,22 +1,15 @@
 /**
- * Safely serializes any Apollo / Network / JS error into a JSON-friendly object
- * without ever throwing or getting caught in circular references.
- *
- * Uses WeakSet to track visited objects and prevent circular references.
- * Limits recursion depth to avoid serializing massive Apollo context objects.
+ * Serializes any Apollo / Network / JS error to a JSON-friendly object without
+ * throwing. A WeakSet tracks visited objects against circular references, and
+ * depth is capped so a huge Apollo context object is not walked whole.
  */
-/**
- * Type guard narrowing an opaque value to an indexable object so optional
- * error properties can be read without `any`.
- */
+
+/** Narrows an opaque value to an indexable object, so no `any` is needed. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-/**
- * Extract a string message from an opaque error value (string, Error, or any
- * object carrying a string `message`), returning '' when none is present.
- */
+/** '' when the value carries no string `message`. */
 function getErrorMessage(error: unknown): string {
   if (typeof error === 'string') return error;
   if (isRecord(error) && typeof error.message === 'string') {
@@ -47,11 +40,9 @@ interface SerializedOperation {
 }
 
 /**
- * Describe an error object that carries no usable `message`, using the
- * clues that remain — its name (or constructor) and its own property
- * names — so it stays attributable in logs instead of collapsing to a
- * bare "Unknown error". Uses `getOwnPropertyNames` because Error fields
- * (`message`, `stack`, custom codes) are often non-enumerable.
+ * Keeps a message-less error attributable in logs instead of collapsing to a
+ * bare "Unknown error". `getOwnPropertyNames` because Error fields are often
+ * non-enumerable.
  */
 function describeMessagelessError(error: Record<string, unknown>): string {
   const ctor = (error as { constructor?: { name?: unknown } }).constructor;
@@ -64,12 +55,8 @@ function describeMessagelessError(error: Record<string, unknown>): string {
 }
 
 /**
- * JSON-friendly, fully-narrowed error shape returned by {@link serializeError}.
- *
- * The well-known Apollo/JS error fields are typed so readers index them
- * (`result.graphQLErrors?.[0].message`, `result.networkError?.name`) without
- * casts. The index signature keeps the object open for the dynamic
- * `additionalProperties` capture and any logger that reads ad-hoc keys.
+ * The well-known Apollo/JS fields are typed so readers index them without casts;
+ * the index signature keeps the object open for `additionalProperties`.
  */
 export interface SerializedError {
   name?: string;
@@ -259,13 +246,9 @@ export function isCircularStructureError(error: unknown): boolean {
 }
 
 /**
- * Check if an error is a timer-related circular structure error
- * These are expected during subscription teardown/setup due to graphql-ws internals
- * and are not actionable - they should be silently suppressed
- *
- * The graphql-ws library uses internal setTimeout for keepalive pings.
- * During subscription lifecycle transitions, error events may contain
- * Timer object references which have circular linked-list structures.
+ * graphql-ws keepalive pings use setTimeout, and a Timer object is a circular
+ * linked list — so during subscription teardown/setup an error event can carry
+ * one. Expected and not actionable, so callers suppress it silently.
  */
 export function isTimerCircularStructureError(error: unknown): boolean {
   if (!error) return false;

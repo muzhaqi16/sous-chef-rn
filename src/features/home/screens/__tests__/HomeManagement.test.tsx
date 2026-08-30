@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { act, render } from '@testing-library/react-native';
 import { HomeManagement } from '../HomeManagement';
 
 // Mock token scheduler / refreshToken
@@ -82,6 +82,8 @@ const mockHomeCardProps: Array<{
   canDelete?: boolean;
   canInvite?: boolean;
   isDefault?: boolean;
+  isHighlighted?: boolean;
+  onSetDefault?: (homeId: string) => void;
 }> = [];
 jest.mock('#features/home/components/HomeCard', () => ({
   HomeCard: (props: {
@@ -89,6 +91,8 @@ jest.mock('#features/home/components/HomeCard', () => ({
     canDelete?: boolean;
     canInvite?: boolean;
     isDefault?: boolean;
+    isHighlighted?: boolean;
+    onSetDefault?: (homeId: string) => void;
   }) => {
     mockHomeCardProps.push(props);
     return props.homeRef?.name;
@@ -486,6 +490,64 @@ describe('HomeManagement', () => {
       render(<HomeManagement />);
 
       expect(mockHomeCardProps[0]?.homeRef?.id).toBe('home-2');
+    });
+  });
+
+  describe('setting the default home', () => {
+    const twoHomes = [
+      { id: 'home-1', name: 'First', myMembership: { canManageHome: true } },
+      { id: 'home-2', name: 'Second', myMembership: { canManageHome: true } },
+    ];
+
+    it('does not highlight a home whose switch was refused', async () => {
+      // A refusal rolls the chip back, so highlighting anyway leaves the two
+      // pointing at different homes.
+      const setDefaultHome = jest.fn().mockResolvedValue(false);
+      mockHook({
+        homes: twoHomes,
+        remoteDefaultHomeId: 'home-1',
+        selectedHomeId: 'home-1',
+        setDefaultHome,
+      });
+
+      render(<HomeManagement />);
+
+      const onSetDefault = mockHomeCardProps.find(
+        p => p.homeRef?.id === 'home-2',
+      )?.onSetDefault;
+
+      await act(async () => {
+        await onSetDefault?.('home-2');
+      });
+
+      expect(setDefaultHome).toHaveBeenCalledWith('home-2');
+      expect(mockHomeCardProps.some(p => p.isHighlighted)).toBe(false);
+    });
+
+    it('highlights a home whose switch stood', async () => {
+      const setDefaultHome = jest.fn().mockResolvedValue(true);
+      mockHook({
+        homes: twoHomes,
+        remoteDefaultHomeId: 'home-1',
+        selectedHomeId: 'home-1',
+        setDefaultHome,
+      });
+
+      render(<HomeManagement />);
+
+      const onSetDefault = mockHomeCardProps.find(
+        p => p.homeRef?.id === 'home-2',
+      )?.onSetDefault;
+
+      await act(async () => {
+        await onSetDefault?.('home-2');
+      });
+
+      expect(
+        mockHomeCardProps.some(
+          p => p.homeRef?.id === 'home-2' && p.isHighlighted,
+        ),
+      ).toBe(true);
     });
   });
 });

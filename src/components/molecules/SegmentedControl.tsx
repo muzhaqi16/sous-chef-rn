@@ -82,13 +82,7 @@ const SegmentedTab = <T extends string>({
   );
 };
 
-/**
- * SegmentedControl - Reusable segmented control for selecting from options
- * Generic component that works with any string enum or array of string values
- *
- * Features a fluid sliding indicator pill with spring physics and
- * interpolated text color transitions.
- */
+/** Segmented control over any string enum or array, with a spring-driven pill. */
 export const SegmentedControl = <T extends string>({
   label,
   options,
@@ -101,30 +95,22 @@ export const SegmentedControl = <T extends string>({
 }: SegmentedControlProps<T>) => {
   const isCompact = size === 'compact';
 
-  // Layout measurement — subtract border (1px each side) for inner content width
   const [contentWidth, setContentWidth] = useState(0);
   const tabWidth = contentWidth > 0 ? contentWidth / options.length : 0;
   const selectedIndex = Math.max(0, options.indexOf(value));
 
-  // The pill's resting position is derived live from the selected segment and
-  // the measured width, so it is correct on the first measured frame (including
-  // the first cold-boot frame) and re-derives after any relayout such as a
-  // rotation — nothing is stored to go stale or be dropped while Reanimated's
-  // runtime is still warming up. `offset` is a transient slide delta: on a
-  // selection change we seed it with the distance back to the old segment and
-  // spring it to 0, which slides the pill from the old segment to the new one.
+  // The resting position is DERIVED from the selection and measured width, so it
+  // is right on the first measured frame and re-derives after a relayout — nothing
+  // stored can go stale while Reanimated warms up. `offset` is only a transient
+  // slide delta, seeded with the distance back to the old segment and sprung to 0.
   const offset = useSharedValue(0);
   const indicatorX = useDerivedValue(
     () => selectedIndex * tabWidth + offset.get(),
   );
 
-  // Slide the pill from the previously-selected segment to the new one. Seeded
-  // in a layout effect (not the render body) so no SharedValue is written during
-  // render; keyed on the selected index. The previous index lives in a
-  // SharedValue — writing it never re-renders, and reading it in the effect
-  // avoids a setState-in-effect cascade. The resting position stays derived
-  // (indicatorX above), so first paint / cold boot is correct even before this
-  // ever runs — this only adds the transient slide on a selection change.
+  // Seeded in a layout effect, not the render body, so no SharedValue is written
+  // during render; the prior index lives in a SharedValue so reading it here costs
+  // no re-render. Only the transient slide — `indicatorX` owns the resting spot.
   const prevIndexSV = useSharedValue(selectedIndex);
   useLayoutEffect(() => {
     const fromIndex = prevIndexSV.get();
@@ -141,15 +127,12 @@ export const SegmentedControl = <T extends string>({
   const indicatorAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: indicatorX.get() }],
     width: tabWidth,
-    // Width is 0 until measured; gate opacity too so the always-mounted pill
-    // never paints at the left edge before the first measurement.
+    // Width is 0 until measured; the opacity gate keeps the always-mounted pill
+    // from painting at the left edge before the first measurement.
     opacity: tabWidth > 0 ? 1 : 0,
-    // Read the brand color inside the worklet (the same channel the tab text
-    // already uses) so Reanimated is the sole writer of this node. When the
-    // color lived on the static stylesheet, Reanimated and Unistyles both
-    // committed to this one native node, and a Reanimated commit could land
-    // over a freshly-applied theme color — pinning the pill to the previous
-    // brand color until the screen remounted.
+    // The brand color is read INSIDE the worklet so Reanimated is the node's sole
+    // writer; on the static stylesheet, Unistyles also commits to it and a
+    // Reanimated commit can land over a freshly-applied theme color.
     backgroundColor: animatedTheme.get().colors.primary,
   }));
 
@@ -209,9 +192,8 @@ const styles = StyleSheet.create(theme => ({
     bottom: 0,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    // backgroundColor is driven by the worklet in `indicatorAnimatedStyle`, not
-    // here — see the comment there for why the brand color must not live on the
-    // static stylesheet of a node Reanimated also commits to.
+    // backgroundColor is driven by the worklet in `indicatorAnimatedStyle` — see
+    // there for why it must not sit on the static stylesheet.
   },
   segment: {
     flex: 1,

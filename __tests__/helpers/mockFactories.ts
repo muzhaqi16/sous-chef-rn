@@ -320,17 +320,35 @@ export function createMockHome(overrides?: Partial<MockHome>): MockHome {
   };
 }
 
-// The GetHomes connection-node shape consumed by the home hooks
-// (useHomeSelection, useHomeMutations, useDefaultHome). Derived from the
-// generated query so it stays in sync; `pantries` is the optional flat shape
-// useHomeSelection's HomeNode adds on top of the node.
-type MockHomeNode = GetHomesQuery['homes']['edges'][number]['node'] & {
-  pantries?: Array<{ id: string; isDefault?: boolean }>;
+// The GetHomes connection-node shape consumed by the home hooks. Derived from
+// the generated query so it stays in sync.
+type MockHomeNode = GetHomesQuery['homes']['edges'][number]['node'];
+
+/** `pantries` is a shorthand: it is written out as a real connection. */
+type MockHomeNodeOverrides = Partial<MockHomeNode> & {
+  pantries?: Array<{ id: string; name?: string; isDefault?: boolean }>;
 };
 
 export function createMockHomeNode(
-  overrides?: Partial<MockHomeNode>,
+  overrides?: MockHomeNodeOverrides,
 ): MockHomeNode {
+  const { pantries, ...rest } = overrides ?? {};
+  const pantriesConnection = pantries
+    ? {
+        __typename: 'PantryConnection' as const,
+        totalCount: pantries.length,
+        edges: pantries.map(pantry => ({
+          __typename: 'PantryEdge' as const,
+          node: {
+            __typename: 'Pantry' as const,
+            id: pantry.id,
+            name: pantry.name ?? 'Test Pantry',
+            isDefault: pantry.isDefault ?? false,
+          },
+        })),
+      }
+    : undefined;
+
   return {
     __typename: 'Home',
     id: nextId(),
@@ -357,7 +375,8 @@ export function createMockHomeNode(
       __typename: 'MembershipConnection',
       totalCount: 0,
     },
-    ...overrides,
+    ...rest,
+    ...(pantriesConnection ? { pantriesConnection } : {}),
   };
 }
 

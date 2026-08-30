@@ -4,20 +4,10 @@ import { registerSessionScopedStore } from '#store/sessionScopedStores';
 import type { ExpirationLinkData } from '#features/notifications/types';
 
 /**
- * The expiration-enrichment buffer.
- *
- * `expirationNotificationChanged` and `notificationChanged` are separate events
- * and can arrive in either order. When the enrichment lands first there is no
- * notification to attach it to and nothing to key it against, so it waits here
- * until its partner arrives and `toDisplayNotification` merges it at read time.
- *
- * This is the only notification state the client owns: the feed, its read state
- * and its counts live in the Apollo cache (`notificationCacheWrites.ts`).
- *
- * A feature store rather than a slice of the root store, because nothing outside
- * notifications reads it — pantry writes to it through `useLinkExpirationData`.
- * Deliberately NOT persisted: it is a buffer for two in-flight events, and a
- * stale entry outliving the session would enrich the wrong notification.
+ * The expiration-enrichment buffer, and the ONLY notification state outside the
+ * Apollo cache. Its two halves arrive on different subscriptions in either
+ * order, so an early enrichment waits here until `toDisplayNotification` merges
+ * it. NOT persisted: a stale entry would enrich the wrong notification.
  */
 interface NotificationStoreState {
   /** Enrichment keyed by the generic notification id it belongs to. */

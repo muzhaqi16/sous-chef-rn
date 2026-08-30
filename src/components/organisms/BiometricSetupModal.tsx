@@ -19,11 +19,9 @@ interface BiometricSetupModalProps {
 }
 
 /**
- * Modal shell for biometric enrollment — used from Profile → Security to
- * enable/re-enable biometric login. The card itself (icon, copy, password
- * field, enable/skip + the storeCredentials logic) is the shared
- * `BiometricSetupView` + `useBiometricSetup`, so this stays in lockstep with
- * the onboarding step and the post-login gate.
+ * Modal shell for biometric enrollment (Profile → Security). The card itself is
+ * the shared `BiometricSetupView` + `useBiometricSetup`, so this stays in
+ * lockstep with the onboarding step and the post-login gate.
  */
 export const BiometricSetupModal = ({
   visible,
@@ -37,12 +35,11 @@ export const BiometricSetupModal = ({
     userEmail,
     presetPassword: userPassword,
     active: visible,
-    // The modal callers only care about the boolean outcome.
     onComplete: enabled => onComplete(enabled),
   });
 
-  // Unavailable / not-yet-probed → render nothing; the hook calls onComplete
-  // once the (async) probe confirms biometrics are unavailable.
+  // Renders nothing until probed; the hook calls onComplete if biometrics are
+  // unavailable.
   if (!visible || !bio.available) return null;
 
   return (
@@ -105,8 +102,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.overlays.medium,
   },
   contentContainer: {
-    // flexGrow so the card can scroll once the keyboard shrinks the avoiding
-    // view, instead of being clamped to it and clipped.
+    // flexGrow so the card scrolls once the keyboard shrinks the avoiding view.
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',

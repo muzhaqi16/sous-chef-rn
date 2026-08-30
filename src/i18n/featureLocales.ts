@@ -1,30 +1,10 @@
 import type { SupportedLanguage } from './config';
 
 /*
- * Feature-owned copy, merged into the core tree at init.
- *
- * ## Why the imports are here and not behind the feature registry
- *
- * `src/i18n/config.ts` is imported near the top of `index.js`, before anything
- * else that can call `t()`. Reaching for `#features/registry` to collect these
- * would pull in every manifest, and through them every tab stack and every
- * screen — the whole component graph — into the launch path. These are JSON
- * imports: data, no components, no cost beyond the strings themselves.
- *
- * ## Adding a feature
- *
- * Add `src/features/<name>/locales/{en,es,it,sq}.json` and one entry below.
- *
- * The gates read the FILESYSTEM (`scripts/check-i18n.mjs` and
- * `__tests__/helpers/mergedLocales.ts` both read the locales directory of every
- * feature under `src/features`),
- * while the app reads the map below. Those are two different sources, and this
- * comment used to claim they were one — so adding the files and forgetting the
- * entry left every gate green while the feature rendered raw dotted keys in all
- * four languages at runtime.
- *
- * `__tests__/i18n/featureLocaleRegistration.test.ts` asserts the two agree in
- * both directions, which is what makes the sentence above true.
+ * Feature-owned copy, merged at init. Imported DIRECTLY, not via
+ * `#features/registry` — that pulls the whole component graph into the launch
+ * path. A feature needs its JSON files AND an entry below: the gates read the
+ * filesystem, the app reads this map, so a missing entry renders raw keys.
  */
 import pantryEn from '#features/pantry/locales/en.json';
 import pantryEs from '#features/pantry/locales/es.json';
@@ -91,16 +71,10 @@ export const FEATURE_LOCALES: Record<
 };
 
 /**
- * Merge two locale trees, combining namespaces instead of replacing them.
- *
- * `Object.assign` at the top level is what this replaces: a feature declaring a
- * namespace the core tree also declares — `labels`, `errors`, `empty` — REPLACED
- * core's subtree wholesale, taking every key in it with it. The checkers
- * repeated the same shallow merge, so parity still reported clean while the app
- * had lost the strings.
- *
- * Arrays and scalars are replaced, not merged: a locale value is either a
- * namespace or a string, never something to concatenate.
+ * Merge locale trees by COMBINING namespaces. A shallow `Object.assign` would
+ * let a feature declaring `labels` or `errors` replace core's subtree wholesale,
+ * silently taking every key in it. Arrays and scalars are replaced, not merged:
+ * a locale value is a namespace or a string, never something to concatenate.
  */
 const deepMergeLocale = (
   base: LocaleTree,

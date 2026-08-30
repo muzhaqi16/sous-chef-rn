@@ -304,7 +304,7 @@ locale's `_other` — it falls through to `fallbackLng`. An Italian user at a
 count of 1,000,000 (Italian needs `many`) would read `1000000 items` in
 English if `_many` keys were missing.
 
-**Verified against `i18next@26.0.10`.** `Translator.resolve()` builds, per
+**Verified against `i18next@26.4.0`.** `Translator.resolve()` builds, per
 language, `[key, key + pluralSuffix]` and tries them in reverse — the plural
 key, then the bare key — and never tries `key_other` intra-locale; only after
 both miss does it advance to the next language in the fallback hierarchy.

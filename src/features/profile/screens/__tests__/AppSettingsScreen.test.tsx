@@ -18,6 +18,9 @@ jest.mock('#features/profile/hooks/useAppSettings', () => ({
       betaFeatures: [],
     },
     loading: false,
+    hasLoadedSettings: true,
+    error: undefined,
+    refetch: jest.fn(),
     updateAppSetting: mockUpdateAppSetting,
     resetToDefaults: mockResetToDefaults,
   }),
@@ -278,6 +281,8 @@ describe('AppSettingsScreen - loading state', () => {
         },
         loading: true,
         hasLoadedSettings: false,
+        error: undefined,
+        refetch: jest.fn(),
         updateAppSetting: mockUpdateAppSetting,
         resetToDefaults: mockResetToDefaults,
       });
@@ -285,7 +290,7 @@ describe('AppSettingsScreen - loading state', () => {
 
   it('shows loading text when nothing has been loaded yet', () => {
     render(<AppSettingsScreen />);
-    expect(screen.getByText('Loading settings...')).toBeTruthy();
+    expect(screen.getByTestId('settings-state')).toBeTruthy();
   });
 
   it('keeps the header and back button while it waits', () => {

@@ -1,12 +1,8 @@
 /**
- * useOpenPantryItemBatch - Mutation hook for marking a batch as opened
- * (local-first).
- *
- * Writes `isOpened`/`openedAt` to the cached batch PERMANENTLY before firing so
- * the opened state shows instantly and survives an offline/queued open. The
- * open is naturally idempotent (re-opening is a no-op), and the canonical
- * mutation carries a client-minted `input.idempotencyKey` so a queued replay is
- * deduped at the server too. A real rejection restores the pre-open snapshot.
+ * Local-first: `isOpened`/`openedAt` are written to the cached batch PERMANENTLY
+ * before firing, so the state survives an offline/queued open (an
+ * `optimisticResponse` would roll back on the queue's null result). A real
+ * rejection restores the pre-open snapshot.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';

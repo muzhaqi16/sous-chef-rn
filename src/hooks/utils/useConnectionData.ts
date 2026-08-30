@@ -2,13 +2,8 @@ import { usePagination, type FetchMoreFn } from '#hooks/utils/usePagination';
 import { usePreservedConnection } from '#hooks/apollo/usePreservedConnection';
 
 /**
- * Structural constraint matching codegen connection types as they appear
- * in query results. Queries typically select only `hasNextPage` + `endCursor`
- * from PageInfo, so we require only those fields rather than the full
- * codegen `PageInfo` type.
- *
- * All codegen connection types (RecipeConnection, ShoppingListItemConnection,
- * PantryItemConnection, etc.) satisfy this constraint.
+ * Structural constraint over codegen connection types AS SELECTED: only
+ * `hasNextPage` + `endCursor`, not the full codegen `PageInfo`.
  */
 export type ConnectionResult = {
   edges: Array<{ node: unknown }>;
@@ -46,23 +41,9 @@ export interface ConnectionData<TNode> {
 }
 
 /**
- * Composes `extractNodes` + `getConnectionTotalCount` + `usePagination`
- * into a single reusable hook for any cursor-paginated connection.
- *
- * The consumer calls their own Apollo query hook (with entity-specific
- * skip/policy config) and passes the result here via `data` + `selector`.
- *
- * Node types are inferred automatically from the codegen query type —
- * no manual type annotations needed at the call site.
- *
- * @example
- * const unpurchased = useConnectionData({
- *   data: unpurchasedData,   // GetShoppingListItemsFilteredQuery
- *   selector: (d) => d.shoppingList?.itemsConnection,
- *   loading: uLoading,
- *   fetchMore: uFetchMore,
- * });
- * // unpurchased.items is ShoppingListItemDisplayFragment[]
+ * Node extraction + total count + `usePagination` for any cursor-paginated
+ * connection. The caller runs its own query and passes `data` + `selector`; node
+ * types are inferred from the codegen query type.
  */
 export function useConnectionData<TData, C extends ConnectionResult>(
   config: UseConnectionDataConfig<TData, C>,
@@ -77,10 +58,8 @@ export function useConnectionData<TData, C extends ConnectionResult>(
   } = config;
 
   const connection = data ? selector(data) : undefined;
-  // Preserve across error-driven `undefined` connections (errorPolicy:'ignore' /
-  // a failed refetch) BEFORE extracting nodes — see `usePreservedConnection`.
-  // Without this, a transient network blip would flatten `undefined → []` and
-  // wipe a list whose items are still safely in the cache.
+  // Preserved BEFORE extracting nodes, or a transient blip flattens
+  // `undefined → []` and wipes a list still safely in the cache.
   const preserved = usePreservedConnection(connection);
   const items = preserved.nodes;
   const totalCount = preserved.totalCount;

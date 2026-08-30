@@ -26,16 +26,10 @@ import { BiometricSetupModal } from '#components/organisms/BiometricSetupModal';
 import { errorService } from '#/services/errorService';
 import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
 
-// Map PROFILE_SETTINGS_CONFIG section titles (the config's canonical English
-// keys) → translation keys under the `profile.sections` namespace.
-// Shape of a single entry inside PROFILE_SETTINGS_CONFIG.
 /**
- * Builds the profile screen's setting rows.
- *
- * Takes no profile: every row here navigates, toggles biometrics, changes
- * language or signs out — none of them renders a UserProfile field. It used to
- * take one, for eleven personal-information branches that PROFILE_SETTINGS_CONFIG
- * never reached; those live in PersonalInformationScreen.
+ * Builds the profile screen's setting rows. Takes no profile — every row here
+ * navigates, toggles biometrics, changes language or signs out; the rows that
+ * render UserProfile fields live in PersonalInformationScreen.
  */
 export const useConfigurableSettings = () => {
   const { t } = useTranslation();
@@ -46,18 +40,10 @@ export const useConfigurableSettings = () => {
     useCredentialStorage();
   const { resetBiometricDeclination, markBiometricEnabled } =
     useAuthPreferences();
-  // ===== MUTATION 1: Update User Profile =====
-  // Local-first: the edited fields are written to the cached UserProfile
-  // PERMANENTLY before firing (an optimisticResponse would be torn down the
-  // moment the offline queue completes the request with a null result). The
-  // update is idempotent server-side (keyed by the authenticated userId), so a
-  // queued replay is safe; a real rejection restores the pre-edit values.
-  // Error/rejection handling lives in updateProfile/updateUserPreferences below
-  // (via alertIfRejected) so there is exactly one alerter — no mutation onError.
-
-  // ===== MUTATION 2: Update User Preferences =====
-  // No optimistic response — UserSettings has many required fields that are hard
-  // to predict; automatic normalization writes the response by id (~100-200ms).
+  // No optimistic response — UserSettings has many required fields that are
+  // hard to predict; normalization writes the response by id. Rejections are
+  // alerted in `updateUserPreferences` below, the single alerter, so this
+  // mutation deliberately carries no `onError`.
   const [updateSettingsMutation] = useMutation(UpdateUserPreferencesDocument);
 
   // Biometric state
@@ -295,10 +281,9 @@ export const useConfigurableSettings = () => {
               logger.debug('User logged out');
             };
 
-            // Deliberate sign-out DELETES the queue (`queueManager.onLogout`),
-            // so anything still waiting to replay is destroyed. Nothing on this
-            // path used to say so. Only prompt when there is something to lose —
-            // with an empty queue this stays a one-tap sign-out.
+            // A deliberate sign-out DELETES the queue
+            // (`queueManager.onLogout`), so prompt only when there is something
+            // to lose; an empty queue stays a one-tap sign-out.
             const pendingCount = queueStore.getPendingCount();
             if (pendingCount === 0) {
               signOut();

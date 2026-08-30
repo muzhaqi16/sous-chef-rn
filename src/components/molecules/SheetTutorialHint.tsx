@@ -8,23 +8,15 @@ import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
 interface SheetTutorialHintProps {
-  /** The hint text displayed to the user */
   text: string;
-  /** 'inline' = banner in content flow, 'handle' = floating near drag handle */
+  /** `inline` sits in the content flow; `handle` floats near the drag handle. */
   variant: 'inline' | 'handle';
-  /** Called when the skip/dismiss button is pressed */
   onSkip?: () => void;
 }
 
 /**
- * Lightweight hint component rendered inside a BottomSheetModal.
- * Avoids the Modal-on-Modal conflict that SpotlightCoachMark would cause.
- *
- * Two variants:
- * - `inline`:  Banner with icon + text, rendered in the sheet's content flow
- *              (e.g. above suggestion items: "Tap + next to an item to add it")
- * - `handle`:  Floating indicator near the sheet handle with animated down-arrow
- *              (e.g. "Pull down to close")
+ * Hint rendered inside a BottomSheetModal, avoiding the Modal-on-Modal conflict
+ * `SpotlightCoachMark` would cause.
  */
 export const SheetTutorialHint: React.FC<SheetTutorialHintProps> = ({
   text,
@@ -54,7 +46,6 @@ export const SheetTutorialHint: React.FC<SheetTutorialHintProps> = ({
     );
   }
 
-  // inline variant
   return (
     <Animated.View
       entering={FadeIn.duration(300)}
@@ -81,7 +72,6 @@ export const SheetTutorialHint: React.FC<SheetTutorialHintProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  // ── Handle variant ──
   handleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -91,7 +81,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
   },
-  // ── Inline variant ──
   inlineContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -121,7 +110,6 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
 
-  // ── Shared ──
   skipButton: {
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,

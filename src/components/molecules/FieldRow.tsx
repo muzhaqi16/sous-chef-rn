@@ -8,19 +8,7 @@ interface FieldRowProps {
   containerStyle?: ViewStyle;
 }
 
-/**
- * FieldRow - A horizontal layout wrapper for form fields
- *
- * Places children side-by-side with equal flex distribution.
- * Useful for grouping related fields like Quantity + Unit.
- * Applies consistent bottom margin for spacing between rows.
- *
- * @example
- * <FieldRow>
- *   <FormInput label="Quantity" />
- *   <FormInput label="Unit" />
- * </FieldRow>
- */
+/** Side-by-side form fields with equal flex and the standard row bottom margin. */
 export const FieldRow: React.FC<FieldRowProps> = ({
   children,
   gap = 12,

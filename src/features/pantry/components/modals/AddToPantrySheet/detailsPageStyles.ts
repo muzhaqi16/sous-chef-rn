@@ -5,13 +5,8 @@ import type { Theme } from '#/theme/themes';
 // to `string` when returned from the factory below.
 const FULL_HEIGHT: DimensionValue = '100%';
 
-/**
- * The full-height page / scroll-content / section layout shared by the
- * AddToPantry detail pages (`MainDetailsPage`, `DetailsPage`,
- * `StockSettingsPage`, `StoragePage`). Spread into each page's
- * `StyleSheet.create(theme => …)` so the values stay declared through
- * `StyleSheet.create` and keep their ShadowTree binding.
- */
+// Shared by the AddToPantry detail pages. Spread into each page's
+// `StyleSheet.create(theme => …)` so the values keep their ShadowTree binding.
 export const detailsPageBaseStyles = (theme: Theme) => ({
   page: {
     flex: 1,

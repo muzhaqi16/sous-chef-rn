@@ -23,15 +23,10 @@ interface OptimisticUnfavoriteArgs {
 }
 
 /**
- * Un-saves a recipe optimistically and consistently across call sites.
- *
- * Snapshots the `MySavedRecipes` query and the recipe's `savedDetails`, drops the
- * saved edge (and decrements `totalCount`) before firing the mutation so the removal
- * sticks even fully offline — the queued mutation replays idempotently. A resolved
- * rejection (`*Error` union member / transport error) or a throw reverts from the
- * snapshot and reports once; `'queued'` (offline / API down) keeps the removal.
- *
- * @returns `true` when the removal is kept (`'created'`/`'queued'`), `false` when reverted.
+ * Un-saves a recipe optimistically. Snapshots `MySavedRecipes` and the recipe's
+ * `savedDetails`, then drops the edge before firing so the removal sticks
+ * offline and replays idempotently. A rejection or throw reverts and reports
+ * once; `'queued'` keeps it. Returns whether the removal was kept.
  */
 export async function performOptimisticUnfavorite({
   client,

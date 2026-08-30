@@ -38,16 +38,10 @@ export function pickImageUrl(
 }
 
 /**
- * Resolves the best available image URL from any common data shape.
- * Handles: Item (direct), PantryItem/ShoppingListItem (nested .item),
- * PantryItemSuggestion (own imageUrl + nested .item fallback).
- *
- * This is the LIST/CARD path — it reads `Item.images`, which returns at most
- * one row (the primary photo's best asset). Screens showing a gallery read
- * `Item.photos` instead; see `photoDisplayUrl`.
- *
- * @param preferredSize - Preferred image size. Defaults to 'small' for list/card
- *   contexts. Pass 'large' for detail/gallery screens.
+ * The LIST/CARD path: reads `Item.images`, which returns at most one row (the
+ * primary photo's best asset), from any of the common source shapes. A gallery
+ * screen reads `Item.photos` via `photoDisplayUrl` instead. `preferredSize`
+ * defaults to 'small'; pass 'large' for a detail screen.
  */
 export function resolveImageUrl(
   source:
@@ -123,17 +117,13 @@ export const getItemImageUrl = (
   return null;
 };
 
-// =============================================================================
-// GALLERY (Item.photos)
-// =============================================================================
+// --- Gallery (Item.photos) ---
 
 /**
- * How many photos the detail carousel renders.
- *
- * Not a product limit — `MultiImagePicker` already caps user uploads at 6. This
- * bounds PUBLIC catalog items, which aggregate provider images and can carry
- * many more. Sized to hold the whole perspective set (7) plus one, because
- * `galleryPhotos` reserves a slot per perspective before filling the rest.
+ * Not a product limit — `MultiImagePicker` caps uploads at 6. This bounds PUBLIC
+ * catalog items, which aggregate provider images. Sized to hold the whole
+ * perspective set (7) plus one, since `galleryPhotos` reserves a slot per
+ * perspective before filling the rest.
  */
 export const MAX_GALLERY_PHOTOS = 8;
 
@@ -146,11 +136,8 @@ export interface PhotoLike {
 }
 
 /**
- * Best URL to render for one photo at a given size.
- *
- * `variants` is empty until the processing job has run, so the original `url`
- * is the documented fallback — never return null here, a photo always has an
- * asset to show.
+ * `variants` is empty until the processing job runs, so the original `url` is
+ * the documented fallback — a photo always has an asset, so never null.
  */
 export function photoDisplayUrl(
   photo: PhotoLike,
@@ -165,11 +152,9 @@ export function photoDisplayUrl(
 }
 
 /**
- * A photo's perspective when the caller handed us materialized data. Structural
- * rather than a generic constraint: constraining `T` makes TypeScript infer the
- * constraint itself for a possibly-undefined argument, which erased the element
- * type at every call site. Masked refs carry no fields and read as null here,
- * which degrades this to a plain in-order slice.
+ * Structural rather than a generic constraint: constraining `T` makes TS infer
+ * the constraint for a possibly-undefined argument and erase the element type at
+ * every call site. A masked ref reads null, degrading to a plain in-order slice.
  */
 function readPerspective(photo: unknown): string | null {
   if (
@@ -184,18 +169,10 @@ function readPerspective(photo: unknown): string | null {
 }
 
 /**
- * The photos to render, capped at `MAX_GALLERY_PHOTOS`.
- *
- * A plain `slice(0, N)` is wrong here. `Item.photos` orders primary, then
- * *featured* photos — any perspective, unbounded — and only then the
- * front/back/left/right/top/nutrition_label/ingredient_list run. A catalog item
- * carrying several featured provider shots therefore pushes `nutrition_label`
- * and `ingredient_list` past the cap, dropping exactly the angles the fullscreen
- * viewer exists to show. So: reserve a slot for the first photo of each distinct
- * perspective, then fill what's left in order.
- *
- * Selection changes which photos survive, never their order — the returned array
- * is always in the server's sequence, which the gallery's paging depends on.
+ * Capped at `MAX_GALLERY_PHOTOS`, but a plain `slice(0, N)` is WRONG:
+ * `Item.photos` puts an unbounded featured run before the front/back/
+ * nutrition_label/… perspectives, so a slot is reserved per distinct perspective
+ * first. Selection never changes ORDER — the gallery's paging depends on it.
  */
 export function galleryPhotos<T>(photos: readonly T[] | null | undefined): T[] {
   if (!photos || photos.length === 0) return [];
@@ -257,13 +234,9 @@ export function toImagePerspective(
 }
 
 /**
- * Localized display label for a perspective.
- *
- * Takes `t` rather than returning English: these labels are rendered as visible
- * caption text in the photo viewer and spliced into accessibility copy, so a
- * hardcoded table put "Nutrition" inside otherwise-Spanish UI. An unrecognised
- * perspective (a provider value outside our set) falls back to its capitalized
- * raw form, which is still better than a missing-key marker.
+ * Takes `t` rather than returning English: these are visible captions, and a
+ * hardcoded table puts "Nutrition" inside otherwise-Spanish UI. An unrecognised
+ * provider perspective falls back to its capitalized raw form.
  */
 export function getPerspectiveLabel(
   perspective: string,

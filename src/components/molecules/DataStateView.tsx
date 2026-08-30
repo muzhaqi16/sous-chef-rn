@@ -8,36 +8,22 @@ import type { DataState } from '#hooks/data/useDataState';
 interface DataStateViewProps {
   /** From `useDataState`. Renders nothing at `'ready'`. */
   state: DataState;
-  /**
-   * Re-runs the query. Offered on both the error and offline states — the point
-   * of those states is that they are recoverable without leaving the screen.
-   */
+  /** Re-runs the query; offered on both the error and offline states. */
   onRetry: () => void;
   /**
-   * The empty state, which is the screen's own: only it knows what "nothing
-   * here" means or what to do about it. Everything else is shared vocabulary.
-   *
-   * Optional, for screens with a bespoke empty state of their own — omitting it
-   * makes `'empty'` render nothing here, and the caller renders it instead. The
-   * failure states are never the caller's to reimplement.
+   * The empty state is the screen's own — omit it and `'empty'` renders nothing
+   * here, leaving the caller to draw it. The FAILURE states are never the
+   * caller's to reimplement.
    */
   empty?: EmptyStateProps;
   testID?: string;
 }
 
-/**
- * Renders whichever of loading / error / offline / empty a screen is in.
- *
- * Every screen used to hand-roll this, and most of them only ever wrote the
- * empty branch — so a failed fetch rendered "No recipes yet" alongside a button
- * offering to create the recipes the person already owns. The four states are
- * kept in one place so that a screen cannot implement three of them and stop.
- *
- * The failure text is deliberately the app's own and identical everywhere: the
- * same situation reads the same on every screen, and no server message,
- * operation name or identifier reaches a person. The real error goes to the logs
- * through the query's own reporting.
- */
+// Renders whichever of loading / error / offline / empty a screen is in. All four
+// live here so a screen cannot implement three and stop — a hand-rolled version
+// writes only the empty branch, and a failed fetch then reads "No recipes yet".
+// The failure copy is the app's own everywhere: no server message, operation name
+// or identifier reaches a person; the real error goes to the logs.
 export const DataStateView: React.FC<DataStateViewProps> = ({
   state,
   onRetry,
@@ -72,9 +58,8 @@ export const DataStateView: React.FC<DataStateViewProps> = ({
       onRetry={onRetry}
       retryLabel={t('labels.tryAgain')}
       alignment="center"
-      // No `action` to create anything: when the fetch failed we do not know
-      // what exists, so offering to create it invites a duplicate of something
-      // the person may already own.
+      // No `action`: after a failed fetch we don't know what exists, so offering
+      // to create it invites a duplicate of something the person already owns.
       testID={testID ?? (offline ? 'state-offline' : 'state-error')}
     />
   );

@@ -10,25 +10,17 @@ interface EdgeFadeProps {
   /** Width of the fade band in px. */
   width?: number;
   /**
-   * Which theme color the opaque end blends into — i.e. the surface the
-   * scroller sits on. `background` for a screen (default), `surface` for a
+   * The surface the scroller sits on: `background` for a screen, `surface` for a
    * bottom sheet. A mismatch paints a visible band of the wrong color.
    */
   colorKey?: 'background' | 'surface';
 }
 
 /**
- * A horizontal fade overlay for the edge of a scrollable row. Renders a
- * gradient from the screen background (opaque, on `side`) to transparent, so
- * content scrolling under it reads as "there's more to scroll" instead of being
- * hard-clipped at the viewport edge.
- *
- * Decorative only — `pointerEvents="none"` so it never intercepts touches on the
- * chips beneath it. SVG can't consume Unistyles styles, so the background color
- * is read via `useUnistyles` (the documented exception for SVG/Skia draw calls).
- * The Svg fills a sized wrapper View (100%×100%) so its canvas is deterministic;
- * gradient stops are always emitted in ascending offset order (0 → 1) — RN-SVG
- * renders descending stops incorrectly.
+ * Decorative horizontal fade at the edge of a scrollable row. SVG can't consume
+ * Unistyles styles, so the color comes from `useUnistyles` (the documented
+ * SVG/Skia exception). Gradient stops must stay in ascending offset order —
+ * RN-SVG renders descending stops incorrectly.
  */
 export const EdgeFade: React.FC<EdgeFadeProps> = ({
   side,
@@ -38,8 +30,6 @@ export const EdgeFade: React.FC<EdgeFadeProps> = ({
   const { theme } = useUnistyles();
   const bg =
     colorKey === 'surface' ? theme.colors.surface : theme.colors.background;
-  // Opaque end sits on `side`; stops stay ascending and direction is set by
-  // which end is opaque.
   const startOpacity = side === 'left' ? 1 : 0;
   const endOpacity = side === 'left' ? 0 : 1;
 

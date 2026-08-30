@@ -14,40 +14,12 @@ import type {
   UseSlideAnimationReturn,
 } from './types';
 
-/** Default easing: standard cubic bezier for smooth animations */
 const defaultEasing = Easing.bezier(0.25, 0.1, 0.25, 1);
 
 /**
- * Reusable slide animation hook for FlashList items.
- * Properly handles view recycling by resetting state when itemId changes.
- *
- * Animation: Exit slide that completes BEFORE triggering state change.
- * This ensures FlashList can't recycle the view mid-animation.
- *
- * Production guards:
- * - Re-entry guard prevents double-tap issues
- * - scheduleOnRN ensures callback runs on RN thread after animation
- *
- * @example
- * ```tsx
- * // Basic usage
- * const { animatedSlideStyle, triggerSlide } = useSlideAnimation({ itemId: item.id });
- *
- * // With opacity fade
- * const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
- *   itemId: item.id,
- *   slideDistance: 200,
- *   withOpacity: true,
- *   opacityTarget: 0,
- * });
- *
- * // Restricted to right-only slide
- * const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
- *   itemId: item.id,
- *   allowedDirections: 'right',
- * });
- * ```
- *
+ * Slide animation for FlashList rows. The exit slide completes BEFORE the state
+ * change fires, so FlashList cannot recycle the view mid-animation, and
+ * `useRecyclingState` resets shared values when `itemId` changes.
  * @see https://shopify.github.io/flash-list/docs/guides/reanimated/
  */
 export function useSlideAnimation({
@@ -64,21 +36,18 @@ export function useSlideAnimation({
   const opacity = useSharedValue(1);
   const isAnimatingShared = useSharedValue(false);
 
-  // Ref to store pending completion callback
-  // This allows dynamic callbacks to be invoked via a stable RN-runtime wrapper
   const onCompleteRef = useRef<(() => void) | null>(null);
 
-  // Stable wrapper for completion callback - defined in RN runtime
-  // scheduleOnRN requires functions to be defined in RN runtime scope
+  // scheduleOnRN requires a function defined in RN-runtime scope, so a dynamic
+  // callback has to travel through this stable wrapper.
   const executeOnComplete = () => {
     const callback = onCompleteRef.current;
     onCompleteRef.current = null;
     callback?.();
   };
 
-  // Synchronous reset when FlashList recycles this view for a different item.
-  // useRecyclingState's onReset fires inside useMemo (during render, BEFORE paint),
-  // preventing stale shared values from being briefly visible.
+  // onReset fires inside useMemo — during render, BEFORE paint — so a recycled
+  // view never briefly shows the previous item's shared values.
   useRecyclingState(undefined, [itemId], () => {
     cancelAnimation(translateX);
     cancelAnimation(opacity);
@@ -99,26 +68,22 @@ export function useSlideAnimation({
   });
 
   const triggerSlide = (direction: SlideDirection, onComplete?: () => void) => {
-    // Guard: disabled mode
     if (disabled) {
       if (onComplete) {
-        // Store callback and execute via RN-runtime wrapper
         onCompleteRef.current = onComplete;
         executeOnComplete();
       }
       return;
     }
 
-    // Guard: direction constraints
     if (allowedDirections === 'right' && direction === -1) return;
     if (allowedDirections === 'left' && direction === 1) return;
 
-    // Guard: prevent double-tap / re-entry while animating
+    // Re-entry guard: a double tap must not restart the slide.
     if (isAnimatingShared.get()) return;
 
     isAnimatingShared.set(true);
 
-    // Store callback before animation starts
     if (onComplete) {
       onCompleteRef.current = onComplete;
     }
@@ -126,7 +91,6 @@ export function useSlideAnimation({
     const animationEasing = easing ?? defaultEasing;
     const timingConfig = { duration, easing: animationEasing };
 
-    // Animate opacity if enabled
     if (withOpacity) {
       opacity.set(withTiming(opacityTarget, timingConfig));
     }

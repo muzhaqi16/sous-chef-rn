@@ -8,14 +8,10 @@ let nextCellId = 0;
 const allocateCellId = () => nextCellId++;
 
 /**
- * Which list indices currently have a committed cell (cell id → index).
- *
- * An imperative side channel with a stable identity: the hook holds one
- * instance for its lifetime, `MountedCellRenderer`'s layout effects write to
- * it, and the blank check reads it from event handlers and effects — never
- * during render, so nothing rendered depends on its contents. The hook
- * re-points `setOnChange` in an effect on every render, which is how the
- * renderer (created once) reaches the latest check closure.
+ * Which list indices currently have a committed cell (cell id → index). An
+ * imperative side channel, read only from effects and event handlers — NEVER
+ * during render, so nothing rendered depends on it. `setOnChange` is re-pointed
+ * each render, which is how the once-created renderer reaches the latest check.
  */
 export class MountedCellRegistry {
   private readonly cells = new Map<number, number>();
@@ -30,16 +26,10 @@ export class MountedCellRegistry {
   }
 
   /**
-   * Coalesce the listener to one call per frame.
-   *
-   * A commit registers every cell it mounted, moved or unmounted, and the
-   * listener is a whole visible-range computation — a layout-table lookup plus
-   * a scan of this map. Calling it inline made that cost quadratic in the cells
-   * a commit touched, on every scroll, in release builds as well as dev.
-   *
-   * A frame rather than a microtask: a microtask still runs inside the commit,
-   * before layout has settled, and the listener reads the layout table. It is
-   * also the granularity the metric it feeds is recorded at.
+   * One listener call per frame: the listener is a whole visible-range
+   * computation, so calling it per registration is quadratic in the cells a
+   * commit touched. A FRAME, not a microtask — a microtask runs inside the
+   * commit, before the layout table the listener reads has settled.
    */
   private scheduleFlush(): void {
     if (this.pendingFlush !== null) return;
@@ -75,10 +65,9 @@ export class MountedCellRegistry {
   }
 
   /**
-   * Number of distinct list indices in `[startIndex, endIndex]` that have a
-   * committed cell. Distinct, because FlashList can briefly hold two cells at
-   * one index (a sticky header's copy, a recycle in flight) and that is still
-   * one rendered row.
+   * Distinct list indices in `[startIndex, endIndex]` holding a committed cell.
+   * Distinct because FlashList can briefly hold two cells at one index (a sticky
+   * header's copy, a recycle in flight), which is still one rendered row.
    */
   countMountedInRange(startIndex: number, endIndex: number): number {
     const seen = new Set<number>();
@@ -90,17 +79,10 @@ export class MountedCellRegistry {
 }
 
 /**
- * Builds the `CellRendererComponent` a list hands to FlashList.
- *
- * FlashList wraps every cell in this component and passes the cell's `index`;
- * it recycles cells, so one instance moves between indices over time. The
- * layout effect keeps `registry` current — set on commit, re-keyed when the
- * index changes, removed on unmount — and each of those runs the registry's
- * `onChange`, which is what lets the blank check run right after the commit
- * that mounted or moved cells instead of whenever viewability next reports.
- *
- * Renders an `Animated.View` so Reanimated layout animations on cells keep
- * working, as FlashList's Reanimated guide requires of a cell renderer.
+ * The `CellRendererComponent` handed to FlashList. Cells are RECYCLED, so one
+ * instance moves between indices; the layout effect keeps `registry` current and
+ * fires `onChange`, so the blank check runs on the commit rather than whenever
+ * viewability next reports. The `Animated.View` is what keeps cell animations.
  */
 export function createMountedCellRenderer(registry: MountedCellRegistry) {
   const MountedCellRenderer = forwardRef<
@@ -126,15 +108,10 @@ export function createMountedCellRenderer(registry: MountedCellRegistry) {
 export type MountedCellRenderer = ReturnType<typeof createMountedCellRenderer>;
 
 /**
- * The cell renderer for UNSAMPLED sessions: the `Animated.View` without the
- * measurement.
- *
- * The `Animated.View` is not instrumentation — FlashList's Reanimated guide
- * requires a cell renderer that renders one, or layout animations on cells stop
- * working. Sampling used to hand FlashList `undefined` instead, so it fell back
- * to its own plain-View container and ~95% of release sessions silently lost
- * every cell layout animation. Only the registry and its per-cell layout effect
- * are worth sampling; the wrapper itself costs nothing.
+ * The UNSAMPLED session's cell renderer: the `Animated.View` without the
+ * measurement. The wrapper is NOT instrumentation — handing FlashList
+ * `undefined` drops it to a plain-View container and every cell layout animation
+ * stops. Only the registry and its per-cell layout effect are sampled.
  */
 export const PlainAnimatedCellRenderer = forwardRef<
   React.ComponentRef<typeof Animated.View>,

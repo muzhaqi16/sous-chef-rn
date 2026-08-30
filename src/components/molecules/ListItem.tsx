@@ -17,8 +17,7 @@ interface ListItemProps {
   subtitle?: string | React.ReactNode;
   onPress?: () => void;
   leftIcon?: React.ComponentProps<typeof Icon>['name'];
-  // Pass `null` to suppress the default trailing chevron (e.g. rows whose press
-  // is handled externally by a Swipeable rather than ListItem's own onPress).
+  // `null` suppresses the default trailing chevron.
   rightIcon?: React.ComponentProps<typeof Icon>['name'] | null;
   badge?: {
     text: string;
@@ -29,8 +28,7 @@ interface ListItemProps {
   checkboxElement?: React.ReactNode; // Optional checkbox before leftElement (for shopping list)
   dragHandleElement?: React.ReactNode; // Optional drag handle before checkbox (for reordering)
   isPurchased?: boolean; // For strikethrough styling
-  // Optional theme override forwarded to `withUnistyles(Icon)` via uniProps;
-  // when null, the wrapped Icon falls back to its theme-reactive default.
+  // Forwarded to `withUnistyles(Icon)`; null keeps the theme-reactive default.
   themeColors?: RowThemeColors | null;
 }
 
@@ -53,7 +51,6 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   const { t } = useTranslation();
   const overrideIconColor = themeColors?.textSecondary;
 
-  // When children are provided, render them directly as content
   if (children) {
     return (
       <View style={styles.container}>
@@ -64,11 +61,9 @@ const ListItemComponent: React.FC<ListItemProps> = ({
 
   const content = (
     <>
-      {/* Optional checkbox element (for shopping list items) */}
       {!!checkboxElement && (
         <View style={styles.checkboxContainer}>{checkboxElement}</View>
       )}
-      {/* Optional left element for image or icon */}
       {leftElement}
       {!!leftIcon && (
         <View style={styles.leftIcon}>
@@ -110,13 +105,11 @@ const ListItemComponent: React.FC<ListItemProps> = ({
           })}
         />
       )}
-      {/* Optional drag handle element (for reordering) - on right side */}
       {dragHandleElement}
     </>
   );
 
   if (onPress) {
-    // Build accessible label from content
     const subtitleText = typeof subtitle === 'string' ? subtitle : '';
     const accessibilityLabel = [title, subtitleText, badge?.text]
       .filter(Boolean)
@@ -145,19 +138,11 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   );
 };
 
-// React Compiler memoizes JSX at the parent call site, so React.memo is
-// redundant on non-FlashList components. Per CLAUDE.md / project memory.
 /**
- * The three `purchased`-variant surfaces, each owning its own `useVariants`
- * call.
- *
- * Unistyles' variant transform makes the React Compiler bail out of whatever
- * function contains the call ("Could not find binding for declaration"), and a
- * bailout is silent — the function simply stops being memoized. `ListItem`
- * renders every row of the shopping list, so it is the one that must stay
- * compiled; these leaves are cheap enough that their own bailout costs nothing.
- * See `node scripts/check-compiler-bailouts.mjs --list`, which names the
- * bailing function precisely so this distinction is visible.
+ * The three `purchased`-variant surfaces, each owning its own `useVariants` call.
+ * Unistyles' variant transform silently bails the React Compiler out of whichever
+ * function contains that call, and `ListItem` renders every shopping-list row, so
+ * it is the one that must stay compiled; a bailout in these leaves costs nothing.
  */
 const ListItemTitle: React.FC<{
   purchased: boolean;
@@ -211,10 +196,8 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.sm,
-    // `minHeight` (not a fixed `height`) so single-line rows stay compact but
-    // a title that wraps to 2 lines + subtitle can grow instead of being
-    // squashed/clipped inside a fixed box. Matches BaseItemCard / MockItemCard;
-    // FlashList v2 handles variable row heights natively.
+    // `minHeight`, not a fixed height, so a 2-line title can grow rather than be
+    // clipped; FlashList v2 handles variable row heights natively.
     minHeight: theme.sizes.itemCard.compact.height,
     gap: theme.spacing.sm, // Better spacing between elements
   },

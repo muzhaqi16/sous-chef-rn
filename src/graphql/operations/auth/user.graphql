@@ -1,13 +1,6 @@
 # QUERIES
 # ============================================
 
-query GetMe {
-  me {
-    id
-    ...PartialUser
-  }
-}
-
 query GetUserSettings {
   me {
     id

@@ -35,10 +35,9 @@ export interface GenericAutocompleteFieldProps<T> {
 }
 
 /**
- * Wraps `AutocompleteField` with the inline/modal variant branch that every
- * `*AutocompleteField` wrapper used to duplicate. A wrapper now only supplies
- * its hook's items + the field-specific handlers and copy; this component picks
- * the correct discriminated-union shape for `AutocompleteField`.
+ * Owns the inline/modal variant branch for every `*AutocompleteField` wrapper: a
+ * wrapper supplies only its hook's items plus field-specific handlers and copy,
+ * and this picks the matching discriminated-union shape for `AutocompleteField`.
  */
 export function GenericAutocompleteField<T>({
   variant,

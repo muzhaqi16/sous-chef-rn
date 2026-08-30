@@ -48,12 +48,9 @@ type PendingAction = { type: 'all' };
 
 /**
  * Fires the right add-ingredient mutation and reports whether the item landed.
- *
- * Module-level rather than inline in the hook because its body is full of
- * `||` / `?.` / ternaries, and the React Compiler bails out of the whole hook
- * when a value block appears inside a try/catch. The caller invokes it from
- * inside its try, so the catch still covers it.
- * See scripts/probe-compiler-try-forms.mjs.
+ * Module-level, not inline: its body is full of value blocks, and one inside a
+ * try/catch bails the whole hook out of the React Compiler. The caller still
+ * invokes it from inside its try.
  */
 async function addIngredientToList(
   ingredient: DisplayIngredient,

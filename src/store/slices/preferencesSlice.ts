@@ -13,11 +13,8 @@ import { RootState } from '../index';
 import { logger } from '#/utils/environment';
 
 /**
- * Apply a `ThemePreference` to `UnistylesRuntime`. Shared between the in-app
- * setter (`setTheme` action) and the post-rehydration sync run from the
- * Zustand persist `onRehydrateStorage` callback. Single source of truth for
- * preference → runtime translation, called from both paths so they can't
- * diverge.
+ * The one preference → `UnistylesRuntime` translation, shared by the `setTheme`
+ * action and the post-rehydration sync, so the two cannot diverge.
  */
 export function applyThemePreferenceToRuntime(theme: ThemePreference): void {
   try {

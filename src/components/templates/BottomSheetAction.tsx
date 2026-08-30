@@ -14,23 +14,18 @@ interface BottomSheetActionProps {
   sheetTitle?: string;
   snapPoints?: string[] | number[];
   /**
-   * State-driven presentation: when provided, the sheet auto-presents on
-   * `true` and dismisses on `false` via `useStandardBottomSheet`'s guarded
-   * `visible` path (which also adds navigation focus-awareness). This is the
-   * preferred convention. Mutually exclusive with `sheetRef` — pass one or the
-   * other, not both (a caller-supplied `sheetRef` overrides the hook's internal
-   * ref, which the auto present/dismiss effect drives).
+   * The preferred convention: auto-presents on `true` through
+   * `useStandardBottomSheet`'s guarded, focus-aware `visible` path. Mutually
+   * exclusive with `sheetRef`, which would override the ref this effect drives.
    */
   visible?: boolean;
   /** Manual presentation: parent drives this sheet imperatively via the ref. */
   sheetRef?: Ref<BottomSheetModalRef>;
-  /** Whether to wrap content in scrollable view (default: true). Set to false when children contain FlatList/SectionList */
+  /** Default true; false when children contain their own FlatList/SectionList. */
   scrollable?: boolean;
-  /** Optional element to render on the right side of the header */
   headerRight?: ReactNode;
-  /** Called when the sheet is dismissed (after close animation completes) */
   onDismiss?: () => void;
-  /** Called when the sheet snap point changes (-1 = closed, 0+ = open) */
+  /** Snap point changed; -1 is closed. */
   onChange?: (index: number) => void;
 }
 
@@ -57,10 +52,9 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
     },
     snapPoints,
     keyboardBehavior: 'fillParent',
-    // Forward through the hook so it composes the backdrop claim with the
-    // caller's onChange. Setting `onChange` directly on `<BottomSheetModal>`
-    // below would overwrite the hook's composed handler and silently break
-    // the dim layer (the claim/release path never fires).
+    // Forwarded through the hook so it composes the backdrop claim with the
+    // caller's handler; setting `onChange` on the modal directly overwrites the
+    // composed one and silently kills the dim layer.
     onChange: onChangeProp ? index => onChangeProp(index) : undefined,
   });
 
