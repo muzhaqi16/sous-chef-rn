@@ -297,6 +297,9 @@ mutation DeleteHome($input: DeleteHomeInput!) {
       resource
       resourceId
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -394,6 +397,9 @@ mutation DeclineHomeInvite($input: DeclineHomeInviteInput!) {
       resource
       resourceId
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -436,6 +442,9 @@ mutation RemoveMember($input: RemoveMemberInput!) {
       resource
       resourceId
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -454,6 +463,9 @@ mutation DeleteHomeInvite($input: DeleteHomeInviteInput!) {
     ... on NotFoundError {
       resource
       resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -497,6 +509,9 @@ mutation LeaveHome($input: LeaveHomeInput!) {
     ... on NotFoundError {
       resource
       resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

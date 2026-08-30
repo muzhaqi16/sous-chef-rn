@@ -119,6 +119,9 @@ mutation DeleteMealPlan($input: DeleteMealPlanInput!) {
       resource
       resourceId
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -189,6 +192,9 @@ mutation DeleteMealPlanItem($input: DeleteMealPlanItemInput!) {
     ... on NotFoundError {
       resource
       resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

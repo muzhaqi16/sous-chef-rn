@@ -27,6 +27,9 @@ mutation AddItemsToShoppingListFromRecipe($input: AddItemsToShoppingListInput!) 
       code
       message
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 

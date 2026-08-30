@@ -204,6 +204,9 @@ mutation DeleteAccount {
       resource
       resourceId
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -230,6 +233,9 @@ mutation CompleteOnboarding {
     ... on NotFoundError {
       resource
       resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
