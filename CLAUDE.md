@@ -157,9 +157,10 @@ alternatives-considered belong in the PR or `docs/`; what the code used to do
 belongs in git.
 
 - **Present tense, current behaviour only.** No "previously", "used to", "old
-  behavior", "was tried", "regressed", "formerly". A comment narrating a fix
-  outlives the fix and then lies — a sweep found 31 wrong comments, one of
-  which described the exact bug the code beneath it had already removed.
+  behavior", "was tried", "regressed", "formerly", "no longer". A comment
+  narrating a fix outlives the fix and then lies — a sweep found 36 wrong ones,
+  including a block describing the exact bug the code beneath it had removed.
+  This is a LINT ERROR (`no-warning-comments`), so your editor catches it.
 - **No comment run longer than six lines.** A `/** … */` counts its `/**` and
   `*/`, and an internal blank ` *` line does not split the run, so that is four
   lines of prose.
@@ -167,14 +168,19 @@ belongs in git.
 - Don't restate the identifier (`/** Props for the FooCard component */`), and
   don't write `@param`/`@returns` that repeat the TypeScript signature. No
   `@example` blocks for internal helpers.
-- **Attach a doc to the thing it documents.** Ten orphaned JSDoc blocks were
+- **Attach a doc to the thing it documents.** Eleven orphaned JSDoc blocks were
   found stacked above a *different* declaration than the one they described,
-  sometimes 350 lines away. Use `{@link other}` instead of "the function
+  one of them 350 lines away. Use `{@link other}` instead of "the function
   above/below", which goes stale on a reorder.
 
-Enforced by `node scripts/check-comment-budget.mjs` (pre-commit and CI) against
-a shrink-only baseline. Tool directives — `@ts-expect-error`, generated-file
-banners, `@deprecated`, `@internal` — are never counted and never removed.
+Two enforcers, split by what they can see. **Vocabulary** is
+`no-warning-comments` in `.eslintrc.js`, scoped to production `src` `.ts`/`.tsx`
+— an error, so it lands in the editor. **Volume** is
+`node scripts/check-comment-budget.mjs` (pre-commit and CI), whose baseline is
+EMPTY: any finding is a regression, not a tally. Tool directives —
+`@ts-expect-error`, generated-file banners, `@deprecated`, `@internal` — are
+never counted and never removed. Test files are exempt from the vocabulary rule
+and are a known backlog (~67 files).
 
 ## GraphQL & Apollo
 

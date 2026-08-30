@@ -18,7 +18,7 @@ jest.mock('#/services/performance/types', () => ({
     trackMemory: false,
     trackScreens: true,
     sampleRate: 1.0,
-    slowRenderThreshold: 500,
+    flashListInstrumentationSampleRate: 1.0,
     memoryWarningThreshold: 80,
     maxMemorySnapshots: 100,
   },

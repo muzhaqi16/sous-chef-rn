@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 /**
- * Fails when a comment block runs longer than six lines, when a file carries
- * more comment lines than half its code, or when a comment narrates history
- * instead of describing current behaviour.
+ * Fails when a comment block runs longer than six lines, or when a file carries
+ * more comment lines than half its code.
  *
  * ## Why a check
  * The house style had drifted to essayistic docblocks: 20-50 lines of prose
@@ -18,10 +17,9 @@
  * fits in one to three lines. Rationale belongs in the PR or `docs/`, and what
  * the code USED to do belongs in git.
  *
- * The history rule lives here rather than in ESLint's `no-warning-comments`
- * because that rule has no baseline, and the ~50 test files still carrying the
- * vocabulary would fail `lint` outright. Production `src/` is clean, so the
- * rule can move to ESLint once tests are too.
+ * VOLUME only. Whether a comment narrates history rather than current behaviour
+ * is ESLint's `no-warning-comments`, configured in `.eslintrc.js` over this same
+ * file set — one rule, one place, so the two cannot drift.
  *
  * ## What counts
  * A run of consecutive whole-line comments — `//`, `/* … *\/`, or a JSX
@@ -38,12 +36,8 @@
  *   172 and buries them. Small files are the block rule's job.
  * - Tests, mocks and generated files. Test comments explain why a case exists,
  *   and generated files are not hand-edited.
- * - Content, beyond the history vocabulary below. This counts lines; it cannot
- *   tell a load-bearing invariant from a war story. Judgement stays with the
- *   author.
- * - Loose history words that are usually ordinary prose. `prior to`, `legacy`
- *   and a bare `the old` describe live things often enough that banning them
- *   would cost more rewording than it buys.
+ * - Content. This counts lines; it cannot tell a load-bearing invariant from a
+ *   war story. Judgement stays with the author.
  *
  * A blank line splits a run, so a long rationale cannot be smuggled past this by
  * spacing it out — that reads as separate notes, which is the point.
@@ -78,27 +72,6 @@ const BASELINE = baselineFile(
 
 const MAX_BLOCK_LINES = 6;
 
-/**
- * Vocabulary that only appears when a comment is describing a past state. Kept
- * narrow on purpose — every term here is one whose sentence cannot be about the
- * code as it stands.
- */
-const HISTORY_TERMS = [
-  'previously',
-  'used to',
-  'old behavior',
-  'old behaviour',
-  'was tried',
-  'we tried',
-  'regressed',
-  'historically',
-  'formerly',
-  'no longer',
-  'this replaces',
-  'changed from',
-  'until recently',
-];
-const HISTORY_RE = new RegExp(HISTORY_TERMS.join('|'), 'i');
 const MAX_COMMENT_RATIO = 0.5;
 const MIN_CODE_LINES_FOR_RATIO = 60;
 
@@ -125,7 +98,6 @@ export function analyze(source) {
   let code = 0;
   let comment = 0;
 
-  const historyHits = [];
   const endRun = () => {
     if (run > 0) blocks.push({ start: runStart, length: run });
     run = 0;
@@ -156,24 +128,19 @@ export function analyze(source) {
       if (run === 0) runStart = index + 1;
       run += 1;
       comment += 1;
-      if (HISTORY_RE.test(text)) historyHits.push(index + 1);
     } else {
       endRun();
       code += 1;
-      // Block length ignores trailing comments (they are bounded by the code
-      // beside them), but narration in one is still narration.
-      const trailing = /\s\/\/(.*)$/.exec(raw);
-      if (trailing && HISTORY_RE.test(trailing[1])) historyHits.push(index + 1);
     }
   });
   endRun();
 
-  return { blocks, code, comment, historyHits };
+  return { blocks, code, comment };
 }
 
 /** Every budget violation in one file, as stable path-keyed findings. */
 function findingsFor(rel, source) {
-  const { blocks, code, comment, historyHits } = analyze(source);
+  const { blocks, code, comment } = analyze(source);
   const found = [];
 
   const longest = blocks.reduce((max, b) => Math.max(max, b.length), 0);
@@ -183,9 +150,7 @@ function findingsFor(rel, source) {
     found.push(`${rel}#ratio`);
   }
 
-  if (historyHits.length) found.push(`${rel}#history`);
-
-  return { found, blocks, code, comment, longest, historyHits };
+  return { found, blocks, code, comment, longest };
 }
 
 function selfTest() {
@@ -274,51 +239,12 @@ function selfTest() {
       ].join('\n'),
       expectBlock: true,
     },
-    {
-      name: 'history inside a JSX comment node is flagged',
-      source: ['{/* it used to live on the tab headers */}', '<View />'].join(
-        '\n',
-      ),
-      expectBlock: false,
-      expectHistory: true,
-    },
-    {
-      name: 'history narration is flagged',
-      source: [
-        '// This used to re-declare both paddings.',
-        'const a = 1;',
-      ].join('\n'),
-      expectBlock: false,
-      expectHistory: true,
-    },
-    {
-      name: 'present-tense prose is not flagged',
-      source: ['// Cleared as null, never removed.', 'const a = 1;'].join('\n'),
-      expectBlock: false,
-      expectHistory: false,
-    },
-    {
-      name: 'history in a trailing comment is flagged',
-      source: ['const a = 1; // previously 250ms'].join('\n'),
-      expectBlock: false,
-      expectHistory: true,
-    },
-    {
-      name: 'a url in code is not read as a trailing comment',
-      source: ["const u = 'https://example.com/previously';"].join('\n'),
-      expectBlock: false,
-      expectHistory: false,
-    },
   ];
 
   let failed = 0;
   for (const testCase of cases) {
-    const { blocks, comment, historyHits } = findingsFor(
-      'probe.ts',
-      testCase.source,
-    );
+    const { blocks, comment } = findingsFor('probe.ts', testCase.source);
     const flagged = blocks.some(b => b.length > MAX_BLOCK_LINES);
-    const history = historyHits.length > 0;
     if (flagged !== testCase.expectBlock) {
       console.error(
         `  ✗ ${testCase.name}: expected flagged=${testCase.expectBlock}, got ${flagged}`,
@@ -330,14 +256,6 @@ function selfTest() {
     ) {
       console.error(
         `  ✗ ${testCase.name}: expected ${testCase.expectComment} comment lines, got ${comment}`,
-      );
-      failed += 1;
-    } else if (
-      testCase.expectHistory !== undefined &&
-      history !== testCase.expectHistory
-    ) {
-      console.error(
-        `  ✗ ${testCase.name}: expected history=${testCase.expectHistory}, got ${history}`,
       );
       failed += 1;
     } else {
@@ -376,13 +294,13 @@ const detail = [];
 
 for (const file of files) {
   const rel = relative(REPO_ROOT, file);
-  const { found, blocks, code, comment, longest, historyHits } = findingsFor(
+  const { found, blocks, code, comment, longest } = findingsFor(
     rel,
     readFileSync(file, 'utf8'),
   );
   if (!found.length) continue;
   current.push(...found);
-  detail.push({ rel, blocks, code, comment, longest, historyHits });
+  detail.push({ rel, blocks, code, comment, longest });
 }
 
 current.sort();
@@ -396,9 +314,6 @@ if (flags.list) {
     );
     for (const block of over) {
       console.log(`      line ${block.start}: ${block.length}-line block`);
-    }
-    for (const line of entry.historyHits) {
-      console.log(`      line ${line}: history narration`);
     }
   }
   console.log(`\n${current.length} finding(s) across ${files.length} files.`);
@@ -429,11 +344,11 @@ if (added.length) {
     `\n  '#block' is a comment run longer than ${MAX_BLOCK_LINES} lines; '#ratio' is a file whose\n` +
       `  comments exceed ${
         MAX_COMMENT_RATIO * 100
-      }% of its code; '#history' is a comment narrating what\n` +
-      `  the code used to do. Say the constraint the code cannot say — a library\n` +
-      `  gotcha, an invariant an edit would break — in one to three lines, in the\n` +
-      `  present tense. Rationale and evidence go in the PR or docs/; history is\n` +
-      `  already in git. Run with --list to see the offending lines.\n`,
+      }% of its code. Say the constraint the code cannot\n` +
+      `  say — a library gotcha, an invariant an edit would break — in one to\n` +
+      `  three lines. Rationale and evidence go in the PR or docs/. Narration\n` +
+      `  about what the code used to do is ESLint's no-warning-comments. Run\n` +
+      `  with --list to see the offending blocks.\n`,
   );
   process.exit(1);
 }

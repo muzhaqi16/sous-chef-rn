@@ -28,16 +28,14 @@ export function useOptimisticDataRestorationMultiple(
 ) {
   const user = useUser();
 
-  const stableEntityTypes = entityTypes;
-
   useEffect(() => {
-    if (!user?.id || !enabled || stableEntityTypes.length === 0) return;
+    if (!user?.id || !enabled || entityTypes.length === 0) return;
 
     // Non-urgent: restoration must not block navigation or the first render.
     startTransition(() => {
       client.cache.batch({
         update: cache => {
-          stableEntityTypes.forEach(entityType => {
+          entityTypes.forEach(entityType => {
             const allUpdates =
               optimisticDataPersistence.getAllForType(entityType);
 
@@ -83,5 +81,5 @@ export function useOptimisticDataRestorationMultiple(
         },
       });
     });
-  }, [user?.id, stableEntityTypes, enabled]);
+  }, [user?.id, entityTypes, enabled]);
 }

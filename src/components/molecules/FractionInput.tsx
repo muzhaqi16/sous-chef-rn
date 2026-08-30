@@ -31,7 +31,7 @@ interface FractionInputProps {
 export const FractionInput: React.FC<FractionInputProps> = ({
   value,
   onChangeText,
-  placeholder = 'e.g., 1 1/4 or 1.5',
+  placeholder,
   error,
   label,
   disabled = false,
@@ -48,10 +48,13 @@ export const FractionInput: React.FC<FractionInputProps> = ({
       : ThemedTextInput;
   const [isFocused, setIsFocused] = useState(false);
 
+  // `,` as well as `.`: the keypad on a comma-locale device offers no `.` at
+  // all, and `parseFractionalInput` already accepts both — without it here the
+  // field rejects a value the parser handles.
   const isValidFormat = (text: string): boolean => {
     if (!text || text.trim() === '') return true; // Empty is valid
 
-    const pattern = /^\d+(\s+\d+\/\d+)?$|^\d+\/\d+$|^\d+\.?\d*$/;
+    const pattern = /^\d+(\s+\d+\/\d+)?$|^\d+\/\d+$|^\d+[.,]?\d*$/;
     return pattern.test(text.trim());
   };
 
@@ -61,6 +64,8 @@ export const FractionInput: React.FC<FractionInputProps> = ({
   };
 
   const hasError = !!(error || (value && !isValidFormat(value)));
+  // Same vocabulary as the hint below, with the device's separator substituted.
+  const formatsHint = localizeNumericHint(t('fractionInput.formatsHint'));
 
   styles.useVariants({
     focused: isFocused,
@@ -71,7 +76,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
   return (
     <FormFieldWrapper
       label={label || ''}
-      error={hasError ? error || 'Use format: 1/4, 1 1/4, or 1.5' : undefined}
+      error={hasError ? error || formatsHint : undefined}
       required={required}
     >
       <InputComponent
@@ -80,7 +85,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
         onChangeText={handleChangeText}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        placeholder={placeholder}
+        placeholder={placeholder ?? formatsHint}
         keyboardType={keyboardType}
         editable={!disabled}
         selectTextOnFocus
@@ -88,7 +93,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
       />
       {!hasError && !!value && !!isFocused && (
         <Text size="xs" tone="secondary" style={styles.hintText}>
-          {localizeNumericHint(t('fractionInput.formatsHint'))}
+          {formatsHint}
         </Text>
       )}
     </FormFieldWrapper>

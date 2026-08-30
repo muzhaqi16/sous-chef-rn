@@ -76,7 +76,7 @@ interface UseFlashListPerformanceReturn {
    * The FlashList's `CellRendererComponent`. Always set; in an unsampled session
    * it wraps cells without registering them and blank evaluation is skipped.
    */
-  CellRendererComponent: MountedCellRenderer | undefined;
+  CellRendererComponent: MountedCellRenderer;
 }
 
 const noopRisk: BlankRiskAssessment = {

@@ -64,8 +64,8 @@ describe('useCommitTracking', () => {
   });
 
   it('reports in production builds, not only in __DEV__', () => {
-    // The production slowRenderThreshold of 16ms is meaningless if the hook is
-    // inert there; a __DEV__ guard on the reporting effect once made it so.
+    // A release-tuned sample rate means nothing if the reporting effect is
+    // inert outside __DEV__, so assert it runs with __DEV__ false.
     const originalDev = (globalThis as { __DEV__?: boolean }).__DEV__;
     (globalThis as { __DEV__?: boolean }).__DEV__ = false;
 

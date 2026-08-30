@@ -118,9 +118,6 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
     backgroundColor: theme.colors.border,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));
 
 export default BottomSheetHeader;

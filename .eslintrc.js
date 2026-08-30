@@ -353,6 +353,54 @@ module.exports = {
       },
     },
     {
+      // A comment describing what the code USED to do outlives the code and
+      // then lies. A repo-wide sweep found 36 wrong ones, including a block
+      // that described the exact bug the fix beneath it had already removed.
+      //
+      // Scoped to production `src` .ts/.tsx — the same set
+      // `scripts/check-comment-budget.mjs` holds to a length budget, and the
+      // only set that is clean today. Everywhere else has genuine false
+      // positives: `device.graphql`'s "used to push notifications" means "used
+      // FOR", and `check-comment-budget.mjs` has to quote these very terms to
+      // document the ban. Tests are a known backlog (~67 files), not an
+      // endorsement. `no-warning-comments` matches plain substrings, so a term
+      // cannot be made precise enough to include them.
+      //
+      // Its own block: no other override declares this rule, so nothing
+      // replaces it — see the note at the top of this file for why that is
+      // worth stating.
+      files: ['src/**/*.ts', 'src/**/*.tsx'],
+      excludedFiles: [
+        'src/**/__tests__/**',
+        'src/**/__mocks__/**',
+        'src/**/*.test.ts',
+        'src/**/*.test.tsx',
+      ],
+      rules: {
+        'no-warning-comments': [
+          'error',
+          {
+            terms: [
+              'previously',
+              'used to',
+              'old behavior',
+              'old behaviour',
+              'was tried',
+              'we tried',
+              'regressed',
+              'historically',
+              'formerly',
+              'no longer',
+              'this replaces',
+              'changed from',
+              'until recently',
+            ],
+            location: 'anywhere',
+          },
+        ],
+      },
+    },
+    {
       // Tests live outside the production tsconfig (Metro bundles them
       // separately). __tests__/tsconfig.json includes them so ESLint's
       // type-checked rules (no-deprecated, etc.) can still run.

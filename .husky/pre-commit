@@ -45,8 +45,8 @@ node scripts/check-dead-modules.mjs || exit 1
 # runs none at all, so as a test it never ran in the loop that would prevent it.
 node scripts/check-test-cache-fidelity.mjs || exit 1
 
-# Comment volume and history narration. Long explanatory blocks rot faster than
-# the code they sit on — a sweep found 36 wrong comments, one describing the
-# very bug the fix beneath it removed, and eleven attached to the wrong
-# declaration. The baseline is EMPTY, so any finding is a regression.
+# Comment VOLUME. Long explanatory blocks rot faster than the code they sit on —
+# a sweep found 36 wrong comments, one describing the very bug the fix beneath
+# it removed. The baseline is EMPTY, so any finding is a regression. Narration
+# about what the code used to do is ESLint's `no-warning-comments` instead.
 node scripts/check-comment-budget.mjs || exit 1
