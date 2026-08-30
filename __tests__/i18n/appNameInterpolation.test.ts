@@ -1,9 +1,7 @@
-import fs from 'fs';
-import path from 'path';
 import { getI18n } from '#/i18n/config';
 import { appConfig } from '#/config/appConfig';
+import { mergedLocale } from '#/test-utils/mergedLocales';
 
-const LOCALES_DIR = path.join(__dirname, '..', '..', 'src', 'i18n', 'locales');
 const LOCALES = ['en', 'es', 'it', 'sq'];
 
 /** Every leaf string in a locale tree, with its dotted key. */
@@ -17,8 +15,15 @@ const flatten = (obj: unknown, prefix = ''): Array<[string, string]> => {
   return out;
 };
 
-const load = (locale: string) =>
-  JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, `${locale}.json`), 'utf8'));
+/**
+ * The WHOLE tree the app loads, core plus every feature's.
+ *
+ * This read only `src/i18n/locales/` — about a third of the copy — so it could
+ * not see the one file that actually uses the variable outside core
+ * (`profile.cameraPermissionBlockedMessage`), nor a literal product name typed
+ * into any feature's copy.
+ */
+const load = (locale: string) => mergedLocale(locale);
 
 /**
  * The product name reaches copy through `{{appName}}`, fed by

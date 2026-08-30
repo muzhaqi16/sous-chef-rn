@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { ErrorLike } from '@apollo/client';
 import { errorService } from '#/services/errorService';
 import { useApolloClient, useQuery } from '@apollo/client/react';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
@@ -8,10 +9,7 @@ import type {
   RecipeInstruction as ExternalRecipeInstruction,
 } from '#/services/recipeApi/types';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
-import type {
-  GetRecipeQuery,
-  GetRecipeQueryVariables,
-} from '#features/recipes/graphql/recipe.generated';
+import type { GetRecipeQuery } from '#features/recipes/graphql/recipe.generated';
 import {
   UseRecipeData_RecipeFragmentDoc,
   type UseRecipeData_RecipeFragment,
@@ -96,9 +94,10 @@ export interface UseRecipeDataResult {
   displayData: RecipeDisplayData | null;
   loading: boolean;
   error: string | null;
-  backendError: ReturnType<
-    typeof useQuery<GetRecipeQuery, GetRecipeQueryVariables>
-  >['error'];
+  // Modern signatures (see src/types/apollo-default-options.d.ts) reject
+  // generics on `useQuery`, including in a type position. `ErrorLike` is what
+  // the hook's `error` actually is, and it does not vary by operation.
+  backendError: ErrorLike | undefined;
   backendRecipe: MaterializedRecipe | undefined;
   isBackendRecipe: boolean;
   externalRecipe: RecipeInformation | null;

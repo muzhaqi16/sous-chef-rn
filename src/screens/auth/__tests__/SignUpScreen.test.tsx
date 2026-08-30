@@ -63,6 +63,11 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
       footerLinkText,
       footerLinkTestID,
       onFooterLinkPress,
+      linkText,
+      linkTestID,
+      onLinkPress,
+      linkDisabled,
+      linkCountdown,
     }: {
       title?: string;
       subtitle?: string;
@@ -76,6 +81,11 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
       footerLinkText?: string;
       footerLinkTestID?: string;
       onFooterLinkPress?: () => void;
+      linkText?: string;
+      linkTestID?: string;
+      onLinkPress?: () => void;
+      linkDisabled?: boolean;
+      linkCountdown?: number;
     }) => (
       <View testID="auth-form-template">
         <Text>{title}</Text>
@@ -97,6 +107,20 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
               : submitText}
           </Text>
         </Pressable>
+        {linkText ? (
+          <Pressable
+            testID={linkTestID}
+            onPress={onLinkPress}
+            disabled={linkDisabled}
+            accessibilityState={{ disabled: !!linkDisabled }}
+          >
+            <Text>
+              {linkCountdown && linkCountdown > 0
+                ? `${linkText} (${linkCountdown}s)`
+                : linkText}
+            </Text>
+          </Pressable>
+        ) : null}
         {footerText ? <Text>{footerText}</Text> : null}
         {footerLinkText ? (
           <Pressable testID={footerLinkTestID} onPress={onFooterLinkPress}>
@@ -120,11 +144,23 @@ jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
   BaseInput: 'BaseInput',
 }));
 
-jest.mock('#/utils/validation/auth', () => ({
-  // A permissive real schema so `handleSubmit` passes validation and invokes
-  // `onSubmit` (the default `() => ({})` isn't a yup schema and blocks submit).
-  getSignUpValidationSchema: () => require('yup').object({}),
-}));
+jest.mock('#/utils/validation/auth', () => {
+  const yup = require('yup');
+  return {
+    // A permissive real schema so `handleSubmit` passes validation and invokes
+    // `onSubmit` (the default `() => ({})` isn't a yup schema and blocks
+    // submit). The inputs are string mocks and cannot be typed into, so the
+    // address is seeded through the cast — `onSubmit` reads the resolver's
+    // output, and the confirmation needs a real one to resend to.
+    getSignUpValidationSchema: () =>
+      yup.object({
+        email: yup.string().transform(() => 'new@example.com'),
+      }),
+    // The success branch renders CodeVerificationScreen, which builds its own
+    // resolver. A partial factory here would leave that undefined.
+    getEmailVerificationValidationSchema: () => yup.object({}),
+  };
+});
 
 beforeEach(() => {
   mockRegister.mockReset();
@@ -181,41 +217,26 @@ describe('SignUpScreen', () => {
     expect(mockNavigateToLogin).toHaveBeenCalledTimes(1);
   });
 
-  it('shows the inline "check your inbox" confirmation on successful registration', async () => {
+  it('offers code entry on successful registration', async () => {
     mockRegister.mockResolvedValue(true);
     const user = userEvent.setup();
     renderWithApollo(<SignUpScreen />);
 
     await user.press(screen.getByTestId('signup-submit-button'));
 
-    // Registration succeeded → the form is replaced by the verification-sent
-    // confirmation (no navigation into the app, no auth).
+    // Registration succeeded → the form is replaced by the code screen (no
+    // navigation into the app, no auth). The activation mail carries a code AND
+    // a link, so the user can finish here instead of leaving for their inbox.
     await waitFor(() => {
-      expect(screen.getByTestId('signup-verification-sent')).toBeTruthy();
+      expect(screen.getByTestId('code-verification-screen')).toBeTruthy();
     });
-    expect(screen.getByText('Check your inbox')).toBeTruthy();
-    // Resend is available on the confirmation (spec: verification hand-off).
-    expect(screen.getByTestId('signup-resend-button')).toBeTruthy();
+    expect(screen.getByText('Enter Code')).toBeTruthy();
     expect(mockRegister).toHaveBeenCalledTimes(1);
   });
 
   it('opens the resend cooldown as soon as the activation mail is sent', async () => {
-    // The mail has already gone out, so the first "Resend email" tap must not
-    // be able to fire a duplicate send seconds later.
-    mockRegister.mockResolvedValue(true);
-    const user = userEvent.setup();
-    renderWithApollo(<SignUpScreen />);
-
-    await user.press(screen.getByTestId('signup-submit-button'));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('signup-resend-button')).toBeTruthy();
-    });
-    expect(screen.getByTestId('signup-resend-button')).toBeDisabled();
-    expect(screen.getByText('Resend email (30s)')).toBeTruthy();
-  });
-
-  it('does not send while the cooldown is running', async () => {
+    // The mail has already gone out, so the first resend tap must not be able
+    // to fire a duplicate send seconds later.
     const recordedVariables: Record<string, unknown>[] = [];
     mockRegister.mockResolvedValue(true);
     const user = userEvent.setup();
@@ -243,15 +264,18 @@ describe('SignUpScreen', () => {
 
     await user.press(screen.getByTestId('signup-submit-button'));
     await waitFor(() => {
-      expect(screen.getByTestId('signup-resend-button')).toBeTruthy();
+      expect(screen.getByTestId('code-verification-screen')).toBeTruthy();
     });
 
-    await user.press(screen.getByTestId('signup-resend-button'));
+    // Resend sits in the link slot on this context and opens inside the first
+    // cooldown, so the tap cannot fire a duplicate send.
+    expect(screen.getByTestId('resend-code')).toBeDisabled();
+    await user.press(screen.getByTestId('resend-code'));
 
     expect(recordedVariables).toHaveLength(0);
   });
 
-  it('stays on the form (no confirmation) when registration is rejected', async () => {
+  it('stays on the form (no code entry) when registration is rejected', async () => {
     mockRegister.mockResolvedValue(false);
     const user = userEvent.setup();
     renderWithApollo(<SignUpScreen />);
@@ -259,7 +283,7 @@ describe('SignUpScreen', () => {
     await user.press(screen.getByTestId('signup-submit-button'));
 
     await waitFor(() => expect(mockRegister).toHaveBeenCalledTimes(1));
-    expect(screen.queryByTestId('signup-verification-sent')).toBeNull();
+    expect(screen.queryByTestId('code-verification-screen')).toBeNull();
     expect(screen.getByTestId('signup-screen')).toBeTruthy();
   });
 });

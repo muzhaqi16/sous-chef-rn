@@ -56,6 +56,7 @@ const fullItem: Unmasked<ItemDetail_ShoppingListItemFragment> = {
   },
   purchaseInfo: {
     __typename: 'ShoppingListItemPurchaseInfo',
+    movedToPantryAt: null,
     isPurchased: true,
     purchasedQuantity: 2,
     purchasedPrice: 3.5,
@@ -115,6 +116,7 @@ const narrowItem: Unmasked<UseToggleShoppingItem_ItemFragment> = {
   purchaseInfo: {
     __typename: 'ShoppingListItemPurchaseInfo',
     isPurchased: true,
+    movedToPantryAt: null,
   },
   version: 3,
   updatedAt: '2026-08-19T00:01:00.000Z',
@@ -187,6 +189,7 @@ describe('nested value objects on ShoppingListItem', () => {
         purchaseInfo: {
           __typename: 'ShoppingListItemPurchaseInfo',
           isPurchased: false,
+          movedToPantryAt: null,
         },
       },
     });
@@ -215,6 +218,7 @@ describe('nested value objects on ShoppingListItem', () => {
           purchaseInfo: {
             __typename: 'ShoppingListItemPurchaseInfo',
             isPurchased,
+            movedToPantryAt: null,
           },
         },
       });

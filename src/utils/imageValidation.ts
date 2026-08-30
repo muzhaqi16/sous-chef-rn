@@ -23,6 +23,20 @@ export interface ImageValidationError extends Error {
   code: 'INVALID_TYPE' | 'FILE_TOO_LARGE' | 'UNKNOWN_ERROR';
 }
 
+/**
+ * The `message` here is LOG text, and deliberately English.
+ *
+ * It reaches `errorService.reportError` through the pickers' `onError`, which is
+ * where an English sentence is what you want. What must never happen is showing
+ * it: three pickers used to put it straight into `alertService.alert` under a
+ * translated title, so an Albanian user read "Only JPEG, PNG, and WebP images
+ * are allowed" in a Gabim dialog.
+ *
+ * `code` is the half that maps to copy. `imageErrorMessage(t, error, isProfile)`
+ * in `#hooks/useImageUpload` is the one mapping, onto the `imageUpload.*` keys.
+ * Guarded by `src/utils/__tests__/imageValidationMessages.test.ts`; a display
+ * site reading `.message` is caught by the sink selector in `.eslintrc.js`.
+ */
 export const createImageValidationError = (
   message: string,
   code: ImageValidationError['code'],

@@ -31,6 +31,7 @@ import {
   UseMealPlanActions_DetailStubFragmentDoc,
   type UseMealPlanActions_DetailStubFragment,
 } from './useMealPlanActions.generated';
+import { NEUTRAL_MEAL_PLAN_DETAIL } from './mealPlanDetailNeutral.generated';
 import {
   type CreateMealPlanInput,
   type UpdateMealPlanInput,
@@ -132,35 +133,19 @@ function buildOptimisticMealPlan(
 /**
  * A meal plan created offline must render on its complete-gated detail screen —
  * `useMealPlan` reads `MealPlanMain_mealPlan` and returns null unless the whole
- * fragment is `complete`. Materialize the detail-only fields (zeroed nutrition,
- * no goal progress, empty items) alongside the `MealPlanDisplay` write so the
- * fragment is complete until the server response / queued replay fills real
- * values. Reuses the resolved `home` / `createdBy` from the display entity.
+ * fragment is `complete`. Materialize the detail-only fields alongside the
+ * `MealPlanDisplay` write so the fragment is complete until the server response
+ * / queued replay fills real values.
+ *
+ * The values are the neutral base derived from the SDL (see
+ * scripts/generate-optimistic-fillers.mjs) — zeroed nutrition, no goal
+ * progress, empty items — so a field added to the fragment cannot be forgotten
+ * here, an omission that is invisible until the detail screen blanks offline.
  */
 function buildMealPlanDetailStub(
   planId: string,
 ): UseMealPlanActions_DetailStubFragment {
-  return {
-    __typename: 'MealPlan',
-    id: planId,
-    mealPlanItems: [],
-    nutritionSummary: {
-      __typename: 'MealPlanNutritionSummary',
-      totalCalories: 0,
-      totalProtein: 0,
-      totalCarbs: 0,
-      totalFat: 0,
-      avgDailyCalories: 0,
-      avgDailyProtein: 0,
-      avgDailyCarbs: 0,
-      avgDailyFat: 0,
-      totalMeals: 0,
-      mealsWithNutrition: 0,
-      coveragePercentage: 0,
-      mealTypeBreakdown: [],
-    },
-    nutritionGoalProgress: null,
-  };
+  return { ...NEUTRAL_MEAL_PLAN_DETAIL, id: planId };
 }
 
 /** Fields an update can change that live on the cached `MealPlanDisplay`. */

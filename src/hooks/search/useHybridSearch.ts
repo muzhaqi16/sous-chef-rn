@@ -1,4 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
+import type {
+  ApolloClient,
+  TypedDocumentNode,
+  OperationVariables,
+} from '@apollo/client';
 import { useApolloClient } from '@apollo/client/react';
 import type { DocumentNode } from 'graphql';
 import { useDebouncedValue } from '#hooks/utils/useDebouncedValue';
@@ -197,10 +202,21 @@ export function useHybridSearch<TQuery, TItem extends { id: string }>(
       // inside a try block ("Support value blocks … within a try/catch
       // statement"). Keeping the try body to plain statements keeps this hook
       // compiled. See scripts/probe-compiler-try-forms.mjs.
-      let result: Awaited<ReturnType<typeof client.query<TQuery>>> | undefined;
+      // PARAMETERIZED on TQuery. `ReturnType<typeof client.query>` is the
+      // un-instantiated return, whose `TData` defaults to `unknown` — the
+      // annotation on `data` below then narrowed that with no check of what the
+      // document actually returns, so `extractItems` was typed against a shape
+      // nothing verified.
+      let result: ApolloClient.QueryResult<TQuery> | undefined;
       try {
-        result = await client.query<TQuery>({
-          query: searchDocument,
+        // The document is a plain `DocumentNode` here (callers pass concrete
+        // operations whose variables types differ), so the result shape rides
+        // on this cast rather than a generic — modern signatures reject those.
+        result = await client.query({
+          query: searchDocument as TypedDocumentNode<
+            TQuery,
+            OperationVariables
+          >,
           variables: effectVariables,
           fetchPolicy: 'network-only',
         });

@@ -1,23 +1,25 @@
-// Biometric credentials must SURVIVE a sign-out.
+// Biometric credentials must NOT survive a sign-out.
 //
-// `logout()` used to end with `removeCredentials(currentUserEmail)`, which
-// resets both keychain slots for that account — the biometry-gated credential
-// service and the unprotected "credentials exist" indicator. That one line made
-// biometric login structurally impossible:
+// This suite asserted the opposite. The reasoning behind that was recorded as
+// "reading the slot still costs a successful biometric prompt from that
+// account's owner" — and it does not hold. The credential slot is
+// `ACCESS_CONTROL.BIOMETRY_ANY` (`src/storage/keychain.ts`), which ANY biometric
+// enrolled on the device satisfies, and typically the device passcode as well;
+// the two slots the login screen reads to decide whether to OFFER the button
+// (`indicatorServiceFor`, `LAST_BIOMETRIC_EMAIL_KEY`) carry no access control at
+// all. On a shared device that produced: user A signs out, user B launches, the
+// biometric button appears for A's address, and B's own finger unlocks A's
+// stored password and signs in as A.
 //
-//   • `LoginScreen` shows its biometric button only when `hasCredentials` is
-//     true, so after any sign-out the button was gone;
-//   • `shouldShowPostLoginBiometricPrompt` checks the same thing, so every
-//     fresh login asked the user to enrol AGAIN; and
-//   • `autoLogin()` could never succeed after a manual sign-out.
+// The convenience this costs is real, and was the reason for the old default:
+// biometric login exists to get the user back in after a sign-out, and clearing
+// the slot means `LoginScreen` shows no biometric button until the account
+// enrols again. That trade is now made explicitly — a caller that wants the old
+// behaviour passes `keepBiometricCredentials: true` — instead of every sign-out
+// leaving a password behind for whoever picks the device up next.
 //
-// The user-visible shape was "it keeps asking me to register my fingerprint but
-// never offers to log in with it". Nothing caught it: `sessionEndLeavesNoData`
-// classifies persisted STORE keys on purpose, and the keychain is not in its
-// inventory — so deleting credentials read as correct cleanup.
-//
-// These tests pin both directions: an ordinary sign-out leaves the slot alone,
-// and `forgetDevice` (account deletion) still clears it.
+// Nothing caught the original: `sessionEndLeavesNoData` classifies persisted
+// STORE keys on purpose, and the keychain is not in its inventory.
 
 const mockMutate = jest.fn();
 jest.mock('#/apollo/client', () => ({
@@ -81,6 +83,7 @@ jest.mock('#/hooks/useFeatureHint', () => ({
   resetAllFeatureHints: jest.fn(),
 }));
 
+import { logger } from '#/utils/environment';
 import { authService } from '#/services/authService';
 
 describe('logout and biometric credentials', () => {
@@ -89,18 +92,23 @@ describe('logout and biometric credentials', () => {
     mockMutate.mockResolvedValue({ data: {} });
   });
 
-  it('leaves the stored credentials in place on an ordinary sign-out', async () => {
+  it('clears the stored credentials on an ordinary sign-out', async () => {
     await authService.logout();
 
-    // The whole point: signing out is not the same as forgetting the device,
-    // and the next login screen must still be able to offer biometric login.
+    // The shared-device case: nothing of the previous account may be left
+    // unlockable by the next person to pick the phone up.
+    expect(mockClearCredentials).toHaveBeenCalledWith('chef@example.com');
+  });
+
+  it('keeps them only when the caller opts in', async () => {
+    await authService.logout({ keepBiometricCredentials: true });
+
     expect(mockClearCredentials).not.toHaveBeenCalled();
   });
 
   it('still signs the user out of the session itself', async () => {
     await authService.logout();
 
-    // Keeping credentials must not be mistaken for keeping the session.
     expect(mockResetStore).toHaveBeenCalledWith(
       expect.objectContaining({ auth: true }),
     );
@@ -108,8 +116,51 @@ describe('logout and biometric credentials', () => {
   });
 
   it('clears them when the account itself is going away', async () => {
-    await authService.logout({ forgetDevice: true });
+    // Account deletion passes nothing now — the default already clears.
+    await authService.logout();
 
     expect(mockClearCredentials).toHaveBeenCalledWith('chef@example.com');
+  });
+
+  it('reports a keychain delete that did not succeed', async () => {
+    // A failed delete leaves the previous user's password on the device. It
+    // must not be indistinguishable from success — the boolean was discarded.
+    mockClearCredentials.mockRejectedValueOnce(new Error('keychain locked'));
+
+    await authService.logout();
+
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('could not be removed'),
+    );
+  });
+  /**
+   * The other half of the same rule, from the opposite direction: a failure
+   * that does NOT establish the credentials are dead must leave them alone.
+   *
+   * `autoLogin` cleared on any `result.error` and again in its catch, so a
+   * single network blip on launch silently un-enrolled the device — the next
+   * launch offered no biometric button, with nothing said. The payload branch
+   * beside it already got this right via `isDeadCredentialCode`; these two did
+   * not.
+   */
+  it('keeps stored credentials when auto-login fails on transport', async () => {
+    mockClearCredentials.mockClear();
+    mockMutate.mockRejectedValueOnce(new Error('Network request failed'));
+
+    await authService.autoLogin();
+
+    expect(mockClearCredentials).not.toHaveBeenCalled();
+  });
+
+  it('keeps them when auto-login resolves with a transport error', async () => {
+    mockClearCredentials.mockClear();
+    mockMutate.mockResolvedValueOnce({
+      data: { login: null },
+      error: new Error('Network request failed'),
+    });
+
+    await authService.autoLogin();
+
+    expect(mockClearCredentials).not.toHaveBeenCalled();
   });
 });

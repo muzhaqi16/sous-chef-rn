@@ -124,8 +124,6 @@ const ShoppingTabComponent: React.FC = () => {
           items={items}
           showImages={showImages}
           onItemPress={actions.onItemPress}
-          onItemEdit={actions.onItemEdit}
-          onItemDelete={actions.onItemDelete}
           onTogglePurchase={actions.onTogglePurchase}
           onQuantityPress={actions.onQuantityPress}
           onSortOrderUpdate={actions.onSortOrderUpdate}

@@ -6,10 +6,7 @@ import type { AdjustPantryItemQuantityInput } from '#/graphql/generated/schemaTy
 import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { useAdjustPantryItemQuantity } from '../useAdjustPantryItemQuantity';
 
-jest.mock('#/services/errorService', () => ({
-  errorService: { reportError: jest.fn() },
-  getErrorMessage: jest.fn(() => 'Network error'),
-}));
+jest.mock('#/services/errorService');
 
 let mockHandleVersionConflict = false;
 jest.mock('#/utils/errors/versionConflict', () => ({
@@ -230,7 +227,12 @@ describe('useAdjustPantryItemQuantity', () => {
 
     expect(success).toBe(false);
     await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith('Error', 'Network error'),
+      // Localized copy, not the error's own text. The raw message is
+      // unlocalizable English and belongs in the report, not the alert.
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Something went wrong.',
+      ),
     );
   });
 

@@ -39,6 +39,7 @@ jest.mock('#store', () => ({
 }));
 
 import { ApolloClient, ApolloLink, InMemoryCache, gql } from '@apollo/client';
+import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { Observable } from 'rxjs';
 import {
   CombinedGraphQLErrors,
@@ -313,6 +314,7 @@ describe('errorLink — CLIENT_UPGRADE_REQUIRED', () => {
   const client = new ApolloClient({
     cache: new InMemoryCache(),
     link: ApolloLink.empty(),
+    defaultOptions: APOLLO_DEFAULT_OPTIONS,
   });
 
   const runWithError = (

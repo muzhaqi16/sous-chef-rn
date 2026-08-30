@@ -7,6 +7,7 @@ import {
   type BottomSheetModalRef,
 } from '../useStandardBottomSheet';
 import { createFakeBottomSheetModal } from '#/test-utils/gorhomModalStateMachine';
+import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 
 // Track present/dismiss calls on the BottomSheetModal ref
 const mockPresent = jest.fn();
@@ -38,9 +39,29 @@ jest.mock('#hooks/useBottomSheetBackHandler', () => ({
   useBottomSheetBackHandler: jest.fn(),
 }));
 
+// The real backdrop-claim hook runs; only the provider it reads is stubbed, so
+// the claim/release sequence the sheet drives is observable.
+const mockBackdropClaim = jest.fn(() => 'claim-1');
+const mockBackdropRelease = jest.fn();
+jest.mock('#components/providers/OverlayBackdropProvider', () => ({
+  useOverlayBackdropOptional: () => ({
+    claim: mockBackdropClaim,
+    release: mockBackdropRelease,
+  }),
+}));
+
+// Last `enabled` argument the (mocked) back handler was wired with.
+const backHandlerEnabled = (): unknown => {
+  const calls = (useBottomSheetBackHandler as jest.Mock).mock.calls;
+  return calls[calls.length - 1]?.[1];
+};
+
 beforeEach(() => {
   mockPresent.mockClear();
   mockDismiss.mockClear();
+  (useBottomSheetBackHandler as jest.Mock).mockClear();
+  mockBackdropClaim.mockClear();
+  mockBackdropRelease.mockClear();
 });
 
 describe('useStandardBottomSheet', () => {
@@ -498,6 +519,74 @@ describe('useStandardBottomSheet', () => {
 
       expect(mockPresent).not.toHaveBeenCalled();
       expect(mockDismiss).not.toHaveBeenCalled();
+    });
+
+    // `visible` stays true across a navigation away so the sheet can restore on
+    // return. A back handler enabled by `visible` alone therefore stays
+    // subscribed on the pushed screen and swallows the press there — the user
+    // presses back on the barcode scanner and nothing happens.
+    it('disarms the hardware back handler while the screen is blurred', () => {
+      const { navigation, emit } = createMockNavigation();
+      const { result } = renderHook(
+        () => useStandardBottomSheet({ ...defaultOptions, visible: true }),
+        { wrapper: navWrapper(navigation) },
+      );
+
+      attachRefMocks(result.current.ref);
+      expect(backHandlerEnabled()).toBe(true);
+
+      act(() => emit('blur'));
+      expect(backHandlerEnabled()).toBe(false);
+
+      act(() => emit('focus'));
+      expect(backHandlerEnabled()).toBe(true);
+    });
+
+    // A blur-driven dismiss can unmount the gorhom portal before onChange(-1)
+    // or onDismiss reach JS. Waiting on either leaves the slot claimed, and a
+    // claimed slot with a settled-to-zero opacity is an invisible full-screen
+    // tap blocker over the screen behind.
+    it('releases the backdrop claim when the screen blurs', () => {
+      const { navigation, emit } = createMockNavigation();
+      const { result } = renderHook(
+        () => useStandardBottomSheet({ ...defaultOptions, visible: true }),
+        { wrapper: navWrapper(navigation) },
+      );
+
+      attachRefMocks(result.current.ref);
+      act(() => result.current.modalProps.onAnimate?.(-1, 0, 0, 0));
+      expect(mockBackdropClaim).toHaveBeenCalledTimes(1);
+
+      act(() => emit('blur'));
+
+      expect(mockBackdropRelease).toHaveBeenCalledWith('claim-1');
+    });
+
+    it('leaves the closing fade to gorhom when the consumer closes the sheet', () => {
+      const { navigation } = createMockNavigation();
+      const { result, rerender } = renderHook(
+        ({ visible }: { visible: boolean }) =>
+          useStandardBottomSheet({ ...defaultOptions, visible }),
+        { wrapper: navWrapper(navigation), initialProps: { visible: true } },
+      );
+
+      attachRefMocks(result.current.ref);
+      act(() => result.current.modalProps.onAnimate?.(-1, 0, 0, 0));
+
+      act(() => rerender({ visible: false }));
+
+      // Still on screen and fading; gorhom's onChange(-1) / onDismiss release it.
+      expect(mockBackdropRelease).not.toHaveBeenCalled();
+    });
+
+    it('leaves the back handler disarmed for a sheet that is not open', () => {
+      const { navigation } = createMockNavigation();
+      renderHook(
+        () => useStandardBottomSheet({ ...defaultOptions, visible: false }),
+        { wrapper: navWrapper(navigation) },
+      );
+
+      expect(backHandlerEnabled()).toBe(false);
     });
   });
 });

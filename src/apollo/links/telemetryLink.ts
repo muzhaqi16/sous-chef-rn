@@ -1,6 +1,7 @@
 import { ApolloLink, Observable } from '@apollo/client';
 import type { GraphQLFormattedError } from 'graphql';
 import performance from 'react-native-performance';
+import { env as buildEnv } from '#/config/env';
 import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
@@ -12,11 +13,25 @@ interface GraphQLTiming {
   operationName: string;
   operationType: string;
   startTime: number;
-  markName: string;
 }
 
-// Sample rate for production telemetry (10% of operations)
-const PRODUCTION_SAMPLE_RATE = 0.1;
+// Fraction of non-dev GraphQL operations that carry telemetry, from
+// `GRAPHQL_TELEMETRY_SAMPLE_RATE` (build-time env). Configurable rather than a
+// constant so the rate can be lowered per environment as the fleet grows —
+// without it, "turn sampling down" was a code change.
+//
+// Defaults to full capture: an unset or unparseable value must not silently
+// discard 90% of production telemetry. Clamped to (0, 1] because
+// `sampleWeight` divides by it.
+const parseSampleRate = (raw: string | undefined): number => {
+  const parsed = Number.parseFloat(raw ?? '');
+  if (!Number.isFinite(parsed) || parsed <= 0) return 1;
+  return Math.min(parsed, 1);
+};
+
+const CONFIGURED_SAMPLE_RATE = parseSampleRate(
+  buildEnv.GRAPHQL_TELEMETRY_SAMPLE_RATE,
+);
 
 export const createTelemetryLink = () => {
   const timings = new Map<string, GraphQLTiming>();
@@ -31,10 +46,11 @@ export const createTelemetryLink = () => {
       return forward(operation);
     }
 
-    // Sample telemetry in production to reduce overhead
+    // Sample telemetry outside dev to reduce overhead. At a rate of 1 this is
+    // a no-op comparison — `Math.random()` is never > 1.
     if (
       !Environment.isDevelopment() &&
-      Math.random() > PRODUCTION_SAMPLE_RATE
+      Math.random() > CONFIGURED_SAMPLE_RATE
     ) {
       return forward(operation);
     }
@@ -52,32 +68,48 @@ export const createTelemetryLink = () => {
     // percentile in graphql_request_duration_ms past the top bucket.
     const isSubscription = operationType === 'subscription';
 
-    // In production only 1-in-PRODUCTION_SAMPLE_RATE operations reach this
-    // point (see sampling gate above), so each sampled operation stands in for
-    // 1/sampleRate real ones. Weight counter increments accordingly so totals
-    // estimate true volume instead of under-reporting ~10×. Dev is unsampled.
+    // Only a `CONFIGURED_SAMPLE_RATE` share of operations reach this point (see
+    // the gate above), so each one stands in for 1/rate real operations. Weight
+    // counter increments accordingly so totals estimate true volume regardless
+    // of the rate. At the current rate of 1 the weight is 1 and the counters
+    // are exact counts — note that makes them NOT comparable with series
+    // recorded while the rate was 0.1, which were 10× estimates.
     const sampleWeight = Environment.isDevelopment()
       ? 1
-      : Math.round(1 / PRODUCTION_SAMPLE_RATE);
+      : Math.round(1 / CONFIGURED_SAMPLE_RATE);
 
     const operationId = `${operationName}_${startTime}`;
-    const markName = `gql:${operationName}:${operationId}`;
 
-    // Place a mark for timeline visibility
-    performance.mark(markName);
-
+    // No `performance.mark` / `performance.measure` pair here.
+    //
+    // It existed only "for timeline visibility", and nothing reads a `gql:*`
+    // measure — the Performance Dashboard reads `react-native-mark` and
+    // `resource` entries. Meanwhile it made instrumentation QUADRATIC in session
+    // length: `performance.clearMarks(name)` is implemented as a full-array
+    // `entries.filter()` with a fresh allocation, and every `measure` appended
+    // an entry that was never cleared, so operation k walked k entries
+    // synchronously inside the GraphQL response handler. Measured against the
+    // real buffer semantics, 500 operations cost 1.9 ms of churn and 5,000 cost
+    // 100.4 ms — 10x the operations for 53x the cost, before Hermes.
+    //
+    // `duration` is computed from `startTime` below and never read the mark.
     timings.set(operationId, {
       operationName,
       operationType,
       startTime,
-      markName,
     });
 
-    Telemetry.debug(`GraphQL ${operationType}: ${operationName} started`, {
-      operation_type: operationType,
-      operation_name: operationName,
-      variables: operation.variables ? Object.keys(operation.variables) : [],
-    });
+    // Guarded: production's log floor is `warn`, so unguarded this walked
+    // `operation.variables` and built a payload for every operation only for
+    // `log()` to discard it — cheap per call, but now on every operation
+    // rather than one in ten.
+    if (Telemetry.isLevelEnabled('debug')) {
+      Telemetry.debug(`GraphQL ${operationType}: ${operationName} started`, {
+        operation_type: operationType,
+        operation_name: operationName,
+        variables: operation.variables ? Object.keys(operation.variables) : [],
+      });
+    }
 
     Telemetry.increment('graphql_requests_total', sampleWeight, {
       type: operationType,
@@ -87,14 +119,6 @@ export const createTelemetryLink = () => {
     const finalizeTiming = (timing: GraphQLTiming, hasErrors: boolean) => {
       const duration = performance.now() - timing.startTime;
       timings.delete(operationId);
-
-      // Create a measure for timeline visibility, then clean up the mark
-      try {
-        performance.measure(`gql:${operationName}`, timing.markName);
-      } catch {
-        // Mark may have been cleared
-      }
-      performance.clearMarks(timing.markName);
 
       // Report directly with full labels (central observer skips gql:* measures).
       // Intentionally NOT sample-weighted: latency quantiles are scale-invariant,
@@ -161,7 +185,7 @@ export const createTelemetryLink = () => {
                   name: operationName,
                 },
               );
-            } else {
+            } else if (Telemetry.isLevelEnabled('debug')) {
               Telemetry.debug(`GraphQL Success: ${operationName}`, {
                 duration_ms: duration,
                 operation_type: operationType,
@@ -169,7 +193,11 @@ export const createTelemetryLink = () => {
             }
 
             if (!isSubscription && duration > 1000) {
+              // `operation_name` is load-bearing: this is one of the few
+              // telemetryLink lines that survives production's `warn` floor,
+              // and the Grafana log panel renders it by that field.
               Telemetry.warn(`Slow GraphQL query: ${operationName}`, {
+                operation_name: operationName,
                 duration_ms: duration,
                 operation_type: operationType,
               });
@@ -248,7 +276,12 @@ export const createTelemetryLink = () => {
         },
       });
 
-      return () => subscription.unsubscribe();
+      return () => {
+        subscription.unsubscribe();
+        // An operation cancelled by an unmount never reaches `finalizeTiming`,
+        // so without this its entry is retained for the life of the session.
+        timings.delete(operationId);
+      };
     });
   });
 };

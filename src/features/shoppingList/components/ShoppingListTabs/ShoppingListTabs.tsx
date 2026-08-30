@@ -18,6 +18,8 @@ import { PurchasedTab } from './PurchasedTab';
 import { EmptyState, type EmptyStateProps } from '#components/atoms/EmptyState';
 import type { ShoppingListRowItem } from '../SortableShoppingList/types';
 import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
+import { ItemSwipeActionsProvider } from '#components/organisms/itemSwipeActionsContext';
+import type { ItemSwipeActionsFactory } from '#components/molecules/SwipeableItem/types';
 import {
   ShoppingListTabsActionsProvider,
   type ShoppingListTabsActions,
@@ -50,8 +52,7 @@ interface ShoppingListTabsProps {
   totalCountUnpurchased?: number;
   totalCountPurchased?: number;
   onItemPress: (id: string) => void;
-  onItemEdit?: (id: string) => void;
-  onItemDelete?: (id: string) => void;
+  itemSwipeActions?: ItemSwipeActionsFactory;
   onTogglePurchase?: (id: string, opts?: { withDetails?: boolean }) => void;
   onMoveToPantry?: (id: string) => void;
   onQuantityPress?: (id: string) => void;
@@ -126,8 +127,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   totalCountUnpurchased,
   totalCountPurchased,
   onItemPress,
-  onItemEdit,
-  onItemDelete,
+  itemSwipeActions,
   onTogglePurchase,
   onMoveToPantry,
   onQuantityPress,
@@ -183,6 +183,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 
   // TabView navigation state
   const [index, setIndex] = useState(0);
+  /** Which scene the finger can actually reach — `swipeEnabled` is off. */
+  const shoppingTabActive = index === 0;
 
   // PERFORMANCE: Use pre-filtered items when provided (stable references from useShoppingListScreen)
   // Fall back to internal filtering for backwards compatibility
@@ -200,6 +202,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   // Handle tab change - close any open swipeable via external coordinator
   const handleIndexChange = (newIndex: number) => {
     onCloseAllSwipeables?.();
+    // The outgoing list can no longer report the end of a drag in flight, which
+    // would leave the tab bar following a list the finger has left.
+    onMomentumScrollEnd?.();
     setIndex(newIndex);
     // Notify tutorial when user switches to Purchased tab
     if (newIndex === 1) {
@@ -239,8 +244,6 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   // Action callbacks for context provider — consumed by ShoppingTab/PurchasedTab
   const tabActions: ShoppingListTabsActions = {
     onItemPress,
-    onItemEdit,
-    onItemDelete,
     onTogglePurchase,
     onMoveToPantry,
     onQuantityPress,
@@ -379,10 +382,13 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     canMarkPurchased,
     canReorderItems,
     isTransitioning,
-    onScroll,
-    onScrollBeginDrag,
-    onScrollEndDrag,
-    onMomentumScrollEnd,
+    // Only the visible tab drives the tab bar. `lazy` keeps both scenes mounted
+    // once visited, so a hidden list's layout or restore scroll would otherwise
+    // feed the same direction tracking as the one under the finger.
+    onScroll: shoppingTabActive ? onScroll : undefined,
+    onScrollBeginDrag: shoppingTabActive ? onScrollBeginDrag : undefined,
+    onScrollEndDrag: shoppingTabActive ? onScrollEndDrag : undefined,
+    onMomentumScrollEnd: shoppingTabActive ? onMomentumScrollEnd : undefined,
     scrollEventThrottle,
     listHeaderComponent,
   };
@@ -402,10 +408,10 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     canMarkPurchased,
     canReorderItems: false,
     isTransitioning,
-    onScroll,
-    onScrollBeginDrag,
-    onScrollEndDrag,
-    onMomentumScrollEnd,
+    onScroll: shoppingTabActive ? undefined : onScroll,
+    onScrollBeginDrag: shoppingTabActive ? undefined : onScrollBeginDrag,
+    onScrollEndDrag: shoppingTabActive ? undefined : onScrollEndDrag,
+    onMomentumScrollEnd: shoppingTabActive ? undefined : onMomentumScrollEnd,
     scrollEventThrottle,
     listHeaderComponent,
   };
@@ -430,42 +436,46 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 
   return (
     <ShoppingListTabsActionsProvider actions={tabActions}>
-      <ShoppingListDataProvider data={tabData}>
-        <View
-          style={{
-            flex: 1,
-            ...(Platform.OS === 'android' && { elevation: 0 }),
-          }}
-        >
-          {showEmptyState ? (
-            <ScrollView
-              contentContainerStyle={{ flex: 1 }}
-              refreshControl={
-                onRefresh ? (
-                  <ThemedRefreshControl
-                    refreshing={refreshing || false}
-                    onRefresh={onRefresh}
-                  />
-                ) : undefined
-              }
-            >
-              {renderTabBar()}
-              <EmptyState {...emptyState} />
-            </ScrollView>
-          ) : (
-            <TabView
-              navigationState={{ index, routes }}
-              renderScene={renderSceneDataFree}
-              renderTabBar={renderTabBar}
-              onIndexChange={handleIndexChange}
-              initialLayout={{ width: layout.width }}
-              swipeEnabled={false}
-              lazy={true}
-              overScrollMode="never"
-            />
-          )}
-        </View>
-      </ShoppingListDataProvider>
+      {/* A derivation, so it travels as a value: the rows call it while
+          rendering and must get the current one. */}
+      <ItemSwipeActionsProvider value={itemSwipeActions}>
+        <ShoppingListDataProvider data={tabData}>
+          <View
+            style={{
+              flex: 1,
+              ...(Platform.OS === 'android' && { elevation: 0 }),
+            }}
+          >
+            {showEmptyState ? (
+              <ScrollView
+                contentContainerStyle={{ flex: 1 }}
+                refreshControl={
+                  onRefresh ? (
+                    <ThemedRefreshControl
+                      refreshing={refreshing || false}
+                      onRefresh={onRefresh}
+                    />
+                  ) : undefined
+                }
+              >
+                {renderTabBar()}
+                <EmptyState {...emptyState} />
+              </ScrollView>
+            ) : (
+              <TabView
+                navigationState={{ index, routes }}
+                renderScene={renderSceneDataFree}
+                renderTabBar={renderTabBar}
+                onIndexChange={handleIndexChange}
+                initialLayout={{ width: layout.width }}
+                swipeEnabled={false}
+                lazy={true}
+                overScrollMode="never"
+              />
+            )}
+          </View>
+        </ShoppingListDataProvider>
+      </ItemSwipeActionsProvider>
     </ShoppingListTabsActionsProvider>
   );
 };

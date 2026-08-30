@@ -11,7 +11,7 @@
  * name + quantity and their links resolve from the server response on sync.
  */
 
-import { gql, type ApolloCache } from '@apollo/client';
+import { type ApolloCache } from '@apollo/client';
 import {
   MyRecipesDocument,
   type MyRecipesQuery,
@@ -20,6 +20,8 @@ import {
   UseRecipeData_RecipeFragmentDoc,
   type UseRecipeData_RecipeFragment,
 } from '#features/recipes/hooks/useRecipeData.generated';
+import { RecipeCacheWriters_FormFieldsFragmentDoc } from './recipeCacheWriters.generated';
+import { NEUTRAL_RECIPE_FORM_FIELDS } from './recipeFormFieldsNeutral.generated';
 import {
   Difficulty,
   RecipeCategory,
@@ -161,35 +163,6 @@ function buildOptimisticRecipeEntity(
 }
 
 /**
- * The `RecipeForm_recipe` fields that `useRecipeData_recipe` does NOT select.
- *
- * `GetRecipe` spreads BOTH fragments, so materializing only the detail one
- * leaves the query's cache read incomplete — and an incomplete read means
- * `useQuery` returns no data at all and goes to the network. Online the fetch
- * papers over it; offline the recipe detail (and its edit form) render nothing
- * for a recipe the user just created locally. Same failure the pantry's missing
- * `createdAt` caused — see `buildOptimisticPantryItem`.
- *
- * Written as its own fragment rather than folded into either builder because
- * each of those is pinned to a generated fragment type that can't carry the
- * other's fields.
- */
-const OptimisticRecipeFormFieldsFragment = gql`
-  fragment _OptimisticRecipeFormFields on Recipe {
-    id
-    prepTimeMinutes
-    cookTimeMinutes
-    difficulty
-    category
-    cuisine
-    diets
-    healthGoals
-    intolerances
-    notes
-  }
-`;
-
-/**
  * Write the form-only half of the entity. Overlaps deliberately with the
  * MyRecipes edge node (`prepTimeMinutes` … `category`) so the entity satisfies
  * `RecipeForm_recipe` on its own, independent of the edge write.
@@ -203,16 +176,22 @@ function writeOptimisticRecipeFormFields(
   const cook = input.timing?.cookTimeMinutes ?? null;
   cache.writeFragment({
     id: cache.identify({ __typename: 'Recipe', id }),
-    fragment: OptimisticRecipeFormFieldsFragment,
-    fragmentName: '_OptimisticRecipeFormFields',
+    fragment: RecipeCacheWriters_FormFieldsFragmentDoc,
+    fragmentName: 'recipeCacheWriters_formFields',
     data: {
-      __typename: 'Recipe',
+      // Neutral base derived from the SDL (see
+      // scripts/generate-optimistic-fillers.mjs), so a field added to
+      // `RecipeForm_recipe` cannot be forgotten here — that omission is
+      // invisible until the detail screen blanks offline.
+      ...NEUTRAL_RECIPE_FORM_FIELDS,
       id,
       prepTimeMinutes: prep,
       cookTimeMinutes: cook,
-      // Same server-side defaults the list node mirrors.
-      difficulty: input.metadata?.difficulty ?? Difficulty.Easy,
-      category: input.metadata?.category ?? RecipeCategory.MainCourse,
+      // The derived base supplies the same server-side defaults the list node
+      // mirrors; the form overrides them whenever it has a value.
+      difficulty:
+        input.metadata?.difficulty ?? NEUTRAL_RECIPE_FORM_FIELDS.difficulty,
+      category: input.metadata?.category ?? NEUTRAL_RECIPE_FORM_FIELDS.category,
       cuisine: input.metadata?.cuisine ?? null,
       diets: input.dietary?.diets ?? [],
       healthGoals: input.dietary?.healthGoals ?? [],

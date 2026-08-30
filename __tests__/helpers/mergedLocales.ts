@@ -29,10 +29,31 @@ export const featureLocaleDirs = (): string[] =>
  * the copy and pass.
  */
 export const mergedLocale = (locale: string): LocaleTree => {
-  const merged: LocaleTree = read(path.join(CORE_DIR, `${locale}.json`));
+  let merged: LocaleTree = read(path.join(CORE_DIR, `${locale}.json`));
   for (const feature of featureLocaleDirs()) {
     const file = path.join(FEATURES_DIR, feature, 'locales', `${locale}.json`);
-    if (fs.existsSync(file)) Object.assign(merged, read(file));
+    if (fs.existsSync(file)) merged = deepMerge(merged, read(file));
   }
   return merged;
 };
+
+/**
+ * The same namespace-combining merge the app performs. `Object.assign` at the
+ * top level made a feature's `labels` REPLACE core's — and because the checkers
+ * repeated that mistake, parity still reported clean over a tree the app had
+ * silently emptied.
+ */
+const deepMerge = (base: LocaleTree, incoming: LocaleTree): LocaleTree => {
+  const merged: LocaleTree = { ...base };
+  for (const [key, value] of Object.entries(incoming)) {
+    const existing = merged[key];
+    merged[key] =
+      isNamespace(existing) && isNamespace(value)
+        ? deepMerge(existing, value)
+        : value;
+  }
+  return merged;
+};
+
+const isNamespace = (value: unknown): value is LocaleTree =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);

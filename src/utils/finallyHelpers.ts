@@ -79,12 +79,24 @@ export async function executeAsyncWithCleanup(
 }
 
 /** Wraps an async operation with loading state management (try-catch-finally).
- *  Sets loading true before, false after, and swallows errors (optionally calling onError). */
+ *  Sets loading true before, false after, and swallows errors (optionally calling onError).
+ *  `onCleanup` runs in the same finalizer as the loading reset, so a caller can
+ *  release something on EVERY outcome — including a throw — without writing a
+ *  `try/finally` of its own, which would bail the React Compiler out of the
+ *  whole component. */
 export async function executeWithLoadingState(
   fn: () => Promise<void>,
   setLoading: (value: boolean) => void,
   onError?: (error: unknown) => void,
+  onCleanup?: () => void,
 ): Promise<void> {
   setLoading(true);
-  await executeAsyncWithCleanup(fn, () => setLoading(false), onError);
+  await executeAsyncWithCleanup(
+    fn,
+    () => {
+      setLoading(false);
+      onCleanup?.();
+    },
+    onError,
+  );
 }

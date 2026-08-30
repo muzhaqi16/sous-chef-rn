@@ -29,9 +29,7 @@ jest.mock('#store/useAppStore', () => ({
     selector({ hasInitializedHomeData: mockReady }),
 }));
 
-jest.mock('#/services/errorService', () => ({
-  errorService: { reportError: jest.fn() },
-}));
+jest.mock('#/services/errorService');
 
 /** Drains the idle callback the hook schedules, plus the awaited queries. */
 async function flushWarm() {

@@ -21,6 +21,10 @@ describe('profileScreens', () => {
       'PersonalInformation',
       'Profile',
       'ProfilePhotoUpload',
+      // An auth screen, registered here because from inside the app it is only
+      // ever reached from the verify-email banner and the collaborate gate —
+      // as a PUSH, not the root navigator's `verification` group swap.
+      'VerifyEmail',
     ]);
   });
 

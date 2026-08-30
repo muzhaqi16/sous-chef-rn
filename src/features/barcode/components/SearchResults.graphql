@@ -31,7 +31,7 @@ mutation BarcodeAddItemToShoppingList($input: AddItemsToShoppingListInput!) {
         error
         item {
           id
-          ...SearchResults_shoppingListItem
+          ...AddedShoppingListItemFields
         }
       }
     }
@@ -71,10 +71,10 @@ mutation BarcodeCreatePantryItem($input: CreatePantryItemInput!) {
     }
     # The server reports a re-add of an item already stocked as this typed
     # union member (not a top-level error); selecting the ids lets the barcode
-    # add route the user to a one-tap restock.
+    # add route the user to a one-tap restock. `suggestion` is not selected —
+    # see the note on the canonical CreatePantryItem in pantry.graphql.
     ... on DuplicatePantryItemError {
       existingPantryItemIds
-      suggestion
     }
   }
 }

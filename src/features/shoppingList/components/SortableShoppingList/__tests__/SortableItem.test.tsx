@@ -14,9 +14,26 @@ import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
  * Apollo client.
  */
 
+// Records what the row passes down. The previous mock dropped every action
+// prop, which is why a row rendering NO swipe actions looked identical to one
+// rendering working ones.
+const swipeableProps: {
+  leftActions?: unknown[];
+  rightActions?: unknown[];
+}[] = [];
+
 jest.mock('#/components/molecules/SwipeableItem/SwipeableItem', () => ({
-  SwipeableItem: ({ children }: { children?: React.ReactNode }) => {
+  SwipeableItem: ({
+    children,
+    leftActions,
+    rightActions,
+  }: {
+    children?: React.ReactNode;
+    leftActions?: unknown[];
+    rightActions?: unknown[];
+  }) => {
     const { View } = require('react-native');
+    swipeableProps.push({ leftActions, rightActions });
     return <View testID="swipeable-item">{children}</View>;
   },
 }));
@@ -124,12 +141,18 @@ jest.mock('#context/StaggeredEntryContext', () => ({
   })),
 }));
 
+// The row reads its swipe-action factory from this context now: it is a
+// derivation the row calls while rendering, not a command.
+jest.mock('#components/organisms/itemSwipeActionsContext', () => ({
+  useItemSwipeActions: jest.fn(() => undefined),
+  ItemSwipeActionsProvider: ({ children }: { children?: React.ReactNode }) =>
+    children,
+}));
+
 jest.mock('../SortableListActionsContext', () => ({
   useSortableListActions: jest.fn(() => ({
     actions: {
       onItemPress: jest.fn(),
-      onItemEdit: jest.fn(),
-      onItemDelete: jest.fn(),
       onTogglePurchase: jest.fn(),
       onMoveToPantry: jest.fn(),
       onQuantityPress: jest.fn(),
@@ -177,6 +200,8 @@ import { SwipeableListItem } from '../SortableItem';
 import { SortableItem_ItemFragmentDoc } from '../SortableItem.generated';
 import type { FragmentType } from '@apollo/client/masking';
 import type { ShoppingListRowItem } from '../types';
+import { useSortableListActions } from '../SortableListActionsContext';
+import { useItemSwipeActions } from '#components/organisms/itemSwipeActionsContext';
 import {
   useShoppingListTutorialState,
   useShoppingListTutorialActions,
@@ -331,6 +356,187 @@ describe('SwipeableListItem (SortableItem)', () => {
     );
     expect(screen.queryByTestId('list-item')).toBeNull();
     expect(screen.queryByTestId('swipeable-item')).toBeNull();
+  });
+
+  describe('swipe actions reach the row', () => {
+    const setActions = (
+      itemSwipeActions: unknown,
+      permissions = {
+        canRemoveItems: true,
+        canEditItems: true,
+        canMarkPurchased: true,
+      },
+    ) => {
+      (useItemSwipeActions as jest.Mock).mockReturnValue(itemSwipeActions);
+      (useSortableListActions as jest.Mock).mockReturnValue({
+        actions: {
+          onItemPress: jest.fn(),
+          onTogglePurchase: jest.fn(),
+          onMoveToPantry: jest.fn(),
+          onQuantityPress: jest.fn(),
+          onSwipeableWillOpen: jest.fn(),
+          onSwipeableClose: jest.fn(),
+        },
+        permissions,
+        permissionsRef: { current: permissions },
+      });
+    };
+
+    beforeEach(() => {
+      swipeableProps.length = 0;
+    });
+
+    it('renders the edit and delete descriptors the screen supplies', () => {
+      const onEdit = jest.fn();
+      const onDelete = jest.fn();
+      setActions((id: string) => ({
+        left: [
+          { key: 'edit', labelKey: 'labels.edit', onPress: () => onEdit(id) },
+        ],
+        right: [
+          {
+            key: 'delete',
+            labelKey: 'labels.delete',
+            onPress: () => onDelete(id),
+            removesRow: true,
+          },
+        ],
+      }));
+
+      const entry = seedItem();
+      renderWithApollo(
+        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+        { cache: seedCache([entry]) },
+      );
+
+      const last = swipeableProps[swipeableProps.length - 1];
+      expect(last.leftActions).toHaveLength(1);
+      expect(last.rightActions).toHaveLength(1);
+
+      // The descriptor must carry the screen's handler, not a wrapper that
+      // silently no-ops — that is the shape the dead buttons had.
+      (last.leftActions as { onPress: () => void }[])[0].onPress();
+      expect(onEdit).toHaveBeenCalledWith(entry.id);
+      (last.rightActions as { onPress: () => void }[])[0].onPress();
+      expect(onDelete).toHaveBeenCalledWith(entry.id);
+    });
+
+    it('renders no actions when the screen supplies no factory', () => {
+      setActions(undefined);
+
+      const entry = seedItem();
+      renderWithApollo(
+        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+        { cache: seedCache([entry]) },
+      );
+
+      const last = swipeableProps[swipeableProps.length - 1];
+      expect(last.leftActions).toBeUndefined();
+      expect(last.rightActions).toBeUndefined();
+    });
+
+    it('withholds edit and delete that the permissions forbid', () => {
+      setActions(
+        () => ({
+          left: [{ key: 'edit', labelKey: 'labels.edit', onPress: jest.fn() }],
+          right: [
+            { key: 'delete', labelKey: 'labels.delete', onPress: jest.fn() },
+          ],
+        }),
+        { canRemoveItems: false, canEditItems: false, canMarkPurchased: true },
+      );
+
+      const entry = seedItem();
+      renderWithApollo(
+        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+        { cache: seedCache([entry]) },
+      );
+
+      const last = swipeableProps[swipeableProps.length - 1];
+      expect(last.leftActions).toBeUndefined();
+      expect(last.rightActions).toBeUndefined();
+    });
+  });
+
+  describe('a line already stocked in the pantry', () => {
+    const setMoveAction = () => {
+      (useSortableListActions as jest.Mock).mockReturnValue({
+        actions: {
+          onItemPress: jest.fn(),
+          onTogglePurchase: jest.fn(),
+          onMoveToPantry: jest.fn(),
+          onQuantityPress: jest.fn(),
+          onSwipeableWillOpen: jest.fn(),
+          onSwipeableClose: jest.fn(),
+        },
+        permissions: {
+          canRemoveItems: true,
+          canEditItems: true,
+          canMarkPurchased: true,
+        },
+        permissionsRef: {
+          current: {
+            canRemoveItems: true,
+            canEditItems: true,
+            canMarkPurchased: true,
+          },
+        },
+      });
+    };
+
+    beforeEach(setMoveAction);
+
+    it('offers move-to-pantry on a purchased line that has not been moved', () => {
+      const entry = seedItem({
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: true,
+          movedToPantryAt: null,
+        },
+      });
+      renderWithApollo(
+        <SwipeableListItem
+          item={rowItem(entry, true)}
+          index={0}
+          target="Cell"
+        />,
+        { cache: seedCache([entry]) },
+      );
+
+      expect(
+        screen.getByTestId(`shopping-list-item-${entry.id}-move-to-pantry`),
+      ).toBeTruthy();
+      expect(
+        screen.queryByTestId(`shopping-list-item-${entry.id}-stocked`),
+      ).toBeNull();
+    });
+
+    it('shows it as stocked instead once the line carries the stamp', () => {
+      const entry = seedItem({
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: true,
+          movedToPantryAt: '2026-08-28T10:00:00.000Z',
+        },
+      });
+      renderWithApollo(
+        <SwipeableListItem
+          item={rowItem(entry, true)}
+          index={0}
+          target="Cell"
+        />,
+        { cache: seedCache([entry]) },
+      );
+
+      // The bulk move filters its working set on this same stamp, so offering
+      // the action would promise something that does nothing.
+      expect(
+        screen.getByTestId(`shopping-list-item-${entry.id}-stocked`),
+      ).toBeTruthy();
+      expect(
+        screen.queryByTestId(`shopping-list-item-${entry.id}-move-to-pantry`),
+      ).toBeNull();
+    });
   });
 
   describe('tutorial rect cleanup', () => {

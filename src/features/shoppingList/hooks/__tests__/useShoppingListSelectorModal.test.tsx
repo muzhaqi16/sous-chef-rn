@@ -130,11 +130,7 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
-jest.mock('#/services/errorService', () => ({
-  useErrorService: jest.fn(() => ({
-    handleApolloError: jest.fn(() => ({ message: 'Error' })),
-  })),
-}));
+jest.mock('#/services/errorService');
 
 jest.mock('#/services/toastService', () => ({
   toastService: {

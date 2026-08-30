@@ -22,13 +22,13 @@ import { Icon } from '#/utils/iconUtils';
 import { Telemetry } from '#/services/telemetry';
 import { useEffect } from 'react';
 import { Environment } from '#/utils/environment';
+import { DEVELOPER_SECTION_ID } from '#/config/settingsConfig';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { ProfileSkeleton } from '#components/atoms/Skeleton/ProfileSkeleton';
 import {
   useCanAccessDevTools,
   useHasUnverifiedEmail,
 } from '#store/useAppStore';
-import { useEmailVerificationActions } from '#hooks/auth/useEmailVerification';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { Text } from '#components/atoms/Text';
 
@@ -42,7 +42,6 @@ export const ProfileScreen = () => {
   useScreenTransition('ProfileScreen');
   const canAccessDevTools = useCanAccessDevTools();
   const hasUnverifiedEmail = useHasUnverifiedEmail();
-  const { resumeVerification } = useEmailVerificationActions();
   const {
     toProfilePhotoUpload,
     toDeleteAccount,
@@ -54,6 +53,7 @@ export const ProfileScreen = () => {
     toDebugInfo,
     toPerformanceDashboard,
     toChangePassword,
+    toVerifyEmail,
     goBack,
   } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
@@ -87,16 +87,14 @@ export const ProfileScreen = () => {
     toProfilePhotoUpload();
   };
 
-  const handleLogout = () => {
+  // Takes the row's OWN handler rather than looking the row up again. The
+  // lookup this replaces matched the logout section by a `key` that a settings
+  // refactor renamed from the title to the section id, which left the button
+  // firing telemetry and nothing else. There is only one binding now, and it is
+  // the item the renderer already has in hand.
+  const handleLogout = (performLogout: (() => void) | undefined) => {
     Telemetry.trackEvent('logout_clicked', { source: 'ProfileScreen' });
-    // Find and execute logout action — match the section by its stable `key`,
-    // not the translated `title` (which differs per locale).
-    const logoutSection = sections.find(s => s.key === '');
-    const logoutItem = logoutSection?.items.find(i => i.key === 'logout');
-
-    if (logoutItem?.onPress) {
-      logoutItem.onPress();
-    }
+    performLogout?.();
   };
 
   const handleMorePress = () => {
@@ -159,7 +157,7 @@ export const ProfileScreen = () => {
             icon="mail-unread-outline"
             iconLibrary="Ionicons"
             variant="warning"
-            onPress={resumeVerification}
+            onPress={toVerifyEmail}
             testID="verify-email-banner"
           />
         )}
@@ -167,8 +165,11 @@ export const ProfileScreen = () => {
           .filter(section => {
             // Filter out Developer section if debug features are not enabled.
             // Compare against the stable `key` so the filter still works in
-            // non-English locales where `title` is translated.
-            if (section.key === 'Developer') {
+            // non-English locales where `title` is translated. The id is
+            // imported rather than spelled out, so a rename cannot leave the
+            // comparison matching nothing while the section renders to
+            // everyone.
+            if (section.key === DEVELOPER_SECTION_ID) {
               return (
                 Environment.shouldEnableDebugFeatures() || canAccessDevTools
               );
@@ -180,12 +181,13 @@ export const ProfileScreen = () => {
               key={`section-${index}`}
               title={section.title}
               items={section.items.map(item => {
-                // Override logout handler to include navigation
+                // Wrap the row's own handler so the tap is recorded; the
+                // handler itself stays the one the settings config built.
                 if (item.key === 'logout') {
                   return {
                     ...item,
                     testID: 'profile-logout-button',
-                    onPress: handleLogout,
+                    onPress: () => handleLogout(item.onPress),
                   };
                 }
                 // Handle navigation items

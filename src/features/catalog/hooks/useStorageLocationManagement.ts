@@ -12,6 +12,7 @@ import { type UpdateStorageLocationInput } from '#/graphql/generated/schemaTypes
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 import {
   createAddToQueryConnectionUpdater,
+  skipUnmatchedArgVariants,
   createAddToParentConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
@@ -19,26 +20,36 @@ import {
 import {
   updateEntityFieldsLocalFirst,
   writeEntityFields,
+  snapshotFields,
 } from '#/apollo/utils/localFirstFields';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
 import { useBlocksCacheMissQueries } from '#hooks/app/useBlocksCacheMissQueries';
 import { t } from '#/i18n';
+import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 import { errorService } from '#/services/errorService';
 
 /**
- * Toast the message from a resolved errors-as-data member. A non-success union
- * payload (`ForbiddenError`/`ValidationError`/…) resolves without throwing under
- * `errorPolicy:'all'`, so call this on the non-success branch to surface it.
+ * Toast a resolved errors-as-data member in the user's own language. A
+ * non-success union payload (`ForbiddenError`/`ValidationError`/…) resolves
+ * without throwing under `errorPolicy:'all'`, so call this on the non-success
+ * branch to surface it.
+ *
+ * It resolves field → code → localized generic. It used to display
+ * `payload.message`, which is the server's English by construction — the client
+ * sends no `Accept-Language` and the token carries no locale — so deleting a
+ * non-empty location told an es/it/sq user "Location has items", and a test
+ * asserted that string verbatim.
  */
 function toastResolvedError(
-  payload: { __typename?: string; message?: string } | null | undefined,
+  payload:
+    | { __typename?: string; code?: string | null; field?: string | null }
+    | null
+    | undefined,
 ): void {
-  const message =
-    payload && typeof payload.message === 'string' && payload.message
-      ? payload.message
-      : t('errors.codes.genericRetry');
-  toastService.error(message);
+  toastService.error(
+    localizedRefusalMessage(payload, t('errors.codes.genericRetry')),
+  );
 }
 
 /** Flat storage-location node as returned by `GetStorageLocations`. */
@@ -91,8 +102,16 @@ function restoreLocationToCaches(
   cache: ApolloCache,
   location: FlatStorageLocation,
   pantryId: string | undefined,
+  homeId: string | undefined,
 ): void {
-  addToStorageLocationsQuery(cache, location, { position: 'end' });
+  // `cache.modify` runs for EVERY cached `storageLocations(homeId:…)` variant,
+  // so without this scope a refused delete in home A also appended the row into
+  // home B's list. The field is keyed on a plain argument rather than a
+  // `filters` object, which is why this uses the arg matcher.
+  addToStorageLocationsQuery(cache, location, {
+    position: 'end',
+    skipStoreField: homeId ? skipUnmatchedArgVariants({ homeId }) : undefined,
+  });
   if (pantryId)
     addToPantryLocations(cache, pantryId, location, { position: 'end' });
 }
@@ -217,30 +236,101 @@ export function useStorageLocationManagement(
     id: string,
     input: Omit<UpdateStorageLocationInput, 'id'>,
   ) => {
-    // The input's field names ARE the StorageLocation field names, so the
-    // change can be written straight onto the cached entity and rolled back
-    // from the pre-edit values if the server refuses.
     const current = locations.find(location => location.id === id);
-    const previous = Object.fromEntries(
-      Object.keys(input)
-        .filter(key => key in (current ?? {}))
-        .map(key => [key, (current as Record<string, unknown>)[key]]),
-    );
+
+    // Most input field names ARE the StorageLocation field names, so they can be
+    // written straight onto the cached entity. `parentLocationId` is the
+    // exception: the edit sheet is seeded with the flat id, but the query
+    // selects only the nested `parentLocation`, and that is what the tree
+    // builder and the delete guard read. Writing the flat field alone moved
+    // nothing on screen while reporting success — and offline no response ever
+    // arrives to correct it.
+    const { parentLocationId, ...directFields } = input;
+    const nextParent =
+      parentLocationId === undefined
+        ? undefined
+        : locations.find(location => location.id === parentLocationId) ?? null;
+
+    // Identity only. `writeEntityFields` normalizes a nested `__typename`+`id`
+    // into a reference, so the child points AT the parent rather than holding a
+    // copy of its fields — renaming the parent afterwards would otherwise move
+    // that row and leave every child's sub-label on the old name, with no fetch
+    // to correct it because nothing about the child changed. Carrying no other
+    // field also means the write cannot clobber the parent's own record.
+    const locationRef = (locationId: string) => ({
+      __typename: 'StorageLocation',
+      id: locationId,
+    });
+
+    const updates = {
+      ...directFields,
+      ...(nextParent === undefined
+        ? {}
+        : { parentLocation: nextParent ? locationRef(nextParent.id) : null }),
+    };
+
+    // Snapshot the fields being changed. A key the read did not CARRY is
+    // omitted, so a refusal leaves that field alone rather than blanking a
+    // value the snapshot never saw; a key it carries as null is recorded, so a
+    // genuinely-empty field is still restored as empty. Every key here comes
+    // from the edit form and is one this screen's own query selects, so nothing
+    // is omitted in practice — the helper is what keeps that true if that ever
+    // stops being so.
+    //
+    // `current` being undefined is separately harmless: `entity` below is then
+    // undefined too, and both the optimistic write and its revert go through
+    // `writeEntityFields`, which is a no-op without one.
+    const previous = {
+      ...snapshotFields(current, updates),
+      // `current` is a query READ, so its `parentLocation` is denormalized.
+      // Snapshotting it verbatim would make a refusal restore the very copy
+      // this write exists to avoid.
+      ...(nextParent === undefined
+        ? {}
+        : {
+            parentLocation: current?.parentLocation?.id
+              ? locationRef(current.parentLocation.id)
+              : null,
+          }),
+    };
+
+    // `isDefault` is exclusive. `setDefaultLocation` clears the previous holder
+    // for exactly this reason; ticking Default in the EDIT sheet has to as well,
+    // or two rows read as default until the next fetch.
+    const displacedDefault =
+      input.isDefault === true
+        ? locations.find(location => location.isDefault && location.id !== id)
+        : undefined;
 
     const { persisted, result } = await updateEntityFieldsLocalFirst({
       cache: client.cache,
       entity: current ? { __typename: 'StorageLocation', id } : undefined,
-      updates: input,
+      updates,
       previous,
       logLabel: 'Update Storage Location',
-      mutate: () =>
-        updateMutation({
+      mutate: () => {
+        if (displacedDefault) {
+          writeEntityFields(
+            client.cache,
+            { __typename: 'StorageLocation', id: displacedDefault.id },
+            { isDefault: false },
+          );
+        }
+        return updateMutation({
           variables: { input: { ...input, id } },
           context: { localFirst: true },
-        }),
+        });
+      },
     });
 
     if (!persisted) {
+      if (displacedDefault) {
+        writeEntityFields(
+          client.cache,
+          { __typename: 'StorageLocation', id: displacedDefault.id },
+          { isDefault: true },
+        );
+      }
       toastResolvedError(
         (result?.data as { updateStorageLocation?: unknown } | undefined)
           ?.updateStorageLocation as Parameters<typeof toastResolvedError>[0],
@@ -281,7 +371,7 @@ export function useStorageLocationManagement(
     if (classifyCreateResult(result) === 'rejected') {
       if (removed) {
         try {
-          restoreLocationToCaches(client.cache, removed, pantryId);
+          restoreLocationToCaches(client.cache, removed, pantryId, homeId);
         } catch (cacheError) {
           errorService.reportError(cacheError, {
             operation: 'Revert rejected storage-location delete',

@@ -12,8 +12,9 @@ import {
 import type { ApolloCache } from '@apollo/client';
 import { handleMutationError } from '#/utils/errorHandlers';
 import {
-  updateEntityFieldsLocalFirst,
+  snapshotFields,
   type FieldsEntityRef,
+  updateEntityFieldsLocalFirst,
 } from '#/apollo/utils/localFirstFields';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import {
@@ -285,10 +286,7 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
   const updateMultipleSettings = async (
     updates: Partial<NotificationSettings>,
   ) => {
-    const keys = Object.keys(updates) as (keyof NotificationSettings)[];
-    const previous: Partial<NotificationSettings> = Object.fromEntries(
-      keys.map(key => [key, settings[key]]),
-    );
+    const previous = snapshotFields<NotificationSettings>(settings, updates);
 
     return applySettingsUpdate({
       cache: client.cache,
@@ -345,12 +343,16 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
   // Point it at the device's zone so the configured window means the user's own
   // wall clock. Guarded by a ref: a rejected write must not re-fire every render.
   const syncedTimezone = useRef<string | null>(null);
+  const preferencesId = preferences?.id;
+  const quietHoursEnabled = preferences?.quietHoursEnabled;
+  const quietHoursTimezone = preferences?.quietHoursTimezone;
   useEffect(() => {
     const deviceTimezone = getDeviceTimezone();
     if (
       !deviceTimezone ||
-      !preferences?.quietHoursEnabled ||
-      preferences.quietHoursTimezone === deviceTimezone ||
+      !quietHoursEnabled ||
+      !preferencesId ||
+      quietHoursTimezone === deviceTimezone ||
       syncedTimezone.current === deviceTimezone
     ) {
       return;
@@ -358,11 +360,14 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
     syncedTimezone.current = deviceTimezone;
     void applySettingsUpdate({
       cache: client.cache,
-      entity: { __typename: 'NotificationPreferences', id: preferences.id },
+      entity: { __typename: 'NotificationPreferences', id: preferencesId },
       updates: { quietHoursTimezone: deviceTimezone },
-      previous: {
-        quietHoursTimezone: preferences.quietHoursTimezone ?? null,
-      },
+      // Snapshotted from the field itself, not the whole record, so the effect
+      // keeps closing over the fields it already depends on.
+      previous: snapshotFields(
+        { quietHoursTimezone },
+        { quietHoursTimezone: deviceTimezone },
+      ),
       mutate: input =>
         updatePreferences({
           variables: { input },
@@ -371,9 +376,9 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
     });
   }, [
     client,
-    preferences?.id,
-    preferences?.quietHoursEnabled,
-    preferences?.quietHoursTimezone,
+    preferencesId,
+    quietHoursEnabled,
+    quietHoursTimezone,
     updatePreferences,
   ]);
 

@@ -1,11 +1,16 @@
 import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
-import { RemoveRecipeFromFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
 import {
+  RemoveRecipeFromFavoritesDocument,
+  UpdateFavoriteRecipeDocument,
+} from '#features/recipes/graphql/recipe.generated';
+import {
+  recordMock,
   renderHookWithApollo,
   seedCache,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { toastService } from '#/services/toastService';
 import { useRecipeSavedMetadata } from '../useRecipeSavedMetadata';
 
 // Reads just enough off the cached Recipe to assert the optimistic un-save.
@@ -109,5 +114,110 @@ describe('useRecipeSavedMetadata — offline unfavorite', () => {
       expect.objectContaining({ id: 'sr1' }),
     );
     expect(onUnfavoriteSuccess).not.toHaveBeenCalled();
+  });
+});
+
+describe('useRecipeSavedMetadata — clearing an optional field', () => {
+  /** A saved recipe sitting in a folder, with notes. */
+  function seedSavedRecipe() {
+    return seedCache([
+      {
+        __typename: 'Recipe',
+        id: 'r1',
+        savedDetails: {
+          __typename: 'SavedRecipe',
+          id: 'sr1',
+          folder: 'Weeknight',
+          notes: 'Add chilli',
+          tags: [],
+          personalRating: null,
+        },
+      },
+    ]);
+  }
+
+  function updateMock() {
+    return recordMock(UpdateFavoriteRecipeDocument, {
+      data: {
+        updateFavoriteRecipe: {
+          __typename: 'UpdateFavoriteRecipePayload',
+          savedRecipe: { __typename: 'SavedRecipe', id: 'sr1' },
+          recipe: { __typename: 'Recipe', id: 'r1' },
+        },
+      },
+    });
+  }
+
+  function renderWith(mock: MockedResponse) {
+    return renderHookWithApollo(
+      () =>
+        useRecipeSavedMetadata({
+          recipeId: 'r1',
+          preloadedRecipeId: undefined,
+          onUnfavoriteSuccess: jest.fn(),
+        }),
+      { cache: seedSavedRecipe(), operationMocks: [mock] },
+    );
+  }
+
+  it('sends an explicit null when the folder is removed', async () => {
+    // `folder ?? undefined` was dropped from the serialized variables, and an
+    // absent key means "leave unchanged" — so the server never cleared it and
+    // the mutation's own `update` wrote the old folder back over the row.
+    const update = updateMock();
+    const { result } = renderWith(update.mock);
+
+    await act(async () => {
+      await result.current.handleUpdateFolder(null);
+    });
+
+    expect(update.fired[0]).toEqual({
+      input: expect.objectContaining({ recipeId: 'r1', folder: null }),
+    });
+  });
+
+  it('keeps the folder name when one is chosen', async () => {
+    const update = updateMock();
+    const { result } = renderWith(update.mock);
+
+    await act(async () => {
+      await result.current.handleUpdateFolder('Sunday');
+    });
+
+    expect(update.fired[0]).toEqual({
+      input: expect.objectContaining({ folder: 'Sunday' }),
+    });
+  });
+
+  it('sends an explicit null when notes are emptied', async () => {
+    const update = updateMock();
+    const { result } = renderWith(update.mock);
+
+    await act(async () => {
+      await result.current.handleUpdateNotes('');
+    });
+
+    expect(update.fired[0]).toEqual({
+      input: expect.objectContaining({ notes: null }),
+    });
+  });
+
+  it('does not report success when the write was refused', async () => {
+    // The helper reverts the cache on a refusal. A success toast fired anyway
+    // told the user the opposite of what had just happened.
+    const successToast = jest.spyOn(toastService, 'success');
+    const errorToast = jest.spyOn(toastService, 'error');
+    const refused = recordMock(UpdateFavoriteRecipeDocument, {
+      error: new Error('refused'),
+    });
+
+    const { result } = renderWith(refused.mock);
+
+    await act(async () => {
+      await result.current.handleUpdateFolder(null);
+    });
+
+    expect(successToast).not.toHaveBeenCalled();
+    expect(errorToast).toHaveBeenCalledTimes(1);
   });
 });

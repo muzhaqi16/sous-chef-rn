@@ -137,6 +137,49 @@ describe('useFlashListPerformance — the first-content-layout latch', () => {
     expect(onFirstContentLayout).toHaveBeenCalledTimes(1);
   });
 
+  it('re-arms when the list loses its content, and waits for the next layout', () => {
+    // Switching pantry tabs re-arms skeletons: `hasRealContent` goes
+    // true -> false -> true. The latch was set once per MOUNT and never reset,
+    // so from the second switch on it was already true while the data flag
+    // re-armed — and `PantryContent`'s
+    // `overlayVisible = initialSkeletons || !hasContentLayout` collapsed to the
+    // data flag alone. The cover then came down as soon as the data landed,
+    // before FlashList released its cells from `opacity: 0`: the 300ms+ blank
+    // frame it exists to hide, on every switch after the first.
+    const onFirstContentLayout = jest.fn();
+    const { result, rerender } = renderWithContent(true, onFirstContentLayout);
+
+    act(() => result.current.onCommitLayoutEffect());
+    expect(result.current.hasContentLayout).toBe(true);
+
+    // Away from the tab: content goes, the latch must go with it.
+    rerender({ hasRealContent: false });
+    expect(result.current.hasContentLayout).toBe(false);
+
+    // Back: data alone is not enough — the cover holds until layout commits.
+    rerender({ hasRealContent: true });
+    expect(result.current.hasContentLayout).toBe(false);
+
+    act(() => result.current.onCommitLayoutEffect());
+    expect(result.current.hasContentLayout).toBe(true);
+    expect(onFirstContentLayout).toHaveBeenCalledTimes(2);
+  });
+
+  it('re-arming does not re-fire the startup metric', () => {
+    // `app_fully_drawn_ms` is a STARTUP metric and latches once. Only the
+    // overlay's latch re-arms.
+    const { result, rerender } = renderWithContent(true);
+
+    act(() => result.current.onLoad({ elapsedTimeInMs: 12 }));
+    expect(markFullyDrawn).toHaveBeenCalledTimes(1);
+
+    rerender({ hasRealContent: false });
+    rerender({ hasRealContent: true });
+    act(() => result.current.onLoad({ elapsedTimeInMs: 8 }));
+
+    expect(markFullyDrawn).toHaveBeenCalledTimes(1);
+  });
+
   it('does not disturb the fully-drawn latch', () => {
     // The two latches ride different signals (commit layout vs onLoad) and
     // must stay independent: fully-drawn fires from onLoad + content alone.

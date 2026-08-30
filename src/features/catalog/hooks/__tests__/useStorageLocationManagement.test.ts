@@ -19,6 +19,7 @@ globalThis.cancelIdleCallback = (handle: number): void => {
   }
 };
 
+import { InMemoryCache } from '@apollo/client';
 import { act, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
@@ -67,12 +68,14 @@ jest.mock('#/hooks/utils/useCrudOperations', () => ({
   })),
 }));
 
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
-  createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
-  createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
-  createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
-}));
+// Spread the real module. Stubbing every factory to `jest.fn()` meant the
+// optimistic remove and its revert — the whole local-first half of this hook —
+// executed nothing, so the suite was green on writes that never happened. The
+// factories are spied on top of the real implementations instead, which keeps
+// the call assertions AND exercises the cache.
+jest.mock('#/apollo/utils/cacheUpdaters', () =>
+  jest.requireActual('#/apollo/utils/cacheUpdaters'),
+);
 
 jest.mock('#/utils/finallyHelpers');
 
@@ -181,6 +184,7 @@ function buildUpdateLocationMock(): MockedResponse {
 function buildDeleteLocationMock(
   success: boolean = true,
   message: string = 'OK',
+  refusal: { code?: string; field?: string } = {},
 ): MockedResponse {
   return {
     request: {
@@ -201,6 +205,8 @@ function buildDeleteLocationMock(
           : {
               __typename: 'ValidationError',
               message,
+              code: refusal.code ?? 'VALIDATION_FAILED',
+              field: refusal.field ?? null,
             },
       },
     },
@@ -381,7 +387,36 @@ describe('useStorageLocationManagement', () => {
       await result.current.deleteLocation('loc-1');
     });
 
-    expect(mockToastError).toHaveBeenCalledWith('Location has items');
+    // The app's own words, never the server's. `message` is English by
+    // construction (no `Accept-Language` is sent and the token carries no
+    // locale), so asserting it here pinned the leak in place — one commit after
+    // "fix(shopping-list): … stop leaking server English".
+    expect(mockToastError).not.toHaveBeenCalledWith('Location has items');
+    expect(mockToastError).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the copy for the field the server named', async () => {
+    const { result } = renderHookWithApollo(
+      () => useStorageLocationManagement('home-1', 'pantry-1'),
+      {
+        operationMocks: [
+          buildGetLocationsMock(),
+          buildDeleteLocationMock(false, 'Location has items', {
+            field: 'storageLocation',
+          }),
+        ],
+      },
+    );
+
+    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+    await act(async () => {
+      await result.current.deleteLocation('loc-1');
+    });
+
+    const [shown] = mockToastError.mock.calls[0] as [string];
+    expect(shown).not.toBe('Location has items');
+    expect(typeof shown).toBe('string');
+    expect(shown.length).toBeGreaterThan(0);
   });
 
   describe('editing works offline', () => {
@@ -484,5 +519,252 @@ describe('useStorageLocationManagement', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(typeof result.current.refetch).toBe('function');
+  });
+});
+
+describe('updateLocation writes what consumers read', () => {
+  /**
+   * The edit sheet is seeded with the FLAT `parentLocationId` (read off
+   * `location.parentLocation?.id`), but `GetStorageLocations` selects only the
+   * NESTED `parentLocation { id name }` — and that nested field is what
+   * `buildTreeFromFlatList` and the delete guard read. Writing the input bag
+   * straight onto the entity therefore set a field nothing reads and left the
+   * one everything reads pointing at the old parent.
+   */
+  it('re-parents the node, not just the flat id', async () => {
+    const { result } = renderHookWithApollo(
+      () => useStorageLocationManagement('home-1'),
+      { operationMocks: [buildGetLocationsMock(), buildUpdateLocationMock()] },
+    );
+
+    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+
+    await act(async () => {
+      await result.current.updateLocation('loc-2', {
+        parentLocationId: 'loc-1',
+      });
+    });
+
+    await waitFor(() =>
+      expect(
+        result.current.locations.find(l => l.id === 'loc-2')?.parentLocation
+          ?.id,
+      ).toBe('loc-1'),
+    );
+
+    // And the tree the screen renders must actually move it.
+    const roots = result.current.tree;
+    expect(roots.find(node => node.id === 'loc-2')).toBeUndefined();
+    expect(
+      roots
+        .find(node => node.id === 'loc-1')
+        ?.childLocations.map(child => child.id),
+    ).toContain('loc-2');
+  });
+
+  it('keeps the parent link live when the parent is later renamed', async () => {
+    // Own the cache so the test can rename the parent the way any other write
+    // would.
+    const cache = new InMemoryCache();
+    const { result } = renderHookWithApollo(
+      () => useStorageLocationManagement('home-1'),
+      {
+        cache,
+        operationMocks: [buildGetLocationsMock(), buildUpdateLocationMock()],
+      },
+    );
+
+    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+
+    await act(async () => {
+      await result.current.updateLocation('loc-2', {
+        parentLocationId: 'loc-1',
+      });
+    });
+
+    await waitFor(() =>
+      expect(
+        result.current.locations.find(l => l.id === 'loc-2')?.parentLocation
+          ?.id,
+      ).toBe('loc-1'),
+    );
+
+    // The parent is an entity in its own right. Writing a COPY of its fields
+    // onto the child forks it: renaming the parent updates one row and leaves
+    // the child's sub-label reading the old name, with no fetch to correct it
+    // because nothing about the child changed.
+    act(() => {
+      cache.modify({
+        id: cache.identify({
+          __typename: 'StorageLocation',
+          id: 'loc-1',
+        }),
+        fields: { name: () => 'Cellar' },
+      });
+    });
+
+    await waitFor(() =>
+      expect(
+        result.current.locations.find(l => l.id === 'loc-2')?.parentLocation
+          ?.name,
+      ).toBe('Cellar'),
+    );
+  });
+
+  it('clears the previous default when the edit sets one', async () => {
+    // The server answers with the location that was EDITED. The shared mock
+    // always echoes loc-1, which would re-normalize the very flag under test.
+    const updatedLoc2: MockedResponse = {
+      request: { query: UpdateStorageLocationDocument, variables: () => true },
+      result: {
+        data: {
+          updateStorageLocation: {
+            __typename: 'UpdateStorageLocationPayload',
+            home: null,
+            storageLocation: buildLocationNode({
+              id: 'loc-2',
+              name: 'Pantry',
+              sortOrder: 2,
+              isDefault: true,
+            }),
+          },
+        },
+      },
+      maxUsageCount: Number.POSITIVE_INFINITY,
+    };
+
+    const { result } = renderHookWithApollo(
+      () => useStorageLocationManagement('home-1'),
+      { operationMocks: [buildGetLocationsMock(), updatedLoc2] },
+    );
+
+    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+    // loc-1 is the seeded default.
+    expect(
+      result.current.locations.find(l => l.id === 'loc-1')?.isDefault,
+    ).toBe(true);
+
+    await act(async () => {
+      await result.current.updateLocation('loc-2', { isDefault: true });
+    });
+
+    await waitFor(() =>
+      expect(
+        result.current.locations.find(l => l.id === 'loc-2')?.isDefault,
+      ).toBe(true),
+    );
+    // Default is exclusive. Two rows badged Default is the visible symptom.
+    expect(
+      result.current.locations.find(l => l.id === 'loc-1')?.isDefault,
+    ).toBe(false);
+  });
+
+  it('reverts a re-parent the server refuses', async () => {
+    const refusal: MockedResponse = {
+      request: { query: UpdateStorageLocationDocument, variables: () => true },
+      result: {
+        data: {
+          updateStorageLocation: {
+            __typename: 'ValidationError',
+            message: 'nope',
+          },
+        },
+      },
+      maxUsageCount: Number.POSITIVE_INFINITY,
+    };
+
+    const { result } = renderHookWithApollo(
+      () => useStorageLocationManagement('home-1'),
+      { operationMocks: [buildGetLocationsMock(), refusal] },
+    );
+
+    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+
+    await act(async () => {
+      await result.current.updateLocation('loc-2', {
+        parentLocationId: 'loc-1',
+      });
+    });
+
+    // The pre-edit value was absent from the entity's own keys, so a snapshot
+    // filtered by `key in current` could not restore it.
+    await waitFor(() =>
+      expect(
+        result.current.locations.find(l => l.id === 'loc-2')?.parentLocation,
+      ).toBeNull(),
+    );
+  });
+
+  it('restores a live parent link when the server refuses', async () => {
+    const refusal: MockedResponse = {
+      request: { query: UpdateStorageLocationDocument, variables: () => true },
+      result: {
+        data: {
+          updateStorageLocation: {
+            __typename: 'ValidationError',
+            message: 'nope',
+          },
+        },
+      },
+      maxUsageCount: Number.POSITIVE_INFINITY,
+    };
+
+    const cache = new InMemoryCache();
+    const { result } = renderHookWithApollo(
+      () => useStorageLocationManagement('home-1'),
+      {
+        cache,
+        operationMocks: [
+          buildGetLocationsMock(),
+          buildUpdateLocationMock(),
+          refusal,
+        ],
+      },
+    );
+
+    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+
+    // Give loc-2 a parent, the way the accepted path does.
+    await act(async () => {
+      await result.current.updateLocation('loc-2', {
+        parentLocationId: 'loc-1',
+      });
+    });
+    await waitFor(() =>
+      expect(
+        result.current.locations.find(l => l.id === 'loc-2')?.parentLocation
+          ?.id,
+      ).toBe('loc-1'),
+    );
+
+    // Now detach it and have the server say no. The snapshot the revert restores
+    // is taken from a query READ, whose `parentLocation` is denormalized — so
+    // restoring it verbatim re-introduces the copy the write path exists to
+    // avoid, and only on the refusal path, where nothing looks at it again.
+    await act(async () => {
+      await result.current.updateLocation('loc-2', {
+        parentLocationId: null,
+      });
+    });
+    await waitFor(() =>
+      expect(
+        result.current.locations.find(l => l.id === 'loc-2')?.parentLocation
+          ?.id,
+      ).toBe('loc-1'),
+    );
+
+    act(() => {
+      cache.modify({
+        id: cache.identify({ __typename: 'StorageLocation', id: 'loc-1' }),
+        fields: { name: () => 'Cellar' },
+      });
+    });
+
+    await waitFor(() =>
+      expect(
+        result.current.locations.find(l => l.id === 'loc-2')?.parentLocation
+          ?.name,
+      ).toBe('Cellar'),
+    );
   });
 });

@@ -24,9 +24,7 @@ jest.mock('#store/useAppStore', () => ({
   useIsOnline: () => mockIsOnline.value,
 }));
 
-jest.mock('#/services/errorService', () => ({
-  errorService: { reportError: jest.fn() },
-}));
+jest.mock('#/services/errorService');
 
 /**
  * The message shape `GraphQLWsLink` produces when a close ends a subscription.

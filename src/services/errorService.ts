@@ -20,6 +20,10 @@ import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import {
+  GraphQLDomainError,
+  GraphQLNetworkError,
+} from '#/utils/errors/graphqlErrors';
+import {
   CombinedGraphQLErrors,
   CombinedProtocolErrors,
   ServerError,
@@ -172,6 +176,44 @@ export class ErrorService {
 
     // Version Control Errors
     VERSION_CONFLICT: 'versionConflict',
+
+    // Schema-declared codes that had no mapping.
+    //
+    // Every member of `ErrorCode` and `TopLevelErrorCode` must appear in this
+    // table — `__tests__/i18n/errorCodeCoverage.test.ts` enumerates the
+    // generated enums and fails on a gap, in the direction that matters. A
+    // missing member fell through to `errors.codes.unexpected`, so a user who
+    // hit a not-found, a conflict, a quota or a duplicate read "An unexpected
+    // error occurred" while localized copy for exactly that case already
+    // shipped, unreachable.
+    //
+    // (The table is deliberately WIDER than the two enums: `NETWORK_ERROR`,
+    // `CIRCUIT_OPEN`, the `BUSINESS_*` and `RATE_LIMIT_*` families and the
+    // client's own `SERVICE_TIMEOUT` are raised on this side and have no SDL
+    // to be declared in. Only the missing direction is an error.)
+    NOT_FOUND: 'resourceNotFound',
+    CONFLICT: 'resourceConflict',
+    UNIT_INVALID: 'unitInvalid',
+    EMAIL_ALREADY_VERIFIED: 'emailAlreadyVerified',
+    UNAUTHENTICATED: 'signInRequired',
+    BAD_REQUEST: 'validationFailed',
+    CLIENT_UPGRADE_REQUIRED: 'clientUpgradeRequired',
+    HOME_NOT_A_MEMBER: 'homeAccessDenied',
+    OPERATION_RATE_LIMITED: 'rateLimitExceeded',
+    RESOURCE_VERSION_CONFLICT: 'versionConflict',
+    WS_OPERATION_NOT_ALLOWED: 'operationNotAllowed',
+    INTERNAL_SERVER_ERROR: 'genericLater',
+    // Transient server-side conditions: the same request is worth retrying.
+    DEADLOCK: 'genericRetry',
+    DB_CONSTRAINT_VIOLATION: 'genericRetry',
+    PAGINATION_FANOUT_EXCEEDED: 'genericRetry',
+    SUBSCRIPTION_ERROR: 'genericRetry',
+    SUBSCRIPTION_FILTER_ERROR: 'genericRetry',
+    SUBSCRIPTION_LIMIT_EXCEEDED: 'genericRetry',
+    // Should never be DISPLAYED — both classifiers treat it as converged, so
+    // reaching a message means something upstream stopped doing that. Mapped so
+    // the table stays total rather than because the string is expected.
+    IDEMPOTENT_REPLAY: 'genericRetry',
 
     // Pantry Errors
     PANTRY_ITEM_ALREADY_EXISTS: 'pantryItemAlreadyExists',
@@ -379,6 +421,20 @@ export class ErrorService {
       } else if (CombinedProtocolErrors.is(error)) {
         errorCode = 'NETWORK_ERROR';
         errorMessage = error.message || 'Unable to connect.';
+      }
+      // A refusal that `unwrapPayload` turned into a throw. It carries the
+      // server's own `code`, and this branch is what keeps it: without it the
+      // error fell through to the plain `instanceof Error` arm below, `errorCode`
+      // stayed at its 'UNKNOWN_ERROR' initializer, and every domain refusal
+      // reaching a caller by throw — a quota, a duplicate, a version conflict —
+      // resolved to "An unexpected error occurred". It must be tested BEFORE
+      // `instanceof Error`, which it also satisfies.
+      else if (error instanceof GraphQLDomainError) {
+        errorCode = error.code;
+        errorMessage = error.message;
+      } else if (error instanceof GraphQLNetworkError) {
+        errorCode = 'NETWORK_ERROR';
+        errorMessage = error.message;
       } else if (error instanceof Error) {
         errorMessage = error.message;
       } else if (typeof error === 'string') {
@@ -509,23 +565,44 @@ export class ErrorService {
 // Export singleton instance
 export const errorService = new ErrorService();
 
-// Utility function for getting error messages (replaces getErrorMessage from errorHandling.ts)
-export const getErrorMessage = (error: unknown): string => {
-  const result = errorService.parseApolloError(error, { logError: false });
-  return result.error?.message || 'An unexpected error occurred';
-};
-
 /**
- * Pure extraction of a raw error message from an `unknown` value, with a
- * caller-supplied fallback. Unlike `getErrorMessage`, this does NOT map to a
- * user-friendly message or emit telemetry — use it at display/handler sites
- * that already have their own fallback copy and just need the raw message
- * (replaces the repeated `(error as any)?.message || fallback` pattern).
+ * What to SHOW a user when a mutation fails.
+ *
+ * Resolved from the error's CODE through `errors.codes.*`, never from the
+ * server's message. The server's text is unlocalizable English by construction,
+ * and it reaches users verbatim otherwise: an Albanian-locale user pressing
+ * "move to pantry" against an unmigrated database saw a "Gabim" alert whose
+ * body read "An unexpected database error occurred".
+ *
+ * An unmapped code lands on the caller's `fallback` — or on
+ * `errors.codes.unexpected` when there is none — rather than on that text. A
+ * vaguer sentence in the right language beats a precise one in the wrong one,
+ * and the precise version is in the log either way.
+ *
+ * `fallback` must itself be localized: it is the caller's own copy for what
+ * failed ("Couldn't update the home name"), which is more useful than a generic
+ * sentence wherever the site knows what it was doing.
+ *
+ * A TRANSPORT failure yields to that fallback rather than overriding it. The
+ * copy for `NETWORK_ERROR` and `CIRCUIT_OPEN` is written for a READ — "You're
+ * currently offline. Showing cached data when available." — and on a write it
+ * is not merely vague but untrue: nothing is being shown, the change did not
+ * land. The code tells the caller only that the request did not arrive, which
+ * the caller already knew; what failed is the part only the caller knows. With
+ * no fallback the transport sentence still stands, since a generic message in
+ * the reader's language beats none.
  */
-export const errorMessageOr = (error: unknown, fallback: string): string => {
-  if (error instanceof Error && error.message) return error.message;
-  if (typeof error === 'string' && error) return error;
-  return fallback;
+const TRANSPORT_CODES = new Set(['NETWORK_ERROR', 'CIRCUIT_OPEN']);
+
+export const localizedErrorMessage = (
+  error: unknown,
+  fallback?: string,
+): string => {
+  const result = errorService.parseApolloError(error, { logError: false });
+  const code = result.error?.code;
+  if (!code) return fallback ?? t('errors.codes.unexpected');
+  if (fallback && TRANSPORT_CODES.has(code)) return fallback;
+  return errorService.getUserFriendlyMessage(code, fallback);
 };
 
 // Export hook for use in components
@@ -543,6 +620,5 @@ export const useErrorService = () => {
     shouldRetry: errorService.shouldRetry.bind(errorService),
     isAuthError: errorService.isAuthError.bind(errorService),
     reportError: errorService.reportError.bind(errorService),
-    getErrorMessage,
   };
 };

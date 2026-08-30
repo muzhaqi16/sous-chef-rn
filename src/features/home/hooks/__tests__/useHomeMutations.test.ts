@@ -35,11 +35,7 @@ jest.mock('#store/useAppStore', () => ({
   })),
 }));
 
-jest.mock('#/services/errorService', () => ({
-  useErrorService: () => ({
-    handleApolloError: jest.fn(() => ({ message: 'Mutation error' })),
-  }),
-}));
+jest.mock('#/services/errorService');
 
 jest.mock('#/utils/errors/versionConflict', () => ({
   handleVersionConflict: jest.fn(() => false),

@@ -11,8 +11,8 @@ import {
 } from './useRecipeData';
 import {
   AddItemsToShoppingListFromRecipeDocument,
-  GetShoppingListsLiteDocument,
-  CreateShoppingListDocument,
+  GetShoppingListsLiteForRecipeDocument,
+  CreateShoppingListForRecipeDocument,
 } from './useRecipeDetail.generated';
 import { type BatchAddShoppingListItemInput } from '#/graphql/generated/schemaTypes';
 import { useAppStore, useSelectedShoppingListId } from '#store/useAppStore';
@@ -198,7 +198,7 @@ export function useRecipeShoppingList({
 }: UseRecipeShoppingListOptions) {
   const { t } = useTranslation();
   const { data: shoppingListsData, loading: shoppingListsLoading } = useQuery(
-    GetShoppingListsLiteDocument,
+    GetShoppingListsLiteForRecipeDocument,
     {},
   );
   const shoppingLists = extractNodes(shoppingListsData?.shoppingLists);
@@ -252,17 +252,20 @@ export function useRecipeShoppingList({
     'shoppingLists',
     'ShoppingList',
   );
-  const [createShoppingListMutation] = useMutation(CreateShoppingListDocument, {
-    update(cache, { data }) {
-      const payload = data?.createShoppingList;
-      if (payload?.__typename === 'CreateShoppingListPayload') {
-        addToShoppingListsCache(cache, payload.shoppingList);
-      }
+  const [createShoppingListMutation] = useMutation(
+    CreateShoppingListForRecipeDocument,
+    {
+      update(cache, { data }) {
+        const payload = data?.createShoppingList;
+        if (payload?.__typename === 'CreateShoppingListPayload') {
+          addToShoppingListsCache(cache, payload.shoppingList);
+        }
+      },
+      onError: () => {
+        toastService.error(t('errors.createListFailed'));
+      },
     },
-    onError: () => {
-      toastService.error(t('errors.createListFailed'));
-    },
-  });
+  );
 
   const [createShoppingListItemsFromRecipeMutation] = useMutation(
     CreateShoppingListItemsFromRecipeDocument,

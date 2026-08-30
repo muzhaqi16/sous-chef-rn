@@ -673,11 +673,15 @@ mutation CreatePantryItem($input: CreatePantryItemInput!) {
       }
     }
     # The server can return the duplicate as a union member (in `data`), not just
-    # as a GraphQL error — select its fields so the restock prompt can offer the
+    # as a GraphQL error — select the ids so the restock prompt can offer the
     # existing items. `code`/`message` come from the `... on Error` spread below.
+    #
+    # `suggestion` is deliberately NOT selected. It is a free-form String whose
+    # one documented value (`RESTOCK_EXISTING`) is what this client already
+    # does unconditionally, so reading it would change no branch — and
+    # branching on an unconstrained string would be guessing.
     ... on DuplicatePantryItemError {
       existingPantryItemIds
-      suggestion
     }
     ... on Error {
       code

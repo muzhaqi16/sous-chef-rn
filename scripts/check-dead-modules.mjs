@@ -45,26 +45,18 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 
 import { parseFlags, REPO_ROOT, requireNonEmptyScan } from './lib/tooling.mjs';
+import { createRequire } from 'node:module';
 
-const ALIASES = [
-  ['#components/', 'src/components/'],
-  ['#features/', 'src/features/'],
-  ['#hooks/', 'src/hooks/'],
-  ['#store/', 'src/store/'],
-  ['#services/', 'src/services/'],
-  ['#navigation/', 'src/navigation/'],
-  ['#constants/', 'src/constants/'],
-  ['#context/', 'src/context/'],
-  ['#utils/', 'src/utils/'],
-  ['#screens/', 'src/screens/'],
-  ['#generated/', 'src/graphql/generated/'],
-  ['#operations/', 'src/graphql/operations/'],
-  ['#storage/', 'src/storage/'],
-  ['#config/', 'src/config/'],
-  ['#theme/', 'src/theme/'],
-  ['#assets/', 'src/assets/'],
-  ['#/', 'src/'],
-];
+const { prefixPairs } = createRequire(import.meta.url)('./lib/aliases.js');
+
+// Derived from `tsconfig.json`, the single source — not restated. This was a
+// FOURTH hand-written list and had already drifted in both directions: it
+// carried `#theme/`, which tsconfig did not declare at the time, and lacked
+// `#graphql/`, `#styles/`, `#types/` and `#/test-utils/`, which it did. A
+// module reached only through a missing alias reads as unreferenced (a false
+// finding), and one reached through a stale alias reads as referenced (a missed
+// one) — neither visible from here.
+const ALIASES = prefixPairs();
 const toRepoPath = spec => {
   for (const [alias, real] of ALIASES) {
     if (spec.startsWith(alias)) return real + spec.slice(alias.length);

@@ -3,6 +3,10 @@ import { View } from 'react-native';
 import { measureRenders } from 'reassure';
 import { BaseItemCard } from '#components/molecules/BaseItemCard/BaseItemCard';
 import { Text } from '#components/atoms/Text';
+import {
+  deleteAction,
+  editAction,
+} from '#components/molecules/SwipeableItem/commonActions';
 import type { SwipeAction } from '#components/molecules/SwipeableItem/types';
 
 /**
@@ -32,15 +36,26 @@ const ROWS = Array.from({ length: 40 }, (_, index) => index);
 
 const noop = () => {};
 
-const SWIPE_ACTIONS: SwipeAction[] = [
+// A row's two edges publish ONE `accessibilityActions` list, so a key may
+// appear once per row, not once per edge — `SwipeableItem` throws on a
+// duplicate. Mirrors the pantry's real vocabulary (`pantrySwipeActions`):
+// domain verbs left, edit/delete right.
+const LEFT_ACTIONS: SwipeAction[] = [
   {
     key: 'consume',
-    labelKey: 'pantry.consume',
-    icon: 'restaurant',
+    labelKey: 'swipeActions.consume',
+    icon: 'restaurant-outline',
     onPress: noop,
   },
-  { key: 'waste', labelKey: 'pantry.waste', icon: 'trash', onPress: noop },
+  {
+    key: 'waste',
+    labelKey: 'swipeActions.recordWaste',
+    icon: 'warning-outline',
+    onPress: noop,
+  },
 ];
+
+const RIGHT_ACTIONS: SwipeAction[] = [editAction(noop), deleteAction(noop)];
 
 test('BaseItemCard x40 swipeable rows', async () => {
   await measureRenders(
@@ -51,8 +66,8 @@ test('BaseItemCard x40 swipeable rows', async () => {
           itemId={`item-${index}`}
           testID={`perf-row-${index}`}
           onPress={noop}
-          leftActions={SWIPE_ACTIONS}
-          rightActions={SWIPE_ACTIONS}
+          leftActions={LEFT_ACTIONS}
+          rightActions={RIGHT_ACTIONS}
           leftElement={<View style={{ width: 48, height: 48 }} />}
           rightElement={
             <Text size="sm" tone="secondary">

@@ -11,6 +11,7 @@ import { commonStyles } from '#/styles/commonStyles';
 import { useSelectedPantryId, useSelectedHomeId } from '#store/useAppStore';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useApolloClient, useQuery } from '@apollo/client/react';
+import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { GetHomeDocument } from '#operations/home/home.generated';
 import {
   GetPantryDocument,
@@ -49,12 +50,15 @@ import { NetWeightSection } from './NetWeightSection';
 import { usePantryItemFormSubmit } from './usePantryItemFormSubmit';
 import { logValidationErrors } from '#utils/validation/common';
 import {
-  type PageName,
-  PAGES,
   TAB_FIELDS,
   INVENTORY_ADVANCED_FIELDS,
   editItemSchema,
 } from './pantryItemFormConfig';
+import {
+  PAGES,
+  PAGE_LABEL_KEYS,
+  type PageName,
+} from '#features/catalog/ui/AddItemForm/fields';
 import { formatNumberForInput } from '#/utils/formatters/number';
 
 export interface PantryItemFormData {
@@ -153,24 +157,32 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   });
 
   // Load the item being edited
+  const isUnconfirmed = useIsCreateUnconfirmed(itemId);
   const {
     data: existingItemData,
     loading: itemLoading,
     refetch: refetchItem,
   } = useQuery(GetPantryItemDocument, {
     variables: { id: itemId ?? '' },
-    skip: !itemId,
+    // A client-minted id is in the cache — and reachable by the edit swipe
+    // action — before the server has the row. Reading it in that window can
+    // only return RESOURCE_NOT_FOUND, which this form renders as the dead-end
+    // "item not found" state. See `unconfirmedCreates`.
+    skip: !itemId || isUnconfirmed,
   });
 
   // Materialize the form's own narrow fragment from the cache. The screen's
   // `GetPantryItem` query selects this fragment via `...PantryItemForm_pantryItem`
   // in `PantryItemDetail_pantryItem`, so the cache is already populated.
+  // Read by ENTITY key, not off the query result: an item created locally is
+  // in the cache before any server round trip, and chaining off
+  // `existingItemData` made the form unopenable until one completed.
   const apolloClient = useApolloClient();
-  const existingPantryItem = existingItemData?.pantryItem
+  const existingPantryItem = itemId
     ? apolloClient.cache.readFragment<PantryItemForm_PantryItemFragment>({
         fragment: PantryItemForm_PantryItemFragmentDoc,
         fragmentName: 'PantryItemForm_pantryItem',
-        from: existingItemData.pantryItem,
+        from: { __typename: 'PantryItem', id: itemId },
       })
     : null;
 
@@ -397,7 +409,11 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     onSuccess,
   });
 
-  if (itemLoading) {
+  // Cache first. A locally-created item is fully readable before any round
+  // trip, so a spinner here would hide a form that is ready to edit; only fall
+  // back to one when there is genuinely nothing to show yet. `isUnconfirmed`
+  // counts as loading rather than "missing" — the create is in flight.
+  if (!existingPantryItem && (itemLoading || isUnconfirmed)) {
     return (
       <View style={[commonStyles.container, commonStyles.center]}>
         <PrimaryActivityIndicator size="large" />
@@ -452,8 +468,11 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const inventoryAdvancedHasError =
     INVENTORY_ADVANCED_FIELDS.some(fieldHasError);
   const showTags = tagsExpanded || inventoryAdvancedHasError;
+  // `page` is the identifier, not the copy. Passing it straight through as the
+  // label put "Basics / Product / Storage / Inventory" in the tab bar in every
+  // language.
   const indicatorPages = PAGES.map(page => ({
-    label: page,
+    label: t(PAGE_LABEL_KEYS[page]),
     hasError: tabHasError(page),
   }));
 

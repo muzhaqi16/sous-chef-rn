@@ -27,7 +27,7 @@ import { OnboardingStack } from './stacks/OnboardingStack';
 import { HomeTabs } from './stacks/HomeTabs';
 import { BarcodeStack } from './stacks/BarcodeStack';
 import { NotificationStack } from './stacks/NotificationStack';
-import { CodeVerificationScreen } from '#screens/auth/CodeVerificationScreen';
+import { VerificationGateScreen } from '#screens/auth/CodeVerificationScreen';
 import { EmailVerificationDeepLinkScreen } from '#screens/auth/EmailVerificationDeepLinkScreen';
 import { ResetPasswordScreen } from '#screens/auth/ResetPasswordScreen';
 import { AcceptInvite } from '#features/shoppingList/screens/AcceptInvite';
@@ -101,7 +101,7 @@ const RootStack = createNativeStackNavigator({
       screenLayout: topInsetWith(AuthErrorBoundary),
       screens: {
         Verification: createNativeStackScreen({
-          screen: CodeVerificationScreen,
+          screen: VerificationGateScreen,
           linking: 'verify/:email?',
         }),
       },

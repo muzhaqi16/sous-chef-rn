@@ -26,6 +26,7 @@ React Native App
 | `OTLP_LOGS_ENDPOINT` | Base URL for the logs OTLP receiver (Loki). App appends `/v1/logs`. |
 | `OTLP_LOGS_AUTH_USERNAME` | Basic auth username for the logs endpoint. |
 | `OTLP_LOGS_AUTH_PASSWORD` | Basic auth password for the logs endpoint. |
+| `GRAPHQL_TELEMETRY_SAMPLE_RATE` | Fraction (0-1] of GraphQL operations that carry telemetry. Currently `1.0` in every environment. See § GraphQL sampling below. |
 
 Auth is **credential-presence-based**: if username + password are set, Basic auth headers are sent. If either is empty, no auth header is attached. This works for both cloud (auth required) and self-hosted (auth often not needed) setups.
 
@@ -223,6 +224,9 @@ both sides.
 | `offline_queue_auth_parked_total` | `operation` | A queued write was parked because the token could not be refreshed. NOT a rejection - the server never saw it; it is revived on the next sign-in. |
 | `reconnect_backfill_queries_total` | | Active queries refetched after an outage ended. Incremented by the number refetched, so it is a volume, not an event count. |
 | `storage_recovery_instance_used` | | The device key was unavailable and the session fell back to unencrypted recovery storage. Any non-zero value means encrypted data was not readable that launch. |
+| `offline_reads_served_total` | `operation` | A query was answered entirely from cache because the network leg was unwanted or doomed (offline mode, device offline, or the reachability breaker open). The offline promise working. |
+| `offline_reads_probed_total` | `operation` | Cache miss while the breaker was open but the device is online, so the request was forwarded as an organic probe rather than blocked. |
+| `offline_reads_blocked_total` | `operation` | Cache miss with no network leg — the user saw *"This isn't available offline yet"*. **The one that means the offline promise failed.** A rising rate names the operation whose cached shape is incomplete for the screen reading it, which is what the optimistic-completeness invariant exists to prevent. Until these existed the whole offline READ path was invisible in release: `offlineModeLink` logged with `logger`, which is console-only. |
 
 ### Gauges
 
@@ -295,6 +299,86 @@ never reaches Loki, and console output is stripped from release builds. Use
 `Telemetry.*`.
 
 Histogram bucket boundaries: `[10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000]` ms.
+
+### GraphQL sampling
+
+`telemetryLink` captures a `GRAPHQL_TELEMETRY_SAMPLE_RATE` share of operations
+outside development and weights every counter it emits by `1/rate`, so
+`graphql_requests_total`, `graphql_errors_total`,
+`graphql_network_errors_total` and `graphql_slow_queries_total` estimate true
+volume at any rate. **`graphql_request_duration_ms` is deliberately NOT
+weighted** — quantiles are scale-invariant — so its `_count`/`_sum` reflect only
+observed operations. Never divide one family by the other.
+
+The rate is **1.0** today: the fleet is small enough that full capture is
+affordable, and 10% sampling was leaving the duration histogram on a tenth of the
+sample its neighbouring request-rate panel implied. Lower it (e.g. `0.1`) when
+volume makes full capture costly; it is a build-time env var, so the change
+needs a native rebuild, not a code edit.
+
+**"Costs nothing" was not true when the rate was raised.** The link placed a
+`performance.mark` per operation and cleared it on completion, plus a
+`performance.measure` that was never cleared. `clearMarks` is implemented as a
+full-array `entries.filter()` with a fresh allocation, and the uncleared
+measures grew that array without bound — so operation *k* walked *k* entries
+synchronously inside the GraphQL response handler, making the link's cost
+QUADRATIC in session length. Measured against the real
+`react-native-performance` buffer semantics: 500 operations cost 1.9 ms, 5,000
+cost 100.4 ms — ten times the operations for ~53 times the cost, before Hermes.
+Going 0.1 → 1.0 therefore did not cost 10× more, it cost ~50× more.
+
+The mark/measure pair has been removed. Nothing read a `gql:*` measure (the
+Performance Dashboard reads `react-native-mark` and `resource` entries), and the
+duration was always computed from the stored `startTime`, never from the mark.
+The same operations now cost 0.5 ms at 5,000 and retain nothing. The Observable
+teardown also deletes the operation's timing entry, so a query cancelled by an
+unmount — ordinary, not exceptional — no longer leaks one per occurrence.
+
+Those numbers are *shape* measurements (quadratic vs linear) taken against the
+library's real buffer implementation, not device latencies; per this repo's
+measurement rules an absolute figure needs a release build on hardware.
+
+**Counters recorded before 2026-08-28 are ×10 estimates** taken at a rate of
+0.1; after it they are exact counts. A panel spanning that boundary shows an
+apparent 10× drop that is an artefact of the rate change, not a traffic change.
+Compare within eras.
+
+Sampling that exists to limit VOLUME (this one) can go to 1.0 when volume is
+small. Sampling that exists because the instrument perturbs what it measures —
+`flashListInstrumentationSampleRate` (0.05) and the commit-tracking `sampleRate`
+(0.2) in `src/services/performance/types.ts` — must not, at any fleet size:
+the per-cell FlashList wrapper costs ~30-60 ms of a ~320 ms first-layout window,
+and nothing labels a session as instrumented, so raising it would contaminate
+`app_fully_drawn_ms` and `flashlist_initial_load_ms` with no way to separate
+clean sessions from perturbed ones. If denser blank-cell data is ever needed,
+add a `cell_instrumented` label FIRST, then raise the rate.
+
+### Querying logs in Loki
+
+Only three labels are indexed as **stream selectors**: `service_name`,
+`deployment_environment_name` and `environment`. Everything else the log record
+carries is either structured metadata or a body field, and putting it inside
+`{...}` silently matches nothing:
+
+```logql
+{service_name="sous-chef-app", level="error"}    # WRONG — returns zero rows
+{service_name="sous-chef-app"} | level="error"   # right — structured metadata
+{service_name="sous-chef-app"} | json | device_id="device_..."   # body field
+```
+
+`{job="sous-chef-app"}` matches nothing at all — `job` is a METRIC label, not a
+log one. Structured metadata: `level`, `detected_level`, `platform`, `os_type`,
+`severity_text`, `severity_number`, `scope_name`, `scope_version`,
+`exception_type`. Body fields (need `| json`): `message`, `env`, `device_id`,
+`session_id`, `git_sha`, plus whatever the call site passed in `extra`.
+
+**Production and staging never emit `debug`, and production never emits
+`info`** — `minLogLevel` (`src/services/telemetry/index.ts`) drops them before
+the buffer. A panel charting those levels outside development is charting a
+line that is flat by construction. A breadcrumb that must be visible in release
+has to be `warn` or `error`; if it is high-frequency, carry the volume on a
+counter and keep the log for the anomalous branch, as
+`src/apollo/offlineQueue/queueManager.ts` does for queue drains.
 
 ## Troubleshooting
 

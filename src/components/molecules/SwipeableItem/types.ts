@@ -80,6 +80,25 @@ export interface ActionButtonProps {
   testID?: string;
 }
 
+/**
+ * Builds the swipe actions for one row.
+ *
+ * A DERIVATION, not a command: a row calls it while rendering and renders what
+ * it returns. It therefore travels as a context VALUE, never through
+ * `createActionsContext`, whose members are voided precisely so a derivation
+ * cannot be stabilised behind a ref and go stale.
+ *
+ * Declared once here because it is the handshake between a screen that supplies
+ * row actions and the list that renders them — it was written out at six sites,
+ * in two shapes that disagreed about whether `undefined` was a legal return.
+ */
+export type ItemSwipeActionsFactory = (id: string) =>
+  | {
+      left?: SwipeAction[];
+      right?: SwipeAction[];
+    }
+  | undefined;
+
 export interface SwipeActionsProps {
   actions: SwipeAction[];
   /** Which edge these sit on — decides the container style only. */

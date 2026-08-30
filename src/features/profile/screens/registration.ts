@@ -23,6 +23,17 @@ const AppearanceScreen = React.lazy(() => import('./AppearanceScreen'));
 const NotificationSettingsScreen = React.lazy(
   () => import('#features/notifications/screens/NotificationSettingsScreen'),
 );
+// Same arrangement: an auth screen, but from inside the app it is only ever
+// reached from Profile's verify-email banner (and the collaborate gate's
+// alert). Registered here as a sibling of `Home` so it PUSHES over the app —
+// the root navigator's `verification` group is a different thing, a gate with
+// no app behind it, and swapping to it is what used to strand the user on Home
+// after verifying and offer sign-out as the only way back.
+const VerifyEmailScreen = React.lazy(() =>
+  import('#screens/auth/CodeVerificationScreen').then(m => ({
+    default: m.VerifyEmailScreen,
+  })),
+);
 
 /**
  * Profile and its settings screens, registered as siblings of `Home` — see
@@ -58,6 +69,11 @@ export const profileScreens = {
   }),
   NotificationSettings: createNativeStackScreen({
     screen: NotificationSettingsScreen,
+    options: settingsScreenOptions,
+    linking: null,
+  }),
+  VerifyEmail: createNativeStackScreen({
+    screen: VerifyEmailScreen,
     options: settingsScreenOptions,
     linking: null,
   }),

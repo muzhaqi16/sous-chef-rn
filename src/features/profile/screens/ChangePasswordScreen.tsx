@@ -7,7 +7,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
-import { errorMessageOr } from '#/services/errorService';
+import { localizedErrorMessage } from '#/services/errorService';
 import { PasswordInput } from '#components/atoms/PasswordInput';
 import { Header } from '#components/molecules/Header';
 import { Button } from '#components/atoms/Button';
@@ -107,7 +107,7 @@ export const ChangePasswordScreen: React.FC = () => {
         ),
       setIsSubmitting,
       (error: unknown) => {
-        const errorMessage = errorMessageOr(
+        const errorMessage = localizedErrorMessage(
           error,
           t('changePassword.failedFallback'),
         );

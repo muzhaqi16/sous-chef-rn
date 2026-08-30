@@ -35,12 +35,28 @@ resolve_envfile
 # the gate comment below.
 allow_launch_arg_auth "debug release localRelease"
 
-# This script only ever builds for the simulator (`--simulator` below), and a
-# simulator artifact cannot be installed on a phone — which is what makes the
-# Release configuration safe to measure on iOS without a separate variant, the
-# way Android needed `localRelease`. The gate is passed the sdk rather than the
-# mode so that stays true if this script ever grows a device destination.
-node scripts/check-launch-arg-auth.mjs --platform ios --sdk iphonesimulator
+# The destination this script builds for, resolved ONCE and used by both the
+# gate and the build below. A simulator artifact cannot be installed on a phone
+# — which is what makes the Release configuration safe to measure on iOS
+# without a separate variant, the way Android needed `localRelease`.
+#
+# The sdk used to be a literal on the gate's command line while the build read
+# `--simulator` from elsewhere, so the one condition the iOS branch of the gate
+# tests (`sdk !== 'iphonesimulator'`) could never be false — the check could
+# not refuse anything, while its own comment claimed the sdk was passed "so
+# that stays true if this script ever grows a device destination". It has one
+# now, and the gate can refuse it.
+IOS_DESTINATION="${IOS_DESTINATION:-simulator}"
+case "$IOS_DESTINATION" in
+  simulator) IOS_SDK="iphonesimulator" ;;
+  device)    IOS_SDK="iphoneos" ;;
+  *)
+    echo "✗ IOS_DESTINATION must be 'simulator' or 'device' (got '$IOS_DESTINATION')." >&2
+    exit 2
+    ;;
+esac
+
+node scripts/check-launch-arg-auth.mjs --platform ios --sdk "$IOS_SDK"
 
 case "$MODE" in
   staging)    SCHEME="SousChefRN (Staging)" ;;
@@ -67,6 +83,13 @@ fi
 echo "==> $DEVICE  (mode=$MODE, scheme=$SCHEME, configuration=$CONFIGURATION)"
 
 xcrun simctl boot "$DEVICE" 2>/dev/null || true
+
+if [ "$IOS_DESTINATION" = "device" ]; then
+  exec npx react-native run-ios \
+    --scheme "$SCHEME" \
+    --mode "$CONFIGURATION" \
+    --device "$DEVICE"
+fi
 
 exec npx react-native run-ios \
   --scheme "$SCHEME" \

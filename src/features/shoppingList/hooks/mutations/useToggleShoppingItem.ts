@@ -27,6 +27,7 @@ import {
 import {
   moveShoppingListItemToPurchased,
   moveShoppingListItemToUnpurchased,
+  writePurchaseInfo,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isNetworkError } from '#/utils/isNetworkError';
@@ -79,17 +80,19 @@ export function useToggleShoppingItem({
     const previousIsPurchased = snapshot.purchaseInfo?.isPurchased ?? false;
     const newStatus = !previousIsPurchased;
     const previousUpdatedAt = snapshot.updatedAt;
+    // The flip clears this, so the snapshot is the only record of it once the
+    // write lands. A refusal that cannot put it back leaves the row offering
+    // move-to-pantry for a line the server still considers stocked.
+    const previousMovedToPantryAt =
+      snapshot.purchaseInfo?.movedToPantryAt ?? null;
 
     // 1. Flip purchaseInfo + bump updatedAt on the entity
-    client.cache.modify<UseToggleShoppingItem_ItemFragment>({
-      id: cacheId,
-      fields: {
-        purchaseInfo(existing) {
-          return { ...existing, isPurchased: newStatus };
-        },
-        updatedAt: () => new Date().toISOString(),
-      },
-    });
+    writePurchaseInfo(
+      client.cache,
+      itemId,
+      { isPurchased: newStatus },
+      { updatedAt: new Date().toISOString() },
+    );
 
     // 2. Move the item between the purchased/unpurchased connections
     if (newStatus) {
@@ -112,15 +115,18 @@ export function useToggleShoppingItem({
     );
 
     const revert = () => {
-      client.cache.modify<UseToggleShoppingItem_ItemFragment>({
-        id: cacheId,
-        fields: {
-          purchaseInfo(existing) {
-            return { ...existing, isPurchased: previousIsPurchased };
-          },
-          updatedAt: () => previousUpdatedAt,
+      writePurchaseInfo(
+        client.cache,
+        itemId,
+        {
+          isPurchased: previousIsPurchased,
+          movedToPantryAt: previousMovedToPantryAt,
         },
-      });
+        // Restoring, not flipping: the server never saw the change, so it still
+        // holds the stamp. Treated as a flip, the revert cleared it a second
+        // time and the snapshot's value was discarded.
+        { updatedAt: previousUpdatedAt, restoring: true },
+      );
       if (previousIsPurchased) {
         moveShoppingListItemToPurchased(client.cache, listId, { id: itemId });
       } else {
@@ -246,20 +252,19 @@ export function useToggleShoppingItem({
 
     const previousIsPurchased = snapshot.purchaseInfo?.isPurchased ?? false;
     const previousUpdatedAt = snapshot.updatedAt;
+    const previousMovedToPantryAt =
+      snapshot.purchaseInfo?.movedToPantryAt ?? null;
     const now = new Date().toISOString();
 
     // 1. Optimistically mark purchased (same as toggleItem). The entered amounts
     //    ride on the mutation's purchaseTracking; the detail screen's
     //    cache-and-network query reflects the server's recorded values.
-    client.cache.modify<UseToggleShoppingItem_ItemFragment>({
-      id: cacheId,
-      fields: {
-        purchaseInfo(existing) {
-          return { ...existing, isPurchased: true };
-        },
-        updatedAt: () => now,
-      },
-    });
+    writePurchaseInfo(
+      client.cache,
+      itemId,
+      { isPurchased: true },
+      { updatedAt: now },
+    );
     moveShoppingListItemToPurchased(client.cache, listId, { id: itemId });
     const clearPersistence = optimisticDataPersistence.track(
       'ShoppingListItem',
@@ -269,15 +274,15 @@ export function useToggleShoppingItem({
     );
 
     const revert = () => {
-      client.cache.modify<UseToggleShoppingItem_ItemFragment>({
-        id: cacheId,
-        fields: {
-          purchaseInfo(existing) {
-            return { ...existing, isPurchased: previousIsPurchased };
-          },
-          updatedAt: () => previousUpdatedAt,
+      writePurchaseInfo(
+        client.cache,
+        itemId,
+        {
+          isPurchased: previousIsPurchased,
+          movedToPantryAt: previousMovedToPantryAt,
         },
-      });
+        { updatedAt: previousUpdatedAt, restoring: true },
+      );
       if (!previousIsPurchased) {
         moveShoppingListItemToUnpurchased(client.cache, listId, { id: itemId });
       }

@@ -7,7 +7,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
 import { handleMutationError } from '#/utils/errorHandlers';
-import { errorMessageOr } from '#/services/errorService';
+import { localizedErrorMessage } from '#/services/errorService';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { formatRole } from '#utils/formatters/roleFormatters';
@@ -518,7 +518,9 @@ const CreateHomeScreenComponent = () => {
         }),
       setIsCreating,
       (error: unknown) => {
-        setGraphqlError(errorMessageOr(error, t('onBoarding.setupError')));
+        setGraphqlError(
+          localizedErrorMessage(error, t('onBoarding.setupError')),
+        );
       },
     );
   };

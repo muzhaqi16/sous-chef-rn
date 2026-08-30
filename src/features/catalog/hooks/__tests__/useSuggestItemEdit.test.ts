@@ -205,7 +205,7 @@ describe('useSuggestItemEdit', () => {
   });
 
   // A non-PUBLIC target answers ValidationError, never ForbiddenError.
-  it('surfaces the server message on a validation failure', async () => {
+  it("routes a refusal to localized copy, never the server's text", async () => {
     const { mock } = recordMock(CreateItemSuggestionDocument, {
       data: {
         createItemSuggestion: {
@@ -223,6 +223,16 @@ describe('useSuggestItemEdit', () => {
     expect(outcome).toEqual({ status: 'failed' });
     expect(alertService.alert).toHaveBeenCalledWith(
       "Couldn't send that",
+      // Not 'Item is not public' — the server's text is English by
+      // construction (no `Accept-Language`, no locale on the token), so
+      // displaying it puts English in front of every es/it/sq reader. With no
+      // `errors.field.itemId` to resolve, this falls back to the caller's own
+      // copy: vaguer, but in the reader's language, and the precise sentence is
+      // still in the log.
+      'Something went wrong sending your suggestion. Please try again.',
+    );
+    expect(alertService.alert).not.toHaveBeenCalledWith(
+      expect.any(String),
       'Item is not public',
     );
   });

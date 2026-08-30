@@ -89,6 +89,13 @@ export function useAppNavigation() {
 
     // ─── Profile / home management ────────────────────────────────────────
     toProfile: () => navigation.navigate('Profile'),
+    /**
+     * Email verification reached from INSIDE the app (the profile banner, the
+     * collaborate gate). A pushed screen rather than the root navigator's
+     * `verification` group, so backing out keeps the session and a successful
+     * verify returns to the screen it was opened from.
+     */
+    toVerifyEmail: () => navigation.navigate('VerifyEmail'),
     toHomeManagement: (params?: RootStackParamList['HomeManagement']) =>
       navigation.navigate('HomeManagement', params ?? {}),
     toHomeDetail: (params: RootStackParamList['HomeDetail']) =>

@@ -7,7 +7,7 @@
  * normalizes the result, leaving the handler only connection membership.
  */
 
-import type { TypedDocumentNode } from '@apollo/client';
+import type { OperationVariables, TypedDocumentNode } from '@apollo/client';
 import { logger } from '#/utils/environment';
 import type { SubscriptionApolloClient } from './types';
 
@@ -19,7 +19,10 @@ import type { SubscriptionApolloClient } from './types';
  * same to a caller: nothing to add to a connection, and not a failure. The list
  * self-corrects on its next `cache-and-network` read.
  */
-export async function fetchEventEntity<TData, TVariables extends object>(
+export async function fetchEventEntity<
+  TData,
+  TVariables extends OperationVariables,
+>(
   client: SubscriptionApolloClient,
   query: TypedDocumentNode<TData, TVariables>,
   variables: TVariables,

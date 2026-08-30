@@ -407,34 +407,26 @@ mutation CreateShoppingListItemsFromRecipe(
   createShoppingListItemsFromRecipe(input: $input) {
     __typename
     ... on CreateShoppingListItemsFromRecipePayload {
+      # These lines are written straight into the list's connection, so the
+      # response has to satisfy the query that displays them. Hand-listing a
+      # subset left the created entity missing eleven of the fifteen fields
+      # `GetShoppingListItemsFiltered` selects, which makes the whole list read
+      # incomplete rather than one value blank.
       addedItems {
+        # `id` directly as well as through the spread: masking hides the
+        # fragment's fields from the parent, key field included.
         id
-        itemName
-        quantity
-        unit {
-          id
-          name
-          symbol
-        }
+        ...AddedShoppingListItemFields
         storeInfo {
           aisle
         }
-        purchaseInfo {
-          isPurchased
-        }
       }
+      # Same shape as addedItems: an updated line is normalized into the same
+      # entity the list reads, and a narrower selection would blank the fields
+      # it omits rather than leave them alone.
       updatedItems {
         id
-        itemName
-        quantity
-        unit {
-          id
-          name
-          symbol
-        }
-        purchaseInfo {
-          isPurchased
-        }
+        ...AddedShoppingListItemFields
       }
       skippedItems {
         id

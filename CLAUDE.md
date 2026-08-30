@@ -18,7 +18,9 @@ npm start / npm run ios / npm run android    # dev loop
 npm run codegen      # re-pull schema + regenerate types (run before lint if schema is stale)
 npm run typecheck    # app AND test tsconfig — run after every code change
 npm run lint         # ESLint, incl. every .graphql operation vs the pulled schema
-npm test             # full Jest suite (~15s) — always run unfiltered
+npm test             # full Jest suite — 668 files, 8060 tests, ~80s, ~3.3GB peak
+                     # Workers are capped in jest.config.js; uncapped, nine of
+                     # them exhaust 16GB of RAM. Run it unfiltered.
 node scripts/check-compiler-bailouts.mjs         # also in pre-push
 node scripts/check-unistyles-variant-staleness.mjs   # also in pre-push
 node scripts/check-layer-purity.mjs              # also in pre-commit
@@ -204,6 +206,21 @@ Defaults:
   `errors.field.<field>` with the caller's copy as fallback; never branch on
   `message` text. Reasoning: `docs/apollo-client-patterns.md` § Localizing
   refusals.
+- **Pass the caller's copy INTO `localizedErrorMessage`, never after it.**
+  `localizedErrorMessage(err) || t('…')` type-checks and reads as a fallback,
+  and is unreachable: the resolver is total. It also disables the resolver's own
+  escape hatch, which yields to the caller's copy on a TRANSPORT code — so a
+  write that never left the device got reported with the read-oriented offline
+  sentence. Guarded by
+  `__tests__/i18n/callerFallbackReachesResolver.test.ts`.
+- **A field with a write-time invariant is written through the ONE path that
+  runs it.** `cache.modify` does not run type-policy merges and cannot introduce
+  a field the cached record lacks, so a record whose rules live in a merge policy
+  (`ShoppingListItem.purchaseInfo`) must go through `cache.writeFragment` —
+  `writePurchaseInfo` is the worked example, and it carries the cached record
+  forward so the policy's clear-on-flip has nothing to clear on a LOCAL write.
+  A second writer of such a field (the offline restoration pass) routes through
+  `src/apollo/utils/fieldWriters.ts` rather than merging blind.
 - **Never pair `optimisticResponse` with `context: { localFirst: true }`** —
   Apollo tears the optimistic layer down when the mutation completes, and
   offline that completion is `queueLink`'s null result, so the change reverts
@@ -722,9 +739,20 @@ the build path itself, not just in pre-push.
   matrix and PR guidance: `docs/development.md` § Git hooks +
   `CONTRIBUTING.md`.
 - The API repo (`sous-chef-api`) is read-only from here: align the client to
-  it, read it to verify contract constants, never edit it. After every
-  codegen, read `sous-chef-api/docs/api/breaking-changes.md` — BEHAVIOUR
-  entries have no SDL diff.
+  it, read it to verify contract constants, never edit it.
+- **After every codegen, diff `src/graphql/generated/schema.graphql`.** It is
+  tracked, `npm run codegen` re-pulls the live SDL, and the pre-push check
+  refuses a stale one — so a server change lands in YOUR branch, mixed into
+  whatever you were doing. Read it before committing and give it its own
+  commit; a removed field or a narrowed meaning is the client's problem to
+  find. This instruction used to name `sous-chef-api/docs/api/breaking-changes.md`
+  as the place to check instead. That file is GONE — the API deleted the log,
+  its `.schema-breaking-allow` and the `schema-breaking-changes.mjs` linter
+  together — so there is no longer a published record of BEHAVIOUR changes,
+  the ones that never show up as an SDL diff at all. The doc comments in the
+  SDL are what remain: they are prose, they do change, and a diff that looks
+  like documentation can be a contract change (`summary.skipped` was
+  redefined that way on 2026-08-29 with no signature change).
 - Parallel sessions may share this checkout — touch only the files your task
   edits; no whole-tree git commands (`stash`, `reset --hard`, `checkout .`).
 

@@ -41,7 +41,7 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
           <Controller
             control={control}
             name="netWeight"
-            render={({ field: { onChange, onBlur, value } }) => (
+            render={({ field: { onChange, onBlur, value }, fieldState }) => (
               <FormInput
                 label={t('labels.netWeight')}
                 value={value || ''}
@@ -50,13 +50,17 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
                 placeholder={localizeNumericHint(t('labels.eG145'))}
                 keyboardType="decimal-pad"
                 editable={!isWeightLocked}
+                // The pair is all-or-nothing: the submit path drops a weight
+                // with no resolved unit id, so a refusal has to say which half
+                // is missing rather than the value silently vanishing.
+                error={fieldState.error?.message}
               />
             )}
           />
           <Controller
             control={control}
             name="netWeightUnit"
-            render={({ field: { onChange, value } }) => (
+            render={({ field: { onChange, value }, fieldState }) => (
               <UnitAutocompleteField
                 variant="modal"
                 label={t('storageLocationForm.unit')}
@@ -64,6 +68,7 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
                 onChangeText={onChange}
                 onUnitSelected={onNetWeightUnitSelected}
                 placeholder={t('labels.ozGMl')}
+                error={fieldState.error?.message}
               />
             )}
           />

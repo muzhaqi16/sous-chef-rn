@@ -239,11 +239,20 @@ export function addPantryToHomeCache(
   });
 }
 
-/** Reverse the optimistic pantry create (rejected by the server). */
+/**
+ * Take a pantry out of its home's lists.
+ *
+ * Two callers with different needs. Reversing a rejected CREATE evicts: the
+ * entity only ever existed locally, so nothing should survive it. A local-first
+ * DELETE passes `evictEntity: false` — it removes the pantry from view before
+ * the server has agreed, and a refusal has to put it back, which needs the
+ * entity to still be there.
+ */
 export function removeOptimisticPantry(
   cache: ApolloCache,
   homeId: string,
   pantryId: string,
+  options: { evictEntity?: boolean } = {},
 ): void {
   const homeCacheId = cache.identify({ __typename: 'Home', id: homeId });
   if (homeCacheId) {
@@ -275,5 +284,58 @@ export function removeOptimisticPantry(
       },
     });
   }
-  safeEvict(cache, 'Pantry', pantryId);
+  if (options.evictEntity !== false) {
+    safeEvict(cache, 'Pantry', pantryId);
+  }
+}
+
+/**
+ * Put a pantry back into its home's lists after a local-first delete was
+ * refused. The mirror of {@link removeOptimisticPantry}'s non-evicting form —
+ * the entity is still cached, so only the two membership fields need repairing.
+ * Idempotent: a restore that runs twice must not duplicate the row.
+ */
+export function restorePantryToHomeCache(
+  cache: ApolloCache,
+  homeId: string,
+  pantryId: string,
+): void {
+  const homeCacheId = cache.identify({ __typename: 'Home', id: homeId });
+  if (!homeCacheId) return;
+
+  cache.modify({
+    id: homeCacheId,
+    fields: {
+      pantries(
+        existingPantries: readonly Reference[] = [],
+        { readField, toReference },
+      ) {
+        if (existingPantries.some(ref => readField('id', ref) === pantryId)) {
+          return existingPantries;
+        }
+        const ref = toReference({ __typename: 'Pantry', id: pantryId });
+        return ref ? [...existingPantries, ref] : existingPantries;
+      },
+      pantriesConnection(
+        existingConnection: ConnectionData | null = null,
+        { readField, toReference },
+      ) {
+        if (!existingConnection) return existingConnection;
+        const edges = existingConnection.edges ?? [];
+        if (edges.some(edge => readField('id', edge?.node) === pantryId)) {
+          return existingConnection;
+        }
+        const node = toReference({ __typename: 'Pantry', id: pantryId });
+        if (!node) return existingConnection;
+        return {
+          ...existingConnection,
+          edges: [
+            ...edges,
+            { __typename: 'PantryEdge', cursor: pantryId, node },
+          ],
+          totalCount: (existingConnection.totalCount ?? edges.length) + 1,
+        };
+      },
+    },
+  });
 }

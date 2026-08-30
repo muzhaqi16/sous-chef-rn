@@ -10,6 +10,8 @@
  */
 
 import { readFileSync } from 'node:fs';
+import type { OperationVariables } from '@apollo/client';
+import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { join } from 'node:path';
 import { ApolloClient, ApolloLink, InMemoryCache } from '@apollo/client';
 import { print } from 'graphql';
@@ -63,12 +65,21 @@ function buildCapturingClient(captured: CapturedRequest[]) {
   return new ApolloClient({
     cache: new InMemoryCache(),
     link: ApolloLink.from([persistedQueryLink, terminating]),
+    defaultOptions: APOLLO_DEFAULT_OPTIONS,
   });
 }
 
 describe('persistedQueryLink ↔ manifest identity', () => {
-  // Variables never affect the document hash — only the printed query does.
-  const CASES = [
+  // Variables never affect the document hash — only the printed query does,
+  // which is why the documents are deliberately plain `DocumentNode`s here.
+  // `variables` is typed rather than inferred so the three entries widen at the
+  // definition site instead of forming a union: under Apollo 4.2's modern
+  // signatures a union of variables no longer satisfies `client.query`.
+  const CASES: Array<{
+    operationName: string;
+    document: import('graphql').DocumentNode;
+    variables: OperationVariables;
+  }> = [
     {
       operationName: 'GetUnreadNotifications',
       document:

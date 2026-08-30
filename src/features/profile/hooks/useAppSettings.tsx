@@ -11,7 +11,10 @@ import {
   UnitSystem,
   type UpdateSettingsInput,
 } from '#/graphql/generated/schemaTypes';
-import { updateEntityFieldsLocalFirst } from '#/apollo/utils/localFirstFields';
+import {
+  snapshotFields,
+  updateEntityFieldsLocalFirst,
+} from '#/apollo/utils/localFirstFields';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
@@ -99,10 +102,7 @@ export const useAppSettings = () => {
     updates: Partial<AppSettings>,
     failureMessage: string = t('settings.updateFailed'),
   ) => {
-    const keys = Object.keys(updates) as (keyof AppSettings)[];
-    const previous: Partial<AppSettings> = Object.fromEntries(
-      keys.map(key => [key, memoizedSettings[key]]),
-    );
+    const previous = snapshotFields<AppSettings>(memoizedSettings, updates);
 
     const { persisted, result } =
       await updateEntityFieldsLocalFirst<AppSettings>({

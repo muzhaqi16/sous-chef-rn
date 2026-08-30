@@ -7,6 +7,10 @@ import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
+import {
+  removeItemFromShoppingListForMoveToPantry,
+  restoreItemToShoppingListAfterMoveToPantry,
+} from '#/apollo/utils/shoppingListCacheUpdaters';
 import { useStore } from '#store';
 import { useMoveToPantry } from '../useMoveToPantry';
 
@@ -30,6 +34,7 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   ...jest.requireActual('#/apollo/utils/shoppingListCacheUpdaters'),
   removeItemFromShoppingListForMoveToPantry: jest.fn(),
+  restoreItemToShoppingListAfterMoveToPantry: jest.fn(),
 }));
 
 jest.mock('#/utils/finallyHelpers');
@@ -258,6 +263,55 @@ describe('useMoveToPantry', () => {
       expect(input.idempotencyKey).toEqual(expect.any(String));
     });
 
+    it('unlinks the shopping row eagerly, without evicting it', async () => {
+      // Offline neither the mutation's `update` callback nor the replay runs
+      // one, so a removal left to `update` never happened: the server deleted
+      // the line while the client kept rendering it in the list and in both
+      // counters until a full refetch. It has to be unlinked here — and NOT
+      // evicted, because a permanently-refused replay has to put it back.
+      useStore.setState({ apiReachable: false });
+      const move = moveMock();
+      const { result } = renderHookWithApollo(
+        () => useMoveToPantry({ currentListId: 'list-1' }),
+        { operationMocks: [move.mock] },
+      );
+
+      await act(async () => {
+        await result.current.moveToPantry(createItem(), {
+          pantryId: 'pantry-1',
+          actualQuantity: 2,
+          removeFromList: true,
+        });
+      });
+
+      expect(removeItemFromShoppingListForMoveToPantry).toHaveBeenCalledWith(
+        expect.anything(),
+        'list-1',
+        'item-1',
+        expect.any(Boolean),
+        { evictEntity: false },
+      );
+    });
+
+    it('leaves the row alone when the move keeps it on the list', async () => {
+      useStore.setState({ apiReachable: false });
+      const move = moveMock();
+      const { result } = renderHookWithApollo(
+        () => useMoveToPantry({ currentListId: 'list-1' }),
+        { operationMocks: [move.mock] },
+      );
+
+      await act(async () => {
+        await result.current.moveToPantry(createItem(), {
+          pantryId: 'pantry-1',
+          actualQuantity: 2,
+          removeFromList: false,
+        });
+      });
+
+      expect(removeItemFromShoppingListForMoveToPantry).not.toHaveBeenCalled();
+    });
+
     it('fires the mutation normally when online', async () => {
       const move = moveMock();
       const { result } = renderHookWithApollo(
@@ -275,5 +329,168 @@ describe('useMoveToPantry', () => {
 
       expect(move.fired).toHaveLength(1);
     });
+  });
+});
+
+describe('useMoveToPantry pantry item count', () => {
+  /**
+   * The eager write publishes a pantry row before the server answers. The count
+   * beside those rows has to move with it: offline the mutation's `update`
+   * callback never runs, so nothing else will correct it and the header then
+   * contradicts the rows underneath. `usePantryScreen` also branches on this
+   * value to choose server vs client sorting.
+   */
+  const { gql } = require('@apollo/client');
+  const STATS_FRAGMENT = gql`
+    fragment PantryStatsProbe on Pantry {
+      id
+      stats {
+        totalItems
+      }
+    }
+  `;
+
+  function seededCache() {
+    const { makeCache } = require('#/apollo/cache');
+    const cache = makeCache();
+    cache.writeFragment({
+      id: 'Pantry:pantry-1',
+      fragment: STATS_FRAGMENT,
+      data: {
+        __typename: 'Pantry',
+        id: 'pantry-1',
+        stats: { __typename: 'PantryStats', totalItems: 63 },
+      },
+    });
+    return cache;
+  }
+
+  function readTotal(cache: { readFragment: Function }) {
+    return (
+      cache.readFragment({
+        id: 'Pantry:pantry-1',
+        fragment: STATS_FRAGMENT,
+      }) as { stats: { totalItems: number } } | null
+    )?.stats.totalItems;
+  }
+
+  /**
+   * Echoes the client-minted id, which is the ordinary case: the server accepted
+   * the row we published. When it answers with a DIFFERENT id it restocked an
+   * existing stack instead, and the hook evicts its optimistic row — that path
+   * has its own expectation below.
+   */
+  function echoingMoveMock() {
+    return recordMock(MoveShoppingItemToPantryDocument, {
+      data: (vars: Record<string, unknown>) => ({
+        moveShoppingItemToPantry: {
+          __typename: 'MoveShoppingItemToPantryPayload',
+          pantryItem: {
+            __typename: 'PantryItem',
+            id: (vars.input as { pantryItemId: string }).pantryItemId,
+          },
+        },
+      }),
+    });
+  }
+
+  it('increments the pantry item count alongside the row it adds', async () => {
+    const cache = seededCache();
+    const move = echoingMoveMock();
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [move.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 2,
+        removeFromList: true,
+      });
+    });
+
+    expect(readTotal(cache)).toBe(64);
+  });
+
+  it('withdraws the count when the move is refused', async () => {
+    const cache = seededCache();
+    const rejected = recordMock(MoveShoppingItemToPantryDocument, {
+      data: {
+        moveShoppingItemToPantry: {
+          __typename: 'ValidationError',
+          message: 'nope',
+        },
+      },
+    });
+
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [rejected.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 2,
+        removeFromList: true,
+      });
+    });
+
+    expect(readTotal(cache)).toBe(63);
+  });
+
+  it('puts the shopping row back when the move is refused', async () => {
+    // Both sides were written before firing, so both are undone. The row was
+    // unlinked rather than evicted, which is what leaves an entity to re-link.
+    const cache = seededCache();
+    const rejected = recordMock(MoveShoppingItemToPantryDocument, {
+      data: {
+        moveShoppingItemToPantry: {
+          __typename: 'ValidationError',
+          message: 'nope',
+          field: 'shoppingListItemId',
+        },
+      },
+    });
+
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [rejected.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 2,
+        removeFromList: true,
+      });
+    });
+
+    expect(restoreItemToShoppingListAfterMoveToPantry).toHaveBeenCalledWith(
+      expect.anything(),
+      'item-1',
+    );
+  });
+
+  it('withdraws the count when the server supersedes the optimistic row', async () => {
+    const cache = seededCache();
+    // A different id means the server restocked an existing stack; the hook
+    // evicts the row it published, so the count it added must go with it.
+    const move = moveMock();
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [move.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 2,
+        removeFromList: true,
+      });
+    });
+
+    expect(readTotal(cache)).toBe(63);
   });
 });

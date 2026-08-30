@@ -7,7 +7,10 @@ import {
 import type { FlashListProps } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import { SortableShoppingList } from '../SortableShoppingList/SortableList';
-import type { ShoppingListRowItem } from '../SortableShoppingList/types';
+import type {
+  ShoppingListRowItem,
+  SortableShoppingListProps,
+} from '../SortableShoppingList/types';
 import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { ShoppingListItemSkeleton } from '#features/shoppingList/components/skeletons/ShoppingListItemSkeleton';
@@ -17,8 +20,7 @@ interface StaggeredTabContentProps {
   /** Whether row cells render their product image */
   showImages?: boolean;
   onItemPress: (id: string) => void;
-  onItemEdit?: (id: string) => void;
-  onItemDelete?: (id: string) => void;
+  itemSwipeActions?: SortableShoppingListProps['itemSwipeActions'];
   onTogglePurchase?: (id: string, opts?: { withDetails?: boolean }) => void;
   onQuantityPress?: (id: string) => void;
   onRefresh?: () => void | Promise<void>;
@@ -58,8 +60,7 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
   items,
   showImages,
   onItemPress,
-  onItemEdit,
-  onItemDelete,
+  itemSwipeActions,
   onTogglePurchase,
   onQuantityPress,
   onRefresh,
@@ -101,8 +102,7 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
         items={items}
         showImages={showImages}
         onItemPress={onItemPress}
-        onItemEdit={onItemEdit}
-        onItemDelete={onItemDelete}
+        itemSwipeActions={itemSwipeActions}
         onTogglePurchase={onTogglePurchase}
         onQuantityPress={onQuantityPress}
         onSortOrderUpdate={onSortOrderUpdate}

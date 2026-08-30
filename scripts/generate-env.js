@@ -35,6 +35,9 @@ const KEYS = [
   'OTLP_LOGS_ENDPOINT',
   'OTLP_LOGS_AUTH_USERNAME',
   'OTLP_LOGS_AUTH_PASSWORD',
+  // Fraction (0-1] of GraphQL operations that carry telemetry. See
+  // src/apollo/links/telemetryLink.ts.
+  'GRAPHQL_TELEMETRY_SAMPLE_RATE',
   // Environment-specific URL overrides read by Environment.getApiConfig()
   'DEV_API_URL',
   'DEV_WS_URL',

@@ -8,8 +8,6 @@ import { createActionsContext } from '#hooks/utils/createActionsContext';
  */
 export interface ShoppingListTabsActions {
   onItemPress: (id: string) => void;
-  onItemEdit?: (id: string) => void;
-  onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string, opts?: { withDetails?: boolean }) => void;
   onMoveToPantry?: (id: string) => void;
   onQuantityPress?: (id: string) => void;

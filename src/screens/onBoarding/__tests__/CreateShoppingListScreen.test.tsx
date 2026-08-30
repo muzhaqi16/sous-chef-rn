@@ -51,9 +51,7 @@ jest.mock('#utils/validation/onboarding', () => ({
   },
 }));
 jest.mock('#hooks/performance/useScreenTransition');
-jest.mock('#/services/errorService', () => ({
-  errorService: { reportError: jest.fn() },
-}));
+jest.mock('#/services/errorService');
 jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#components/templates/OnBoardingWrapper', () => ({

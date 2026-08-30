@@ -6,10 +6,7 @@ import {
   WhiteActivityIndicator,
 } from '#components/atoms/themedComponents';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
-import {
-  BottomSheetView,
-  useBottomSheetScrollableCreator,
-} from '@gorhom/bottom-sheet';
+import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
@@ -91,7 +88,18 @@ export const IngredientMatchingSheet: React.FC<
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetView style={[styles.container, contentContainerStyle]}>
+      {/*
+        A plain View, NOT `BottomSheetView`. gorhom composes the caller's style
+        FIRST — `[containerStyle, styles.container]` — and its own
+        `styles.container` is `{ position: 'absolute', left: 0, top: 0, right: 0 }`
+        with no bottom and no height, so the `flex: 1` below loses and the
+        FlashList inside is never height-bounded. The rows past the fold were
+        unreachable, and `handleSettingScrollable` also registered
+        SCROLLABLE_TYPE.VIEW after the list registered itself, so the sheet lost
+        scrollable arbitration too. `BottomSheetAutocompleteInput` records the
+        same observed failure.
+      */}
+      <View style={[styles.container, contentContainerStyle]}>
         <BottomSheetHeader
           title={t('ingredientMatching.reviewIngredients')}
           onCancel={onClose}
@@ -178,7 +186,7 @@ export const IngredientMatchingSheet: React.FC<
             )}
           </Pressable>
         </View>
-      </BottomSheetView>
+      </View>
     </BottomSheetModal>
   );
 };

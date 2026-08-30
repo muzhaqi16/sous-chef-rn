@@ -11,7 +11,7 @@ const ThemedSheetTextInput = withUnistyles(BottomSheetTextInput, theme => ({
   placeholderTextColor: theme.colors.inputPlaceholder,
 }));
 import { Icon } from '#/utils/iconUtils';
-import { errorMessageOr } from '#/services/errorService';
+import { localizedErrorMessage } from '#/services/errorService';
 import { commonStyles } from '#/styles/commonStyles';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -204,12 +204,12 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
           setError('');
           setIsAddingModal(false);
         } else {
-          setError('Failed to add item');
+          setError(t('errors.addItemFailed'));
         }
       },
       setLoading,
       (err: unknown) => {
-        setError(errorMessageOr(err, 'An error occurred'));
+        setError(localizedErrorMessage(err, t('errors.generic')));
       },
     );
   };

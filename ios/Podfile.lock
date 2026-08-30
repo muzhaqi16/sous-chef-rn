@@ -30,7 +30,7 @@ PODS:
     - ReactNativeDependencies
     - Yoga
   - MMKVCore (2.4.0)
-  - NitroImage (0.14.0):
+  - NitroImage (0.15.2):
     - hermes-engine
     - NitroModules
     - RCTRequired
@@ -79,7 +79,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - NitroModules (0.36.1):
+  - NitroModules (0.37.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1705,7 +1705,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context (5.8.0):
+  - react-native-safe-area-context (5.9.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1717,8 +1717,8 @@ PODS:
     - React-graphics
     - React-ImageManager
     - React-jsi
-    - react-native-safe-area-context/common (= 5.8.0)
-    - react-native-safe-area-context/fabric (= 5.8.0)
+    - react-native-safe-area-context/common (= 5.9.1)
+    - react-native-safe-area-context/fabric (= 5.9.1)
     - React-NativeModulesApple
     - React-RCTFabric
     - React-renderercss
@@ -1729,7 +1729,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context/common (5.8.0):
+  - react-native-safe-area-context/common (5.9.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1751,7 +1751,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context/fabric (5.8.0):
+  - react-native-safe-area-context/fabric (5.9.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1774,7 +1774,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-skia (2.5.4):
+  - react-native-skia (2.11.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1798,7 +1798,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-turbo-image (1.24.1):
+  - react-native-turbo-image (1.24.3):
     - APNGKit
     - Gifu
     - hermes-engine
@@ -1822,7 +1822,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-vector-icons-ionicons (12.3.0)
+  - react-native-vector-icons-ionicons (12.5.0)
   - React-NativeModulesApple (0.86.3):
     - hermes-engine
     - React-callinvoker
@@ -2220,7 +2220,7 @@ PODS:
     - React-utils (= 0.86.3)
     - ReactNativeDependencies
   - ReactNativeDependencies (0.86.3)
-  - ReactNavigation (8.0.0-alpha.43):
+  - ReactNavigation (8.0.0-alpha.44):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2527,7 +2527,7 @@ PODS:
     - ReactNativeDependencies
     - RNWorklets
     - Yoga
-  - RNScreens (4.26.2):
+  - RNScreens (4.27.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2549,9 +2549,9 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-    - RNScreens/common (= 4.26.2)
+    - RNScreens/common (= 4.27.0)
     - Yoga
-  - RNScreens/common (4.26.2):
+  - RNScreens/common (4.27.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2713,7 +2713,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - VisionCamera (5.2.2):
+  - VisionCamera (5.2.3):
     - hermes-engine
     - NitroImage
     - NitroModules
@@ -3088,9 +3088,9 @@ SPEC CHECKSUMS:
   hermes-engine: 63c5db7d529c36335fada6582fd293ae2a105d77
   LiquidGlass: 79edfdadba32c29aa45772a4684cfead35698e9a
   MMKVCore: 3d16ce9f7d411e135020915fde98a056859a1efa
-  NitroImage: 1f29caf8d1b31ca9647f0551a25ffcc94ffc5726
+  NitroImage: 5daf897d2f37ed419186278d6b0fcdd8aab313b0
   NitroMmkv: 85a251e15c39d7c95fe58cf40786fa126b8d143c
-  NitroModules: b4174dd303728e16ad1afb79f64c1a5c69a3b373
+  NitroModules: 38f8754287858ff1294e43fd43f614a664e54050
   RCTDeprecation: 96f68ebf33f8762466b01d57d6e873c4f30efb07
   RCTRequired: 166eed8ad6d8440e73e56d09a9090366609823d2
   RCTSwiftUI: e818198d11928a78c2b2afe281d072171dab617f
@@ -3136,10 +3136,10 @@ SPEC CHECKSUMS:
   react-native-netinfo: 4319d381f35bc11b53dafebd5cd99c04c66a9fb4
   react-native-pager-view: 1c005017ae5f344608af076f9aa4eb984ee6ec1c
   react-native-performance: 3290079971f56838ae50f7f1d65d6e075d88b932
-  react-native-safe-area-context: fb5c8ee9f6dd62ef710611b3d370c501f42a4ac0
-  react-native-skia: 4bce4f754c3dd3f1f9e283ec4fd8f730fa4cd6e3
-  react-native-turbo-image: 293a01cc65dc9dd1184c0a5629411448da29065c
-  react-native-vector-icons-ionicons: ad07e944a092a5cf71b8b569d8f5ce2bf674c415
+  react-native-safe-area-context: 8368d1052ccc8fe8725adfb6a83498c8bdb48250
+  react-native-skia: 9f1f9bfd9e3c6139711296c4ee6cb367931fb306
+  react-native-turbo-image: fdd359e61af800640d8a19daa5114be13ffba781
+  react-native-vector-icons-ionicons: 7e633927db6ab96e0255b5920c053777cacca505
   React-NativeModulesApple: 2b658272ca69df0694cf5d54f9510aa7c33977bc
   React-networking: 6be0b80e18e710dd30e77b04838ec46666a7bb78
   React-oscompat: cea7c66df8076bd97e95885d7f584b86afffde41
@@ -3175,7 +3175,7 @@ SPEC CHECKSUMS:
   ReactCodegen: 828f54f35f2bc4ee3f39345144ff0ec22c9535c2
   ReactCommon: 02f6a489d5eb4ab79d7deba5cd4434e0ba351a07
   ReactNativeDependencies: 6738e602b46fd24aa453cd58267ec3bb8bf29d27
-  ReactNavigation: ea05782d87af1242be1e906cace5c1570c52b257
+  ReactNavigation: d81e8a2238ba4fd42ed32b2f41031a64cb07dc37
   RNCClipboard: 715fa7c6c8366f17d00f05a439ee7488f390fa5f
   RNCMaskedView: eb2b2e538afa907f05a5848a1a1ac26092e6fec9
   RNCPicker: d74667bdfc08ed389a2a277d95b8faf2349290a9
@@ -3188,11 +3188,11 @@ SPEC CHECKSUMS:
   RNPermissions: b8e47cc88734c8520f224914fe80f4bffc0c1c09
   RNReactNativeHapticFeedback: 16e5f7fd37e2acc5a33ea14f48bfd88ff43776ee
   RNReanimated: aec656f27f33212c0b6ee9dcf3d7bb66ab1c9c9e
-  RNScreens: 7118cd7715c226856125b5bece3c4d9abec90356
+  RNScreens: de068bbd7d91b820fedac25c597d4b14830de74b
   RNSVG: 6cae8d4082913be2eb43eaec2a456222c42195ed
   RNWorklets: 479a8693aef79a20a12a83c6d97858b3a58faecb
   Unistyles: 5b9f9a08b494a93d552dafcdb079754c7e3d252a
-  VisionCamera: a917b12fb1a8af28f8265b20e9676d1cb37a1593
+  VisionCamera: f84550cffbbf23f3cac7a3d1d2e66e5098a4e8eb
   Yoga: 18b74b3ade30bebc1904004dfaceae1dd02a330a
 
 PODFILE CHECKSUM: 37821b63aacf4fae712142bd8dae8b060f207414

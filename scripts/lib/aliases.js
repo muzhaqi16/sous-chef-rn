@@ -54,4 +54,19 @@ const jestModuleNameMapper = () =>
     ]),
   );
 
-module.exports = { babelAliases, jestModuleNameMapper };
+/**
+ * `[['#components/', 'src/components/'], …]`, longest alias first — the shape a
+ * plain prefix-replacing script wants.
+ *
+ * `check-dead-modules.mjs` hand-maintained a FOURTH copy of this list, which had
+ * already drifted from `tsconfig.json` in both directions. A module reached only
+ * through a missing alias reads as unreferenced, and one reached through a stale
+ * alias reads as referenced; both are wrong, and neither is visible.
+ */
+const prefixPairs = () =>
+  bySpecificity(Object.entries(prefixes())).map(([alias, target]) => [
+    alias === '#' ? '#/' : `${alias}/`,
+    `${target.replace(/^\.\//, '')}/`,
+  ]);
+
+module.exports = { babelAliases, jestModuleNameMapper, prefixPairs };

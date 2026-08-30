@@ -84,6 +84,84 @@ const flashListRenderers = collectTsxFiles(SRC)
   .map(file => relative(process.cwd(), file))
   .sort();
 
+/**
+ * Files rendering a scrollable inside gorhom's `BottomSheetView`.
+ *
+ * `BottomSheetView`'s own style is `{ position: 'absolute', left: 0, top: 0,
+ * right: 0 }` — no bottom, no height — and gorhom composes it AFTER the
+ * caller's, so a caller's `flex: 1` loses. A list inside it is never
+ * height-bounded and cannot scroll; `handleSettingScrollable` also registers
+ * SCROLLABLE_TYPE.VIEW after the list registers itself, so the sheet loses
+ * scrollable arbitration too. `maxHeight` lists merely get away with it.
+ *
+ * The repo has already paid for this once (`BottomSheetAutocompleteInput`
+ * records the observed failure), and PR #216 moved a third instance across the
+ * tree without noticing. Detection is deliberately crude — the opening tag and
+ * a scrollable somewhere after it in the same file — because a false positive
+ * costs a `View` swap and a false negative costs a sheet nobody can scroll.
+ */
+const SCROLLABLES = [
+  '<FlashList',
+  '<BottomSheetScrollView',
+  '<BottomSheetFlatList',
+  '<BottomSheetFormScrollView',
+  '<BottomSheetScrollable',
+];
+
+/** Files the scan above reads as a nest, with the reason each one is not. */
+const BOUNDED_ANOTHER_WAY: Record<string, string> = {
+  'src/components/atoms/BottomSheetLayout.tsx':
+    'the two are ALTERNATIVES, not a nest — this component picks BottomSheetView for its `view` variant and a scroll view for its `form` variant',
+  'src/components/molecules/FolderPicker.tsx':
+    'the list carries an explicit maxHeight, so it is bounded without the container — the variant CLAUDE.md records as getting away with it',
+  'src/components/molecules/TagPicker.tsx':
+    'the list carries an explicit maxHeight, so it is bounded without the container',
+};
+
+const bottomSheetViewWrappers = collectTsxFiles(SRC)
+  .filter(file => {
+    const source = stripComments(readFileSync(file, 'utf8'));
+    const opensView = source.indexOf('<BottomSheetView');
+    if (opensView === -1) return false;
+    return SCROLLABLES.some(tag => source.indexOf(tag, opensView) !== -1);
+  })
+  .map(file => relative(process.cwd(), file))
+  .filter(file => !(file in BOUNDED_ANOTHER_WAY))
+  .sort();
+
+describe('scrollables inside BottomSheetView', () => {
+  it('finds the sheets at all, so the check below is not vacuous', () => {
+    // Guard on the guard: the scan must still be able to SEE a BottomSheetView.
+    const anySheetViews = collectTsxFiles(SRC).filter(file =>
+      stripComments(readFileSync(file, 'utf8')).includes('<BottomSheetView'),
+    );
+    expect(anySheetViews.length).toBeGreaterThan(0);
+  });
+
+  it('never nests one, because it cannot be height-bounded', () => {
+    expect(bottomSheetViewWrappers).toEqual([]);
+  });
+
+  it('keeps the allowlist honest', () => {
+    // An entry whose file stopped matching is a stale exemption that will
+    // silently cover the next file to take its path.
+    const matched = collectTsxFiles(SRC)
+      .filter(file => {
+        const source = stripComments(readFileSync(file, 'utf8'));
+        const opensView = source.indexOf('<BottomSheetView');
+        if (opensView === -1) return false;
+        return SCROLLABLES.some(tag => source.indexOf(tag, opensView) !== -1);
+      })
+      .map(file => relative(process.cwd(), file));
+
+    const stale = Object.keys(BOUNDED_ANOTHER_WAY).filter(
+      file => !matched.includes(file),
+    );
+
+    expect(stale).toEqual([]);
+  });
+});
+
 describe('FlashList scroll components', () => {
   it('finds the lists at all, so the checks below are not vacuous', () => {
     expect(flashListRenderers.length).toBeGreaterThan(10);

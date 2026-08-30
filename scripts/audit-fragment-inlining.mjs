@@ -32,6 +32,19 @@ import {
 } from './lib/tooling.mjs';
 
 const ROOT = REPO_ROOT;
+/**
+ * Counts deliberately raised above a previous baseline, and why.
+ *
+ * A raise is a regression being accepted. Two landed inside a commit about
+ * something else, with no note, which is what this exists to stop.
+ */
+const ACCEPTED_RAISES = {
+  brand_idName:
+    '13 -> 14: writePantryItemDetailStub.graphql. Its fragments are FLAT by contract — a spread would make cache.writeFragment write masked refs and the detail read would still come back incomplete — so `brand { id name }` is inlined on purpose.',
+  store_idName:
+    '3 -> 4: writePantryItemDetailStub.graphql, same reason as brand_idName.',
+};
+
 const BASELINE = baselineFile(
   fromRoot('scripts', 'audit-fragment-inlining.baseline.json'),
 );
@@ -154,7 +167,11 @@ function main() {
     BASELINE.write({
       _description:
         'Per-pattern counts of inline field selections across src/**/*.graphql. ' +
-        'The audit-fragment-inlining.mjs script fails if any count regresses.',
+        'The audit-fragment-inlining.mjs script fails if any count regresses. ' +
+        'A RAISED count is a regression being accepted, so it needs a reason ' +
+        'recorded in _raises below — this file is written by --update, so a ' +
+        'note added by hand would not survive.',
+      _raises: ACCEPTED_RAISES,
       counts,
     });
     console.log('Updated baseline:');

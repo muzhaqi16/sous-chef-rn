@@ -7,7 +7,7 @@ import {
 import { CreateShoppingListItemFromRecipeIngredientDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   AddItemsToShoppingListFromRecipeDocument,
-  GetShoppingListsLiteDocument,
+  GetShoppingListsLiteForRecipeDocument,
 } from '../useRecipeDetail.generated';
 import type { RecipeIngredient as ExternalRecipeIngredient } from '#/services/recipeApi/types';
 import { useRecipeShoppingList } from '../useRecipeShoppingList';
@@ -40,7 +40,10 @@ beforeEach(() => {
 
 /** One complete default list so `getTargetShoppingList()` resolves a target. */
 const shoppingListsMock = (): MockedResponse => ({
-  request: { query: GetShoppingListsLiteDocument, variables: () => true },
+  request: {
+    query: GetShoppingListsLiteForRecipeDocument,
+    variables: () => true,
+  },
   result: {
     data: {
       shoppingLists: {

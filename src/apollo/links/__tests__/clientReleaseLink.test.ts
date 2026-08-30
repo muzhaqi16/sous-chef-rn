@@ -3,6 +3,7 @@ jest.mock('../../clientUpgradeNotice', () => ({
 }));
 
 import { ApolloClient, ApolloLink, InMemoryCache, gql } from '@apollo/client';
+import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { Observable } from 'rxjs';
 import { createClientReleaseLink } from '../clientReleaseLink';
 import { announceClientReleaseAvailable } from '../../clientUpgradeNotice';
@@ -22,6 +23,7 @@ const query = gql`
 const client = new ApolloClient({
   cache: new InMemoryCache(),
   link: ApolloLink.empty(),
+  defaultOptions: APOLLO_DEFAULT_OPTIONS,
 });
 
 /**

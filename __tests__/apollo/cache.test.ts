@@ -269,6 +269,72 @@ describe('cache.ts', () => {
 
     const gql = require('graphql-tag').default;
 
+    it('Query.storageLocations drops an edge whose node was evicted', () => {
+      // The field is a CONNECTION keyed on a plain `homeId` argument, and
+      // Apollo's default broken-reference filtering only handles plain arrays
+      // of refs — so an optimistic delete's evict left `edge.node` dangling,
+      // `GetStorageLocations` went incomplete, and offline `usePreservedNodes`
+      // handed back the PRE-delete connection: the deleted row reappeared and
+      // the list froze at that snapshot for the rest of the session.
+      const QUERY = gql`
+        query GetLocations($homeId: ID!) {
+          storageLocations(homeId: $homeId) {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            totalCount
+          }
+        }
+      `;
+      cache.writeQuery({
+        query: QUERY,
+        variables: { homeId: 'h-1' },
+        data: {
+          storageLocations: {
+            __typename: 'StorageLocationConnection',
+            totalCount: 2,
+            edges: [
+              {
+                __typename: 'StorageLocationEdge',
+                node: {
+                  __typename: 'StorageLocation',
+                  id: 'loc-1',
+                  name: 'Fridge',
+                },
+              },
+              {
+                __typename: 'StorageLocationEdge',
+                node: {
+                  __typename: 'StorageLocation',
+                  id: 'loc-2',
+                  name: 'Pantry',
+                },
+              },
+            ],
+          },
+        },
+      });
+
+      cache.evict({ id: 'StorageLocation:loc-1' });
+
+      const diff = cache.diff({
+        query: QUERY,
+        variables: { homeId: 'h-1' },
+        optimistic: true,
+        returnPartialData: true,
+      });
+      const read = diff.result as {
+        storageLocations: { edges: unknown[]; totalCount: number };
+      };
+
+      expect(diff.complete).toBe(true);
+      expect(read.storageLocations.edges).toHaveLength(1);
+      expect(read.storageLocations.totalCount).toBe(1);
+    });
+
     it('Query.shoppingLists preserves existing on null incoming', () => {
       const QUERY = gql`query GetLists($filters: ShoppingListFilters) { shoppingLists(filters: $filters) { id } }`;
       cache.writeQuery({

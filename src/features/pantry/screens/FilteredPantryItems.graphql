@@ -12,29 +12,7 @@ mutation AddItemToShoppingListFromFilteredPantry($input: AddItemsToShoppingListI
         error
         item {
           id
-          itemName
-          quantity
-          quantityInput
-          displayFormat
-          purchaseInfo {
-            isPurchased
-          }
-          version
-          updatedAt
-          category
-          notes
-          unitName
-          unit {
-            id
-            name
-            symbol
-          }
-          sortOrder
-          item {
-            id
-            imageUrl
-            images { url kind }
-          }
+          ...AddedShoppingListItemFields
         }
       }
     }

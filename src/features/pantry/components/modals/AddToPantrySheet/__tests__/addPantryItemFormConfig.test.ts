@@ -1,4 +1,5 @@
 import { ValidationError } from 'yup';
+import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   addPantryItemSchema,
   addPantryItemDefaults,
@@ -68,6 +69,52 @@ describe('addPantryItemSchema', () => {
         await messageFor({ ...valid, quantityInput: input }, 'quantityInput'),
       ).toBeUndefined();
     });
+
+    // The keypad on an es/it/sq device offers a comma and no point at all, so
+    // a rule that accepts only `.` makes fractional quantities unenterable in
+    // three of the four shipped locales.
+    it.each(['2,5', '0,5', '.5', '1,25'])(
+      'accepts %p from a comma-decimal keypad',
+      async input => {
+        expect(
+          await messageFor({ ...valid, quantityInput: input }, 'quantityInput'),
+        ).toBeUndefined();
+      },
+    );
+
+    // Validation and parsing have to agree. The schema decides whether Add is
+    // allowed; `parseFractionalInput` is what converts what the user typed. A
+    // regex that restated the parser's grammar by hand is what let them drift.
+    it.each([
+      '1',
+      '2.5',
+      '2,5',
+      '0,5',
+      '.5',
+      '1/2',
+      '1 1/4',
+      '10',
+      '0',
+      '0.0',
+      '0,0',
+      '0/4',
+      '-1',
+      '-2,5',
+      'abc',
+      '',
+      '   ',
+      '1..2',
+      '1/0',
+    ])('agrees with parseFractionalInput on %p', async input => {
+      const parsed = parseFractionalInput(input);
+      const accepted =
+        (await messageFor(
+          { ...valid, quantityInput: input },
+          'quantityInput',
+        )) === undefined;
+
+      expect(accepted).toBe(parsed !== null && parsed > 0);
+    });
   });
 
   describe('net weight is all-or-nothing', () => {
@@ -130,6 +177,60 @@ describe('addPantryItemSchema', () => {
 
     it('does not ask for a weight when no unit was picked', async () => {
       expect(await messageFor({ ...valid }, 'pantryNetWeight')).toBeUndefined();
+    });
+  });
+
+  // The same rule one level down, on the package-details per-container weight.
+  // It had none: the submit path resolved `displayUnitId` to undefined, the
+  // both-or-neither guard then dropped the pantry-level NetWeightInput, and the
+  // number the user typed was still sent inline as a unitless `item.netWeight`.
+  // The weight disappeared with nothing reported anywhere.
+  describe('package-details net weight is all-or-nothing', () => {
+    const open = {
+      ...base,
+      itemName: 'Oat Milk',
+      showPackageDetails: true,
+      packageSize: '6',
+      contentUnit: 'carton',
+    };
+
+    it('needs a unit once a per-container weight is typed', async () => {
+      expect(
+        await messageFor({ ...open, itemNetWeight: '1.89' }, 'weightUnit'),
+      ).toBe('Please select a unit for the net weight.');
+    });
+
+    it('passes once a unit is picked', async () => {
+      expect(
+        await messageFor(
+          { ...open, itemNetWeight: '1.89', weightUnitId: 'unit-l' },
+          'weightUnit',
+        ),
+      ).toBeUndefined();
+    });
+
+    it('needs a weight once a unit is picked', async () => {
+      expect(
+        await messageFor({ ...open, weightUnitId: 'unit-l' }, 'itemNetWeight'),
+      ).toBe('Enter both a package size and its unit, or leave both empty.');
+    });
+
+    it('asks for neither when both are empty', async () => {
+      expect(await messageFor(open, 'weightUnit')).toBeUndefined();
+      expect(await messageFor(open, 'itemNetWeight')).toBeUndefined();
+    });
+
+    // Scoped to `showPackageDetails` on purpose: a value left behind in a
+    // collapsed section is never read by the submit path, so blocking Save on
+    // it would refuse the form over an input the user cannot see.
+    it('stays silent while the package section is collapsed', async () => {
+      const collapsed = {
+        ...open,
+        showPackageDetails: false,
+        itemNetWeight: '1.89',
+      };
+      expect(await messageFor(collapsed, 'weightUnit')).toBeUndefined();
+      expect(await messageFor(collapsed, 'itemNetWeight')).toBeUndefined();
     });
   });
 

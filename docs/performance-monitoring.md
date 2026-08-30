@@ -34,7 +34,7 @@ This document describes the performance monitoring infrastructure added to the S
   - Maximum render time
   - Last render time
 - **Features**:
-  - Configurable sampling rate (default: 100% dev, 10% prod)
+  - Configurable sampling rate (default: 100% dev, 20% release)
   - Slow render detection (threshold: 16ms for 60fps)
   - Automatic telemetry reporting
 
@@ -231,7 +231,7 @@ const DEFAULT_PERFORMANCE_CONFIG = {
   trackRenders: true,     // Track component renders (sampled in production)
   trackMemory: false,     // Disabled — RN memory APIs are unreliable
   trackScreens: true,     // Track screen transitions in all environments
-  sampleRate: __DEV__ ? 1.0 : 0.1,  // 100% in dev, 10% in production
+  sampleRate: __DEV__ ? 1.0 : 0.2,  // 100% in dev, 20% in release
   slowRenderThreshold: __DEV__ ? 500 : 16,  // Android emulator adds 5-10x overhead; 16ms = 60fps for production
   memoryWarningThreshold: 80, // Warn at 80% memory usage
   maxMemorySnapshots: 100,    // Keep last 100 snapshots
@@ -374,7 +374,10 @@ All performance data is reported to the Telemetry system:
 
 ### Minimal Overhead
 
-1. **Sampling**: Only 10% of renders tracked in production
+1. **Sampling**: Only 20% of commits tracked in release builds, and per-cell
+   FlashList instrumentation only 5% of sessions — the latter because the
+   wrapper costs ~30-60 ms of a ~320 ms first-layout window, so it is a
+   measurement-accuracy guard, not a volume knob. Do not raise it.
 2. **Selective Tracking**: Render and screen tracking enabled in all environments; memory tracking disabled
 3. **Efficient Storage**: Limited retention (50 components, 30 screens, 100 snapshots)
 4. **No Re-renders**: Uses `useRef` to avoid triggering component re-renders
@@ -422,7 +425,7 @@ release is where the numbers are valid. Debug is for attribution only.)
 **2. Performance overhead**
 - Reduce sample rate in configuration
 - Disable tracking for non-critical components
-- Consider production mode where sampling is 10%
+- Consider release mode, where commit sampling is 20%
 
 **3. Memory measurements inaccurate**
 - React Native has limited memory APIs

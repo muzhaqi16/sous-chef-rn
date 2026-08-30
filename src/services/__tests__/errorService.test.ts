@@ -29,9 +29,13 @@ jest.mock('@apollo/client/errors', () => ({
 
 import {
   errorService,
-  getErrorMessage,
+  localizedErrorMessage,
   useErrorService,
 } from '../errorService';
+import {
+  GraphQLDomainError,
+  GraphQLNetworkError,
+} from '#/utils/errors/graphqlErrors';
 import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
 import {
@@ -258,6 +262,28 @@ describe('errorService', () => {
 
       expect(result.success).toBe(false);
       expect(result.error?.code).toBe('QUERY_TOO_COMPLEX');
+    });
+
+    it('keeps the code of a refusal that arrived as a thrown domain error', () => {
+      // `unwrapPayload` turns an error-union member into a throw carrying its
+      // `code`. With no branch for it the error fell through to the plain
+      // `instanceof Error` arm, `errorCode` stayed 'UNKNOWN_ERROR', and every
+      // refusal reaching a caller this way read "An unexpected error occurred".
+      (isQueryComplexityError as jest.Mock).mockReturnValue(false);
+      (isVersionConflictError as jest.Mock).mockReturnValue(false);
+
+      const result = errorService.parseApolloError(
+        new GraphQLDomainError({
+          __typename: 'ConflictError',
+          code: 'CONFLICT',
+          message: 'Item already exists',
+        }),
+      );
+
+      expect(result.error?.code).toBe('CONFLICT');
+      // Localized from the CODE, not the server's sentence.
+      expect(result.error?.message).not.toBe('Item already exists');
+      expect(result.error?.message).not.toBe('An unexpected error occurred');
     });
 
     it('detects version conflict errors', () => {
@@ -653,44 +679,6 @@ describe('errorService', () => {
   });
 
   // -----------------------------------------------------------------------
-  // getErrorMessage (exported utility)
-  // -----------------------------------------------------------------------
-  describe('getErrorMessage', () => {
-    it('returns a user-friendly message for an error', () => {
-      (isQueryComplexityError as jest.Mock).mockReturnValue(false);
-      (isVersionConflictError as jest.Mock).mockReturnValue(false);
-      mockCombinedGraphQLErrorsIs.mockReturnValue(false);
-      mockServerErrorIs.mockReturnValue(false);
-      mockServerParseErrorIs.mockReturnValue(false);
-      mockCombinedProtocolErrorsIs.mockReturnValue(false);
-
-      const message = getErrorMessage(new Error('user facing'));
-      expect(message).toBe('user facing');
-    });
-
-    it('suppresses logger.error calls', () => {
-      (isQueryComplexityError as jest.Mock).mockReturnValue(false);
-      (isVersionConflictError as jest.Mock).mockReturnValue(false);
-      mockCombinedGraphQLErrorsIs.mockReturnValue(false);
-      mockServerErrorIs.mockReturnValue(false);
-      mockServerParseErrorIs.mockReturnValue(false);
-      mockCombinedProtocolErrorsIs.mockReturnValue(false);
-
-      getErrorMessage(new Error('silent'));
-      expect(logger.error).not.toHaveBeenCalled();
-    });
-
-    it('returns default message when error has no message', () => {
-      (isQueryComplexityError as jest.Mock).mockImplementation(() => {
-        throw new Error('force catch');
-      });
-
-      const message = getErrorMessage(null);
-      expect(message).toBe('Something went wrong. Please try again.');
-    });
-  });
-
-  // -----------------------------------------------------------------------
   // useErrorService
   // -----------------------------------------------------------------------
   describe('useErrorService', () => {
@@ -706,7 +694,6 @@ describe('errorService', () => {
       expect(typeof service.shouldRetry).toBe('function');
       expect(typeof service.isAuthError).toBe('function');
       expect(typeof service.reportError).toBe('function');
-      expect(typeof service.getErrorMessage).toBe('function');
     });
 
     it('bound methods work correctly', () => {
@@ -719,5 +706,81 @@ describe('errorService', () => {
       expect(service.shouldRetry('SERVICE_TIMEOUT')).toBe(true);
       expect(service.isAuthError('AUTH_TOKEN_INVALID')).toBe(true);
     });
+  });
+});
+
+describe('localizedErrorMessage', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (isQueryComplexityError as jest.Mock).mockReturnValue(false);
+    (isVersionConflictError as jest.Mock).mockReturnValue(false);
+    mockCombinedGraphQLErrorsIs.mockReturnValue(false);
+  });
+
+  it("never returns the server's own message", () => {
+    mockCombinedGraphQLErrorsIs.mockReturnValue(true);
+    const serverText = 'An unexpected database error occurred';
+    const message = localizedErrorMessage({
+      errors: [
+        {
+          message: serverText,
+          extensions: { code: 'RESOURCE_NOT_FOUND' },
+        },
+      ],
+    });
+
+    // The server's text is unlocalizable English by construction — it belongs
+    // in the log, never in front of a user.
+    expect(message).not.toBe(serverText);
+  });
+
+  it('falls back to localized copy for an unmapped code, not the raw text', () => {
+    mockCombinedGraphQLErrorsIs.mockReturnValue(true);
+    const serverText = 'Some brand new server condition';
+    const message = localizedErrorMessage({
+      errors: [
+        {
+          message: serverText,
+          extensions: { code: 'A_CODE_THE_CLIENT_HAS_NEVER_SEEN' },
+        },
+      ],
+    });
+
+    // A vaguer sentence in the right language beats a precise one in the wrong
+    // language — and the precise one is in the report either way.
+    expect(message).not.toBe(serverText);
+    expect(typeof message).toBe('string');
+    expect(message.length).toBeGreaterThan(0);
+  });
+
+  it('returns localized copy when the error carries no code at all', () => {
+    const message = localizedErrorMessage(new Error('boom'));
+    expect(message).not.toBe('boom');
+    expect(message.length).toBeGreaterThan(0);
+  });
+
+  it("prefers the caller's copy over the read-oriented transport sentence", () => {
+    const fallback = 'Something went wrong setting up your home.';
+    const message = localizedErrorMessage(
+      new GraphQLNetworkError('socket hang up'),
+      fallback,
+    );
+
+    // `NETWORK_ERROR` resolves to "You're currently offline. Showing cached
+    // data when available." — written for a READ. On a failed write that is
+    // not merely vague but untrue: nothing is being shown and the change did
+    // not land. The code says only that the request never arrived, which the
+    // caller already knew; what failed is the half only the caller knows.
+    expect(message).toBe(fallback);
+  });
+
+  it('still gives a transport failure a message when the caller has none', () => {
+    const message = localizedErrorMessage(
+      new GraphQLNetworkError('socket hang up'),
+    );
+
+    // A generic sentence in the reader's language beats no sentence.
+    expect(message).not.toBe('socket hang up');
+    expect(message.length).toBeGreaterThan(0);
   });
 });

@@ -223,10 +223,17 @@
     "noListSelected": "Nessuna lista della spesa selezionata",
     "movedItems_one": "Spostato {{count}} articolo in dispensa{{skipped}}",
     "movedItems_other": "Spostati {{count}} articoli in dispensa{{skipped}}",
-    "skippedSuffix": " ({{skippedCount}} saltati)",
     "noItemsMoved": "Nessun articolo è stato spostato in dispensa",
     "noPantryTitle": "Nessuna dispensa disponibile",
-    "noPantryBody": "Crea prima una dispensa nella tua casa."
+    "noPantryBody": "Crea prima una dispensa nella tua casa.",
+    "queued": "In coda: gli articoli verranno spostati in dispensa quando tornerai online",
+    "alreadyThereSuffix_one": " ({{count}} era già presente)",
+    "alreadyThereSuffix_other": " ({{count}} erano già presenti)",
+    "allAlreadyThere_one": "Quell’articolo è già in dispensa",
+    "allAlreadyThere_other": "Quei {{count}} articoli sono già in dispensa",
+    "failedItems_one": "Impossibile spostare {{names}}",
+    "failedItems_other": "Impossibile spostare {{count}} articoli, tra cui {{names}}",
+    "nothingLeftToMove": "Tutto ciò che hai comprato è già in dispensa"
   },
   "pantryAction": {
     "useByDefault": "Da consumare entro",

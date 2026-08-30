@@ -124,3 +124,21 @@ export function createMountedCellRenderer(registry: MountedCellRegistry) {
 }
 
 export type MountedCellRenderer = ReturnType<typeof createMountedCellRenderer>;
+
+/**
+ * The cell renderer for UNSAMPLED sessions: the `Animated.View` without the
+ * measurement.
+ *
+ * The `Animated.View` is not instrumentation — FlashList's Reanimated guide
+ * requires a cell renderer that renders one, or layout animations on cells stop
+ * working. Sampling used to hand FlashList `undefined` instead, so it fell back
+ * to its own plain-View container and ~95% of release sessions silently lost
+ * every cell layout animation. Only the registry and its per-cell layout effect
+ * are worth sampling; the wrapper itself costs nothing.
+ */
+export const PlainAnimatedCellRenderer = forwardRef<
+  React.ComponentRef<typeof Animated.View>,
+  ViewProps & { index?: number }
+>(function PlainAnimatedCell({ index: _index, ...props }, ref) {
+  return <Animated.View ref={ref} {...props} />;
+});

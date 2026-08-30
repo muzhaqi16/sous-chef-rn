@@ -204,7 +204,7 @@ async function fetchRecipeSearchPage(
     .filter((i): i is Intolerance => Boolean(i));
   const searchLocalRecipes = async (): Promise<SearchRecipesQuery | null> => {
     try {
-      const result = await client.query<SearchRecipesQuery>({
+      const result = await client.query({
         query: SearchRecipesDocument,
         variables: {
           query,

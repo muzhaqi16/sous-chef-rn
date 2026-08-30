@@ -86,11 +86,7 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
-jest.mock('#/services/errorService', () => ({
-  useErrorService: () => ({
-    handleApolloError: jest.fn(() => ({ message: 'err' })),
-  }),
-}));
+jest.mock('#/services/errorService');
 jest.mock('#/services/toastService', () => ({
   toastService: { error: jest.fn(), success: jest.fn() },
 }));

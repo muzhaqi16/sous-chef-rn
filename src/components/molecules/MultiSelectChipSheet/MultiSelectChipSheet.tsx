@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
-import { BottomSheetView, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
@@ -86,9 +86,13 @@ export function MultiSelectChipSheet<T extends string = string>({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetView
-        style={[styles.bottomSheetContent, contentContainerStyle]}
-      >
+      {/*
+        A plain View, NOT `BottomSheetView`: gorhom's own container style is
+        absolutely positioned with no bottom and no height, and it composes
+        AFTER the caller's — so this `flex: 1` loses and the
+        `BottomSheetScrollView` below is never height-bounded.
+      */}
+      <View style={[styles.bottomSheetContent, contentContainerStyle]}>
         <BottomSheetHeader
           title={title}
           onCancel={onClose}
@@ -167,7 +171,7 @@ export function MultiSelectChipSheet<T extends string = string>({
             </Text>
           </View>
         )}
-      </BottomSheetView>
+      </View>
     </BottomSheetModal>
   );
 }

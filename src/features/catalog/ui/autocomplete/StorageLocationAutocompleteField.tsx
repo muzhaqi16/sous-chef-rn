@@ -56,12 +56,25 @@ export const StorageLocationAutocompleteField: React.FC<
     }
   };
 
+  /**
+   * The field's text is the location's OWN name, never a parent-decorated
+   * label.
+   *
+   * That text is not just display: when the selection is cleared — which any
+   * keystroke does, via `handleTextChange` — the submit paths fall back to
+   * sending it as `storage.storageLocationName`, and the server resolves that
+   * name at the ROOT level only (it never matches a nested location). So a
+   * decorated `"Freezer (Kitchen Fridge)"` could not match the location it
+   * named; it find-or-created a new root location called exactly that, in the
+   * shared home, permanently. The nested location is reachable only by id,
+   * which `onStorageLocationSelected` carries.
+   *
+   * Which parent a location sits under is shown on the row while choosing
+   * (see `renderItem`), where it disambiguates without entering form state.
+   */
   const handleSelect = (item: StorageLocation) => {
     hasSelectionRef.current = true;
-    const displayName = item.parentLocation
-      ? `${item.name} (${item.parentLocation.name})`
-      : item.name;
-    onChangeText(displayName);
+    onChangeText(item.name);
     setSearchTerm('');
     onStorageLocationSelected?.(item.id, item);
   };
@@ -79,9 +92,13 @@ export const StorageLocationAutocompleteField: React.FC<
       iconElement={<StorageLocationIcon type={item.type} size={24} />}
       title={item.name}
       subtitle={
-        item.parentLocation ? `Inside ${item.parentLocation.name}` : undefined
+        item.parentLocation
+          ? t('storageLocationCard.insideParent', {
+              parent: item.parentLocation.name,
+            })
+          : undefined
       }
-      badge={item.isDefault ? 'Default' : undefined}
+      badge={item.isDefault ? t('labels.default') : undefined}
     />
   );
 
@@ -108,7 +125,7 @@ export const StorageLocationAutocompleteField: React.FC<
         keyExtractor={keyExtractor}
         onSelect={handleSelect}
         showAddNew={showAddNew}
-        addNewLabel={`Add "${searchTerm}"`}
+        addNewLabel={t('labels.addNamed', { name: searchTerm })}
         onAddNew={handleAddNew}
       />
     );
@@ -142,7 +159,7 @@ export const StorageLocationAutocompleteField: React.FC<
       }
       onSearchChange={setSearchTerm}
       showAddNew={showAddNew}
-      addNewLabel={`Add "${searchTerm}"`}
+      addNewLabel={t('labels.addNamed', { name: searchTerm })}
       onAddNew={handleAddNew}
     />
   );

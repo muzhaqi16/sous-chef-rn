@@ -1,0 +1,160 @@
+# Detail-only materialization for a local-first pantry create.
+#
+# `buildOptimisticPantryItem` writes the shape `CreatePantryItem` selects, which
+# is tuned for the LIST query (`GetPantry`). The detail screens read
+# `PantryItemDetail_pantryItem`, which needs eleven more PantryItem fields and
+# seven more on `item` — so a freshly created row was list-complete and
+# detail-incomplete, and tapping it sent `GetPantryItem` to a server that had no
+# such id yet. Offline that has no recovery.
+#
+# These fragments are FLAT (no nested fragment spreads) so `cache.writeFragment`
+# sees the unmasked shape — a spread here would write masked refs and the read
+# would still come back incomplete.
+
+fragment writePantryItemDetailStub_pantryItem on PantryItem {
+  id
+  brand {
+    id
+    name
+  }
+  store {
+    id
+    name
+  }
+  tags
+  storageNotes
+  restockQuantity
+  condition
+  acquisitionMethod
+  costPerUnit
+  totalCost
+  purchase {
+    id
+    purchaseDate
+    unitPrice
+    totalPrice
+    quantity
+  }
+  # Field arguments are part of the cache key, so `first: 5` must match
+  # `PantryItemDetail_pantryItem` exactly or this seeds a different field.
+  usageRecords(first: 5) {
+    edges {
+      node {
+        id
+        quantityUsed
+        usageUnit {
+          id
+          name
+          symbol
+        }
+        usedAt
+        purpose
+        adjustmentReason
+      }
+    }
+  }
+}
+
+# Re-points `PantryItem.item` at the normalized `Item:<id>`.
+#
+# `addToPantryItemsCache` writes the entity through `toReference(item, true)`,
+# a shallow store merge that leaves nested objects EMBEDDED — so
+# `PantryItem:<cuid>.item` is a four-field stub and reads of
+# `item.name / photos / nutritions / categories` can never fall through to the
+# real catalog entity. `cache.writeFragment` uses the normalizing writer, so
+# writing just `{ __typename, id }` here converts that embedded object into a
+# reference without carrying any value that could clobber the catalog row.
+fragment writePantryItemDetailStub_itemRef on PantryItem {
+  id
+  item {
+    id
+  }
+}
+
+# Per-group top-ups for the catalog `Item`. `topUpEntityGroup` reads each group
+# tolerating partial data and writes only the fields genuinely absent, so a
+# value another query already fetched is never replaced by a neutral default.
+# The grouping is for readability; correctness does not depend on it, because
+# `readFragment` being all-or-nothing would otherwise default a whole group
+# whenever one of its fields was missing.
+
+fragment writePantryItemDetailStub_itemIdentity on Item {
+  id
+  name
+  canEdit
+}
+
+fragment writePantryItemDetailStub_itemMedia on Item {
+  id
+  imageUrl
+  images {
+    url
+    kind
+  }
+}
+
+fragment writePantryItemDetailStub_itemPhotos on Item {
+  id
+  photos {
+    id
+    url
+    perspective
+    isPrimary
+    status
+    variants {
+      url
+      kind
+    }
+  }
+}
+
+fragment writePantryItemDetailStub_itemCatalog on Item {
+  id
+  shelfLifeDays
+  shelfLifeOpenedDays
+  nutritions
+  categories {
+    isPrimary
+    category {
+      id
+      name
+    }
+  }
+}
+
+# Which Unit the row was just written with.
+#
+# Read off the cache rather than taken as an argument: the optimistic builder
+# has already run by the time this helper is called, so the reference is there,
+# and a new create site cannot forget to pass something it never has to know
+# about.
+fragment writePantryItemDetailStub_unitRef on PantryItem {
+  id
+  unit {
+    id
+  }
+}
+
+# The tracking `Unit`, topped up the same way the catalog `Item` is.
+#
+# `buildOptimisticPantryItem` embeds the unit through `toReference(unit, true)`
+# with the five fields the LIST query selects, while
+# `PantryItemDetail_pantryItem` selects eleven — so a create carrying a unitId
+# left `GetPantryItem` reading INCOMPLETE ("Can't find field 'isMetric' on
+# object { __typename: Unit, … }"), and the detail screen was blank offline for
+# the rest of the session. It bit precisely when the Unit was WELL cached, which
+# is why no test with a bare create ever saw it.
+fragment writePantryItemDetailStub_unit on Unit {
+  id
+  name
+  symbol
+  type
+  isMetric
+  baseUnitId
+  conversionFactor
+  isCommon
+  displayAsFraction
+  minPrecision
+  autoConvertThreshold
+}
+

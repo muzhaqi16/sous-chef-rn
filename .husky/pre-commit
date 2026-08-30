@@ -1,3 +1,9 @@
+# Caps the heap of every node process the hook spawns — lint-staged included,
+# and through it each jest worker. It cannot go in the lint-staged command
+# itself: lint-staged spawns without a shell, so an inline `NAME=value` prefix
+# is read as the executable name and fails with ENOENT.
+export NODE_OPTIONS=--max-old-space-size=1536
+
 npx lint-staged || exit 1
 
 # Whole-tree gates that cost ~0.2s together. They run here rather than on push

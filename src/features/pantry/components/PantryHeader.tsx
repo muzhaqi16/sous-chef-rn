@@ -207,6 +207,14 @@ const styles = StyleSheet.create(theme => ({
   },
   greeting: {
     fontSize: theme.typography.fontSize['2xl'] + 2,
+    // Leading has to come with the font size. `Text` gives a size its own
+    // leading only when it is chosen through the `size` PROP; setting
+    // `fontSize` in a style leaves the variant's line box in place — here the
+    // `body` default's 24 — so 26px glyphs are clipped top and bottom. In
+    // English that trims nothing visible; in a locale with diacritics above the
+    // cap height it eats them, which is how "Përshëndetje" lost the dots on
+    // both of its ë.
+    lineHeight: theme.typography.lineHeight.loose,
     color: theme.colors.textPrimary,
   },
   householdBadge: {

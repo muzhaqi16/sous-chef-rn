@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { alertService } from '#/services/alertService';
+import { localizedErrorMessage } from '#/services/errorService';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import { useFragment, useMutation, useQuery } from '@apollo/client/react';
 import { HomeDetailScreen_HomeFragmentDoc } from '#features/home/screens/HomeDetailScreen.generated';
@@ -105,7 +106,9 @@ export function useHomeDetailManagement(homeId: string) {
       onError: error => {
         alertService.alert(
           t('labels.error'),
-          error.message || t('errors.updateHomeNameFailed'),
+          // Code-resolved, with this site's own copy as the fallback. The
+          // server's `message` is English by construction.
+          localizedErrorMessage(error, t('errors.updateHomeNameFailed')),
         );
       },
     },

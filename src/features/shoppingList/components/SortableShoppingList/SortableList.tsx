@@ -12,6 +12,7 @@ import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollCom
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 import type { SortableShoppingListProps, ShoppingListRowItem } from './types';
 import { SwipeableListItem } from './SortableItem';
+import { ItemSwipeActionsProvider } from '#components/organisms/itemSwipeActionsContext';
 import {
   SortableListActionsProvider,
   type SortableListActions,
@@ -52,8 +53,7 @@ const renderItem = (info: ListRenderItemInfo<ShoppingListRowItem>) => {
 const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   items,
   onItemPress,
-  onItemEdit,
-  onItemDelete,
+  itemSwipeActions,
   onTogglePurchase,
   onMoveToPantry,
   onQuantityPress,
@@ -126,13 +126,11 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   // Actions for context — wrap delete/toggle to prepare FlashList for layout animation
   const actions: SortableListActions = {
     onItemPress,
-    onItemEdit,
-    onItemDelete: onItemDelete
-      ? (id: string) => {
-          flashListRef.current?.prepareForLayoutAnimationRender();
-          onItemDelete(id);
-        }
-      : undefined,
+    // A command: the row calls it before a `removesRow` action, and the list is
+    // what knows how to prepare itself.
+    onBeforeRowRemoved: () => {
+      flashListRef.current?.prepareForLayoutAnimationRender();
+    },
     onTogglePurchase: onTogglePurchase
       ? (id: string, opts?: { withDetails?: boolean }) => {
           // A long-press ({ withDetails }) opens the purchase-amount sheet and
@@ -175,53 +173,57 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
           actions={actions}
           permissions={permissions}
         >
-          <View style={styles.container}>
-            <FlashList<ShoppingListRowItem>
-              renderScrollComponent={SwipeAwareScrollComponent}
-              ref={flashListRef}
-              CellRendererComponent={perfCallbacks.CellRendererComponent}
-              data={items}
-              extraData={`${disabled}-${canRemoveItems}-${canEditItems}-${canMarkPurchased}-${canReorderItems}`}
-              keyExtractor={keyExtractor}
-              getItemType={getItemType}
-              renderItem={renderItem}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={contentContainerStyle}
-              ListHeaderComponent={ListHeaderComponent ?? undefined}
-              ListFooterComponent={ListFooterComponent ?? undefined}
-              ListEmptyComponent={ListEmptyComponent ?? undefined}
-              onEndReached={onEndReached}
-              onEndReachedThreshold={onEndReachedThreshold}
-              onLoad={perfCallbacks.onLoad}
-              onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
-              onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
-              drawDistance={DRAW_DISTANCE}
-              maxItemsInRecyclePool={
-                FLASHLIST_DEFAULTS.fullScreen.maxItemsInRecyclePool
-              }
-              onScroll={onScroll}
-              onScrollBeginDrag={onScrollBeginDrag}
-              onScrollEndDrag={onScrollEndDrag}
-              onMomentumScrollEnd={onMomentumScrollEnd}
-              scrollEventThrottle={scrollEventThrottle}
-              // An explicit control, NOT the bare `onRefresh`/`refreshing` pair.
-              // Given only those, FlashList builds React Native's RefreshControl
-              // itself (`useSecondaryProps.tsx` — `else if (onRefresh)`), and
-              // RNGH's ScrollView above then hands that control its scroll
-              // gesture as `block`, which RN's control silently drops. The
-              // indicator ends up outside the arbitration: it hangs mid-list and
-              // will not retract until the user pushes it back up by hand.
-              refreshControl={
-                onRefresh ? (
-                  <ThemedRefreshControl
-                    refreshing={refreshing}
-                    onRefresh={onRefresh}
-                  />
-                ) : undefined
-              }
-              maintainVisibleContentPosition={MVCP_DISABLED}
-            />
-          </View>
+          {/* A derivation: the value is the value, so rows read the current
+              one instead of a ref published after they render. */}
+          <ItemSwipeActionsProvider value={itemSwipeActions}>
+            <View style={styles.container}>
+              <FlashList<ShoppingListRowItem>
+                renderScrollComponent={SwipeAwareScrollComponent}
+                ref={flashListRef}
+                CellRendererComponent={perfCallbacks.CellRendererComponent}
+                data={items}
+                extraData={`${disabled}-${canRemoveItems}-${canEditItems}-${canMarkPurchased}-${canReorderItems}`}
+                keyExtractor={keyExtractor}
+                getItemType={getItemType}
+                renderItem={renderItem}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={contentContainerStyle}
+                ListHeaderComponent={ListHeaderComponent ?? undefined}
+                ListFooterComponent={ListFooterComponent ?? undefined}
+                ListEmptyComponent={ListEmptyComponent ?? undefined}
+                onEndReached={onEndReached}
+                onEndReachedThreshold={onEndReachedThreshold}
+                onLoad={perfCallbacks.onLoad}
+                onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
+                onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
+                drawDistance={DRAW_DISTANCE}
+                maxItemsInRecyclePool={
+                  FLASHLIST_DEFAULTS.fullScreen.maxItemsInRecyclePool
+                }
+                onScroll={onScroll}
+                onScrollBeginDrag={onScrollBeginDrag}
+                onScrollEndDrag={onScrollEndDrag}
+                onMomentumScrollEnd={onMomentumScrollEnd}
+                scrollEventThrottle={scrollEventThrottle}
+                // An explicit control, NOT the bare `onRefresh`/`refreshing` pair.
+                // Given only those, FlashList builds React Native's RefreshControl
+                // itself (`useSecondaryProps.tsx` — `else if (onRefresh)`), and
+                // RNGH's ScrollView above then hands that control its scroll
+                // gesture as `block`, which RN's control silently drops. The
+                // indicator ends up outside the arbitration: it hangs mid-list and
+                // will not retract until the user pushes it back up by hand.
+                refreshControl={
+                  onRefresh ? (
+                    <ThemedRefreshControl
+                      refreshing={refreshing}
+                      onRefresh={onRefresh}
+                    />
+                  ) : undefined
+                }
+                maintainVisibleContentPosition={MVCP_DISABLED}
+              />
+            </View>
+          </ItemSwipeActionsProvider>
         </SortableListActionsProvider>
       </ShoppingListRowOptionsContext.Provider>
     </SortableListThemeContext.Provider>

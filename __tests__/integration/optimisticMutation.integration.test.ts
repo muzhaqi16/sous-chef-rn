@@ -31,6 +31,7 @@
 'use no memo';
 
 import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import type { ReactNode } from 'react';
 import React from 'react';
 import { ApolloClient, InMemoryCache } from '@apollo/client';
@@ -78,6 +79,7 @@ function seedItem(cache: InMemoryCache, isPurchased: boolean) {
     displayFormat: DisplayFormat.Decimal,
     purchaseInfo: {
       __typename: 'ShoppingListItemPurchaseInfo',
+      movedToPantryAt: null,
       isPurchased,
     },
     version: 1,
@@ -126,6 +128,7 @@ function buildSettledServerResponse(
         // owns rather than just the flag that changed.
         purchaseInfo: {
           __typename: 'ShoppingListItemPurchaseInfo',
+          movedToPantryAt: null,
           isPurchased: newPurchased,
           purchasedQuantity: newPurchased ? 1 : null,
           purchasedPrice: newPurchased ? 2.5 : null,
@@ -199,7 +202,7 @@ function buildClient(opts: {
   const client = new ApolloClient({
     cache,
     link: new MockLink(responses),
-    defaultOptions: { mutate: { errorPolicy: 'all' } },
+    defaultOptions: APOLLO_DEFAULT_OPTIONS,
   });
   return { client, cache };
 }

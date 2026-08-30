@@ -14,7 +14,39 @@ const SKIP = [/(^|\/)(node_modules|generated)(\/|$)/];
 // Written by `scripts/generate-env.js`, not graphql-codegen, so it legitimately
 // has no `.graphql` sibling. Filtered by path rather than by the glob's
 // `exclude`, which is called with bare basenames for files.
-const SKIP_FILES = new Set([fromRoot('src', 'config', 'env.generated.ts')]);
+const SKIP_FILES = new Set([
+  fromRoot('src', 'config', 'env.generated.ts'),
+  // Written by `scripts/generate-optimistic-fillers.mjs` from the SDL, so its
+  // `.graphql` sibling is the fragment file it DERIVES from
+  // (`writePantryItemDetailStub.graphql`), under a different name. Same
+  // situation as env.generated.ts: generator-owned, not a codegen leftover.
+  fromRoot(
+    'src',
+    'features',
+    'pantry',
+    'hooks',
+    'pantryItemDetailNeutral.generated.ts',
+  ),
+  // Same generator, derived from `shoppingListCacheUpdaters.graphql`.
+  fromRoot('src', 'apollo', 'utils', 'shoppingListDetailNeutral.generated.ts'),
+  // Same generator, derived from `recipeCacheWriters.graphql`.
+  fromRoot(
+    'src',
+    'features',
+    'recipes',
+    'screens',
+    'RecipeForm',
+    'recipeFormFieldsNeutral.generated.ts',
+  ),
+  // Same generator, derived from `useMealPlanActions.graphql`.
+  fromRoot(
+    'src',
+    'features',
+    'mealPlan',
+    'hooks',
+    'mealPlanDetailNeutral.generated.ts',
+  ),
+]);
 
 const fix = process.argv.includes('--fix');
 const orphans = filesUnder('src/**/*.generated.ts', { exclude: SKIP })

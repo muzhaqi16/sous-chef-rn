@@ -1,7 +1,13 @@
 'use no memo';
 import React from 'react';
-import { screen } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { screen, waitFor } from '@testing-library/react-native';
+import {
+  renderWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
+import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { toastService } from '#/services/toastService';
 import { AddToPantrySheet } from '../AddToPantrySheet';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -55,9 +61,22 @@ jest.mock('#/services/toastService', () => ({
   toastService: { success: jest.fn(), error: jest.fn() },
 }));
 
+/**
+ * The quick-add handlers are props on `AddItemSheet`, which is mocked away —
+ * so the mock parks them here for a test to call. Without this the handlers
+ * are unreachable and only the render path is covered.
+ */
+const sheetProps: { current: Record<string, unknown> } = { current: {} };
+
 jest.mock('#features/catalog/ui/AddItemSheet/AddItemSheet', () => ({
-  AddItemSheet: ({ children }: { children: React.ReactNode }) => {
+  AddItemSheet: ({
+    children,
+    ...rest
+  }: {
+    children: React.ReactNode;
+  } & Record<string, unknown>) => {
     const { View, Text } = require('react-native');
+    sheetProps.current = rest;
     return require('react').createElement(
       View,
       { testID: 'add-item-sheet' },
@@ -161,5 +180,52 @@ describe('AddToPantrySheet', () => {
       <AddToPantrySheet {...defaultProps} pantryId="pantry-2" />,
     );
     expect(screen.getByTestId('add-item-sheet')).toBeTruthy();
+  });
+
+  /**
+   * Every business failure of `createPantryItem` is a member of the result
+   * union, and under `errorPolicy: 'all'` it RESOLVES — `{ data, error:
+   * undefined }`. Quick-add used to read `result.error` alone, so a refusal
+   * counted as success: the success toast stood, `onItemAdded` fired, and the
+   * optimistic row stayed in the pantry pointing at an id the server never
+   * created.
+   */
+  describe('a resolved refusal is not a success', () => {
+    const forbidden: MockedResponse = {
+      request: {
+        query: CreatePantryItemDocument,
+        // The input carries a freshly minted cuid, so match on the operation.
+        variables: () => true,
+      },
+      result: {
+        data: {
+          createPantryItem: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+            message: 'No add-items access',
+          },
+        },
+      },
+    };
+
+    it('reports a ForbiddenError instead of calling onItemAdded', async () => {
+      const onItemAdded = jest.fn();
+      renderWithApollo(
+        <AddToPantrySheet {...defaultProps} onItemAdded={onItemAdded} />,
+        { operationMocks: [forbidden] },
+      );
+
+      const quickAdd = sheetProps.current.onQuickAddSearchSuggestion as (
+        item: unknown,
+      ) => void;
+      quickAdd({ id: 'item-1', name: 'Milk' });
+
+      await waitFor(() =>
+        expect(toastService.error).toHaveBeenCalledWith(
+          'Failed to add item. Please try again.',
+        ),
+      );
+      expect(onItemAdded).not.toHaveBeenCalled();
+    });
   });
 });

@@ -35,10 +35,18 @@ jest.mock('../ItemCard', () => {
       title,
       subtitle,
       testID,
-    }: Pick<ItemCardProps, 'title' | 'subtitle' | 'testID'>) => (
+      rightActions,
+    }: Pick<
+      ItemCardProps,
+      'title' | 'subtitle' | 'testID' | 'rightActions'
+    >) => (
       <View testID={testID}>
         <Text>{title}</Text>
         <Text>{subtitle}</Text>
+        {/* Surfaced so a test can see which swipe actions reached the row. */}
+        {(rightActions ?? []).map(action => (
+          <Text key={action.key}>{`action:${action.key}`}</Text>
+        ))}
       </View>
     ),
   };
@@ -145,5 +153,64 @@ describe('ItemList', () => {
     );
     expect(screen.queryByText('No items')).toBeNull();
     expect(screen.getByText('Milk')).toBeTruthy();
+  });
+
+  // The scrollable swaps when the list empties, so a drag in flight on the old
+  // one never delivers its end event — the caller's drag tracking would stay on
+  // and a later programmatic scroll would read as finger-driven.
+  it("settles the caller's scroll tracking when the list empties", () => {
+    const onMomentumScrollEnd = jest.fn();
+    const emptyState = {
+      icon: 'cube-outline' as const,
+      title: 'No items',
+      description: 'Add some items to get started',
+    };
+
+    const { rerender } = render(
+      <ItemList
+        {...defaultProps}
+        emptyState={emptyState}
+        onMomentumScrollEnd={onMomentumScrollEnd}
+      />,
+    );
+    expect(onMomentumScrollEnd).not.toHaveBeenCalled();
+
+    rerender(
+      <ItemList
+        items={[]}
+        onItemPress={jest.fn()}
+        emptyState={emptyState}
+        onMomentumScrollEnd={onMomentumScrollEnd}
+      />,
+    );
+
+    expect(onMomentumScrollEnd).toHaveBeenCalled();
+  });
+
+  it('picks up swipe actions that appear after the first render', () => {
+    const { rerender } = render(<ItemList {...defaultProps} />);
+    expect(screen.queryByText('action:delete')).toBeNull();
+
+    // Whether rows HAVE swipe actions used to be encoded into `extraData` so
+    // FlashList would re-render its cells for it. The factory now travels on its
+    // own context, which each row subscribes to directly — context propagation
+    // does not go through the cells' props, so the encoding buys nothing.
+    rerender(
+      <ItemList
+        {...defaultProps}
+        itemSwipeActions={() => ({
+          right: [
+            {
+              key: 'delete',
+              icon: 'trash-outline',
+              labelKey: 'actions.delete',
+              onPress: jest.fn(),
+            },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getAllByText('action:delete')).toHaveLength(items.length);
   });
 });

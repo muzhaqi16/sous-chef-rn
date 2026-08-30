@@ -8,9 +8,7 @@ import {
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { errorService } from '#/services/errorService';
 
-jest.mock('#/services/errorService', () => ({
-  errorService: { reportError: jest.fn() },
-}));
+jest.mock('#/services/errorService');
 
 beforeEach(() => {
   clearAllRetryStates();

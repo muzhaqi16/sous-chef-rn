@@ -30,15 +30,8 @@ jest.mock('#/services/recipeApi/SpoonacularService', () => {
   };
 });
 
-const mockReportError = jest.fn();
-jest.mock('#/services/errorService', () => ({
-  errorService: {
-    reportError: (
-      error: unknown,
-      context?: { operation?: string; [key: string]: unknown },
-    ) => mockReportError(error, context),
-  },
-}));
+jest.mock('#/services/errorService');
+import { errorService } from '#/services/errorService';
 
 jest.mock('#/utils/finallyHelpers', () => ({
   executeWithLoadingState: jest.fn(
@@ -122,7 +115,7 @@ describe('useRecipeSuggestionsForItem', () => {
     renderHookWithApollo(() => useRecipeSuggestionsForItem('Bread'));
 
     await waitFor(() =>
-      expect(mockReportError).toHaveBeenCalledWith(
+      expect(jest.mocked(errorService.reportError)).toHaveBeenCalledWith(
         err,
         expect.objectContaining({
           operation: 'useRecipeSuggestionsForItem.fetch',
@@ -143,7 +136,7 @@ describe('useRecipeSuggestionsForItem', () => {
 
     // Give the effect a tick
     await new Promise(r => setTimeout(r, 50));
-    expect(mockReportError).not.toHaveBeenCalled();
+    expect(jest.mocked(errorService.reportError)).not.toHaveBeenCalled();
   });
 
   it('toggles loadingRecipes around the fetch', async () => {

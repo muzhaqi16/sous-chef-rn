@@ -22,24 +22,35 @@ interface BreakdownPieChartProps {
 /**
  * Categorical slice colors, brand-first.
  *
- * The first three come from the theme's brand ramp, so a rebrand reaches the
- * chart — they used to be literal hexes (`'#FF8C42' // Primary orange`), which
- * meant a fork could change `appConfig.branding.primaryColor` and still get the
- * old orange here. The remaining five are a fixed categorical set: they exist to
- * be DISTINGUISHABLE from the brand and from each other, so deriving them from
- * one hue would defeat the point.
+ * ONE color comes from the theme, so a rebrand reaches the chart — the literal
+ * hexes this replaced (`'#FF8C42' // Primary orange`) meant a fork could change
+ * `appConfig.branding.primaryColor` and still get the old orange. The rest are a
+ * fixed categorical set: they exist to be DISTINGUISHABLE from the brand and
+ * from each other, so deriving them from one hue would defeat the point.
+ *
+ * Slots 2 and 3 used to be `primaryDark` and `primaryLight`, and both were
+ * wrong for a data color:
+ *
+ *   - `primaryLight` is `brand[400] + '20'` in the dark theme — an 8-digit hex
+ *     whose alpha byte is 12.5%, described in `themes.ts` as an "accent
+ *     surface". Fed to a Skia slice fill and a legend chip's `backgroundColor`,
+ *     the third category simply vanished from both, dark mode only.
+ *   - `primary` and `primaryDark` are adjacent steps of one ramp
+ *     (brand[500]/brand[600] in dark), which is not the separation a
+ *     categorical scale needs.
+ *
+ * A data color must be opaque and separated in BOTH themes. Anything defined as
+ * a translucent surface tint is not a candidate.
  */
-const brandFirstColors = (theme: {
-  colors: { primary: string; primaryLight: string; primaryDark: string };
-}) => [
+const brandFirstColors = (theme: { colors: { primary: string } }) => [
   theme.colors.primary,
-  theme.colors.primaryDark,
-  theme.colors.primaryLight,
   '#4ECDC4',
   '#45B7D1',
   '#96CEB4',
   '#FFEAA7',
   '#DDA0DD',
+  '#F4A261',
+  '#8E7DBE',
 ];
 
 export const BreakdownPieChart: React.FC<BreakdownPieChartProps> = ({
@@ -177,3 +188,6 @@ const styles = StyleSheet.create(theme => ({
     minHeight: 100,
   },
 }));
+
+/** Internals under test — see the palette suite in this file's tests. */
+export const __testables = { brandFirstColors };

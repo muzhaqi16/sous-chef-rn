@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { renderHook, act } from '@testing-library/react-native';
+import { render, renderHook, act } from '@testing-library/react-native';
 import {
   SortableListActionsProvider,
   useSortableListActions,
@@ -12,8 +12,6 @@ import {
 describe('SortableListActionsContext', () => {
   const defaultActions: SortableListActions = {
     onItemPress: jest.fn(),
-    onItemEdit: jest.fn(),
-    onItemDelete: jest.fn(),
     onTogglePurchase: jest.fn(),
     onMoveToPantry: jest.fn(),
     onQuantityPress: jest.fn(),
@@ -72,16 +70,19 @@ describe('SortableListActionsContext', () => {
     expect(defaultActions.onItemPress).toHaveBeenCalledWith('item-1');
   });
 
-  it('delegates onItemDelete to the provided action', () => {
+  // `itemSwipeActions` is no longer a member of this bag: it is a derivation a
+  // row calls while rendering, so it travels as a context VALUE. See
+  // `itemSwipeActionsContext` and `createValueContext`.
+  it('delegates onMoveToPantry to the provided action', () => {
     const { result } = renderHook(() => useSortableListActions(), {
       wrapper: wrapper(),
     });
 
     act(() => {
-      result.current.actions.onItemDelete?.('item-2');
+      result.current.actions.onMoveToPantry?.('item-2');
     });
 
-    expect(defaultActions.onItemDelete).toHaveBeenCalledWith('item-2');
+    expect(defaultActions.onMoveToPantry).toHaveBeenCalledWith('item-2');
   });
 
   it('delegates onTogglePurchase to the provided action', () => {
@@ -93,11 +94,19 @@ describe('SortableListActionsContext', () => {
       result.current.actions.onTogglePurchase?.('item-3');
     });
 
-    // Delegates the id plus the optional details flag (undefined for a plain tap).
-    expect(defaultActions.onTogglePurchase).toHaveBeenCalledWith(
-      'item-3',
-      undefined,
-    );
+    // A plain tap passes the id alone.
+    expect(defaultActions.onTogglePurchase).toHaveBeenCalledWith('item-3');
+
+    act(() => {
+      result.current.actions.onTogglePurchase?.('item-3', {
+        withDetails: true,
+      });
+    });
+
+    // A long press forwards the details flag through untouched.
+    expect(defaultActions.onTogglePurchase).toHaveBeenLastCalledWith('item-3', {
+      withDetails: true,
+    });
   });
 
   it('forwards the withDetails flag on onTogglePurchase (long-press)', () => {
@@ -178,20 +187,58 @@ describe('SortableListActionsContext', () => {
     expect(result.current.permissions).toBe(firstPermissions);
   });
 
-  it('handles actions with no optional callbacks set', () => {
+  it('leaves an unsupplied handler undefined rather than wrapping it', () => {
     const minimalActions: SortableListActions = {};
 
     const { result } = renderHook(() => useSortableListActions(), {
       wrapper: wrapper(minimalActions),
     });
 
-    // Should not throw when calling actions that are not provided
+    // A wrapper for an absent handler is a truthy function, and rows gate their
+    // affordances on truthiness (`canEditItems && onItemPress`) — so wrapping
+    // renders the control and drops the tap. That is a dead button, not a
+    // disabled one.
+    expect(result.current.actions.onItemPress).toBeUndefined();
+    expect(result.current.actions.onMoveToPantry).toBeUndefined();
+    expect(result.current.actions.onSwipeableClose).toBeUndefined();
+
     expect(() => {
       act(() => {
         result.current.actions.onItemPress?.('item-1');
-        result.current.actions.onItemDelete?.('item-1');
-        result.current.actions.onSwipeableClose?.();
       });
     }).not.toThrow();
+  });
+
+  it('publishes a handler that only arrives on a later render', () => {
+    // A tree rather than `renderHook`: the bag is a PROVIDER prop, and
+    // `initialProps` reach the hook callback, not the wrapper.
+    let seen: ReturnType<typeof useSortableListActions>['actions'] | undefined;
+    const Consumer = () => {
+      seen = useSortableListActions().actions;
+      return null;
+    };
+    const Tree = ({ actions }: { actions: SortableListActions }) => (
+      <SortableListActionsProvider
+        actions={actions}
+        permissions={defaultPermissions}
+      >
+        <Consumer />
+      </SortableListActionsProvider>
+    );
+
+    const onMoveToPantry = jest.fn();
+    const { rerender } = render(<Tree actions={{}} />);
+
+    expect(seen?.onMoveToPantry).toBeUndefined();
+
+    // Permissions arrive from a query after the first render, and the actions
+    // they gate are spread in behind them. Freezing the wrapper set at first
+    // render loses every key that shows up this way.
+    rerender(<Tree actions={{ onMoveToPantry }} />);
+
+    act(() => {
+      seen?.onMoveToPantry?.('item-9');
+    });
+    expect(onMoveToPantry).toHaveBeenCalledWith('item-9');
   });
 });

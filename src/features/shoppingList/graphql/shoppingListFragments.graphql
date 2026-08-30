@@ -21,6 +21,9 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   displayFormat
   purchaseInfo {
     isPurchased
+    # The row renders a stocked line differently, and a field the write omits
+    # is a field the cache does not hold — so the writers carry it too.
+    movedToPantryAt
   }
   version
   updatedAt
@@ -107,6 +110,10 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
 # selection that does not spread this.
 fragment ShoppingListItemPurchaseInfoFragment on ShoppingListItemPurchaseInfo {
   isPurchased
+  # When this line's purchase reached the pantry. Part of the purchase record
+  # rather than beside it: the server clears it on the same transition the
+  # cache merge clears the rest on — the line re-entering an unpurchased state.
+  movedToPantryAt
   purchasedQuantity
   purchasedPrice
   purchaseDate
@@ -117,5 +124,69 @@ fragment ShoppingListItemPurchaseInfoFragment on ShoppingListItemPurchaseInfo {
       displayName
       avatar
     }
+  }
+}
+
+# The item shape returned by every copy of `AddItemsToShoppingList`.
+#
+# Spread by: shoppingList.graphql (AddItemToShoppingList),
+# SearchResults.graphql (BarcodeAddItemToShoppingList),
+# FilteredPantryItems.graphql (AddItemToShoppingListFromFilteredPantry),
+# PantryItemDetail.graphql (AddItemToShoppingListFromPantryItem).
+#
+# The Feature API Boundary Convention stops those features importing the
+# shopping-list feature's operations, so each kept a hand-maintained copy of
+# this selection — and they drifted. The two pantry copies had lost the parent
+# list's counters, which matters because `reconcileShoppingItemCreateUpdate`
+# passes `bumpTotalItems: false` on the deliberate assumption that the response
+# carries them; without them a list's counts go stale after an add. All four
+# copies are registered in SHOPPING_LIST_SYNC_BUILDERS and replay through the
+# same Sync fragment, so they were already one operation to the queue while
+# being four to a maintainer. Now they are one selection.
+#
+# Scoped to the ITEM rather than the whole payload on purpose: `results` stays
+# unmasked so `buildAddItemsReconcileUpdate` and `useAddShoppingItem` keep
+# reading it directly, and only the item fields ride behind the spread.
+#
+# `<feature>Fragments.generated.ts` is public surface per the boundary
+# convention, so spreading this across features is allowed.
+# Guarded by __tests__/graphql/localFirstCopyDrift.test.ts.
+fragment AddedShoppingListItemFields on ShoppingListItem {
+  id
+  itemName
+  quantity
+  quantityInput
+  displayFormat
+  purchaseInfo {
+    isPurchased
+    # The row renders a stocked line differently, and a field the write omits
+    # is a field the cache does not hold — so the writers carry it too.
+    movedToPantryAt
+  }
+  version
+  updatedAt
+  category
+  notes
+  unitName
+  unit {
+    id
+    name
+    symbol
+  }
+  sortOrder
+  item {
+    id
+    imageUrl
+    images {
+      url
+      kind
+    }
+  }
+  shoppingList {
+    id
+    totalItems
+    completedItems
+    remainingItems
+    completionRate
   }
 }

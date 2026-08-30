@@ -196,6 +196,27 @@ export class TelemetryService {
     }
   }
 
+  /**
+   * Whether a log at `level` would survive the gates in {@link log}. Exposed so
+   * a caller on a hot path can skip BUILDING a payload that `log` would discard
+   * on the next line — the floor is `warn` in production, so a `debug`
+   * breadcrumb there allocates its message and `extra` object for nothing.
+   * Matters most where the payload is non-trivial (`telemetryLink` reads
+   * `Object.keys(operation.variables)` on every GraphQL operation).
+   */
+  isLevelEnabled(level: LogEntry['level']): boolean {
+    if (
+      !this.config.enabled ||
+      !this.config.enableLogs ||
+      this.isConsentDenied()
+    ) {
+      return false;
+    }
+    return (
+      LOG_LEVEL_PRIORITY[level] >= LOG_LEVEL_PRIORITY[this.config.minLogLevel]
+    );
+  }
+
   log(
     level: LogEntry['level'],
     message: string,
@@ -392,7 +413,10 @@ export class TelemetryService {
     // `app_events_total` is the source of truth for the analytics dashboards.
     // The breadcrumb is logged at debug level so `minLogLevel` drops it before
     // Loki in staging/production — no write-amplification where volume matters.
-    this.log('debug', `Event: ${eventName}`, properties);
+    // Guarded so the message is not even built where the floor discards it.
+    if (this.isLevelEnabled('debug')) {
+      this.log('debug', `Event: ${eventName}`, properties);
+    }
 
     // Build labels for the counter
     const labels: Record<string, string> = {
@@ -413,7 +437,9 @@ export class TelemetryService {
   ): void {
     // `screen_views_total` is the source of truth; the breadcrumb is logged at
     // debug level so `minLogLevel` drops it before Loki in staging/production.
-    this.log('debug', `Screen: ${screenName}`, properties);
+    if (this.isLevelEnabled('debug')) {
+      this.log('debug', `Screen: ${screenName}`, properties);
+    }
     this.incrementCounter('screen_views_total', 1, {
       screen_name: screenName,
     });

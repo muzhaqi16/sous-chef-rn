@@ -116,6 +116,81 @@ export interface RemoveFromArrayOptions {
  *   skipStoreField: skipUnmatchedFilterVariants({ category: template.category }),
  * });
  */
+/**
+ * The serialized arguments inside a `storeFieldName`, or null when it has none.
+ *
+ * Apollo writes them TWO ways, decided by how the field is keyed:
+ *
+ *   storageLocations:{"homeId":"A"}        keyArgs: ['homeId']   COLON form
+ *   things({"filters":{"category":"x"}})   no keyArgs            PAREN form
+ *
+ * A guard that locates them by searching for `(` therefore sees nothing at all
+ * on an array-`keyArgs` field, which is how a scope guard came to return "do
+ * not skip" for every variant it was given. Splitting on `:` instead fails the
+ * other way, because the paren form's JSON contains colons of its own — so the
+ * delimiter that comes FIRST is the one that decides the form.
+ *
+ * Verified 2026-08-29 vs `@apollo/client@4.2.12`, which exports no parser of
+ * its own for this — re-check: `node scripts/probe-apollo-cache-shapes.mjs`;
+ * mechanism:
+ * `docs/verified-library-behaviour.md#apollo-storefieldname-has-two-serialized-forms`.
+ */
+function storeFieldArgs(storeFieldName: string): string | null {
+  const paren = storeFieldName.indexOf('(');
+  const colon = storeFieldName.indexOf(':');
+
+  if (paren !== -1 && (colon === -1 || paren < colon)) {
+    const end = storeFieldName.lastIndexOf(')');
+    if (end <= paren) return null;
+    return storeFieldName.slice(paren + 1, end) || null;
+  }
+  if (colon !== -1) return storeFieldName.slice(colon + 1) || null;
+  return null;
+}
+
+/**
+ * Skip cached variants whose TOP-LEVEL arguments do not match.
+ *
+ * The sibling {@link skipUnmatchedFilterVariants} reads a nested `filters`
+ * object, which is the shape most of this app's connections are keyed by. A
+ * field keyed on a plain argument — `storageLocations(homeId:)` — puts that
+ * argument at the top level instead, so the filters matcher finds nothing to
+ * compare and lets every variant through: a location restored after a refused
+ * delete in home A reappeared in home B's list too.
+ *
+ * Two cases go opposite ways on purpose, because they are not the same
+ * question:
+ *
+ * - A variant carrying NONE of the named arguments is left alone. It cannot be
+ *   proven not to match, and a briefly-missing row heals on the next read while
+ *   a wrongly-placed one does not.
+ * - A variant whose arguments cannot be PARSED is skipped. Here the guard has
+ *   been asked to scope a write and cannot, so writing anyway is the one
+ *   outcome it can be sure is unjustified — the same direction
+ *   {@link skipUnmatchedFilterVariants} takes.
+ */
+export function skipUnmatchedArgVariants(
+  equals: Record<string, unknown>,
+): (storeFieldName: string) => boolean {
+  return storeFieldName => {
+    const args = storeFieldArgs(storeFieldName);
+    if (args === null) return false;
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(args);
+    } catch {
+      return true;
+    }
+    if (!parsed || typeof parsed !== 'object') return false;
+
+    const actual = parsed as Record<string, unknown>;
+    return Object.entries(equals).some(
+      ([key, value]) => key in actual && actual[key] !== value,
+    );
+  };
+}
+
 export function skipUnmatchedFilterVariants(
   equals: Record<string, unknown>,
 ): (storeFieldName: string) => boolean {
@@ -582,7 +657,11 @@ export function createRemoveFromParentConnectionUpdater(
     parentId: string,
     itemId: string,
     options: RemoveFromArrayOptions & { updateTotalCount?: boolean } = {},
-  ): void => {
+    // Reports whether an edge was actually removed, so a caller pairing this
+    // with a counter adjusts it only when the membership really changed.
+    // `totalCount` follows the same rule: subtracting for a row that was not in
+    // the connection is how a count drifts below the rows beneath it.
+  ): boolean => {
     const { evictItem = false, gc = true, updateTotalCount = true } = options;
 
     try {
@@ -591,12 +670,12 @@ export function createRemoveFromParentConnectionUpdater(
           __typename: itemTypename,
           id: itemId,
         });
-        if (!cacheId) return;
+        if (!cacheId) return false;
         cache.evict({ id: cacheId });
         if (gc) {
           gcResetResultCache(cache);
         }
-        return;
+        return true;
       }
 
       const parentCacheId = cache.identify({
@@ -608,8 +687,10 @@ export function createRemoveFromParentConnectionUpdater(
         logger.warn(
           `Parent entity not found in cache: ${parentTypename}:${parentId}`,
         );
-        return;
+        return false;
       }
+
+      let removed = false;
 
       cache.modify({
         id: parentCacheId,
@@ -622,6 +703,10 @@ export function createRemoveFromParentConnectionUpdater(
             const edges = existingEdges.filter(
               edge => readField('id', edge?.node) !== itemId,
             );
+            if (edges.length === existingEdges.length)
+              return existingConnection;
+
+            removed = true;
             const totalCount = updateTotalCount
               ? Math.max(0, (existingConnection?.totalCount || 0) - 1)
               : existingConnection?.totalCount;
@@ -634,11 +719,14 @@ export function createRemoveFromParentConnectionUpdater(
           },
         },
       });
+
+      return removed;
     } catch (error) {
       logger.warn(
         `Cache update failed for removing from ${parentTypename}.${connectionField}:`,
         serializeError(error),
       );
+      return false;
     }
   };
 }

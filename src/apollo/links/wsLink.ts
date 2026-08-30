@@ -578,13 +578,50 @@ currentClient = createWsClient();
  * shut. Every method forwards to whichever client is current, creating one if
  * a session end dropped it.
  */
+/**
+ * Dispose a client without letting its rejection escape.
+ *
+ * `dispose()` is **async** and awaits graphql-ws's internal `connecting`
+ * promise, which the library rejects with the RAW WebSocket event — a bare
+ * `Event` when the upgrade fails (`websocketFailed`), a `CloseEvent` when the
+ * socket closes. Neither carries a `message`, so an escaped one is reported as
+ * `Unhandled Promise Rejection: Unknown error (Event; props: _defaultPrevented,
+ * …)` with the close code stranded inside an object nothing reads.
+ *
+ * A synchronous `try`/`catch` around the call cannot see that: the promise
+ * leaves the frame the moment `dispose()` returns. The window is widest exactly
+ * when it matters — `url()` paces reconnects with a sleep of up to
+ * `MAX_RECONNECT_DELAY_MS` INSIDE `connecting`, so while the API is unreachable
+ * that promise is pending almost continuously, and a session end during an
+ * outage is the common case rather than the rare one.
+ *
+ * The call itself stays synchronous — teardown must not be deferred a tick —
+ * and only its result is normalized, covering both halves of the declared
+ * `void | Promise<void>`. The assignment is the whole `try` body on purpose:
+ * a value block inside one bails the React Compiler out of the function.
+ */
+const disposeSafely = (client: Client): Promise<void> => {
+  let pending: void | Promise<void>;
+  try {
+    pending = client.dispose();
+  } catch (error) {
+    logger.warn('WebSocket dispose failed:', serializeError(error));
+    return Promise.resolve();
+  }
+  return Promise.resolve(pending).catch(error => {
+    logger.warn('WebSocket dispose failed:', serializeError(error));
+  });
+};
+
 const wsClientFacade: Client = {
   on: (...args: Parameters<Client['on']>) => getOrCreateClient().on(...args),
   subscribe: (...args: Parameters<Client['subscribe']>) =>
     getOrCreateClient().subscribe(...args),
   iterate: (...args: Parameters<Client['iterate']>) =>
     getOrCreateClient().iterate(...args),
-  dispose: () => currentClient?.dispose(),
+  // Returns a promise that never rejects, so a caller that awaits it still
+  // gets orderly shutdown and one that drops it leaks nothing.
+  dispose: () => (currentClient ? disposeSafely(currentClient) : undefined),
   terminate: () => currentClient?.terminate(),
 };
 
@@ -682,12 +719,11 @@ export const disposeWebSocket = () => {
 
   if (!client) return;
 
-  try {
-    logger.info('🔌 Disposing WebSocket client for logout');
-    client.dispose();
-  } catch (error) {
-    logger.warn('Error disposing WebSocket:', serializeError(error));
-  }
+  logger.info('🔌 Disposing WebSocket client for logout');
+  // Deliberately not awaited — a session end must not block on a socket that
+  // may be mid-reconnect. `disposeSafely` owns the rejection, which a bare
+  // `client.dispose()` here leaked as an unhandled raw WebSocket `Event`.
+  void disposeSafely(client);
 };
 
 // Export function to get WebSocket connection state

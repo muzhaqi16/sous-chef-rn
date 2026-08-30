@@ -223,10 +223,17 @@
     "noListSelected": "No shopping list selected",
     "movedItems_one": "Moved {{count}} item to pantry{{skipped}}",
     "movedItems_other": "Moved {{count}} items to pantry{{skipped}}",
-    "skippedSuffix": " ({{skippedCount}} skipped)",
     "noItemsMoved": "No items could be moved to pantry",
     "noPantryTitle": "No Pantry Available",
-    "noPantryBody": "Please create a pantry in your home first."
+    "noPantryBody": "Please create a pantry in your home first.",
+    "queued": "Queued — items will move to your pantry when you're back online",
+    "alreadyThereSuffix_one": " ({{count}} was already there)",
+    "alreadyThereSuffix_other": " ({{count}} were already there)",
+    "allAlreadyThere_one": "That item is already in your pantry",
+    "allAlreadyThere_other": "Those {{count}} items are already in your pantry",
+    "failedItems_one": "Couldn't move {{names}}",
+    "failedItems_other": "Couldn't move {{count}} items, including {{names}}",
+    "nothingLeftToMove": "Everything purchased is already in your pantry"
   },
   "pantryAction": {
     "useByDefault": "Use by",

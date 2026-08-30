@@ -8,6 +8,7 @@ import {
   getSupportedBiometryType,
   setInternetCredentials,
   getInternetCredentials,
+  resetInternetCredentials,
   type SetOptions,
 } from 'react-native-keychain';
 import { jwtDecode } from 'jwt-decode';
@@ -279,6 +280,17 @@ export async function clearCredentials(email: string): Promise<void> {
     await resetGenericPassword({ service: credentialsServiceFor(email) });
     await resetGenericPassword({ service: indicatorServiceFor(email) });
 
+    // The identity hint the LOGIN SCREEN reads. Clearing only the two
+    // per-account services left this pointing at an account whose credentials
+    // are gone, so `getLastBiometricEmail()` still named the previous user, the
+    // biometric button still appeared for them, and a deleted account's address
+    // stayed on the device forever.
+    //
+    // Cleared only when it names THIS account: another account may have
+    // enrolled since, and taking its hint away would silently disable a
+    // biometric login that still works.
+    await clearLastBiometricEmailFor(email);
+
     // PERFORMANCE: Invalidate cache after clearing credentials
     credentialsExistCache.set(account, false);
   } catch (err) {
@@ -320,6 +332,25 @@ export async function saveLastBiometricEmail(email: string): Promise<void> {
     });
   } catch (error) {
     logger.error('Failed to save email:', error);
+  }
+}
+
+/**
+ * Forget the stored identity hint, but only when it names `email`.
+ *
+ * Never throws: the hint is a convenience, and failing to clear it must not
+ * turn a sign-out into an error. The credential slots it points at are already
+ * gone by the time this runs, so the worst case is a button that resolves to
+ * nothing.
+ */
+export async function clearLastBiometricEmailFor(email: string): Promise<void> {
+  try {
+    const stored = await getInternetCredentials(LAST_BIOMETRIC_EMAIL_KEY);
+    if (!stored) return;
+    if (normalizeAccount(stored.username) !== normalizeAccount(email)) return;
+    await resetInternetCredentials({ server: LAST_BIOMETRIC_EMAIL_KEY });
+  } catch (error) {
+    logger.error('Failed to clear the stored biometric email:', error);
   }
 }
 

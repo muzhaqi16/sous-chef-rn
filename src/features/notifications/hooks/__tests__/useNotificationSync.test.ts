@@ -18,9 +18,7 @@ import { useNotificationSync } from '../useNotificationSync';
 
 jest.mock('#/utils/finallyHelpers');
 
-jest.mock('#/services/errorService', () => ({
-  errorService: { reportError: jest.fn() },
-}));
+jest.mock('#/services/errorService');
 
 // The hook reads only the signed-in user from the store now — whether a
 // notification is unread is read from the cache, which is also what renders

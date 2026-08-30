@@ -1,8 +1,10 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
+import { View } from 'react-native';
 import {
   createMountedCellRenderer,
   MountedCellRegistry,
+  PlainAnimatedCellRenderer,
 } from '../mountedCellRenderer';
 
 describe('createMountedCellRenderer', () => {
@@ -115,5 +117,36 @@ describe('MountedCellRegistry.countMountedInRange', () => {
     expect(registry.countMountedInRange(5, 5)).toBe(1);
     expect(registry.countMountedInRange(0, 3)).toBe(0);
     expect(new MountedCellRegistry().countMountedInRange(0, 10)).toBe(0);
+  });
+});
+
+describe('the unsampled cell renderer', () => {
+  it('still wraps the cell in an Animated.View', () => {
+    // The wrapper is not instrumentation: FlashList's Reanimated guide requires
+    // a cell renderer that renders one, or layout animations on cells stop
+    // working. Sampling used to hand FlashList `undefined`, so ~95% of release
+    // sessions silently lost every cell layout animation.
+    const tree = render(
+      <PlainAnimatedCellRenderer index={0} testID="cell">
+        <View testID="row" />
+      </PlainAnimatedCellRenderer>,
+    );
+
+    expect(tree.getByTestId('cell')).toBeTruthy();
+    expect(tree.getByTestId('row')).toBeTruthy();
+  });
+
+  it('does not touch the registry', () => {
+    // The measurement is the sampled half, and this renderer is the one that
+    // does without it.
+    const registry = new MountedCellRegistry();
+
+    render(
+      <PlainAnimatedCellRenderer index={3}>
+        <View />
+      </PlainAnimatedCellRenderer>,
+    );
+
+    expect(registry.countMountedInRange(0, 10)).toBe(0);
   });
 });

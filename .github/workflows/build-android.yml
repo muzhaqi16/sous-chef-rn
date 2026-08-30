@@ -192,6 +192,8 @@ jobs:
           echo "WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}" >> "$ENV_FILE"
           echo "OTLP_METRICS_ENDPOINT=${{ vars.OTLP_METRICS_ENDPOINT }}" >> "$ENV_FILE"
           echo "OTLP_LOGS_ENDPOINT=${{ vars.OTLP_LOGS_ENDPOINT }}" >> "$ENV_FILE"
+          # Unset renders empty, which telemetryLink reads as full capture (1.0).
+          echo "GRAPHQL_TELEMETRY_SAMPLE_RATE=${{ vars.GRAPHQL_TELEMETRY_SAMPLE_RATE }}" >> "$ENV_FILE"
           echo "SPOONACULAR_API_KEY=${{ secrets.SPOONACULAR_API_KEY }}" >> "$ENV_FILE"
 
           # Build identity goes in the FILE, not a step `env:` block. Metro
@@ -486,6 +488,8 @@ jobs:
           echo "WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}" >> "$ENV_FILE"
           echo "OTLP_METRICS_ENDPOINT=${{ vars.OTLP_METRICS_ENDPOINT }}" >> "$ENV_FILE"
           echo "OTLP_LOGS_ENDPOINT=${{ vars.OTLP_LOGS_ENDPOINT }}" >> "$ENV_FILE"
+          # Unset renders empty, which telemetryLink reads as full capture (1.0).
+          echo "GRAPHQL_TELEMETRY_SAMPLE_RATE=${{ vars.GRAPHQL_TELEMETRY_SAMPLE_RATE }}" >> "$ENV_FILE"
           echo "SPOONACULAR_API_KEY=${{ secrets.SPOONACULAR_API_KEY }}" >> "$ENV_FILE"
 
           # Build identity goes in the FILE, not a step `env:` block. Metro

@@ -55,7 +55,13 @@
  *   node scripts/check-layer-purity.mjs --update  # re-baseline
  */
 import { readFileSync } from 'node:fs';
-import { relative, sep } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
+import { createRequire } from 'node:module';
+
+/** Aliases derived from `tsconfig.json` — the single source. */
+const ALIAS_PAIRS = createRequire(import.meta.url)(
+  './lib/aliases.js',
+).prefixPairs();
 
 import {
   baselineFile,
@@ -245,6 +251,80 @@ const record = (relPath, kind) => {
 };
 
 const schemaTypeFiles = new Set();
+/** Composition-root files that reach a feature — walk targets, never findings. */
+const compositionRootCouplings = new Set();
+
+/**
+ * Resolve an import specifier to a repo-relative kit file, or null.
+ *
+ * Aliases come from `tsconfig.json` through the shared derivation, so this
+ * cannot drift the way a hand-written table would.
+ */
+/**
+ * The files the transitive walk may step through.
+ *
+ * The kit itself, PLUS `src/app` — the composition root, whose whole job is to
+ * know the feature list. `src/app` is exempt from the direct rule by design,
+ * but a KIT file importing it drags that feature graph into what a sibling app
+ * reuses wholesale, which is exactly how `SubscriptionProvider` sat in
+ * `src/components/providers/` reaching all four features while this check
+ * printed "0 coupled kit file(s)".
+ *
+ * The KERNEL is deliberately NOT walked. Its feature imports are load-bearing
+ * (the offline queue, i18n bundling, the subscription layer) and governed by
+ * the `.eslintrc.js` zone instead — following them would mark every kit file
+ * that touches `#/apollo/client` and say nothing.
+ */
+const COMPOSITION_ROOT_GLOBS = ['src/app/**/*.{ts,tsx}'];
+const walkableFiles = [
+  ...kitFiles,
+  ...filesUnder(COMPOSITION_ROOT_GLOBS, { exclude: SKIP }),
+];
+const kitFileSet = new Set(kitFiles.map(f => relative(REPO_ROOT, f)));
+const walkableSet = new Set(walkableFiles.map(f => relative(REPO_ROOT, f)));
+const CANDIDATE_SUFFIXES = ['', '.ts', '.tsx', '/index.ts', '/index.tsx'];
+
+const resolveToKitFile = (spec, fromRel) => {
+  let base = null;
+  if (spec.startsWith('.')) {
+    base = relative(
+      REPO_ROOT,
+      resolve(dirname(join(REPO_ROOT, fromRel)), spec),
+    );
+  } else {
+    for (const [alias, target] of ALIAS_PAIRS) {
+      if (spec.startsWith(alias)) {
+        base = target + spec.slice(alias.length);
+        break;
+      }
+    }
+  }
+  if (!base) return null;
+  for (const suffix of CANDIDATE_SUFFIXES) {
+    const candidate = `${base}${suffix}`;
+    if (walkableSet.has(candidate)) return candidate;
+  }
+  return null;
+};
+
+/** Walkable file -> the walkable files it imports. Built once, walked below. */
+const kitImports = new Map();
+
+// The composition root is scanned for edges and for its OWN feature imports,
+// but never reported: it is exempt by design.
+for (const file of filesUnder(COMPOSITION_ROOT_GLOBS, { exclude: SKIP })) {
+  const rel = relative(REPO_ROOT, file);
+  const specs = importsOf(readFileSync(file, 'utf8'));
+  if (specs.some(s => REACHES_FEATURE.test(s) || RELATIVE_FEATURE.test(s))) {
+    compositionRootCouplings.add(rel);
+  }
+  kitImports.set(
+    rel,
+    specs
+      .map(spec => resolveToKitFile(spec, rel))
+      .filter(target => target !== null && target !== rel),
+  );
+}
 
 for (const file of kitFiles) {
   const rel = relative(REPO_ROOT, file);
@@ -256,6 +336,45 @@ for (const file of kitFiles) {
   }
   if (namesDomain(rel)) record(rel, 'featureName');
   if (specs.some(s => SCHEMA_TYPES.test(s))) schemaTypeFiles.add(rel);
+
+  kitImports.set(
+    rel,
+    specs
+      .map(spec => resolveToKitFile(spec, rel))
+      .filter(target => target !== null && target !== rel),
+  );
+}
+
+/**
+ * A kit file that reaches a feature THROUGH another kit file is coupled too.
+ *
+ * The scan above reads direct imports only, which is why the check printed
+ * "0 coupled kit file(s)" while `SubscriptionProvider` — still in the kit —
+ * mounted every feature's subscription providers one hop away. What a sibling
+ * app reuses wholesale is the transitive closure, not the first edge.
+ *
+ * Only edges INSIDE the kit are followed: a feature file that imports another
+ * feature is that layer's business, and the kernel has its own rule.
+ */
+const directlyCoupled = new Set([
+  ...[...findings.keys()].filter(rel => findings.get(rel).has('featureImport')),
+  ...compositionRootCouplings,
+]);
+
+for (const rel of kitFileSet) {
+  if (directlyCoupled.has(rel)) continue;
+  const seen = new Set([rel]);
+  const stack = [...(kitImports.get(rel) ?? [])];
+  while (stack.length) {
+    const next = stack.pop();
+    if (seen.has(next)) continue;
+    seen.add(next);
+    if (directlyCoupled.has(next)) {
+      record(rel, 'featureImportVia');
+      break;
+    }
+    stack.push(...(kitImports.get(next) ?? []));
+  }
 }
 
 for (const file of filesUnder(KIT_GRAPHQL, { exclude: SKIP })) {

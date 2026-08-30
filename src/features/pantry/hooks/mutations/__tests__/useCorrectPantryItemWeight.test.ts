@@ -8,10 +8,7 @@ import { AdjustPantryItemWeightDocument } from '#features/pantry/graphql/pantry.
 import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { useCorrectPantryItemWeight } from '../useCorrectPantryItemWeight';
 
-jest.mock('#/services/errorService', () => ({
-  errorService: { reportError: jest.fn() },
-  getErrorMessage: jest.fn(() => 'Test error'),
-}));
+jest.mock('#/services/errorService');
 
 let mockHandleVersionConflict = false;
 jest.mock('#/utils/errors/versionConflict', () => ({
@@ -197,7 +194,11 @@ describe('useCorrectPantryItemWeight', () => {
 
     expect(success).toBe(false);
     await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith('Error', 'Test error'),
+      // Localized copy, not the error's own text.
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Something went wrong.',
+      ),
     );
   });
 

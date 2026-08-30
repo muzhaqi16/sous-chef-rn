@@ -39,20 +39,46 @@ import { errorService } from '#/services/errorService';
  *   - `useShoppingListsQuery`  -> GetShoppingListsLite { first: 50 }
  *   - `useMealPlans()` (no args, as MealPlanMain calls it) -> GetMealPlans
  */
-const WARM_TARGETS = [
+// One-shot `query` defaults to network-only, so `cache-first` must be explicit
+// — otherwise every launch refetches what is already cached.
+const WARM_OPTIONS: { fetchPolicy: 'cache-first'; errorPolicy: 'all' } = {
+  fetchPolicy: 'cache-first',
+  errorPolicy: 'all',
+};
+
+/**
+ * Each target owns its own call so the document and its variables stay paired.
+ * They were a `{ document, variables }` array iterated in a loop, which unions
+ * the operations together — under Apollo 4.2's modern signatures that pairing
+ * is type-checked, and a union of documents no longer matches a union of
+ * variables. Closing over both here is also what makes a mismatched pair a
+ * compile error rather than a silently-warmed wrong cache entry.
+ */
+const WARM_TARGETS: Array<{
+  name: string;
+  warm: (client: ApolloClient) => Promise<unknown>;
+}> = [
   {
     name: 'GetShoppingListsLite',
-    document: GetShoppingListsLiteDocument,
-    variables: { first: 50 },
+    warm: client =>
+      client.query({
+        query: GetShoppingListsLiteDocument,
+        variables: { first: 50 },
+        ...WARM_OPTIONS,
+      }),
   },
   {
     name: 'GetMealPlans',
-    document: GetMealPlansDocument,
-    variables: {
-      first: 20,
-      filters: undefined,
-      orderBy: { startDate: SortOrder.Desc },
-    },
+    warm: client =>
+      client.query({
+        query: GetMealPlansDocument,
+        variables: {
+          first: 20,
+          filters: undefined,
+          orderBy: { startDate: SortOrder.Desc },
+        },
+        ...WARM_OPTIONS,
+      }),
   },
 ];
 
@@ -61,14 +87,7 @@ async function warmTabQueries(client: ApolloClient): Promise<void> {
     // Plain statements only inside the try: a value block (`?.`, `??`, ternary)
     // there bails the whole function out of the React Compiler.
     try {
-      await client.query({
-        query: target.document,
-        variables: target.variables,
-        // One-shot `query` defaults to network-only, so this must be explicit —
-        // otherwise every launch refetches what is already cached.
-        fetchPolicy: 'cache-first',
-        errorPolicy: 'all',
-      });
+      await target.warm(client);
     } catch (error) {
       // Best effort: a failed warm must never surface to the user or block
       // anything. The next cold start retries.

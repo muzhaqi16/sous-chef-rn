@@ -223,10 +223,17 @@
     "noListSelected": "No hay ninguna lista de la compra seleccionada",
     "movedItems_one": "Se movió {{count}} artículo a la despensa{{skipped}}",
     "movedItems_other": "Se movieron {{count}} artículos a la despensa{{skipped}}",
-    "skippedSuffix": " ({{skippedCount}} omitidos)",
     "noItemsMoved": "No se pudo mover ningún artículo a la despensa",
     "noPantryTitle": "No hay despensa disponible",
-    "noPantryBody": "Primero crea una despensa en tu hogar."
+    "noPantryBody": "Primero crea una despensa en tu hogar.",
+    "queued": "En cola: los artículos se moverán a tu despensa cuando vuelvas a estar en línea",
+    "alreadyThereSuffix_one": " ({{count}} ya estaba)",
+    "alreadyThereSuffix_other": " ({{count}} ya estaban)",
+    "allAlreadyThere_one": "Ese artículo ya está en tu despensa",
+    "allAlreadyThere_other": "Esos {{count}} artículos ya están en tu despensa",
+    "failedItems_one": "No se pudo mover {{names}}",
+    "failedItems_other": "No se pudieron mover {{count}} artículos, incluidos {{names}}",
+    "nothingLeftToMove": "Todo lo comprado ya está en tu despensa"
   },
   "pantryAction": {
     "useByDefault": "Consumir antes de",

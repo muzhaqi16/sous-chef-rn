@@ -101,6 +101,40 @@ describe('SwipeableItem', () => {
     expect(screen.getByText('Basic item')).toBeTruthy();
   });
 
+  it('refuses the same action key on both edges', () => {
+    // `key` doubles as the accessibility action NAME, and dispatch is a `find`
+    // — so a duplicate publishes two `accessibilityActions` with one name and
+    // VoiceOver/TalkBack always reaches the LEFT one, silently doing the wrong
+    // thing. `key` became free-form when the named verbs were replaced by
+    // descriptors, which is what made this reachable.
+    expect(() =>
+      render(
+        <SwipeableItem
+          leftActions={[action('archive')]}
+          rightActions={[action('archive')]}
+        >
+          <Text>Row</Text>
+        </SwipeableItem>,
+      ),
+    ).toThrow(/duplicate action key/i);
+  });
+
+  it('allows the same key on different rows', () => {
+    // The uniqueness is per ROW, not global — every row has an `edit`.
+    expect(() =>
+      render(
+        <>
+          <SwipeableItem rightActions={[action('edit')]}>
+            <Text>Row A</Text>
+          </SwipeableItem>
+          <SwipeableItem rightActions={[action('edit')]}>
+            <Text>Row B</Text>
+          </SwipeableItem>
+        </>,
+      ),
+    ).not.toThrow();
+  });
+
   it('renders with a single left action', () => {
     render(
       <SwipeableItem leftActions={[action('togglePurchase')]}>
@@ -138,6 +172,51 @@ describe('SwipeableItem', () => {
       expect(actionNames).toEqual(
         expect.arrayContaining(['edit', 'delete', 'consume']),
       );
+    });
+
+    // The production shape: most rows pass no actions at all, so the component
+    // renders through its default parameters. A fixture that always passes an
+    // explicit list never exercises that path.
+    it('exposes no accessibility actions when both lists are omitted', () => {
+      render(
+        <SwipeableItem>
+          <Text>Item</Text>
+        </SwipeableItem>,
+      );
+      const host = findA11yActionHost(screen.getByTestId('swipeable-content'));
+      expect(host.props.accessibilityActions).toEqual([]);
+    });
+
+    it('tracks the action set when it changes', () => {
+      const { rerender } = render(
+        <SwipeableItem rightActions={[action('edit')]}>
+          <Text>Item</Text>
+        </SwipeableItem>,
+      );
+      let host = findA11yActionHost(screen.getByTestId('swipeable-content'));
+      expect(
+        host.props.accessibilityActions.map((a: { name: string }) => a.name),
+      ).toEqual(['edit']);
+
+      rerender(
+        <SwipeableItem rightActions={[action('edit'), action('delete')]}>
+          <Text>Item</Text>
+        </SwipeableItem>,
+      );
+      host = findA11yActionHost(screen.getByTestId('swipeable-content'));
+      expect(
+        host.props.accessibilityActions.map((a: { name: string }) => a.name),
+      ).toEqual(['edit', 'delete']);
+
+      // ...and back to none, so the assistive surface cannot outlive the swipe
+      // surface it mirrors.
+      rerender(
+        <SwipeableItem>
+          <Text>Item</Text>
+        </SwipeableItem>,
+      );
+      host = findA11yActionHost(screen.getByTestId('swipeable-content'));
+      expect(host.props.accessibilityActions).toEqual([]);
     });
 
     it('omits actions for callbacks not provided', () => {

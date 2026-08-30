@@ -10,9 +10,14 @@ import { errorService } from '#/services/errorService';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import {
   addToPantryItemsCache,
+  adjustPantryItemCount,
   removeFromPantryItemsCache,
 } from '#/apollo/utils/pantryCacheUpdaters';
-import { removeItemFromShoppingListForMoveToPantry } from '#/apollo/utils/shoppingListCacheUpdaters';
+import {
+  removeItemFromShoppingListForMoveToPantry,
+  restoreItemToShoppingListAfterMoveToPantry,
+  writePurchaseInfo,
+} from '#/apollo/utils/shoppingListCacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { generateEntityId } from '#/utils/generateEntityId';
 
@@ -42,6 +47,27 @@ const MoveToPantryItemPurchaseFragment = gql`
     }
   }
 `;
+
+/**
+ * Which filtered variant of the list's connection the row sits in. Both the
+ * eager removal and the mutation's `update` have to agree on this, or the
+ * removal lands on the wrong tab and its `totalCount` decrements the wrong one.
+ */
+function readWasPurchased(cache: ApolloCache, itemId: string): boolean {
+  const itemCacheId = cache.identify({
+    __typename: 'ShoppingListItem',
+    id: itemId,
+  });
+  if (!itemCacheId) return false;
+  return (
+    cache.readFragment<{
+      purchaseInfo?: { isPurchased?: boolean } | null;
+    }>({
+      id: itemCacheId,
+      fragment: MoveToPantryItemPurchaseFragment,
+    })?.purchaseInfo?.isPurchased ?? false
+  );
+}
 
 /**
  * Hook for moving shopping list items to pantry
@@ -88,23 +114,14 @@ function applyMoveToPantryCacheUpdate(
   if (!currentListId) return;
 
   if (removeFromList) {
-    const itemCacheId = cache.identify({
-      __typename: 'ShoppingListItem',
-      id: shoppingListItemId,
-    });
-    const wasPurchased = itemCacheId
-      ? cache.readFragment<{
-          purchaseInfo?: { isPurchased?: boolean } | null;
-        }>({
-          id: itemCacheId,
-          fragment: MoveToPantryItemPurchaseFragment,
-        })?.purchaseInfo?.isPurchased ?? false
-      : false;
+    // Idempotent with the eager unlink: filtering an edge that is already gone
+    // leaves the connection untouched. The evict is the part only the confirmed
+    // path may do — offline the entity has to survive for the withdrawal.
     removeItemFromShoppingListForMoveToPantry(
       cache,
       currentListId,
       shoppingListItemId,
-      wasPurchased,
+      readWasPurchased(cache, shoppingListItemId),
     );
   } else {
     // If keeping in list, mark as unpurchased in cache (server does this automatically)
@@ -113,12 +130,12 @@ function applyMoveToPantryCacheUpdate(
       id: shoppingListItemId,
     });
     if (cacheId) {
+      // The purchase record goes through its own writer: it owns the rule that
+      // a flag flip clears the stocked stamp, which a spread here would keep.
+      writePurchaseInfo(cache, shoppingListItemId, { isPurchased: false });
       cache.modify<ShoppingListItemDisplayFragment>({
         id: cacheId,
         fields: {
-          purchaseInfo(existing) {
-            return { ...existing, isPurchased: false };
-          },
           version(existingVersion = 0) {
             return existingVersion + 1;
           },
@@ -218,15 +235,41 @@ export function useMoveToPantry({
       client.cache,
     );
 
-    // ONLY the pantry side is written eagerly. Removing the shopping row here
-    // too would be lossy: when a REPLAY fails (not the initial call), the queue
-    // withdraws the entity it created — the PantryItem — but nothing restores a
-    // shopping row this hook removed, so the item would vanish from both lists.
-    // Observed on device: a move whose first attempt timed out, retried, and
-    // came back NotFound left the row in neither place. The shopping side stays
-    // with the mutation's `update` callback, which runs only on a real payload.
+    // BOTH sides are written eagerly, because offline neither the mutation's
+    // `update` callback nor the replay runs one: the queue completes a queued
+    // mutation with a null result, and `executeMutation` replays with no
+    // `update` at all. Leaving the shopping side to that callback meant the
+    // server deleted the row while the client kept rendering it in the list and
+    // in both counters until a full refetch.
+    //
+    // The eager removal UNLINKS without evicting. That distinction is what makes
+    // it safe: the earlier version of this hook evicted, so when a REPLAY failed
+    // (not the initial call) the queue withdrew the PantryItem it created and
+    // nothing could restore the shopping row — observed on device, a move that
+    // timed out, retried, and came back NotFound left the item in neither place.
+    // The entity survives here, and `handleQueueFailure` re-links it through
+    // `restoreItemToShoppingListAfterMoveToPantry`.
+    const wasPurchased = readWasPurchased(client.cache, item.id);
+    // Resolved BEFORE the try: `&&` is a value block, and the React Compiler
+    // bails out of the whole hook when one appears inside a try body.
+    const unlinkFromListId = input.removeFromList ? currentListId : undefined;
     try {
       addToPantryItemsCache(client.cache, input.pantryId, optimisticPantryItem);
+      // The count travels with the row. Offline the mutation's `update` never
+      // runs, so nothing else corrects it and the pantry header would keep
+      // reporting the pre-move total over the rows the user can see.
+      // `usePantryScreen` also branches on this value to pick server vs client
+      // sorting, so a stale one can select the wrong mode as well.
+      adjustPantryItemCount(client.cache, input.pantryId, 1);
+      if (unlinkFromListId) {
+        removeItemFromShoppingListForMoveToPantry(
+          client.cache,
+          unlinkFromListId,
+          item.id,
+          wasPurchased,
+          { evictEntity: false },
+        );
+      }
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Move Item to Pantry (optimistic)',
@@ -262,9 +305,14 @@ export function useMoveToPantry({
     const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
-      // Only the pantry row needs undoing — the shopping row was never touched.
+      // Both sides were written, so both are undone. The shopping row was
+      // unlinked rather than evicted, so the entity is still here to re-link.
       try {
         removeFromPantryItemsCache(client.cache, input.pantryId, pantryItemId);
+        adjustPantryItemCount(client.cache, input.pantryId, -1);
+        if (input.removeFromList) {
+          restoreItemToShoppingListAfterMoveToPantry(client.cache, item.id);
+        }
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Revert rejected move to pantry',
@@ -290,6 +338,7 @@ export function useMoveToPantry({
     if (serverId && serverId !== pantryItemId) {
       try {
         removeFromPantryItemsCache(client.cache, input.pantryId, pantryItemId);
+        adjustPantryItemCount(client.cache, input.pantryId, -1);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Evict superseded optimistic pantry row',

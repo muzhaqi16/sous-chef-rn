@@ -59,6 +59,17 @@ query GetMealTemplateForEdit($id: ID!) {
       customMealName
       servings
       notes
+      # The editor WRITES this field (picking a recipe, or replacing one with a
+      # custom name), so it has to READ it too. Without it the revert snapshot
+      # could not tell "this row has no recipe" from "this query never asked",
+      # and a refused edit wrote null over a link it had never seen.
+      recipe {
+        id
+        name
+        imageUrl
+        servings
+        totalTimeMinutes
+      }
     }
   }
 }

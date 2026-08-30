@@ -1,4 +1,5 @@
 import { alertService } from '#/services/alertService';
+import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 import {
   getRateLimitMessage,
   isRateLimitError,
@@ -76,10 +77,12 @@ export function alertMutationFailure(
       );
       return;
     case 'ValidationError':
-      // Server-authored and field-specific — the most useful thing we have.
+      // Field-specific, but NOT the server's own sentence: that is English by
+      // construction, and `localizedRefusalMessage` resolves the refused field
+      // (then the code) into copy this app owns, falling back to ours.
       alertService.alert(
         t(`${keyPrefix}.rejectedTitle`),
-        payload?.message || t(`${keyPrefix}.failedBody`),
+        localizedRefusalMessage(payload, t(`${keyPrefix}.failedBody`)),
       );
       return;
     default:

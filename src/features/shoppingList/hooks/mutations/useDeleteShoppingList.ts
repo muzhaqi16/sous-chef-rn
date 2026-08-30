@@ -17,15 +17,20 @@ import {
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { toastService } from '#/services/toastService';
-import { getErrorMessage } from '#/services/errorService';
-import { errorService } from '#/services/errorService';
+import { errorService, localizedErrorMessage } from '#/services/errorService';
+import { t } from '#/i18n';
 
 export function useDeleteShoppingList() {
   const client = useApolloClient();
 
   const [mutate, { loading }] = useMutation(DeleteShoppingListDocument, {
     onError: error => {
-      toastService.error(getErrorMessage(error));
+      // Resolved from the error's CODE, never from the server's message — that
+      // text is English by construction and would reach every non-English user
+      // verbatim, under a translated title.
+      toastService.error(
+        localizedErrorMessage(error, t('errors.deleteShoppingListFailed')),
+      );
     },
   });
 

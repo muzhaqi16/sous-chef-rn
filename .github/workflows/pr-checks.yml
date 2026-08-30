@@ -180,6 +180,70 @@ jobs:
       - name: Self-test the bundled secret scanner
         run: node scripts/check-bundled-secrets.mjs --self-test
 
+  # The whole-tree structural gates.
+  #
+  # These ran ONLY in `.husky/pre-commit`, which means they ran only when hooks
+  # ran: `--no-verify`, a hook-less clone, a squash landed through the web UI,
+  # or any environment where `core.hooksPath` is not set skipped every one of
+  # them. A ratchet that can be bypassed by a flag is a suggestion. They cost
+  # well under a second together, so they run as one job rather than seven.
+  #
+  # `check-launch-arg-auth` runs in its BUILD-PATH mode here: the post-hoc mode
+  # reads `src/config/env.generated.ts`, which a checks-only job has no reason
+  # to produce, and the artifact question is the one that matters anyway.
+  structural-gates:
+    name: Structural Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies and generate GraphQL types
+        uses: ./.github/actions/setup-deps
+
+      - name: Codegen orphans
+        run: node scripts/check-codegen-orphans.mjs
+
+      - name: Version sync across package.json, Android and iOS
+        run: node scripts/check-version-sync.mjs
+
+      - name: Startup origin position
+        run: node scripts/check-startup-origin.mjs
+
+      # The build-path invocations read ALLOW_LAUNCH_ARG_AUTH from the
+      # environment, which CI does not set — so both returned "off, nothing to
+      # check" and exited 0 whatever they were handed. The self-test runs the
+      # refusal logic against inputs that must be refused, which is the part
+      # worth asserting away from a build machine.
+      - name: Launch-argument auth — the gate can refuse
+        run: node scripts/check-launch-arg-auth.mjs --self-test
+
+      - name: Launch-argument auth — Android release artifact
+        run: node scripts/check-launch-arg-auth.mjs --platform android --variant release
+
+      - name: Launch-argument auth — iOS device artifact
+        run: node scripts/check-launch-arg-auth.mjs --platform ios --sdk iphoneos
+
+      - name: Layer purity
+        run: node scripts/check-layer-purity.mjs
+
+      - name: Feature shape
+        run: node scripts/check-feature-shape.mjs
+
+      - name: Dead modules
+        run: node scripts/check-dead-modules.mjs
+
+      - name: Optimistic fillers are up to date
+        run: npm run check:fillers
+
   # Unit tests
   unit-tests:
     name: Unit Tests

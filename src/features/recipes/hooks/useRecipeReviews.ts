@@ -15,6 +15,7 @@ import {
 import { type MaterializedRecipe } from './useRecipeData';
 import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
+import { localizedErrorMessage } from '#/services/errorService';
 import {
   getRateLimitMessage,
   isRateLimitError,
@@ -105,8 +106,16 @@ export function useRecipeReviews({
           });
         }
       },
+      // `err.message` is the server's English (or a transport error's
+      // developer text). `localizedErrorMessage` resolves the error's CODE to
+      // the app's own copy and falls back to the caller's — which has to be
+      // PASSED to it: the resolver is total, so applying copy to its result is
+      // unreachable, and a transport failure on a write then reports the
+      // read-oriented offline sentence instead of what did not save.
       onError: err => {
-        toastService.error(err.message || t('recipes.submitReviewFailed'));
+        toastService.error(
+          localizedErrorMessage(err, t('recipes.submitReviewFailed')),
+        );
       },
     },
   );
@@ -115,7 +124,9 @@ export function useRecipeReviews({
     UpdateRecipeReviewDocument,
     {
       onError: err => {
-        toastService.error(err.message || t('recipes.updateReviewFailed'));
+        toastService.error(
+          localizedErrorMessage(err, t('recipes.updateReviewFailed')),
+        );
       },
     },
   );
@@ -134,7 +145,9 @@ export function useRecipeReviews({
         removeReviewFromRecipe(cache, recipeId, variables.input.id);
       },
       onError: err => {
-        toastService.error(err.message || t('recipes.deleteReviewFailed'));
+        toastService.error(
+          localizedErrorMessage(err, t('recipes.deleteReviewFailed')),
+        );
       },
     },
   );
@@ -168,7 +181,9 @@ export function useRecipeReviews({
       });
     },
     onError: err => {
-      toastService.error(err.message || t('recipes.helpfulVoteFailed'));
+      toastService.error(
+        localizedErrorMessage(err, t('recipes.helpfulVoteFailed')),
+      );
     },
   });
 

@@ -1,5 +1,6 @@
 import { object, string, boolean, date } from 'yup';
 import { t } from '#/i18n';
+import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   StorageState,
   ItemCondition,
@@ -68,6 +69,9 @@ export const FIELD_PAGE: Partial<Record<keyof AddPantryItemFormData, number>> =
     quantityInput: 1,
     pantryNetWeight: 1,
     pantryNetWeightUnit: 1,
+    // Package details live on the Details page too.
+    itemNetWeight: 1,
+    weightUnit: 1,
   };
 
 export const addPantryItemDefaults = (
@@ -108,20 +112,18 @@ export const addPantryItemDefaults = (
  * A quantity may be fractional ("1/2", "1 1/4") — parsing lives in
  * `parseFractionalInput`, so the schema only asserts it is present and
  * resolves to a positive number.
+ *
+ * It defers to the parser rather than restating its grammar. The regex that
+ * stood here mirrored the accepted forms by hand and matched only `.` as the
+ * decimal separator, so `2,5` failed validation on exactly the devices whose
+ * `decimal-pad` offers no `.` at all — fractional quantities were unreachable
+ * in es, it and sq. Validation and parsing have to agree, and the only way to
+ * guarantee that is to ask the parser.
  */
 const isPositiveQuantity = (value: string | undefined): boolean => {
   if (!value?.trim()) return false;
-  // Mirrors parseFractionalInput's accepted forms without importing it into a
-  // module-scope schema: whole, decimal, "a/b", or "a b/c".
-  const match = value
-    .trim()
-    .match(/^(\d+(?:\.\d+)?)$|^(\d+)\/(\d+)$|^(\d+)\s+(\d+)\/(\d+)$/);
-  if (!match) return false;
-  const [, plain, num, den, whole, wnum, wden] = match;
-  if (plain !== undefined) return Number(plain) > 0;
-  if (num !== undefined)
-    return Number(den) !== 0 && Number(num) / Number(den) > 0;
-  return Number(whole) + Number(wnum) / Number(wden) > 0;
+  const parsed = parseFractionalInput(value);
+  return parsed !== null && parsed > 0;
 };
 
 export const addPantryItemSchema = object({
@@ -156,6 +158,32 @@ export const addPantryItemSchema = object({
       return Boolean(context.parent.pantryNetWeightUnitId);
     },
   ),
+  // The package-details per-container weight is the SAME all-or-nothing rule,
+  // one level down: it feeds `item.netWeight` + `item.displayUnitId` inline,
+  // and (times the package size) the pantry-level `NetWeightInput`. Without
+  // this, a weight typed with no unit was dropped from the pantry input by the
+  // both-or-neither guard in the submit path and sent inline as a unitless
+  // Float — the value vanished with nothing reported. Scoped to
+  // `showPackageDetails` so a collapsed section can never block Save.
+  itemNetWeight: string().test(
+    'item-net-weight-needs-value',
+    msg('errors.field.netWeight'),
+    (value, context) => {
+      if (!context.parent.showPackageDetails) return true;
+      if ((value ?? '').trim()) return true;
+      return !context.parent.weightUnitId;
+    },
+  ),
+  weightUnit: string().test(
+    'item-net-weight-needs-unit',
+    msg('labels.pleaseSelectAUnitForTheNetWeight'),
+    (_value, context) => {
+      if (!context.parent.showPackageDetails) return true;
+      const weight = (context.parent.itemNetWeight ?? '').trim();
+      if (!weight) return true;
+      return Boolean(context.parent.weightUnitId);
+    },
+  ),
   // Everything else is free-form; the mutation input builder handles shaping.
   brand: string(),
   category: string(),
@@ -168,8 +196,6 @@ export const addPantryItemSchema = object({
   packageSize: string(),
   contentUnit: string(),
   contentUnitId: string().nullable(),
-  itemNetWeight: string(),
-  weightUnit: string(),
   weightUnitId: string().nullable(),
   storageLocation: string(),
   selectedStorageLocationId: string().nullable(),

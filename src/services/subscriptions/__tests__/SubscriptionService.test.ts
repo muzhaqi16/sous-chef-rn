@@ -414,6 +414,29 @@ describe('SubscriptionService', () => {
       expect(service.getStats().totalUpdates).toBe(0);
       expect(service.getStats().totalErrors).toBe(0);
     });
+
+    it('leaves no timer scheduled against the torn-down state', () => {
+      // `pendingDeletes` kept its timer handle and was cancelled here; the
+      // parent-deletion and reorder expiries did not, so a session end cleared
+      // the collections while their callbacks stayed queued — firing later
+      // against state that belonged to a session that had ended.
+      service.registerPendingDelete('item-1', 'parent-1', 'PantryItem');
+      service.registerParentDeletion('parent-1');
+      service.markItemReordered('item-9');
+
+      service.cleanup();
+
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('cancels a parent-deletion expiry when it is unregistered', () => {
+      service.registerParentDeletion('parent-2');
+      expect(jest.getTimerCount()).toBeGreaterThan(0);
+
+      service.unregisterParentDeletion('parent-2');
+
+      expect(jest.getTimerCount()).toBe(0);
+    });
   });
 
   describe('getActiveSubscriptions', () => {

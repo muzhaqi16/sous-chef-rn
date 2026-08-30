@@ -2,9 +2,16 @@
 
 import React from 'react';
 import { InMemoryCache } from '@apollo/client';
-import { fireEvent, screen } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  DeletePantryDocument,
+  GetPantryDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import {
+  removeOptimisticPantry,
+  restorePantryToHomeCache,
+} from '#features/pantry/utils/optimisticPantry';
 import {
   pantryData,
   type PantryFixture,
@@ -34,12 +41,7 @@ jest.mock('#store/useAppStore', () => {
   };
 });
 
-jest.mock('#/services/errorService', () => ({
-  useErrorService: () => ({
-    handleApolloError: jest.fn(() => ({ message: 'error' })),
-  }),
-  errorService: { reportError: jest.fn() },
-}));
+jest.mock('#/services/errorService');
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     registerParentDeletion: jest.fn(),
@@ -51,6 +53,14 @@ jest.mock('#features/pantry/hooks/usePantryPermissions');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
+}));
+
+// Spread the real module: the screen imports several of its writers, and a
+// trimmed factory fails at import rather than at the assertion.
+jest.mock('#features/pantry/utils/optimisticPantry', () => ({
+  ...jest.requireActual('#features/pantry/utils/optimisticPantry'),
+  removeOptimisticPantry: jest.fn(),
+  restorePantryToHomeCache: jest.fn(),
 }));
 
 jest.mock('#components/molecules/ScreenHeader', () => ({
@@ -242,6 +252,73 @@ describe('PantrySettings', () => {
       expect.stringContaining('Are you sure'),
       expect.any(Array),
     );
+  });
+
+  describe('deleting is local-first', () => {
+    /** Press Delete Pantry, then the destructive button in its confirmation. */
+    async function confirmDelete() {
+      fireEvent.press(screen.getByText('Delete Pantry'));
+      const buttons = (alertService.alert as jest.Mock).mock.calls.at(
+        -1,
+      )?.[2] as { style?: string; onPress?: () => void }[] | undefined;
+      const destructive = buttons?.find(b => b.style === 'destructive');
+      await act(async () => {
+        destructive?.onPress?.();
+      });
+    }
+
+    it('removes the pantry from the home before the mutation resolves', async () => {
+      // `buildDeletePantryUpdater` runs only for a real DeletePantryPayload,
+      // and offline there is none — the queue completes with a null result and
+      // the replay carries no `update`. Without a pre-fire write the user was
+      // returned to a home still listing the pantry they had just deleted.
+      const remove = recordMock(DeletePantryDocument, {
+        data: {
+          deletePantry: {
+            __typename: 'DeletePantryPayload',
+            pantry: { __typename: 'Pantry', id: 'p1', name: 'Test Pantry' },
+          },
+        },
+      });
+
+      renderWithApollo(<PantrySettings route={editRoute} />, {
+        cache: cacheWithPantry(defaultPantry),
+        operationMocks: [remove.mock],
+      });
+
+      await confirmDelete();
+
+      expect(removeOptimisticPantry).toHaveBeenCalledWith(
+        expect.anything(),
+        'h1',
+        'p1',
+        // Unlinked, not evicted: a refusal has to be able to put it back.
+        { evictEntity: false },
+      );
+    });
+
+    it('puts the pantry back when the delete is refused', async () => {
+      // A failing mutation RESOLVES under errorPolicy 'all'; the operation
+      // mock carries the error rather than a helper being stubbed to throw.
+      const refused = recordMock(DeletePantryDocument, {
+        error: new Error('refused'),
+      });
+
+      renderWithApollo(<PantrySettings route={editRoute} />, {
+        cache: cacheWithPantry(defaultPantry),
+        operationMocks: [refused.mock],
+      });
+
+      await confirmDelete();
+
+      await waitFor(() =>
+        expect(restorePantryToHomeCache).toHaveBeenCalledWith(
+          expect.anything(),
+          'h1',
+          'p1',
+        ),
+      );
+    });
   });
 
   it('toggles default pantry switch without mutation for new pantry', () => {

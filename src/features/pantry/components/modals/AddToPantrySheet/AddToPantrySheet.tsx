@@ -24,10 +24,16 @@ import {
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
 import { extractNodes } from '#/utils/connectionUtils';
 import { getPantryItemDuplicateFromResult } from '#/utils/errors/pantryItemDuplicate';
-import { addToPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import {
+  addPantryItemLocally,
+  addToPantryItemsCache,
+} from '#/apollo/utils/pantryCacheUpdaters';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { safeEvict, adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
 import { AddItemSheet } from '#features/catalog/ui/AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '#features/catalog/ui/AddItemSheet/useAddItemSheetState';
 import type { SuggestionsHookResult } from '#features/catalog/ui/AddItemSheet/types';
@@ -93,14 +99,23 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
 
   // Create pantry item mutation — synchronous cache update prevents flickering
   const [createPantryItem] = useMutation(CreatePantryItemDocument, {
-    update: (cache, { data }) => {
+    update: (cache, { data }, { variables }) => {
       const payload = data?.createPantryItem;
       if (payload?.__typename !== 'CreatePantryItemPayload' || !pantryId)
         return;
       const pantryItem = payload.pantryItem;
+      // Read outside the try: `?.` is a value block, and one inside a try body
+      // bails the React Compiler out of the whole component.
+      const clientId = variables?.input?.id;
 
       try {
+        // NOT the counting helper: the eager write above already counted this
+        // row. This re-add reconciles the server's entity into the same edge.
         addToPantryItemsCache(cache, pantryId, pantryItem);
+        // The re-add dedupes BY ID, so a server-resolved id divergence
+        // would leave the client cuid as a second, permanently unresolvable
+        // edge. Client id read off this mutation's own variables.
+        adoptServerEntityId(cache, 'PantryItem', pantryItem.id, clientId);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Cache update failed for createPantryItem:',
@@ -194,6 +209,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     if (!pantryId || pendingItemIds.current.has(item.id)) return;
 
     const id = generateEntityId();
+    // Publishing this id to `Pantry.itemsConnection` below makes the row
+    // tappable, and its detail/edit screens query by it. Hold those off until
+    // the server has the row — see `unconfirmedCreates`.
+    unconfirmedCreates.mark(id);
     const variables = {
       input: {
         id,
@@ -217,7 +236,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     // stays if the create is queued offline (the queue replays it later, keyed by
     // this id).
     try {
-      addToPantryItemsCache(
+      // Publishes the row AND counts it. They were two calls here and only
+      // the first was made, so the header stayed behind the list — and offline
+      // no response arrives to correct it.
+      addPantryItemLocally(
         client.cache,
         pantryId,
         buildOptimisticPantryItem(
@@ -230,6 +252,12 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
           client.cache,
         ),
       );
+      // Detail-shape the same row so tapping it renders from cache instead
+      // of querying an id the server does not have yet.
+      writePantryItemDetailStub(client.cache, id, {
+        itemId: item.id,
+        itemName: item.name,
+      });
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Add Pantry Item (optimistic)',
@@ -271,9 +299,16 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
           return;
         }
         pendingItemIds.current.delete(item.id);
-        if (result.error) {
-          // Real (non-network) error → revert the optimistic item.
+        // Every business failure is a member of the result union, and under
+        // `errorPolicy: 'all'` it RESOLVES with no `error` — so reading
+        // `result.error` alone reports a ForbiddenError (no add-items access)
+        // or a ValidationError as success and strands the optimistic row.
+        // `classifyCreateResult` reads the payload's `__typename`, and keeps
+        // the row for a queued create and for IDEMPOTENT_REPLAY.
+        if (classifyCreateResult(result) === 'rejected') {
           safeEvict(client.cache, 'PantryItem', id);
+          // The success toast has already fired; correct it.
+          toastService.error(t('errors.addItemFailedRetry'));
         } else {
           onItemAdded?.();
         }
@@ -283,7 +318,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         // Real failure → revert the optimistic item.
         safeEvict(client.cache, 'PantryItem', id);
         toastService.error(t('errors.addItemFailedRetry'));
-      });
+      })
+      // Released on every outcome; a queued create is tracked by the offline
+      // queue's pending set from here on.
+      .finally(() => unconfirmedCreates.confirm(id));
   };
 
   // Handle quick add from pantry item suggestion (fire-and-forget)
@@ -298,6 +336,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     pendingItemIds.current.add(pantryItem.itemId);
 
     const id = generateEntityId();
+    // Publishing this id to `Pantry.itemsConnection` below makes the row
+    // tappable, and its detail/edit screens query by it. Hold those off until
+    // the server has the row — see `unconfirmedCreates`.
+    unconfirmedCreates.mark(id);
     const variables = {
       input: {
         id,
@@ -318,7 +360,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     // stays if the create is queued offline (the queue replays it later, keyed by
     // this id).
     try {
-      addToPantryItemsCache(
+      // Publishes the row AND counts it. They were two calls here and only
+      // the first was made, so the header stayed behind the list — and offline
+      // no response arrives to correct it.
+      addPantryItemLocally(
         client.cache,
         pantryId,
         buildOptimisticPantryItem(
@@ -331,6 +376,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
           client.cache,
         ),
       );
+      writePantryItemDetailStub(client.cache, id, {
+        itemId: pantryItem.itemId,
+        itemName: pantryItem.name,
+      });
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Add Pantry Item (optimistic)',
@@ -372,11 +421,15 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
           return;
         }
         pendingItemIds.current.delete(pantryItem.itemId);
-        if (result.error) {
-          // Real (non-network) error → revert the optimistic item + restore the
-          // suggestion (undo the exit animation).
+        // A refusal is a resolved union member carrying no `error` (see the
+        // search-suggestion handler above), so classify the payload rather
+        // than reading `result.error`. Rejected → revert the optimistic item
+        // and restore the suggestion (undo the exit animation).
+        if (classifyCreateResult(result) === 'rejected') {
           safeEvict(client.cache, 'PantryItem', id);
           state.completeExitAnimation(pantryItem.itemId);
+          // The success toast has already fired; correct it.
+          toastService.error(t('errors.addItemFailed'));
         } else {
           onItemAdded?.();
         }
@@ -387,7 +440,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         safeEvict(client.cache, 'PantryItem', id);
         state.completeExitAnimation(pantryItem.itemId);
         toastService.error(t('errors.addItemFailed'));
-      });
+      })
+      // Released on every outcome; a queued create is tracked by the offline
+      // queue's pending set from here on.
+      .finally(() => unconfirmedCreates.confirm(id));
   };
 
   const handleExitComplete = (itemId: string) => {

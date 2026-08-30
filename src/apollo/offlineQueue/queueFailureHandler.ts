@@ -3,9 +3,12 @@ import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { removePantryItemLocally } from '#/apollo/utils/pantryCacheUpdaters';
+import { restoreItemToShoppingListAfterMoveToPantry } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
 import { logger } from '#/utils/environment';
+import type { OperationVariables } from '@apollo/client';
 import type { FailedMutationInfo } from '#/apollo/offlineQueue/types';
 
 /**
@@ -29,6 +32,70 @@ import type { FailedMutationInfo } from '#/apollo/offlineQueue/types';
  * single entity) is skipped: there is nothing to withdraw, and the next refetch
  * heals it. The person is still told.
  */
+/**
+ * Withdrawals the generic evict cannot express.
+ *
+ * `safeEvict(entityType, entityId)` withdraws what a write CREATED. An
+ * operation that also UNLINKED an existing entity — a move takes a row out of
+ * one parent before the server has agreed — leaves that second half standing,
+ * and no evict can put it back. Each entry undoes its own operation's unlink,
+ * keyed by the operation name the queue recorded.
+ *
+ * Keep every entry IDEMPOTENT: a withdrawal can run after a revert the call
+ * site already performed, when the write failed while the screen was still open.
+ */
+const UNLINK_WITHDRAWALS: Record<
+  string,
+  (variables: OperationVariables) => void
+> = {
+  MoveShoppingItemToPantry: variables => {
+    const input = variables.input as
+      | { shoppingListItemId?: string; removeFromList?: boolean | null }
+      | undefined;
+    if (!input?.shoppingListItemId) return;
+    // `removeFromList: false` never unlinked anything.
+    if (input.removeFromList === false) return;
+    restoreItemToShoppingListAfterMoveToPantry(
+      client.cache,
+      input.shoppingListItemId,
+    );
+  },
+};
+
+/**
+ * Aggregates the eager write moved that the generic evict does not put back.
+ *
+ * A local-first pantry write adjusts `Pantry.stats.totalItems` when it
+ * publishes its row, because the mutation's `update` callback never runs while
+ * the write is queued. Every FOREGROUND rejection path pairs that with a
+ * withdrawal; this path — the REPLAY refused permanently — did not, so the row
+ * disappeared and the header went on counting it, with no response coming to
+ * correct it offline.
+ *
+ * Runs BEFORE the evict, so the paired helper can still see the edge it is
+ * uncounting and stays idempotent on a re-run.
+ */
+const COUNT_WITHDRAWALS: Record<
+  string,
+  (variables: OperationVariables, entityId: string | null) => void
+> = {
+  CreatePantryItem: (variables, entityId) => {
+    const pantryId = (variables.input as { pantryId?: string } | undefined)
+      ?.pantryId;
+    if (!pantryId || !entityId) return;
+    removePantryItemLocally(client.cache, pantryId, entityId);
+  },
+  MoveShoppingItemToPantry: (variables, entityId) => {
+    const input = variables.input as
+      | { pantryId?: string; pantryItemId?: string }
+      | undefined;
+    const pantryId = input?.pantryId;
+    const rowId = input?.pantryItemId ?? entityId;
+    if (!pantryId || !rowId) return;
+    removePantryItemLocally(client.cache, pantryId, rowId);
+  },
+};
+
 export function handleQueueFailure(info: FailedMutationInfo): void {
   const { mutationId, entityType, entityId, operationName, error } = info;
 
@@ -37,11 +104,38 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
     { entityType, entityId, code: error.code, type: error.type },
   );
 
+  const withdrawCount = COUNT_WITHDRAWALS[operationName];
+  if (withdrawCount) {
+    try {
+      withdrawCount(info.variables, entityId);
+    } catch (countError) {
+      logger.warn(
+        `Queue: could not withdraw ${operationName}'s count`,
+        countError,
+      );
+    }
+  }
+
   if (entityType && entityId) {
     safeEvict(client.cache, entityType, entityId);
     // Otherwise the optimistic value is replayed over the server's on the next
     // restoration pass and the change comes back from the dead.
     optimisticDataPersistence.clearEntity(entityType, entityId);
+  }
+
+  // The other half of the withdrawal: put back what the write unlinked. Runs
+  // after the evict, so a move's pantry row is gone before its shopping row
+  // returns and the item is never visible in both places at once.
+  const withdrawUnlink = UNLINK_WITHDRAWALS[operationName];
+  if (withdrawUnlink) {
+    try {
+      withdrawUnlink(info.variables);
+    } catch (withdrawError) {
+      logger.warn(
+        `Queue: could not withdraw ${operationName}'s unlink`,
+        withdrawError,
+      );
+    }
   }
 
   // The app's own words, not the server's: `error.message` is written for

@@ -157,7 +157,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Environment distribution of app usage",
+      "description": "Share of GraphQL traffic by environment over the selected range. Uses increase() rather than summing the raw cumulative counter, which drifted with instance churn. Caveat: development is unsampled (weight 1) while other environments are weighted by 1/GRAPHQL_TELEMETRY_SAMPLE_RATE, so the split is only like-for-like while that rate is 1.0.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -199,7 +199,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum by (env) (graphql_requests_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})",
+          "expr": "sum by (env) (increase(graphql_requests_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[$__range]))",
           "refId": "A",
           "legendFormat": "{{env}}"
         }
@@ -242,7 +242,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           }
         }
       },
@@ -309,7 +314,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           }
         }
       },
@@ -376,7 +386,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           }
         }
       },
@@ -448,7 +463,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           }
         }
       },
@@ -525,7 +545,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           }
         }
       },
@@ -597,7 +622,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           }
         }
       },
@@ -657,7 +687,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           }
         }
       },
@@ -735,7 +770,8 @@
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
-        "type": "query"
+        "type": "query",
+        "allValue": ".*"
       },
       {
         "current": {
@@ -762,7 +798,8 @@
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
-        "type": "query"
+        "type": "query",
+        "allValue": ".*"
       }
     ]
   },

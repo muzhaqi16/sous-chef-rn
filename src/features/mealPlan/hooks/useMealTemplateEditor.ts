@@ -35,14 +35,20 @@ import {
   skipUnmatchedFilterVariants,
 } from '#/apollo/utils/cacheUpdaters';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { alertService } from '#/services/alertService';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { updateEntityFieldsLocalFirst } from '#/apollo/utils/localFirstFields';
+import {
+  snapshotFields,
+  updateEntityFieldsLocalFirst,
+} from '#/apollo/utils/localFirstFields';
 import {
   buildOptimisticTemplateItem,
   addTemplateItemToCache,
   removeTemplateItemFromCache,
   readTemplateItem,
+  toRestorableTemplateItem,
+  readRecipeRef,
 } from '#features/mealPlan/utils/optimisticTemplateItem';
 import { useUser } from '#store/useAppStore';
 import {
@@ -329,21 +335,33 @@ export function useMealTemplateEditor() {
     const previousItem = readTemplateItem(client.cache, id);
     // `meal` is an @oneOf ref, not a flat field — the row shows it as
     // `customMealName` / `recipe`, so map it rather than writing it through.
+    //
+    // BOTH fields move together. The input can only name one of them, but the
+    // entity carries both, so writing only the named one leaves the row holding
+    // the value it was supposed to replace: renaming a recipe-backed row to a
+    // custom name kept the old recipe, and picking a recipe left the row with
+    // neither a name nor a recipe. Offline no response arrives to reconcile it.
     const updates = {
       ...flatFields,
-      ...(meal ? { customMealName: meal.customMealName ?? null } : {}),
+      ...(meal
+        ? {
+            customMealName: meal.customMealName ?? null,
+            recipe: readRecipeRef(client.cache, meal.recipeId),
+          }
+        : {}),
     };
 
     const { persisted, result } = await updateEntityFieldsLocalFirst({
       cache: client.cache,
       entity: previousItem ? { __typename: 'MealTemplateItem', id } : undefined,
       updates,
-      previous: Object.fromEntries(
-        Object.keys(updates).map(key => [
-          key,
-          (previousItem as Record<string, unknown> | null)?.[key],
-        ]),
-      ),
+      // A key the read did not CARRY is omitted, not recorded as null — the
+      // revert then leaves that field alone instead of blanking a value the
+      // snapshot never saw. `GetMealTemplateForEdit` now selects every field
+      // these updates write, so in practice nothing is omitted here; the
+      // helper is what keeps that true if a field is ever added to the write
+      // and not to the query.
+      previous: snapshotFields(previousItem, updates),
       logLabel: 'Update Template Item',
       mutate: () =>
         updateItemMutation({
@@ -368,9 +386,25 @@ export function useMealTemplateEditor() {
     templateId: string,
   ): Promise<boolean> => {
     // Snapshot before evicting: a refusal has to put the row back, and once the
-    // entity is gone the cache can no longer describe it.
-    const removed = readTemplateItem(client.cache, itemId);
+    // entity is gone the cache can no longer describe it. The snapshot is
+    // partial (the editor's query selects no `recipe`), so it is completed here
+    // rather than trusted whole.
+    const removed = toRestorableTemplateItem(
+      readTemplateItem(client.cache, itemId),
+      itemId,
+    );
     const parentTemplateId = templateId;
+
+    // No snapshot means no revert. Evicting anyway is how a refused remove left
+    // the row gone under a message saying it had failed — refuse the remove
+    // instead, so the row the user can still see is the row that still exists.
+    if (!removed) {
+      alertService.alert(
+        t('labels.error'),
+        t('mealTemplateBuilder.failedToRemoveItem'),
+      );
+      return false;
+    }
 
     if (parentTemplateId) {
       try {
@@ -395,7 +429,7 @@ export function useMealTemplateEditor() {
     }
 
     if (classifyCreateResult(result) === 'rejected') {
-      if (removed && parentTemplateId) {
+      if (parentTemplateId) {
         try {
           addTemplateItemToCache(client.cache, parentTemplateId, removed);
         } catch (cacheError) {

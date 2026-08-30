@@ -111,6 +111,14 @@ export interface FailedMutationInfo {
   operationName: string;
   entityType: string | null;
   entityId: string | null;
+  /**
+   * The refused write's own variables. The generic withdrawal is an evict of
+   * `entityType`/`entityId`, which covers a create — the entity only ever
+   * existed locally. An operation that also UNLINKED something (a move, which
+   * takes a row out of one parent) needs its own withdrawal, and that
+   * withdrawal needs to know which row.
+   */
+  variables: OperationVariables;
   error: QueueError;
 }
 

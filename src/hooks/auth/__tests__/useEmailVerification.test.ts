@@ -29,6 +29,13 @@ jest.mock('#store/useAppStore', () => ({
   useHasUnverifiedEmail: () => mockHasUnverifiedEmail,
 }));
 
+jest.mock('#hooks/navigation/useAppNavigation');
+const mockNav = (
+  jest.requireMock('#hooks/navigation/useAppNavigation') as {
+    useAppNavigation: jest.Mock;
+  }
+).useAppNavigation();
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockUserId = 'u1';
@@ -46,28 +53,13 @@ describe('useEmailVerificationActions', () => {
     });
   });
 
-  it('clears the flag and routes back when verification resumes', () => {
-    const { result } = renderHook(() => useEmailVerificationActions());
-
-    act(() => result.current.resumeVerification());
-
-    // Order matters: clearing the flag first is what stops resolveNavTarget
-    // from routing straight back out of the screen we are entering.
-    expect(mockSetUserNavigationState).toHaveBeenCalledWith('u1', {
-      verificationSkipped: false,
-    });
-    expect(mockSetNavigationState).toHaveBeenCalledWith('verification');
-  });
-
   it('does nothing without a signed-in user', () => {
     mockUserId = undefined;
     const { result } = renderHook(() => useEmailVerificationActions());
 
     act(() => result.current.skipVerification());
-    act(() => result.current.resumeVerification());
 
     expect(mockSetUserNavigationState).not.toHaveBeenCalled();
-    expect(mockSetNavigationState).not.toHaveBeenCalled();
   });
 });
 
@@ -105,6 +97,10 @@ describe('useVerifiedEmailGate', () => {
     }[];
     act(() => buttons.find(b => b.text === 'Verify Now')?.onPress?.());
 
-    expect(mockSetNavigationState).toHaveBeenCalledWith('verification');
+    // A PUSH over the app, never the root navigator's `verification` group:
+    // swapping groups here would strand the user on Home after verifying and
+    // leave sign-out as the only way back.
+    expect(mockNav.toVerifyEmail).toHaveBeenCalledTimes(1);
+    expect(mockSetNavigationState).not.toHaveBeenCalled();
   });
 });

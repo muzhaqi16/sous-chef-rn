@@ -13,7 +13,10 @@ import { ScreenHeader } from '#components/molecules/ScreenHeader';
 import { LoadingInline } from '#components/atoms/Loading';
 import { InfoRow } from '#components/molecules/InfoRow';
 import { useApolloClient, useQuery, useMutation } from '@apollo/client/react';
-import { updateEntityFieldsLocalFirst } from '#/apollo/utils/localFirstFields';
+import {
+  snapshotFields,
+  updateEntityFieldsLocalFirst,
+} from '#/apollo/utils/localFirstFields';
 import type { ApolloCache } from '@apollo/client';
 import {
   GetPantryDocument,
@@ -42,6 +45,7 @@ import {
   addPantryToHomeCache,
   buildOptimisticPantry,
   removeOptimisticPantry,
+  restorePantryToHomeCache,
   writeOptimisticPantry,
 } from '#features/pantry/utils/optimisticPantry';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
@@ -340,10 +344,11 @@ export const PantrySettings: React.FC<
             cache: apolloClient.cache,
             entity: { __typename: 'Pantry', id: pantryId },
             updates,
-            previous: {
-              name: pantry?.name ?? '',
-              description: pantry?.description ?? '',
-            },
+            // Not `pantry?.name ?? ''`: `pantry` is optional here, so that
+            // coercion wrote an EMPTY NAME over the real one whenever a refusal
+            // landed before the query had resolved. A key the read did not
+            // carry is omitted instead, and the revert leaves it alone.
+            previous: snapshotFields(pantry, updates),
             logLabel: 'PantrySettings.updatePantry',
             mutate: () =>
               updatePantry({
@@ -382,13 +387,56 @@ export const PantrySettings: React.FC<
 
             executeAsyncWithCleanup(
               async () => {
+                // Local-first means the cache is written HERE, before firing.
+                // `buildDeletePantryUpdater` runs only for a real
+                // `DeletePantryPayload`, and offline there is none — the queue
+                // completes with a null result and the replay carries no
+                // `update` at all — so the caller returned to a home that still
+                // listed the pantry it had just deleted, with none selected.
+                //
+                // Unlinks without evicting: the entity has to survive a refusal
+                // so `restorePantryToHomeCache` can put the row back.
+                if (selectedHomeId) {
+                  try {
+                    removeOptimisticPantry(
+                      apolloClient.cache,
+                      selectedHomeId,
+                      pantryId,
+                      { evictEntity: false },
+                    );
+                  } catch (cacheError) {
+                    errorService.reportError(cacheError, {
+                      operation: 'Delete Pantry (optimistic)',
+                    });
+                  }
+                }
+
                 // Queued when offline: the delete converges server-side on
                 // replay (`converged: true` for an already-deleted row), so
                 // re-sending it is safe rather than a permanent failure.
-                await deletePantry({
+                const result = await deletePantry({
                   variables: { input: { id: pantryId } },
                   context: { localFirst: true },
                 });
+
+                if (classifyCreateResult(result) === 'rejected') {
+                  if (selectedHomeId) {
+                    try {
+                      restorePantryToHomeCache(
+                        apolloClient.cache,
+                        selectedHomeId,
+                        pantryId,
+                      );
+                    } catch (cacheError) {
+                      errorService.reportError(cacheError, {
+                        operation: 'Revert rejected Pantry delete',
+                      });
+                    }
+                  }
+                  alertRejectedMutation(result, t('errors.deletePantryFailed'));
+                  return;
+                }
+
                 setSelectedPantryId(null);
                 goBack();
               },

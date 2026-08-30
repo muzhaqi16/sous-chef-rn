@@ -20,7 +20,8 @@
  * ("takes two taps"), reached from the other direction, and the same fix.
  */
 
-import type { ApolloCache, StoreObject } from '@apollo/client';
+import { gql, type ApolloCache, type StoreObject } from '@apollo/client';
+import type { DocumentNode } from 'graphql';
 import { classifyCreateResult } from './classifyCreateResult';
 import { errorService } from '#/services/errorService';
 
@@ -39,10 +40,64 @@ export type FieldsEntityRef = StoreObject & {
 /** The shape of an awaited Apollo mutation result this module reads. */
 type MutationResultLike = { data?: unknown; error?: unknown };
 
+/** An object the cache should normalize rather than store inline. */
+function isEntityLike(value: unknown): value is Record<string, unknown> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    '__typename' in value
+  );
+}
+
+/**
+ * The selection a value needs, as GraphQL source. Empty for a leaf.
+ *
+ * A `__typename` is what separates a nested ENTITY from a JSON-scalar field that
+ * merely happens to be an object, and selecting through it is what makes the
+ * cache normalize the value instead of storing a private copy of it.
+ */
+function selectionFor(value: unknown): string {
+  if (Array.isArray(value)) {
+    const entities = value.filter(isEntityLike);
+    if (entities.length === 0 || entities.length !== value.length) return '';
+    // The intersection: selecting a key some element lacks makes the write warn
+    // and store a hole.
+    const shared = entities
+      .map(entry => Object.keys(entry))
+      .reduce((acc, keys) => acc.filter(key => keys.includes(key)));
+    return selectionFor(
+      Object.fromEntries(shared.map(k => [k, entities[0][k]])),
+    );
+  }
+  if (!isEntityLike(value)) return '';
+
+  const inner = Object.keys(value)
+    .filter(key => key !== '__typename')
+    .map(key => `${key}${selectionFor(value[key])}`);
+  return ` { __typename ${inner.join(' ')} }`;
+}
+
 /**
  * Write flat fields onto a cached entity. `undefined` values are skipped so a
  * partial update never blanks a field, and an unidentifiable entity is a no-op
  * rather than a write against ROOT_QUERY.
+ *
+ * Goes through `writeFragment`, not `cache.modify`, for two reasons:
+ *
+ * - **`cache.modify` cannot INTRODUCE a field.** It runs a modifier only for a
+ *   field the store object already holds, so writing one the cached entity has
+ *   never carried is silently dropped — no error, no warning. Which fields an
+ *   entity carries is decided by whichever query loaded it, so this bites
+ *   exactly where it is hardest to see: `GetMealTemplateForEdit` selects no
+ *   `recipe`, so picking a recipe for a row that query loaded cleared the custom
+ *   name (a field it DOES carry) and dropped the recipe, leaving the row with
+ *   neither. Verified 2026-08-29 vs `@apollo/client@4.1`:
+ *   `docs/verified-library-behaviour.md#cache-modify-cannot-add-a-field`.
+ * - **`cache.modify` stores what it is handed.** A nested `{ __typename, id,
+ *   name }` becomes a private copy, so renaming that entity later moves the
+ *   original and leaves every copy stale. `writeFragment` normalizes it to a
+ *   reference and merges the nested entity's own fields into its own record.
  */
 export function writeEntityFields<TFields extends object>(
   cache: ApolloCache,
@@ -53,14 +108,103 @@ export function writeEntityFields<TFields extends object>(
   const cacheId = cache.identify(entity);
   if (!cacheId) return;
 
-  const fields: Record<string, () => unknown> = {};
-  for (const [field, value] of Object.entries(updates)) {
-    if (value === undefined) continue;
-    fields[field] = () => value;
-  }
-  if (Object.keys(fields).length === 0) return;
+  const written = Object.entries(updates).filter(
+    ([, value]) => value !== undefined,
+  );
+  if (written.length === 0) return;
 
-  cache.modify({ id: cacheId, fields });
+  const selections = written
+    .map(([field, value]) => `${field}${selectionFor(value)}`)
+    .join('\n    ');
+
+  cache.writeFragment({
+    id: cacheId,
+    fragment: localFirstFragment(entity.__typename, selections),
+    data: { __typename: entity.__typename, ...Object.fromEntries(written) },
+  });
+}
+
+/**
+ * The runtime fragment for one (type, field-shape) pair, built at most once.
+ *
+ * The fragment is generated from the update's keys, so its content differs per
+ * call site and per partial update. Under a FIXED name, graphql-tag is handed
+ * different content under one name every time: it warns once per distinct
+ * shape, and it keeps each document in a module-scope cache that then grows for
+ * the life of the process without ever serving a hit.
+ *
+ * The name is derived from the content instead, and the built document is
+ * memoized here — so a repeated write of the same shape reuses one document and
+ * two different shapes never collide. `writePantryItemDetailStub` satisfies the
+ * same constraint by filtering an already-parsed AST rather than re-parsing.
+ */
+const localFirstFragments = new Map<string, DocumentNode>();
+
+function localFirstFragment(
+  typename: string,
+  selections: string,
+): DocumentNode {
+  const shapeKey = `${typename}:${selections}`;
+  const memo = localFirstFragments.get(shapeKey);
+  if (memo) return memo;
+
+  const built = gql`
+      fragment LocalFirstFields_${typename}_${shapeHash(
+    shapeKey,
+  )} on ${typename} {
+        __typename
+        ${selections}
+      }
+    `;
+  localFirstFragments.set(shapeKey, built);
+  return built;
+}
+
+/**
+ * A short, stable, alphanumeric digest of a field shape.
+ *
+ * Only needs to make a GraphQL-legal name unique per shape within one process —
+ * not to resist collision by an adversary — so djb2 over the shape key is
+ * enough, rendered base-36 so the result is always name-safe.
+ */
+function shapeHash(input: string): string {
+  let hash = 5381;
+  for (let i = 0; i < input.length; i++) {
+    hash = ((hash << 5) + hash + input.charCodeAt(i)) | 0;
+  }
+  return (hash >>> 0).toString(36);
+}
+
+/**
+ * The pre-write values for exactly the keys an update will write.
+ *
+ * A key the source does not CARRY is omitted rather than recorded as null.
+ * `writeEntityFields` skips `undefined`, so an omitted key is a field the
+ * revert leaves alone — which is the only correct treatment for a field the
+ * snapshot's read never selected. Coercing that absence to `null` writes
+ * emptiness over a value the snapshot never saw, and on the local-first path
+ * there is no next fetch to repair it: an incomplete read that would have
+ * refetched becomes a definite null that will not.
+ *
+ * A key the source carries as `null` IS recorded, so a genuinely-empty field is
+ * still restored as empty. That is the distinction — absent from the read is not
+ * the same fact as empty in the store, and one `??` collapses them.
+ */
+export function snapshotFields<TFields extends object>(
+  // `object` rather than `Record<string, unknown>`: an interface without an
+  // index signature is not assignable to that, and forcing one at every call
+  // site would mean a double cast at each. The read's shape is whatever the
+  // query carried, which is exactly the fact this inspects.
+  source: object | null | undefined,
+  updates: Partial<TFields>,
+): Partial<TFields> {
+  if (!source) return {};
+  const held = source as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(updates)) {
+    if (key in source) out[key] = held[key];
+  }
+  return out as Partial<TFields>;
 }
 
 export interface LocalFirstFieldsOptions<TFields extends object> {

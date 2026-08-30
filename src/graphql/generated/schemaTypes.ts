@@ -1,10 +1,5 @@
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | null | undefined;
-export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
-export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
-export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
-export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
-export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
   ID: { input: string; output: string; }
@@ -3782,6 +3777,36 @@ export type FailedIpStat = {
   ipAddress: Maybe<Scalars['String']['output']>;
 };
 
+/**
+ * A purchased line movePurchasedItemsToPantry could not move, with the reason.
+ * Counted in summary.failed.
+ */
+export type FailedMoveInfo = {
+  __typename: 'FailedMoveInfo';
+  /**
+   * The registered error code for this line's failure — the same code the
+   * single-line moveShoppingItemToPantry would carry in its error extensions.
+   * Branch on this, not on the reason text.
+   */
+  code: Scalars['String']['output'];
+  /**
+   * Present only when the reason was masked. Names the log entry holding the
+   * real error, so support can look it up.
+   */
+  errorId: Maybe<Scalars['String']['output']>;
+  itemName: Scalars['String']['output'];
+  /**
+   * Client-safe explanation. A failure the client can act on (not found, a
+   * conflict, a validation refusal) states itself. Anything else — a database
+   * fault, a timeout, an unexpected error — reports a generic message and an
+   * errorId instead: this field is payload DATA and so does not pass through the
+   * response error masking, and returning the underlying text here would leak
+   * what that masking exists to withhold.
+   */
+  reason: Scalars['String']['output'];
+  shoppingListItemId: Scalars['ID']['output'];
+};
+
 /** Sub-input for feature-specific notifications */
 export type FeatureNotificationsInput = {
   collaborationInvites?: InputMaybe<Scalars['Boolean']['input']>;
@@ -6583,8 +6608,11 @@ export type MovePurchasedItemsToPantryInput = {
 
 export type MovePurchasedItemsToPantryPayload = {
   __typename: 'MovePurchasedItemsToPantryPayload';
-  /** Items that were successfully moved from the shopping list into the pantry. */
+  /** Purchased lines that could not be moved, each with a registered code and a client-safe reason. Counted in summary.failed. Was always empty before failures were reported per line. */
+  failedItems: Array<FailedMoveInfo>;
+  /** Purchased lines that are now in the pantry — both the ones this call moved and the ones an earlier call in the SAME purchase cycle had already moved (see alreadyInPantry). Not a count of what this call stocked: read summary.succeeded for that. */
   movedItems: Array<MovedItemInfo>;
+  /** summary.succeeded = lines moved by THIS call; summary.skipped = lines this purchase had already put in the pantry; summary.failed = lines that errored. All three changed meaning without changing name or type — failed was previously always 0, and skipped previously meant a line that could not be moved. */
   summary: BulkSummary;
 };
 
@@ -6642,6 +6670,14 @@ export type MoveShoppingItemToPantryInput = {
 
 export type MoveShoppingItemToPantryPayload = {
   __typename: 'MoveShoppingItemToPantryPayload';
+  /**
+   * True when this line's purchase was already in the pantry and the call
+   * wrote nothing — a replay, or a move retargeted at a different pantry.
+   * Same meaning as MovedItemInfo.alreadyInPantry in the batch form, so a
+   * client does not have to call the batch to learn whether its single call
+   * did anything.
+   */
+  alreadyInPantry: Scalars['Boolean']['output'];
   pantry: Maybe<Pantry>;
   pantryItem: PantryItem;
 };
@@ -6687,11 +6723,20 @@ export type MoveToPantryIdHintInput = {
 };
 
 /**
- * Info about a successfully moved item (the per-element entity of
- * movePurchasedItemsToPantry).
+ * Info about a line that is now in the pantry (the per-element entity of
+ * movePurchasedItemsToPantry). Covers both outcomes — read alreadyInPantry to
+ * tell them apart.
  */
 export type MovedItemInfo = {
   __typename: 'MovedItemInfo';
+  /**
+   * True when an earlier move had already placed this line and the call wrote
+   * nothing. The batch leaves its lines on the shopping list, so a line stays in
+   * the purchased section and is re-attempted on every invocation; this is how a
+   * client tells "already stocked" from "just moved" and stops counting the same
+   * line as new work. Counted in summary.skipped, not summary.succeeded.
+   */
+  alreadyInPantry: Scalars['Boolean']['output'];
   itemName: Scalars['String']['output'];
   pantryItemId: Scalars['ID']['output'];
   quantity: Scalars['Float']['output'];
@@ -7108,13 +7153,53 @@ export type Mutation = {
   /**
    * Move all purchased items from a shopping list to the home's default pantry.
    * Only available for shopping lists linked to a home.
-   * Items without an itemId (custom items not in catalog) will be skipped.
+   *
+   * Bulk form of moveShoppingItemToPantry, with one difference: it never removes
+   * the lines it moves. They stay in the purchased section — clearing that is
+   * deleteShoppingListItems(purchased: true) — and each is stamped with
+   * ShoppingListItem.purchaseInfo.movedToPantryAt, which is what takes it out of
+   * this mutation's working set. A repeat call over an unchanged list therefore
+   * acts on nothing and reports total: 0. Read that stamp to render a purchased
+   * row as already stocked; it is available on any read, not only here.
+   *
+   * Read the summary accordingly: succeeded = lines this call moved; failed =
+   * lines that errored, each in failedItems with its code and reason; skipped =
+   * a line THIS purchase had already put in the pantry and that had lost its
+   * stamp. movedItems carries the moved and the skipped together, told apart by
+   * alreadyInPantry — so movedItems.length is not "lines stocked by this call",
+   * summary.succeeded is.
+   *
+   * Re-adding, unmarking or restoring a line starts a new purchase CYCLE: the
+   * stamp clears, the line returns to the working set, and its next purchase is
+   * stocked in its own right even while the previous cycle's pantry entry is
+   * still there. Buying the same item every week therefore stocks the pantry
+   * every week. Only a replay WITHIN one purchase converges as skipped.
+   *
+   * Three counters carry meanings a client cannot infer from their names, so
+   * read them as defined above rather than by analogy with other bulk payloads:
+   * failed can be non-zero, skipped is "already stocked" rather than "could not
+   * be moved", and movedItems.length is not a count of what this call stocked.
+   * docs/api/graphql-operation-conventions.md records what changed and when.
+   *
+   * A line whose catalog item was deleted is re-resolved from the name it still
+   * carries rather than skipped; only a line with neither fails.
    */
   movePurchasedItemsToPantry: MovePurchasedItemsToPantryResult;
   /**
    * Move a shopping list item to the pantry after purchase.
    * Creates a PantryItem with full traceability back to the shopping list item.
    * Optionally removes the item from the shopping list.
+   *
+   * The target pantry must belong to the same home as the shopping list. A
+   * pantry in another home is refused as a validation error naming the mismatch,
+   * even where the caller has permission to add items to it; a PERSONAL list
+   * (one with no home) may target any pantry the caller can add to.
+   *
+   * Stocking is once PER PURCHASE, keyed on the line and its purchase cycle: a
+   * replay within one purchase returns the existing pantry item with
+   * alreadyInPantry true, while the line's next purchase stocks the pantry in
+   * its own right. If that existing entry sits in a pantry the caller cannot
+   * read, the call is refused rather than disclosing it.
    */
   moveShoppingItemToPantry: MoveShoppingItemToPantryResult;
   /** Reorder a shopping list item relative to other items. */
@@ -14307,6 +14392,16 @@ export type ShoppingListItemPurchaseInfo = {
   __typename: 'ShoppingListItemPurchaseInfo';
   /** Whether the item has been purchased */
   isPurchased: Scalars['Boolean']['output'];
+  /**
+   * When this line's purchase reached the pantry, or null if it has not.
+   *
+   * Read this to render a purchased row as already stocked — it is the same
+   * state movePurchasedItemsToPantry filters its working set on, so a line with
+   * a value here is one that move will not act on again. It is cleared when the
+   * line re-enters an unpurchased state (re-added, unmarked, restored), which
+   * starts a new purchase cycle and returns the line to that working set.
+   */
+  movedToPantryAt: Maybe<Scalars['DateTime']['output']>;
   /** When the item was purchased */
   purchaseDate: Maybe<Scalars['DateTime']['output']>;
   /** Who purchased the item */

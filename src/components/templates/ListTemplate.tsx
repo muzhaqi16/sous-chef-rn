@@ -47,7 +47,19 @@ interface ListTemplateProps<TItem extends { id: string } = { id: string }> {
   testIDPrefix?: string;
 
   customListComponent?: React.ComponentType<CustomListComponentProps<TItem>>;
-  customListProps?: Record<string, unknown>;
+  /**
+   * Extra props for a `customListComponent`, spread BEFORE the template's own
+   * injections so a caller cannot override them. It used to be spread last: a
+   * key colliding with `onItemPress`, `itemSwipeActions` or `testIDPrefix`
+   * silently replaced the wiring the template exists to guarantee.
+   *
+   * The type rejects such a key too. It used to be written as an `Omit` over an
+   * index-signature type, which removes nothing — an open record has no known
+   * keys to omit — so it read as a guard and permitted every collision it
+   * named. Mapping the injected keys to `never` is what actually refuses them.
+   */
+  customListProps?: Record<string, unknown> &
+    Partial<Record<keyof CustomListComponentProps<TItem>, never>>;
 }
 
 /** Props the template injects into a `customListComponent`. */
@@ -71,8 +83,17 @@ interface CustomListComponentProps<
     | null;
   testIDPrefix?: string;
   emptyState?: EmptyStateConfig;
-  [key: string]: unknown;
 }
+/*
+ * This prop set used to end in `[key: string]: unknown`, which let a custom
+ * list component be typed against props the template never injects. Removing it
+ * stops untyped props flowing through the typed slot — caller extras go in
+ * `customListProps` — but it does NOT catch the defect that motivated it: a
+ * component reading a renamed prop declares it OPTIONAL, and an unused optional
+ * prop stays assignable either way. The guard for that is behavioural, in
+ * `SortableItem.test.tsx` § "swipe actions reach the row", which asserts the
+ * descriptors the screen supplies actually reach the row's swipe props.
+ */
 
 export const ListTemplate = <TItem extends { id: string } = { id: string }>({
   items = [],
@@ -112,6 +133,8 @@ export const ListTemplate = <TItem extends { id: string } = { id: string }>({
     <View style={styles.container}>
       {CustomListComponent ? (
         <CustomListComponent
+          // Caller extras FIRST: the template's own wiring is not overridable.
+          {...customListProps}
           items={items || []}
           onItemPress={isLoading ? () => {} : onItemPress}
           itemSwipeActions={isLoading ? undefined : itemSwipeActions}
@@ -120,7 +143,6 @@ export const ListTemplate = <TItem extends { id: string } = { id: string }>({
           ListFooterComponent={ListFooterComponent}
           testIDPrefix={testIDPrefix}
           emptyState={effectiveEmptyState}
-          {...customListProps}
         />
       ) : (
         <ItemList

@@ -4,6 +4,22 @@ module.exports = {
   preset: '@react-native/jest-preset',
   testTimeout: 30000,
   forceExit: true,
+  // Worker count and per-worker heap are BOTH load-bearing on a 16GB machine.
+  //
+  // Jest's default is `cpus - 1` (9 here), and each worker is a Node process
+  // whose default V8 heap ceiling is 4288MB — ~38GB of permitted heap against
+  // 16GB of RAM. V8 has no reason to collect early when the limit is that far
+  // away, so every worker drifts upward until the machine swaps. A single
+  // worker measured with `--logHeapUsage` sawtooths between ~200MB and ~880MB
+  // across an Apollo-heavy directory; nine of those in parallel is the OOM.
+  //
+  // `maxWorkers` caps the multiplier and `workerIdleMemoryLimit` caps each
+  // term: Jest checks a worker's heap after every test file and restarts it
+  // past the limit, which turns the unbounded drift into a hard ceiling.
+  // CI (`ubuntu-latest`, 4 vCPU) already ran at 3 workers and passed, which is
+  // why this never showed up there — keep its count rather than halving it.
+  maxWorkers: process.env.CI ? '75%' : 4,
+  workerIdleMemoryLimit: '512MB',
   setupFilesAfterEnv: ['./jest.setup.js'],
   moduleNameMapper: {
     // Binary assets (fonts, images, etc.)
@@ -30,7 +46,18 @@ module.exports = {
     // run a duplicated copy of the suite per agent in flight.
     '/\\.claude/worktrees/',
   ],
-  modulePathIgnorePatterns: ['/\\.claude/worktrees/'],
+  // `testPathIgnorePatterns` above decides what becomes a test SUITE; it does
+  // not reach the haste crawler. `modulePathIgnorePatterns` is the one that
+  // does, so the native build trees — 19GB / 67,776 files under `ios/` and
+  // 5.9GB / 2,701 under `android/` — are excluded here or they are walked and
+  // indexed into every worker's module map. No `.ts`/`.tsx` under `src/`
+  // resolves a module out of either directory, and neither contains a
+  // `package.json`, so nothing becomes unresolvable by excluding them.
+  modulePathIgnorePatterns: [
+    '/\\.claude/worktrees/',
+    '<rootDir>/ios/',
+    '<rootDir>/android/',
+  ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/graphql/generated/**',

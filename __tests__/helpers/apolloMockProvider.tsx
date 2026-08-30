@@ -125,17 +125,12 @@ function buildSchemaLink(options: Pick<ApolloTestOptions, 'mocks' | 'resolvers'>
  * - With `operationMocks`: per-operation `MockedProvider` mocks.
  * - Don't combine both at once — pick the strategy your test needs.
  */
-import type { ApolloClient } from '@apollo/client';
+import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 
-const TEST_DEFAULT_OPTIONS: ApolloClient.DefaultOptions = {
-  query: { fetchPolicy: 'network-only', errorPolicy: 'all' },
-  mutate: { errorPolicy: 'all' },
-  watchQuery: {
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-    errorPolicy: 'all',
-  },
-};
+// The app's own defaults, not a near-copy. This was a hand-maintained
+// duplicate that had already drifted from `client.ts` (no `returnPartialData`),
+// which meant tests exercised a client that behaved differently from the app.
+const TEST_DEFAULT_OPTIONS = APOLLO_DEFAULT_OPTIONS;
 
 export function createApolloTestWrapper(options: ApolloTestOptions = {}) {
   const { operationMocks, mocks, resolvers, cache: providedCache } = options;

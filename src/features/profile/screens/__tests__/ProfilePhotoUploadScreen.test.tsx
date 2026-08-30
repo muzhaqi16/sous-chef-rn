@@ -54,9 +54,7 @@ jest.mock('react-native-permissions', () => ({
 
 jest.mock('#/storage/mmkv');
 
-jest.mock('#/services/errorService', () => ({
-  errorService: { reportError: jest.fn() },
-}));
+jest.mock('#/services/errorService');
 
 jest.mock('#/utils/finallyHelpers');
 

@@ -6,6 +6,7 @@ import {
   moveShoppingListItemToUnpurchased,
   addNewItemToShoppingListCache,
   removeItemFromShoppingListForMoveToPantry,
+  restoreItemToShoppingListAfterMoveToPantry,
   createOptimisticShoppingListItem,
   adoptServerShoppingListItemId,
   revertOptimisticShoppingListItem,
@@ -27,6 +28,7 @@ type MockedCache = ApolloCache & {
   evict: jest.Mock;
   gc: jest.Mock;
   identify: jest.Mock;
+  readFragment: jest.Mock;
 };
 
 /** A cache ref or normalized object the field helpers read from. */
@@ -48,7 +50,8 @@ function createMockCache(): MockedCache {
       (obj: { __typename: string; id: string }) =>
         `${obj.__typename}:${obj.id}`,
     ),
-  } as MockedCache;
+    readFragment: jest.fn(),
+  } as unknown as MockedCache;
 }
 
 /**
@@ -826,6 +829,117 @@ describe('addNewItemToShoppingListCache', () => {
 });
 
 // ---------------------------------------------------------------------------
+// The eager unlink and its withdrawal
+// ---------------------------------------------------------------------------
+
+describe('move-to-pantry unlink and restore', () => {
+  beforeEach(jest.clearAllMocks);
+
+  it('evicts the entity on the confirmed path', () => {
+    const cache = createMockCache();
+
+    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', false);
+
+    expect(cache.evict).toHaveBeenCalled();
+  });
+
+  it('keeps the entity when the removal is only eager', () => {
+    // Offline the row is unlinked before the server has agreed. Evicting here
+    // is what made a permanently-refused replay lose the item from BOTH lists:
+    // the queue withdrew the PantryItem it created, and there was nothing left
+    // to put back on the shopping side.
+    const cache = createMockCache();
+
+    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', false, {
+      evictEntity: false,
+    });
+
+    expect(cache.modify).toHaveBeenCalled();
+    expect(cache.evict).not.toHaveBeenCalled();
+  });
+
+  it('re-adds the edge and the counters on withdrawal', () => {
+    const cache = createMockCache();
+    cache.readFragment.mockReturnValue({
+      id: 'sli-1',
+      purchaseInfo: { isPurchased: false },
+      shoppingList: { id: 'sl-1' },
+    });
+
+    restoreItemToShoppingListAfterMoveToPantry(cache, 'sli-1');
+
+    const helpers = createFieldHelpers({
+      storeFieldName: 'itemsConnection:{"isPurchased":false}',
+    });
+    helpers.readField.mockReturnValue('sli-9');
+    helpers.toReference.mockReturnValue({ __ref: 'ShoppingListItem:sli-1' });
+
+    const result = invokeFieldModifier(
+      cache,
+      'itemsConnection',
+      { edges: [{ node: { __ref: 'ShoppingListItem:sli-9' } }], totalCount: 1 },
+      helpers,
+    );
+
+    expect(result.edges).toHaveLength(2);
+    expect(result.totalCount).toBe(2);
+  });
+
+  it('restores into the variant the row actually belongs to', () => {
+    const cache = createMockCache();
+    cache.readFragment.mockReturnValue({
+      id: 'sli-1',
+      purchaseInfo: { isPurchased: true },
+      shoppingList: { id: 'sl-1' },
+    });
+
+    restoreItemToShoppingListAfterMoveToPantry(cache, 'sli-1');
+
+    const helpers = createFieldHelpers({
+      storeFieldName: 'itemsConnection:{"isPurchased":false}',
+    });
+    const existing = { edges: [], totalCount: 0 };
+
+    expect(
+      invokeFieldModifier(cache, 'itemsConnection', existing, helpers),
+    ).toBe(existing);
+  });
+
+  it('is idempotent — a second withdrawal does not duplicate the row', () => {
+    const cache = createMockCache();
+    cache.readFragment.mockReturnValue({
+      id: 'sli-1',
+      purchaseInfo: { isPurchased: false },
+      shoppingList: { id: 'sl-1' },
+    });
+
+    restoreItemToShoppingListAfterMoveToPantry(cache, 'sli-1');
+
+    const helpers = createFieldHelpers({
+      storeFieldName: 'itemsConnection:{"isPurchased":false}',
+    });
+    helpers.readField.mockReturnValue('sli-1');
+    const existing = {
+      edges: [{ node: { __ref: 'ShoppingListItem:sli-1' } }],
+      totalCount: 1,
+    };
+
+    expect(
+      invokeFieldModifier(cache, 'itemsConnection', existing, helpers),
+    ).toBe(existing);
+  });
+
+  it('does nothing when the entity is gone', () => {
+    const cache = createMockCache();
+    cache.readFragment.mockReturnValue(null);
+
+    restoreItemToShoppingListAfterMoveToPantry(cache, 'sli-1');
+
+    expect(cache.modify).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // removeItemFromShoppingListForMoveToPantry
 // ---------------------------------------------------------------------------
 
@@ -956,46 +1070,20 @@ describe('removeItemFromShoppingListForMoveToPantry', () => {
     expect(result).toBe(existing);
   });
 
-  it('decrements completedItems when wasPurchased=true', () => {
-    const cache = createMockCache();
-
-    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', true);
-
-    const result = invokeFieldModifier(cache, 'completedItems', 3, {});
-
-    expect(result).toBe(2);
-  });
-
-  it('does NOT have completedItems modifier when wasPurchased=false', () => {
-    const cache = createMockCache();
-
-    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', false);
-
-    const modifyCall = cache.modify.mock.calls[0];
-    const fields = modifyCall[0].fields;
-
-    expect(fields.completedItems).toBeUndefined();
-  });
-
-  it('decrements totalItems', () => {
-    const cache = createMockCache();
-
-    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', true);
-
-    const result = invokeFieldModifier(cache, 'totalItems', 5, {});
-
-    expect(result).toBe(4);
-  });
-
-  it('clamps totalItems to 0', () => {
-    const cache = createMockCache();
-
-    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', true);
-
-    const result = invokeFieldModifier(cache, 'totalItems', 0, {});
-
-    expect(result).toBe(0);
-  });
+  /**
+   * The counters moved OUT of this suite.
+   *
+   * They live in a second `cache.modify` that only runs when the edge was
+   * actually removed — this helper is called twice for one online move, and
+   * `edges.filter` is idempotent while `-1` is not. `createMockCache().modify`
+   * is a `jest.fn` that never invokes a modifier, so nothing here can make that
+   * condition true, and a counter assertion in this suite could only ever
+   * answer "does the modifier subtract?", which was never in doubt. That is how
+   * the double-decrement shipped under a green suite.
+   *
+   * `moveToPantryCounters.test.ts` covers them against the real cache, where
+   * the two passes and their cumulative result are observable.
+   */
 
   it('evicts item entity and calls gc', () => {
     const cache = createMockCache();
@@ -1052,6 +1140,7 @@ describe('createOptimisticShoppingListItem', () => {
     expect(entity.purchaseInfo).toEqual({
       __typename: 'ShoppingListItemPurchaseInfo',
       isPurchased: false,
+      movedToPantryAt: null,
     });
     expect(entity.item).toBeNull();
     expect(entity.unit).toBeNull();
@@ -1237,5 +1326,125 @@ describe('buildAddItemsReconcileUpdate', () => {
       wrap: { message: 'Cache update failed:' },
     })(cache, successData, variables);
     expect(cache.modify).toHaveBeenCalled();
+  });
+});
+
+describe('writePurchaseInfo', () => {
+  const { gql } = require('@apollo/client');
+  const { makeCache } = require('#/apollo/cache');
+  const { writePurchaseInfo } = require('../shoppingListCacheUpdaters');
+
+  const RECORD = gql`
+    fragment WritePurchaseInfoProbe on ShoppingListItem {
+      id
+      purchaseInfo {
+        isPurchased
+        movedToPantryAt
+        purchasedQuantity
+        purchasedPrice
+      }
+      updatedAt
+    }
+  `;
+
+  function seed(overrides: Record<string, unknown> = {}) {
+    const cache = makeCache();
+    cache.writeFragment({
+      id: 'ShoppingListItem:i1',
+      fragment: RECORD,
+      data: {
+        __typename: 'ShoppingListItem',
+        id: 'i1',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: true,
+          movedToPantryAt: '2026-08-28T10:00:00.000Z',
+          purchasedQuantity: 3,
+          purchasedPrice: 2.5,
+          ...overrides,
+        },
+      },
+    });
+    return cache;
+  }
+
+  const read = (cache: { readFragment: Function }) =>
+    cache.readFragment({
+      id: 'ShoppingListItem:i1',
+      fragment: RECORD,
+      returnPartialData: true,
+    }) as {
+      updatedAt: string;
+      purchaseInfo: {
+        isPurchased: boolean;
+        movedToPantryAt: string | null;
+        purchasedQuantity: number | null;
+        purchasedPrice: number | null;
+      };
+    } | null;
+
+  it('clears the stamp when the flag flips', () => {
+    const cache = seed();
+    writePurchaseInfo(cache, 'i1', { isPurchased: false });
+
+    // The server clears the stamp on this transition; the local write matches.
+    expect(read(cache)?.purchaseInfo.movedToPantryAt).toBeNull();
+    expect(read(cache)?.purchaseInfo.isPurchased).toBe(false);
+  });
+
+  it('keeps the rest of the record when the flag flips', () => {
+    const cache = seed();
+    writePurchaseInfo(cache, 'i1', { isPurchased: false });
+
+    // The amounts describe a purchase the server recorded. Only the stamp is
+    // derived from the flag.
+    expect(read(cache)?.purchaseInfo.purchasedQuantity).toBe(3);
+    expect(read(cache)?.purchaseInfo.purchasedPrice).toBe(2.5);
+  });
+
+  it('preserves the stamp when the flag is unchanged', () => {
+    const cache = seed();
+    writePurchaseInfo(cache, 'i1', { isPurchased: true });
+
+    expect(read(cache)?.purchaseInfo.movedToPantryAt).toBe(
+      '2026-08-28T10:00:00.000Z',
+    );
+  });
+
+  it('sets the stamp without touching the flag', () => {
+    const cache = seed({ isPurchased: false, movedToPantryAt: null });
+    writePurchaseInfo(cache, 'i1', {
+      movedToPantryAt: '2026-08-29T00:00:00.000Z',
+    });
+
+    // A stamp-only write must not assert a flag it does not own — asserting
+    // `true` over a cached `false` is what cleared the record.
+    expect(read(cache)?.purchaseInfo.isPurchased).toBe(false);
+    expect(read(cache)?.purchaseInfo.movedToPantryAt).toBe(
+      '2026-08-29T00:00:00.000Z',
+    );
+    expect(read(cache)?.purchaseInfo.purchasedQuantity).toBe(3);
+  });
+
+  it('writes updatedAt only when asked', () => {
+    const cache = seed();
+    writePurchaseInfo(cache, 'i1', { isPurchased: false });
+    expect(read(cache)?.updatedAt).toBe('2026-01-01T00:00:00.000Z');
+
+    writePurchaseInfo(
+      cache,
+      'i1',
+      { isPurchased: true },
+      { updatedAt: '2026-08-29T12:00:00.000Z' },
+    );
+    expect(read(cache)?.updatedAt).toBe('2026-08-29T12:00:00.000Z');
+  });
+
+  it('does nothing for an entity the cache cannot identify', () => {
+    const cache = makeCache();
+    expect(() =>
+      writePurchaseInfo(cache, '', { isPurchased: true }),
+    ).not.toThrow();
   });
 });

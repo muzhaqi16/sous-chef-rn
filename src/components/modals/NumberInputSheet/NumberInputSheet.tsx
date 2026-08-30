@@ -8,7 +8,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { errorMessageOr } from '#/services/errorService';
+import { localizedErrorMessage } from '#/services/errorService';
 import { Text } from '#components/atoms/Text';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
@@ -87,7 +87,7 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
       },
       setLoading,
       (err: unknown) => {
-        setError(errorMessageOr(err, t('errors.generic')));
+        setError(localizedErrorMessage(err, t('errors.generic')));
       },
     );
   };

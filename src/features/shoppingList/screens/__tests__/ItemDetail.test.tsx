@@ -124,6 +124,7 @@ function buildShoppingListItem(overrides: Record<string, unknown> = {}) {
     purchaseInfo: {
       __typename: 'ShoppingListItemPurchaseInfo',
       isPurchased: false,
+      movedToPantryAt: null,
       purchasedQuantity: null,
       purchasedPrice: null,
       purchaseDate: null,
@@ -245,6 +246,7 @@ describe('ShoppingListItemDetail', () => {
             purchaseInfo: {
               __typename: 'ShoppingListItemPurchaseInfo',
               isPurchased: true,
+              movedToPantryAt: null,
               purchasedQuantity: 2,
               purchasedPrice: 3.5,
               purchaseDate: '2026-08-19T00:00:00Z',

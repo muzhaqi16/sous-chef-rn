@@ -22,7 +22,7 @@ import {
 } from '#operations/auth/auth.generated';
 import { PasswordActionStatus } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
-import { errorMessageOr, errorService } from '#/services/errorService';
+import { localizedErrorMessage, errorService } from '#/services/errorService';
 import {
   getRateLimitMessage,
   isRateLimitError,
@@ -229,7 +229,10 @@ export const ResetPasswordScreen: React.FC = () => {
         toast({
           message: isRateLimitError(error)
             ? getRateLimitMessage(error)
-            : errorMessageOr(error, t('auth.resetPasswordFailedFallback')),
+            : localizedErrorMessage(
+                error,
+                t('auth.resetPasswordFailedFallback'),
+              ),
           type: 'error',
         });
       },

@@ -101,7 +101,17 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       variant: {
         card: { marginBottom: theme.spacing.md, marginTop: theme.spacing.md },
-        inset: { letterSpacing: 0.5 },
+        // 13px/bold, restored. The `Text size="xs" weight="semibold"` this
+        // section renders with is the CARD variant's scale; folding the inset
+        // header into the same component silently took its titles from
+        // 13px/bold down to 12px/semibold, under a refactor whose commit
+        // described it as visually neutral. Overriding here keeps one component
+        // without changing what either variant looks like.
+        inset: {
+          letterSpacing: 0.5,
+          fontSize: 13,
+          fontWeight: theme.fonts.weight.bold,
+        },
       },
     },
   },

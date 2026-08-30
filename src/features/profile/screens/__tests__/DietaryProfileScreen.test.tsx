@@ -45,11 +45,7 @@ jest.mock('#/styles/commonStyles', () => ({
   },
 }));
 
-jest.mock('#/services/errorService', () => ({
-  errorService: {
-    reportError: jest.fn(),
-  },
-}));
+jest.mock('#/services/errorService');
 
 jest.mock('#constants/animations', () => ({
   TIMING: { SLOW: 300 },

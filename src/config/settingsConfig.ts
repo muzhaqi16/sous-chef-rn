@@ -29,12 +29,22 @@ export interface SettingItemConfig {
   options?: SettingOptionConfig[];
 }
 
+/**
+ * The developer section's id, exported so the screens that gate on it import
+ * the identity rather than repeating a literal.
+ *
+ * A literal is what let the gate fail open: the section's key changed from the
+ * English title to this id, and the comparison against `'Developer'` silently
+ * stopped matching, so the section rendered for every user in every build.
+ */
+export const DEVELOPER_SECTION_ID = 'developer';
+
 export interface SettingSectionConfig {
   /**
    * Stable identity, independent of what the section is called on screen.
    *
-   * Screens branch on this (`section.id === 'developer'`). They used to branch
-   * on the English title, which tied control flow to display copy.
+   * Screens branch on this (`section.id === DEVELOPER_SECTION_ID`). They used
+   * to branch on the English title, which tied control flow to display copy.
    */
   id: string;
   /** Empty for an unlabelled trailing group (the log-out row). */
@@ -210,7 +220,7 @@ export const PROFILE_SETTINGS_CONFIG: SettingSectionConfig[] = [
     ],
   },
   {
-    id: 'developer',
+    id: DEVELOPER_SECTION_ID,
     titleKey: 'profile.sections.developer',
     items: [
       { key: 'debugInfo', labelKey: 'labels.debugInfo', type: 'navigation' },

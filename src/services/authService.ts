@@ -26,10 +26,6 @@ import { incrementLoginCount } from '#/hooks/useFeatureHint';
 import {
   LoginDocument,
   RegisterDocument,
-  type LoginMutation,
-  type LoginMutationVariables,
-  type RegisterMutation,
-  type RegisterMutationVariables,
 } from '#operations/auth/auth.generated';
 import {
   LoginUserFragmentDoc,
@@ -37,11 +33,7 @@ import {
 } from '#operations/auth/userFragments.generated';
 import {
   RegisterDeviceDocument,
-  type RegisterDeviceMutation,
-  type RegisterDeviceMutationVariables,
   UpdateDeviceDocument,
-  type UpdateDeviceMutation,
-  type UpdateDeviceMutationVariables,
 } from '#operations/auth/device.generated';
 import {
   type LoginInput,
@@ -67,6 +59,7 @@ import {
 } from '#/storage/keychain';
 import { storage } from '#/storage/mmkv';
 import { t } from '#/i18n';
+import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 import {
   collectDeviceInformation,
   validateDeviceInformation,
@@ -257,7 +250,7 @@ async function pushRotatedTokenToServer(
   pushToken: string,
 ): Promise<void> {
   try {
-    await client.mutate<UpdateDeviceMutation, UpdateDeviceMutationVariables>({
+    await client.mutate({
       mutation: UpdateDeviceDocument,
       variables: { input: { id: deviceId, pushToken } },
     });
@@ -278,7 +271,7 @@ function deregisterDeviceOnLogout(): void {
   const deviceId = registeredDeviceId;
   if (!deviceId) return;
   void client
-    .mutate<UpdateDeviceMutation, UpdateDeviceMutationVariables>({
+    .mutate({
       mutation: UpdateDeviceDocument,
       variables: { input: { id: deviceId, delete: true } },
     })
@@ -305,10 +298,7 @@ async function registerDeviceOnce(): Promise<boolean> {
     const pushToken =
       notificationStatus === 'granted' ? await acquirePushToken() : null;
 
-    const result = await client.mutate<
-      RegisterDeviceMutation,
-      RegisterDeviceMutationVariables
-    >({
+    const result = await client.mutate({
       mutation: RegisterDeviceDocument,
       variables: { input: buildDeviceInput(deviceInfo, pushToken) },
     });
@@ -523,8 +513,15 @@ function handleRejectedAuthPayload(
   operation: string,
 ): void {
   logger.warn(`${operation} rejected by the server: ${payload.code}`);
+  // The FALLBACK must be the app's own copy, not the payload's. Passing
+  // `payload.message` meant any code missing from the suffix table displayed
+  // the server's English — the table is total now, but the fallback is where
+  // the next gap would have surfaced.
   toastService.error(
-    errorService.getUserFriendlyMessage(payload.code, payload.message),
+    errorService.getUserFriendlyMessage(
+      payload.code,
+      t('errors.codes.genericRetry'),
+    ),
   );
   useStore.getState().setAuthIsLoading(false);
 }
@@ -691,7 +688,7 @@ async function login(
   store.setAuthIsLoading(true);
 
   try {
-    const result = await client.mutate<LoginMutation, LoginMutationVariables>({
+    const result = await client.mutate({
       mutation: LoginDocument,
       variables: { input },
     });
@@ -749,10 +746,7 @@ async function register(
   store.setAuthIsLoading(true);
 
   try {
-    const result = await client.mutate<
-      RegisterMutation,
-      RegisterMutationVariables
-    >({
+    const result = await client.mutate({
       mutation: RegisterDocument,
       variables: { input },
     });
@@ -786,9 +780,12 @@ async function register(
     if (payload) {
       // Non-success union member (ValidationError / ConflictError /
       // ForbiddenError / NotFoundError). It resolves 200 with no transport
-      // error, so surface its message the way handleAuthError surfaces
-      // transport failures — a toast — and stay on the sign-up screen.
-      toastService.error(payload.message);
+      // error, so surface it the way handleAuthError surfaces transport
+      // failures — a toast — and stay on the sign-up screen. In the app's own
+      // words: the payload's `message` is unlocalizable English.
+      toastService.error(
+        localizedRefusalMessage(payload, t('errors.codes.genericRetry')),
+      );
       store.setAuthIsLoading(false);
       return false;
     }
@@ -810,24 +807,28 @@ async function register(
 
 interface LogoutOptions {
   /**
-   * Also delete this account's stored biometric credentials.
+   * KEEP this account's stored biometric credentials across the sign-out.
    *
-   * Default FALSE, and deliberately so: biometric login exists precisely to
-   * get the user back IN after a sign-out, so clearing the keychain here made
-   * the feature structurally impossible — `hasCredentials` came back false on
-   * the login screen (no biometric button) AND in
-   * `shouldShowPostLoginBiometricPrompt` (enrol again, every login), and
-   * `autoLogin` could never succeed after a manual sign-out.
+   * Default FALSE — a sign-out clears them. The previous default was the
+   * reverse, on the argument that "reading the slot still costs a successful
+   * biometric prompt from that account's owner". That argument does not hold:
+   * the slot is `ACCESS_CONTROL.BIOMETRY_ANY` (`src/storage/keychain.ts`), which
+   * ANY biometric enrolled on the device satisfies — and typically the device
+   * passcode too — while the two slots the login screen reads to decide whether
+   * to offer the button (`indicatorServiceFor`, `LAST_BIOMETRIC_EMAIL_KEY`) have
+   * no access control at all. On a shared device that meant: user A signs out,
+   * user B launches, the biometric button appears for A's address, and B's own
+   * finger unlocks A's stored password.
    *
-   * Enrolment is per account and biometry-gated, so leaving it in place does
-   * not expose anything on a shared device — reading the slot still costs a
-   * successful biometric prompt from that account's owner.
+   * The convenience it costs is real and was the reason for the old default:
+   * biometric login exists to get the user back in after a sign-out. That
+   * remains available by opting in — pass `true` — and re-enrolment after a
+   * deliberate sign-out is one prompt.
    *
-   * Pass `true` only when the account itself is going away (delete account).
    * The user-facing way to forget a device is Profile → Security → disable,
    * which calls `removeCredentials` directly.
    */
-  forgetDevice?: boolean;
+  keepBiometricCredentials?: boolean;
 }
 
 async function logout(options?: LogoutOptions): Promise<void> {
@@ -838,17 +839,23 @@ async function logout(options?: LogoutOptions): Promise<void> {
     const currentUserEmail = user?.email;
     const currentUserId = user?.id;
 
-    // Biometric credentials SURVIVE a sign-out (see `LogoutOptions`). Only an
-    // account that is going away takes its keychain slot with it; credentials
-    // are scoped per account, so this never touches another user's.
+    // Biometric credentials do NOT survive a sign-out (see `LogoutOptions` for
+    // why the default is to clear). Credentials are scoped per account, so this
+    // never touches another user's.
     //
     // Done FIRST, not last. Everything below can throw, and the whole body is
     // wrapped in a catch that only logs — so a security-relevant deletion
-    // parked at the end is a deletion that silently may not happen. There is
-    // nothing to lose by clearing early: the caller has already decided the
-    // account is gone, and logout always ends locally signed-out regardless.
-    if (options?.forgetDevice && currentUserEmail) {
-      await removeCredentials(currentUserEmail);
+    // parked at the end is a deletion that silently may not happen.
+    if (!options?.keepBiometricCredentials && currentUserEmail) {
+      // The result is READ, not discarded: a keychain delete that failed leaves
+      // the previous user's password on the device, which is exactly the state
+      // this call exists to prevent, and it must not look like success.
+      const removed = await removeCredentials(currentUserEmail);
+      if (!removed) {
+        logger.error(
+          'Logout: biometric credentials could not be removed; the previous account may still be unlockable on this device',
+        );
+      }
     }
 
     // Tear down the prior user's push/notification state before clearing auth,
@@ -915,7 +922,7 @@ async function autoLogin(): Promise<boolean> {
     }
 
     logger.info('Attempting auto-login with stored credentials');
-    const result = await client.mutate<LoginMutation, LoginMutationVariables>({
+    const result = await client.mutate({
       mutation: LoginDocument,
       variables: {
         input: { email: credentials.email, password: credentials.password },
@@ -950,20 +957,33 @@ async function autoLogin(): Promise<boolean> {
     }
 
     if (result.error) {
-      logger.warn('Auto-login failed, clearing stored credentials');
-      await removeCredentials(email);
+      // Same rule as the payload branch above, which this used to contradict:
+      // credentials are dropped only when the failure establishes they will
+      // never authenticate. A transport failure says the request did not
+      // ARRIVE — it says nothing about the password — and clearing on one meant
+      // a single blip on launch silently un-enrolled the device, with the next
+      // launch offering no biometric button and no explanation.
+      const parsed = errorService.parseApolloError(result.error, {
+        logError: false,
+      });
+      const code = parsed.error?.code;
+      if (code && isDeadCredentialCode(code)) {
+        logger.warn(
+          `Auto-login rejected (${code}), clearing stored credentials`,
+        );
+        await removeCredentials(email);
+      } else {
+        logger.warn('Auto-login failed; stored credentials kept');
+      }
       handleAuthError(result.error, 'Auto-login');
     }
 
     return false;
   } catch (error) {
+    // Deliberately does NOT clear. A throw here is a transport or client fault,
+    // never the server saying these credentials are dead — and the branches
+    // above already handle the one case that is.
     logger.error('Auto-login error:', error);
-    try {
-      const email = await getLastBiometricEmail();
-      if (email) await removeCredentials(email);
-    } catch {
-      logger.error('Failed to cleanup credentials after auto-login error');
-    }
     return false;
   }
 }

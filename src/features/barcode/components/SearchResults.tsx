@@ -19,6 +19,7 @@ import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
 import {
   createAddToParentConnectionUpdater,
   safeEvict,
+  adoptServerEntityId,
 } from '#/apollo/utils/cacheUpdaters';
 import {
   addNewItemToShoppingListCache,
@@ -33,13 +34,20 @@ import {
 } from '#/apollo/utils/pantryCacheUpdaters';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import {
   getPantryItemDuplicateFromResult,
   promptPantryDuplicate,
 } from '#/utils/errors/pantryItemDuplicate';
 import { useAppStore } from '#store/useAppStore';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
+import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
+import {
+  executeAsyncWithCleanup,
+  executeWithLoadingState,
+} from '#/utils/finallyHelpers';
 import type { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
 import type { BarcodeSource } from '#/types/navigation';
 import { ScrollView } from 'react-native';
@@ -84,7 +92,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     s => s.setPendingPantryScrollToTop,
   );
   const [addToPantry] = useMutation(BarcodeCreatePantryItemDocument, {
-    update: (cache, { data }) => {
+    update: (cache, { data }, { variables }) => {
       const payload = data?.createPantryItem;
       if (payload?.__typename === 'CreatePantryItemPayload' && pantryId) {
         const maskedPantryItem = payload.pantryItem;
@@ -101,6 +109,15 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         if (pantryItem) {
           addToPantryItemsConnection(cache, pantryId, pantryItem);
         }
+        // The connection add dedupes BY ID, so a server-resolved id divergence
+        // would leave the client cuid as a second, permanently unresolvable
+        // edge. Client id read off this mutation's own variables.
+        adoptServerEntityId(
+          cache,
+          'PantryItem',
+          maskedPantryItem.id,
+          variables?.input?.id,
+        );
       }
     },
   });
@@ -164,6 +181,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           // Generate the item's id so a create that gets queued (API blips after
           // the barcode lookup) replays idempotently, keyed by this id.
           const id = generateEntityId();
+          // The optimistic write below publishes this id to
+          // `Pantry.itemsConnection`, making the row tappable into a detail
+          // screen that queries by it. See `unconfirmedCreates`.
+          unconfirmedCreates.mark(id);
           const mutationInput: CreatePantryItemInput = {
             id,
             pantryId,
@@ -194,25 +215,68 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             },
             client.cache,
           );
-          try {
-            addToPantryItemsCache(client.cache, pantryId, optimisticPantryItem);
-            // The connection updater moves the LIST; the header's "N items"
-            // reads `Pantry.stats.totalItems`, which only the mutation's
-            // `update:` callback touched — and that never runs when the create
-            // is queued offline. Same defect as the add sheet had, on the third
-            // create path. It sits beside the optimistic row so both move
-            // together whether or not the create reaches the server.
-            adjustPantryItemCount(client.cache, pantryId, 1);
-          } catch (cacheError) {
-            errorService.reportError(cacheError, {
-              operation: 'Add Pantry Item (optimistic)',
-            });
-          }
+          // Publishing and withdrawing the optimistic row are a pair, and the
+          // force-add retry below has to do both again after the duplicate
+          // branch has withdrawn it. Named so the halves cannot drift.
+          const applyOptimisticPantryItem = () => {
+            try {
+              addToPantryItemsCache(
+                client.cache,
+                pantryId,
+                optimisticPantryItem,
+              );
+              // Detail-shape the same row so tapping it renders from cache
+              // instead of querying an id the server does not have yet. A
+              // scanned add always carries a catalog item, so `item` resolves to
+              // the real entity rather than a locally-minted one.
+              writePantryItemDetailStub(client.cache, id, {
+                itemId: item.id,
+                itemName: item.name,
+                acquisitionMethod: AcquisitionMethod.BarcodeScan,
+                quantity,
+              });
+              // The connection updater moves the LIST; the header's "N items"
+              // reads `Pantry.stats.totalItems`, which only the mutation's
+              // `update:` callback touched — and that never runs when the create
+              // is queued offline. Same defect as the add sheet had, on the third
+              // create path. It sits beside the optimistic row so both move
+              // together whether or not the create reaches the server.
+              adjustPantryItemCount(client.cache, pantryId, 1);
+            } catch (cacheError) {
+              errorService.reportError(cacheError, {
+                operation: 'Add Pantry Item (optimistic)',
+              });
+            }
+          };
+          const revertOptimisticPantryItem = () => {
+            safeEvict(client.cache, 'PantryItem', id);
+            adjustPantryItemCount(client.cache, pantryId, -1);
+          };
 
-          const result = await addToPantry({
-            variables: { input: mutationInput },
-            context: { localFirst: true },
-          });
+          applyOptimisticPantryItem();
+
+          // Released on every outcome — including a THROW. `confirm` sitting
+          // after a bare `await` was released on the paths that return, and on
+          // none of the paths that don't: a transport throw left the id marked
+          // unconfirmed for the rest of the session, which suppresses the
+          // detail query for a row the user can see. The helper is how a
+          // finalizer is written here at all — a bare `try/finally` bails the
+          // React Compiler out of the whole component.
+          let result!: Awaited<ReturnType<typeof addToPantry>>;
+          await executeAsyncWithCleanup(
+            async () => {
+              result = await addToPantry({
+                variables: { input: mutationInput },
+                context: { localFirst: true },
+              });
+            },
+            () => unconfirmedCreates.confirm(id),
+            // Rethrow so the outer handler still reports it; the cleanup above
+            // has already run by then.
+            error => {
+              throw error;
+            },
+          );
 
           // Handle duplicate pantry item — the server reports it as a typed
           // DuplicatePantryItemError member in `data` (or the legacy
@@ -225,8 +289,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             setIsLoading(false);
             // Already in the pantry → the server keeps the existing row, not
             // our optimistic item. Discard the one we wrote, count included.
-            safeEvict(client.cache, 'PantryItem', id);
-            adjustPantryItemCount(client.cache, pantryId, -1);
+            revertOptimisticPantryItem();
             promptPantryDuplicate({
               onRestock: () => {
                 executeWithLoadingState(
@@ -260,24 +323,47 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               onAddAnyway: () => {
                 executeWithLoadingState(
                   async () => {
+                    // The duplicate branch withdrew the optimistic row; put it
+                    // back before firing, or a force-add that queues offline
+                    // leaves nothing on screen until the replay lands. Reusing
+                    // the id is deliberate — the duplicate was a refusal, so it
+                    // committed no row, and the id is what makes the replay
+                    // idempotent.
+                    //
+                    // Re-marked, because the first attempt's cleanup already
+                    // confirmed this id. The row is tappable again from the line
+                    // below, and the server does not have it — so without the
+                    // mark, opening it fetches an id that 404s and parks the
+                    // detail screen in an error state that never retries.
+                    unconfirmedCreates.mark(id);
+                    applyOptimisticPantryItem();
                     const retryResult = await addToPantry({
                       variables: {
                         input: { ...mutationInput, forceAdd: true },
                       },
+                      // Same local-first contract as the first attempt: without
+                      // it the force-add is the one add here that cannot queue.
+                      context: { localFirst: true },
                     });
+                    // `alertIfRejected`, not a payload-typename check: a retry
+                    // reusing this id after the first attempt did commit (a lost
+                    // response) returns ConflictError(IDEMPOTENT_REPLAY), which
+                    // the contract says to treat as a successful no-op. It also
+                    // keeps the row when the create was queued rather than
+                    // answered, and routes a ValidationError's `field` to
+                    // localized copy.
                     if (
-                      retryResult.data?.createPantryItem?.__typename ===
-                      'CreatePantryItemPayload'
-                    ) {
-                      setIsAdded(true);
-                      setPendingPantryScrollToTop(true);
-                      onScanAnother();
-                    } else {
-                      alertService.alert(
-                        t('labels.error'),
+                      alertIfRejected(
+                        retryResult,
                         t('errors.addItemFailedRetry'),
-                      );
+                      )
+                    ) {
+                      revertOptimisticPantryItem();
+                      return;
                     }
+                    setIsAdded(true);
+                    setPendingPantryScrollToTop(true);
+                    onScanAnother();
                   },
                   setIsLoading,
                   () => {
@@ -286,6 +372,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                       t('errors.addItemFailedRetry'),
                     );
                   },
+                  // Released on EVERY outcome of the retry, a throw included —
+                  // a mark left standing suppresses the detail query for a row
+                  // the user can see, for the rest of the session.
+                  () => unconfirmedCreates.confirm(id),
                 );
               },
             });
@@ -296,12 +386,12 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           if (outcome === 'rejected') {
             // The server refused the create — discard the item we wrote,
             // count included.
-            safeEvict(client.cache, 'PantryItem', id);
-            adjustPantryItemCount(client.cache, pantryId, -1);
-            alertService.alert(
-              t('labels.error'),
-              t('errors.addItemFailedRetry'),
-            );
+            revertOptimisticPantryItem();
+            // The document selects `... on ValidationError { field }`, so route
+            // the refusal to its localized `errors.field.*` copy instead of a
+            // fixed string. `alertIfRejected` because this mutation has no
+            // `onError` — the resolved-`error` case needs telling too.
+            alertIfRejected(result, t('errors.addItemFailedRetry'));
           } else {
             // 'created' or 'queued' — the item stays (and replays if it was
             // queued offline); confirm and move on.

@@ -1,8 +1,5 @@
-import {
-  deleteAction,
-  editAction,
-} from '#components/molecules/SwipeableItem/commonActions';
 import React, { useEffect, useRef } from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 // RNGH's Pressable (not AppPressable/RN) for the archive button: it's nested in
 // the row's RNGH Swipeable, so RNGH's native button captures the tap and it
@@ -36,6 +33,8 @@ import {
 import { resolveImageUrl } from '#utils/imageUtils';
 import { SortableItem_ItemFragmentDoc } from './SortableItem.generated';
 import { useSortableListActions } from './SortableListActionsContext';
+import { useItemSwipeActions } from '#components/organisms/itemSwipeActionsContext';
+import { resolveRowActions } from '#components/molecules/SwipeableItem/commonActions';
 import {
   useShoppingListRowOptions,
   useSortableListTheme,
@@ -97,17 +96,18 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     duration: TIMING.MODERATE,
   });
 
+  const { t } = useTranslation();
+
   // Get actions and permissions from context (stable references)
   const { actions, permissions } = useSortableListActions();
   const {
     onItemPress,
-    onItemEdit,
-    onItemDelete,
     onTogglePurchase,
     onMoveToPantry,
     onQuantityPress,
     onSwipeableWillOpen,
     onSwipeableClose,
+    onBeforeRowRemoved,
   } = actions;
 
   const {
@@ -128,6 +128,21 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   // before the cache propagates.
   const isPurchased = rowItem?.isPurchased ?? false;
   const itemId = rowItem?.id ?? '';
+  // A derivation, read from its own context so it is the current one — the
+  // command bag publishes behind a ref that children see too late.
+  const itemSwipeActions = useItemSwipeActions();
+  const swipeActions = resolveRowActions(
+    itemSwipeActions,
+    itemId,
+    onBeforeRowRemoved,
+  );
+
+  // This line's purchase already reached the pantry. The bulk move filters its
+  // working set on the same stamp, so offering "move to pantry" here would
+  // promise an action that does nothing — the row is shown as stocked instead.
+  // Cleared server-side when the line re-enters an unpurchased state, so a
+  // re-added item becomes actionable again on its own.
+  const isStocked = !!data?.purchaseInfo?.movedToPantryAt;
 
   // Derive display data from the fragment. On cache miss before first paint
   // we fall back to safe defaults instead of returning null so the cell still
@@ -264,7 +279,19 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
 
   // Create rightElement: quantity badge + optional archive action
   const rightElement = (() => {
-    const archiveIcon = isPurchased && !!onMoveToPantry && (
+    const stockedIndicator = isPurchased && isStocked && (
+      <View
+        style={styles.moveToPantryButton}
+        accessibilityLabel={t('shoppingList.alreadyInPantry')}
+        testID={`shopping-list-item-${itemId}-stocked`}
+      >
+        {/* Colour comes from the list's single theme read, like every other
+            icon in this row — `tone=` would make each cell subscribe. */}
+        <Icon name="archive" size={24} color={themeColors?.textSecondary} />
+      </View>
+    );
+
+    const archiveIcon = isPurchased && !isStocked && !!onMoveToPantry && (
       <View
         ref={isTutorialArchiveTarget ? archiveIconRef : undefined}
         collapsable={false}
@@ -277,6 +304,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           }}
           style={styles.moveToPantryButton}
           hitSlop={HIT_SLOP}
+          testID={`shopping-list-item-${itemId}-move-to-pantry`}
         >
           <Icon name="archive-outline" size={24} color={themeColors?.primary} />
         </Pressable>
@@ -300,6 +328,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           themeColors={themeColors}
         />
         {archiveIcon}
+        {stockedIndicator}
       </View>
     );
   })();
@@ -411,22 +440,11 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             : undefined
         }
         // Edit on the left, delete on the right — what `swipeMode="shopping"`
-        // used to mean inside the swipe molecule.
-        leftActions={
-          canEditItems && onItemEdit
-            ? [editAction(() => onItemEdit(itemId))]
-            : undefined
-        }
-        rightActions={
-          canRemoveItems && onItemDelete
-            ? [
-                {
-                  ...deleteAction(() => onItemDelete(itemId)),
-                  removesRow: true,
-                },
-              ]
-            : undefined
-        }
+        // used to mean inside the swipe molecule. The descriptors come from the
+        // screen; the permission flags decide whether this row may show them,
+        // which is why the gate stays here rather than at the source.
+        leftActions={canEditItems ? swipeActions?.left : undefined}
+        rightActions={canRemoveItems ? swipeActions?.right : undefined}
         friction={1}
         onSwipeableWillOpen={ref => {
           onSwipeableWillOpen?.(ref);

@@ -18,7 +18,11 @@ export interface DetailsPageProps {
   /** Validation message for the quantity field. */
   quantityError?: string;
   /** Validation message for the net-weight UNIT picker (net weight is all-or-nothing). */
+  pantryNetWeightError?: string;
   pantryNetWeightUnitError?: string;
+  /** Package-details pair: a per-container weight needs its unit, and vice versa. */
+  itemNetWeightError?: string;
+  weightUnitError?: string;
   unit: string;
   setUnit: (value: string) => void;
   handleUnitSelected: (id: string | null, name: string | null) => void;
@@ -49,7 +53,10 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
   quantityInput,
   setQuantityInput,
   quantityError,
+  pantryNetWeightError,
   pantryNetWeightUnitError,
+  itemNetWeightError,
+  weightUnitError,
   unit,
   setUnit,
   handleUnitSelected,
@@ -114,6 +121,10 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
             label={t('labels.netWeight')}
             value={pantryNetWeight}
             onChangeText={setPantryNetWeight}
+            // The all-or-nothing rule reports on BOTH halves of the pair; only
+            // the unit half was rendered, and FIELD_PAGE navigates here for a
+            // message that had nowhere to appear.
+            error={pantryNetWeightError}
             placeholder={localizeNumericHint(t('labels.eG145'))}
             keyboardType="decimal-pad"
             useBottomSheetInput
@@ -183,6 +194,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
                   onChangeText={setItemNetWeight}
                   placeholder={t('addToPantry.weightPerUnitPlaceholder')}
                   keyboardType="decimal-pad"
+                  error={itemNetWeightError}
                   useBottomSheetInput
                 />
                 <UnitAutocompleteField
@@ -192,6 +204,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
                   onChangeText={setWeightUnit}
                   onUnitSelected={handleWeightUnitSelected}
                   placeholder={t('addToPantry.contentWeightUnitPlaceholder')}
+                  error={weightUnitError}
                 />
               </FieldRow>
             </View>

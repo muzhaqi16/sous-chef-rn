@@ -37,6 +37,5 @@ const styles = StyleSheet.create(theme => ({
   inner: {
     flex: 1,
     paddingHorizontal: theme.spacing.lg,
-    justifyContent: 'space-around',
   },
 }));

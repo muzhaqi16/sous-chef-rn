@@ -32,13 +32,37 @@ function flatten(obj, prefix = '', out = new Map()) {
   return out;
 }
 
+const isNamespace = value =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/**
+ * The same DEEP merge `src/i18n/featureLocales.ts` and `#/test-utils/mergedLocales`
+ * perform.
+ *
+ * `Object.assign` is shallow, so a feature contributing `errors.*` REPLACED the
+ * core `errors` namespace outright instead of adding to it — this gate then
+ * compared a tree the app never builds, and could report a key as present or
+ * missing on the strength of which file happened to declare its namespace last.
+ */
+function deepMergeLocale(base, incoming) {
+  const merged = { ...base };
+  for (const [key, value] of Object.entries(incoming)) {
+    const existing = merged[key];
+    merged[key] =
+      isNamespace(existing) && isNamespace(value)
+        ? deepMergeLocale(existing, value)
+        : value;
+  }
+  return merged;
+}
+
 /** Core copy plus every feature's, for one locale file (e.g. `en.json`). */
 function load(file) {
-  const merged = JSON.parse(readFileSync(join(LOCALES_DIR, file), 'utf8'));
+  let merged = JSON.parse(readFileSync(join(LOCALES_DIR, file), 'utf8'));
   for (const feature of featureLocaleDirs()) {
     const path = join(FEATURES_DIR, feature, 'locales', file);
     if (existsSync(path)) {
-      Object.assign(merged, JSON.parse(readFileSync(path, 'utf8')));
+      merged = deepMergeLocale(merged, JSON.parse(readFileSync(path, 'utf8')));
     }
   }
   return merged;

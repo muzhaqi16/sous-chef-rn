@@ -38,11 +38,7 @@ type PreviewResult = Awaited<
   ReturnType<HomeInvitationsApi['previewHomeByCode']>
 >;
 
-jest.mock('#/services/errorService', () => ({
-  useErrorService: () => ({
-    handleApolloError: jest.fn(() => ({ message: 'Error occurred' })),
-  }),
-}));
+jest.mock('#/services/errorService');
 
 jest.mock('#/utils/connectionUtils', () => ({
   normalizeHome: jest.fn((home: unknown) => home),

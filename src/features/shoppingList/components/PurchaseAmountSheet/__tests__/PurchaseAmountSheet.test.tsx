@@ -182,13 +182,9 @@ describe('PurchaseAmountSheet', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('treats an empty quantity as 0 on confirm', () => {
-    const onConfirm = jest.fn();
-    renderWithInit(buildProps({ onConfirm }));
-    fireEvent.changeText(screen.getByTestId('purchase-quantity-input'), '');
-    fireEvent.press(screen.getByTestId('header-action-0'));
-    expect(onConfirm).toHaveBeenCalledWith(0, 9.98);
-  });
+  // Replaced: this used to assert `onConfirm(0, 9.98)` — the coercion itself,
+  // encoded as intended behaviour. An empty field is now refused on the field
+  // instead; see "an unusable quantity is refused, not substituted" below.
 
   it('re-seeds inputs when the item id changes', () => {
     const props = buildProps();
@@ -216,5 +212,70 @@ describe('PurchaseAmountSheet', () => {
     );
     fireEvent.press(screen.getByTestId('header-action-0'));
     expect(onConfirm).not.toHaveBeenCalled();
+  });
+});
+
+describe('an unusable quantity is refused, not substituted', () => {
+  /**
+   * `parsedQty ?? 0` used to send an empty field through as a real quantity.
+   * Zero is a legitimate number downstream, and `unitPriceFromTotal`'s
+   * zero-guard returns the total UN-divided — so the server computed
+   * `purchasedPrice x 0` and recorded the purchase at quantity 0 for nothing,
+   * silently discarding the amount the shopper had typed.
+   */
+  it('does not confirm when the quantity is cleared', () => {
+    const onConfirm = jest.fn();
+    renderWithInit(buildProps({ onConfirm }));
+
+    // The input has `selectTextOnFocus`, so tapping it selects the pre-filled
+    // value and one backspace empties it. This is the realistic path in.
+    fireEvent.changeText(screen.getByTestId('purchase-quantity-input'), '');
+    fireEvent.press(screen.getByTestId('header-action-0'));
+
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('does not confirm when the quantity cannot be parsed', () => {
+    const onConfirm = jest.fn();
+    renderWithInit(buildProps({ onConfirm }));
+
+    fireEvent.changeText(screen.getByTestId('purchase-quantity-input'), 'abc');
+    fireEvent.press(screen.getByTestId('header-action-0'));
+
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('does not confirm at quantity zero', () => {
+    const onConfirm = jest.fn();
+    renderWithInit(buildProps({ onConfirm }));
+
+    fireEvent.changeText(screen.getByTestId('purchase-quantity-input'), '0');
+    fireEvent.press(screen.getByTestId('header-action-0'));
+
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('reports the problem on the field, not through an alert', () => {
+    renderWithInit(buildProps());
+    expect(screen.queryByTestId('purchase-quantity-error')).toBeNull();
+
+    fireEvent.changeText(screen.getByTestId('purchase-quantity-input'), '');
+
+    expect(screen.getByTestId('purchase-quantity-error')).toBeTruthy();
+    // The field stays on screen and editable — a modal would cover the form and,
+    // once dismissed, no longer say which field it meant.
+    expect(screen.getByTestId('purchase-quantity-input')).toBeTruthy();
+  });
+
+  it('clears the message and confirms once the quantity is usable again', () => {
+    const onConfirm = jest.fn();
+    renderWithInit(buildProps({ onConfirm }));
+
+    fireEvent.changeText(screen.getByTestId('purchase-quantity-input'), '');
+    fireEvent.changeText(screen.getByTestId('purchase-quantity-input'), '4');
+
+    expect(screen.queryByTestId('purchase-quantity-error')).toBeNull();
+    fireEvent.press(screen.getByTestId('header-action-0'));
+    expect(onConfirm).toHaveBeenCalledWith(4, 9.98);
   });
 });

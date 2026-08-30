@@ -62,3 +62,53 @@ export function adjustPantryItemCount(
     },
   });
 }
+
+/**
+ * Publish a locally-created row AND count it, as one operation.
+ *
+ * The row and the count are two writes with one meaning, and every path that
+ * does one has to do the other — a count that contradicts the rows beneath it
+ * is visible immediately, and `usePantryScreen` also branches on it to choose
+ * server-side against client-side sorting, so a stale one can select the wrong
+ * mode as well as show a wrong number.
+ *
+ * They were separate calls, and the separation is what let four of the six
+ * paths drift: two quick-add paths published a row without counting it, and the
+ * queue's permanent-failure handler withdrew a row without uncounting it —
+ * leaving the header permanently ahead of the list, with no response coming to
+ * correct it offline. Pairing them here means a call site cannot do one and
+ * forget the other.
+ */
+export function addPantryItemLocally<T extends { id: string }>(
+  cache: ApolloCache,
+  pantryId: string,
+  // Generic so a caller can pass the whole optimistic entity — which it must,
+  // since the connection write identifies the row through its `__typename`.
+  item: T,
+  options?: Parameters<typeof addToPantryItemsCache>[3],
+): boolean {
+  // Counted only when the row was actually added. The barcode force-add
+  // republishes the same id after a duplicate refusal, and the duplicate guard
+  // makes that a no-op — a count applied anyway would run ahead of a list that
+  // did not change.
+  const added = addToPantryItemsCache(cache, pantryId, item, options);
+  if (added) adjustPantryItemCount(cache, pantryId, 1);
+  return added;
+}
+
+/**
+ * Withdraw a locally-created row AND uncount it.
+ *
+ * The mirror of {@link addPantryItemLocally}, for a refusal, a revert, or a
+ * queued write the server permanently rejected.
+ */
+export function removePantryItemLocally(
+  cache: ApolloCache,
+  pantryId: string,
+  itemId: string,
+  options?: Parameters<typeof removeFromPantryItemsCache>[3],
+): boolean {
+  const removed = removeFromPantryItemsCache(cache, pantryId, itemId, options);
+  if (removed) adjustPantryItemCount(cache, pantryId, -1);
+  return removed;
+}

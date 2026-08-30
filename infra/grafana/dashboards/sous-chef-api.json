@@ -158,7 +158,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
           "unit": "reqps"
         }
@@ -196,7 +201,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "P95 and average response time for GraphQL operations",
+      "description": "P95 and average response time for GraphQL operations graphql_request_duration_ms is deliberately NOT sample-weighted, so its _count/_sum reflect only observed operations - do not divide it against graphql_requests_total.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -227,9 +232,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 500 },
-              { "color": "red", "value": 1000 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 500
+              },
+              {
+                "color": "red",
+                "value": 1000
+              }
             ]
           },
           "unit": "ms"
@@ -273,7 +287,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "GraphQL operations by type (query, mutation, subscription)",
+      "description": "GraphQL operations by type (query, mutation, subscription) Counts are weighted by 1/GRAPHQL_TELEMETRY_SAMPLE_RATE. At the current rate of 1.0 they are exact; series recorded before 2026-08-28 were 10x estimates from 10% sampling and are not comparable across that boundary.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -328,7 +342,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Top 10 GraphQL operations by request count",
+      "description": "Top 10 GraphQL operations by request count Counts are weighted by 1/GRAPHQL_TELEMETRY_SAMPLE_RATE. At the current rate of 1.0 they are exact; series recorded before 2026-08-28 were 10x estimates from 10% sampling and are not comparable across that boundary.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -341,7 +355,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           }
         }
       },
@@ -418,8 +437,14 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "green", "value": 1 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
             ]
           }
         }
@@ -460,7 +485,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Time since last metric was ingested",
+      "description": "Seconds since the last app_events_total sample, over a 24h lookback. The bare timestamp() form read ~0 while data flowed and then went to No Data, so its thresholds could never fire.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -470,9 +495,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 300 },
-              { "color": "red", "value": 600 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 300
+              },
+              {
+                "color": "red",
+                "value": 600
+              }
             ]
           },
           "unit": "s"
@@ -501,7 +535,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "time() - max(timestamp(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}))",
+          "expr": "time() - max(max_over_time(timestamp(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})[24h:5m]))",
           "refId": "A",
           "legendFormat": "Last Seen"
         }
@@ -548,7 +582,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           }
         }
       },
@@ -615,7 +654,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           }
         }
       },
@@ -662,7 +706,7 @@
         "type": "loki",
         "uid": "${DS_LOKI}"
       },
-      "description": "GraphQL operation logs",
+      "description": "GraphQL errors, network errors and slow queries. It previously matched any line containing 'GraphQL', but those are Telemetry.debug breadcrumbs that never leave development - minLogLevel is 'warn' in production. Only these three shapes reach Loki from a release build.",
       "gridPos": {
         "h": 8,
         "w": 24,
@@ -678,11 +722,11 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "{service_name=\"sous-chef-app\"} |= \"GraphQL\" | json | env=~\"$environment\" | platform=~\"$platform\" | line_format \"{{.operation_name}}: {{.message}} ({{.duration_ms}}ms)\"",
+          "expr": "{service_name=\"sous-chef-app\"} |~ \"GraphQL (Error|Network Error) in|Slow GraphQL query:\" | json | env=~\"$environment\" | platform=~\"$platform\" | line_format \"{{.operation_name}}: {{.message}} ({{.duration_ms}}ms)\"",
           "refId": "A"
         }
       ],
-      "title": "GraphQL Operation Logs",
+      "title": "GraphQL Problem Logs (errors & slow queries)",
       "type": "logs"
     }
   ],
@@ -717,7 +761,8 @@
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
-        "type": "query"
+        "type": "query",
+        "allValue": ".*"
       },
       {
         "current": {
@@ -744,7 +789,8 @@
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
-        "type": "query"
+        "type": "query",
+        "allValue": ".*"
       }
     ]
   },

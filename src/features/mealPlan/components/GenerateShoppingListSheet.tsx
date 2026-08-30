@@ -11,7 +11,7 @@ import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { FormInput } from '#components/molecules/FormInput';
 import { useQuery } from '@apollo/client/react';
-import { GetShoppingListsLiteDocument } from './GenerateShoppingListSheet.generated';
+import { GetShoppingListsLiteForMealPlanDocument } from './GenerateShoppingListSheet.generated';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
@@ -51,10 +51,13 @@ export const GenerateShoppingListSheet: React.FC<
     }
   }
 
-  const { data: listsData } = useQuery(GetShoppingListsLiteDocument, {
-    variables: { first: 20 },
-    skip: !visible,
-  });
+  const { data: listsData } = useQuery(
+    GetShoppingListsLiteForMealPlanDocument,
+    {
+      variables: { first: 20 },
+      skip: !visible,
+    },
+  );
 
   const shoppingLists = listsData?.shoppingLists?.edges?.map(e => e.node) ?? [];
 

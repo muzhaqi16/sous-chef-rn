@@ -10,6 +10,7 @@ import {
 } from '#features/recipes/graphql/recipe.generated';
 import { toastService } from '#/services/toastService';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 
 /**
  * Read / write the folder list. Module-level so each caller's try body stays a
@@ -29,6 +30,62 @@ function writeFolders(cache: ApolloCache, folders: string[]): void {
     query: SavedRecipeFoldersDocument,
     data: { __typename: 'Query', savedRecipeFolders: folders },
   });
+}
+
+/**
+ * Move every cached `SavedRecipe` out of `from` and into `to`.
+ *
+ * The folder LIST and the recipes' own `folder` field are two separate pieces
+ * of cache state, and the Saved Recipes screen filters on the second
+ * (`recipe.folder === selectedFolder`). Rewriting only the list renamed the
+ * chip and left every recipe pointing at the old name, so the folder the user
+ * had just renamed rendered empty under a success toast. `DeleteRecipeFolderPayload`
+ * returns no recipe nodes, and this hook has no `refetchQueries`, so nothing
+ * else repairs it — and under `localFirst` there is no response at all until
+ * the queue replays.
+ *
+ * Returns the ids it changed so a refusal can put them back.
+ */
+function rewriteSavedRecipeFolders(
+  cache: ApolloCache,
+  from: string,
+  to: string | null,
+): string[] {
+  // `extract()` is typed as `unknown` on the base ApolloCache; the normalized
+  // store is a flat map keyed by `TypeName:id`, which is what the loop needs.
+  //
+  // It serializes the WHOLE store, which is the cost of the only correct
+  // question here: which `SavedRecipe` entities carry this folder, whichever
+  // query happened to load them. Reading a specific list instead would miss the
+  // ones another query cached, and leave exactly the stale-folder rows this
+  // function exists to rewrite. Bounded to a rename or delete — a rare,
+  // user-initiated action, not a render path.
+  const snapshot = cache.extract() as Record<
+    string,
+    { folder?: string | null } | undefined
+  >;
+  const changed: string[] = [];
+
+  for (const cacheId of Object.keys(snapshot)) {
+    if (!cacheId.startsWith('SavedRecipe:')) continue;
+    if (snapshot[cacheId]?.folder !== from) continue;
+
+    changed.push(cacheId);
+    cache.modify({ id: cacheId, fields: { folder: () => to } });
+  }
+
+  return changed;
+}
+
+/** Put back what {@link rewriteSavedRecipeFolders} moved. */
+function restoreSavedRecipeFolders(
+  cache: ApolloCache,
+  cacheIds: string[],
+  folder: string | null,
+): void {
+  for (const cacheId of cacheIds) {
+    cache.modify({ id: cacheId, fields: { folder: () => folder } });
+  }
 }
 
 /**
@@ -71,6 +128,11 @@ export function useFolderActions() {
         previousFolders.map(f => (f === oldName ? newName : f)),
       );
     }
+    const movedRecipes = rewriteSavedRecipeFolders(
+      client.cache,
+      oldName,
+      newName,
+    );
 
     let result;
     try {
@@ -86,10 +148,18 @@ export function useFolderActions() {
 
     if (classifyCreateResult(result) === 'rejected') {
       if (previousFolders) writeFolders(client.cache, previousFolders);
-      const rejected = result?.data?.deleteRecipeFolder;
-      const reason =
-        rejected && 'message' in rejected ? rejected.message : null;
-      toastService.error(reason ?? t('recipes.renameFolderFailedRetry'));
+      restoreSavedRecipeFolders(client.cache, movedRecipes, oldName);
+      // The app's own words. `message` is the server's English by construction
+      // — the client sends no `Accept-Language` and the token carries no locale
+      // — so this displayed untranslated text to every es/it/sq user. The
+      // mutation already selects `... on ValidationError { field }`, which is
+      // the actionable half anyway.
+      toastService.error(
+        localizedRefusalMessage(
+          result?.data?.deleteRecipeFolder,
+          t('recipes.renameFolderFailedRetry'),
+        ),
+      );
       return false;
     }
 
@@ -113,6 +183,12 @@ export function useFolderActions() {
         previousFolders.filter(f => f !== folderName),
       );
     }
+    // Deleting a folder unfolders its recipes — same field, same defect.
+    const unfoldered = rewriteSavedRecipeFolders(
+      client.cache,
+      folderName,
+      null,
+    );
 
     let result;
     try {
@@ -128,10 +204,13 @@ export function useFolderActions() {
 
     if (classifyCreateResult(result) === 'rejected') {
       if (previousFolders) writeFolders(client.cache, previousFolders);
-      const rejected = result?.data?.deleteRecipeFolder;
-      const reason =
-        rejected && 'message' in rejected ? rejected.message : null;
-      toastService.error(reason ?? t('recipes.deleteFolderFailed'));
+      restoreSavedRecipeFolders(client.cache, unfoldered, folderName);
+      toastService.error(
+        localizedRefusalMessage(
+          result?.data?.deleteRecipeFolder,
+          t('recipes.deleteFolderFailed'),
+        ),
+      );
       return false;
     }
 

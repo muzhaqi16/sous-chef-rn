@@ -18,11 +18,7 @@ const mockNav = (
   }
 ).useAppNavigation();
 
-jest.mock('#/services/errorService', () => ({
-  errorService: {
-    reportError: jest.fn(),
-  },
-}));
+jest.mock('#/services/errorService');
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',

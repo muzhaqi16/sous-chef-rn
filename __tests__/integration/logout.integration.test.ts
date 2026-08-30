@@ -26,6 +26,7 @@ jest.mock('../../src/apollo/links/tokenScheduler');
 jest.mock('../../src/apollo/links/refreshToken');
 
 import { ApolloClient, ApolloLink, InMemoryCache, Observable, gql } from '@apollo/client';
+import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { createTestStore } from '#/test-utils/createTestStore';
 
 // A no-op link is enough — these tests never fire a network request. They
@@ -61,7 +62,11 @@ function makeAuthenticatedSetup() {
   // the cache reaches after a successful query. `clearStore()` is the
   // production logout path and is exercised end-to-end.
   const cache = new InMemoryCache();
-  const client = new ApolloClient({ cache, link: noopLink });
+  const client = new ApolloClient({
+    cache,
+    link: noopLink,
+    defaultOptions: APOLLO_DEFAULT_OPTIONS,
+  });
   cache.writeQuery({
     query: SEED_QUERY,
     data: {

@@ -15,15 +15,14 @@ import {
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { useToggleShoppingItem } from '../useToggleShoppingItem';
 
-const mockHandleApolloError = jest.fn(() => ({ message: 'Toggle error' }));
+jest.mock('#/services/errorService');
 
-jest.mock('#/services/errorService', () => ({
-  useErrorService: () => ({
-    handleApolloError: mockHandleApolloError,
-  }),
-}));
-
+// Spread the real module: only the two connection movers are stubbed. The
+// purchase-record writer must be the real one, because these tests assert on
+// what it leaves in the cache — and a partial factory silently makes any export
+// the hook reaches next `undefined`.
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
+  ...jest.requireActual('#/apollo/utils/shoppingListCacheUpdaters'),
   moveShoppingListItemToPurchased: jest.fn(),
   moveShoppingListItemToUnpurchased: jest.fn(),
 }));
@@ -172,6 +171,9 @@ function seedShoppingItem() {
       purchaseInfo: {
         __typename: 'ShoppingListItemPurchaseInfo',
         isPurchased: false,
+        // The snapshot fragment selects it, so a fixture without it makes the
+        // strict read incomplete and the hook refuse the toggle.
+        movedToPantryAt: null,
       },
       version: 3,
       updatedAt: '2026-01-01T00:00:00.000Z',
@@ -440,5 +442,133 @@ describe('useToggleShoppingItem — recordPurchase', () => {
     expect(toggled).toBe(false);
     expect(readPurchased(cache)).toBe(false);
     expect(mockAlert).toHaveBeenCalledWith(expect.anything(), ITEM_NAME_COPY);
+  });
+});
+
+describe('the stocked stamp follows the purchased flag', () => {
+  const RECORD = gql`
+    fragment ToggleStampProbe on ShoppingListItem {
+      id
+      purchaseInfo {
+        isPurchased
+        movedToPantryAt
+        purchasedQuantity
+      }
+    }
+  `;
+
+  /**
+   * The mutation resolves as QUEUED — a null payload, no error.
+   *
+   * Without a mock the operation resolves as an unmatched-operation ERROR, so
+   * the hook's revert races the next toggle and the assertion sees whichever
+   * won. These tests are about what the local write leaves behind, and queued
+   * is the case where that is all there is.
+   */
+  const queued: MockedResponse = {
+    request: {
+      query: UpdateShoppingListItemDocument,
+      variables: () => true,
+    },
+    result: { data: { updateShoppingListItem: null } },
+    maxUsageCount: Number.POSITIVE_INFINITY,
+  };
+
+  /**
+   * The same for the TOGGLE mutation, which `toggleItem` actually fires.
+   *
+   * Without it the operation is unmatched, resolves as an error, and the hook
+   * REVERTS — so every assertion below described the post-revert state while
+   * claiming to describe the flip. They passed only because the revert used to
+   * clear the stamp too, which is the defect they were written to catch.
+   */
+  const toggleQueued: MockedResponse = {
+    request: {
+      query: ToggleShoppingListItemPurchasedDocument,
+      variables: () => true,
+    },
+    result: { data: { toggleShoppingListItemPurchased: null } },
+    maxUsageCount: Number.POSITIVE_INFINITY,
+  };
+
+  /** A line that was purchased AND already moved into the pantry. */
+  function seedStockedItem() {
+    const cache = seedShoppingItem();
+    cache.writeFragment({
+      id: 'ShoppingListItem:item-1',
+      fragment: RECORD,
+      data: {
+        __typename: 'ShoppingListItem',
+        id: 'item-1',
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: true,
+          movedToPantryAt: '2026-08-28T10:00:00.000Z',
+          purchasedQuantity: 3,
+        },
+      },
+    });
+    return cache;
+  }
+
+  const readRecord = (cache: ReturnType<typeof seedCache>) =>
+    cache.readFragment<{
+      purchaseInfo: {
+        isPurchased: boolean;
+        movedToPantryAt: string | null;
+        purchasedQuantity: number | null;
+      };
+    }>({ id: 'ShoppingListItem:item-1', fragment: RECORD })?.purchaseInfo;
+
+  it('clears the stamp when the line is un-purchased', async () => {
+    const cache = seedStockedItem();
+    const { result } = renderHookWithApollo(
+      () => useToggleShoppingItem({ listId: 'list-1', refetch: jest.fn() }),
+      { cache, operationMocks: [queued, toggleQueued] },
+    );
+
+    await act(async () => {
+      await result.current.toggleItem('item-1');
+    });
+
+    // The server clears the stamp on exactly this transition, so a line the
+    // user just un-checked must stop reading as "already in your pantry" —
+    // otherwise its row withholds the move-to-pantry action for a line the
+    // bulk move WILL act on.
+    expect(readRecord(cache)?.movedToPantryAt).toBeNull();
+  });
+
+  it('does not resurrect the stamp when the line is re-purchased', async () => {
+    const cache = seedStockedItem();
+    const { result } = renderHookWithApollo(
+      () => useToggleShoppingItem({ listId: 'list-1', refetch: jest.fn() }),
+      { cache, operationMocks: [queued, toggleQueued] },
+    );
+
+    await act(async () => {
+      await result.current.toggleItem('item-1');
+    });
+    await act(async () => {
+      await result.current.toggleItem('item-1');
+    });
+
+    expect(readRecord(cache)?.isPurchased).toBe(true);
+    expect(readRecord(cache)?.movedToPantryAt).toBeNull();
+  });
+
+  it('leaves the rest of the purchase record alone on a flip', async () => {
+    const cache = seedStockedItem();
+    const { result } = renderHookWithApollo(
+      () => useToggleShoppingItem({ listId: 'list-1', refetch: jest.fn() }),
+      { cache, operationMocks: [queued, toggleQueued] },
+    );
+
+    await act(async () => {
+      await result.current.toggleItem('item-1');
+    });
+
+    // Only the stamp is derived from the flag. The amounts belong to the
+    // purchase the server recorded and are not this write's to discard.
+    expect(readRecord(cache)?.purchasedQuantity).toBe(3);
   });
 });

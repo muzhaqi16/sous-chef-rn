@@ -36,11 +36,7 @@ jest.mock('#store/useAppStore', () => ({
   useUser: () => ({ email: 'john@example.com' }),
 }));
 
-jest.mock('#/services/errorService', () => ({
-  errorService: {
-    reportError: jest.fn(),
-  },
-}));
+jest.mock('#/services/errorService');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },

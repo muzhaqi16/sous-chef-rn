@@ -1208,7 +1208,9 @@ describe('CreateHomeScreen', () => {
     const { findByTestId, findByText } = renderScreen();
     await user.press(await findByTestId('submit-button'));
 
-    expect(await findByText('Failed to create home')).toBeTruthy();
+    // This screen's OWN copy, never the refusal's `message` — that text is
+    // English by construction, and it used to be rendered verbatim.
+    expect(await findByText('An error occurred during setup')).toBeTruthy();
   });
 
   it('handles pantry creation when home exists but pantry does not', async () => {
@@ -1420,17 +1422,17 @@ describe('CreateHomeScreen', () => {
   it('handles generic error on submit with no message', async () => {
     const user = userEvent.setup();
     // With Apollo errorPolicy: 'all', a network error resolves with
-    // { data: undefined, error }. The screen then sees no payload and throws
-    // 'Failed to create home' from the no-success branch — that error message
-    // is surfaced to the user. (The original test threw {} directly, which
-    // produced 'An error occurred during setup'; with real Apollo plumbing the
-    // surfaced message comes from the no-payload throw site instead.)
+    // { data: undefined, error }, so the screen sees no payload and throws.
+    // What it SHOWS is its own copy: a transport failure tells the caller only
+    // that the request did not arrive, and the shared code copy for that
+    // ("Showing cached data when available") is written for a read — on a
+    // failed create it is not vague but untrue.
     mockCreateHomeError = new Error('');
 
     const { findByTestId, findByText } = renderScreen();
     await user.press(await findByTestId('submit-button'));
 
-    expect(await findByText('Failed to create home')).toBeTruthy();
+    expect(await findByText('An error occurred during setup')).toBeTruthy();
   });
 
   it('shows multiple pending invites', async () => {

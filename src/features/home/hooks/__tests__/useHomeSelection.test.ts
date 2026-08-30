@@ -34,11 +34,7 @@ jest.mock('#store/useAppStore', () => ({
   ),
 }));
 
-jest.mock('#/services/errorService', () => ({
-  useErrorService: () => ({
-    handleApolloError: jest.fn(() => ({ message: 'Error message' })),
-  }),
-}));
+jest.mock('#/services/errorService');
 
 jest.mock('#/utils/finallyHelpers');
 

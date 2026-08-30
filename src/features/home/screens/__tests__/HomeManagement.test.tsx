@@ -97,9 +97,7 @@ jest.mock('#/services/toastService', () => ({
   toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
 }));
 
-jest.mock('#/services/errorService', () => ({
-  errorService: { reportError: jest.fn() },
-}));
+jest.mock('#/services/errorService');
 
 jest.mock('#/styles/commonStyles', () => ({
   commonStyles: {

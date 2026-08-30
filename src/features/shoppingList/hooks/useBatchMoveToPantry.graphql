@@ -2,11 +2,27 @@ mutation MovePurchasedItemsToPantry($input: MovePurchasedItemsToPantryInput!) {
   movePurchasedItemsToPantry(input: $input) {
     __typename
     ... on MovePurchasedItemsToPantryPayload {
+      # The lines that are now in the pantry, so the rows can be shown as
+      # stocked without waiting for a refetch — the ones this call moved and the
+      # ones it found already there alike. `alreadyInPantry` is deliberately NOT
+      # selected: the cached stamp is what decides whether a line needs one (see
+      # `markMovedLinesStocked`), so fetching the flag would be fetching a field
+      # nothing reads.
       movedItems {
         shoppingListItemId
-        pantryItemId
+      }
+      # Lines the batch could not move. Only `itemName` reaches the user — the
+      # rest is for telemetry, so a failure is diagnosable without asking the
+      # user to reproduce it.
+      #
+      # `reason` is deliberately NOT selected: it is a server string, we never
+      # display it, and the schema's own guidance is to branch on `code`
+      # instead. `errorId` names the log entry holding the real error when the
+      # reason was masked, which is what support looks it up by.
+      failedItems {
         itemName
-        quantity
+        code
+        errorId
       }
       summary {
         total

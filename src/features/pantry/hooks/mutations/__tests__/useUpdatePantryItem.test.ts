@@ -9,14 +9,7 @@ import { UseUpdatePantryItem_PantryItemFragmentDoc } from '../useUpdatePantryIte
 import type { FormDataInput } from '../types';
 import { useUpdatePantryItem } from '../useUpdatePantryItem';
 
-jest.mock('#/services/errorService', () => ({
-  useErrorService: () => ({
-    handleApolloError: jest.fn(() => ({ message: 'Update error' })),
-  }),
-  errorService: {
-    reportError: jest.fn(),
-  },
-}));
+jest.mock('#/services/errorService');
 
 jest.mock('#/utils/errors/versionConflict', () => ({
   handleVersionConflict: jest.fn(() => false),

@@ -1,4 +1,5 @@
-import React, { useState, ReactNode, useEffect } from 'react';
+import React, { useState, ReactNode, useEffect, forwardRef } from 'react';
+import type { ViewProps } from 'react-native';
 
 import Animated, {
   useSharedValue,
@@ -134,28 +135,46 @@ const supersedes = (older: ToastOptions, newer: ToastOptions) =>
  * module-level dispatch singleton, on each of the several provider renders per
  * toast (show, the render-phase `setDisplayed`, auto-dismiss, queue pop).
  */
-function ToastCard({
-  message,
-  type,
-  actionLabel,
-  onActionPress,
-  interactive,
-  topInset,
-  animatedStyle,
-}: {
-  message?: string;
-  type: ToastType;
-  actionLabel?: string;
-  onActionPress: () => void;
-  interactive: boolean;
-  topInset: number;
-  animatedStyle: ReturnType<typeof useAnimatedStyle>;
-}) {
+/**
+ * Forwards its ref and spreads what it does not consume, because
+ * `GestureDetector` clones its child with `{ collapsable: false, ref }`. A
+ * plain function component simply drops both: the ref never reaches a host
+ * view, and losing `collapsable: false` lets Android's view flattening prune
+ * the very view the gesture is attached to. Every other `GestureDetector` in
+ * this repo passes a host view directly; this one passes a component, so the
+ * component has to behave like one.
+ */
+const ToastCard = forwardRef<
+  React.ComponentRef<typeof Animated.View>,
+  {
+    message?: string;
+    type: ToastType;
+    actionLabel?: string;
+    onActionPress: () => void;
+    interactive: boolean;
+    topInset: number;
+    animatedStyle: ReturnType<typeof useAnimatedStyle>;
+  } & ViewProps
+>(function ToastCardHost(
+  {
+    message,
+    type,
+    actionLabel,
+    onActionPress,
+    interactive,
+    topInset,
+    animatedStyle,
+    ...hostProps
+  },
+  ref,
+) {
   const iconName = TOAST_ICONS[type];
   styles.useVariants({ type: type === 'default' ? undefined : type });
 
   return (
     <Animated.View
+      ref={ref}
+      {...hostProps}
       testID={`toast-${type}`}
       pointerEvents={interactive ? 'auto' : 'none'}
       // Safe-area offset applied as layout, not animation — see the entry
@@ -187,7 +206,7 @@ function ToastCard({
       ) : null}
     </Animated.View>
   );
-}
+});
 
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   children,

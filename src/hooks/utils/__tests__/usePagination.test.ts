@@ -3,9 +3,7 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { usePagination } from '../usePagination';
 
-jest.mock('#/services/errorService', () => ({
-  errorService: { reportError: jest.fn() },
-}));
+jest.mock('#/services/errorService');
 
 describe('usePagination', () => {
   const mockFetchMore = jest.fn().mockResolvedValue({});

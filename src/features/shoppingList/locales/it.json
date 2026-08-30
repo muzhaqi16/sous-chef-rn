@@ -182,7 +182,8 @@
     "totalPrice": "Prezzo totale",
     "currencySymbol": "$",
     "pricePlaceholder": "0.00",
-    "perUnitHint": "{{price}} per unità"
+    "perUnitHint": "{{price}} per unità",
+    "quantityRequired": "Inserisci una quantità maggiore di zero"
   },
   "addToShoppingListSheet": {
     "tutorialTapPlus": "Tocca + accanto a un articolo per aggiungerlo",
@@ -262,5 +263,8 @@
   "listTemplate": {
     "loading": "Caricamento...",
     "loadingItems": "Caricamento dei tuoi articoli"
+  },
+  "shoppingList": {
+    "alreadyInPantry": "Già in dispensa"
   }
 }
