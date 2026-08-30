@@ -103,9 +103,15 @@ export const WhiteActivityIndicator = withUnistyles(
  * injected gesture crosses by reference
  * (`scripts/probe-withunistyles-prop-passthrough.mjs`).
  */
+// The three props are one set, not two plus an optional. `colors` is the
+// Android arc, `tintColor` the iOS spinner, and `progressBackgroundColor` the
+// DISC the Android arc is drawn on — which defaults to white and stays white
+// under a dark theme, so leaving it out put a bright disc over the pantry
+// header on every pull.
 export const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
   colors: [theme.colors.primary],
   tintColor: theme.colors.primary,
+  progressBackgroundColor: theme.colors.surface,
 }));
 
 /**
@@ -120,6 +126,7 @@ export const PlainScrollRefreshControl = withUnistyles(
   theme => ({
     colors: [theme.colors.primary],
     tintColor: theme.colors.primary,
+    progressBackgroundColor: theme.colors.surface,
   }),
 );
 

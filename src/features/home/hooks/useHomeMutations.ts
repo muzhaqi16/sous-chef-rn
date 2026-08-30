@@ -92,7 +92,10 @@ export function useHomeMutations({
           const freshHomes = extractNodes(cachedData?.homes);
 
           // Only set as default if this is truly the first/only home
-          if (freshHomes.length === 1 && freshHomes[0].id === newHome.id) {
+          const isFirstHome =
+            freshHomes.length === 1 && freshHomes[0].id === newHome.id;
+
+          if (isFirstHome) {
             setSelectedHomeId(newHome.id);
             setDefaultHome(newHome.id).catch((error: unknown) => {
               logger.warn(
@@ -100,13 +103,17 @@ export function useHomeMutations({
                 error,
               );
             });
-          }
 
-          // If a default pantry was created, set it as selected
-          const pantries = extractNodes(newHome.pantriesConnection);
-          const defaultPantry = pantries.find(p => p.isDefault);
-          if (defaultPantry) {
-            setSelectedPantryId(defaultPantry.id);
+            // Adopt the new home's default pantry ONLY when we also switched
+            // to that home. Unconditionally, creating a SECOND home points
+            // `selectedPantryId` at a pantry in a home `selectedHomeId` does
+            // not name, and every pantry watcher fires across homes until
+            // `useCurrentPantry` reconciles a render later.
+            const pantries = extractNodes(newHome.pantriesConnection);
+            const defaultPantry = pantries.find(p => p.isDefault);
+            if (defaultPantry) {
+              setSelectedPantryId(defaultPantry.id);
+            }
           }
         }
       },
@@ -246,7 +253,7 @@ export function useHomeMutations({
     }),
     validateInput: (input: { name: string }) => {
       if (!input.name?.trim()) {
-        return 'Please enter a home name';
+        return t('homeDetail.homeNameEmptyError');
       }
       return true;
     },
@@ -278,8 +285,15 @@ export function useHomeMutations({
     homeId: string,
     updates: { name?: string; isDefault?: boolean; allowJoinCode?: boolean },
   ) => {
-    // Handle default home update separately if needed
-    if (updates.isDefault !== undefined && updates.isDefault) {
+    // `isDefault` is not a field of `UpdateHomeInput` — it is derived from
+    // `UserSettings.defaultHomeId` and moves only through `markHomeAsDefault`.
+    // Split it off by destructuring rather than `delete`, which would strip the
+    // field from the CALLER's object, and which previously ran only on the
+    // truthy branch — so `{ isDefault: false, … }` reached the server as an
+    // input field the schema does not define.
+    const { isDefault, ...fieldUpdates } = updates;
+
+    if (isDefault) {
       let defaultResult;
       try {
         defaultResult = await setDefaultHome(homeId);
@@ -288,11 +302,13 @@ export function useHomeMutations({
           operation: 'Set default home error:',
         });
       }
-      if (defaultResult === false) return false;
-      delete updates.isDefault; // Remove from updates since we handle it separately
+      // A throw leaves this undefined, which is a failure like any other:
+      // testing only for `false` reported the whole update as successful and
+      // went on to write the remaining fields.
+      if (!defaultResult) return false;
     }
 
-    if (Object.keys(updates).length > 0) {
+    if (Object.keys(fieldUpdates).length > 0) {
       // The server requires the version: an update sent without one reports
       // success while overwriting a concurrent edit.
       const current = apolloClient.cache.readFragment({
@@ -305,7 +321,7 @@ export function useHomeMutations({
       try {
         result = await updateHomeMutation({
           variables: {
-            input: { ...updates, id: homeId, version: current.version },
+            input: { ...fieldUpdates, id: homeId, version: current.version },
           },
         });
       } catch (error) {
@@ -327,8 +343,10 @@ export function useHomeMutations({
     const operation = createRemoveOperation({
       mutation: deleteHomeMutation,
       itemId: homeId,
-      confirmMessage: 'Are you sure you want to delete "{name}"?',
-      itemName: homeName,
+      confirmTitle: t('confirmations.deleteHomeTitle'),
+      confirmMessage: t('labels.areYouSureYouWantToDeleteThisCannotBeUndone', {
+        name: homeName,
+      }),
       operationName: 'Delete Home',
     });
     return operation();

@@ -348,8 +348,10 @@ export function useHomeDetailManagement(homeId: string) {
     const operation = createRemoveOperation({
       mutation: removeMemberMutation,
       itemId: membershipId,
-      confirmMessage: `Are you sure you want to remove {name} from this home?`,
-      itemName: memberName,
+      confirmTitle: t('confirmations.removeMemberTitle'),
+      confirmMessage: t('confirmations.removeMemberNamed', {
+        name: memberName,
+      }),
       operationName: 'Remove Member',
     });
     return operation();
@@ -359,8 +361,10 @@ export function useHomeDetailManagement(homeId: string) {
     const operation = createRemoveOperation({
       mutation: revokeInviteMutation,
       itemId: inviteId,
-      confirmMessage: `Are you sure you want to revoke the invitation to {name}?`,
-      itemName: inviteEmail,
+      confirmTitle: t('confirmations.revokeInviteTitle'),
+      confirmMessage: t('confirmations.revokeInviteNamed', {
+        name: inviteEmail,
+      }),
       operationName: 'Revoke Invitation',
     });
     return operation();

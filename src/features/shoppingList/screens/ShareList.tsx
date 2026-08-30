@@ -89,7 +89,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 
   const handleRemoveMember = (memberId: string) => {
     alertService.alert(
-      t('shoppingListScreens.removeMemberTitle'),
+      t('confirmations.removeMemberTitle'),
       t('labels.areYouSureYouWantToRemoveThisMember'),
       [
         { text: t('labels.cancel'), style: 'cancel' },

@@ -718,6 +718,65 @@ need to do this by hand. On 4.2.12 it does **not**:
 `argumentsObjectFromField` or `storeKeyNameFromField`. If a later version does,
 prefer it over the hand-rolled split.
 
+### Apollo reports `loading: true` on every mount, warm cache or not
+
+Verified 2026-08-30 vs `@apollo/client@4.2.12` — re-check:
+`node scripts/probe-apollo-loading-on-mount.mjs`.
+
+**Claim:** under the app-wide `cache-and-network` -> `cache-first` pair
+(`src/apollo/defaultOptions.ts`), `loading` is `true` on a screen's first render
+even when the cache answers the query completely, and it is `true` again on
+every remount. A screen gating its whole render on `loading` therefore blanks
+itself for the length of the network leg on EVERY visit.
+
+```
+1. cache-and-network over a COMPLETE cache, first mount
+   started at       -> cache-and-network
+   loading          -> true
+   data present     -> true
+   settled to       -> cache-first
+2. the SAME query watched again (a remount)
+   started at       -> cache-and-network
+   loading          -> true
+3. the same query over a cache missing ONE field
+   loading          -> true
+   data             -> undefined
+```
+
+Two mechanisms, and the second is the one that surprises:
+
+`ObservableQuery.getInitialResult` **hard-codes** the flag for this policy
+(`core/ObservableQuery.js`), so the cache never enters into it:
+
+```js
+case "cache-and-network":
+    return { ...cacheResult(), loading: true, networkStatus: NetworkStatus.loading };
+```
+
+And `nextFetchPolicy` rewrites `options.fetchPolicy` on the **ObservableQuery
+instance** that settled. `useQuery` calls `client.watchQuery` per mount
+(`react/hooks/useQuery.js`), so a remount gets a fresh instance that starts at
+`cache-and-network` again — the switch never survives a navigation. Line 2 of
+the probe is that: the first instance sitting on `cache-first` buys the second
+nothing. `notifyOnNetworkStatusChange: false` does not help either; it only
+filters emissions AFTER the initial result.
+
+The third line is the other half. With `returnPartialData: false` an incomplete
+cache read yields `data === undefined` rather than a partial object, so
+`loading && !data` is precisely *"the read was incomplete"* — and one missing
+field of the selection is enough to trigger it. That is why every writer of an
+entity must write the full shape the reading query selects; see
+[cache.modify cannot add a field](#cachemodify-cannot-add-a-field) and
+`__tests__/apollo/userProfileCompleteness.test.ts`.
+
+Both halves shipped together in the profile area: `AppSettingsScreen`,
+`NotificationSettingsScreen` and `DietaryProfileScreen` gated on bare `loading`,
+and `GetUserProfile` selected 17 profile fields while `LoginUser` wrote 3. A
+stalled request then held the screen blank for httpLink's 10s abort deadline
+(`Environment.getApiConfig().timeout`), up to ~30s across `retryLink`'s three
+attempts — with no header and no back button, because the loading branch
+rendered outside `ProfileScreenWrapper`.
+
 ### Apollo partial reads omit missing keys rather than undefining them
 
 Verified 2026-08-29 vs `@apollo/client@4.2.12` — re-check:

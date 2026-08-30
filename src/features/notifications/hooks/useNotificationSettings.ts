@@ -389,6 +389,13 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
   return {
     settings,
     loading,
+    // `settings` always has a value — every field below falls back to a
+    // fabricated default — so it cannot tell a screen whether the server has
+    // answered. A screen gating on `loading` alone blanks itself on every
+    // mount: `cache-and-network` reports `loading: true` for the whole network
+    // leg even when the cache already answered, and `nextFetchPolicy` does not
+    // survive an unmount (useQuery builds a new ObservableQuery per mount).
+    hasPreferences: !!preferences,
     updateNotificationSetting,
     updateMultipleSettings,
     resetToDefaults,

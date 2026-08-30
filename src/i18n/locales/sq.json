@@ -213,7 +213,12 @@
     "logout": "Vërtet dëshiron të dalësh?",
     "discardChanges": "Vërtet dëshiron t'i shpërfillësh ndryshimet?",
     "logoutWithPending_one": "Ke {{count}} ndryshim të pasinkronizuar. Dalja do ta heqë atë.",
-    "logoutWithPending_other": "Ke {{count}} ndryshime të pasinkronizuara. Dalja do t'i heqë ato."
+    "logoutWithPending_other": "Ke {{count}} ndryshime të pasinkronizuara. Dalja do t'i heqë ato.",
+    "deleteHomeTitle": "Fshi shtëpinë",
+    "removeMemberTitle": "Hiq anëtarin",
+    "removeMemberNamed": "Vërtet dëshiron ta heqësh {{name}} nga kjo shtëpi?",
+    "revokeInviteTitle": "Tërhiq ftesën",
+    "revokeInviteNamed": "Vërtet dëshiron ta tërheqësh ftesën për {{name}}?"
   },
   "labels": {
     "accept": "Prano",

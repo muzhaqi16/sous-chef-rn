@@ -137,6 +137,12 @@ export interface RemoveOperationConfig<TResult> {
   parentId?: string | null | (() => string | null | undefined);
   itemId: string;
   confirmMessage?: string;
+  /**
+   * Localized heading for the confirmation dialog. `operationName` is a
+   * telemetry label — English by construction — so a caller that shows a
+   * dialog passes its own translated title here.
+   */
+  confirmTitle?: string;
   itemName?: string;
   onSuccess?: (data: TResult) => void;
   onError?: (error: unknown) => void;
@@ -394,6 +400,7 @@ function createRemoveOperationImpl<TResult>(
       parentId,
       itemId,
       confirmMessage,
+      confirmTitle,
       itemName,
       onSuccess,
       onError,
@@ -415,7 +422,7 @@ function createRemoveOperationImpl<TResult>(
     if (confirmMessage) {
       return new Promise(resolve => {
         alertService.alert(
-          operationName,
+          confirmTitle ?? operationName,
           itemName
             ? confirmMessage.replace('{name}', itemName)
             : confirmMessage,

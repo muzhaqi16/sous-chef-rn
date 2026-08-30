@@ -135,6 +135,7 @@ export function ForgotPasswordScreen() {
           fields={[]}
           control={control}
           errors={errors}
+          contentPlacement="top"
           submitText={t('auth.backToSignIn')}
           submitButtonTestID="forgot-password-back-to-login-button"
           onSubmit={() => navigateToLogin()}
@@ -165,6 +166,7 @@ export function ForgotPasswordScreen() {
         ]}
         control={control}
         errors={errors}
+        contentPlacement="top"
         submitText={t('auth.sendResetLink')}
         submitButtonTestID="forgot-password-submit-button"
         onSubmit={handleSubmit(onSendResetLink, logValidationErrors)}

@@ -165,7 +165,14 @@ export const SelectPantryItems = () => {
     },
   );
 
-  if (loading || pantryLoading) {
+  // Gate on the absence of data, not on `loading`. Under `cache-and-network`
+  // Apollo reports `loading: true` for the whole network leg on EVERY mount —
+  // `nextFetchPolicy` lives on the ObservableQuery and useQuery builds a new
+  // one each time — so stepping back into this screen re-showed the loader over
+  // a warm cache, for as long as the request took. `useSelectableItems` keeps
+  // only the user's overrides and re-derives the rest from `initialItems`, so a
+  // late `pantryData` still lands the pre-selection without discarding a tap.
+  if ((loading && !data) || (pantryLoading && !pantryData)) {
     return (
       <OnBoardingWrapper
         title={t('onBoarding.stockPantryTitle')}

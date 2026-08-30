@@ -185,6 +185,14 @@ export const useAppSettings = () => {
   return {
     settings: memoizedSettings,
     loading,
+    // `settings` is never empty — `getAppSettings()` fills every field with a
+    // default — so it cannot answer "has the server answered yet". A screen
+    // that renders a spinner needs that distinction, or it blanks itself on
+    // every mount: `cache-and-network` reports `loading: true` for the whole
+    // network leg even when the cache already answered, and `nextFetchPolicy`
+    // does not survive an unmount (useQuery builds a new ObservableQuery per
+    // mount), so every visit is a fresh network leg.
+    hasLoadedSettings: !!settings,
     // errorPolicy:'all' (global) resolves failures with data+error rather than
     // throwing — expose `error` so consumers can surface a load failure.
     error,

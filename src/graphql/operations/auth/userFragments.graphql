@@ -27,10 +27,28 @@ fragment LoginUser on User {
       }
     }
   }
+  # The CURRENT user's profile is written here with the SAME shape
+  # `GetUserProfile` reads. `returnPartialData` is false, so one missing field
+  # makes that whole read incomplete and the Profile screen falls back to its
+  # skeleton until the network answers — the shipped bug this shape fixes.
+  # `authSlice.setAuth` also reads firstName/lastName off this payload, which
+  # the three-field version never carried. Kept inline rather than behind a
+  # shared fragment because `dataMasking` is on and these consumers read the
+  # fields directly; `__tests__/apollo/userProfileCompleteness.test.ts` is what
+  # holds the four copies together.
   profile {
     id
+    firstName
+    lastName
     displayName
+    bio
     avatar
+    phone
+    dateOfBirth
+    gender
+    profileVisibility
+    showEmail
+    showPhone
   }
   settings {
     id
@@ -53,12 +71,20 @@ fragment PartialUser on User {
   defaultHomeId
   createdAt
   updatedAt
+  # Same shape as `GetUserProfile` reads — see the note on LoginUser above.
   profile {
     id
-    displayName
-    avatar
     firstName
     lastName
+    displayName
+    bio
+    avatar
+    phone
+    dateOfBirth
+    gender
+    profileVisibility
+    showEmail
+    showPhone
   }
   settings {
     id

@@ -33,27 +33,30 @@ query GetUserSettings {
   }
 }
 
+# Every field here must be in the cache or the WHOLE read yields nothing
+# (`returnPartialData: false`), so the selection is kept to exactly what the
+# screens render: ProfileScreen (avatar, displayName, firstName, lastName),
+# PersonalInformationScreen (the rest), DataProvider (the first four). Five
+# fields no screen read — userId, coverImage, website, createdAt, updatedAt —
+# used to sit here, and each one was another way for the read to come back
+# incomplete. Every writer of the current user's profile matches this shape;
+# `__tests__/apollo/userProfileCompleteness.test.ts` fails if one drifts.
 query GetUserProfile {
   me {
     id
     profile {
       id
-      userId
       firstName
       lastName
       displayName
       bio
       avatar
-      coverImage
       phone
-      website
       dateOfBirth
       gender
       profileVisibility
       showEmail
       showPhone
-      createdAt
-      updatedAt
     }
   }
 }
@@ -276,6 +279,10 @@ subscription UserEvents($userId: ID!) {
         language
         lastActiveAt
       }
+      # PROFILE_CHANGED normalizes this node straight into the cache (see
+      # useUserSubscriptions), so it writes the SAME shape `GetUserProfile`
+      # reads. Short of that it can seed a partial UserProfile record, and the
+      # profile screens then read nothing at all.
       ... on UserProfile {
         id
         firstName
@@ -283,10 +290,12 @@ subscription UserEvents($userId: ID!) {
         displayName
         bio
         avatar
-        coverImage
         phone
-        website
+        dateOfBirth
+        gender
         profileVisibility
+        showEmail
+        showPhone
       }
     }
   }

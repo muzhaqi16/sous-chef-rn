@@ -67,7 +67,7 @@ export const HomeManagement: React.FC = () => {
 
   const {
     homes,
-    defaultHomeId,
+    remoteDefaultHomeId,
     initialLoading,
     creating,
     joiningByCode,
@@ -210,12 +210,15 @@ export const HomeManagement: React.FC = () => {
     );
   };
 
-  // Sort homes with default home first
+  // Sort the account's default home first. Keyed off the server-owned
+  // `Home.isDefault` (via `remoteDefaultHomeId`), not the local selection —
+  // the two are allowed to differ, and only one of them is what this screen's
+  // "Default" chip claims.
   const sortedHomes = (() => {
     if (!homes) return [];
     return [...homes].sort((a, b) => {
-      if (a.id === defaultHomeId) return -1;
-      if (b.id === defaultHomeId) return 1;
+      if (a.id === remoteDefaultHomeId) return -1;
+      if (b.id === remoteDefaultHomeId) return 1;
       return 0;
     });
   })();
@@ -247,6 +250,7 @@ export const HomeManagement: React.FC = () => {
               icon: 'add',
               onPress: () => setShowCreateForm(true),
               variant: 'primary',
+              testID: 'home-management-add-button',
             },
           ]}
         />
@@ -411,7 +415,7 @@ export const HomeManagement: React.FC = () => {
                 >
                   <HomeCard
                     homeRef={home}
-                    isDefault={home.id === defaultHomeId}
+                    isDefault={home.id === remoteDefaultHomeId}
                     isHighlighted={home.id === highlightedHomeId}
                     canInvite={userCanInvite}
                     canDelete={userCanDelete}

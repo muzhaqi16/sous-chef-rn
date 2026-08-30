@@ -189,7 +189,7 @@ Pick the cache-update pattern by what the mutation changes
 | `updateEntityFieldsLocalFirst`                | Settings-shaped entity whose field names ARE the setting names      | `useAppSettings`, `useNotificationSettings`                                |
 | `cache.modify` on connection edges + counts   | Entity moves between filtered connections                           | `moveShoppingListItemTo*` helpers                                          |
 | `writeFragment`                               | Subscription push written through                                   | `usePantrySubscriptions`, `useShoppingListSubscriptions`                   |
-| `refetchQueries` (last resort)                | Query shape underivable from the response                           | `CreateHomeScreen`, `useRecipePreload`                                     |
+| `refetchQueries` (last resort)                | Query shape underivable from the response                           | `useHomeSubscriptions`, `usePantryItemDetailActions`                      |
 
 Defaults:
 
@@ -254,6 +254,31 @@ Defaults:
 deliberately not adopted — reach for them only when a new screen has 2+
 independent parallel queries; rationale and decision trees:
 `docs/apollo-client-patterns.md` § Apollo Client 4.x Notes.
+
+- **Gate a screen on "is there anything to show", NEVER on `loading` alone.**
+  Under that default `loading` is `true` on the FIRST result whatever the cache
+  holds — Apollo hard-codes it for `cache-and-network` — and `nextFetchPolicy`
+  lives on the ObservableQuery, which `useQuery` rebuilds per mount, so it never
+  survives a navigation and every visit is a fresh network leg.
+  `notifyOnNetworkStatusChange: false` changes neither. So `if (loading)` blanks
+  the screen for the whole request on every visit, which against a stalled API
+  is httpLink's 10s abort (`Environment.getApiConfig().timeout`) and up to ~30s
+  across `retryLink`'s three attempts. Write `loading && !data`, as
+  `ProfileScreen` does. When the hook's value is always defined because it fills
+  in defaults (`useAppSettings`, `useNotificationSettings`) it cannot answer the
+  question — return a separate `hasLoadedSettings` / `hasPreferences` flag.
+  And keep the loading branch INSIDE the screen's header wrapper: rendered
+  outside `ProfileScreenWrapper` it has no back button, so the screen cannot be
+  left while it waits.
+- **`returnPartialData: false` makes `!data` mean "the cache read was
+  INCOMPLETE"** — one missing field of the selection yields no data at all, not
+  a partial object. Hence the completeness invariant: every writer of an entity
+  writes the full shape the reading query selects. `GetUserProfile` reads 12
+  profile fields and `LoginUser` / `PartialUser` / `UserEvents` each write the
+  same 12; `__tests__/apollo/userProfileCompleteness.test.ts` fails if one
+  drifts. Verified 2026-08-30 vs `@apollo/client@4.2.12` — re-check:
+  `node scripts/probe-apollo-loading-on-mount.mjs`; mechanism:
+  `docs/verified-library-behaviour.md#apollo-reports-loading-true-on-every-mount-warm-cache-or-not`.
 
 ### Subscriptions & transport verdicts
 

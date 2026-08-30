@@ -253,6 +253,29 @@ describe('HomeDetailScreen', () => {
     route: { params: { homeId: 'home-1' } },
   };
 
+  /**
+   * The gate is `!home`, not `loading || !home`. Under `cache-and-network`
+   * Apollo reports `loading: true` for the whole network leg on EVERY mount —
+   * `nextFetchPolicy` lives on the ObservableQuery and useQuery builds a new
+   * one each time — so `loading ||` threw the cached home away and showed a
+   * spinner on every visit, for as long as the request took.
+   */
+  it('renders the cached home while a background refresh is in flight', () => {
+    const {
+      useHomeDetailManagement,
+    } = require('#features/home/hooks/useHomeDetailManagement');
+    useHomeDetailManagement.mockReturnValue({
+      ...useHomeDetailManagement(),
+      loading: true,
+    });
+
+    const { getByText, queryByText } = render(
+      <HomeDetailScreen {...defaultProps} />,
+    );
+    expect(getByText('Home Name: My Home')).toBeTruthy();
+    expect(queryByText('Loading...')).toBeNull();
+  });
+
   it('renders home detail template', () => {
     const { getByText } = render(<HomeDetailScreen {...defaultProps} />);
     expect(getByText('Home Details')).toBeTruthy();

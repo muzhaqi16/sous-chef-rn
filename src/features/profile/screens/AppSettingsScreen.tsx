@@ -27,8 +27,13 @@ export const AppSettingsScreen: React.FC = () => {
   const [updating, setUpdating] = useState<string | null>(null);
   const [unitPickerVisible, setUnitPickerVisible] = useState(false);
 
-  const { settings, loading, updateAppSetting, resetToDefaults } =
-    useAppSettings();
+  const {
+    settings,
+    loading,
+    hasLoadedSettings,
+    updateAppSetting,
+    resetToDefaults,
+  } = useAppSettings();
 
   // Offline mode renders from the STORE, not from `settings`. The store is what
   // actually drives the policy (`offlineModeLink` reads it, and it's the value
@@ -163,13 +168,26 @@ export const AppSettingsScreen: React.FC = () => {
     unitSystemOptions.find(o => o.value === settings.preferredUnitSystem)
       ?.label ?? t('labels.select');
 
-  if (loading) {
+  // Gate on "nothing to show", not on `loading`. Under `cache-and-network`
+  // Apollo reports `loading: true` for the whole network leg even when the
+  // cache already answered, and it starts a fresh leg on every mount — so a
+  // bare `if (loading)` blanked this screen on every visit for as long as the
+  // request took, up to the 10s httpLink abort deadline. The loading state
+  // stays inside ProfileScreenWrapper so the title and back button remain:
+  // without them the screen could not be left while it waited.
+  if (loading && !hasLoadedSettings) {
     return (
-      <View style={commonStyles.loadingContainer}>
-        <Text style={commonStyles.loadingText}>
-          {t('settings.loadingSettings')}
-        </Text>
-      </View>
+      <ProfileScreenWrapper
+        title={t('labels.appSettings')}
+        testID="settings-screen"
+        scrollEnabled={false}
+      >
+        <View style={commonStyles.loadingContainer}>
+          <Text style={commonStyles.loadingText}>
+            {t('settings.loadingSettings')}
+          </Text>
+        </View>
+      </ProfileScreenWrapper>
     );
   }
 

@@ -128,7 +128,6 @@
     "currentMembers": "Current Members",
     "manageHome": "Manage Home",
     "shareHomeLinkedNotice": "This list belongs to the home \"{{name}}\". Members are managed through home settings.",
-    "removeMemberTitle": "Remove Member",
     "removeMemberA11y": "Remove member",
     "cannotLeaveOwnerMessage": "Owners cannot leave the list. Please transfer ownership to another member or delete the list.",
     "failedToUpdateShareSettings": "Failed to update share settings",

@@ -65,6 +65,12 @@ const REPLAY_SAFETY_BASELINE: Record<string, 'absolute-update' | 'bulk-create'> 
     MarkAllNotificationsAsRead: 'absolute-update',
     MarkExpirationAction: 'absolute-update',
     MarkExpirationNotificationAsRead: 'absolute-update',
+    // Sets `UserSettings.defaultHomeId` to one existing home id. There is one
+    // such field per user and the input names the home outright, so a replay
+    // writes the value already there — and a replay that lands AFTER the user
+    // picked a different home is the only real hazard, which the queue's own
+    // ordering (FIFO per user) settles in favour of the later pick.
+    MarkHomeAsDefault: 'absolute-update',
     MovePurchasedItemsToPantry: 'bulk-create',
     RemoveItemsFromShoppingList: 'absolute-update',
     RemoveRecipeFromFavorites: 'absolute-update',

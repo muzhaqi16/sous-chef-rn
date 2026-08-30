@@ -14,7 +14,7 @@ const mockHomeQuery = {
 
 const mockHomeSelection = {
   selectedHomeId: 'home-1',
-  defaultHome: { id: 'home-1', name: 'Home 1' },
+  selectedHome: { id: 'home-1', name: 'Home 1' },
   isSynced: true,
   setDefaultHome: jest.fn(),
   setSelectedHomeId: jest.fn(),
@@ -78,8 +78,8 @@ describe('useHomeManagement', () => {
     });
 
     // Data from useHomeSelection
-    expect(result.current.defaultHomeId).toBe('home-1');
-    expect(result.current.defaultHome).toEqual({
+    expect(result.current.selectedHomeId).toBe('home-1');
+    expect(result.current.selectedHome).toEqual({
       id: 'home-1',
       name: 'Home 1',
     });
@@ -124,7 +124,6 @@ describe('useHomeManagement', () => {
     expect(useHomeSelection).toHaveBeenCalledWith({
       homes: mockHomeQuery.homes,
       remoteDefaultHomeId: mockHomeQuery.remoteDefaultHomeId,
-      loading: mockHomeQuery.loading,
     });
   });
 

@@ -1,22 +1,40 @@
 /**
- * useHomeSelection - Default home selection logic
+ * useHomeSelection — switching which home is active.
  *
- * Single responsibility:
- * - Auto-select first home for new users
- * - Sync default home to server
- * - Handle home switching with pantry coordination
+ * **Two different things are called "the default home", and this hook is where
+ * they meet.** Keeping them apart is the point:
+ *
+ * - The **selection** (`selectedHomeId`, Zustand + MMKV) is device-local: which
+ *   home the user is looking at right now. It survives a restart on THIS
+ *   device only.
+ * - The **account default** (`Home.isDefault`, computed by the server from
+ *   `UserSettings.defaultHomeId`, surfaced here as `remoteDefaultHomeId`) is
+ *   shared across devices and is what a fresh install opens to.
+ *
+ * They are allowed to differ, and `isSynced` reports when they do. Exposing the
+ * selection under a name like `defaultHome`/`defaultHomeId` is what let the
+ * "Default" chip claim one home while the server said another, so this hook
+ * names the selection `selectedHome`/`selectedHomeId` and nothing else.
+ *
+ * `setDefaultHome` deliberately moves BOTH: making a home the account default
+ * also switches you to it, which is the behaviour the UI promises.
+ *
+ * Auto-selecting a first home is NOT here — see `useDefaultHome`.
  */
 
-import { useEffect, useRef } from 'react';
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
+import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import {
-  MarkHomeAsDefaultDocument,
-  type MarkHomeAsDefaultMutation,
-} from '#operations/home/userSettings.generated';
-import type { GetHomesQuery } from '#operations/home/home.generated';
-import type { Reference } from '@apollo/client';
+  GetHomesDocument,
+  type GetHomesQuery,
+} from '#operations/home/home.generated';
+import type { ApolloCache, Reference } from '@apollo/client';
+import { extractNodes } from '#/utils/connectionUtils';
+import { defaultPantryOf } from '#features/home/utils/homePantries';
+import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import {
   useHomeState,
   useSelectedHomeId,
@@ -25,7 +43,6 @@ import {
   useSetIsHomeSelectionReady,
   useSetSelectedPantryId,
 } from '#store/useAppStore';
-import { handleMutationError } from '#/utils/errorHandlers';
 
 /**
  * Home node as returned by `GetHomes` (via `extractNodes`), widened with an
@@ -42,10 +59,46 @@ type HomeNode = GetHomesQuery['homes']['edges'][number]['node'] & {
  */
 type HomeEdge = { node?: Reference } | Reference;
 
+/**
+ * Flip `isDefault` across every cached home so the badge (and every other
+ * `isDefault` reader) moves immediately and STAYS moved while the mutation is
+ * queued. Written directly rather than through an `optimisticResponse` because
+ * an optimistic layer is torn down on completion — including the offline
+ * queue's null completion.
+ */
+const applyDefaultHome = (cache: ApolloCache, defaultHomeId: string | null) => {
+  cache.modify({
+    fields: {
+      homes(
+        existingHomes: { edges?: HomeEdge[]; readonly __ref?: string },
+        { readField },
+      ) {
+        if (!existingHomes || !existingHomes.edges) return existingHomes;
+
+        existingHomes.edges.forEach((edge: HomeEdge) => {
+          const homeRef = ('node' in edge && edge.node) || edge;
+          if (!homeRef) return;
+
+          const homeId = readField('id', homeRef);
+          const cacheId = cache.identify(homeRef);
+          if (cacheId) {
+            cache.modify({
+              id: cacheId,
+              fields: { isDefault: () => homeId === defaultHomeId },
+            });
+          }
+        });
+
+        // Entities were modified directly; the connection itself is unchanged.
+        return existingHomes;
+      },
+    },
+  });
+};
+
 interface UseHomeSelectionOptions {
   homes: HomeNode[] | null;
   remoteDefaultHomeId: string | null;
-  loading: boolean;
 }
 
 /**
@@ -61,14 +114,12 @@ interface UseHomeSelectionOptions {
  * const { selectedHomeId, setDefaultHome, defaultHome, isSynced } = useHomeSelection({
  *   homes,
  *   remoteDefaultHomeId,
- *   loading,
  * });
  * ```
  */
 export function useHomeSelection({
   homes,
   remoteDefaultHomeId,
-  loading,
 }: UseHomeSelectionOptions) {
   const selectedHomeId = useSelectedHomeId();
   const { setSelectedHomeId } = useHomeState();
@@ -77,102 +128,38 @@ export function useHomeSelection({
   const setHomeAndPantry = useSetHomeAndPantry();
   const setIsHomeSelectionReady = useSetIsHomeSelectionReady();
 
-  // Ref to track if initial home auto-selection has been attempted
-  const hasInitializedDefaultHome = useRef(false);
+  const client = useApolloClient();
 
+  // Local-first: the write lands in the cache permanently BEFORE firing (see
+  // `applyDefaultHome` below), so `queueLink` can queue it offline and replay
+  // it on reconnect instead of failing fast. That opt-in rules out an
+  // `optimisticResponse` — Apollo tears the optimistic layer down when the
+  // mutation "completes", and offline that completion is the queue's own null
+  // result, so the badge would snap back while the write is still queued.
+  //
+  // Replay is safe without a `Sync*` mapping: `convertToSyncMutation` falls
+  // back to re-sending the original, and marking the same home default twice
+  // is idempotent.
   const [setDefaultHomeMutation] = useMutation(MarkHomeAsDefaultDocument, {
-    // Optimistic response for instant UI updates (especially offline)
-    optimisticResponse: (variables): MarkHomeAsDefaultMutation => ({
-      __typename: 'Mutation',
-      markHomeAsDefault: {
-        __typename: 'MarkHomeAsDefaultPayload',
-        settings: {
-          __typename: 'UserSettings',
-          id: variables.input.homeId,
-        },
-        defaultPantry: null,
-      },
-    }),
-
-    // Update Apollo cache to set isDefault on the correct home
-    update: (cache, _result, { variables }) => {
-      if (!variables?.input.homeId) return;
-
-      // Update isDefault field on all homes in cache
-      cache.modify({
-        fields: {
-          homes(
-            existingHomes: { edges?: HomeEdge[]; readonly __ref?: string },
-            { readField },
-          ) {
-            // Handle connection type: homes has { edges: [...] }
-            if (!existingHomes || !existingHomes.edges) {
-              return existingHomes;
-            }
-
-            // Iterate through edges to update isDefault on each home
-            existingHomes.edges.forEach((edge: HomeEdge) => {
-              const homeRef = ('node' in edge && edge.node) || edge;
-              if (!homeRef) return;
-
-              const homeId = readField('id', homeRef);
-              const cacheId = cache.identify(homeRef);
-
-              if (cacheId) {
-                cache.modify({
-                  id: cacheId,
-                  fields: {
-                    isDefault: () => homeId === variables.input.homeId,
-                  },
-                });
-              }
-            });
-
-            // Return existing unchanged - we modified entities directly
-            return existingHomes;
-          },
-        },
-      });
-    },
+    context: { localFirst: true },
   });
 
-  // Auto-select first home if no default is set and we have homes (initialization for first-time users)
-  // This runs ONCE when the user has homes but no default home set anywhere
-  useEffect(() => {
-    if (
-      !hasInitializedDefaultHome.current &&
-      !selectedHomeId &&
-      !remoteDefaultHomeId &&
-      !loading &&
-      homes &&
-      homes.length > 0
-    ) {
-      hasInitializedDefaultHome.current = true; // Mark as done
-      const firstHome = homes[0];
-      setSelectedHomeId(firstHome.id);
+  // Auto-selecting a first home lives in `useDefaultHome`, which
+  // `AuthenticatedDataProvider` mounts for the whole authenticated app — and
+  // this hook is reachable only from `HomeManagement`, inside it. A second
+  // copy here fired the same `MarkHomeAsDefault` with different side effects:
+  // it bypassed `setDefaultHome`, so it neither gated the pantry queries nor
+  // adopted the pantry the server returns, leaving the two routes to disagree
+  // about the selection depending on which won.
 
-      // Sync this choice to the backend
-      setDefaultHomeMutation({
-        variables: { input: { homeId: firstHome.id } },
-      }).catch(error => {
-        handleMutationError(error, {
-          operation: 'Set First Home as Default',
-          showAlert: false,
-        });
-      });
-    }
-  }, [
-    selectedHomeId,
-    remoteDefaultHomeId,
-    loading,
-    homes?.length, // Use primitive to prevent re-runs when array reference changes
-    setDefaultHomeMutation,
-    setSelectedHomeId,
-    homes,
-  ]);
-
+  /**
+   * Make `homeId` the account default AND switch the current selection to it.
+   *
+   * Returns true when the change stands — the server accepted it, or the write
+   * is queued offline and will replay. False means it was rolled back.
+   */
   const setDefaultHome = async (homeId: string) => {
-    // Prevent redundant calls if already set as default (check both local and remote)
+    // Already both the selection and the account default — nothing to move.
     if (homeId === selectedHomeId && homeId === remoteDefaultHomeId) {
       return true;
     }
@@ -183,28 +170,41 @@ export function useHomeSelection({
       return false;
     }
 
-    // Find the target home and its default pantry BEFORE mutation
-    // This prevents race condition where cache updates but Zustand hasn't
-    const targetHome = homes?.find(home => home.id === homeId);
-    if (!targetHome) {
-      alertService.alert(t('labels.error'), t('errors.codes.homeNotFound'));
-      return false;
-    }
+    // Resolve the target home BEST-EFFORT — for the pantry hint, nothing more.
+    //
+    // The local list is NOT an authority on existence. A mutation's
+    // `onCompleted` runs in the same task as its cache write, BEFORE React
+    // re-renders, so for a home created moments ago the `homes` PROP is still
+    // the pre-create list — empty, for a user's first home. On the join path
+    // the home is in neither the prop nor the cache: `JoinHomeByCode` returns
+    // Membership only, and its `update` fires an un-awaited refetch. A miss
+    // here therefore means "not visible yet", never "does not exist" — so it
+    // must not abort the switch.
+    //
+    // The SERVER decides whether the home exists; a refusal is surfaced below.
+    const homeFromProps = homes?.find(home => home.id === homeId);
+    const cachedHomes = homeFromProps
+      ? null
+      : client.cache.readQuery({ query: GetHomesDocument });
+    const targetHome =
+      homeFromProps ??
+      extractNodes(cachedHomes?.homes).find(home => home.id === homeId);
 
-    // Get the default pantry from home data we already have
-    const localDefaultPantry =
-      targetHome.pantries?.find(p => p.isDefault) || targetHome.pantries?.[0];
+    // A hint for the optimistic switch; the server's `defaultPantry` wins below.
+    const localDefaultPantry = defaultPantryOf(targetHome);
 
     // Store old values for potential rollback
     const previousHomeId = selectedHomeId;
     const previousPantryId = selectedPantryId;
+    const previousDefaultHomeId = remoteDefaultHomeId;
 
     // 1. Gate all pantry queries by setting ready flag to false
     // This prevents GetPantry from firing with invalid id during the transition
     setIsHomeSelectionReady(false);
 
-    // 2. Update home and pantry - safe to set null because queries are gated
-    // This clears old pantry data to avoid showing wrong home's items
+    // 2. Write the change permanently, then update the selection. Order
+    // matters: the cache write is what survives being queued offline.
+    applyDefaultHome(client.cache, homeId);
     setHomeAndPantry(homeId, localDefaultPantry?.id ?? null);
 
     let result;
@@ -213,43 +213,58 @@ export function useHomeSelection({
         variables: { input: { homeId } },
       });
     } catch {
-      // Rollback on error and re-enable queries
+      // A genuine throw. This mutation carries no mutation-level `onError`, so
+      // nothing else reports it.
+      applyDefaultHome(client.cache, previousDefaultHomeId);
       setHomeAndPantry(previousHomeId, previousPantryId);
       setIsHomeSelectionReady(true);
       alertService.alert(t('labels.error'), t('errors.setDefaultHomeFailed'));
+      return false;
     }
-    if (!result) return false;
 
+    // The server is the authority on whether this home exists, but only when it
+    // answered: a queued write (offline, or the API unreachable) resolves with
+    // no payload and no error, and must keep the local change rather than
+    // reverting it — it replays on reconnect.
+    if (classifyCreateResult(result) === 'rejected') {
+      applyDefaultHome(client.cache, previousDefaultHomeId);
+      setHomeAndPantry(previousHomeId, previousPantryId);
+      setIsHomeSelectionReady(true);
+      alertService.alert(
+        t('labels.error'),
+        localizedRefusalMessage(
+          result.data?.markHomeAsDefault,
+          t('errors.setDefaultHomeFailed'),
+        ),
+      );
+      return false;
+    }
+
+    // Adopt the pantry the server picked; it is the authority when it answered.
     if (
       result.data?.markHomeAsDefault?.__typename === 'MarkHomeAsDefaultPayload'
     ) {
-      // Update pantry from server response (server is source of truth)
       const serverPantry = result.data.markHomeAsDefault.defaultPantry;
       if (serverPantry?.id) {
         setSelectedPantryId(serverPantry.id);
       }
-      // 3. Re-enable queries now that we have valid pantryId
-      setIsHomeSelectionReady(true);
-      return true;
     }
 
-    // A resolved `*Error` union member (or no data) doesn't throw under
-    // errorPolicy:'all', so the executeMutation error callback above never
-    // fired. Roll back, re-enable queries, and surface it (mirrors the throw
-    // path; the early `if (!result) return false` keeps the two exclusive).
-    setHomeAndPantry(previousHomeId, previousPantryId);
+    // 3. Re-enable queries now that the selection is settled.
     setIsHomeSelectionReady(true);
-    alertService.alert(t('labels.error'), t('errors.setDefaultHomeFailed'));
-    return false;
+    return true;
   };
 
-  // Computed value for current default home
-  const defaultHome = homes?.find(home => home.id === selectedHomeId) || null;
+  // The home the user is currently VIEWING. Deliberately not called
+  // `defaultHome`: it tracks `selectedHomeId`, which is a local, persisted
+  // selection and is allowed to differ from the account's default — `isSynced`
+  // is what reports that divergence.
+  const selectedHome = homes?.find(home => home.id === selectedHomeId) || null;
   const isSynced = selectedHomeId === remoteDefaultHomeId;
 
   return {
     selectedHomeId,
-    defaultHome,
+    selectedHome,
     isSynced,
     setDefaultHome,
     setDefaultHomeMutation,

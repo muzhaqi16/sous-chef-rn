@@ -213,7 +213,12 @@
     "logout": "Are you sure you want to log out?",
     "discardChanges": "Are you sure you want to discard your changes?",
     "logoutWithPending_one": "You have {{count}} change that hasn't synced yet. Signing out will discard it.",
-    "logoutWithPending_other": "You have {{count}} changes that haven't synced yet. Signing out will discard them."
+    "logoutWithPending_other": "You have {{count}} changes that haven't synced yet. Signing out will discard them.",
+    "deleteHomeTitle": "Delete Home",
+    "removeMemberTitle": "Remove Member",
+    "removeMemberNamed": "Are you sure you want to remove {{name}} from this home?",
+    "revokeInviteTitle": "Revoke Invitation",
+    "revokeInviteNamed": "Are you sure you want to revoke the invitation to {{name}}?"
   },
   "labels": {
     "accept": "Accept",

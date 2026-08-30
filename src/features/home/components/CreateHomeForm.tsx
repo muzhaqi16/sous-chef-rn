@@ -33,6 +33,7 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
   return (
     <View style={styles.createForm}>
       <BaseInput
+        testID="create-home-name-input"
         value={homeName}
         onChangeText={onHomeNameChange}
         placeholder={t('labels.enterHomeName')}
@@ -45,10 +46,16 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
         onPress={() => onAllowJoinCodeChange(!allowJoinCode)}
       />
       <View style={styles.formActions}>
-        <Button variant="secondary" onPress={onCancel} fullWidth>
+        <Button
+          testID="create-home-cancel-button"
+          variant="secondary"
+          onPress={onCancel}
+          fullWidth
+        >
           {t('labels.cancel')}
         </Button>
         <Button
+          testID="create-home-submit-button"
           loading={isCreating}
           disabled={!homeName.trim()}
           onPress={onSubmit}

@@ -513,22 +513,17 @@ export function createMockProfile(overrides?: Partial<MockProfile>): MockProfile
   return {
     __typename: 'UserProfile',
     id: nextId(),
-    userId: nextId(),
     firstName: 'Test',
     lastName: 'User',
     displayName: 'testuser',
     bio: null,
     phone: null,
-    website: null,
     dateOfBirth: null,
     avatar: null,
-    coverImage: null,
     gender: null,
     profileVisibility: ProfileVisibility.Public,
     showEmail: false,
     showPhone: false,
-    createdAt: '2025-01-01T00:00:00.000Z',
-    updatedAt: '2025-01-01T00:00:00.000Z',
     ...overrides,
   };
 }

@@ -248,7 +248,7 @@ describe('useHomeMutations', () => {
       expect(returnValue).toBe(false);
       expect(alertService.alert).toHaveBeenCalledWith(
         'Validation Error',
-        'Please enter a home name',
+        'Home name cannot be empty',
       );
     });
   });

@@ -22,7 +22,7 @@ jest.mock('#features/home/hooks/useHomeManagement', () => ({
         myMembership: { canManageHome: true },
       },
     ],
-    defaultHomeId: 'home-1',
+    remoteDefaultHomeId: 'home-1',
     initialLoading: false,
     creating: false,
     joiningByCode: false,
@@ -78,15 +78,17 @@ jest.mock('#features/home/components/CreateHomeForm', () => ({
 // Captures every render's props so tests can assert the gating computed by the
 // screen (the card itself is presentation-only here).
 const mockHomeCardProps: Array<{
-  homeRef?: { name?: string };
+  homeRef?: { name?: string; id?: string };
   canDelete?: boolean;
   canInvite?: boolean;
+  isDefault?: boolean;
 }> = [];
 jest.mock('#features/home/components/HomeCard', () => ({
   HomeCard: (props: {
-    homeRef?: { name?: string };
+    homeRef?: { name?: string; id?: string };
     canDelete?: boolean;
     canInvite?: boolean;
+    isDefault?: boolean;
   }) => {
     mockHomeCardProps.push(props);
     return props.homeRef?.name;
@@ -112,6 +114,40 @@ jest.mock('#/utils/finallyHelpers');
 jest.mock('#components/atoms/SousChefLoader', () => ({
   SousChefLoader: () => 'SousChefLoader',
 }));
+
+/**
+ * The `useHomeManagement` surface this screen reads, in one place.
+ *
+ * `selectedHomeId` and `remoteDefaultHomeId` are deliberately DIFFERENT here:
+ * they answer different questions (which home am I viewing vs. which is the
+ * account's default) and the screen must never substitute one for the other.
+ */
+const baseHookReturn = {
+  homes: [],
+  selectedHome: null,
+  selectedHomeId: null as string | null,
+  remoteDefaultHomeId: null as string | null,
+  initialLoading: false,
+  creating: false,
+  joiningByCode: false,
+  loadingPreview: false,
+  previewHome: null,
+  createHome: jest.fn(),
+  deleteHome: jest.fn(),
+  setDefaultHome: jest.fn(),
+  inviteUserToHome: jest.fn(),
+  joinHomeByCode: jest.fn(),
+  previewHomeByCode: jest.fn(),
+  stats: { totalHomes: 0, totalMembers: 0, totalPantries: 0 },
+  refetch: jest.fn().mockResolvedValue({}),
+};
+
+const mockHook = (overrides: Record<string, unknown>) => {
+  const { useHomeManagement } = jest.requireMock(
+    '#features/home/hooks/useHomeManagement',
+  );
+  useHomeManagement.mockReturnValue({ ...baseHookReturn, ...overrides });
+};
 
 describe('HomeManagement', () => {
   beforeEach(() => {
@@ -200,7 +236,7 @@ describe('HomeManagement', () => {
           myMembership: { canManageHome: true },
         },
       ],
-      defaultHomeId: 'home-1',
+      remoteDefaultHomeId: 'home-1',
       initialLoading: false,
       creating: false,
       joiningByCode: false,
@@ -233,7 +269,7 @@ describe('HomeManagement', () => {
           myMembership: { canManageHome: true },
         },
       ],
-      defaultHomeId: 'home-1',
+      remoteDefaultHomeId: 'home-1',
       initialLoading: false,
       creating: true,
       joiningByCode: false,
@@ -372,20 +408,8 @@ describe('HomeManagement', () => {
   // affordance that could only return FORBIDDEN.
   describe('Delete gating follows the OWNER role', () => {
     const baseReturn = {
-      defaultHomeId: null,
-      initialLoading: false,
-      creating: false,
-      joiningByCode: false,
-      loadingPreview: false,
-      previewHome: null,
-      createHome: jest.fn(),
-      deleteHome: jest.fn(),
-      setDefaultHome: jest.fn(),
-      inviteUserToHome: jest.fn(),
-      joinHomeByCode: jest.fn(),
-      previewHomeByCode: jest.fn(),
+      ...baseHookReturn,
       stats: { totalHomes: 1, totalMembers: 1, totalPantries: 0 },
-      refetch: jest.fn(),
     };
 
     const homeWithMembership = (membership: {
@@ -422,6 +446,46 @@ describe('HomeManagement', () => {
 
       render(<HomeManagement />);
       expect(mockHomeCardProps.at(-1)?.canDelete).toBe(true);
+    });
+  });
+
+  describe('the Default chip', () => {
+    // The chip claims the ACCOUNT's default home. `selectedHomeId` is a
+    // separate, locally persisted "which home am I viewing" value that is
+    // allowed to differ — reading it here made the chip point at one home
+    // while the server said another, and the disagreement survived a restart.
+    const twoHomes = [
+      { id: 'home-1', name: 'First', myMembership: { canManageHome: true } },
+      { id: 'home-2', name: 'Second', myMembership: { canManageHome: true } },
+    ];
+
+    it('follows the server default, not the local selection', () => {
+      mockHook({
+        homes: twoHomes,
+        remoteDefaultHomeId: 'home-2',
+        // Deliberately a DIFFERENT home: the user is viewing home-1.
+        selectedHomeId: 'home-1',
+      });
+
+      render(<HomeManagement />);
+
+      const byId = new Map(
+        mockHomeCardProps.map(p => [p.homeRef?.id, p.isDefault]),
+      );
+      expect(byId.get('home-2')).toBe(true);
+      expect(byId.get('home-1')).toBe(false);
+    });
+
+    it('sorts the server default first', () => {
+      mockHook({
+        homes: twoHomes,
+        remoteDefaultHomeId: 'home-2',
+        selectedHomeId: 'home-1',
+      });
+
+      render(<HomeManagement />);
+
+      expect(mockHomeCardProps[0]?.homeRef?.id).toBe('home-2');
     });
   });
 });

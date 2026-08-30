@@ -213,7 +213,12 @@
     "logout": "Vuoi davvero uscire?",
     "discardChanges": "Vuoi davvero annullare le modifiche?",
     "logoutWithPending_one": "Hai {{count}} modifica non sincronizzata. Uscendo verrà eliminata.",
-    "logoutWithPending_other": "Hai {{count}} modifiche non sincronizzate. Uscendo verranno eliminate."
+    "logoutWithPending_other": "Hai {{count}} modifiche non sincronizzate. Uscendo verranno eliminate.",
+    "deleteHomeTitle": "Elimina casa",
+    "removeMemberTitle": "Rimuovi membro",
+    "removeMemberNamed": "Vuoi davvero rimuovere {{name}} da questa casa?",
+    "revokeInviteTitle": "Revoca invito",
+    "revokeInviteNamed": "Vuoi davvero revocare l'invito a {{name}}?"
   },
   "labels": {
     "accept": "Accetta",

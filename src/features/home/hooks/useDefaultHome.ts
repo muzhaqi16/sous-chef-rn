@@ -17,6 +17,7 @@ import {
 import { useStore } from '#store';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 import { extractNodes } from '#/utils/connectionUtils';
+import { pantriesOf } from '#features/home/utils/homePantries';
 import { logger } from '#/utils/environment';
 
 // Minimal connection shape getDefaultPantry reads — satisfied by both the
@@ -32,22 +33,6 @@ type HomePantries = {
 // Flat home shape some callers (and tests) hand in instead of the
 // connection-shaped node.
 type FlatHome = { pantries?: Array<{ id: string; isDefault?: boolean }> };
-
-// Module scope: it closes over nothing from the hook, and an effect below
-// needs it, so a per-render identity would re-arm that effect every render.
-const pantriesOf = (home: HomePantries | FlatHome | undefined) => {
-  if (!home) return [];
-  const connection =
-    'pantriesConnection' in home ? home.pantriesConnection : undefined;
-  const fromConnection = extractNodes(connection) as Array<{
-    id: string;
-    isDefault?: boolean;
-  }>;
-  if (fromConnection.length) return fromConnection;
-  // Callers passing the flat shape hand in `{ pantries: [...] }`. Accept it.
-  const flat = 'pantries' in home ? home.pantries : undefined;
-  return Array.isArray(flat) ? flat : [];
-};
 
 /**
  * Manages home selection, default home resolution, and pantry ID tracking.
@@ -106,24 +91,46 @@ export const useDefaultHome = () => {
 
   // Allow pantry query to start immediately when persisted selections exist.
   // This runs in parallel with GetHomes instead of waiting for selection init.
-  // Safe because both cache partitions are restored synchronously in
-  // initializeClient() before React mounts.
+  // Both cache partitions are restored synchronously in initializeClient()
+  // before React mounts, so the pair can be CHECKED here without a round-trip —
+  // and it has to be. Restored is not the same as valid: the user may have left
+  // or deleted that home since, on this device or another, and this flag is
+  // precisely what opens `usePantryQuery`'s gate. Trusting the pair outright
+  // sent `GetPantry` for a pantry the user can no longer read, which comes back
+  // "Access denied to this pantry" on every cold start until the selection is
+  // reconciled.
+  //
+  // A cache that cannot answer (fresh install, version purge) simply doesn't
+  // take the shortcut — the pantry query would be waiting on the network there
+  // regardless.
   useEffect(() => {
     if (
-      canAttemptQueries &&
-      selectedHomeId &&
-      selectedPantryId &&
-      !isHomeSelectionReady
+      !canAttemptQueries ||
+      !selectedHomeId ||
+      !selectedPantryId ||
+      isHomeSelectionReady
     ) {
-      logger.debug('⚡ Early ready: using persisted home/pantry IDs');
-      setIsHomeSelectionReady(true);
+      return;
     }
+
+    const cached = client.cache.readQuery({ query: GetHomesDocument });
+    const cachedHome = extractNodes(cached?.homes).find(
+      h => h.id === selectedHomeId,
+    );
+    const belongsToSelectedHome = pantriesOf(
+      cachedHome as HomeNode | undefined,
+    ).some(p => p.id === selectedPantryId);
+    if (!belongsToSelectedHome) return;
+
+    logger.debug('⚡ Early ready: using persisted home/pantry IDs');
+    setIsHomeSelectionReady(true);
   }, [
     canAttemptQueries,
     selectedHomeId,
     selectedPantryId,
     isHomeSelectionReady,
     setIsHomeSelectionReady,
+    client,
   ]);
 
   // Execute query ONCE when authenticated to populate Apollo cache
@@ -177,6 +184,29 @@ export const useDefaultHome = () => {
     return homesList.some(h => h.id === selectedHomeId);
   })();
 
+  // The selected PANTRY must belong to the selected HOME.
+  //
+  // `selectedPantryId` is persisted alongside `selectedHomeId`, so a cold start
+  // can restore a pantry from a home the user has since left, been removed
+  // from, or deleted. `needsClearing` above only validates the home, and the
+  // ready flag below flips on a valid home alone — which opens `usePantryQuery`'s
+  // gate on the stale id and sends `GetPantry` for a pantry the user cannot
+  // read ("Access denied to this pantry"). `useCurrentPantry` repoints it, but
+  // one render too late: the request is already in flight.
+  //
+  // Judged only when the home's pantries are actually known: `homesList` can be
+  // a partially cached shape, and an empty list there means "not loaded", not
+  // "no pantries".
+  const selectedHomePantries = pantriesOf(
+    homesList?.find(h => h.id === selectedHomeId) as HomeNode | undefined,
+  );
+  const isSelectedPantryStale = !!(
+    selectedPantryId &&
+    isSelectedHomeValid &&
+    selectedHomePantries.length > 0 &&
+    !selectedHomePantries.some(p => p.id === selectedPantryId)
+  );
+
   // Derived boolean: true when selected home no longer exists and needs clearing
   const needsClearing = !!(
     selectedHomeId &&
@@ -216,6 +246,28 @@ export const useDefaultHome = () => {
     setSelectedHomeId,
     setSelectedPantryId,
     setIsHomeSelectionReady,
+    client,
+  ]);
+
+  // Repoint a stale pantry at the selected home's own default. Runs before the
+  // ready flag flips (that effect is gated on `isSelectedPantryStale` too), so
+  // the pantry query's gate never opens on the dead id.
+  const staleSelectedPantryId = isSelectedPantryStale ? selectedPantryId : null;
+  useEffect(() => {
+    if (!staleSelectedPantryId) return;
+    logger.warn(
+      '[HomeSelector] Selected pantry does not belong to the selected home, repointing',
+    );
+    safeEvictMany(client.cache, [
+      { typename: 'Pantry', id: staleSelectedPantryId },
+    ]);
+    const replacement =
+      selectedHomePantries.find(p => p.isDefault) ?? selectedHomePantries[0];
+    setSelectedPantryId(replacement?.id ?? null);
+  }, [
+    staleSelectedPantryId,
+    selectedHomePantries,
+    setSelectedPantryId,
     client,
   ]);
 
@@ -439,6 +491,10 @@ export const useDefaultHome = () => {
     // Don't update while clearing stale IDs (wait for state to propagate)
     if (needsClearing) return;
 
+    // Same for a pantry that outlived its home: flipping ready here is what
+    // lets `usePantryQuery` fire on it.
+    if (isSelectedPantryStale) return;
+
     // Case 1: No homes exist - ready with no selection
     if (!homesList || homesList.length === 0) {
       if (!isHomeSelectionReady) {
@@ -466,6 +522,7 @@ export const useDefaultHome = () => {
     selectedHomeId,
     isHomeSelectionReady,
     needsClearing,
+    isSelectedPantryStale,
     setIsHomeSelectionReady,
   ]);
 

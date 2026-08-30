@@ -502,6 +502,53 @@ describe('useDefaultHome', () => {
         ),
       );
     });
+
+    it('repoints a persisted pantry that belongs to another home, and holds ready until it does', async () => {
+      // `selectedPantryId` is persisted next to `selectedHomeId`, so a cold
+      // start can restore a pantry from a home the user has since left. Ready
+      // opens `usePantryQuery`'s gate, so flipping it on a valid HOME alone
+      // sent `GetPantry` for a pantry the user cannot read.
+      mockStoreState.selectedHomeId = 'home-1';
+      mockStoreState.selectedPantryId = 'pantry-from-a-home-i-left';
+
+      renderHookWithApollo(() => useDefaultHome(), {
+        operationMocks: [
+          buildGetHomesMock([
+            buildHomeNode({
+              id: 'home-1',
+              isDefault: true,
+              pantries: [
+                { id: 'pantry-1', isDefault: false },
+                { id: 'pantry-2', isDefault: true },
+              ],
+            }),
+          ]),
+          buildSetDefaultHomeMock('home-1'),
+        ],
+      });
+
+      // Repointed at the selected home's OWN default, not merely nulled.
+      await waitFor(() =>
+        expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
+          'pantry-2',
+        ),
+      );
+
+      // And ready was never flipped while the stale id was still in place.
+      const readyCallIndex =
+        mockStoreState.setIsHomeSelectionReady.mock.calls.findIndex(
+          ([value]) => value === true,
+        );
+      const repointCallOrder =
+        mockStoreState.setSelectedPantryId.mock.invocationCallOrder[0];
+      if (readyCallIndex !== -1) {
+        expect(
+          mockStoreState.setIsHomeSelectionReady.mock.invocationCallOrder[
+            readyCallIndex
+          ],
+        ).toBeGreaterThan(repointCallOrder);
+      }
+    });
   });
 
   describe('default pantry extraction', () => {

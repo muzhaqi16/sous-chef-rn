@@ -531,10 +531,10 @@
       "body": "query GetItemPurchaseHistory($itemId: ID!, $first: Int, $after: String) {\n  shoppingListItem(id: $itemId) {\n    id\n    purchasesConnection(first: $first, after: $after) {\n      edges {\n        node {\n          id\n          purchaseDate\n          quantity\n          unitPrice\n          totalPrice\n          currency {\n            id\n            code\n            __typename\n          }\n          unitSymbol\n          user {\n            id\n            email\n            profile {\n              id\n              displayName\n              __typename\n            }\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n        __typename\n      }\n      totalCount\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
-      "id": "16c84e33356a0f651ec9ea2e696cabd704be092d67553ab1aefb511f6658b631",
+      "id": "f6e15431f5eaf92163b1427f34db401b99ce8ba51521695808c4e33d9f50870f",
       "name": "GetMe",
       "type": "query",
-      "body": "query GetMe {\n  me {\n    id\n    ...PartialUser\n    __typename\n  }\n}\n\nfragment PartialUser on User {\n  id\n  email\n  emailVerified\n  role\n  canAccessDevTools\n  onBoarded\n  timezone\n  defaultShoppingListId\n  defaultHomeId\n  createdAt\n  updatedAt\n  profile {\n    id\n    displayName\n    avatar\n    firstName\n    lastName\n    __typename\n  }\n  settings {\n    id\n    theme\n    showTutorials\n    __typename\n  }\n  __typename\n}"
+      "body": "query GetMe {\n  me {\n    id\n    ...PartialUser\n    __typename\n  }\n}\n\nfragment PartialUser on User {\n  id\n  email\n  emailVerified\n  role\n  canAccessDevTools\n  onBoarded\n  timezone\n  defaultShoppingListId\n  defaultHomeId\n  createdAt\n  updatedAt\n  profile {\n    id\n    firstName\n    lastName\n    displayName\n    bio\n    avatar\n    phone\n    dateOfBirth\n    gender\n    profileVisibility\n    showEmail\n    showPhone\n    __typename\n  }\n  settings {\n    id\n    theme\n    showTutorials\n    __typename\n  }\n  __typename\n}"
     },
     {
       "id": "24dfbc07e6be1b6555b3b61b15e0d10de5024ec340f37f2b10eb6f8d99c48d60",
@@ -759,10 +759,10 @@
       "body": "query GetUnreadNotifications {\n  me {\n    id\n    unreadNotificationCount\n    hasUrgentNotifications\n    notificationsConnection(\n      filters: {unreadOnly: true}\n      first: 50\n      orderBy: SENT_AT_DESC\n    ) {\n      edges {\n        node {\n          id\n          ...useNotificationsOnLaunch_notification\n          __typename\n        }\n        __typename\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment useNotificationsOnLaunch_notification on Notification {\n  id\n  type\n  priority\n  title\n  message\n  payload\n  category\n  sentAt\n  expiresAt\n  sourceId\n  sourceType\n  actionUrl\n  readAt\n  status\n  __typename\n}"
     },
     {
-      "id": "f1dadda05eb76834afed9dfc182d46ddcb897d75ff9a8006fa1e8578c6eae61a",
+      "id": "db817d26f265e43f00e9766c36c40dead8df7881c255e8ce5bb6c4d89ef4f1b1",
       "name": "GetUserProfile",
       "type": "query",
-      "body": "query GetUserProfile {\n  me {\n    id\n    profile {\n      id\n      userId\n      firstName\n      lastName\n      displayName\n      bio\n      avatar\n      coverImage\n      phone\n      website\n      dateOfBirth\n      gender\n      profileVisibility\n      showEmail\n      showPhone\n      createdAt\n      updatedAt\n      __typename\n    }\n    __typename\n  }\n}"
+      "body": "query GetUserProfile {\n  me {\n    id\n    profile {\n      id\n      firstName\n      lastName\n      displayName\n      bio\n      avatar\n      phone\n      dateOfBirth\n      gender\n      profileVisibility\n      showEmail\n      showPhone\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "a4aa81d85c28eae7cb4484dc613db08cb61d1176566c29ab59c1934049809270",
@@ -825,10 +825,10 @@
       "body": "mutation LeaveHome($input: LeaveHomeInput!) {\n  leaveHome(input: $input) {\n    __typename\n    ... on LeaveHomePayload {\n      membership {\n        id\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
-      "id": "7ffc6d23a52b428a1edc7132f7edd450a63c5ff98b90041cfd08ee950a608212",
+      "id": "229de1a6d55b2bca34f5b747c9a38fc2d4ba950f9250f6e53dede340112a74aa",
       "name": "Login",
       "type": "mutation",
-      "body": "mutation Login($input: LoginInput!) {\n  login(input: $input) {\n    __typename\n    ... on AuthPayload {\n      accessToken\n      refreshToken\n      user {\n        id\n        ...LoginUser\n        __typename\n      }\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n  }\n}\n\nfragment LoginUser on User {\n  id\n  email\n  emailVerified\n  role\n  canAccessDevTools\n  onBoarded\n  createdAt\n  updatedAt\n  timezone\n  defaultHomeId\n  defaultShoppingListId\n  defaultHome {\n    id\n    name\n    isDefault\n    pantriesConnection {\n      edges {\n        node {\n          id\n          isDefault\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n  profile {\n    id\n    displayName\n    avatar\n    __typename\n  }\n  settings {\n    id\n    theme\n    showTutorials\n    __typename\n  }\n  __typename\n}"
+      "body": "mutation Login($input: LoginInput!) {\n  login(input: $input) {\n    __typename\n    ... on AuthPayload {\n      accessToken\n      refreshToken\n      user {\n        id\n        ...LoginUser\n        __typename\n      }\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n  }\n}\n\nfragment LoginUser on User {\n  id\n  email\n  emailVerified\n  role\n  canAccessDevTools\n  onBoarded\n  createdAt\n  updatedAt\n  timezone\n  defaultHomeId\n  defaultShoppingListId\n  defaultHome {\n    id\n    name\n    isDefault\n    pantriesConnection {\n      edges {\n        node {\n          id\n          isDefault\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n  profile {\n    id\n    firstName\n    lastName\n    displayName\n    bio\n    avatar\n    phone\n    dateOfBirth\n    gender\n    profileVisibility\n    showEmail\n    showPhone\n    __typename\n  }\n  settings {\n    id\n    theme\n    showTutorials\n    __typename\n  }\n  __typename\n}"
     },
     {
       "id": "142b5d8c7f3f8bdffcc9aad004331dc914d00cda1cfe4520f8572fc7fd38bce6",
@@ -1407,10 +1407,10 @@
       "body": "mutation UpsertExternalRecipe($input: CreateRecipeInput!) {\n  upsertExternalRecipe(input: $input) {\n    __typename\n    ... on UpsertExternalRecipePayload {\n      recipe {\n        id\n        name\n        imageUrl\n        externalSource\n        externalId\n        servings\n        prepTimeMinutes\n        cookTimeMinutes\n        totalTimeMinutes\n        __typename\n      }\n      created\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
-      "id": "71e5e6bd0ffd01b895244170393ad15b2763aa319fdda2e014f59059fb681d93",
+      "id": "c5501772496d0c1f5b477bd5f1331f9f8c1dad491d3cc6a0d8d029f5f56101e1",
       "name": "UserEvents",
       "type": "subscription",
-      "body": "subscription UserEvents($userId: ID!) {\n  userEvents(userId: $userId) {\n    subtype\n    mutation\n    actorUserId\n    updatedFields\n    timestamp\n    userId\n    reason\n    warningCount\n    parents {\n      homeId\n      shoppingListId\n      __typename\n    }\n    node {\n      ... on User {\n        id\n        email\n        emailVerified\n        role\n        onBoarded\n        timezone\n        preferredCurrency\n        language\n        lastActiveAt\n        __typename\n      }\n      ... on UserProfile {\n        id\n        firstName\n        lastName\n        displayName\n        bio\n        avatar\n        coverImage\n        phone\n        website\n        profileVisibility\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
+      "body": "subscription UserEvents($userId: ID!) {\n  userEvents(userId: $userId) {\n    subtype\n    mutation\n    actorUserId\n    updatedFields\n    timestamp\n    userId\n    reason\n    warningCount\n    parents {\n      homeId\n      shoppingListId\n      __typename\n    }\n    node {\n      ... on User {\n        id\n        email\n        emailVerified\n        role\n        onBoarded\n        timezone\n        preferredCurrency\n        language\n        lastActiveAt\n        __typename\n      }\n      ... on UserProfile {\n        id\n        firstName\n        lastName\n        displayName\n        bio\n        avatar\n        phone\n        dateOfBirth\n        gender\n        profileVisibility\n        showEmail\n        showPhone\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "784034e105dbaf94cf9d858eadc8cc4eea9279e7c2db8d00cd491ebcf55bbdf5",
@@ -1419,10 +1419,10 @@
       "body": "mutation ValidatePasswordResetToken($input: ValidatePasswordResetTokenInput!) {\n  validatePasswordResetToken(input: $input) {\n    __typename\n    ... on ValidatePasswordResetTokenPayload {\n      status\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
-      "id": "c418c1dfb7444c8dd3141a84b1c29fb297d29aa076e05db21afb10dbdd711642",
+      "id": "13e483af331c63a99de06919585ac5e59e4c6db2123f7ed1b9ae6e911a9db108",
       "name": "VerifyEmail",
       "type": "mutation",
-      "body": "mutation VerifyEmail($input: VerifyEmailInput!) {\n  verifyEmail(input: $input) {\n    __typename\n    ... on VerifyEmailPayload {\n      user {\n        id\n        ...LoginUser\n        __typename\n      }\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment LoginUser on User {\n  id\n  email\n  emailVerified\n  role\n  canAccessDevTools\n  onBoarded\n  createdAt\n  updatedAt\n  timezone\n  defaultHomeId\n  defaultShoppingListId\n  defaultHome {\n    id\n    name\n    isDefault\n    pantriesConnection {\n      edges {\n        node {\n          id\n          isDefault\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n  profile {\n    id\n    displayName\n    avatar\n    __typename\n  }\n  settings {\n    id\n    theme\n    showTutorials\n    __typename\n  }\n  __typename\n}"
+      "body": "mutation VerifyEmail($input: VerifyEmailInput!) {\n  verifyEmail(input: $input) {\n    __typename\n    ... on VerifyEmailPayload {\n      user {\n        id\n        ...LoginUser\n        __typename\n      }\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment LoginUser on User {\n  id\n  email\n  emailVerified\n  role\n  canAccessDevTools\n  onBoarded\n  createdAt\n  updatedAt\n  timezone\n  defaultHomeId\n  defaultShoppingListId\n  defaultHome {\n    id\n    name\n    isDefault\n    pantriesConnection {\n      edges {\n        node {\n          id\n          isDefault\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n  profile {\n    id\n    firstName\n    lastName\n    displayName\n    bio\n    avatar\n    phone\n    dateOfBirth\n    gender\n    profileVisibility\n    showEmail\n    showPhone\n    __typename\n  }\n  settings {\n    id\n    theme\n    showTutorials\n    __typename\n  }\n  __typename\n}"
     },
     {
       "id": "d7de42941d6f301f58ed409d968237377a7f21480a412298fea95f71db45a0f6",

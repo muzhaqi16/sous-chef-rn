@@ -216,26 +216,37 @@ export const DietaryProfileScreen: React.FC = () => {
     return await updateDietaryProfile({ snacksPerDay: value });
   };
 
-  if (loading) {
+  // Gate on "nothing to show", not on `loading`. Under `cache-and-network`
+  // Apollo reports `loading: true` for the whole network leg even when the
+  // cache already answered, and it starts a fresh leg on every mount — so a
+  // bare `if (loading)` blanked this screen on every visit for as long as the
+  // request took, up to the 10s httpLink abort deadline. Both non-content
+  // states stay inside ProfileScreenWrapper so the title and back button
+  // remain: without them the screen could not be left while it waited.
+  if (loading && !profile) {
     return (
-      <View style={commonStyles.loadingContainer}>
-        <Text style={commonStyles.loadingText}>
-          {t('dietary.loadingProfile')}
-        </Text>
-      </View>
+      <ProfileScreenWrapper title={t('dietary.title')} scrollEnabled={false}>
+        <View style={commonStyles.loadingContainer}>
+          <Text style={commonStyles.loadingText}>
+            {t('dietary.loadingProfile')}
+          </Text>
+        </View>
+      </ProfileScreenWrapper>
     );
   }
 
   if (!profile) {
     return (
-      <View style={commonStyles.emptyState}>
-        <Text style={commonStyles.emptyStateTitle}>
-          {t('dietary.noProfileTitle')}
-        </Text>
-        <Text style={commonStyles.emptyStateText}>
-          {t('dietary.noProfileSubtitle')}
-        </Text>
-      </View>
+      <ProfileScreenWrapper title={t('dietary.title')} scrollEnabled={false}>
+        <View style={commonStyles.emptyState}>
+          <Text style={commonStyles.emptyStateTitle}>
+            {t('dietary.noProfileTitle')}
+          </Text>
+          <Text style={commonStyles.emptyStateText}>
+            {t('dietary.noProfileSubtitle')}
+          </Text>
+        </View>
+      </ProfileScreenWrapper>
     );
   }
 

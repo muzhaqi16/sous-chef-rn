@@ -105,9 +105,17 @@ export function useHomeInvitations({
         if (data?.joinHomeByCode?.__typename === 'JoinHomeByCodePayload') {
           const homeId = data.joinHomeByCode.membership.homeId;
 
-          // Set as default if this is the first home
-          const freshHomes = homes || [];
-          if (freshHomes.length === 0) {
+          // Set as default if this is the first home.
+          //
+          // Deliberately the PROP, not a cache read: the question is "did the
+          // user have zero homes BEFORE this join?", and the prop is exactly
+          // that pre-join snapshot (React has not re-rendered, and the `update`
+          // callback's `refetch()` is not awaited, so a cache read would race).
+          // The joined home itself is in NEITHER the prop nor the cache yet —
+          // `JoinHomeByCode` returns Membership only — which is why
+          // `setDefaultHome` must not require a local record to exist.
+          const homesBeforeJoin = homes || [];
+          if (homesBeforeJoin.length === 0) {
             setSelectedHomeId(homeId);
             setDefaultHome(homeId).catch((error: unknown) => {
               logger.warn('Failed to set default home after join:', error);

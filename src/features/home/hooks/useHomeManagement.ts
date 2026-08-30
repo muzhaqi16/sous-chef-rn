@@ -15,7 +15,7 @@
  *
  * // Preferred: Use individual hooks
  * const { homes, stats } = useHomeQuery();
- * const { setDefaultHome } = useHomeSelection({ homes, remoteDefaultHomeId, loading });
+ * const { setDefaultHome } = useHomeSelection({ homes, remoteDefaultHomeId });
  * ```
  */
 
@@ -42,7 +42,7 @@ export function useHomeManagement() {
   // Selection hook - handles default home logic
   const {
     selectedHomeId,
-    defaultHome,
+    selectedHome,
     isSynced,
     setDefaultHome,
     setSelectedHomeId,
@@ -50,7 +50,6 @@ export function useHomeManagement() {
   } = useHomeSelection({
     homes,
     remoteDefaultHomeId,
-    loading,
   });
 
   // Mutations hook - CRUD operations
@@ -81,8 +80,12 @@ export function useHomeManagement() {
     // Data
     homes,
     allHomes: homes,
-    defaultHome,
-    defaultHomeId: selectedHomeId,
+    // Which home the user is VIEWING, and which one the account defaults to.
+    // These are different questions and `defaultHomeId` used to answer the
+    // first — so the "Default" chip followed the local selection and could
+    // point at one home while the server said another.
+    selectedHome,
+    selectedHomeId,
     remoteDefaultHomeId,
     isSynced,
     loading,

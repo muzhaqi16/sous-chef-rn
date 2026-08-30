@@ -215,6 +215,7 @@ export const NotificationSettingsScreen: React.FC = () => {
   const {
     settings,
     loading,
+    hasPreferences,
     updateNotificationSetting,
     resetToDefaults,
     isQuietTime,
@@ -384,13 +385,25 @@ export const NotificationSettingsScreen: React.FC = () => {
     );
   };
 
-  if (loading) {
+  // Gate on "nothing to show", not on `loading`. Under `cache-and-network`
+  // Apollo reports `loading: true` for the whole network leg even when the
+  // cache already answered, and it starts a fresh leg on every mount — so a
+  // bare `if (loading)` blanked this screen on every visit for as long as the
+  // request took, up to the 10s httpLink abort deadline. The loading state
+  // stays inside ProfileScreenWrapper so the title and back button remain:
+  // without them the screen could not be left while it waited.
+  if (loading && !hasPreferences) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text size="md" tone="secondary">
-          {t('settings.loadingSettings')}
-        </Text>
-      </View>
+      <ProfileScreenWrapper
+        title={t('notifications.title')}
+        scrollEnabled={false}
+      >
+        <View style={styles.loadingContainer}>
+          <Text size="md" tone="secondary">
+            {t('settings.loadingSettings')}
+          </Text>
+        </View>
+      </ProfileScreenWrapper>
     );
   }
 

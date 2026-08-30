@@ -27,6 +27,20 @@ import { t } from '#/i18n';
  *
  * Derived here rather than at each call site because both helpers already hold
  * the result, and every rejected mutation passes through one of them.
+ *
+ * **This deliberately does NOT fall through to `code`, unlike its sibling
+ * {@link localizedRefusalMessage}.** The asymmetry looks like an oversight and
+ * is not: these two resolve copy for different situations. This one backs an
+ * ALERT raised by a caller that knows which operation the user just attempted,
+ * and that context is what an alert needs — "Failed to discard expired items"
+ * beats `NOT_FOUND`'s "The requested item was not found", which names no
+ * operation and leaves the user asking which item. Same for a fieldless
+ * `ValidationError`, whose `VALIDATION_FAILED` resolves to a generic "check
+ * your input". `localizedRefusalMessage` consults `code` because its callers
+ * hold a payload and no such context.
+ *
+ * Delegating this to the sibling was tried; it regressed the copy at three
+ * call sites covered by tests, which is the evidence for keeping the split.
  */
 const rejectionMessage = (result: { data?: unknown }, fallback: string) => {
   const field = validationFieldName(result.data);

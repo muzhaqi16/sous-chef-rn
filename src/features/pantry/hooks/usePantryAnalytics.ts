@@ -144,20 +144,32 @@ export function usePantryAnalytics({
     ledgerAnalytics !== null,
   );
 
+  // Each `*Loading` is reported to the charts only while its chart has NOTHING
+  // to draw. Apollo's raw `loading` is `true` for the whole network leg on
+  // EVERY mount under `cache-and-network` — `nextFetchPolicy` lives on the
+  // ObservableQuery and useQuery builds a new one each time — so passing it
+  // straight to `ChartSection` replaced already-drawn charts with a spinner on
+  // every visit to the tab, for as long as the request took. A filter change is
+  // still covered: each `dateRange`/`granularity` combination is its own cache
+  // entry, so the new one reads null and the spinner returns.
+  const usageIsBlank = usageLoading && usageAnalytics === null;
+  const wasteIsBlank = wasteLoading && wasteAnalytics === null;
+  const ledgerIsBlank = ledgerLoading && ledgerAnalytics === null;
+
   return {
     usageData: usageAnalytics,
-    usageLoading,
+    usageLoading: usageIsBlank,
     usageError: usage.error,
     usageOffline: usage.offline,
     wasteData: wasteAnalytics,
-    wasteLoading,
+    wasteLoading: wasteIsBlank,
     wasteError: waste.error,
     wasteOffline: waste.offline,
     ledgerData: ledgerAnalytics,
-    ledgerLoading,
+    ledgerLoading: ledgerIsBlank,
     ledgerError: ledger.error,
     ledgerOffline: ledger.offline,
-    loading: usageLoading || wasteLoading || ledgerLoading,
+    loading: usageIsBlank || wasteIsBlank || ledgerIsBlank,
     dateRange,
     setDateRange,
     ledgerGranularity,
