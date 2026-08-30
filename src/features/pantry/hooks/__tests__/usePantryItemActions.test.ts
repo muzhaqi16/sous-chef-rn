@@ -542,7 +542,7 @@ describe('usePantryItemActions', () => {
 
     it('shows version conflict alert on consume payload VERSION_CONFLICT (optimistic-lock code)', async () => {
       // The API emits VERSION_CONFLICT (not CONFLICT) for optimistic-lock
-      // failures — this used to fall through to the generic Error alert.
+      // failures; matching only CONFLICT drops it into the generic Error alert.
       const m = consumeMock({
         __typename: 'ConflictError' as const,
         code: 'VERSION_CONFLICT',

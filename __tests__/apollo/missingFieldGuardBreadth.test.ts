@@ -74,9 +74,9 @@ afterEach(() => {
 
 describe('the missing-field guard exempts nothing', () => {
   it('still reports a missing field on a payload that merely contains a purchase record', () => {
-    // The regression the old key allowed. `quantity` is missing from a
-    // `ShoppingListItem`; the payload happens to carry a purchase record, which
-    // used to be enough to silence it.
+    // The regression a purchase-record-shaped payload can hide. `quantity` is
+    // missing from a `ShoppingListItem`; carrying a purchase record does not
+    // silence the guard.
     raise('quantity', itemCarryingPurchaseInfo);
 
     const [entry, ...rest] = drain();
@@ -131,11 +131,11 @@ describe('the missing-field guard exempts nothing', () => {
 });
 
 describe('a partial mock excuses its own omissions and nothing else', () => {
-  // The opt-out used to be a whole-test boolean that cleared every collected
-  // diagnostic: one deliberately-partial mock switched the guard off for every
-  // other mock, every `writeFragment` and every subscription write in the test.
-  // Measured across the suite, two tests opting out for one field each were
-  // silencing 27 diagnostics spread over six types.
+  // The opt-out is per-mock, not a whole-test boolean that clears every
+  // collected diagnostic: a whole-test switch lets one deliberately-partial mock
+  // turn the guard off for every other mock, every `writeFragment` and every
+  // subscription write in the test. Measured across the suite, two tests opting
+  // out for one field each silence 27 diagnostics spread over six types.
   beforeEach(() => {
     (
       globalThis as { __apolloPartialFieldExemptions?: Set<string> }

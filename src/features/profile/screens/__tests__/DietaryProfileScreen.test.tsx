@@ -255,8 +255,8 @@ describe('DietaryProfileScreen - loading state', () => {
 
   it('keeps the header and back button while it waits', () => {
     render(<DietaryProfileScreen />);
-    // The loading branch used to return a bare View, so a stalled request left
-    // the user on a blank screen with no way off it.
+    // A loading branch that returns a bare View leaves the user on a blank
+    // screen with no way off it while a request stalls.
     expect(screen.getByTestId('profile-screen-wrapper')).toBeTruthy();
     expect(screen.getByText('Dietary Profile')).toBeTruthy();
   });

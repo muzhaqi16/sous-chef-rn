@@ -448,9 +448,9 @@ export function createApolloTestWrapper(options: ApolloTestOptions = {}) {
   const cache = providedCache ?? makeCache();
 
   // An EMPTY array is still a choice of strategy: it says "no per-operation
-  // mocks", not "answer everything from the schema". Falling through used to
-  // hand 14 sites a link that answered every operation with generated data and
-  // wrote it into the cache, possibly after teardown.
+  // mocks", not "answer everything from the schema". Falling through hands 14
+  // sites a link that answers every operation with generated data and writes it
+  // into the cache, possibly after teardown.
   if (operationMocks !== undefined) {
     // Completion is applied HERE rather than only in `recordMock`, so a plain
     // `{ request, result }` literal gets it too — the literal form is the one
@@ -914,7 +914,7 @@ function transformLikeTheClient(query: DocumentNode): DocumentNode {
 // Two things can go wrong, and they mean opposite things.
 //
 // The DOCUMENT not matching the schema is drift: the operation selects
-// something the API no longer offers, so every mock feeding it is describing a
+// something the API does not offer, so every mock feeding it is describing a
 // response that can never arrive. That is thrown, loudly — falling back would
 // restore exactly the silence this whole mechanism exists to remove. (`npm run
 // lint` catches it earlier via `@graphql-eslint/fields-on-correct-type`; this
@@ -1199,11 +1199,11 @@ function buildFullFragment(
 /**
  * The selection for one record, recursing through nested entities AND lists.
  *
- * A list of identified entities used to be emitted as a bare field name, which
- * made Apollo store the whole array as an opaque value: the children got no
- * records of their own, `readFragment` on one returned null, every child-type
- * policy went unexercised, and a later normalized write to a child never
- * reached the parent's embedded copy. That is a store the production path could
+ * A list of identified entities must not be emitted as a bare field name: that
+ * makes Apollo store the whole array as an opaque value, so the children get no
+ * records of their own, `readFragment` on one returns null, every child-type
+ * policy goes unexercised, and a later normalized write to a child never
+ * reaches the parent's embedded copy. That is a store the production path could
  * never produce, which is the opposite of what seeding a production cache is
  * for.
  */

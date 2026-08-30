@@ -71,13 +71,13 @@ describe('HomeActions', () => {
     expect(defaultProps.onDelete).toHaveBeenCalledWith('home-1');
   });
 
-  // Regression: the chips used to size to their labels and sit BESIDE them, so
-  // sq "Vendos si parazgjedhur" / es "Establecer Predeterminado" made the chip
-  // wider than a third of the card and pushed Delete onto a second row. The
-  // label is stacked under the icon now, so each button is a fixed third and
-  // the label wraps into the button's full width instead of widening it. Jest
-  // has no Yoga layout pass, so this asserts the style contract that guarantees
-  // it; confirm the wrap on device.
+  // Pins: a chip sizes to the row, not to its label. A chip sized to its label
+  // and sitting BESIDE it makes sq "Vendos si parazgjedhur" / es "Establecer
+  // Predeterminado" wider than a third of the card and pushes Delete onto a
+  // second row. The label is stacked under the icon, so each button is a fixed
+  // third and the label wraps into the button's full width instead of widening
+  // it. Jest has no Yoga layout pass, so this asserts the style contract that
+  // guarantees it; confirm the wrap on device.
   it('stacks each label under its icon in an equal-width third of one row', () => {
     render(<HomeActions {...defaultProps} />);
 

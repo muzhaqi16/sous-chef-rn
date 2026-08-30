@@ -594,8 +594,8 @@ describe('PantryContent', () => {
     });
 
     it('keeps FlashList data identical while an overlay covers the rows', () => {
-      // A pantry write behind the Add sheet used to re-render every mounted
-      // cell for a list nobody can see — ~2 full passes per quick-add.
+      // A pantry write behind the Add sheet must not re-render every mounted
+      // cell for a list nobody can see — that is ~2 full passes per quick-add.
       mockOverlayPresent = true;
       const { rerender } = render(
         <PantryContent {...defaultProps} items={twoItems} />,

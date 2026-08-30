@@ -228,9 +228,9 @@ describe('useMoveToPantry', () => {
     });
 
     /**
-     * The move used to refuse offline with a toast. It is local-first now: the
-     * client mints `input.pantryItemId`, so the row it writes to the cache and
-     * the row the server writes are the same entity, and the queue can replay.
+     * The move is local-first, not an offline refusal with a toast: the client
+     * mints `input.pantryItemId`, so the row it writes to the cache and the row
+     * the server writes are the same entity, and the queue can replay.
      */
     it('still fires the mutation, so the queue can replay it', async () => {
       useStore.setState({ apiReachable: false });

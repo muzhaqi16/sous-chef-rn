@@ -7,9 +7,9 @@ import {
   type ScannedItem,
 } from '../barcodeScannerStore';
 
-// A feature store, so no root-store scaffolding is needed — the auth-slice
-// mocks this file used to carry went with the slice. `resetScanner` keeps the
-// scan history by design, so a full reset is what starts each test clean.
+// A feature store, so neither root-store scaffolding nor auth-slice mocks are
+// needed. `resetScanner` keeps the scan history by design, so a full reset is
+// what starts each test clean.
 const createTestStore = () => {
   useBarcodeScannerStore.setState(() => ({ ...initialBarcodeScannerState }));
   return useBarcodeScannerStore;

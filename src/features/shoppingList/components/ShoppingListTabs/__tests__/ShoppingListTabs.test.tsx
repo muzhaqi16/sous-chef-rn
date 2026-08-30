@@ -285,7 +285,7 @@ describe('ShoppingListTabs', () => {
     expect(capturedTabData?.shopping.onScroll).toBeUndefined();
   });
 
-  // The outgoing list can no longer report the end of a drag in flight.
+  // The outgoing list cannot report the end of a drag in flight.
   it('settles the tab bar when the user switches tabs', () => {
     const onMomentumScrollEnd = jest.fn();
     render(

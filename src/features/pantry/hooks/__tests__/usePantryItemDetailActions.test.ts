@@ -199,11 +199,11 @@ describe('usePantryItemDetailActions', () => {
     });
 
     it('withdraws the row even when the delete is only queued', async () => {
-      // This screen used to own a second DeletePantryItem whose only cache work
-      // was an `update:` callback. That never runs when the delete is queued
-      // offline, so the screen navigated back and the row was still in the
-      // list. The shared `removeItem` withdraws it before firing, which is why
-      // this holds with a queued (no data, no error) result.
+      // A DeletePantryItem whose only cache work is an `update:` callback
+      // cannot hold here: that callback never runs when the delete is queued
+      // offline, so the screen navigates back with the row still in the list.
+      // The shared `removeItem` withdraws it before firing, which is why this
+      // holds with a queued (no data, no error) result.
       const queuedDelete = recordMock(DeletePantryItemDocument, {});
 
       const { result } = setup({}, { operationMocks: [queuedDelete.mock] });
@@ -332,10 +332,9 @@ describe('usePantryItemDetailActions', () => {
 
     it('restores the row when the server refuses the delete', async () => {
       // `removeItem` evicts the row and drops the count BEFORE firing, so a
-      // refusal has to put both back — that is what `refetch` is for. This
-      // screen used to pass `refetch: () => {}`, so a refused delete left the
-      // item gone locally and still present on the server, with nothing to
-      // bring it back.
+      // refusal has to put both back — that is what `refetch` is for. A no-op
+      // `refetch: () => {}` leaves a refused delete gone locally and still
+      // present on the server, with nothing to bring it back.
       //
       // A REFUSAL, not a transport failure: `errorPolicy: 'all'` resolves it as
       // DATA — a non-success union member — so it never reaches `onError`, and

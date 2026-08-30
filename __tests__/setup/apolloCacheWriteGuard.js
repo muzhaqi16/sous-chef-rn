@@ -69,10 +69,10 @@ function isExpectedMissingField(args) {
 // the wrong thing. Collecting keeps Apollo's control flow intact so the test
 // fails on the real reason.
 //
-// Each entry carries the test that was running when the write happened. A write
-// that settles after its own test used to be either cleared unseen by the next
-// `beforeEach` or reported as the next test's failure; now it names the test
-// whose behaviour produced it, whichever test's teardown reads it.
+// Each entry carries the test that was running when the write happened. Without
+// that, a write settling after its own test is either cleared unseen by the next
+// `beforeEach` or reported as the next test's failure; with it, the entry names
+// the test whose behaviour produced it, whichever test's teardown reads it.
 const collected = [];
 
 function currentTestName() {
@@ -94,8 +94,9 @@ function collectCacheWriteError(args, { exemptions } = {}) {
   if (isExpectedMissingField(args)) return false;
   // The test marked a mock `partial`, so the fields THAT payload omits are its
   // subject. The exemptions are the `(type, field)` pairs derived from the mock
-  // itself, not a switch that turns the guard off for the whole test — one
-  // deliberately-partial mock used to silence every other write in the file.
+  // itself, not a switch that turns the guard off for the whole test — a
+  // whole-test switch lets one deliberately-partial mock silence every other
+  // write in the file.
   if (isExemptedPair(args, exemptions)) return false;
   // Apollo hands the template and its substitutions separately —
   // `console.error("Missing field '%s' while writing result %o", name, obj)` —

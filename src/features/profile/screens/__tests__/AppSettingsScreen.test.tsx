@@ -295,8 +295,8 @@ describe('AppSettingsScreen - loading state', () => {
 
   it('keeps the header and back button while it waits', () => {
     render(<AppSettingsScreen />);
-    // The loading branch used to return a bare View, so a stalled request left
-    // the user on a blank screen with no way off it.
+    // A loading branch that returns a bare View leaves the user on a blank
+    // screen with no way off it while a request stalls.
     expect(screen.getByTestId('settings-screen')).toBeTruthy();
     expect(screen.getByText('App Settings')).toBeTruthy();
   });

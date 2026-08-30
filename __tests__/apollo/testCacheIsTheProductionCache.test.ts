@@ -5,7 +5,7 @@
  * cache, and `scripts/check-test-cache-fidelity.mjs` is what keeps it that way.
  * The history below is why the guard exists, not work outstanding.
  *
- * `apolloMockProvider` used to hand out a bare `InMemoryCache`. Production
+ * A bare `InMemoryCache` is not a substitute for it. Production
  * builds `makeCache()` — 1014 lines: 16 `typePolicies` carrying 15 merge
  * functions, 6 read functions, 9 `merge: true` / `merge: false` directives, and
  * the generated `possibleTypes`. None of that loads in a bare instance, and a

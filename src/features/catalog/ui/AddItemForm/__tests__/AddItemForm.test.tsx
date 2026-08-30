@@ -179,8 +179,8 @@ describe('AddItemForm', () => {
   });
 
   // CreateItemSuggestionInput.note is String! and an admin reads it, so the review
-  // path mandates it. A direct edit has no reviewer and the server no longer
-  // accepts a note on UpdateItemInput, so the field is omitted there entirely.
+  // path mandates it. A direct edit has no reviewer and the server accepts no
+  // note on UpdateItemInput, so the field is omitted there entirely.
   describe('edit note requirement', () => {
     it('addresses the note to the reviewer on the suggestion path', () => {
       render(<AddItemForm {...defaultProps} mode="edit" />);

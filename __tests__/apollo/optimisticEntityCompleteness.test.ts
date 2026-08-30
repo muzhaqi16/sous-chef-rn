@@ -714,12 +714,12 @@ describe('optimistic entity completeness', () => {
       expect(diff.complete).toBe(true);
     });
 
-    // The overview fragment and the DETAIL query select different things, and
-    // an optimistic row used to satisfy only the first: the list appeared and
-    // then dead-ended when opened, because Apollo serves no partial data and
-    // went to the network for an id the server did not have yet. 22 fields
-    // (status, the recurring/template/reminder/budget groups, canMoveToPantry,
-    // shareLink, collaboratorsConnection) now come from the detail stub in
+    // The overview fragment and the DETAIL query select different things, so an
+    // optimistic row satisfying only the first makes the list appear and then
+    // dead-end when opened: Apollo serves no partial data and goes to the
+    // network for an id the server does not have yet. 22 fields (status, the
+    // recurring/template/reminder/budget groups, canMoveToPantry, shareLink,
+    // collaboratorsConnection) come from the detail stub in
     // `addOptimisticShoppingList`.
     it('keeps GetShoppingListDetails complete after an optimistic list create', async () => {
       const cache = makeCache();

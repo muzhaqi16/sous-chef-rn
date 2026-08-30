@@ -435,14 +435,13 @@ describe('useStorageLocationManagement', () => {
 
   describe('editing works offline', () => {
     /**
-     * This block asserted the opposite until the API closed the gap. Update and
-     * set-default write absolute fields keyed by an existing `id`, so a replay
-     * lands the same state twice; a replayed delete now converges server-side
-     * (`converged: true`) instead of 404ing. So all three queue rather than
-     * refuse, and the screen no longer disables the controls.
+     * Update and set-default write absolute fields keyed by an existing `id`,
+     * so a replay lands the same state twice; a replayed delete converges
+     * server-side (`converged: true`) rather than 404ing. So all three queue
+     * instead of refusing, and the screen leaves the controls enabled.
      *
      * What these assert is the half that lives in this hook: the change is on
-     * the cache before any server round trip, and the call no longer refuses.
+     * the cache before any server round trip, and the call does not refuse.
      * The mutation is mocked because `queueLink` — which turns an offline fire
      * into a queued null result — is not in this harness; its own tests cover
      * that half.
@@ -476,7 +475,7 @@ describe('useStorageLocationManagement', () => {
         });
       });
 
-      // Previously this returned false without touching the network.
+      // Refusing offline would return false without touching the network.
       expect(outcome).not.toBe(false);
     });
 
@@ -499,7 +498,7 @@ describe('useStorageLocationManagement', () => {
         outcome = await result.current.deleteLocation('loc-1');
       });
 
-      // Previously this returned false and toasted "Not available offline".
+      // Refusing offline would return false and toast "Not available offline".
       expect(outcome).toBe(true);
       expect(mockToastError).not.toHaveBeenCalledWith('Not available offline');
     });

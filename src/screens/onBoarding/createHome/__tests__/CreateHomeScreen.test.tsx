@@ -1208,9 +1208,9 @@ describe('CreateHomeScreen', () => {
     const { findByTestId, findByText } = renderScreen();
     await user.press(await findByTestId('submit-button'));
 
-    // Never the refusal's `message` — that text is English by construction, and
-    // it used to be rendered verbatim. The CODE is what selects the copy, so an
-    // empty message changes nothing while a code is present.
+    // Never the refusal's `message` — that text is English by construction, so
+    // rendering it verbatim would ship English. The CODE is what selects the
+    // copy, so an empty message changes nothing while a code is present.
     //
     // This asserted the generic fallback until the test cache started loading
     // the production `possibleTypes`. Without them `... on Error { code }` did

@@ -182,9 +182,9 @@ describe('PurchaseAmountSheet', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  // Replaced: this used to assert `onConfirm(0, 9.98)` — the coercion itself,
-  // encoded as intended behaviour. An empty field is now refused on the field
-  // instead; see "an unusable quantity is refused, not substituted" below.
+  // No coercion case here on purpose: an empty field is refused on the field,
+  // not passed through as `onConfirm(0, 9.98)`. See "an unusable quantity is
+  // refused, not substituted" below.
 
   it('re-seeds inputs when the item id changes', () => {
     const props = buildProps();
@@ -217,11 +217,11 @@ describe('PurchaseAmountSheet', () => {
 
 describe('an unusable quantity is refused, not substituted', () => {
   /**
-   * `parsedQty ?? 0` used to send an empty field through as a real quantity.
-   * Zero is a legitimate number downstream, and `unitPriceFromTotal`'s
-   * zero-guard returns the total UN-divided — so the server computed
-   * `purchasedPrice x 0` and recorded the purchase at quantity 0 for nothing,
-   * silently discarding the amount the shopper had typed.
+   * `parsedQty ?? 0` sends an empty field through as a real quantity. Zero is
+   * a legitimate number downstream, and `unitPriceFromTotal`'s zero-guard
+   * returns the total UN-divided — so the server computes `purchasedPrice x 0`
+   * and records the purchase at quantity 0 for nothing, silently discarding the
+   * amount the shopper typed.
    */
   it('does not confirm when the quantity is cleared', () => {
     const onConfirm = jest.fn();
@@ -263,7 +263,7 @@ describe('an unusable quantity is refused, not substituted', () => {
 
     expect(screen.getByTestId('purchase-quantity-error')).toBeTruthy();
     // The field stays on screen and editable — a modal would cover the form and,
-    // once dismissed, no longer say which field it meant.
+    // once dismissed, could not say which field it meant.
     expect(screen.getByTestId('purchase-quantity-input')).toBeTruthy();
   });
 

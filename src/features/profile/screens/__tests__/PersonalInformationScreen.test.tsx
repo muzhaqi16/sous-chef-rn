@@ -51,8 +51,8 @@ jest.mock('#utils/dateUtils', () => ({
 
 // Mirrors the real PERSONAL_INFO_CONFIG: i18n KEYS, a stable section id, and
 // `options` carrying keys too. The assertions below therefore check that the
-// screen RESOLVES those keys, which is the behaviour that regressed when the
-// translation lived in a lookup map keyed on the English title.
+// screen RESOLVES those keys, which is the behaviour that breaks when the
+// translation lives in a lookup map keyed on the English title.
 jest.mock('#/config/settingsConfig', () => ({
   PERSONAL_INFO_CONFIG: [
     {
@@ -186,8 +186,8 @@ describe('PersonalInformationScreen', () => {
     expect(screen.getAllByText('Personal Information')).toHaveLength(2);
   });
 
-  // Section titles come from `titleKey`, resolved here. They used to be looked
-  // up in a map keyed on the English title, so a renamed section rendered its
+  // Section titles come from `titleKey`, resolved here. Looking them up in a
+  // map keyed on the English title instead makes a renamed section render its
   // English name in every language with nothing failing.
   it('resolves section titles from their i18n keys', () => {
     renderWithApollo(<PersonalInformationScreen />);

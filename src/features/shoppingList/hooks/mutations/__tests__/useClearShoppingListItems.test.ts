@@ -279,8 +279,8 @@ describe('useClearShoppingListItems', () => {
       await result.current.clearItems(true);
     });
 
-    // A server refusal surfaces one alert (no longer a silent revert) and
-    // refetches to restore the evicted items.
+    // A server refusal surfaces one alert — not a silent revert — and refetches
+    // to restore the evicted items.
     expect(alertService.alert).toHaveBeenCalledTimes(1);
     expect(mockRefetch).toHaveBeenCalledTimes(1);
   });

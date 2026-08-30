@@ -380,9 +380,9 @@ describe('EmailVerificationDeepLinkScreen - retry', () => {
   });
 
   it('keeps the failure on screen while retrying instead of blanking to the loader', async () => {
-    // Retrying used to reuse the initial-verification flag, so the whole screen
-    // swapped back to "Verifying…" and the failure the user was reading
-    // disappeared. Progress belongs in the button alone.
+    // Reusing the initial-verification flag for a retry swaps the whole screen
+    // back to "Verifying…" and takes away the failure the user is reading.
+    // Progress belongs in the button alone.
     const failingMock: MockedResponse = {
       request: { query: VerifyEmailDocument, variables: () => true },
       result: {

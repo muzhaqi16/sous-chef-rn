@@ -110,7 +110,7 @@ describe('useConvertExpiredToWaste (local-first)', () => {
     });
 
     // Fired with localFirst + a non-empty input.idempotencyKey (the server
-    // dedups the replay on it; operationId is no longer used).
+    // dedups the replay on it; operationId is unused).
     expect(contexts).toHaveLength(1);
     expect(contexts[0]?.localFirst).toBe(true);
     expect(contexts[0]?.operationId).toBeUndefined();

@@ -3,11 +3,11 @@
  * from, plus the operation-shape rule that keeps refusals visible.
  *
  * `src/apollo/utils/classifyCreateResult.ts` takes ONLY the mutation result. It
- * used to take the payload field name and the expected success `__typename` as
- * strings, neither checkable against the schema — and a stale one failed in the
- * worst direction, silently classifying every create as `'rejected'` and
- * reverting its optimistic write forever. Both arguments were removed because
- * both facts are derivable:
+ * takes neither the payload field name nor the expected success `__typename` as
+ * a string, because neither is checkable against the schema — and a stale one
+ * fails in the worst direction, silently classifying every create as
+ * `'rejected'` and reverting its optimistic write forever. Both facts are
+ * derivable instead:
  *
  *   1. WHICH FIELD holds the payload — every mutation operation selects exactly
  *      one top-level field, so it's the single non-`__typename` entry in `data`.

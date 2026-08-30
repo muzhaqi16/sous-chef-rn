@@ -30,8 +30,8 @@ describe('DataStateView', () => {
         const onRetry = jest.fn();
         render(<DataStateView state={state} onRetry={onRetry} empty={empty} />);
 
-        // The defect: a failed fetch used to render this exact text, plus a
-        // button offering to recreate recipes the person already owns.
+        // The defect this pins: a failed fetch rendering this exact text, plus
+        // a button offering to recreate recipes the person already owns.
         expect(screen.queryByText('No recipes yet')).toBeNull();
         expect(screen.queryByText('Create recipe')).toBeNull();
 

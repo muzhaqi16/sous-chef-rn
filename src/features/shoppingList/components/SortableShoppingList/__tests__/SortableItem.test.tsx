@@ -543,7 +543,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     // registerRect only ever sets a value — nothing else clears a rect once
     // its owning row stops being the tutorial's target (item purchased/
     // removed, step advances). Without an explicit clear, the coach mark can
-    // render pointing at a target that no longer exists — the root cause
+    // render pointing at a target that is gone — the root cause
     // behind several reported "spotlight stuck on the wrong thing" bugs.
 
     it('clears the checkbox rect once the spotlighted item is purchased', () => {

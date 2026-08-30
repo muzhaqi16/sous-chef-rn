@@ -208,7 +208,7 @@ describe('local-first writes are replay-safe', () => {
   );
 
   it('the baseline only shrinks', () => {
-    // An entry that no longer applies — the operation gained a dedupe key, a
+    // An entry that has stopped applying — the operation gained a dedupe key, a
     // `Sync*` twin, or stopped being local-first — has to leave the list, or it
     // silently exempts a future operation that happens to reuse the name.
     const stale = Object.keys(REPLAY_SAFETY_BASELINE).filter(name => {

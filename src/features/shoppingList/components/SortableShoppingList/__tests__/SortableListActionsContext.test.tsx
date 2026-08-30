@@ -70,8 +70,8 @@ describe('SortableListActionsContext', () => {
     expect(defaultActions.onItemPress).toHaveBeenCalledWith('item-1');
   });
 
-  // `itemSwipeActions` is no longer a member of this bag: it is a derivation a
-  // row calls while rendering, so it travels as a context VALUE. See
+  // `itemSwipeActions` is not a member of this bag: it is a derivation a row
+  // calls while rendering, so it travels as a context VALUE. See
   // `itemSwipeActionsContext` and `createValueContext`.
   it('delegates onMoveToPantry to the provided action', () => {
     const { result } = renderHook(() => useSortableListActions(), {

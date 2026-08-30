@@ -65,12 +65,13 @@ describe('the default palette', () => {
   /**
    * A data color must be opaque in BOTH themes.
    *
-   * Slot 3 used to be `theme.colors.primaryLight`, which the DARK theme defines
-   * as `brand[400] + '20'` — an 8-digit hex whose alpha byte is 12.5%, and which
-   * `themes.ts` describes as an "accent surface". It feeds both the Skia slice
-   * fill and the legend chip's `backgroundColor`, so the third category vanished
-   * from the chart and its legend in dark mode. The one consumer that passes no
-   * `colorScale` is the Pantry Analytics usage-purpose pie.
+   * `theme.colors.primaryLight` is what this guards against: the DARK theme
+   * defines it as `brand[400] + '20'` — an 8-digit hex whose alpha byte is
+   * 12.5%, and which `themes.ts` describes as an "accent surface". A slot feeds
+   * both the Skia slice fill and the legend chip's `backgroundColor`, so a
+   * translucent one makes its category vanish from the chart and its legend in
+   * dark mode. The one consumer that passes no `colorScale` is the Pantry
+   * Analytics usage-purpose pie.
    */
   const OPAQUE_HEX = /^#[0-9a-fA-F]{6}$/;
 

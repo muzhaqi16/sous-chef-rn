@@ -212,7 +212,7 @@ describe('usePantryItemFormSubmit', () => {
 
       result.current.handleSave({ ...baseData, unit: 'kg' });
 
-      // unit changed from 'L' (current) to 'kg' (typed) but trackingUnit still has 'L'
+      // unit is 'kg' (typed) against 'L' (current) but trackingUnit still has 'L'
       // unitId is 'unit-1' (from trackingUnit), so unitChangedWithoutId is false
       await waitFor(() => expect(params.updateQuantity).toHaveBeenCalled());
     });

@@ -488,9 +488,8 @@ describe('useBatchMoveToPantry', () => {
   /**
    * A null payload with no error is how the offline queue reports a QUEUED
    * mutation, not a failure — `classifyCreateResult` is the single place that
-   * meaning is encoded. This used to assert the opposite, which was right when
-   * the batch move was online-only and a null result could only mean something
-   * had gone wrong.
+   * meaning is encoded. Treating it as a failure only holds for an online-only
+   * move, where a null result can mean nothing else.
    */
   it('treats a null payload as queued: reports pending, not a count, and succeeds', async () => {
     const mockOnSuccess = jest.fn();
@@ -527,9 +526,9 @@ describe('useBatchMoveToPantry', () => {
 
   describe('when the API is unavailable', () => {
     /**
-     * Used to refuse with a toast. The batch is local-first now: the client
-     * mints a pantry-row id per purchased line (`pantryItemIds`), so a replay
-     * resolves to the same rows rather than creating a second set.
+     * The batch is local-first, not an offline refusal with a toast: the
+     * client mints a pantry-row id per purchased line (`pantryItemIds`), so a
+     * replay resolves to the same rows rather than creating a second set.
      */
     it('still fires the mutation, so the queue can replay it', async () => {
       const move = moveMock({
@@ -598,9 +597,9 @@ describe('counters are adjusted exactly once', () => {
    * Every test above passes `purchasedItems: []`, which takes an early return
    * before reaching the code under test. These pass a real slice.
    *
-   * The hook used to remove the purchased edges eagerly AND let the mutation's
-   * `update` callback remove them again on the response. Filtering edges twice
-   * is idempotent; subtracting the count twice is not.
+   * The hook must not remove the purchased edges eagerly AND let the
+   * mutation's `update` callback remove them again on the response. Filtering
+   * edges twice is idempotent; subtracting the count twice is not.
    */
   const COUNTS = gql`
     fragment ShoppingListCounts on ShoppingList {
@@ -663,9 +662,9 @@ describe('counters are adjusted exactly once', () => {
     });
 
     // `movePurchasedItemsToPantry` never removes the lines it moves — clearing
-    // them is `deleteShoppingListItems(purchased: true)`, a separate act. The
-    // client used to filter the edges and subtract the counts anyway, so the
-    // rows came back on the next fetch and the totals disagreed with them.
+    // them is `deleteShoppingListItems(purchased: true)`, a separate act. A
+    // client that filters the edges and subtracts the counts anyway gets the
+    // rows back on the next fetch, with the totals disagreeing with them.
     expect(readCounts(cache)).toEqual(
       expect.objectContaining({ totalItems: 10, completedItems: 4 }),
     );
@@ -695,8 +694,8 @@ describe('counters are adjusted exactly once', () => {
       await result.current.batchMoveToPantry();
     });
 
-    // Nothing was written ahead of the response, so there is nothing to restore
-    // — which is why this hook no longer needs a restore path it did not have.
+    // Nothing is written ahead of the response, so there is nothing to restore
+    // — which is why this hook needs no restore path.
     expect(readCounts(cache)).toEqual(
       expect.objectContaining({ totalItems: 10, completedItems: 4 }),
     );
@@ -777,7 +776,7 @@ describe('moved lines are marked stocked in the cache', () => {
     });
 
     // Without this the row keeps its move-to-pantry button until a refetch,
-    // promising an action the server will no longer act on.
+    // promising an action the server will not act on.
     expect(read(cache)?.purchaseInfo.movedToPantryAt).toEqual(
       expect.any(String),
     );

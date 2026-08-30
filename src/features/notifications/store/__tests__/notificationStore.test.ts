@@ -11,8 +11,8 @@
 import { useNotificationStore } from '../notificationStore';
 import type { ExpirationLinkData } from '#features/notifications/types';
 
-// A feature store, so no root-store scaffolding is needed — the auth-slice
-// mocks this file used to carry went with the slice.
+// A feature store, so no root-store scaffolding is needed — and no auth-slice
+// mocks.
 const createTestStore = () => {
   useNotificationStore.getState().resetNotifications();
   return useNotificationStore;
