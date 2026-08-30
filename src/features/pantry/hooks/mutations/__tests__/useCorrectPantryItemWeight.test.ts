@@ -67,7 +67,7 @@ const validationErrorMock = (): MockedResponse => ({
     data: {
       adjustPantryItemWeight: {
         __typename: 'ValidationError',
-        code: 'VALIDATION_ERROR',
+        code: 'VALIDATION_FAILED',
         message: 'Invalid weight',
         field: 'netWeight',
       },

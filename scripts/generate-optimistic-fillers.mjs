@@ -47,10 +47,9 @@ const SCHEMA_PATH = fromRoot('src', 'graphql', 'generated', 'schema.graphql');
 
 /**
  * Non-null enum fields, by `Type.field`, with the value a brand-new row has.
- *
  * These are decisions, not defaults: the schema offers no neutral member, so a
- * human has to say which one an entity starts life in. Keeping them here rather
- * than scattered through writers means the answer is stated once and reviewed.
+ * human has to say which one an entity starts life in. Stating them here means
+ * the answer is written once and reviewed.
  */
 const ENUM_DEFAULTS = {
   'PantryItem.condition': 'GOOD',
@@ -210,18 +209,11 @@ function neutralForType(
   parentTypeName,
   fieldName,
 ) {
-  // A connection's `totalCount` is 0 on a brand-new row, not "unknown".
-  //
-  // `totalCount` is nullable on 39 of the schema's 41 connections ("computed
-  // only when selected"), so the nullable rule below would derive `null` — but
-  // the neutral base has already asserted `edges: []` two lines up, and a
-  // connection that is empty AND has an unknown count is not a state a fresh
-  // row can be in. Deriving 0 is what keeps the generated object internally
-  // consistent with itself; `null` would be a value the object's own `edges`
-  // contradicts.
-  //
-  // Narrow on purpose: only the field literally named `totalCount`, and only on
-  // a type implementing the `Connection` interface.
+  // A connection's `totalCount` is 0 on a brand-new row, not "unknown". It is
+  // nullable on 39 of the schema's 41 connections, so the nullable rule below
+  // would derive `null` — but the neutral base has already asserted `edges: []`,
+  // which `null` contradicts. Narrow on purpose: only the field literally named
+  // `totalCount`, and only on a type implementing the `Connection` interface.
   const parentType = parentTypeName ? schema.getType(parentTypeName) : null;
   const isConnection =
     parentType &&

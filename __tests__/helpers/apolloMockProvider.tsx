@@ -207,12 +207,23 @@ if (typeof beforeEach === 'function') {
   beforeEach(() => {
     resetMockedSchema();
     unknownFixtureKeys.length = 0;
+    misrepresentedFixtureValues.length = 0;
     // After the global setup's `beforeEach`, which installs an empty set: a
     // file that never imports this helper keeps that empty one, and a file that
     // does keeps its own — including anything registered at module scope.
     publishPartialFieldExemptions();
   });
   afterEach(throwOnUnknownFixtureKeys);
+  afterEach(throwOnMisrepresentedFixtureValues);
+  // A mock served after the file's last test has no `afterEach` left to read
+  // what it recorded, and a dropped finding reads as a pass. A test that does
+  // not await its own mutation is in exactly that position — the result lands
+  // whenever, which is also why a finding can name a later test than the one
+  // that caused it. The operation in the message is what locates it.
+  afterAll(() => {
+    throwOnUnknownFixtureKeys();
+    throwOnMisrepresentedFixtureValues();
+  });
 }
 
 function buildSchemaLink(options: Pick<ApolloTestOptions, 'mocks' | 'resolvers'>) {
@@ -260,6 +271,25 @@ function isPartial(mock: MockedResponse): boolean {
   return partiallyMockedResponses.has(mock);
 }
 
+const futureValueMocks = new WeakSet<object>();
+
+/**
+ * Mark a mock that deliberately states a value the CURRENT schema cannot
+ * represent. The only honest use is a client branch reached only by a value the
+ * API has not added yet — `errorService` falling back to the caller's copy for
+ * an unmapped `ErrorCode`, when every member the schema has today is mapped.
+ * Never for a value that is simply wrong: that is the defect the check exists
+ * for. Completion still runs; only the value check is waived.
+ */
+export function statesFutureSchemaValues<T extends object>(mock: T): T {
+  futureValueMocks.add(mock);
+  return mock;
+}
+
+function statesFutureValues(mock: MockedResponse): boolean {
+  return futureValueMocks.has(mock);
+}
+
 /** `Type.field` pairs a deliberately-partial mock leaves the cache without. */
 type FieldExemptions = Set<string>;
 
@@ -292,7 +322,7 @@ function registerPartialFieldExemptions(mock: MockedResponse): void {
 
   let full: unknown;
   try {
-    full = completeFromSchema(mock.request.query, {}, stated);
+    full = completeFromSchema(mock.request.query, {}, stated, false);
   } catch {
     return;
   }
@@ -407,7 +437,12 @@ export function completeMockedResponse(mock: MockedResponse): MockedResponse {
       if (!memo.has(key)) {
         memo.set(
           key,
-          completeFromSchema(mock.request.query, vars, resolved.data),
+          completeFromSchema(
+            mock.request.query,
+            vars,
+            resolved.data,
+            !statesFutureValues(mock),
+          ),
         );
       }
       return { ...resolved, data: memo.get(key) };
@@ -549,6 +584,7 @@ export function renderWithApollo(
 
 import type {
   DocumentNode,
+  GraphQLFieldResolver,
   GraphQLResolveInfo,
   GraphQLSchema,
 } from 'graphql';
@@ -770,12 +806,16 @@ interface MergeReport {
  */
 const unknownFixtureKeys: string[] = [];
 
-function reportUnknownFixtureKeys(document: DocumentNode, keys: string[]): void {
+function operationName(document: DocumentNode): string {
   const operation = document.definitions.find(
     (definition): definition is OperationDefinitionNode =>
       definition.kind === 'OperationDefinition',
   );
-  const name = operation?.name?.value ?? 'an unnamed operation';
+  return operation?.name?.value ?? 'an unnamed operation';
+}
+
+function reportUnknownFixtureKeys(document: DocumentNode, keys: string[]): void {
+  const name = operationName(document);
   for (const key of keys) unknownFixtureKeys.push(`${name}: ${key}`);
 }
 
@@ -794,6 +834,98 @@ export function throwOnUnknownFixtureKeys(): void {
       '\n\nEither the operation does not select them, or the type does not ' +
       'have them. A fixture the schema cannot produce is a test of a system ' +
       'that does not exist.',
+  );
+}
+
+// A key the operation CAN return, holding a value its type cannot: `'UNREAD'`
+// for a `NotificationStatus`, whose members are `SENT`/`READ`/… The merge is
+// data-shaped and never consults the field's type, so the value is served
+// verbatim and normalized into the cache — where it collides with the correct
+// value the hook writes locally. The two disagree about one field, so the
+// assertion reads whichever landed last and the test turns on timing.
+const misrepresentedFixtureValues: string[] = [];
+
+/**
+ * Execution serializes every leaf, and `serialize` is where a type rejects a
+ * value it cannot represent — so graphql-js does the walking, and fragments,
+ * unions, aliases and lists need no separate handling here.
+ */
+function collectMisrepresentedValues(
+  document: DocumentNode,
+  variableValues: Record<string, unknown>,
+  merged: unknown,
+): string[] {
+  let executed;
+  try {
+    executed = executeSync({
+      schema: getBaseSchema(),
+      document,
+      rootValue: merged,
+      variableValues,
+      fieldResolver: resolveByResponseKey,
+    });
+  } catch {
+    return [];
+  }
+  const found: string[] = [];
+  for (const error of executed.errors ?? []) {
+    if (!error.path) continue;
+    // Absence is not misrepresentation. A key the caller wrote as `undefined`
+    // is the established spelling of "the API omitted this", and an explicit
+    // `null` on a non-null field is how a fixture models a response that
+    // carries `errors` — or, for a mutation, `queueLink`'s offline null result.
+    if (valueAtPath(merged, error.path) == null) continue;
+    found.push(`${error.path.join('.')} — ${error.message}`);
+  }
+  return found;
+}
+
+// The payload is keyed by RESPONSE key, so an aliased field must be read by its
+// alias — `defaultFieldResolver` reads by field NAME, which makes every alias
+// look absent and reports its non-null parent instead.
+const resolveByResponseKey: GraphQLFieldResolver<unknown, unknown> = (
+  source,
+  _args,
+  _context,
+  info,
+) =>
+  source && typeof source === 'object'
+    ? (source as Record<string, unknown>)[String(info.path.key)]
+    : undefined;
+
+function valueAtPath(
+  data: unknown,
+  responsePath: readonly (string | number)[],
+): unknown {
+  let current: unknown = data;
+  for (const key of responsePath) {
+    if (current === null || typeof current !== 'object') return undefined;
+    current = (current as Record<string | number, unknown>)[key];
+  }
+  return current;
+}
+
+function reportMisrepresentedValues(
+  document: DocumentNode,
+  entries: string[],
+): void {
+  const name = operationName(document);
+  for (const entry of entries)
+    misrepresentedFixtureValues.push(`${name}: ${entry}`);
+}
+
+/** Exported for the same reason as {@link throwOnUnknownFixtureKeys}. */
+export function throwOnMisrepresentedFixtureValues(): void {
+  if (misrepresentedFixtureValues.length === 0) return;
+  const seen = [...new Set(misrepresentedFixtureValues)];
+  misrepresentedFixtureValues.length = 0;
+  throw new Error(
+    'Mocked response states values the schema cannot represent:\n' +
+      seen.map(entry => `  - ${entry}`).join('\n') +
+      '\n\nThe field exists and the operation selects it, but the type ' +
+      'rejects this value. Read the enum members off ' +
+      'src/graphql/generated/schema.graphql — a fixture the schema cannot ' +
+      'produce is a test of a system that does not exist.',
   );
 }
 
@@ -1028,6 +1160,7 @@ function completeFromSchema(
   query: DocumentNode,
   variables: Record<string, unknown>,
   overrideData: unknown,
+  checkValues = true,
 ): unknown {
   const document = transformLikeTheClient(query);
 
@@ -1054,6 +1187,12 @@ function completeFromSchema(
       const merged = mergeOverSchema(executed.data, overrideData, '', report);
       if (report.unknownKeys.length > 0) {
         reportUnknownFixtureKeys(document, report.unknownKeys);
+      }
+      const misrepresented = checkValues
+        ? collectMisrepresentedValues(document, variableValues, merged)
+        : [];
+      if (misrepresented.length > 0) {
+        reportMisrepresentedValues(document, misrepresented);
       }
       return merged;
     }

@@ -1,17 +1,4 @@
-/**
- * Screen Object Models Index
- *
- * Centralized exports for all screen object models.
- * Import screens from this file for consistent and clean imports.
- *
- * Example usage:
- * ```typescript
- * import { LoginScreen, ShoppingListScreen } from '../screens';
- *
- * const loginScreen = new LoginScreen();
- * await loginScreen.loginAsTestUser();
- * ```
- */
+/** Centralized exports for every screen object model. */
 
 export { BaseScreen } from './BaseScreen';
 export { LandingAuthScreen } from './LandingAuthScreen';

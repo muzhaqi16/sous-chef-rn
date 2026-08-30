@@ -221,7 +221,7 @@ function toggleFieldRefusalMock(): MockedResponse {
       data: {
         toggleShoppingListItemPurchased: {
           __typename: 'ValidationError',
-          code: 'VALIDATION_ERROR',
+          code: 'VALIDATION_FAILED',
           message: NAMELESS_ROW_MESSAGE,
           field: 'itemName',
         },
@@ -284,7 +284,7 @@ function updatePurchaseMock(
             : outcome === 'fieldRefusal'
             ? {
                 __typename: 'ValidationError',
-                code: 'VALIDATION_ERROR',
+                code: 'VALIDATION_FAILED',
                 message: NAMELESS_ROW_MESSAGE,
                 field: 'itemName',
               }

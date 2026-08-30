@@ -1,15 +1,8 @@
 /**
- * A notification switch must flip on ONE tap.
- *
- * Same assertion as `app-settings-toggle.e2e.ts` and the same root cause
- * (`SettingSwitch` forwarded `loading` to `disabled`), on the other screen —
- * this one renders from `GetNotificationPreferences` rather than
- * `GetUserSettings`, so it exercises the second of the two settings hooks.
- *
- * Reported as "have to tap it twice", and the report is directly measurable:
- * read the switch's own value before and after a single tap. iOS reports it as
- * '1' / '0'. `tapToggleOnce` polls for the change rather than sleeping, so a
- * value that flips and then reverts still fails.
+ * A notification switch must flip on ONE tap — same assertion as
+ * `app-settings-toggle.e2e.ts`, on the screen rendering from
+ * `GetNotificationPreferences` rather than `GetUserSettings`. iOS reports the
+ * value as '1'/'0'; `tapToggleOnce` polls, so a flip-then-revert still fails.
  */
 
 import { by, element, waitFor } from 'detox';

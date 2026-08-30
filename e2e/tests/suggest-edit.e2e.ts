@@ -1,18 +1,7 @@
 /**
- * Device validation for the item edit-suggestion flow (PR 171).
- *
- * Reaches SearchResults by deep link (`scan/result`) rather than the camera —
- * the simulator has none, and the barcode scanner is the only other way in.
- * The URL is delivered at cold start via `launchApp({ url })` alongside the
- * injected session, because `openURL` on an already-running app does not
- * reliably route here.
- *
- * The UPC below is a seeded PUBLIC catalog item the test user did not create,
- * so the API resolves `canEdit: false` and the card must offer "Suggest Edit"
- * rather than "Edit". That routing is the thing under test: the client used to
- * guess it from `visibility` + admin role and now reads the server's
- * viewer-scoped `canEdit`.
- *
+ * Device validation for item edit suggestions (PR 171). Reaches SearchResults
+ * by deep link (`scan/result`) — the simulator has no camera. Edit vs Suggest
+ * Edit comes from the server's viewer-scoped `canEdit`.
  * Run: npx detox test -c ios.sim.debug e2e/tests/suggest-edit.e2e.ts
  */
 import { device, element, by, waitFor } from 'detox';
@@ -77,16 +66,14 @@ describe('Item edit suggestions', () => {
     // The subtitle is what separates the two routes: `directEdit` promises the
     // change goes live immediately, `edit` promises review. Asserted through
     // the resolved copy rather than a literal, so rewording en.json can't leave
-    // this passing against a string the app no longer shows.
+    // this passing against a string the app does not render.
     await waitFor(element(by.id('add-item-form-subtitle')))
       .toHaveText(t('addItemForm.modes.edit.subtitle'))
       .withTimeout(10000);
   });
 
   it('leads the form with the note the reviewer needs', async () => {
-    // The note sits first on Basics and is required on this path. It used to be
-    // optional and buried on tab 4 under "More options", where a required field
-    // would block submit with no visible cause.
+    // The note sits first on Basics and is required on this path.
     await waitFor(
       element(by.text(t('addItemForm.fields.editNote.placeholder'))),
     )

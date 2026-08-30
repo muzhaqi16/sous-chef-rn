@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Fails when a comment block runs longer than six lines, or when a file carries
- * more comment lines than half its code.
+ * more comment lines than half its code. Covers `src/`, `e2e/` and `scripts/`.
  *
  * ## Why a check
  * The house style had drifted to essayistic docblocks: 20-50 lines of prose
@@ -36,6 +36,8 @@
  *   172 and buries them. Small files are the block rule's job.
  * - Tests, mocks and generated files. Test comments explain why a case exists,
  *   and generated files are not hand-edited.
+ * - A `scripts/` file's LEADING docblock, which is that check's only
+ *   documentation and follows a fixed house shape. Everything below it counts.
  * - Content. This counts lines; it cannot tell a load-bearing invariant from a
  *   war story. Judgement stays with the author.
  *
@@ -138,9 +140,30 @@ export function analyze(source) {
   return { blocks, code, comment };
 }
 
+/**
+ * A `scripts/` file opens with a docblock that IS its documentation — the
+ * "Fails when …" summary, `## Why a check`, and the usage lines. That block is
+ * exempt from both rules; nothing else in the file is.
+ */
+function exemptLeadingDocblock(rel, blocks, source) {
+  if (!rel.startsWith('scripts/')) return { blocks, exemptLines: 0 };
+  const firstCodeLine = source.startsWith('#!') ? 2 : 1;
+  const [first] = blocks;
+  if (!first || first.start !== firstCodeLine)
+    return { blocks, exemptLines: 0 };
+  return { blocks: blocks.slice(1), exemptLines: first.length };
+}
+
 /** Every budget violation in one file, as stable path-keyed findings. */
 function findingsFor(rel, source) {
-  const { blocks, code, comment } = analyze(source);
+  const analysis = analyze(source);
+  const { code } = analysis;
+  const { blocks, exemptLines } = exemptLeadingDocblock(
+    rel,
+    analysis.blocks,
+    source,
+  );
+  const comment = analysis.comment - exemptLines;
   const found = [];
 
   const longest = blocks.reduce((max, b) => Math.max(max, b.length), 0);
@@ -226,6 +249,57 @@ function selfTest() {
       expectComment: 0,
     },
     {
+      name: "a scripts/ file's LEADING docblock is exempt",
+      path: 'scripts/probe.mjs',
+      source: [
+        '#!/usr/bin/env node',
+        '/**',
+        ' * 1',
+        ' * 2',
+        ' * 3',
+        ' * 4',
+        ' * 5',
+        ' * 6',
+        ' */',
+        'const a = 1;',
+      ].join('\n'),
+      expectBlock: false,
+    },
+    {
+      name: "a scripts/ file's BODY block is not exempt",
+      path: 'scripts/probe.mjs',
+      source: [
+        '#!/usr/bin/env node',
+        '/** short header */',
+        'const a = 1;',
+        '// 1',
+        '// 2',
+        '// 3',
+        '// 4',
+        '// 5',
+        '// 6',
+        '// 7',
+        'const b = 2;',
+      ].join('\n'),
+      expectBlock: true,
+    },
+    {
+      name: 'the exemption does NOT apply outside scripts/',
+      path: 'src/probe.ts',
+      source: [
+        '/**',
+        ' * 1',
+        ' * 2',
+        ' * 3',
+        ' * 4',
+        ' * 5',
+        ' * 6',
+        ' */',
+        'const a = 1;',
+      ].join('\n'),
+      expectBlock: true,
+    },
+    {
       name: 'a JSX comment node is a comment',
       source: [
         '{/* 1',
@@ -243,7 +317,10 @@ function selfTest() {
 
   let failed = 0;
   for (const testCase of cases) {
-    const { blocks, comment } = findingsFor('probe.ts', testCase.source);
+    const { blocks, comment } = findingsFor(
+      testCase.path ?? 'probe.ts',
+      testCase.source,
+    );
     const flagged = blocks.some(b => b.length > MAX_BLOCK_LINES);
     if (flagged !== testCase.expectBlock) {
       console.error(
@@ -279,13 +356,23 @@ const flags = parseFlags({
 
 if (flags['self-test']) selfTest();
 
-const files = filesUnder(['src/**/*.ts', 'src/**/*.tsx'], { exclude: SKIP });
+const files = filesUnder(
+  [
+    'src/**/*.ts',
+    'src/**/*.tsx',
+    // The Detox suite is ESLint-ignored, so this is its only comment gate.
+    'e2e/**/*.ts',
+    'scripts/**/*.mjs',
+    'scripts/**/*.js',
+  ],
+  { exclude: SKIP },
+);
 
 requireNonEmptyScan({
   count: files.length,
   what: 'source files',
   check: CHECK,
-  hint: 'src/**/*.{ts,tsx} no longer matches — did the exclude patterns widen?',
+  hint: 'the src/e2e/scripts globs match nothing — did the exclude patterns widen?',
   minimum: 200,
 });
 

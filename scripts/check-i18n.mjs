@@ -9,11 +9,9 @@ const FEATURES_DIR = join(__dirname, '..', 'src', 'features');
 const REFERENCE = 'en.json';
 
 /**
- * Feature directories that ship their own copy.
- *
- * A feature's strings live with the feature, so parity has to be checked over
- * core PLUS every feature — checking `src/i18n/locales` alone would compare a
- * third of the app's copy and report it consistent.
+ * Feature directories that ship their own copy. A feature's strings live with
+ * the feature, so parity has to be checked over core PLUS every feature —
+ * `src/i18n/locales` alone is a third of the app's copy.
  */
 const featureLocaleDirs = () =>
   readdirSync(FEATURES_DIR)
@@ -37,12 +35,9 @@ const isNamespace = value =>
 
 /**
  * The same DEEP merge `src/i18n/featureLocales.ts` and `#/test-utils/mergedLocales`
- * perform.
- *
- * `Object.assign` is shallow, so a feature contributing `errors.*` REPLACED the
- * core `errors` namespace outright instead of adding to it — this gate then
- * compared a tree the app never builds, and could report a key as present or
- * missing on the strength of which file happened to declare its namespace last.
+ * perform. `Object.assign` is shallow, so a feature contributing `errors.*`
+ * REPLACES the core `errors` namespace outright, leaving this gate comparing a
+ * tree the app never builds, keyed on whichever file declared it last.
  */
 function deepMergeLocale(base, incoming) {
   const merged = { ...base };

@@ -1,9 +1,6 @@
 /**
- * Token Provider for E2E tests
- *
- * Fetches real auth tokens via direct GraphQL API call,
- * bypassing UI login for faster test bootstrapping.
- * Tokens are cached for 10 minutes to avoid repeated API calls.
+ * Fetches real auth tokens straight from the GraphQL API, bypassing UI login.
+ * Cached for 10 minutes so a suite does not re-login per file.
  */
 
 import { TEST_USER } from '../fixtures/testData';
@@ -27,9 +24,8 @@ interface AuthTokens {
 }
 
 /**
- * Long enough for a cold API, far short of jest's 120s hook timeout — the point
- * is that a stalled request fails as itself rather than as an unexplained
- * `beforeAll` stall.
+ * Long enough for a cold API, far short of jest's 120s hook timeout, so a
+ * stalled request fails as itself rather than as an unexplained `beforeAll`.
  */
 const TOKEN_FETCH_TIMEOUT_MS = 15000;
 
@@ -37,24 +33,9 @@ let cachedTokens: AuthTokens | null = null;
 let cacheTimestamp = 0;
 
 /**
- * Fetch auth tokens via GraphQL Login mutation.
- * Returns cached tokens if still valid (< 10 min old).
- */
-/**
- * `fetch` with the abort turned into a message that says what happened.
- *
- * Kept separate so the call site stays a flat object literal — wrapping the
- * call in a try/catch inline meant re-indenting the GraphQL template literal,
- * which is easy to get subtly wrong.
- */
-/**
- * The API is not accepting connections at all.
- *
- * Distinguished from every other token-fetch failure because it is the one
- * kind the UI-login fallback cannot rescue: UI login posts to this same
- * endpoint. Falling back anyway turns "the API is down" into "login-screen was
- * not visible after 5s" ~50s later, which points at the app instead of at the
- * server that is actually missing.
+ * The one token-fetch failure the UI-login fallback cannot rescue, since UI
+ * login posts to this same endpoint: falling back turns "the API is down" into
+ * "login-screen was not visible after 5s", ~50s later and blaming the app.
  */
 export class ApiUnreachableError extends Error {
   constructor(endpoint: string, cause: unknown) {
@@ -82,6 +63,7 @@ function isConnectionFailure(error: unknown): boolean {
   );
 }
 
+/** Turns the abort into a message that says what happened. */
 async function fetchWithAbortMessage(
   controller: AbortController,
   abortTimer: ReturnType<typeof setTimeout>,
@@ -106,6 +88,7 @@ async function fetchWithAbortMessage(
   }
 }
 
+/** Returns cached tokens while they are under {@link TOKEN_CACHE_TTL_MS} old. */
 export async function getAuthTokens(): Promise<AuthTokens> {
   const now = Date.now();
 
@@ -117,12 +100,10 @@ export async function getAuthTokens(): Promise<AuthTokens> {
   console.log('🔑 Fetching fresh auth tokens via API...');
 
   // Bounded, because an unbounded request does not fail — it hangs. `fetch`
-  // inside Detox's jest runner does not always behave as it does in plain Node
-  // (the same query succeeds from curl, and `scripts/verify-comma-decimal.sh`
-  // asserts outside the runner for exactly this reason). With no timeout a
-  // stalled request runs out jest's 120s HOOK timeout instead, and every test
-  // in the file reports as "Exceeded timeout of 120000 ms for a hook" pointing
-  // at `beforeAll` — naming the symptom and hiding the cause.
+  // inside Detox's jest runner can stall where the same query succeeds from
+  // curl, and with no timeout that runs out jest's 120s HOOK timeout instead:
+  // every test in the file then reports "Exceeded timeout of 120000 ms for a
+  // hook" against `beforeAll`, naming the symptom and hiding the cause.
   const controller = new AbortController();
   const abortTimer = setTimeout(
     () => controller.abort(),
@@ -134,12 +115,9 @@ export async function getAuthTokens(): Promise<AuthTokens> {
     signal: controller.signal,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      // `login` returns the `LoginResult` union, so the payload fields are only
-      // reachable through an inline fragment. Selecting them directly fails
-      // validation ("Cannot query field \"accessToken\" on type
-      // \"LoginResult\""), token injection throws, and the caller falls back to
-      // a slow UI login — which then needs `login-screen` to exist and fails
-      // with a misleading timeout.
+      // `login` returns the `LoginResult` union, so payload fields are only
+      // reachable through an inline fragment; selecting them directly fails
+      // validation and drops the caller into the slow UI-login fallback.
       query: `
         mutation Login($input: LoginInput!) {
           login(input: $input) {
@@ -212,9 +190,6 @@ export async function getAuthTokens(): Promise<AuthTokens> {
   return cachedTokens;
 }
 
-/**
- * Clear the token cache. Use when fresh tokens are needed.
- */
 export function clearTokenCache(): void {
   cachedTokens = null;
   cacheTimestamp = 0;

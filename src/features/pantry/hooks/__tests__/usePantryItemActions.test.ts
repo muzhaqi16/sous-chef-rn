@@ -628,7 +628,7 @@ describe('usePantryItemActions', () => {
     it('shows generic error for unknown payload failure codes', async () => {
       const m = consumeMock({
         __typename: 'ValidationError' as const,
-        code: 'VALIDATION_ERROR',
+        code: 'VALIDATION_FAILED',
         message: 'Cannot use more than available quantity',
         field: 'quantityUsed',
       });

@@ -56,7 +56,7 @@ const mockProfileData = {
   __typename: 'DietaryProfile',
   id: 'dp-1',
   userId: 'user-1',
-  preferredCuisines: ['Italian'],
+  preferredCuisines: ['ITALIAN'],
   dislikedIngredients: ['cilantro'],
   favoriteIngredients: ['garlic'],
   calorieTarget: 2000,
@@ -217,7 +217,7 @@ describe('useDietaryProfile', () => {
     expect(result.current.profile?.id).toBe('dp-1');
     expect(result.current.profile?.userId).toBe('user-1');
     expect(result.current.profile?.restrictions).toHaveLength(1);
-    expect(result.current.profile?.preferredCuisines).toEqual(['Italian']);
+    expect(result.current.profile?.preferredCuisines).toEqual(['ITALIAN']);
   });
 
   it('returns loading state', () => {

@@ -1,15 +1,8 @@
 /**
- * Resolves the copy the app will actually render, so specs can assert on it
- * without duplicating the string.
- *
- * A literal in a spec silently rots: reword `en.json` and the assertion keeps
- * passing against text nobody sees, or fails for a change that was intentional.
- * Looking the key up means the spec asserts the *binding* — "this element shows
- * the edit-mode subtitle" — which is the thing worth pinning.
- *
- * English only, matching the emulator's locale. Detox runs in Node, outside the
- * app's i18next instance, so this reads the bundle directly rather than
- * importing the runtime config (which would drag in React Native).
+ * Resolves the copy the app renders, so a spec asserts the binding rather than
+ * a literal that rots when `en.json` is reworded. English only, matching the
+ * emulator's locale; Detox runs in Node outside the app's i18next instance, so
+ * it reads the bundle directly (the runtime config would pull in React Native).
  */
 import en from '../../src/i18n/locales/en.json';
 
@@ -22,9 +15,8 @@ const interpolate = (text: string, vars: Record<string, string | number>) =>
 /**
  * Looks up a dotted key, e.g. `t('addItemForm.modes.edit.subtitle')`.
  *
- * Throws on a missing key rather than returning the key itself: a spec that
- * asserts `by.text('addItemForm.modes.edit.subtitle')` would fail with a
- * "element not found" that says nothing about the real cause.
+ * Throws on a missing key rather than returning the key: asserting on the key
+ * itself fails as "element not found", which says nothing about the cause.
  */
 export const t = (
   key: string,

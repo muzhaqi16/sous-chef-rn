@@ -158,9 +158,12 @@ belongs in git.
 
 - **Present tense, current behaviour only.** No "previously", "used to", "old
   behavior", "was tried", "regressed", "formerly", "no longer". A comment
-  narrating a fix outlives the fix and then lies — a sweep found 36 wrong ones,
+  narrating a fix outlives the fix and then lies — a sweep found 37 wrong ones,
   including a block describing the exact bug the code beneath it had removed.
-  This is a LINT ERROR (`no-warning-comments`), so your editor catches it.
+  This is a LINT ERROR (`no-warning-comments`), so your editor catches it. In a
+  TEST, keep the defect the case pins — just state it in the present: "the chips
+  used to size to their labels" becomes "a chip sizes to the row, not its
+  label".
 - **No comment run longer than six lines.** A `/** … */` counts its `/**` and
   `*/`, and an internal blank ` *` line does not split the run, so that is four
   lines of prose.
@@ -174,13 +177,15 @@ belongs in git.
   above/below", which goes stale on a reorder.
 
 Two enforcers, split by what they can see. **Vocabulary** is
-`no-warning-comments` in `.eslintrc.js`, scoped to production `src` `.ts`/`.tsx`
-— an error, so it lands in the editor. **Volume** is
-`node scripts/check-comment-budget.mjs` (pre-commit and CI), whose baseline is
-EMPTY: any finding is a regression, not a tally. Tool directives —
+`no-warning-comments` in `.eslintrc.js` — an error, so it lands in the editor —
+covering `src/**` and `__tests__/**`, tests included. **Volume** is
+`node scripts/check-comment-budget.mjs` (pre-commit and CI) over production
+`src` only, since a test comment explaining why a case exists is worth its
+length; its baseline is EMPTY, so any finding is a regression. Tool directives —
 `@ts-expect-error`, generated-file banners, `@deprecated`, `@internal` — are
-never counted and never removed. Test files are exempt from the vocabulary rule
-and are a known backlog (~67 files).
+never counted and never removed. `scripts/`, the root config files and
+`.graphql` are outside the vocabulary rule: each has a phrase it would flag
+wrongly.
 
 ## GraphQL & Apollo
 

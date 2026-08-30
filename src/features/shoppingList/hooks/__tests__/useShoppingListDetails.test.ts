@@ -72,7 +72,7 @@ function buildShoppingList(args: BuildShoppingListArgs = {}) {
           id: c.id,
           email: c.email,
           role: 'EDITOR',
-          status: 'ACCEPTED',
+          status: 'ACTIVE',
           collaboratorId: c.id,
           canAddItems: true,
           canRemoveItems: true,

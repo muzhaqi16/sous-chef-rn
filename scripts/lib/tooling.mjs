@@ -16,23 +16,10 @@ export const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 export const fromRoot = (...segments) => join(REPO_ROOT, ...segments);
 
 /**
- * Absolute, sorted paths for one or more globs.
- *
- * `exclude` takes regexes, not glob patterns, and they are matched against
- * whatever `globSync` hands the predicate — which is a MIX: bare directory
- * names, bare file basenames, and repo-relative paths. So an exclude must be
- * either a path-segment pattern (`(^|\/)generated(\/|$)`) or a suffix
- * (`\.test\.tsx$`). A regex anchored on a full relative path silently matches
- * nothing, because the predicate never sees one for a file. Exclude a single
- * known file by filtering the returned absolute paths instead.
- *
- * The array form of `exclude` is Node 24+, and CI runs Node 22.
- *
- * Sorted because `globSync` is not, and several callers print their results.
- *
- * @param {string|string[]} patterns
- * @param {{exclude?: RegExp[], cwd?: string}} [options]
- * @returns {string[]}
+ * Absolute, sorted paths for one or more globs. `exclude` takes REGEXES, matched
+ * against a MIX of bare directory names, basenames and repo-relative paths: each
+ * must be a path-segment (`(^|\/)generated(\/|$)`) or suffix (`\.test\.tsx$`)
+ * pattern. The array form of `exclude` is Node 24+, and CI runs Node 22.
  */
 export function filesUnder(patterns, { exclude = [], cwd = REPO_ROOT } = {}) {
   const list = Array.isArray(patterns) ? patterns : [patterns];
@@ -48,25 +35,10 @@ export function filesUnder(patterns, { exclude = [], cwd = REPO_ROOT } = {}) {
 }
 
 /**
- * The property that makes a scanning check a guard rather than decoration.
- *
- * Every check here that derives its inputs by scanning — files, symbols, call
- * sites, compiled output — can be broken into finding NOTHING by a change it
- * does not control: a preset upgrade that alters the compiled shape it
- * pattern-matches, a rename, a moved directory, a `cwd` it did not expect.
- * When that happens the check prints its success line and exits 0, which is
- * indistinguishable from the check not existing at all. Worse, a check with a
- * recorded baseline then reports an improvement, and offers to re-baseline the
- * empty result — erasing the record of everything it used to catch.
- *
- * @param {object} options
- * @param {number} options.count     How many candidates the scan produced.
- * @param {string} options.what      Plural noun for the candidates.
- * @param {string} options.check     The script's name, for the message.
- * @param {string} [options.hint]    What usually breaks this scan.
- * @param {number} [options.minimum] Floor below which the scan is not credible.
- *                                   Pass a recorded baseline's size where a
- *                                   sudden collapse is the signal.
+ * The property that makes a scanning check a guard rather than decoration: a
+ * scan broken into finding NOTHING prints exactly what a clean tree prints, and
+ * a baselined check then reports an improvement and offers to write the empty
+ * result over the record. `minimum` is the floor below which it is not credible.
  */
 export function requireNonEmptyScan({ count, what, check, hint, minimum = 1 }) {
   if (count >= minimum && count > 0) return;
@@ -83,13 +55,10 @@ export function requireNonEmptyScan({ count, what, check, hint, minimum = 1 }) {
 }
 
 /**
- * Refuse to re-baseline from a scan that found nothing.
- *
- * The dangerous pairing: a check breaks, finds zero, reports an improvement
- * against its baseline, and tells you to run `--update`. That writes the empty
- * result over the record. `requireNonEmptyScan` already fails the run, so this
- * is the second lock — for a check whose update path can be reached without a
- * full scan.
+ * Refuse to re-baseline from a scan that found nothing: a broken check finds
+ * zero, reports an improvement, and tells you to run `--update`, writing the
+ * empty result over the record. The second lock after `requireNonEmptyScan`,
+ * for a check whose update path can be reached without a full scan.
  */
 export function refuseEmptyBaselineUpdate({ count, baselineCount, check }) {
   if (count > 0 || baselineCount === 0) return;
@@ -105,12 +74,9 @@ export function refuseEmptyBaselineUpdate({ count, baselineCount, check }) {
 }
 
 /**
- * Load/write plumbing for a recorded baseline.
- *
- * Only the plumbing is shared. What a baseline MEANS differs per check — a set,
- * a numeric cap, a per-key counter map — and each keeps its own comparison.
- *
- * @param {string} path Absolute path to the baseline JSON.
+ * Load/write plumbing for a recorded baseline. Only the plumbing is shared:
+ * what a baseline MEANS differs per check — a set, a numeric cap, a per-key
+ * counter map — and each keeps its own comparison.
  */
 export function baselineFile(path) {
   return {
@@ -161,11 +127,9 @@ export const median = xs => {
 
 /**
  * `parseArgs` with the exit code these scripts use for "invoked wrongly".
- *
- * `strict` is what makes a valueless flag an error rather than an absent one,
- * which for a gate means checking the wrong thing instead of failing. The
- * throw becomes exit 2 — the code the checks use for "this check is broken",
- * as distinct from 1, "this check found a problem".
+ * `strict` makes a valueless flag an error rather than an absent one — for a
+ * gate, checking the wrong thing instead of failing. The throw becomes exit 2,
+ * "this check is broken", as distinct from 1, "this check found a problem".
  */
 export function parseFlags(options) {
   try {
@@ -177,19 +141,10 @@ export function parseFlags(options) {
 }
 
 /**
- * Fail if `babel.config.js` no longer runs Unistyles → scope-crawl → compiler
- * in that order.
- *
- * `check-unistyles-variant-staleness` rebuilds that pipeline to reproduce what
- * the app is compiled with. Nothing connected the two, so reordering the real
- * config left the check quietly measuring a pipeline the app no longer uses —
- * and the order is exactly what that check exists to defend: running the
- * compiler first also compiles, but caches the variant-resolved style on the
- * wrong dependencies and freezes it at its first-render value.
- *
- * Read as text. Executing the config needs an `api` stub, and `api.env()` is
- * called with different arguments in different branches, so a stub silently
- * changes the plugin list it is supposed to be checking.
+ * Fail unless `babel.config.js` runs Unistyles → scope-crawl → compiler in that
+ * order: `check-unistyles-variant-staleness` rebuilds that pipeline, and this is
+ * what ties it to the real config. Read as TEXT — executing the config needs an
+ * `api` stub, and `api.env()` differs per branch, so a stub changes the answer.
  */
 export function assertMatchesBabelConfig() {
   const config = readFileSync(fromRoot('babel.config.js'), 'utf8');

@@ -31,12 +31,10 @@ const prefixes = () => {
 };
 
 /**
- * Longest key first.
- *
- * `#/test-utils` must be tried before `#/`, and `#components` before `#`.
- * tsconfig resolves by specificity regardless of order; Babel's module-resolver
- * and Jest's `moduleNameMapper` both take the FIRST match, so the ordering is
- * load-bearing for them and not for tsconfig.
+ * Longest key first: `#/test-utils` must be tried before `#/`, and `#components`
+ * before `#`. tsconfig resolves by specificity regardless of order, but Babel's
+ * module-resolver and Jest's `moduleNameMapper` both take the FIRST match, so
+ * the ordering is load-bearing for them.
  */
 const bySpecificity = entries =>
   entries.sort(([a], [b]) => b.length - a.length);
@@ -56,12 +54,9 @@ const jestModuleNameMapper = () =>
 
 /**
  * `[['#components/', 'src/components/'], …]`, longest alias first — the shape a
- * plain prefix-replacing script wants.
- *
- * `check-dead-modules.mjs` hand-maintained a FOURTH copy of this list, which had
- * already drifted from `tsconfig.json` in both directions. A module reached only
- * through a missing alias reads as unreferenced, and one reached through a stale
- * alias reads as referenced; both are wrong, and neither is visible.
+ * plain prefix-replacing script (`check-dead-modules.mjs`) wants. A hand-kept
+ * copy drifts: a module reached only through a missing alias reads as
+ * unreferenced, one reached through a stale alias reads as referenced.
  */
 const prefixPairs = () =>
   bySpecificity(Object.entries(prefixes())).map(([alias, target]) => [

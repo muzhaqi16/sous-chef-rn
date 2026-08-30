@@ -21,6 +21,7 @@ import {
   completeMockedResponse,
   createApolloTestWrapper,
   renderHookWithApollo,
+  throwOnMisrepresentedFixtureValues,
   throwOnUnknownFixtureKeys,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
@@ -348,6 +349,66 @@ describe('a fixture the operation cannot return is rejected', () => {
     (echo.result as (v: Record<string, unknown>) => unknown)({});
 
     expect(() => throwOnUnknownFixtureKeys()).not.toThrow();
+  });
+});
+
+describe('a fixture stating a value the type cannot hold is rejected', () => {
+  const PROBE_STATUS = gql`
+    query ProbeNotificationStatus {
+      notification(id: "n1") {
+        id
+        status
+        title
+      }
+    }
+  `;
+
+  const row = (over: Record<string, unknown>) => ({
+    notification: { __typename: 'Notification', id: 'n1', ...over },
+  });
+
+  // `NotificationStatus` has no `UNREAD` member — unread is `SENT`. Unchecked,
+  // the merge is data-shaped enough to serve it, and the cache then holds a
+  // status that silently disagrees with the hook's own local write.
+  it('names the operation, the path, the type and the value', () => {
+    complete(PROBE_STATUS, row({ status: 'UNREAD' }));
+
+    expect(() => throwOnMisrepresentedFixtureValues()).toThrow(
+      /ProbeNotificationStatus: notification\.status — Enum "NotificationStatus" cannot represent value: "UNREAD"/,
+    );
+  });
+
+  it('says nothing about a real member', () => {
+    complete(PROBE_STATUS, row({ status: 'SENT' }));
+
+    expect(() => throwOnMisrepresentedFixtureValues()).not.toThrow();
+  });
+
+  // A key written as `undefined` is the established spelling of "the API
+  // omitted this", and the case a test asserting `toBeUndefined()` is about.
+  // Reporting the non-null field it leaves empty would break that idiom.
+  it('says nothing about a field the fixture states as absent', () => {
+    complete(PROBE_STATUS, row({ status: 'SENT', title: undefined }));
+
+    expect(() => throwOnMisrepresentedFixtureValues()).not.toThrow();
+  });
+
+  // The payload is keyed by response key, so reading an aliased field by its
+  // schema name finds nothing and reports its non-null parent instead.
+  it('says nothing about an aliased field', () => {
+    const aliased = gql`
+      query ProbeAliasedStatus {
+        notification(id: "n1") {
+          id
+          state: status
+        }
+      }
+    `;
+    complete(aliased, {
+      notification: { __typename: 'Notification', id: 'n1', state: 'SENT' },
+    });
+
+    expect(() => throwOnMisrepresentedFixtureValues()).not.toThrow();
   });
 });
 

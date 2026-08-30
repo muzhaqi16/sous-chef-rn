@@ -1,14 +1,8 @@
 /**
- * Login E2E Tests
+ * Login: happy path, error handling, edge cases.
  *
- * Tests for the login functionality including:
- * - Happy path login
- * - Error handling (invalid credentials, empty fields)
- * - Edge cases (rapid taps, special characters)
- *
- * Performance: Launches app once in beforeAll. Error/Edge/Navigation tests
- * clear form fields between tests instead of relaunching (~1s vs ~60s).
- * Only relaunches once after Happy Path logs in.
+ * Launches once in `beforeAll`; the Error/Edge/Navigation blocks clear form
+ * fields between tests rather than relaunching (~1s vs ~60s).
  */
 
 import { element, by, waitFor } from 'detox';
@@ -33,10 +27,7 @@ describe('Login', () => {
   const shoppingListScreen = new ShoppingListScreen();
   const pantryScreen = new PantryScreen();
 
-  /**
-   * Launch fresh app (delete all data) and navigate to login screen.
-   * Uses delete: true to clear MMKV-persisted auth tokens.
-   */
+  // `delete: true` is required — auth tokens persist in MMKV, not the keychain.
   async function launchAndNavigateToLogin() {
     await launchAppWithFabricWorkaround({
       newInstance: true,
@@ -48,10 +39,6 @@ describe('Login', () => {
     await loginScreen.waitForScreen(10000);
   }
 
-  /**
-   * Reset to logged-out state by deleting app data and navigating to login.
-   * Auth tokens are stored in MMKV (not keychain), so delete: true is required.
-   */
   async function resetToLoggedOutState() {
     await launchAndNavigateToLogin();
   }
@@ -92,7 +79,6 @@ describe('Login', () => {
       await loginScreen.waitForScreen();
       await loginScreen.loginAsTestUser();
 
-      // Screenshot immediately after login to debug what screen we land on
       await device.takeScreenshot('post-login-submit');
 
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
@@ -100,11 +86,9 @@ describe('Login', () => {
 
       await device.takeScreenshot('post-biometric-dismiss');
 
-      // The one assertion that login actually worked. The screenshot is for
-      // diagnosis; the rethrow is what makes the test able to fail. Swallowing
-      // this meant a login that never completed still passed.
-      // toExist() rather than toBeVisible() because FeatureHintOverlay
-      // (absoluteFillObject + zIndex 9999) can cover the screen.
+      // toExist(), not toBeVisible(): FeatureHintOverlay (absoluteFillObject +
+      // zIndex 9999) can cover the screen. The screenshot is diagnostic; the
+      // rethrow is what lets the test fail.
       try {
         await waitFor(element(by.id('tab-bar')))
           .toExist()
@@ -121,15 +105,12 @@ describe('Login', () => {
     it('should persist session across app restart', async () => {
       await device.reloadReactNative();
 
-      // Wait for reload to complete
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       await device.takeScreenshot('after-reload');
 
 
-      // The one assertion that the session survived the reload — a dropped
-      // session lands back on the landing/login screen with no tab bar, and
-      // swallowing this made that outcome indistinguishable from success.
+      // A dropped session lands back on landing/login with no tab bar.
       // toExist because the overlay may block visibility.
       try {
         await waitFor(element(by.id('tab-bar')))
@@ -143,13 +124,11 @@ describe('Login', () => {
   });
 
   describe('Error Cases', () => {
-    // Reset to logged-out state (fast keychain clear + reload)
     beforeAll(async () => {
       await resetToLoggedOutState();
     });
 
     beforeEach(async () => {
-      // Clear fields between tests (fast — no relaunch needed)
       try {
         await element(by.id('login-email-input')).clearText();
       } catch {
@@ -171,8 +150,7 @@ describe('Login', () => {
     it('should show error for empty email', async () => {
       await loginScreen.enterPassword('somepassword');
 
-      // Dismiss keyboard using tapReturnKey on last focused field.
-      // This avoids UIInputSetContainerView blocking submit button taps.
+      // Dismiss the keyboard — UIInputSetContainerView blocks submit taps.
       try {
         await element(by.id('login-password-input')).tapReturnKey();
       } catch {
@@ -187,7 +165,6 @@ describe('Login', () => {
     it('should show error for empty password', async () => {
       await loginScreen.enterEmail(TEST_USER.email);
 
-      // Dismiss keyboard before tapping submit
       try {
         await element(by.id('login-email-input')).tapReturnKey();
       } catch {
@@ -203,7 +180,6 @@ describe('Login', () => {
       await loginScreen.enterEmail('not-an-email');
       await loginScreen.enterPassword('somepassword');
 
-      // Dismiss keyboard before tapping submit
       try {
         await element(by.id('login-password-input')).tapReturnKey();
       } catch {
@@ -219,7 +195,6 @@ describe('Login', () => {
       await loginScreen.enterEmail(TEST_USER.email);
       await loginScreen.enterPassword('wrong_password_123');
 
-      // Dismiss keyboard before tapping submit
       try {
         await element(by.id('login-password-input')).tapReturnKey();
       } catch {
@@ -235,7 +210,6 @@ describe('Login', () => {
   });
 
   describe('Edge Cases', () => {
-    // Reset to logged-out state (fast keychain clear + reload)
     beforeAll(async () => {
       await resetToLoggedOutState();
     });
@@ -249,10 +223,8 @@ describe('Login', () => {
 
       await device.takeScreenshot('edge-special-chars');
 
-      // This password is not TEST_USER's, so the outcome is not ambiguous: the
-      // server must reject it and the app must stay on the login screen with
-      // the special characters intact. Accepting "still here OR logged in"
-      // meant the test passed either way and proved nothing.
+      // Not TEST_USER's password, so the outcome is unambiguous: the server
+      // must reject it and the app must stay on the login screen.
       await loginScreen.waitForScreen(TIMEOUTS.DEFAULT);
       await loginScreen.expectErrorMessage();
     });
@@ -286,9 +258,8 @@ describe('Login', () => {
 
       await device.takeScreenshot('edge-rapid-taps');
 
-      // The credentials are valid, so extra taps must not prevent the login
-      // from completing — one session, no wedged state. "Logged in OR still on
-      // login" accepted the exact failure the test is named for.
+      // Credentials are valid, so extra taps must not prevent login from
+      // completing — one session, no wedged state.
       await waitFor(element(by.id('tab-bar')))
         .toExist()
         .withTimeout(TIMEOUTS.NETWORK);
@@ -320,13 +291,11 @@ describe('Login', () => {
 
       await device.takeScreenshot('edge-clear-error-after-type');
 
-      // Verify we're still on the login screen
       await loginScreen.waitForScreen(5000);
     });
   });
 
   describe('Navigation', () => {
-    // Reset to logged-out state (fast keychain clear + reload)
     beforeAll(async () => {
       await resetToLoggedOutState();
     });
@@ -358,7 +327,6 @@ describe('Login', () => {
         // No autofill bar to dismiss.
       }
 
-      // Tap the sign up link
       await loginScreen.tapSignUp();
 
       await device.takeScreenshot('nav-signup');

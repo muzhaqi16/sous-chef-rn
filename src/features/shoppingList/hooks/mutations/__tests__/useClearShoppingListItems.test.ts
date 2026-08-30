@@ -86,7 +86,7 @@ function createRejectedClearMock(): MockedResponse {
       data: {
         removeItemsFromShoppingList: {
           __typename: 'ValidationError',
-          code: 'VALIDATION_ERROR',
+          code: 'VALIDATION_FAILED',
           message: 'nope',
           field: 'ids',
         },

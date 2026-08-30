@@ -73,7 +73,7 @@ describe('useMealTemplateEditor', () => {
             data: {
               createMealTemplate: {
                 __typename: 'ValidationError',
-                code: 'VALIDATION_ERROR',
+                code: 'VALIDATION_FAILED',
                 message: 'bad',
                 field: 'name',
               },
@@ -135,7 +135,7 @@ describe('useMealTemplateEditor', () => {
             data: {
               updateMealTemplate: {
                 __typename: 'ValidationError',
-                code: 'VALIDATION_ERROR',
+                code: 'VALIDATION_FAILED',
                 message: 'nope',
                 field: 'name',
               },
@@ -164,7 +164,7 @@ describe('useMealTemplateEditor', () => {
             data: {
               addTemplateItem: {
                 __typename: 'ValidationError',
-                code: 'VALIDATION_ERROR',
+                code: 'VALIDATION_FAILED',
                 message: 'nope',
                 field: 'mealType',
               },

@@ -34,9 +34,7 @@ const apolloVersion = require('@apollo/client/package.json').version;
 
 console.log(`@apollo/client ${apolloVersion}\n`);
 
-// ---------------------------------------------------------------------------
 // 1. storeFieldName serialization
-// ---------------------------------------------------------------------------
 
 const observed = [];
 
@@ -151,9 +149,7 @@ try {
 }
 console.log(`Apollo arg-parsing exports available: ${parserExport}\n`);
 
-// ---------------------------------------------------------------------------
 // 2. Partial reads omit keys, they do not undefine them
-// ---------------------------------------------------------------------------
 
 const partialCache = new InMemoryCache();
 

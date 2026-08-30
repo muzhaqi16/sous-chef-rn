@@ -103,13 +103,10 @@ function gitSha() {
 const repoRoot = path.resolve(__dirname, '..');
 
 /**
- * Decide which env file to read. Precedence:
- *  1. ENVFILE — explicit (npm scripts like `ios:stg`, CI). Always wins.
- *  2. /tmp/envfile — written by the Xcode scheme's "Set Environment" pre-action
- *     so the dropdown picks the env file for release/archive bundles. Only
- *     trusted inside an Xcode build (CONFIGURATION is set there, never for the
- *     Metro dev server), so a stale temp file can't leak into `npm start`.
- *  3. `.env` — local/dev default.
+ * Decide which env file to read: ENVFILE (explicit, always wins), then
+ * /tmp/envfile (the Xcode scheme's pre-action; trusted only inside an Xcode
+ * build, where CONFIGURATION is set, so a stale temp file can't leak into
+ * `npm start`), then `.env`.
  */
 function resolveEnvFileName() {
   if (process.env.ENVFILE) return process.env.ENVFILE;
@@ -121,11 +118,10 @@ function resolveEnvFileName() {
 }
 
 /**
- * Read one key out of a generated `env.generated.ts` source.
- *
- * Three-way on purpose: a string for a written value, `null` for a key written
- * as `undefined`, and `undefined` for a key that is not there at all. The
- * provenance check needs to tell "recorded as absent" from "never emitted".
+ * Read one key out of a generated `env.generated.ts` source. Three-way on
+ * purpose: a string for a written value, `null` for a key written as
+ * `undefined`, `undefined` for a key that is absent — the provenance check
+ * needs to tell "recorded as absent" from "never emitted".
  */
 function readGeneratedValue(source, key) {
   const defined = source.match(new RegExp(`^  ${key}: "([^"]*)",$`, 'm'));
@@ -157,22 +153,10 @@ function parseEnvFile(filePath) {
 }
 
 /**
- * Build identity recorded in a previously generated `env.generated.ts`, kept
- * only where re-deriving it now would be a DOWNGRADE.
- *
- * Metro calls `generateEnv()` at module scope, so the file is rewritten on
- * every Metro start and every bundling step — often from a process that has
- * neither variable. Two downgrades are possible and both shipped:
- *
- *   - BUILD_ID has no derivation at all, so it simply became `undefined`.
- *   - GIT_SHA fell back to `gitSha()`, replacing CI's full sha with a short,
- *     `-dirty`-suffixed one.
- *
- * Deliberately NOT a blanket "keep whatever was there": that would freeze a
- * local checkout's sha at its first value and stop `-dirty` from ever tracking
- * the tree again — which is exactly what the precision test that used to guard
- * this did, because it could never be false. Only these two keys, and GIT_SHA
- * only when this tree can derive no sha at all.
+ * Build identity from an already-generated `env.generated.ts`, kept only where
+ * re-deriving now would be a DOWNGRADE: Metro rewrites the file on every start
+ * and bundling step, often from a process holding neither variable. Deliberately
+ * NOT "keep whatever was there" — that freezes a local sha and kills `-dirty`.
  */
 function readExistingBuildIdentity() {
   const generatedPath = path.join(
@@ -197,19 +181,11 @@ function readExistingBuildIdentity() {
   const buildId = read('BUILD_ID');
   if (buildId) identity.BUILD_ID = buildId;
 
-  // Kept ONLY when this tree cannot describe itself at all.
-  //
-  // The condition here used to be `!FULL_SHA.test(gitSha() ?? '')`, which is
-  // unconditionally TRUE: `gitSha()` only ever returns a SHORT sha, so it never
-  // matches FULL_SHA and the recorded value was preserved on every subsequent
-  // run. One `GIT_SHA=$(git rev-parse HEAD) npm run ios:release` therefore
-  // pinned every later local build to that commit — `-dirty` never reappeared,
-  // and `check-build-provenance.mjs` did not notice because it only compares
-  // when `process.env.GIT_SHA` is set. That defeats the traceability the value
-  // exists for: the build reports a commit it was not built from.
-  //
-  // A tree that CAN derive a sha always wins, precise or not: describing the
-  // wrong commit is worse than describing this one less precisely.
+  // Kept ONLY when this tree cannot describe itself at all. A precision test
+  // (`!FULL_SHA.test(gitSha())`) cannot work here — `gitSha()` only ever returns
+  // a SHORT sha, so it is unconditionally true and pins every later local build
+  // to one recorded commit. A tree that CAN derive a sha always wins, precise or
+  // not: describing the wrong commit is worse than describing this one loosely.
   const recordedSha = read('GIT_SHA');
   if (recordedSha && !gitSha()) {
     identity.GIT_SHA = recordedSha;
@@ -222,12 +198,10 @@ function generateEnv() {
   const envFileName = resolveEnvFileName();
   const envFilePath = path.join(repoRoot, envFileName);
   const fileValues = parseEnvFile(envFilePath);
-  // process.env wins over the file so CI `env:` overrides take precedence.
-  // Build identity already written by an earlier run of this script. Metro
-  // calls generateEnv() at module scope on every start and every bundling
-  // step, often in a process that has neither variable — so without this, the
-  // second run replaced a 40-char CI sha with `gitSha()`'s short `-dirty` one
-  // and BUILD_ID with `undefined`, minutes after CI set them correctly.
+  // Build identity already written by an earlier run. Metro calls generateEnv()
+  // at module scope on every start and every bundling step, often in a process
+  // holding neither variable, which without this replaces CI's 40-char sha with
+  // a short `-dirty` one and BUILD_ID with `undefined`.
   const existing = readExistingBuildIdentity();
 
   const resolve = key => {

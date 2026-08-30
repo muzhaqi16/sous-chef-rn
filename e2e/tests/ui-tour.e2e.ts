@@ -1,20 +1,8 @@
 /**
- * UI Tour — visual smoke test + screenshot capture.
- *
- * Logs in, asserts the authenticated tab bar and the four primary tabs are
- * reachable, and screenshots every primary surface (Pantry / Shopping /
- * Recipes / Meal Plan / Profile / add sheet) into the Detox artifacts dir for
- * visual review and regression.
- *
- * Main-tab navigation is ASSERTED (the test fails if a primary surface is
- * unreachable); the secondary captures (Profile, add sheet, Purchased sub-tab)
- * and all screenshots are best-effort. The LogBox dev-warning toast is
- * auto-silenced under Detox (see `useStartupInit`) so it can't occlude the
- * floating tab bar — no manual setup needed.
- *
- * Run:  npx detox test -c ios.sim.debug    e2e/tests/ui-tour.e2e.ts
- *       npx detox test -c android.emu.debug e2e/tests/ui-tour.e2e.ts
- * Out:  e2e/artifacts/<platform>/<run>/✓ UI Tour …/<name>.png
+ * UI Tour — logs in, ASSERTS the tab bar and four primary tabs are reachable,
+ * then screenshots every surface; secondary captures are best-effort. The
+ * LogBox dev-warning toast is auto-silenced under Detox (`useStartupInit`) so
+ * it can't occlude the floating tab bar. Out: e2e/artifacts/<platform>/<run>/.
  */
 import { device, element, by, waitFor, expect } from 'detox';
 import {
@@ -53,22 +41,12 @@ const dismissByText = async (labels: string[]) => {
   }
 };
 
-// Dismiss a SpotlightCoachMark tutorial if one is up.
-//
-// The coach mark renders a full-screen dimming overlay, so while it is showing
-// EVERY tap lands on it rather than on the tab bar — Detox reports "View is not
-// hittable at its visible point" against a target that is plainly visible in the
-// screenshot, which reads as a layout bug rather than an overlay.
-//
-// `by.text` matches EXACTLY, and the button reads "Skip all" whenever the
-// sequence has more than one step (`SpotlightCoachMark` picks `labels.skipAll`
-// over `labels.skip` on `totalSteps > 1`). A list containing only 'Skip'
-// therefore never matches the multi-step case — which is the common one. The
-// accessibility label is the stable fallback: it is `tutorial.skipTutorial`
-// regardless of step count, and the button carries no testID.
-//
-// Tutorial state persists once dismissed, so this is a no-op on every later run
-// against the same install.
+// Dismiss a SpotlightCoachMark tutorial if one is up. Its full-screen dimming
+// overlay swallows EVERY tap, and Detox reports "View is not hittable at its
+// visible point" against a target plainly visible in the screenshot.
+// `by.text` matches EXACTLY and the button reads "Skip all" whenever
+// `totalSteps > 1`, so the accessibility label is the stable fallback — the
+// button carries no testID. A no-op on later runs; the state persists.
 const dismissTutorialIfPresent = async () => {
   for (const matcher of [
     by.text('Skip all'),
@@ -136,8 +114,8 @@ describe('UI Tour', () => {
     await goTab('tab-mealplan', 'meal-plan-screen');
     await shoot('05-mealplan');
 
-    // ── Secondary surfaces (best-effort so a hiccup never fails the smoke
-    //    assertions above) ──
+    // Secondary surfaces — best-effort, so a hiccup never fails the assertions
+    // above.
     await safe('Profile (header avatar)', async () => {
       await goTab('tab-pantry', 'pantry-screen');
       await element(by.id('tab-profile')).tap();

@@ -80,10 +80,9 @@ const CHECK = process.argv.includes('--check');
 const UPDATE = process.argv.includes('--update');
 
 // Resolving types from the schema rather than guessing is what lets nested
-// selections count. The previous version passed `null` as the type for any
-// field selected inline on a nested object, so those fields were invisible on
-// both the query and the mutation side — the detector could not see a stale
-// field unless it happened to arrive via a named fragment.
+// selections count. Pass `null` as the type for a field selected inline on a
+// nested object and it goes invisible on both the query and the mutation side,
+// leaving the detector blind to anything not arriving via a named fragment.
 const schema = existsSync(SCHEMA)
   ? buildSchema(readFileSync(SCHEMA, 'utf8'))
   : null;
@@ -100,7 +99,7 @@ if (!schema) {
 const DERIVED =
   /count|total|sum|rate|average|avg|stats|summary|last[A-Z]|recent|remaining|completed|previously|has[A-Z]|is[A-Z].*ed$|progress|balance|score/i;
 
-// --- collect documents -------------------------------------------------------
+// Collect documents.
 const files = filesUnder('src/**/*.graphql', {
   exclude: [/(^|\/)(generated|__tests__)(\/|$)/],
 });
@@ -128,14 +127,9 @@ for (const file of files) {
 }
 
 /**
- * Walks a selection set, resolving fragment spreads, and records
- * `type -> Set(field)` using the enclosing fragment's type condition as the
- * type name. Inline field selections inherit the nearest known type.
- */
-/**
- * Records `type -> Set(field)` for every field selected anywhere under `node`,
- * resolving the parent type from the schema at each level so nested selections
- * are attributed correctly. Fragment spreads are inlined first so a single
+ * Records `type -> Set(field)` for every field selected under `node`, resolving
+ * the parent type from the schema at each level so nested selections are
+ * attributed correctly. Fragment spreads are inlined first so a single
  * schema-aware walk sees the whole selection.
  */
 function collect(definition, into) {
@@ -183,7 +177,7 @@ function inlineSpreads(node, seen) {
   return { ...node, selectionSet: { ...node.selectionSet, selections } };
 }
 
-// --- what QUERIES read, per type --------------------------------------------
+// What QUERIES read, per type.
 const readByType = new Map();
 for (const op of operations) {
   if (op.kind !== 'query') continue;
@@ -197,13 +191,9 @@ for (const op of operations) {
 
 /**
  * The entity a mutation actually mutates — the object directly under its
- * payload — rather than every type reachable in the selection.
- *
- * Without this the check blames a mutation for fields of entities that merely
- * appear nested in its response: a meal-plan mutation returning a nested recipe
- * was reported as leaving `Recipe.averageRating` stale, which it neither
- * changes nor is responsible for. That over-approximation is what took the
- * count to 137 and made the number unusable.
+ * payload — rather than every type reachable in the selection. Without this the
+ * check blames a mutation for entities that merely appear nested in its
+ * response, an over-approximation that makes the count unusable.
  */
 function primaryEntityTypes(definition) {
   const inlined = inlineSpreads(definition, new Set());
@@ -238,7 +228,7 @@ function primaryEntityTypes(definition) {
   return types;
 }
 
-// --- what each MUTATION writes back -----------------------------------------
+// What each MUTATION writes back.
 const findings = [];
 for (const op of operations) {
   if (op.kind !== 'mutation') continue;

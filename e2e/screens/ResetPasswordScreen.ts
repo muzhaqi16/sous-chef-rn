@@ -1,9 +1,6 @@
 /**
- * ResetPasswordScreen
- *
- * Screen object model for the screen reached from a password-reset link,
- * where the user chooses their new password. Reached by deep link
- * (`souschef://reset-password?token=…`) rather than in-app navigation.
+ * The screen where a user chooses a new password. Reached by deep link
+ * (`souschef://reset-password?token=…`), not by in-app navigation.
  */
 
 import { BaseScreen } from './BaseScreen';
@@ -25,12 +22,10 @@ export class ResetPasswordScreen extends BaseScreen {
   }
 
   /**
-   * Drops the keyboard before pressing, matching ForgotPasswordScreen. Detox
-   * taps an element's centre, and with the keyboard up the button's centre can
-   * sit behind it — the tap then lands on a key instead, which would make a
-   * "nothing happened" assertion pass without ever pressing the button.
-   * Keyboard-open reachability is covered separately by
-   * `expectFormReachableWithKeyboardOpen`.
+   * Drops the keyboard first: Detox taps an element's CENTRE, and with the
+   * keyboard up the button's centre can sit behind it — the tap lands on a key
+   * and a "nothing happened" assertion passes without a press. Reachability
+   * with the keyboard up is {@link expectFormReachableWithKeyboardOpen}.
    */
   async submit() {
     await this.dismissKeyboard();
@@ -44,9 +39,8 @@ export class ResetPasswordScreen extends BaseScreen {
   }
 
   /**
-   * The confirm field and the submit button must stay on screen while the
-   * keyboard is open. Detox only reports a view visible when it is actually
-   * unobscured, so a keyboard sitting over either one fails this.
+   * Detox reports a view visible only when it is actually unobscured, so a
+   * keyboard sitting over the confirm field or Submit fails this.
    */
   async expectFormReachableWithKeyboardOpen() {
     await this.expectVisible(this.confirmPasswordInput);
@@ -57,10 +51,7 @@ export class ResetPasswordScreen extends BaseScreen {
     await this.expectVisible(this.submitButton);
   }
 
-  /**
-   * The view shown once the server has refused the token — the form is gone
-   * and only "Return to Login" is on offer.
-   */
+  /** Shown once the server refuses the token: the form is gone, only "Return to Login". */
   async expectRejectedLinkVisible(timeout: number = 20000) {
     await this.waitForElement(this.invalidLinkView, timeout);
   }

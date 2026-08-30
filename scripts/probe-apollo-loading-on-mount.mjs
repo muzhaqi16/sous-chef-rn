@@ -83,9 +83,7 @@ const firstResultOf = client => {
   return { observable, subscription, result, startedAt };
 };
 
-// ---------------------------------------------------------------------------
 // 1. Warm cache, first mount
-// ---------------------------------------------------------------------------
 const client = makeClient();
 client.cache.writeQuery({ query: QUERY, data: COMPLETE });
 
@@ -99,9 +97,7 @@ console.log(
   `   => a screen gating on \`loading\` blanks here, with the data in hand\n`,
 );
 
-// ---------------------------------------------------------------------------
 // 2. Remount — a second watchQuery, exactly what useQuery does per mount
-// ---------------------------------------------------------------------------
 const second = firstResultOf(client);
 console.log('2. the SAME query watched again (a remount)');
 console.log(`   started at       -> ${second.startedAt}`);
@@ -114,9 +110,7 @@ console.log(`      every visit is a fresh network leg\n`);
 first.subscription.unsubscribe();
 second.subscription.unsubscribe();
 
-// ---------------------------------------------------------------------------
 // 3. Incomplete cache — one missing field
-// ---------------------------------------------------------------------------
 const partialClient = makeClient();
 partialClient.cache.writeQuery({
   query: gql`

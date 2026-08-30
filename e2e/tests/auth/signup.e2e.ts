@@ -1,10 +1,5 @@
 /**
- * Sign Up E2E Tests
- *
- * Tests for the user registration functionality including:
- * - Happy path registration
- * - Validation errors (weak password, existing email, etc.)
- * - Form validation
+ * Sign up: happy-path registration, validation errors, and edge cases.
  */
 
 import { element, by, waitFor } from 'detox';
@@ -65,7 +60,6 @@ describe('Sign Up', () => {
       await signUpScreen.enterConfirmPassword('TestPass123!');
       await signUpScreen.submit();
 
-      // Should stay on signup screen with validation error
       await signUpScreen.waitForScreen();
       await signUpScreen.expectNameFieldError();
     });
@@ -147,7 +141,7 @@ describe('Sign Up', () => {
 
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
 
-      // Dismiss biometric prompt if shown (only on real devices with biometric support)
+      // Only real devices with biometric hardware raise this prompt.
       await dismissBiometricPromptIfPresent();
 
       // Should navigate to onboarding or home screen
@@ -203,7 +197,6 @@ describe('Sign Up', () => {
       await signUpScreen.submit();
 
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
-      // Should handle gracefully - verify we navigated or stayed on signup
       await signUpScreen.waitForScreen();
     });
 
@@ -215,7 +208,6 @@ describe('Sign Up', () => {
       await signUpScreen.submit();
 
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
-      // Should handle gracefully - verify we navigated or stayed on signup
       await signUpScreen.waitForScreen();
     });
   });

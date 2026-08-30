@@ -295,7 +295,7 @@ const SHOPPING_LIST_ITEM_CORE = {
   itemName: 'Milk',
   quantity: '1',
   quantityInput: '1',
-  displayFormat: 'COMPACT',
+  displayFormat: 'AUTO',
   purchaseInfo: {
     __typename: 'ShoppingListItemPurchaseInfo',
     isPurchased: false,
@@ -963,11 +963,11 @@ describe('AddEditItem', () => {
     });
   });
 
-  it('handles VALIDATION_ERROR graphQL error', async () => {
+  it('handles VALIDATION_FAILED graphQL error', async () => {
     const user = userEvent.setup();
     const validationError = {
       graphQLErrors: [
-        { extensions: { code: 'VALIDATION_ERROR' }, message: 'Invalid' },
+        { extensions: { code: 'VALIDATION_FAILED' }, message: 'Invalid' },
       ],
     };
     forceExecuteWithLoadingStateOnError(validationError);

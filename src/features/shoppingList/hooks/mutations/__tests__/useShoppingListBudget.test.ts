@@ -83,7 +83,7 @@ describe('useShoppingListBudget', () => {
             data: {
               updateShoppingList: {
                 __typename: 'ValidationError',
-                code: 'VALIDATION_ERROR',
+                code: 'VALIDATION_FAILED',
                 message: 'negative budget',
                 field: 'budgetAmount',
               },

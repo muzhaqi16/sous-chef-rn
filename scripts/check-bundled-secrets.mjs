@@ -31,28 +31,18 @@ import { createRequire } from 'node:module';
 const { parseEnvFile } = createRequire(import.meta.url)('./generate-env.js');
 
 /**
- * Env vars whose VALUE must never reach a bundle.
- *
- * Not hand-maintained. Candidates are derived from `generate-env.js`'s own
- * `KEYS` list — the single set of vars the bundler inlines — by name shape, so
- * a newly added credential is a candidate the day it is added rather than the
- * day someone remembers to list it here. Every candidate must then be
- * classified below as either public-by-design or an accepted finding, or the
- * check fails. That is the fail-safe direction: forgetting to classify blocks
- * the build (visible, one-line fix) instead of passing silently.
+ * Env vars whose VALUE must never reach a bundle. Not hand-maintained:
+ * candidates are derived by name shape from `generate-env.js`'s own `KEYS`, so
+ * a new credential is a candidate the day it is added. Each must be classified
+ * below or the check fails — forgetting blocks the build instead of passing.
  */
 const CREDENTIAL_NAME = /(KEY|SECRET|PASSWORD|TOKEN|CREDENTIAL)$/;
 
 /**
- * Bundled values that are SAFE to ship, each with why.
- *
- * The test is not "can it be extracted" — everything in a binary can be. It is
- * "what does it grant a hostile holder?" A credential belongs here only if it
- * is write-only or identity-only, individually revocable, and rate-limited
- * server-side — the Sentry-DSN / Datadog-client-token shape. An infrastructure
- * credential (a database password, a storage backend's basic auth) never
- * qualifies, however narrowly scoped, because it was not designed for a
- * hostile holder.
+ * Bundled values that are SAFE to ship, each with why. The test is not "can it
+ * be extracted" but "what does it grant a hostile holder?" — so: write-only or
+ * identity-only, individually revocable, rate-limited server-side. An
+ * infrastructure credential never qualifies, however narrowly scoped.
  */
 const PUBLIC_BY_DESIGN = {
   API_KEY:
@@ -64,17 +54,10 @@ const PUBLIC_BY_DESIGN = {
 };
 
 /**
- * Findings that are known, accepted, and NOT yet fixed. Reported on every run,
- * but do not fail the build.
- *
- * This exists so a credential we have decided to keep shipping stays visible,
- * instead of being quietly dropped from the candidate set — which would look
- * identical to having fixed it.
- *
- * An entry here is a debt with a name on it, not an exemption. The check fails
- * if an accepted key was searchable and NOT found: the moment the credential
- * leaves the bundle, the entry is stale and has to be deleted, so the exception
- * cannot outlive its subject.
+ * Findings that are known, accepted and NOT yet fixed: reported every run, but
+ * they do not fail the build. An entry is a debt with a name on it, not an
+ * exemption — the check FAILS if an accepted key was searchable and not found,
+ * so the exception cannot outlive its subject.
  */
 const ACCEPTED_FINDINGS = {
   SPOONACULAR_API_KEY:
@@ -98,17 +81,10 @@ const ACCEPTED_FINDINGS = {
 const ENV_NAME = /^[A-Z][A-Z0-9_]*$/;
 
 /**
- * Read `generate-env.js`'s KEYS array — the vars the bundler inlines.
- *
- * Imported, not parsed. A text scrape of that file was silently emptied by an
- * apostrophe inside one of its comments: quote pairing shifted mid-array and
- * every key declared after it — `GIT_SHA`, `BUILD_ID`,
- * `HERMES_PROFILE_STARTUP` — became invisible, so the gate had nothing left to
- * classify and passed. Requiring the module removes that failure mode entirely.
- *
- * The shape checks below exist because this gate's own silence is the danger:
- * "nothing unclassified was found" and "nothing was looked at" must not produce
- * the same exit code.
+ * Read `generate-env.js`'s KEYS array — the vars the bundler inlines. Imported,
+ * not text-scraped: an apostrophe in one of its comments shifted quote pairing
+ * mid-array and hid every key after it. The shape checks below exist because
+ * "nothing unclassified found" and "nothing looked at" must not share an exit code.
  */
 function bundledEnvKeys() {
   const require = createRequire(import.meta.url);
@@ -235,11 +211,10 @@ function bundleFiles(targets, out = []) {
   return out;
 }
 
-// --- self-test -------------------------------------------------------------
-// A check that cannot fail is worse than no check, and this one is only ever
-// exercised in CI against a clean bundle — where passing and being broken look
-// identical. `--self-test` plants a known value in a fake bundle and asserts the
-// scanner finds it.
+// Self-test. A check that cannot fail is worse than no check, and this one is
+// only ever exercised in CI against a clean bundle — where passing and being
+// broken look identical. `--self-test` plants a known value in a fake bundle
+// and asserts the scanner finds it.
 if (process.argv.includes('--self-test')) {
   const planted = 'sk_test_0123456789abcdefghijklmnop';
   const haystack = `var a=1;var k="${planted}";console.log(k);`;

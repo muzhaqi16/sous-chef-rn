@@ -1,41 +1,22 @@
 /**
- * Enhanced Wait utilities for E2E tests
- *
- * ⭐ BEST PRACTICES:
- * - NEVER use device.disableSynchronization() - these utilities handle waiting properly
- * - NEVER use hard-coded setTimeout() - use condition-based waits
- * - Always wait for the specific condition, not arbitrary time
- * - Use retry logic for flaky operations
+ * Wait utilities. Prefer these over `device.disableSynchronization()`, and wait
+ * on a condition rather than an arbitrary interval.
  */
 
-/**
- * Default timeout for most wait operations (5 seconds max - screens appear in 1-2s)
- */
+/** Screens appear in 1-2s. */
 const DEFAULT_TIMEOUT = 5000;
 
-/**
- * Shorter timeout for quick operations (2 seconds)
- */
 const QUICK_TIMEOUT = 2000;
 
-/**
- * Network timeout for GraphQL/API operations (5 seconds max)
- */
+/** GraphQL/API operations. */
 const NETWORK_TIMEOUT = 5000;
 
-/**
- * Long timeout for complex flows or slow devices (20 seconds)
- */
+/** Complex flows, or slow devices. */
 const LONG_TIMEOUT = 20000;
 
-/**
- * Launch timeout for app launch and hydration (30 seconds)
- */
+/** App launch plus hydration. */
 const LAUNCH_TIMEOUT = 30000;
 
-/**
- * Wait for element to be visible with custom timeout
- */
 export async function waitForElementToBeVisible(
   element: Detox.IndexableNativeElement,
   timeout: number = DEFAULT_TIMEOUT,
@@ -43,9 +24,6 @@ export async function waitForElementToBeVisible(
   await waitFor(element).toBeVisible().withTimeout(timeout);
 }
 
-/**
- * Wait for element to disappear
- */
 export async function waitForElementToDisappear(
   element: Detox.IndexableNativeElement,
   timeout: number = DEFAULT_TIMEOUT,
@@ -53,27 +31,19 @@ export async function waitForElementToDisappear(
   await waitFor(element).not.toBeVisible().withTimeout(timeout);
 }
 
-/**
- * ⭐ ENHANCED: Wait for element removal (complete unmount)
- * Use this for modals/overlays to ensure they're completely gone
- */
+/** Modals/overlays: waits for invisible, then for removal from the tree. */
 export async function waitForElementRemoval(
   element: Detox.IndexableNativeElement,
   timeout: number = DEFAULT_TIMEOUT,
 ) {
   try {
-    // First wait for it to become invisible
     await waitFor(element).not.toBeVisible().withTimeout(timeout / 2);
-    // Then wait for it to not exist in the tree
     await waitFor(element).not.toExist().withTimeout(timeout / 2);
   } catch (error) {
     console.warn('Element removal wait failed, continuing...', error);
   }
 }
 
-/**
- * Wait for element to exist (but not necessarily visible)
- */
 export async function waitForElementToExist(
   element: Detox.IndexableNativeElement,
   timeout: number = DEFAULT_TIMEOUT,
@@ -81,16 +51,10 @@ export async function waitForElementToExist(
   await waitFor(element).toExist().withTimeout(timeout);
 }
 
-/**
- * Wait for text to appear on screen
- */
 export async function waitForText(text: string, timeout: number = DEFAULT_TIMEOUT) {
   await waitFor(element(by.text(text))).toBeVisible().withTimeout(timeout);
 }
 
-/**
- * Wait for element by ID
- */
 export async function waitForElementById(
   testID: string,
   timeout: number = DEFAULT_TIMEOUT,
@@ -98,9 +62,6 @@ export async function waitForElementById(
   await waitFor(element(by.id(testID))).toBeVisible().withTimeout(timeout);
 }
 
-/**
- * Wait for screen to load (checks for screen test ID)
- */
 export async function waitForScreen(
   screenTestID: string,
   timeout: number = NETWORK_TIMEOUT,
@@ -110,33 +71,24 @@ export async function waitForScreen(
     .withTimeout(timeout);
 }
 
-/**
- * ⭐ NEW: Wait for network idle
- * Waits for GraphQL/API requests to complete by checking for loading indicators
- *
- * @param loadingIndicatorID - testID of loading spinner/skeleton
- * @param timeout - max time to wait
- */
+/** Waits out a loading spinner/skeleton by testID; a bare delay without one. */
 export async function waitForNetworkIdle(
   loadingIndicatorID?: string,
   timeout: number = NETWORK_TIMEOUT,
 ) {
   if (!loadingIndicatorID) {
-    // If no specific indicator, just wait a bit for network
     await delay(1000);
     return;
   }
 
   try {
-    // Wait for loading indicator to appear (optional)
     await waitFor(element(by.id(loadingIndicatorID)))
       .toBeVisible()
       .withTimeout(2000);
   } catch {
-    // Might already be loaded, that's fine
+    // Already loaded — nothing to wait out.
   }
 
-  // Wait for loading indicator to disappear
   try {
     await waitFor(element(by.id(loadingIndicatorID)))
       .not.toBeVisible()
@@ -146,30 +98,23 @@ export async function waitForNetworkIdle(
   }
 }
 
-/**
- * ⭐ NEW: Wait for keyboard to appear
- * Use before typing to ensure keyboard is ready
- */
+/** Call before typing, so the keyboard is up. */
 export async function waitForKeyboard(timeout: number = QUICK_TIMEOUT) {
-  // On Android, keyboard detection is tricky, so just wait a bit
+  // Android has no reliable keyboard matcher, so it just waits.
   if (device.getPlatform() === 'android') {
     await delay(500);
     return;
   }
 
-  // On iOS, can check for keyboard
   try {
     await waitFor(element(by.type('UIKeyboardLayoutStar')))
       .toExist()
       .withTimeout(timeout);
   } catch {
-    // Keyboard might already be there or detection failed
+    // Already up, or the matcher missed it.
   }
 }
 
-/**
- * ⭐ NEW: Wait for keyboard to dismiss
- */
 export async function waitForKeyboardDismiss(timeout: number = QUICK_TIMEOUT) {
   if (device.getPlatform() === 'android') {
     await delay(300);
@@ -181,14 +126,11 @@ export async function waitForKeyboardDismiss(timeout: number = QUICK_TIMEOUT) {
       .not.toExist()
       .withTimeout(timeout);
   } catch {
-    // Keyboard might already be gone
+    // Already gone.
   }
 }
 
-/**
- * ⭐ ENHANCED: Wait for element and then tap it with retry
- * Automatically retries if tap fails (handles race conditions)
- */
+/** Retries the tap, which absorbs the visible-then-moved race. */
 export async function waitForElementAndTap(
   targetElement: Detox.IndexableNativeElement,
   timeout: number = DEFAULT_TIMEOUT,
@@ -204,44 +146,33 @@ export async function waitForElementAndTap(
   );
 }
 
-/**
- * ⭐ ENHANCED: Wait for element and then type text with keyboard handling
- * Automatically handles keyboard appearance and dismissal
- */
 export async function waitForElementAndType(
   targetElement: Detox.IndexableNativeElement,
   text: string,
   timeout: number = DEFAULT_TIMEOUT,
   dismissKeyboard: boolean = true,
 ) {
-  // Wait for element to be visible and tap it to focus
   await waitFor(targetElement).toBeVisible().withTimeout(timeout);
   await targetElement.tap();
 
-  // Wait for keyboard to appear
   await waitForKeyboard();
 
-  // Clear existing text first
   await targetElement.clearText();
-
-  // Type the text
   await targetElement.typeText(text);
 
-  // Dismiss keyboard if requested
   if (dismissKeyboard) {
+    // Back button on Android, return key on iOS.
     if (device.getPlatform() === 'android') {
-      // On Android, tap outside or press back
       try {
         await device.pressBack();
       } catch {
-        // If back doesn't work, that's fine
+        // Back not available here.
       }
     } else {
-      // On iOS, use return key or tap outside
       try {
         await targetElement.tapReturnKey();
       } catch {
-        // Return key might not be available
+        // This field has no return key.
       }
     }
 
@@ -249,10 +180,6 @@ export async function waitForElementAndType(
   }
 }
 
-/**
- * ⭐ NEW: Scroll to element and wait for it to be visible
- * Useful for long lists or scrollable content
- */
 export async function scrollToElementAndWait(
   scrollElement: Detox.IndexableNativeElement,
   targetElement: Detox.IndexableNativeElement,
@@ -264,11 +191,9 @@ export async function scrollToElementAndWait(
 
   while (scrollCount < maxScrolls) {
     try {
-      // Check if element is visible
       await waitFor(targetElement).toBeVisible().withTimeout(1000);
       return; // Found it!
     } catch {
-      // Not visible yet, scroll
       if (direction === 'down') {
         await scrollElement.scroll(scrollAmount, 'down');
       } else if (direction === 'up') {
@@ -287,49 +212,30 @@ export async function scrollToElementAndWait(
   throw new Error(`Failed to find element after ${maxScrolls} scroll attempts`);
 }
 
-/**
- * ⭐ NEW: Wait for modal/overlay to open and be ready for interaction
- * Handles the full lifecycle: appearance, animation, and readiness
- */
+/** Waits out the full lifecycle: exists, then visible, then settled. */
 export async function waitForModalReady(
   modalTestID: string,
   timeout: number = DEFAULT_TIMEOUT,
 ) {
-  // Wait for modal to exist
   await waitFor(element(by.id(modalTestID))).toExist().withTimeout(timeout / 3);
-
-  // Wait for modal to be visible (animation complete)
   await waitFor(element(by.id(modalTestID))).toBeVisible().withTimeout(timeout / 3);
-
-  // Small delay for modal content to settle
   await delay(300);
 }
 
-/**
- * ⭐ NEW: Wait for modal/overlay to close completely
- * Ensures modal is fully removed before continuing
- */
 export async function waitForModalClosed(
   modalTestID: string,
   timeout: number = DEFAULT_TIMEOUT,
 ) {
   await waitForElementRemoval(element(by.id(modalTestID)), timeout);
-  // Extra delay to ensure animation is complete
   await delay(200);
 }
 
-/**
- * ⭐ NEW: Smart delay that respects platform differences
- * Use this ONLY when absolutely necessary (prefer condition-based waits)
- */
+/** Last resort — prefer a condition-based wait. Android gets a 1.2x multiplier. */
 export async function delay(ms: number) {
   const platformMultiplier = device.getPlatform() === 'android' ? 1.2 : 1.0;
   return new Promise(resolve => setTimeout(resolve, ms * platformMultiplier));
 }
 
-/**
- * ⭐ ENHANCED: Retry an action if it fails with better logging
- */
 export async function retry<T>(
   action: () => Promise<T>,
   maxAttempts: number = 3,
@@ -358,10 +264,7 @@ export async function retry<T>(
   throw lastError || new Error('All retry attempts failed');
 }
 
-/**
- * ⭐ NEW: Wait for multiple elements to be visible (all must be visible)
- * Useful for waiting for a screen to be fully loaded
- */
+/** All must become visible. */
 export async function waitForElements(
   elements: Detox.IndexableNativeElement[],
   timeout: number = DEFAULT_TIMEOUT,
@@ -371,10 +274,7 @@ export async function waitForElements(
   );
 }
 
-/**
- * ⭐ NEW: Wait for any one of multiple elements to be visible
- * Useful when different flows might show different elements
- */
+/** Returns the index of the first to appear — for flows that branch. */
 export async function waitForAnyElement(
   elements: Detox.IndexableNativeElement[],
   timeout: number = DEFAULT_TIMEOUT,
@@ -387,7 +287,7 @@ export async function waitForAnyElement(
         await waitFor(elements[i]).toBeVisible().withTimeout(500);
         return i; // Return index of visible element
       } catch {
-        // This element not visible, try next
+        // Try the next one.
       }
     }
     await delay(200);
@@ -396,10 +296,7 @@ export async function waitForAnyElement(
   throw new Error('None of the elements became visible within timeout');
 }
 
-/**
- * ⭐ NEW: Tap the first available element from multiple selectors
- * Useful for handling UI variations (different testIDs, labels, etc.)
- */
+/** For UI variations across builds — differing testIDs or labels. */
 export async function tapFirstAvailable(
   elements: Detox.IndexableNativeElement[],
   timeout: number = DEFAULT_TIMEOUT,
@@ -409,10 +306,7 @@ export async function tapFirstAvailable(
   return index;
 }
 
-/**
- * ⭐ NEW: Conditional wait - only wait if element exists
- * Useful for optional UI elements (like hints, tooltips)
- */
+/** For optional UI — hints, tooltips. Skips the action if absent. */
 export async function waitIfPresent(
   targetElement: Detox.IndexableNativeElement,
   action: () => Promise<void>,
@@ -422,12 +316,10 @@ export async function waitIfPresent(
     await waitFor(targetElement).toBeVisible().withTimeout(checkTimeout);
     await action();
   } catch {
-    // Element not present, skip action
     console.log('Optional element not present, skipping...');
   }
 }
 
-// Export default timeouts for use in other files
 export const TIMEOUTS = {
   QUICK: QUICK_TIMEOUT,
   DEFAULT: DEFAULT_TIMEOUT,

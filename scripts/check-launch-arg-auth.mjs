@@ -36,10 +36,9 @@ import { parseFlags } from './lib/tooling.mjs';
 const GENERATED = new URL('../src/config/env.generated.ts', import.meta.url);
 const BUILD_GRADLE = new URL('../android/app/build.gradle', import.meta.url);
 
-// `strict` matters here: a `--platform` with no value used to read as absent
-// and drop the gate into post-hoc mode, judging the environment instead of the
-// artifact. For a gate whose failure mode is checking the wrong thing, an
-// explicit throw beats a silent fallback.
+// `strict` matters here: without it a `--platform` carrying no value reads as
+// absent and drops the gate into post-hoc mode, judging the environment instead
+// of the artifact. An explicit throw beats a silent fallback.
 const flags = parseFlags({
   platform: { type: 'string' },
   variant: { type: 'string' },
@@ -50,13 +49,10 @@ const flags = parseFlags({
 const platform = flags.platform;
 
 /**
- * Maps every Android build type to the signing config it declares.
- *
- * Read from build.gradle rather than hardcoded so a variant added there cannot
- * pick up the capability by being absent from a list here. `initWith release`
- * inherits the signing config, which is why `localRelease` has to override it
- * explicitly — and why an inherited one is reported as unknown rather than
- * assumed safe.
+ * Maps every Android build type to the signing config it declares, read from
+ * build.gradle so a variant added there cannot pick up the capability by being
+ * absent from a list here. `initWith release` INHERITS the signing config, so
+ * an inherited one is reported as unknown rather than assumed safe.
  */
 function androidSigningConfigs() {
   const gradle = readFileSync(BUILD_GRADLE, 'utf8');
@@ -91,20 +87,12 @@ function refuse(reasons, artifact) {
   process.exit(1);
 }
 
-// ---------------------------------------------------------------------------
-// Self-test: prove the gate can REFUSE.
-// ---------------------------------------------------------------------------
-//
-// The build-path invocations below judge the artifact about to be produced, and
-// they read `ALLOW_LAUNCH_ARG_AUTH` from the environment. CI does not set it, so
-// in CI both of them return "off, nothing to check" and exit 0 — whatever
-// `--variant` or `--sdk` they are handed. They cannot fail there, which makes a
-// green step no evidence at all: it reports the same result whether the rule
-// holds or the check is broken.
-//
+// Self-test: prove the gate can REFUSE. The build-path invocations below read
+// `ALLOW_LAUNCH_ARG_AUTH` from the environment, which CI does not set, so there
+// they return "off, nothing to check" and exit 0 whatever `--variant` they are
+// handed — a green step that reports the same result if the check is broken.
 // This mode runs the refusal logic in-process against inputs that MUST be
-// refused, so the CI step exercises the one thing worth asserting away from a
-// build machine. Same pattern as `check-bundled-secrets.mjs --self-test`.
+// refused. Same pattern as `check-bundled-secrets.mjs --self-test`.
 if (flags['self-test']) {
   const cases = [
     ['ios', ['--platform', 'ios', '--sdk', 'iphoneos']],
@@ -164,9 +152,7 @@ if (flags['self-test']) {
   process.exit(0);
 }
 
-// ---------------------------------------------------------------------------
 // Build-path mode: judge the artifact about to be produced.
-// ---------------------------------------------------------------------------
 if (platform) {
   const enabled = process.env.ALLOW_LAUNCH_ARG_AUTH === 'true';
 
@@ -193,13 +179,11 @@ if (platform) {
     const { signing, devBundle } = facts;
     const distributable = signing !== 'debug';
 
-    // The ARTIFACT is judged first, and the environment flag second. The order
-    // used to be the reverse — `if (!enabled) { print "✓ off"; exit 0 }` ran
-    // before anything looked at the signing config — so for every artifact
-    // whose capability comes from `__DEV__` rather than the flag, the only
-    // check that inspects signing was skipped AND the build was affirmatively
-    // reported as safe. CLAUDE.md: "Launch-argument auth is gated on the
-    // ARTIFACT, not the environment."
+    // The ARTIFACT is judged first, the environment flag second. Reversed, an
+    // early "✓ off, nothing to check" exit skips the signing inspection for
+    // every artifact whose capability comes from `__DEV__` rather than the flag,
+    // and affirmatively reports it safe. CLAUDE.md: "Launch-argument auth is
+    // gated on the ARTIFACT, not the environment."
     const capabilityLive = enabled || devBundle === true;
 
     if (distributable && capabilityLive) {
@@ -279,9 +263,7 @@ if (platform) {
   process.exit(2);
 }
 
-// ---------------------------------------------------------------------------
 // Post-hoc mode: judge what the bundle actually got.
-// ---------------------------------------------------------------------------
 if (!existsSync(GENERATED)) {
   console.error(
     `✗ src/config/env.generated.ts does not exist.\n` +
@@ -301,9 +283,8 @@ const reasons = [];
 
 // Judged BEFORE the flag, for the same reason the build-path mode is: a CI
 // build must never accept an externally supplied session whatever its
-// environment designation, and `allowsLaunchArgAuth()` is
-// `__DEV__ || flag` — so on a development bundle the capability is live with
-// the flag unset and this check used to exit 0 without looking.
+// environment designation, and `allowsLaunchArgAuth()` is `__DEV__ || flag` —
+// so on a development bundle the capability is live with the flag unset.
 if (process.env.CI && nodeEnv !== 'production' && nodeEnv !== 'staging') {
   reasons.push(
     'This is a CI build on a development bundle, where `__DEV__` makes ' +

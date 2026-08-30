@@ -298,7 +298,7 @@ describe('useUpdatePantryItem — local-first cache behavior', () => {
             data: {
               updatePantryItem: {
                 __typename: 'ValidationError',
-                code: 'VALIDATION_ERROR',
+                code: 'VALIDATION_FAILED',
                 message: 'Name is invalid',
                 field: 'itemName',
               },

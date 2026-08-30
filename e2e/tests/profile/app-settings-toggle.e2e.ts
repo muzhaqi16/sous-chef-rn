@@ -1,13 +1,8 @@
 /**
- * Every settings switch must flip on ONE tap.
- *
- * Reported as "Auto Sync takes two taps, Offline Mode doesn't". The two differ
- * in one way: `SettingSwitch` forwards `loading` to `disabled`, so a switch with
- * a `loading` prop is disabled from the moment the mutation starts — the frame
- * right after the user's tap. Offline Mode has no `loading`, and the
- * notification switches stopped needing two taps when theirs was removed, even
- * though they still render from the Apollo query. This asserts the behaviour
- * for every switch on the screen so the prop can't quietly come back.
+ * Every settings switch must flip on ONE tap. `SettingSwitch` hands `loading` to
+ * `BaseSwitch`, which ORs it into `disabled` — so a switch given a `loading`
+ * prop goes disabled from the frame right after the user's tap and eats the
+ * next one. Asserted for every switch so the prop can't quietly come back.
  */
 
 import { by, element, waitFor } from 'detox';
