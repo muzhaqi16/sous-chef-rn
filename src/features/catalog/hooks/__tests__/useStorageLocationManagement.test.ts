@@ -116,6 +116,23 @@ function buildLocationNode(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/**
+ * The same location as `UpdateStorageLocation` returns it.
+ *
+ * That mutation selects the FLAT `parentLocationId`; only `GetStorageLocations`
+ * selects the nested `parentLocation { id name }`. A node stating both
+ * describes a response neither operation can return.
+ */
+function buildUpdatedLocationNode(overrides: Record<string, unknown> = {}) {
+  const node: Record<string, unknown> = {
+    ...buildLocationNode(overrides),
+    parentLocationId: null,
+    ...overrides,
+  };
+  delete node.parentLocation;
+  return node;
+}
+
 function buildGetLocationsMock(homeId: string = 'home-1'): MockedResponse {
   return {
     request: {
@@ -170,8 +187,7 @@ function buildUpdateLocationMock(): MockedResponse {
       data: {
         updateStorageLocation: {
           __typename: 'UpdateStorageLocationPayload',
-          home: null,
-          storageLocation: buildLocationNode({
+          storageLocation: buildUpdatedLocationNode({
             id: 'loc-1',
             name: 'Updated Fridge',
           }),
@@ -196,7 +212,6 @@ function buildDeleteLocationMock(
         deleteStorageLocation: success
           ? {
               __typename: 'DeleteStorageLocationPayload',
-              home: null,
               storageLocation: {
                 __typename: 'StorageLocation',
                 id: 'loc-1',
@@ -223,7 +238,6 @@ function buildSetDefaultMock(): MockedResponse {
       data: {
         markStorageLocationAsDefault: {
           __typename: 'MarkStorageLocationAsDefaultPayload',
-          home: null,
           storageLocation: {
             __typename: 'StorageLocation',
             id: 'loc-2',
@@ -620,8 +634,7 @@ describe('updateLocation writes what consumers read', () => {
         data: {
           updateStorageLocation: {
             __typename: 'UpdateStorageLocationPayload',
-            home: null,
-            storageLocation: buildLocationNode({
+            storageLocation: buildUpdatedLocationNode({
               id: 'loc-2',
               name: 'Pantry',
               sortOrder: 2,

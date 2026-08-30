@@ -137,10 +137,10 @@ function buildCreateReviewMock(): MockedResponse {
     result: {
       data: {
         createRecipeReview: {
+          // `CreateRecipeReviewPayload` has two fields — `recipe` and
+          // `recipeReview`. `code`/`message` are selected on the ERROR members
+          // of the union, and `success` is on none of them.
           __typename: 'CreateRecipeReviewPayload' as const,
-          success: true,
-          message: 'OK',
-          code: 'OK',
           recipeReview: buildReviewNode(
             'rev-new',
             5,

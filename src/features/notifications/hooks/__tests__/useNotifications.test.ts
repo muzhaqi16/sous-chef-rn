@@ -136,7 +136,6 @@ function buildNotificationSubscriptionMock(
             ? NotificationSubtype.Created
             : NotificationSubtype.Updated,
           mutation: isCreated ? MutationType.Created : MutationType.Updated,
-          actorUserId: null,
           timestamp: '2024-01-01T00:00:00Z',
           affectedCount: null,
           node: {

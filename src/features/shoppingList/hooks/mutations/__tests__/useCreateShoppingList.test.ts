@@ -130,7 +130,13 @@ describe('useCreateShoppingList', () => {
     // error — that's the queued signature classifyCreateResult keys on.
     const { result } = renderHookWithApollo(
       () => useCreateShoppingList('Failed to create list'),
-      { operationMocks: [createMock({ result: { data: null } })] },
+      {
+        // What `queueLink` emits for a queued mutation: the field present
+        // but null. A bare `null` is not a shape production produces.
+        operationMocks: [
+          createMock({ result: { data: { createShoppingList: null } } }),
+        ],
+      },
     );
 
     let created: { id: string; name: string } | undefined;

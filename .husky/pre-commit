@@ -36,3 +36,11 @@ node scripts/check-launch-arg-auth.mjs || exit 1
 node scripts/check-layer-purity.mjs || exit 1
 node scripts/check-feature-shape.mjs || exit 1
 node scripts/check-dead-modules.mjs || exit 1
+
+# A suite that passes its own bare `InMemoryCache` into the shared Apollo helper
+# reinstates, for itself alone, the reduced cache every other suite moved off —
+# no type policies, no possibleTypes. It is the quietest regression in the tree:
+# nothing in that suite's own assertions would notice. Here rather than in jest
+# because lint-staged runs jest only over `src/**` related files and pre-push
+# runs none at all, so as a test it never ran in the loop that would prevent it.
+node scripts/check-test-cache-fidelity.mjs || exit 1

@@ -4,7 +4,7 @@ import React from 'react';
 import { userEvent } from '@testing-library/react-native';
 import { TemplateCategory } from '../../../src/graphql/generated/schemaTypes';
 import type { MealTemplateDisplayFragment } from '../../../src/features/mealPlan/graphql/mealPlanFragments.generated';
-import { renderWithProviders } from '../../helpers/renderWithProviders';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { TemplateCard } from '../../../src/features/mealPlan/components/TemplateCard';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
@@ -13,7 +13,7 @@ jest.mock('../../../src/apollo/links/refreshToken');
 // TemplateCard uses useFragment to subscribe to per-entity cache updates.
 // Wrapping with MockedProvider lets the hook's useApolloClient() resolve;
 // the in-test cache miss is expected (renderer falls back to source prop).
-const render = renderWithProviders;
+const render = renderWithApollo;
 
 const makeTemplate = (
   overrides: Partial<MealTemplateDisplayFragment> = {},

@@ -9,7 +9,7 @@ import {
   CollaboratorStatus,
 } from '#/graphql/generated/schemaTypes';
 import type { ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { renderWithProviders } from '../../../../__tests__/helpers/renderWithProviders';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -82,7 +82,7 @@ describe('CollaboratorPermissionsBottomSheet', () => {
   });
 
   it('renders null when no collaborator is set', () => {
-    const { toJSON } = renderWithProviders(
+    const { toJSON } = renderWithApollo(
       <CollaboratorPermissionsBottomSheet {...defaultProps} />,
     );
     expect(toJSON()).toBeNull();
@@ -90,7 +90,7 @@ describe('CollaboratorPermissionsBottomSheet', () => {
 
   it('renders correctly with ref API', () => {
     const ref = React.createRef<CollaboratorPermissionsBottomSheetRef>();
-    renderWithProviders(
+    renderWithApollo(
       <CollaboratorPermissionsBottomSheet {...defaultProps} ref={ref} />,
     );
     expect(ref.current).toBeTruthy();
@@ -100,7 +100,7 @@ describe('CollaboratorPermissionsBottomSheet', () => {
 
   it('opens and shows collaborator email after calling open', () => {
     const ref = React.createRef<CollaboratorPermissionsBottomSheetRef>();
-    renderWithProviders(
+    renderWithApollo(
       <CollaboratorPermissionsBottomSheet {...defaultProps} ref={ref} />,
     );
     act(() => {
@@ -111,7 +111,7 @@ describe('CollaboratorPermissionsBottomSheet', () => {
 
   it('renders role options after opening', () => {
     const ref = React.createRef<CollaboratorPermissionsBottomSheetRef>();
-    renderWithProviders(
+    renderWithApollo(
       <CollaboratorPermissionsBottomSheet {...defaultProps} ref={ref} />,
     );
     act(() => {
@@ -124,7 +124,7 @@ describe('CollaboratorPermissionsBottomSheet', () => {
 
   it('renders Update and Cancel in the header', () => {
     const ref = React.createRef<CollaboratorPermissionsBottomSheetRef>();
-    renderWithProviders(
+    renderWithApollo(
       <CollaboratorPermissionsBottomSheet {...defaultProps} ref={ref} />,
     );
     act(() => {
@@ -136,7 +136,7 @@ describe('CollaboratorPermissionsBottomSheet', () => {
 
   it('renders the granular permission toggles after opening', () => {
     const ref = React.createRef<CollaboratorPermissionsBottomSheetRef>();
-    renderWithProviders(
+    renderWithApollo(
       <CollaboratorPermissionsBottomSheet {...defaultProps} ref={ref} />,
     );
     act(() => {
@@ -149,7 +149,7 @@ describe('CollaboratorPermissionsBottomSheet', () => {
 
   it('fires the permissions mutation when a toggle changes', async () => {
     const ref = React.createRef<CollaboratorPermissionsBottomSheetRef>();
-    renderWithProviders(
+    renderWithApollo(
       <CollaboratorPermissionsBottomSheet {...defaultProps} ref={ref} />,
     );
     act(() => {

@@ -84,17 +84,32 @@ beforeEach(() => {
   mockGetDeviceTimezone.mockReturnValue('America/New_York');
 });
 
+/**
+ * The preferences query, as a PER-OPERATION mock — the form that composes.
+ *
+ * This used to be a schema-driven `mocks` map, which four tests then spread
+ * alongside `operationMocks`. The wrapper discarded it: the query went
+ * unanswered, the hook ran on its defaults, and all sixteen tests still passed.
+ * `showWarnings={false}` hid the unanswered operation and `errorPolicy: 'all'`
+ * routed the failure into an `error` field nothing read. The two strategies are
+ * mutually exclusive by type now, so the mistake cannot be made again.
+ */
 function withPrefs(prefs: typeof mockPreferencesData | null) {
   return {
-    mocks: {
-      Query: () => ({
-        me: {
-          __typename: 'User' as const,
-          id: 'user-1',
-          notificationPreferences: prefs,
-        },
-      }),
-    },
+    operationMocks: [
+      prefs === null
+        ? recordMock(GetNotificationPreferencesDocument, {
+            data: {
+              me: {
+                __typename: 'User' as const,
+                id: 'user-1',
+                notificationPreferences: null,
+              },
+            },
+            maxUsageCount: Number.POSITIVE_INFINITY,
+          }).mock
+        : prefsQueryMock(prefs),
+    ],
   };
 }
 
@@ -180,8 +195,10 @@ describe('useNotificationSettings', () => {
     });
 
     const { result } = renderHookWithApollo(() => useNotificationSettings(), {
-      ...withPrefs(mockPreferencesData),
-      operationMocks: [update.mock],
+      operationMocks: [
+        ...withPrefs(mockPreferencesData).operationMocks,
+        update.mock,
+      ],
     });
 
     let success: boolean = false;
@@ -280,8 +297,10 @@ describe('useNotificationSettings', () => {
     });
 
     const { result } = renderHookWithApollo(() => useNotificationSettings(), {
-      ...withPrefs(mockPreferencesData),
-      operationMocks: [update.mock],
+      operationMocks: [
+        ...withPrefs(mockPreferencesData).operationMocks,
+        update.mock,
+      ],
     });
 
     await act(async () => {
@@ -299,8 +318,10 @@ describe('useNotificationSettings', () => {
     });
 
     const { result } = renderHookWithApollo(() => useNotificationSettings(), {
-      ...withPrefs(mockPreferencesData),
-      operationMocks: [update.mock],
+      operationMocks: [
+        ...withPrefs(mockPreferencesData).operationMocks,
+        update.mock,
+      ],
     });
 
     await act(async () => {
@@ -321,8 +342,10 @@ describe('useNotificationSettings', () => {
     });
 
     const { result } = renderHookWithApollo(() => useNotificationSettings(), {
-      ...withPrefs(mockPreferencesData),
-      operationMocks: [update.mock],
+      operationMocks: [
+        ...withPrefs(mockPreferencesData).operationMocks,
+        update.mock,
+      ],
     });
 
     let success: boolean = false;
@@ -343,8 +366,10 @@ describe('useNotificationSettings', () => {
     });
 
     const { result } = renderHookWithApollo(() => useNotificationSettings(), {
-      ...withPrefs(mockPreferencesData),
-      operationMocks: [update.mock],
+      operationMocks: [
+        ...withPrefs(mockPreferencesData).operationMocks,
+        update.mock,
+      ],
     });
 
     await act(async () => {

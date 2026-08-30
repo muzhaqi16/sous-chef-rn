@@ -12,7 +12,10 @@ import {
   DeleteNotificationDocument,
 } from '#features/notifications/graphql/notificationMutations.generated';
 import { MarkAllNotificationsAsReadDocument } from '#features/notifications/graphql/bulkNotificationMutations.generated';
-import { NotificationStatus } from '#/graphql/generated/schemaTypes';
+import {
+  NotificationStatus,
+  NotificationType,
+} from '#/graphql/generated/schemaTypes';
 import { readNotificationStatus } from '#features/notifications/utils/notificationCacheWrites';
 import { useNotificationSync } from '../useNotificationSync';
 
@@ -76,7 +79,10 @@ const seedFeed = (
       status: r.status,
       title: 'Seeded',
       message: 'Seeded message',
-      type: 'SYSTEM',
+      // `SYSTEM` is a `NotificationCategory`, not a `NotificationType` — the
+      // type enum has no such member, so the seed described a notification the
+      // schema cannot produce.
+      type: NotificationType.ListUpdated,
       category: 'SYSTEM',
       priority: 'NORMAL',
       payload: null,

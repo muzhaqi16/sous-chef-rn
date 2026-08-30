@@ -93,6 +93,11 @@ function myRecipesMock(
         edges: recipes.map((r, i) => ({
           __typename: 'RecipeEdge' as const,
           cursor: `c${i}`,
+          // `MyRecipes` selects id, category, difficulty, name, description,
+          // `savedDetails { id folder }` and the eight `MyRecipeCard_recipe`
+          // fields. The external provenance the hook matches on is NOT on this
+          // query — it reads that through `cache.readFragment`, which is why
+          // the test seeds the cache separately.
           node: {
             __typename: 'Recipe' as const,
             id: r.id,
@@ -105,24 +110,11 @@ function myRecipesMock(
             totalTimeMinutes: null,
             difficulty: Difficulty.Easy,
             category: RecipeCategory.Dinner,
-            cuisine: null,
-            status: 'PUBLISHED',
-            isExternal: true,
-            externalSource: r.externalSource,
-            externalId: r.externalId,
-            primarySource: null,
-            caloriesPerServing: null,
-            createdAt: '2025-01-01T00:00:00Z',
-            updatedAt: '2025-01-01T00:00:00Z',
             savedDetails: r.folder
               ? {
                   __typename: 'SavedRecipe' as const,
                   id: `sd-${r.id}`,
                   folder: r.folder,
-                  tags: [],
-                  notes: null,
-                  personalRating: null,
-                  cookedCount: 0,
                 }
               : null,
           },

@@ -188,8 +188,11 @@ describe('useRecipeCookingActions', () => {
         }),
       }),
     );
-    // Settle the mutation before the test ends: leaving it in flight lets its
-    // cache write land after teardown, where console.error is no longer spied.
+    // The mutation's own success path, and the point the write has settled.
+    // The shared teardown in `__tests__/setup/globals.js` flushes pending work
+    // before the missing-field guard reads, so a late write is attributed
+    // rather than lost — but the toast is this test's subject, so it is
+    // asserted here rather than left to the flush.
     await waitFor(() =>
       expect(mockToastSuccess).toHaveBeenCalledWith(
         'Recipe marked as cooked! Ingredients deducted from pantry.',

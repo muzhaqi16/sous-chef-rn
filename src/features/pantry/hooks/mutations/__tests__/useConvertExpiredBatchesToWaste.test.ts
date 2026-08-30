@@ -1,7 +1,8 @@
 import React, { type ReactNode } from 'react';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { renderHook, act } from '@testing-library/react-native';
-import { ApolloClient, ApolloLink, InMemoryCache } from '@apollo/client';
+import { ApolloClient, ApolloLink } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
@@ -37,7 +38,8 @@ function renderConvert(
     return forward(operation);
   });
   const client = new ApolloClient({
-    cache: new InMemoryCache(),
+    // The production cache, so the hook runs against the engine the app ships.
+    cache: makeCache(),
     link: ApolloLink.from([tapLink, new MockLink(mocks)]),
     defaultOptions: APOLLO_DEFAULT_OPTIONS,
   });

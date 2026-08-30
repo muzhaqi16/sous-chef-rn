@@ -16,11 +16,13 @@
  *    It runs through the production `optimisticResponse` builder and
  *    `update` callback (which calls the real cache modify + connection
  *    move helpers).
- *  - the Apollo cache, configured the same way the production cache is.
- *    We use `InMemoryCache` directly because `makeCache()` drags in the
- *    fragment matcher and other production-only wiring that's irrelevant
- *    to this seam; `__typename` keying is enough for the cache fragment
- *    reads the SUT performs.
+ *  - the Apollo cache, built by the production `makeCache()`. The seam under
+ *    test IS a type policy: `ShoppingListItemPurchaseInfo.merge` clears the
+ *    fields a write omits whenever `isPurchased` changes, which is the rule
+ *    this file's subject depends on. A bare `InMemoryCache` does not load it,
+ *    so the one test that toggles `purchaseInfo.isPurchased` end to end was the
+ *    one place that rule could not run — under a docstring that said the cache
+ *    was configured the way production's is.
  *
  * Mocks live only at the I/O boundary: `MockLink` for network responses,
  * plus the peripheral utilities the SUT calls (error handlers,
@@ -34,7 +36,8 @@ import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import type { ReactNode } from 'react';
 import React from 'react';
-import { ApolloClient, InMemoryCache } from '@apollo/client';
+import { ApolloClient, type InMemoryCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import { ApolloProvider } from '@apollo/client/react';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { MockLink } from '@apollo/client/testing';
@@ -185,7 +188,7 @@ function buildClient(opts: {
   serverResponse: ToggleShoppingListItemPurchasedMutation;
   serverDelayMs?: number;
 }) {
-  const cache = new InMemoryCache();
+  const cache = makeCache();
   seedItem(cache, opts.initialPurchased);
 
   const newPurchased = !opts.initialPurchased;

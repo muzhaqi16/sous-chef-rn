@@ -82,7 +82,10 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-function matchesMock(matches: Record<string, unknown>[]) {
+function matchesMock(
+  matches: Record<string, unknown>[],
+  options: { partial?: boolean } = {},
+) {
   return recordMock(MatchRecipeIngredientsToPantryDocument, {
     data: {
       matchRecipeIngredientsToPantry: matches.map(m => ({
@@ -90,6 +93,7 @@ function matchesMock(matches: Record<string, unknown>[]) {
         ...m,
       })),
     },
+    partial: options.partial,
   });
 }
 
@@ -228,13 +232,15 @@ describe('useRecipeIngredientMatching', () => {
         suggestedUnit: { __typename: 'Unit' as const, id: 'su-1' },
       },
     ];
-    const m = matchesMock(matches);
+    // The partial `ingredient` IS the subject: completing it from the SDL
+    // would make `cache.readFragment` succeed and nothing would be dropped.
+    // The opt-out rides on THIS mock, so it excuses only the fields this
+    // payload omits.
+    const m = matchesMock(matches, { partial: true });
 
     const { result } = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
-      // The partial `ingredient` IS the subject: completing it from the SDL
-      // would make `cache.readFragment` succeed and nothing would be dropped.
-      { operationMocks: [m.mock], partialMocks: true },
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {

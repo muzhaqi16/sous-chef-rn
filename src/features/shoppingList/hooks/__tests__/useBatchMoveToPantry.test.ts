@@ -1,8 +1,10 @@
 import { act } from '@testing-library/react-native';
+import { gql } from '@apollo/client';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
+  seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { MovePurchasedItemsToPantryDocument } from '../useBatchMoveToPantry.generated';
 import { useBatchMoveToPantry } from '../useBatchMoveToPantry';
@@ -85,6 +87,24 @@ function moveMock(payload: {
   });
 }
 
+/** The purchase record as a reading operation would have cached it. */
+const PURCHASED_ROW_SEED = gql`
+  fragment PurchasedRowSeed on ShoppingListItem {
+    id
+    purchaseInfo {
+      isPurchased
+      movedToPantryAt
+      purchaseDate
+      purchasedById
+      purchasedPrice
+      purchasedQuantity
+      purchasedBy {
+        id
+      }
+    }
+  }
+`;
+
 /**
  * The rows the server reports as moved, cached the way the list query would
  * have cached them. `writePurchaseInfo` carries the CACHED record forward, so
@@ -94,29 +114,13 @@ function moveMock(payload: {
 function cacheWithPurchasedRows(
   ids: string[] = ['item-1', 'item-2', 'item-3'],
 ) {
-  const { makeCache } = require('#/apollo/cache');
-  const { gql } = require('@apollo/client');
-  const ROW = gql`
-    fragment PurchasedRowSeed on ShoppingListItem {
-      id
-      purchaseInfo {
-        isPurchased
-        movedToPantryAt
-        purchaseDate
-        purchasedById
-        purchasedPrice
-        purchasedQuantity
-        purchasedBy {
-          id
-        }
-      }
-    }
-  `;
-  const cache = makeCache();
-  for (const id of ids) {
-    cache.writeFragment({
-      id: `ShoppingListItem:${id}`,
-      fragment: ROW,
+  return seedCache(
+    ids.map(id => ({
+      // The seed is checked against a REAL selection rather than one
+      // synthesized from the fixture's own keys — a derived selection can
+      // never be incomplete, so it cannot hold the seed to anything.
+      fragment: PURCHASED_ROW_SEED,
+      fragmentName: 'PurchasedRowSeed',
       data: {
         __typename: 'ShoppingListItem' as const,
         id,
@@ -131,9 +135,8 @@ function cacheWithPurchasedRows(
           purchasedBy: null,
         },
       },
-    });
-  }
-  return cache;
+    })),
+  );
 }
 
 describe('useBatchMoveToPantry', () => {
@@ -599,7 +602,6 @@ describe('counters are adjusted exactly once', () => {
    * `update` callback remove them again on the response. Filtering edges twice
    * is idempotent; subtracting the count twice is not.
    */
-  const { gql } = require('@apollo/client');
   const COUNTS = gql`
     fragment ShoppingListCounts on ShoppingList {
       id
@@ -702,7 +704,6 @@ describe('counters are adjusted exactly once', () => {
 });
 
 describe('moved lines are marked stocked in the cache', () => {
-  const { gql } = require('@apollo/client');
   const STOCKED = gql`
     fragment StockedProbe on ShoppingListItem {
       id
@@ -856,7 +857,6 @@ describe('moved lines are marked stocked in the cache', () => {
 });
 
 describe('the write-back cannot clear the purchase record', () => {
-  const { gql } = require('@apollo/client');
   const RECORD = gql`
     fragment BatchRecordProbe on ShoppingListItem {
       id

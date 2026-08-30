@@ -259,11 +259,11 @@ const addRecipeIngredientMock = (
       createShoppingListItemFromRecipeIngredient:
         member.kind === 'error-union'
           ? {
+              // `resource`/`resourceId` are selected on `NotFoundError`, not on
+              // this member — a ValidationError response cannot carry them.
               __typename: 'ValidationError',
               code: ErrorCode.ValidationFailed,
               message: 'bad',
-              resource: null,
-              resourceId: null,
             }
           : // No payload + no error → the offline queue emits the field as null.
             null,

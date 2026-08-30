@@ -76,7 +76,10 @@ beforeEach(() => {
 
 // --- Mock builders ---
 
-function upcMock(items: MockItemNode[]): MockedResponse {
+function upcMock(
+  items: MockItemNode[],
+  options: { partial?: boolean } = {},
+): MockedResponse {
   return recordMock(ItemByUpcFilterDocument, {
     data: {
       items: {
@@ -88,6 +91,7 @@ function upcMock(items: MockItemNode[]): MockedResponse {
         })),
       },
     },
+    partial: options.partial,
   }).mock;
 }
 
@@ -221,10 +225,11 @@ describe('useSearchResults', () => {
 
     it('leaves the write-path flags undefined when the API omits them', async () => {
       renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
-        operationMocks: [upcMock([SAMPLE_UPC_ITEM])],
         // The omission IS the subject: schema completion would supply the
-        // flags this test asserts are absent.
-        partialMocks: true,
+        // flags this test asserts are absent. Marking THIS mock partial
+        // excuses exactly the fields it leaves out — the old whole-test flag
+        // switched the missing-field guard off for everything.
+        operationMocks: [upcMock([SAMPLE_UPC_ITEM], { partial: true })],
       });
 
       await waitFor(() =>
@@ -250,8 +255,8 @@ describe('useSearchResults', () => {
         displayUnit: null,
         brands: [],
         units: [],
-        variationBrand: null,
-        matchedVariation: null,
+        // `variationBrand` / `matchedVariation` are selected by
+        // `ItemByUpcFilter` only — the SKU query cannot return them.
       };
 
       renderHookWithApollo(() => useSearchResults('SKU123'), {

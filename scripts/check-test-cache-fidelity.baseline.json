@@ -1,0 +1,18 @@
+{
+  "derivedSeeds": [
+    "__tests__/components/modals/CorrectWeightModal.test.tsx",
+    "__tests__/components/recipe/WriteReviewSheet.test.tsx",
+    "src/features/catalog/hooks/__tests__/useMarkPrimaryItemImage.test.ts",
+    "src/features/mealPlan/hooks/__tests__/useActiveMealPlan.test.ts",
+    "src/features/mealPlan/hooks/__tests__/useMealPlanItemActions.test.ts",
+    "src/features/mealPlan/hooks/__tests__/useMealPlans.test.ts",
+    "src/features/pantry/components/modals/__tests__/AdjustQuantityModal.test.tsx",
+    "src/features/pantry/components/modals/__tests__/PantryActionModal.test.tsx",
+    "src/features/pantry/hooks/__tests__/usePantryItemActions.test.ts",
+    "src/features/recipes/hooks/__tests__/useRecipeFavoriteState.test.ts",
+    "src/features/recipes/hooks/__tests__/useRecipeIngredientMatching.test.ts",
+    "src/features/shoppingList/components/SortableShoppingList/__tests__/SortableItem.test.tsx",
+    "src/features/shoppingList/components/moveToPantry/__tests__/MoveToPantryModal.test.tsx",
+    "src/features/shoppingList/screens/__tests__/ShareList.test.tsx"
+  ]
+}

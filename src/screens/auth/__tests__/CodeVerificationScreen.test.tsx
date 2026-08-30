@@ -191,10 +191,11 @@ function buildResendMock(
     result: {
       data: {
         resendVerificationEmail: {
-          __typename: 'UserPayload',
-          success: true,
-          message: 'OK',
-          code: 'OK',
+          // `UserPayload` is not a member of `ResendVerificationEmailResult`,
+          // and the operation selects `user { id }` on the payload — not
+          // `success`/`code`, which belong to no member of this union.
+          __typename: 'ResendVerificationEmailPayload',
+          user: { __typename: 'User', id: 'user-1' },
         },
       },
     },
@@ -208,10 +209,7 @@ function buildVerifyMock(): MockedResponse {
     result: {
       data: {
         verifyEmail: {
-          __typename: 'UserPayload',
-          success: true,
-          message: 'OK',
-          code: 'OK',
+          __typename: 'VerifyEmailPayload',
           user: null,
         },
       },

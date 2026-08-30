@@ -183,6 +183,13 @@ tests exist to catch. Helper shortcuts: `recordMock()` to capture the variables
 Apollo actually observed, `seedCache()` to pre-write entities that hooks read
 with `cache.readFragment`.
 
+The default is kept by `node scripts/check-test-cache-fidelity.mjs` (pre-commit),
+not by a test. It identifies its subjects by IMPORT rather than by grepping for
+two helper names, enumerates files the way Jest's `testMatch` does, and fails
+when its own scan matches nothing — the three ways the previous in-suite check
+could have been silently vacuous. Only the two behavioural assertions remain in
+`__tests__/apollo/testCacheIsTheProductionCache.test.ts`.
+
 Shared auto-mocks live in `__mocks__/` folders next to their modules
 (`Environment`, `logger`, MMKV storage, navigation hooks, token scheduler, …) —
 override per-suite with `mockReturnValue` rather than replacing the module.
@@ -303,6 +310,21 @@ code relies on.
   same policies the app reads with. Each
   entry needs `__typename` + `id` and any fields the hook reads. Pass the
   returned cache as `{ cache }` to `renderHookWithApollo`.
+  A nested collection of identified entities is stored as its own records and
+  referenced, so a later write to a child reaches every reader of the parent.
+  **Prefer the checked form** — `seedCache([{ fragment: SomeDoc, data }])` —
+  which holds the seed to a REAL selection; the derived form builds its
+  selection from the fixture's own keys, so it can never be incomplete and
+  therefore cannot hold the seed to anything. The count of files still using it
+  is ratcheted by `check-test-cache-fidelity` and may only shrink.
+- **Pick ONE mocking strategy.** `operationMocks` and `mocks`/`resolvers` are
+  mutually exclusive by type. Passing both used to discard the second in
+  silence — one live suite ran its hook on defaults with all sixteen tests
+  passing. `operationMocks: []` means "no per-operation mocks", not "answer
+  everything from the schema".
+- **`partial: true` on a `recordMock`** is the only opt-out from schema
+  completion, and it excuses exactly the `(type, field)` pairs that mock's
+  payload omits. Use it only when the omission IS the subject.
 
 ### The `Environment` auto-mock
 

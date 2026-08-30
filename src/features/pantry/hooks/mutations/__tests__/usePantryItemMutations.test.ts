@@ -65,15 +65,15 @@ jest.mock('#/utils/errors/versionConflict', () => ({
 
 jest.mock('#/hooks/utils/useCrudOperations', () => ({
   useCrudOperations: () => ({
-    // Matches the real `createUpdateOperation`, which calls
-    // `mutation({ variables: { input } })` with the id INSIDE the input
-    // (useCrudOperations.ts:190-196). The old shape put `id` at the top level,
-    // so the hook's `optimisticResponse` read `variables.input.id` as
-    // undefined, found no cached item, and wrote a pantry item with one field.
+    // The real `createUpdateOperation` builds
+    // `{ input: { id: itemId, ...transformedInput } }` — `id` FIRST, so an id
+    // carried in the update itself wins. Spreading the other way round made
+    // `config.itemId` win instead, which passes wherever the two agree and
+    // hides the case worth testing.
     createUpdateOperation: jest.fn(
       (config: MockUpdateConfig) => async (updates: PantryItemUpdate) => {
         await config.mutation({
-          variables: { input: { ...updates, id: config.itemId } },
+          variables: { input: { id: config.itemId, ...updates } },
         });
       },
     ),
