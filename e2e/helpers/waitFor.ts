@@ -306,6 +306,24 @@ export async function tapFirstAvailable(
   return index;
 }
 
+/**
+ * Non-throwing PRESENCE probe, for CHOOSING a path rather than asserting one.
+ * `toExist`, not `toBeVisible`: Detox wants ~75% visibility, so a full-screen
+ * container with the keyboard up is present yet reads as absent. Returns as
+ * soon as the element appears, so the timeout caps only the negative case.
+ */
+export async function exists(
+  testID: string,
+  timeout: number = 1000,
+): Promise<boolean> {
+  try {
+    await waitFor(element(by.id(testID))).toExist().withTimeout(timeout);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** For optional UI — hints, tooltips. Skips the action if absent. */
 export async function waitIfPresent(
   targetElement: Detox.IndexableNativeElement,

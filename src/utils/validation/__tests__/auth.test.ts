@@ -84,6 +84,22 @@ describe('forgotPasswordSchema', () => {
     ).resolves.toBeTruthy();
   });
 
+  // Format cases belong here, not in the Detox suite: each e2e submit spends
+  // one of `requestPasswordReset`'s five-per-hour budget, and the thing under
+  // test is the client rule, which never reaches the server.
+  it('accepts a plus-addressed email', async () => {
+    await expect(
+      forgotPasswordSchema.validate({ email: 'user+test@example.com' }),
+    ).resolves.toBeTruthy();
+  });
+
+  it('accepts a long local part and domain', async () => {
+    const longEmail = `${'a'.repeat(50)}@${'b'.repeat(50)}.com`;
+    await expect(
+      forgotPasswordSchema.validate({ email: longEmail }),
+    ).resolves.toBeTruthy();
+  });
+
   it('rejects empty email', async () => {
     await expect(
       forgotPasswordSchema.validate({ email: '' }),

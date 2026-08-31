@@ -10,6 +10,12 @@ export class ResetPasswordScreen extends BaseScreen {
 
   private readonly newPasswordInput = 'reset-password-new-input';
   private readonly confirmPasswordInput = 'reset-password-confirm-input';
+
+  /** Last field filled here, so it is the one holding the keyboard. */
+  protected keyboardInput = this.confirmPasswordInput;
+
+  /** `AuthFormTemplate`'s title row — above the keyboard on every auth screen. */
+  protected blurTarget = 'auth-title-row';
   private readonly submitButton = 'reset-password-submit-button';
   private readonly invalidLinkView = 'reset-password-invalid-link';
 

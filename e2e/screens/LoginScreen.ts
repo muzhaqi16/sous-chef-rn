@@ -6,6 +6,12 @@ export class LoginScreen extends BaseScreen {
 
   private readonly emailInput = 'login-email-input';
   private readonly passwordInput = 'login-password-input';
+
+  /** Last field filled here, so it is the one holding the keyboard. */
+  protected keyboardInput = this.passwordInput;
+
+  /** `AuthFormTemplate`'s title row — above the keyboard on every auth screen. */
+  protected blurTarget = 'auth-title-row';
   private readonly submitButton = 'login-submit-button';
   private readonly signupLink = 'login-signup-link';
   private readonly forgotPasswordLink = 'login-forgot-password-link';
@@ -24,6 +30,18 @@ export class LoginScreen extends BaseScreen {
     await this.loginWith(TEST_USER.email, TEST_USER.password);
   }
 
+  /** Empty both fields and drop the keyboard, so a test can reuse the screen. */
+  async clearForm() {
+    for (const id of [this.emailInput, this.passwordInput]) {
+      try {
+        await this.getElementById(id).clearText();
+      } catch {
+        // Already empty.
+      }
+    }
+    await this.dismissKeyboard();
+  }
+
   async enterEmail(email: string) {
     await this.clearAndType(this.emailInput, email);
   }
@@ -34,7 +52,7 @@ export class LoginScreen extends BaseScreen {
 
   async submit() {
     await this.dismissKeyboard();
-    await this.tapByID(this.submitButton);
+    await this.tapPastKeyboard(this.submitButton);
   }
 
   async navigateToSignup() {
@@ -90,6 +108,10 @@ export class LoginScreen extends BaseScreen {
 
   async expectEmailFieldError() {
     await this.expectVisible(`${this.emailInput}-error`);
+  }
+
+  async expectNoEmailFieldError() {
+    await this.expectNotVisible(`${this.emailInput}-error`);
   }
 
   async expectPasswordFieldError() {

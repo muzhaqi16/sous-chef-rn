@@ -10,7 +10,7 @@ import { launchAppWithFabricWorkaround } from '../../init';
 import { LandingAuthScreen } from '../../screens/LandingAuthScreen';
 import { LoginScreen } from '../../screens/LoginScreen';
 import { dismissBiometricPromptIfPresent } from '../../helpers/auth';
-import { TIMEOUTS, waitForNetworkIdle } from '../../helpers/waitFor';
+import { TIMEOUTS, exists, waitForNetworkIdle } from '../../helpers/waitFor';
 import { TEST_USER } from '../../fixtures/testData';
 
 describe('Login', () => {
@@ -30,6 +30,19 @@ describe('Login', () => {
   }
 
   async function resetToLoggedOutState() {
+    await launchAndNavigateToLogin();
+  }
+
+  /**
+   * Put the app back on an EMPTY login form. Cheap when already there; a
+   * relaunch only when a prior test signed in or navigated away. Without the
+   * screen check a drifted test clears nothing and runs against the wrong view.
+   */
+  async function ensureEmptyLoginForm() {
+    if (await exists('login-screen')) {
+      await loginScreen.clearForm();
+      return;
+    }
     await launchAndNavigateToLogin();
   }
 
@@ -119,35 +132,13 @@ describe('Login', () => {
     });
 
     beforeEach(async () => {
-      try {
-        await element(by.id('login-email-input')).clearText();
-      } catch {
-        // Field might not have text
-      }
-      try {
-        await element(by.id('login-password-input')).clearText();
-      } catch {
-        // Field might not have text
-      }
-      // Dismiss keyboard using tapReturnKey (more reliable than tapping labels)
-      try {
-        await element(by.id('login-password-input')).tapReturnKey();
-      } catch {
-        // Keyboard already dismissed — nothing to send a return key to.
-      }
+      await ensureEmptyLoginForm();
     });
 
     it('should show error for empty email', async () => {
       await loginScreen.enterPassword('somepassword');
 
-      // Dismiss the keyboard — UIInputSetContainerView blocks submit taps.
-      try {
-        await element(by.id('login-password-input')).tapReturnKey();
-      } catch {
-        // Keyboard already dismissed — nothing to send a return key to.
-      }
-
-      await element(by.id('login-submit-button')).tap();
+      await loginScreen.submit();
       await device.takeScreenshot('error-empty-email');
       await loginScreen.expectEmailFieldError();
     });
@@ -155,13 +146,8 @@ describe('Login', () => {
     it('should show error for empty password', async () => {
       await loginScreen.enterEmail(TEST_USER.email);
 
-      try {
-        await element(by.id('login-email-input')).tapReturnKey();
-      } catch {
-        // Keyboard already dismissed — nothing to send a return key to.
-      }
-
-      await element(by.id('login-submit-button')).tap();
+      await loginScreen.dismissKeyboard('login-email-input');
+      await loginScreen.submit();
       await device.takeScreenshot('error-empty-password');
       await loginScreen.expectPasswordFieldError();
     });
@@ -170,13 +156,7 @@ describe('Login', () => {
       await loginScreen.enterEmail('not-an-email');
       await loginScreen.enterPassword('somepassword');
 
-      try {
-        await element(by.id('login-password-input')).tapReturnKey();
-      } catch {
-        // Keyboard already dismissed — nothing to send a return key to.
-      }
-
-      await element(by.id('login-submit-button')).tap();
+      await loginScreen.submit();
       await device.takeScreenshot('error-invalid-email');
       await loginScreen.expectEmailFieldError();
     });
@@ -185,13 +165,7 @@ describe('Login', () => {
       await loginScreen.enterEmail(TEST_USER.email);
       await loginScreen.enterPassword('wrong_password_123');
 
-      try {
-        await element(by.id('login-password-input')).tapReturnKey();
-      } catch {
-        // Keyboard already dismissed — nothing to send a return key to.
-      }
-
-      await element(by.id('login-submit-button')).tap();
+      await loginScreen.submit();
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
       await device.takeScreenshot('error-incorrect-password');
       await loginScreen.waitForScreen(10000);
@@ -202,6 +176,10 @@ describe('Login', () => {
   describe('Edge Cases', () => {
     beforeAll(async () => {
       await resetToLoggedOutState();
+    });
+
+    beforeEach(async () => {
+      await ensureEmptyLoginForm();
     });
 
     it('should handle special characters in password', async () => {
@@ -220,18 +198,9 @@ describe('Login', () => {
     });
 
     it('should handle rapid submit button taps', async () => {
-      // Relaunch for clean state (previous test may have logged in)
-      await launchAndNavigateToLogin();
-
       await loginScreen.enterEmail(TEST_USER.email);
       await loginScreen.enterPassword(TEST_USER.password);
-
-      // Dismiss keyboard before tapping submit (UIInputSetContainerView blocks taps)
-      try {
-        await element(by.id('login-password-input')).tapReturnKey();
-      } catch {
-        // Keyboard already dismissed — nothing to send a return key to.
-      }
+      await loginScreen.dismissKeyboard();
 
       // Rapid taps — first tap may log in and remove the button
       const submitButton = element(by.id('login-submit-button'));
@@ -256,32 +225,15 @@ describe('Login', () => {
     });
 
     it('should clear error when user starts typing', async () => {
-      // Relaunch for clean state (previous test logged in)
-      await launchAndNavigateToLogin();
-
-      await loginScreen.submit(); // Submit with empty fields
-
-      // Dismiss keyboard so errors are visible
-      try {
-        await element(by.text('Sign in to Sous Chef')).tap();
-      } catch {
-        // No autofill bar to dismiss.
-      }
-
+      await loginScreen.submit();
+      await loginScreen.expectEmailFieldError();
       await device.takeScreenshot('edge-clear-error-before-type');
 
-      await loginScreen.enterEmail('test');
-
-      // Dismiss keyboard again to see if errors cleared
-      try {
-        await element(by.text('Sign in to Sous Chef')).tap();
-      } catch {
-        // No autofill bar to dismiss.
-      }
+      await loginScreen.enterEmail(TEST_USER.email);
+      await loginScreen.dismissKeyboard('login-email-input');
 
       await device.takeScreenshot('edge-clear-error-after-type');
-
-      await loginScreen.waitForScreen(5000);
+      await loginScreen.expectNoEmailFieldError();
     });
   });
 
@@ -290,32 +242,18 @@ describe('Login', () => {
       await resetToLoggedOutState();
     });
 
+    beforeEach(async () => {
+      await ensureEmptyLoginForm();
+    });
+
     it('should navigate to forgot password', async () => {
-      // Dismiss any iOS autofill suggestions by tapping the title area
-      try {
-        await element(by.text('Sign in to Sous Chef')).tap();
-      } catch {
-        // No autofill bar to dismiss.
-      }
-
       await loginScreen.tapForgotPassword();
-
-      // Use toExist() in case an overlay blocks visibility
       await waitFor(element(by.id('forgot-password-screen')))
-        .toExist()
+        .toBeVisible()
         .withTimeout(10000);
     });
 
     it('should navigate to sign up', async () => {
-      // Relaunch to get back to login (previous test navigated away)
-      await launchAndNavigateToLogin();
-
-      // Dismiss any iOS autofill suggestions by tapping the title area
-      try {
-        await element(by.text('Sign in to Sous Chef')).tap();
-      } catch {
-        // No autofill bar to dismiss.
-      }
 
       await loginScreen.tapSignUp();
 
