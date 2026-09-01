@@ -226,6 +226,14 @@ describe('LogoutCleanup', () => {
       expect(LogoutCleanup.shouldSkipOperation('Logout')).toBe(false);
     });
 
+    // The push-token delete dispatches before the flag is set and resolves
+    // after it; cancelled, the server keeps a device row whose token is dead.
+    it('returns false for UpdateDevice, the sign-out device delete', async () => {
+      await LogoutCleanup.performLogoutCleanup();
+
+      expect(LogoutCleanup.shouldSkipOperation('UpdateDevice')).toBe(false);
+    });
+
     it('returns true when no operation name during logout', async () => {
       await LogoutCleanup.performLogoutCleanup();
 
