@@ -3,23 +3,23 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#/utils/iconUtils';
 import { type PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { BatchStatus } from '#/graphql/generated/schemaTypes';
 import { BatchListItem } from './BatchListItem';
 import { useOpenPantryItemBatch } from '#features/pantry/hooks/mutations/useOpenPantryItemBatch';
 import { useWastePantryItemBatch } from '#features/pantry/hooks/mutations/useWastePantryItemBatch';
 import { Text } from '#components/atoms/Text';
+import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
 
-/**
- * `batches` arrive unmasked from the parent, which queries with NO status
- * filter — active AND inactive are already present. `BatchListItem` runs its
- * own `useFragment` for reactive per-row updates.
- */
 /** Active batches shown inline; the rest live on the history screen. */
 const INLINE_LIMIT = 3;
 
 interface BatchSectionProps {
+  /**
+   * Unmasked from the parent, which queries with NO status filter — active AND
+   * inactive are already present. `BatchListItem` runs its own `useFragment`
+   * for reactive per-row updates.
+   */
   batches: ReadonlyArray<PantryItemBatchFragment>;
   unitSymbol?: string;
   /** Every batch, including pages this screen did not fetch. */
@@ -66,23 +66,13 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
 
   return (
     <View>
-      {/* Section Header */}
-      <AppPressable
-        style={styles.sectionHeader}
-        onPress={() => setExpanded(!expanded)}
+      <CollapsibleSection
+        title={t('pantryItemDetail.batch.sectionHeader', {
+          count: activeBatchCount,
+        })}
+        expanded={expanded}
+        onToggle={() => setExpanded(!expanded)}
       >
-        <Text size="base" weight="semibold">
-          {t('pantryItemDetail.batch.sectionHeader', {
-            count: activeBatchCount,
-          })}
-        </Text>
-        <Icon
-          name={expanded ? 'chevron-up' : 'chevron-down'}
-          size={20}
-          tone="textSecondary"
-        />
-      </AppPressable>
-      {!!expanded && (
         <View style={styles.content}>
           {shownBatches.map(batch => (
             <BatchListItem
@@ -102,22 +92,12 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
             </AppPressable>
           )}
         </View>
-      )}
+      </CollapsibleSection>
     </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    marginTop: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
   content: {
     paddingHorizontal: theme.spacing.lg,
   },

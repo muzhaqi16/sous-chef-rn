@@ -136,6 +136,19 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   // bought as 5 reached the pantry as 1.
   const seedQuantity = purchasedQuantity ?? shoppingListItem?.quantity ?? null;
 
+  // ONE source decides both halves. Separate fallback chains let a line with
+  // free-text `unitName` show "bag" while submitting the purchase's unit id.
+  const resolvedUnit = shoppingListItem?.unit
+    ? {
+        symbol: shoppingListItem.unit.symbol ?? '',
+        id: shoppingListItem.unit.id,
+      }
+    : shoppingListItem?.unitName
+    ? { symbol: shoppingListItem.unitName, id: null }
+    : purchasedUnit
+    ? { symbol: purchasedUnit.unitSymbol, id: purchasedUnit.unitId }
+    : { symbol: '', id: null };
+
   // Reset form when modal opens with new item (render-time state update).
   // Key on the item id (not the materialized object) so cache updates to the
   // same item don't clobber input.
@@ -145,6 +158,9 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   );
   const [prevSelectedPantryId, setPrevSelectedPantryId] =
     useState(selectedPantryId);
+  // Both blocks below can run in ONE pass, where `unitId` still holds its
+  // pre-update value — so the seed block would overwrite what the reset queued.
+  let unitIdThisPass = unitId;
   if (
     visible !== prevVisible ||
     shoppingListItem?.id !== prevShoppingListItemId ||
@@ -155,13 +171,9 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     setPrevSelectedPantryId(selectedPantryId);
     if (visible && shoppingListItem) {
       setQuantityInput(formatNumberForInput(seedQuantity) || '1');
-      setUnitValue(
-        shoppingListItem.unit?.symbol ||
-          shoppingListItem.unitName ||
-          purchasedUnit?.unitSymbol ||
-          '',
-      );
-      setUnitId(shoppingListItem.unit?.id || purchasedUnit?.unitId || null);
+      setUnitValue(resolvedUnit.symbol);
+      setUnitId(resolvedUnit.id);
+      unitIdThisPass = resolvedUnit.id;
       setPantryId(selectedPantryId);
       setStorageState(StorageState.Ambient);
       setExpirationDate(undefined);
@@ -189,7 +201,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     setPrevSeed(seedKey);
     // A line with no unit of its own takes the purchase's, which arrives with
     // the amounts rather than with the fragment.
-    if (!unitId && purchasedUnit) {
+    if (!unitIdThisPass && purchasedUnit) {
       setUnitValue(purchasedUnit.unitSymbol);
       setUnitId(purchasedUnit.unitId);
     }
@@ -226,8 +238,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     setPriceTouched(true);
   };
 
-  const lineUnitLabel =
-    shoppingListItem?.unit?.symbol || shoppingListItem?.unitName || '';
+  // The same resolution the fields use, so this cannot render an empty unit.
+  const lineUnitLabel = resolvedUnit.symbol;
 
   // Shown only when the split is not trivial — at quantity 1 the per-unit price
   // IS the total. Mirrors PurchaseAmountSheet.

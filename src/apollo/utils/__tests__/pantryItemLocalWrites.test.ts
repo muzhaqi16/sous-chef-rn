@@ -11,6 +11,8 @@
  */
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
+import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
+import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
 import {
   addPantryItemLocally,
   removePantryItemLocally,
@@ -190,6 +192,30 @@ describe('revertOptimisticPantryItem', () => {
     revertOptimisticPantryItem(cache, 'p-1', 'pi-3');
 
     expect(entityExists(cache, 'pi-3')).toBe(false);
+  });
+
+  it('leaves nothing the create wrote behind', () => {
+    // The create writes a detail stub alongside the row: a locally minted
+    // `Item` and a RETAINED `ROOT_QUERY` connection field. Neither is reclaimed
+    // by `cache.gc()`, and both are persisted — so a revert that drops only the
+    // row leaves one pair behind per refused create, forever.
+    const cache = seed();
+    const before = JSON.stringify(cache.extract());
+
+    writeRow(cache, 'pi-3');
+    addPantryItemLocally(cache, 'p-1', row('pi-3'));
+    writePantryItemDetailStub(cache, 'pi-3', {
+      itemId: null,
+      itemName: 'Anchovies',
+      acquisitionMethod: AcquisitionMethod.ShoppingList,
+      costPerUnit: null,
+      quantity: 1,
+    });
+
+    revertOptimisticPantryItem(cache, 'p-1', 'pi-3');
+    cache.gc();
+
+    expect(JSON.stringify(cache.extract())).toBe(before);
   });
 
   it('is idempotent — the force-add retry withdraws the same id twice', () => {

@@ -14,6 +14,7 @@ import { UsagePurpose, WasteReason } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import { usePantryItemActions } from '../usePantryItemActions';
+import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 
 jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
@@ -409,6 +410,59 @@ describe('usePantryItemActions', () => {
       });
 
       expect(result.current.restockModal.visible).toBe(false);
+    });
+
+    it('keeps the cached batches when the restock is queued offline', async () => {
+      // This mutation runs `localFirst`, so offline `queueLink` resolves it with
+      // a NULL result. Evicting there drops a field only a server response can
+      // refill — and offline there is no response, so the batch section stays
+      // empty for the rest of the session and the emptied field persists.
+      const cache = seedPantryItems();
+      cache.writeQuery({
+        query: GetPantryItemBatchesDocument,
+        variables: { pantryItemId: 'item-1' },
+        data: {
+          __typename: 'Query',
+          pantryItemBatchesConnection: {
+            __typename: 'PantryItemBatchConnection',
+            totalCount: 1,
+            pageInfo: {
+              __typename: 'PageInfo',
+              hasNextPage: false,
+              endCursor: null,
+            },
+            edges: [],
+          },
+        },
+      });
+      const before = cache.readQuery({
+        query: GetPantryItemBatchesDocument,
+        variables: { pantryItemId: 'item-1' },
+      });
+      expect(before).not.toBeNull();
+
+      // A queued local-first write: `queueLink` resolves with a null payload.
+      const queued = recordMock(RestockPantryItemDocument, {
+        data: { restockPantryItem: null },
+      });
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { operationMocks: [queued.mock], cache },
+      );
+
+      act(() => {
+        result.current.handleRestockItem('item-1');
+      });
+      await act(async () => {
+        await result.current.handleConfirmRestock(3, '3', '');
+      });
+
+      expect(
+        cache.readQuery({
+          query: GetPantryItemBatchesDocument,
+          variables: { pantryItemId: 'item-1' },
+        }),
+      ).toEqual(before);
     });
 
     it('includes optional restock fields', async () => {

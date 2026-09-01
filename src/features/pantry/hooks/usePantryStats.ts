@@ -14,6 +14,7 @@ interface UsePantryStatsOptions {
     refrigerated: number;
     frozen: number;
     ambient: number;
+    none: number;
   } | null;
   storageLocationCounts?: Array<{
     storageLocationId: string;
@@ -44,6 +45,7 @@ export function usePantryStats(options: UsePantryStatsOptions) {
           fridge: storageStateCounts.refrigerated,
           freezer: storageStateCounts.frozen,
           pantry: storageStateCounts.ambient,
+          unassigned: storageStateCounts.none,
           ...customLocationCounts,
         } as LocationCounts,
       };
@@ -57,6 +59,7 @@ export function usePantryStats(options: UsePantryStatsOptions) {
           fridge: 0,
           freezer: 0,
           pantry: 0,
+          unassigned: 0,
         } as LocationCounts,
       };
     }
@@ -64,6 +67,7 @@ export function usePantryStats(options: UsePantryStatsOptions) {
     let fridge = 0;
     let freezer = 0;
     let pantryCount = 0;
+    let unassigned = 0;
     const customLocationCounts: Record<string, number> = {};
 
     for (const item of pantryItems) {
@@ -74,8 +78,13 @@ export function usePantryStats(options: UsePantryStatsOptions) {
         case StorageState.Frozen:
           freezer++;
           break;
-        default:
+        case StorageState.Ambient:
           pantryCount++;
+          break;
+        // Mirrors `filterByLocation`: `pantry` is strictly AMBIENT, so an
+        // unassigned item is its own bucket rather than swelling that count.
+        default:
+          unassigned++;
           break;
       }
 
@@ -92,6 +101,7 @@ export function usePantryStats(options: UsePantryStatsOptions) {
         fridge,
         freezer,
         pantry: pantryCount,
+        unassigned,
         ...customLocationCounts,
       } as LocationCounts,
     };

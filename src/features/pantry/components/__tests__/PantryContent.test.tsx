@@ -383,9 +383,11 @@ describe('PantryContent', () => {
     render(<PantryContent {...defaultProps} />);
     expect(screen.getByTestId('filter-tabs')).toBeTruthy();
     expect(screen.getByText('All')).toBeTruthy();
-    expect(screen.getByText('Fridge')).toBeTruthy();
-    expect(screen.getByText('Freezer')).toBeTruthy();
-    expect(screen.getByText('Pantry')).toBeTruthy();
+    // The built-in tabs name the STORAGE STATE they filter — a user's own
+    // Fridge/Freezer LOCATIONS get their own tabs beside these.
+    expect(screen.getByText('Refrigerated')).toBeTruthy();
+    expect(screen.getByText('Frozen')).toBeTruthy();
+    expect(screen.getByText('Ambient')).toBeTruthy();
   });
 
   it('shows empty state when no items and no search query', () => {
@@ -443,7 +445,7 @@ describe('PantryContent', () => {
         totalCount={0}
       />,
     );
-    expect(screen.getByText('No items in Fridge')).toBeTruthy();
+    expect(screen.getByText('No items in Refrigerated')).toBeTruthy();
   });
 
   describe('skeleton hold (offline-first cache gap)', () => {

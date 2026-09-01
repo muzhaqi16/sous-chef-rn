@@ -33,11 +33,15 @@
       "depleted": "Mbaruar",
       "expired": "Skaduar",
       "depletedOn": "Mbaruar më {{date}}",
+      "wastedOn": "Hedhur {{date}}",
       "costPerUnit": "{{cost}}/njësi",
       "sectionHeader_one": "Grupi ({{count}} aktiv)",
       "sectionHeader_other": "Grupet ({{count}} aktive)",
       "historyTitle": "Historiku i loteve",
-      "historySummary": "{{active}} aktive nga {{total}}",
+      "historySummary_one": "{{active}} aktiv nga {{total}}",
+      "historySummary_other": "{{active}} aktive nga {{total}}",
+      "historyTotal_one": "{{count}} grup",
+      "historyTotal_other": "{{count}} grupe",
       "emptyTitle": "Ende pa lote"
     },
     "deleteTitle": "Fshi artikullin",
@@ -45,8 +49,6 @@
     "discardBatchesBody": "Kjo do t'i shënojë të gjitha grupet e skaduara si të shpenzuara.",
     "discardItemTitle": "Hidh artikullin e skaduar",
     "discardItemBody": "Kjo do të shënojë {{quantity}} {{unit}} të mbetura si të shpenzuara për shkak të skadimit.",
-    "moreUsageEntries_one": "+{{count}} regjistrim tjetër",
-    "moreUsageEntries_other": "+{{count}} regjistrime të tjera",
     "usage": {
       "entries": "Regjistrime",
       "mostRecent": "Më i fundit",
@@ -227,9 +229,6 @@
     "notesPlaceholder": "Shto shënime për këtë blerje...",
     "removeFromShopping": "Hiq nga lista e blerjeve",
     "removeFromShoppingDesc": "Çaktivizoje për ta mbajtur artikullin në listën tënde të blerjeve",
-    "stateAmbient": "Ambient",
-    "stateRefrigerated": "Në frigorifer",
-    "stateFrozen": "I ngrirë",
     "noListSelected": "Asnjë listë blerjesh e zgjedhur",
     "movedItems_one": "U zhvendos {{count}} artikull te qilari{{skipped}}",
     "movedItems_other": "U zhvendosën {{count}} artikuj te qilari{{skipped}}",
@@ -309,9 +308,8 @@
     "itemCount_other": "{{count}} artikuj",
     "sort": "Rendit",
     "tabAll": "Të gjitha",
-    "tabFridge": "Frigorifer",
-    "tabFreezer": "Ngrirës",
     "tabPantry": "Qilar",
+    "tabUnassigned": "Pa caktuar",
     "expiringCount": "{{count}} po skadojnë",
     "expiredCount": "{{count}} të skaduar",
     "lowStockCount": "{{count}} pak gjendje",
@@ -387,10 +385,7 @@
     }
   },
   "pantryTabs": {
-    "all": "Të gjitha",
-    "fridge": "Frigorifer",
-    "freezer": "Ngrirës",
-    "pantry": "Qilar"
+    "all": "Të gjitha"
   },
   "expiration": {
     "noExpiryDate": "Pa datë skadimi",

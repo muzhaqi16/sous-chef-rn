@@ -42,6 +42,13 @@ query MoveToPantryPurchaseInfo($id: ID!) {
     # not, because the server falls back to the item's tracking unit or "piece".
     # An explicit ordering: `first: 1` unordered is not the latest purchase.
     purchasesConnection(first: 1, orderBy: { purchaseDate: DESC }) {
+      # A selection writing `edges` writes a PAGE, and a page with no
+      # `pageInfo` merges as "this covers the whole list" — which would strip
+      # the cursor off the shared field if anything else ever keys to it.
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
       edges {
         node {
           id

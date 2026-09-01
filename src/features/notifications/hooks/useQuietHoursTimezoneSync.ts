@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import {
   GetNotificationPreferencesDocument,
@@ -45,8 +46,18 @@ export const useQuietHoursTimezoneSync = (): void => {
   // the mount is an unbounded loop. A refusal is retried on the next launch.
   const attemptedFor = useRef<string | null>(null);
 
+  // Re-sampled on foreground: read once at mount, it answers for every session
+  // except the one the zone changes in — the one this hook exists for.
+  const [deviceTimezone, setDeviceTimezone] = useState(getDeviceTimezone);
+
   useEffect(() => {
-    const deviceTimezone = getDeviceTimezone();
+    const subscription = AppState.addEventListener('change', status => {
+      if (status === 'active') setDeviceTimezone(getDeviceTimezone());
+    });
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
     if (
       !deviceTimezone ||
       !quietHoursEnabled ||
@@ -78,6 +89,7 @@ export const useQuietHoursTimezoneSync = (): void => {
     });
   }, [
     client,
+    deviceTimezone,
     preferencesId,
     quietHoursEnabled,
     quietHoursTimezone,

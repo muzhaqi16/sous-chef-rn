@@ -35,7 +35,6 @@ interface PantryDetailInfoProps {
   shelfLifeDays: number | null | undefined;
   shelfLifeOpenedDays: number | null | undefined;
   onCorrectWeight?: () => void;
-  /** Server unreachable (offline / API down) — disables the correct-weight edit. */
   /**
    * What the batches say about the item's money fields — which rows to label as
    * a blend, and when the rate is too diluted to show. {@link summarizeBatchPricing}
@@ -79,10 +78,12 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   // still honest about the part it knows.
   const costPerUnit = pricing?.isRateDiluted ? null : item.costPerUnit;
   // `item.purchase` is the FIRST acquisition; a restock's is on its own batch.
-  const purchaseDate =
-    pricing?.lastPurchase?.date ?? item.purchase?.purchaseDate;
-  const purchaseTotal = pricing?.lastPurchase
-    ? pricing.lastPurchase.totalCost
+  // Label by SOURCE: a batch has no join to its Purchase, so only `createdAt`
+  // is reachable and "Purchased" would claim an intake time is a purchase date.
+  const fromBatch = pricing?.lastPurchase ?? null;
+  const purchaseDate = fromBatch?.date ?? item.purchase?.purchaseDate;
+  const purchaseTotal = fromBatch
+    ? fromBatch.totalCost
     : item.purchase?.totalPrice;
 
   return (
@@ -303,7 +304,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {!!purchaseDate && (
         <InfoRow
           label={t(
-            isAveraged
+            fromBatch
               ? 'pantryItemDetail.fields.lastPurchase'
               : 'pantryItemDetail.fields.purchased',
           )}

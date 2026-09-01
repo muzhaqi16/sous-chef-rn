@@ -824,5 +824,54 @@ describe('refreshToken', () => {
 
       jest.restoreAllMocks();
     });
+
+    it('lets the socket recovery through the throttle', async () => {
+      // The 4403 fast path needs a token before the socket's backoff elapses.
+      // Throttled, it receives the same `null` a FAILED attempt returns, so the
+      // recovery silently no-ops for the window with nothing to tell the two
+      // apart.
+      await proactiveTokenRefresh();
+      expect(mockedClient.mutate).toHaveBeenCalledTimes(1);
+
+      const recovered = await proactiveTokenRefresh({ reason: 'recovery' });
+
+      expect(recovered).toBe('rotated-token');
+      expect(mockedClient.mutate).toHaveBeenCalledTimes(2);
+    });
+
+    it('still throttles an ordinary caller after a recovery', async () => {
+      await proactiveTokenRefresh({ reason: 'recovery' });
+
+      expect(await proactiveTokenRefresh()).toBeNull();
+    });
+  });
+
+  describe('the contract every return path owes its caller', () => {
+    it("resolves rather than rejects when a JOINER's refresh throws", async () => {
+      // The starter converts its own failure to null in its catch. A joiner was
+      // handed the in-flight promise raw, so it rejected — and authLink's
+      // `?? token` fallback, which absorbs a resolved null, cannot absorb that.
+      (mockedClient.mutate as jest.Mock).mockRejectedValue(
+        new Error('Network down'),
+      );
+
+      const starter = proactiveTokenRefresh();
+      const joiner = proactiveTokenRefresh();
+
+      await expect(joiner).resolves.toBeNull();
+      await expect(starter).resolves.toBeNull();
+    });
+
+    it('gives joiner and starter the same answer', async () => {
+      (mockedClient.mutate as jest.Mock).mockRejectedValue(
+        new Error('Network down'),
+      );
+
+      const [starter, ...joiners] = await Promise.all(
+        Array.from({ length: 6 }, () => proactiveTokenRefresh()),
+      );
+
+      expect(joiners).toEqual(Array(5).fill(starter));
+    });
   });
 });

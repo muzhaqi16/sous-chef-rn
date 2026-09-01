@@ -109,6 +109,12 @@ let refreshState: RefreshState = {
 let refreshQueue: Array<(token: string | null) => void> = [];
 
 // Configuration
+/**
+ * Why a caller wants the refresh. Only `recovery` — the socket's 4403 fast
+ * path, restoring a dropped connection — bypasses the new-rotation throttle.
+ */
+type RefreshReason = 'scheduled' | 'recovery';
+
 const REFRESH_CONFIG = {
   MAX_RETRIES: 3,
   RETRY_DELAY_BASE: 1000, // Base delay in ms
@@ -450,7 +456,9 @@ export const isRefreshTokenValid = (refreshToken: string | null): boolean =>
  * reaches the user. If it fails, the reactive path (errorLink) still handles
  * expiry on the next request.
  */
-export const proactiveTokenRefresh = async (): Promise<string | null> => {
+export const proactiveTokenRefresh = async (
+  options: { reason?: RefreshReason } = {},
+): Promise<string | null> => {
   logger.info('[ProactiveRefresh] Starting proactive token refresh');
 
   // Check if already refreshing (shouldn't happen with proactive, but safety check)
@@ -458,14 +466,20 @@ export const proactiveTokenRefresh = async (): Promise<string | null> => {
     logger.info(
       '[ProactiveRefresh] Already refreshing, returning existing promise',
     );
-    return refreshState.refreshPromise;
+    // Resolve, never reject — the contract the owner's branch honours.
+    // `performTokenRefresh` throws, so a raw hand-back fails the joiner.
+    let joined: string | null = null;
+    try {
+      joined = await refreshState.refreshPromise;
+    } catch (error) {
+      logger.error('[ProactiveRefresh] Joined refresh failed:', error);
+    }
+    return joined;
   }
 
-  // Only a caller that would open a NEW rotation is throttled; the joiners
-  // above never are. authLink AWAITS this once the token is expired, so without
-  // the guard a refresh that keeps failing would start a fresh doomed exchange
-  // per request instead of one per MIN_REFRESH_INTERVAL.
-  if (!canAttemptRefresh()) {
+  // Only a caller opening a NEW rotation is throttled. RECOVERY is exempt: the
+  // socket's 4403 path cannot tell a throttled `null` from a failed one.
+  if (options.reason !== 'recovery' && !canAttemptRefresh()) {
     return null;
   }
 
@@ -494,7 +508,7 @@ export const proactiveTokenRefresh = async (): Promise<string | null> => {
 // `connectionParams` and the server can rotate there — so a failure here is
 // survivable. Registered rather than imported because wsLink cannot import this
 // module back without a cycle.
-registerTokenRefresh(proactiveTokenRefresh);
+registerTokenRefresh(() => proactiveTokenRefresh({ reason: 'recovery' }));
 
 // Rotation is single-use, so only one transport may present the refresh token
 // at a time. This lets `connectionParams` hold its copy back while an HTTP

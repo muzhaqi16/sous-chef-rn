@@ -31,14 +31,17 @@ fragment writePantryItemDetailStub_pantryItem on PantryItem {
   purchase {
     id
     purchaseDate
-    unitPrice
     totalPrice
     quantity
   }
-  # Field arguments are part of the cache key, so `first: 5` must match
+  # Field arguments are part of the cache key, so these must match
   # `PantryItemDetail_pantryItem` exactly or this seeds a different field.
-  usageRecords(first: 5) {
+  usageRecords(first: 5, orderBy: { usedAt: DESC }) {
     totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
     edges {
       node {
         id

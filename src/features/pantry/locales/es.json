@@ -33,11 +33,15 @@
       "depleted": "Agotado",
       "expired": "Caducado",
       "depletedOn": "Agotado el {{date}}",
+      "wastedOn": "Desperdiciado {{date}}",
       "costPerUnit": "{{cost}}/unidad",
       "sectionHeader_one": "Lote ({{count}} activo)",
       "sectionHeader_other": "Lotes ({{count}} activos)",
       "historyTitle": "Historial de lotes",
-      "historySummary": "{{active}} activos de {{total}}",
+      "historySummary_one": "{{active}} activo de {{total}}",
+      "historySummary_other": "{{active}} activos de {{total}}",
+      "historyTotal_one": "{{count}} lote",
+      "historyTotal_other": "{{count}} lotes",
       "emptyTitle": "Aún sin lotes"
     },
     "deleteTitle": "Eliminar artículo",
@@ -45,8 +49,6 @@
     "discardBatchesBody": "Esto marcará todos los lotes caducados como desperdiciados.",
     "discardItemTitle": "Descartar artículo caducado",
     "discardItemBody": "Esto marcará los {{quantity}} {{unit}} restantes como desperdiciados por caducidad.",
-    "moreUsageEntries_one": "+{{count}} entrada más",
-    "moreUsageEntries_other": "+{{count}} entradas más",
     "usage": {
       "entries": "Registros",
       "mostRecent": "Más reciente",
@@ -227,9 +229,6 @@
     "notesPlaceholder": "Añade notas sobre esta compra...",
     "removeFromShopping": "Quitar de la lista de la compra",
     "removeFromShoppingDesc": "Desactívalo para mantener el artículo en tu lista de la compra",
-    "stateAmbient": "Ambiente",
-    "stateRefrigerated": "Refrigerado",
-    "stateFrozen": "Congelado",
     "noListSelected": "No hay ninguna lista de la compra seleccionada",
     "movedItems_one": "Se movió {{count}} artículo a la despensa{{skipped}}",
     "movedItems_other": "Se movieron {{count}} artículos a la despensa{{skipped}}",
@@ -309,9 +308,8 @@
     "itemCount_other": "{{count}} artículos",
     "sort": "Ordenar",
     "tabAll": "Todos",
-    "tabFridge": "Nevera",
-    "tabFreezer": "Congelador",
     "tabPantry": "Despensa",
+    "tabUnassigned": "Sin asignar",
     "expiringCount": "{{count}} por vencer",
     "expiredCount": "{{count}} caducados",
     "lowStockCount": "{{count}} poca existencia",
@@ -387,10 +385,7 @@
     }
   },
   "pantryTabs": {
-    "all": "Todos",
-    "fridge": "Nevera",
-    "freezer": "Congelador",
-    "pantry": "Despensa"
+    "all": "Todos"
   },
   "expiration": {
     "noExpiryDate": "Sin fecha de caducidad",

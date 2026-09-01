@@ -66,12 +66,20 @@ export type ThemedBottomSheetTextInputRef = React.ComponentRef<
   typeof BottomSheetTextInput
 >;
 
+/** `withUnistyles` flattens once, so `[base, [a, b]]` leaves a, b unresolved. */
+const withFieldStyle = (
+  style: React.ComponentProps<typeof UniTextInput>['style'],
+) =>
+  Array.isArray(style)
+    ? [inputStyles.base, ...style]
+    : [inputStyles.base, style];
+
 /** RN TextInput carrying the theme's field color, placeholder and keyboard. */
 export const ThemedTextInput = ({
   style,
   ...rest
 }: React.ComponentProps<typeof UniTextInput>) => (
-  <UniTextInput {...rest} style={[inputStyles.base, style]} />
+  <UniTextInput {...rest} style={withFieldStyle(style)} />
 );
 
 /** The same, for a TextInput inside a BottomSheet. */
@@ -79,7 +87,7 @@ export const ThemedBottomSheetTextInput = ({
   style,
   ...rest
 }: React.ComponentProps<typeof UniBottomSheetTextInput>) => (
-  <UniBottomSheetTextInput {...rest} style={[inputStyles.base, style]} />
+  <UniBottomSheetTextInput {...rest} style={withFieldStyle(style)} />
 );
 
 /**
@@ -127,6 +135,14 @@ export const OnPrimaryActivityIndicator = withUnistyles(
   ActivityIndicator,
   theme => ({
     color: theme.colors.onPrimary,
+  }),
+);
+
+/** Spinner colored by `onError` — for use on error/danger-colored fills. */
+export const OnErrorActivityIndicator = withUnistyles(
+  ActivityIndicator,
+  theme => ({
+    color: theme.colors.onError,
   }),
 );
 

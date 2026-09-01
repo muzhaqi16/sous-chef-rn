@@ -334,6 +334,11 @@ describe('MoveToPantryModal', () => {
             id: ITEM_ID,
             purchasesConnection: {
               __typename: 'PurchaseConnection',
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: null,
+              },
               edges: [
                 {
                   __typename: 'PurchaseEdge',
@@ -459,11 +464,59 @@ describe('MoveToPantryModal', () => {
         />,
       );
 
+      // The header names the unit the fields resolved to. It read
+      // "Purchased: 5 " — the line's absent unit, with nothing after the
+      // number — while submitting the purchase's, so the label and the payload
+      // disagreed for exactly the case this fallback exists to serve.
       await waitFor(() =>
-        expect(screen.getByText('Purchased: 5 ')).toBeTruthy(),
+        expect(screen.getByText('Purchased: 5 lb')).toBeTruthy(),
       );
       fireEvent.press(screen.getByTestId('header-action-checkmark'));
       expect(onConfirm.mock.calls[0][0].actualUnitId).toBe('u-purchase');
+    });
+
+    it("keeps the line's own unit when a purchase names a different one", async () => {
+      // Warm cache: the reset block and the seed block run in the SAME render
+      // pass. `unitId` still holds its pre-update value throughout, so the seed
+      // block read `null`, concluded the line had no unit, and queued the
+      // purchase's AFTER the reset's — moving the item in the purchase's unit
+      // instead of the one the line and the header both show.
+      const onConfirm = jest.fn();
+      // WARM cache — the normal path after Mark Purchased. The purchase is
+      // already readable, so the seed block runs in the same pass as the reset
+      // rather than a beat later.
+      const cache = makeCache();
+      cache.writeQuery({
+        query: MoveToPantryPurchaseInfoDocument,
+        variables: { id: ITEM_ID },
+        data: (
+          purchaseMock(5, 0.59) as { result: { data: Record<string, unknown> } }
+        ).result.data,
+      });
+
+      const { rerender } = renderWithApollo(
+        <MoveToPantryModal
+          {...defaultProps}
+          visible={false}
+          onConfirm={onConfirm}
+        />,
+        { cache, operationMocks: [purchaseMock(5, 0.59)] },
+      );
+      rerender(
+        <MoveToPantryModal
+          {...defaultProps}
+          visible={true}
+          onConfirm={onConfirm}
+        />,
+      );
+
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+      );
+      fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+      // The line's unit, not `u-purchase`.
+      expect(onConfirm.mock.calls[0][0].actualUnitId).toBe('u1');
     });
 
     it('falls back to the requested quantity when nothing was recorded', async () => {

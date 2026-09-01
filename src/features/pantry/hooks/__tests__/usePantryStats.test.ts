@@ -61,7 +61,9 @@ describe('usePantryStats', () => {
       expect(locationCounts.pantry).toBe(0);
     });
 
-    it('counts items with default/other storage states as pantry', () => {
+    it('separates an unassigned item from a deliberate ambient one', () => {
+      // `pantry` is strictly AMBIENT, mirroring the server's filter — folding
+      // NONE in is what made the tab disagree with its own badge.
       const items = [
         makeStatsItem({ storageState: StorageState.Ambient }),
         makeStatsItem({ storageState: StorageState.None }),
@@ -70,7 +72,8 @@ describe('usePantryStats', () => {
 
       const { locationCounts } = usePantryStats({ pantryItems: items });
 
-      expect(locationCounts.pantry).toBe(3);
+      expect(locationCounts.pantry).toBe(1);
+      expect(locationCounts.unassigned).toBe(2);
     });
 
     it('uses totalCount parameter for all count when provided', () => {
@@ -129,7 +132,8 @@ describe('usePantryStats', () => {
 
       expect(locationCounts.fridge).toBe(2);
       expect(locationCounts.freezer).toBe(1);
-      expect(locationCounts.pantry).toBe(2);
+      expect(locationCounts.pantry).toBe(1);
+      expect(locationCounts.unassigned).toBe(1);
       expect(locationCounts.all).toBe(5);
     });
   });
@@ -143,6 +147,7 @@ describe('usePantryStats', () => {
           refrigerated: 20,
           frozen: 15,
           ambient: 15,
+          none: 0,
         },
       });
 
@@ -161,6 +166,7 @@ describe('usePantryStats', () => {
           refrigerated: 1,
           frozen: 0,
           ambient: 1,
+          none: 0,
         },
       });
 
@@ -185,6 +191,7 @@ describe('usePantryStats', () => {
           refrigerated: 40,
           frozen: 30,
           ambient: 30,
+          none: 0,
         },
       });
 
@@ -204,6 +211,7 @@ describe('usePantryStats', () => {
           refrigerated: 10,
           frozen: 10,
           ambient: 10,
+          none: 0,
         },
         storageLocationCounts: [
           { storageLocationId: 'garage', itemCount: 5 },
@@ -227,6 +235,7 @@ describe('usePantryStats', () => {
           refrigerated: 10,
           frozen: 5,
           ambient: 5,
+          none: 0,
         },
         storageLocationCounts: [{ storageLocationId: 'garage', itemCount: 7 }],
       });
@@ -243,6 +252,7 @@ describe('usePantryStats', () => {
           refrigerated: 5,
           frozen: 3,
           ambient: 2,
+          none: 0,
         },
         storageLocationCounts: [],
       });

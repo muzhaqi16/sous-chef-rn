@@ -33,11 +33,15 @@
       "depleted": "Depleted",
       "expired": "Expired",
       "depletedOn": "Depleted {{date}}",
+      "wastedOn": "Wasted {{date}}",
       "costPerUnit": "{{cost}}/unit",
       "sectionHeader_one": "Batch ({{count}} active)",
       "sectionHeader_other": "Batches ({{count}} active)",
       "historyTitle": "Batch history",
-      "historySummary": "{{active}} active of {{total}}",
+      "historySummary_one": "{{active}} active of {{total}}",
+      "historySummary_other": "{{active}} active of {{total}}",
+      "historyTotal_one": "{{count}} batch",
+      "historyTotal_other": "{{count}} batches",
       "emptyTitle": "No batches yet"
     },
     "deleteTitle": "Delete Item",
@@ -45,8 +49,6 @@
     "discardBatchesBody": "This will mark all expired batches as wasted.",
     "discardItemTitle": "Discard Expired Item",
     "discardItemBody": "This will mark the remaining {{quantity}} {{unit}} as wasted due to expiration.",
-    "moreUsageEntries_one": "+{{count}} more entry",
-    "moreUsageEntries_other": "+{{count}} more entries",
     "usage": {
       "entries": "Entries",
       "mostRecent": "Most recent",
@@ -227,9 +229,6 @@
     "notesPlaceholder": "Add any notes about this purchase...",
     "removeFromShopping": "Remove from shopping list",
     "removeFromShoppingDesc": "Turn off to keep the item in your shopping list",
-    "stateAmbient": "Ambient",
-    "stateRefrigerated": "Refrigerated",
-    "stateFrozen": "Frozen",
     "noListSelected": "No shopping list selected",
     "movedItems_one": "Moved {{count}} item to pantry{{skipped}}",
     "movedItems_other": "Moved {{count}} items to pantry{{skipped}}",
@@ -309,9 +308,8 @@
     "itemCount_other": "{{count}} items",
     "sort": "Sort",
     "tabAll": "All",
-    "tabFridge": "Fridge",
-    "tabFreezer": "Freezer",
     "tabPantry": "Pantry",
+    "tabUnassigned": "Unassigned",
     "expiringCount": "{{count}} expiring",
     "expiredCount": "{{count}} expired",
     "lowStockCount": "{{count}} low stock",
@@ -387,10 +385,7 @@
     }
   },
   "pantryTabs": {
-    "all": "All",
-    "fridge": "Fridge",
-    "freezer": "Freezer",
-    "pantry": "Pantry"
+    "all": "All"
   },
   "expiration": {
     "noExpiryDate": "No expiry date",

@@ -24,12 +24,18 @@ export function summarizeBatchPricing(
   batches: readonly PantryItemBatchFragment[],
 ): BatchPricingSummary {
   const active = batches.filter(b => b.status === BatchStatus.Active);
-  const priced = active.filter(b => b.costPerUnit != null && b.costPerUnit > 0);
+  // A batch recorded at 0.00 is priced at zero, not unpriced — counting it as
+  // unknown makes a fully-known set look partial.
+  const priced = active.filter(b => b.costPerUnit != null);
 
+  // ALL batches, not just active: consuming the newest would otherwise walk
+  // this back to an older acquisition.
+  const acquired = batches.filter(b => b.costPerUnit != null);
   const newest =
-    priced.length > 0
-      ? priced.reduce((latest, b) =>
-          b.createdAt > latest.createdAt ? b : latest,
+    acquired.length > 0
+      ? acquired.reduce((latest, b) =>
+          // Instants, not strings: '.500Z' sorts below 'Z' lexicographically.
+          Date.parse(b.createdAt) > Date.parse(latest.createdAt) ? b : latest,
         )
       : null;
 

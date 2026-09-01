@@ -8,10 +8,8 @@ import type { PantryItemDuplicateInfo } from '#/utils/errors/pantryItemDuplicate
 import { logger } from '#/utils/environment';
 
 /**
- * Args declared and passed UNDEFINED on purpose: `itemsConnection` is keyed on
- * them, so client mode stores `itemsConnection:{}`, not a bare
- * `itemsConnection` — reading without them resolves a key that does not exist,
- * and matches nothing with no error to show for it. Server mode misses instead.
+ * Args passed UNDEFINED on purpose: the field is keyed on them, so client mode
+ * stores `itemsConnection:{}`. Client mode only — see {@link scanCachedPantryItems}.
  */
 const CACHED_PANTRY_ITEMS_FRAGMENT = gql`
   fragment CachedPantryItemsForDuplicateCheck on Pantry {
@@ -52,6 +50,58 @@ export interface CachedPantryItemDuplicate extends PantryItemDuplicateInfo {
 const normalizeName = (name: string | null | undefined): string =>
   (name ?? '').trim().toLowerCase();
 
+type CachedNode = {
+  id: string;
+  itemName: string | null;
+  quantity: number | null;
+  item: { id: string } | null;
+};
+
+/**
+ * Every cached `itemsConnection` variant, whatever key. Reads the store direct:
+ * server mode keys on the live filter and sort, which no fragment can name.
+ */
+function scanCachedPantryItems(
+  cache: ApolloCache,
+  pantryCacheId: string,
+): CachedNode[] {
+  let store;
+  try {
+    store = cache.extract() as Record<string, Record<string, unknown>>;
+  } catch (error) {
+    logger.warn(
+      'Pantry duplicate pre-check could not extract the cache:',
+      error,
+    );
+    return [];
+  }
+
+  const pantry = store[pantryCacheId];
+  if (!pantry) return [];
+
+  const nodes: CachedNode[] = [];
+  for (const [field, value] of Object.entries(pantry)) {
+    if (!field.startsWith('itemsConnection')) continue;
+    const edges = (value as { edges?: unknown[] } | null)?.edges;
+    if (!Array.isArray(edges)) continue;
+
+    for (const edge of edges) {
+      const ref = (edge as { node?: { __ref?: string } } | null)?.node?.__ref;
+      const node = ref ? store[ref] : undefined;
+      if (!node) continue;
+      nodes.push({
+        id: node.id as string,
+        itemName: (node.itemName as string | null) ?? null,
+        quantity: (node.quantity as number | null) ?? null,
+        item: (node.item as { __ref?: string } | null)?.__ref
+          ? { id: String((node.item as { __ref: string }).__ref).split(':')[1] }
+          : null,
+      });
+    }
+  }
+  return nodes;
+}
+
 /**
  * The server's key is `(pantryId, itemId)` among non-deleted rows, so `itemId`
  * reproduces it exactly. `itemName` is the fallback for the details form, which
@@ -85,11 +135,15 @@ export function findCachedPantryItemDuplicate(
   }
 
   const edges = pantry?.itemsConnection?.edges;
-  if (!edges) return null;
+  // A miss on the client-mode key is not "no duplicate": in server mode the
+  // field is keyed on the live filter and sort, so the rows are cached under a
+  // key this fragment cannot name. Without this the same duplicate prompts on
+  // a small pantry and not on a large one.
+  const nodes: CachedNode[] = edges
+    ? edges.flatMap(edge => (edge?.node ? [edge.node] : []))
+    : scanCachedPantryItems(cache, pantryCacheId);
 
-  for (const edge of edges) {
-    const node = edge?.node;
-    if (!node) continue;
+  for (const node of nodes) {
     // An id match is authoritative; the name match only runs when the caller
     // has no catalog id to offer.
     const matched = itemId

@@ -10,6 +10,26 @@ import { logger } from '#/utils/environment';
 // Pre-request token validation buffer (5 minutes before expiry)
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
+/** ~40s worst case unbounded (3 retries x 10s abort); past this, send anyway. */
+const AWAITED_REFRESH_CEILING_MS = 12_000;
+
+/** The refresh, or null if it outruns the ceiling. Never rejects. */
+const refreshWithinCeiling = async (): Promise<string | null> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const ceiling = new Promise<null>(resolve => {
+    timer = setTimeout(() => resolve(null), AWAITED_REFRESH_CEILING_MS);
+  });
+
+  let winner: string | null = null;
+  try {
+    winner = await Promise.race([proactiveTokenRefresh(), ceiling]);
+  } catch (error) {
+    logger.warn('[AuthLink] Awaited refresh rejected:', error);
+  }
+  clearTimeout(timer);
+  return winner;
+};
+
 export const authLink = new SetContextLink(async ({ headers }, operation) => {
   // Skip operations during logout to prevent unnecessary auth errors
   if (LogoutCleanup.shouldSkipOperation(operation.operationName)) {
@@ -59,7 +79,7 @@ export const authLink = new SetContextLink(async ({ headers }, operation) => {
       // concurrent operations each presenting the same dead JWT and each
       // drawing its own rotation. A failure resolves null: fall through on the
       // old token and let the reactive 401 path decide, as before.
-      token = (await proactiveTokenRefresh()) ?? token;
+      token = (await refreshWithinCeiling()) ?? token;
     } else {
       // Still valid, so nothing needs the refresh to finish — fire-and-forget
       // rather than stalling every concurrent request behind one shared retry

@@ -26,11 +26,11 @@ import { createHash } from 'crypto';
  * Re-record with:
  *   sha256sum src/apollo/cache.ts | cut -c1-16
  */
-// Re-recorded 2026-08-30: comment-only pass over this file. Long rationale
-// blocks were compressed and their stale counts ("eleven operations", "five
-// fields") and `@apollo/client@4.1.7` pin dropped. No policy, `keyArgs` or
-// `merge`/`read` body changed, so no `CURRENT_CACHE_VERSION` bump.
-const REVIEWED_CACHE_POLICY_HASH = '6a3be817c116b238';
+// Re-recorded 2026-08-31: added `PantryItem.usageRecords:
+// mergeConnectionByNodeId(['orderBy'])`. Adding a policy leaves an old blob
+// safe to restore — entries under the previous all-arguments key are stranded,
+// and a stranded field key is a cache miss and a refetch. No version bump.
+const REVIEWED_CACHE_POLICY_HASH = 'c86e5005497b1212';
 
 it('cache.ts has not changed without the persisted-shape decision being made', () => {
   const actual = createHash('sha256')

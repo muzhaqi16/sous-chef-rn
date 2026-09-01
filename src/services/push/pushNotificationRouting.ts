@@ -8,12 +8,10 @@
 import NavigationService from '#/services/NavigationService';
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
 
-// FCM/Notifee payloads are flat string maps. Routing keys off `category` and
-// the PRESENCE of `notificationId`; the other fields ride along for dedup and
-// correlation, so aren't modeled here.
+// FCM/Notifee payloads are flat string maps. Routing keys off `category`; the
+// other fields ride along for dedup and correlation, so aren't modeled here.
 export interface NotificationTapData {
   category?: string;
-  notificationId?: string;
 }
 
 const readTapData = (
@@ -22,25 +20,17 @@ const readTapData = (
   if (!data) return {};
   const category =
     typeof data.category === 'string' ? data.category : undefined;
-  const notificationId =
-    typeof data.notificationId === 'string' ? data.notificationId : undefined;
-  return { category, notificationId };
+  return { category };
 };
 
 export const routeNotificationTap = (
   data: NotificationTapData | Record<string, unknown> | null | undefined,
 ): void => {
-  const { category, notificationId } = readTapData(data);
+  const { category } = readTapData(data);
 
-  // A push the server coalesced over a quiet-hours window stands for several
-  // notifications and carries no `notificationId`, while `sourceId` survives
-  // and names only the first — so routing it anywhere specific opens one item
-  // out of many. The feed is the only honest destination.
-  if (!notificationId) {
-    NavigationService.navigate('Notifications');
-    return;
-  }
-
+  // Category alone. Quiet hours DELAY each notification's own push rather than
+  // merging them (`docs/guides/push-notifications.md` § Consent and gating), so
+  // no delivery stands for several and there is nothing to route around.
   switch (category?.toUpperCase()) {
     case NotificationCategory.Shopping:
       NavigationService.navigate('Home', {

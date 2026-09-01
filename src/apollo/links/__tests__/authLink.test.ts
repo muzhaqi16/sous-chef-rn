@@ -423,5 +423,36 @@ describe('authLink', () => {
       expect(headers.authorization).toBe(`Bearer ${expired}`);
       expect(mockStoreState.tokenRefreshFailed).not.toHaveBeenCalled();
     });
+
+    it('falls back to the held token when the refresh REJECTS', async () => {
+      // `?? token` only absorbs a resolved null. The single-flight JOIN branch
+      // hands back the in-flight promise unwrapped, and that promise rejects on
+      // every path `performTokenRefresh` throws on — a rotation lost to a flaky
+      // network among them. A joiner must land here, not fail its operation.
+      const expired = makeToken(-60);
+      mockStoreState.accessToken = expired;
+      mockedProactiveRefresh.mockRejectedValue(new Error('Refresh failed'));
+
+      const headers = await run('GetPantry');
+
+      expect(headers.authorization).toBe(`Bearer ${expired}`);
+      expect(mockStoreState.tokenRefreshFailed).not.toHaveBeenCalled();
+    });
+
+    it('keeps a concurrent batch alive when the shared refresh rejects', async () => {
+      // Five joiners behind one owner: the owner converts its own failure to
+      // null, so a rejection reaching the link is by definition a joiner's.
+      const expired = makeToken(-60);
+      mockStoreState.accessToken = expired;
+      mockedProactiveRefresh.mockRejectedValue(new Error('Refresh failed'));
+
+      const batch = await Promise.all(
+        Array.from({ length: 6 }, () => run('GetPantry')),
+      );
+
+      expect(batch.map(headers => headers.authorization)).toEqual(
+        Array(6).fill(`Bearer ${expired}`),
+      );
+    });
   });
 });

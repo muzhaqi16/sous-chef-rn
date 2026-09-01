@@ -629,6 +629,9 @@ export function makeCache(): InMemoryCache {
           unit: {
             merge: false, // Always replace unit with incoming data, never merge
           },
+          // Without a policy, keyArgs is every argument and a `fetchMore` page
+          // lands under its own cursor — the list never grows.
+          usageRecords: mergeConnectionByNodeId(['orderBy']),
         },
       },
       Item: {

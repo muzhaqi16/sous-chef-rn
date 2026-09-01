@@ -37,12 +37,8 @@ const NO_RNGH_GESTURES_IN_ROWS: Record<string, string> = {
     'recipe cards use RN Pressable only — no RNGH gesture in the row',
   'src/features/recipes/screens/SavedRecipes.tsx':
     'recipe cards use RN Pressable only — no RNGH gesture in the row',
-  'src/features/shoppingList/screens/PurchaseHistoryScreen.tsx':
-    'purchase rows are inert — no RNGH gesture in the row',
-  'src/features/pantry/screens/PantryUsageHistoryScreen.tsx':
-    'usage rows are inert — no RNGH gesture in the row',
-  'src/features/pantry/screens/PantryBatchHistoryScreen.tsx':
-    'batch rows act through AppPressable, which is RN Pressable — no RNGH gesture in the row',
+  'src/components/templates/PaginatedHistoryScreen.tsx':
+    'the one list behind the three history screens; all three pass inert rows (purchases, usage entries, and batches acting through AppPressable, which is RN Pressable). A consumer with RNGH rows passes `renderScrollComponent` instead.',
 };
 
 /** Screen-level lists whose rows carry RNGH gestures; RNGH's scroll is required. */

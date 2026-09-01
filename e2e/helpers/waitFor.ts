@@ -307,17 +307,21 @@ export async function tapFirstAvailable(
 }
 
 /**
- * Non-throwing PRESENCE probe, for CHOOSING a path rather than asserting one.
- * `toExist`, not `toBeVisible`: Detox wants ~75% visibility, so a full-screen
- * container with the keyboard up is present yet reads as absent. Returns as
- * soon as the element appears, so the timeout caps only the negative case.
+ * Non-throwing ON-SCREEN probe, for CHOOSING a path rather than asserting one.
+ * The threshold is load-bearing: `toExist` also matches a screen mounted under
+ * a pushed one, while bare `toBeVisible()` wants ~75% and rejects a container
+ * the keyboard covers.
  */
-export async function exists(
+const ON_SCREEN_PCT = 1;
+
+export async function isOnScreen(
   testID: string,
   timeout: number = 1000,
 ): Promise<boolean> {
   try {
-    await waitFor(element(by.id(testID))).toExist().withTimeout(timeout);
+    await waitFor(element(by.id(testID)))
+      .toBeVisible(ON_SCREEN_PCT)
+      .withTimeout(timeout);
     return true;
   } catch {
     return false;

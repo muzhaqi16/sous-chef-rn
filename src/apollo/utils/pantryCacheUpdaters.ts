@@ -83,6 +83,26 @@ export function removePantryItemLocally(
   return removed;
 }
 
+/** The `Item` a local pantry row points at before the catalog has one. */
+export const localItemIdFor = (pantryItemId: string): string =>
+  `local-item-${pantryItemId}`;
+
+/**
+ * Undo what a detail stub writes ALONGSIDE the row — a local `Item` and a
+ * retained `ROOT_QUERY` field. Both survive evicting the row, and both persist.
+ */
+export function evictPantryItemDetailStub(
+  cache: ApolloCache,
+  pantryItemId: string,
+): void {
+  safeEvict(cache, 'Item', localItemIdFor(pantryItemId));
+  cache.evict({
+    id: 'ROOT_QUERY',
+    fieldName: 'pantryItemBatchesConnection',
+    args: { pantryItemId },
+  });
+}
+
 /**
  * Withdraw a refused optimistic row: edge first, so `cache.modify` still sees it
  * and takes both counters with it. Evicting alone strands `stats.totalItems`.
@@ -94,4 +114,5 @@ export function revertOptimisticPantryItem(
 ): void {
   removePantryItemLocally(cache, pantryId, itemId);
   safeEvict(cache, 'PantryItem', itemId);
+  evictPantryItemDetailStub(cache, itemId);
 }

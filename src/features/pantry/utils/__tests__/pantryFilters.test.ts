@@ -1,5 +1,6 @@
 import {
   filterByLocation,
+  locationFilterToQueryFilter,
   isBuiltInFilter,
   sortOptionToOrderBy,
 } from '../pantryFilters';
@@ -73,6 +74,19 @@ describe('filterByLocation', () => {
     expect(filterByLocation(items, 'all').map(i => i.id)).toContain('4');
   });
 
+  it('filters by unassigned (NONE), which has its own tab now', () => {
+    const withNone = [
+      ...items,
+      { id: '6', storageState: StorageState.None, storageLocation: null },
+    ];
+    expect(filterByLocation(withNone, 'unassigned').map(i => i.id)).toEqual([
+      '6',
+    ]);
+    // And it stays out of ambient — the server's AMBIENT filter excludes it, so
+    // folding it in here would put rows under a badge that does not count them.
+    expect(filterByLocation(withNone, 'pantry').map(i => i.id)).toEqual(['3']);
+  });
+
   it('filters by custom location ID', () => {
     const result = filterByLocation(items, 'loc-1');
     expect(result.map(i => i.id)).toEqual(['5']);
@@ -84,6 +98,30 @@ describe('filterByLocation', () => {
 
   it('handles empty items array', () => {
     expect(filterByLocation([], 'fridge')).toEqual([]);
+  });
+});
+
+describe('locationFilterToQueryFilter', () => {
+  it('asks the server for exactly what each built-in tab shows', () => {
+    expect(locationFilterToQueryFilter('all')).toBeNull();
+    expect(locationFilterToQueryFilter('fridge')).toEqual({
+      storageState: StorageState.Refrigerated,
+    });
+    expect(locationFilterToQueryFilter('freezer')).toEqual({
+      storageState: StorageState.Frozen,
+    });
+    expect(locationFilterToQueryFilter('pantry')).toEqual({
+      storageState: StorageState.Ambient,
+    });
+    expect(locationFilterToQueryFilter('unassigned')).toEqual({
+      storageState: StorageState.None,
+    });
+  });
+
+  it('treats anything else as a custom storage location', () => {
+    expect(locationFilterToQueryFilter('loc-1')).toEqual({
+      storageLocationId: 'loc-1',
+    });
   });
 });
 

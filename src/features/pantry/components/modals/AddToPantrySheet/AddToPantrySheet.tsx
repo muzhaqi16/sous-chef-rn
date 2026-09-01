@@ -242,7 +242,19 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       // (deduped by its idempotencyKey).
       context: { localFirst: true },
     })
-      .then(() => onItemAdded?.())
+      .then(result => {
+        // A refused mutation RESOLVES under `errorPolicy: 'all'`, so failure
+        // arrives here, not in `catch`. Handling it only there left the +1
+        // permanently in the cache under a success toast — the revert and the
+        // error copy were unreachable. `classifyCreateResult` keeps the row for
+        // a queued create and for IDEMPOTENT_REPLAY, as the sibling paths do.
+        if (classifyCreateResult(result) === 'rejected') {
+          optimistic.revert();
+          toastService.error(t('addToPantry.restockFailed'));
+          return;
+        }
+        onItemAdded?.();
+      })
       .catch(() => {
         optimistic.revert();
         toastService.error(t('addToPantry.restockFailed'));

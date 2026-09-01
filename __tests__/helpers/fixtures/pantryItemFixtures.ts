@@ -148,6 +148,11 @@ export function pantryItemData(
       usageRecords: {
         __typename: 'PantryItemUsageConnection',
         totalCount: 0,
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: false,
+          endCursor: null,
+        },
         edges: [],
       },
     },

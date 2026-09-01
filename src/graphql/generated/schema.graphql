@@ -11470,10 +11470,18 @@ Counts of pantry items grouped by storage state.
 Always reflects the full pantry (not affected by itemsConnection filters).
 """
 type StorageStateCounts {
-  """Count of items with storageState = AMBIENT, NONE, or null"""
+  """
+  Count of items with storageState = AMBIENT — shelf-stable, chosen.
+  Does NOT include NONE; see the none field.
+  """
   ambient: Int!
   """Count of items with storageState = FROZEN"""
   frozen: Int!
+  """
+  Count of items with no storage state chosen. Distinct from AMBIENT: nobody
+  said where this lives, rather than somebody saying it needs no cold chain.
+  """
+  none: Int!
   """Count of items with storageState = REFRIGERATED"""
   refrigerated: Int!
 }

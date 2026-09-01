@@ -38,6 +38,17 @@ const COMPOSED_KEY_REASON =
 
 const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> = [
   {
+    keys: [
+      'pantryItemDetail.batch.historySummary_one',
+      'pantryItemDetail.batch.historySummary_other',
+    ],
+    reason:
+      'The two plural forms of ONE key. English does not inflect the ' +
+      'adjective, so both read "{{active}} active of {{total}}"; es/it/sq all ' +
+      'differ ("activo"/"activos"). Merging them would drop the forms those ' +
+      'locales need, which is the defect the pair exists to fix.',
+  },
+  {
     keys: ['recipes.difficultyLabel.MEDIUM', 'shoppingListScreens.priorityMedium'],
     reason:
       'Two adjectives that happen to coincide, not one string used twice. ' +
@@ -87,7 +98,7 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> = 
       'parameter.',
   },
   {
-    keys: ['labels.pantry', 'notifications.categoryPantry', 'navigation.tabs.pantry', 'pantryScreen.tabPantry', 'homeManagement.statsPantry_one', 'pantryTabs.pantry'],
+    keys: ['labels.pantry', 'notifications.categoryPantry', 'navigation.tabs.pantry', 'pantryScreen.tabPantry', 'homeManagement.statsPantry_one'],
     reason:
       'The English is one word for two roles: sq "Qilari" vs "Qilar". ' +
       'One form would be wrong in the other context, so the ' +
@@ -515,14 +526,6 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> = 
       'etiquetas..." vs "Añade etiquetas...". One form would be wrong ' +
       'in the other context, so the distinction belongs in the key ' +
       'rather than in a runtime parameter.',
-  },
-  {
-    keys: ['pantryScreen.tabFridge', 'pantryTabs.fridge', 'storageStateShort.REFRIGERATED'],
-    reason:
-      'The English is one word for two roles: it "Frigorifero" vs ' +
-      '"Frigo". One form would be wrong in the other context, so the ' +
-      'distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
   },
   {
     keys: ['homeManagement.modeCreate', 'onboardingSteps.CreateHome.title'],

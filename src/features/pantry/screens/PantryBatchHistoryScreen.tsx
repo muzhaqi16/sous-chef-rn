@@ -1,13 +1,8 @@
-import React, { useRef } from 'react';
-import { View } from 'react-native';
+import React from 'react';
 import { useTranslation } from '#/i18n';
 import { useApolloClient, useQuery } from '@apollo/client/react';
 import type { StaticScreenProps } from '@react-navigation/native';
-import {
-  FlashList,
-  type ListRenderItemInfo,
-  type FlashListRef,
-} from '@shopify/flash-list';
+import type { ListRenderItemInfo } from '@shopify/flash-list';
 import { GetPantryItemBatchHistoryDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   PantryItemBatchFragmentDoc,
@@ -15,18 +10,8 @@ import {
 } from '#features/pantry/graphql/pantryFragments.generated';
 import { BatchStatus } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
-import {
-  ThemedActivityIndicator,
-  ThemedBackButton,
-} from '#components/atoms/themedComponents';
-import { StyleSheet } from 'react-native-unistyles';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { Icon } from '#utils/iconUtils';
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
-import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
-import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
-import { DataStateView } from '#components/molecules/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
+import { PaginatedHistoryScreen } from '#components/templates/PaginatedHistoryScreen';
 import { Text } from '#components/atoms/Text';
 import { BatchListItem } from '#features/pantry/components/BatchListItem';
 import { useOpenPantryItemBatch } from '#features/pantry/hooks/mutations/useOpenPantryItemBatch';
@@ -48,10 +33,8 @@ export const PantryBatchHistoryScreen: React.FC<
   StaticScreenProps<RouteParams>
 > = ({ route }) => {
   const { t } = useTranslation();
-  const { goBack } = useAppNavigation();
-  const { pantryItemId, itemName, unitSymbol } = route.params;
-
   const client = useApolloClient();
+  const { pantryItemId, itemName, unitSymbol } = route.params;
   const { openBatch } = useOpenPantryItemBatch();
   const { wasteBatch } = useWastePantryItemBatch();
 
@@ -70,39 +53,41 @@ export const PantryBatchHistoryScreen: React.FC<
   const connection = data?.pantryItemBatchesConnection;
   // Edges arrive MASKED, so `edge.node.status` is undefined — materialize each
   // before sorting or counting by it, as the detail screen does.
-  const batches: PantryItemBatchFragment[] = (connection?.edges ?? [])
-    .map(edge =>
-      client.cache.readFragment<PantryItemBatchFragment>({
-        fragment: PantryItemBatchFragmentDoc,
-        fragmentName: 'PantryItemBatchFragment',
-        from: edge.node,
-      }),
-    )
+  const materialized = (connection?.edges ?? []).map(edge =>
+    client.cache.readFragment<PantryItemBatchFragment>({
+      fragment: PantryItemBatchFragmentDoc,
+      fragmentName: 'PantryItemBatchFragment',
+      from: edge.node,
+    }),
+  );
+  // `readFragment` returns null for a PARTIALLY cached batch exactly as for a
+  // missing one, so a dropped row would vanish while every count still had it.
+  const unreadable = materialized.filter(b => b == null).length;
+
+  const batches: PantryItemBatchFragment[] = materialized
     .filter((b): b is PantryItemBatchFragment => b != null)
-    // Active first, then the inactive history — the order the detail screen
-    // shows and the order a reader expects to scan.
+    // Active first, then the inactive history. Active batches in FIFO order, as
+    // `BatchSection` shows them — otherwise "View all" reorders the rows the
+    // reader was just looking at.
     .sort((a, b) => {
       const aActive = a.status === BatchStatus.Active ? 0 : 1;
       const bActive = b.status === BatchStatus.Active ? 0 : 1;
       if (aActive !== bActive) return aActive - bActive;
-      return a.batchNumber - b.batchNumber;
+      if (aActive === 1) return a.batchNumber - b.batchNumber;
+      if (!a.expiresAt && !b.expiresAt) return a.batchNumber - b.batchNumber;
+      if (!a.expiresAt) return 1;
+      if (!b.expiresAt) return -1;
+      return new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime();
     });
 
-  const flashListRef = useRef<FlashListRef<PantryItemBatchFragment>>(null);
-  const perfCallbacks = useFlashListPerformance(flashListRef, {
-    componentName: 'PantryBatchHistoryScreen',
-    hasRealContent: batches.length > 0,
-  });
-  useDataReferenceTracker(
-    batches,
-    'PantryBatchHistoryScreen.items',
-    perfCallbacks.onDataReferenceChange,
-  );
-
   const totalCount = connection?.totalCount ?? batches.length;
-  const activeCount = batches.filter(
-    b => b.status === BatchStatus.Active,
-  ).length;
+  // Only describes the whole connection once every page is loaded — otherwise
+  // it counts the loaded window and would climb as the reader scrolls a pantry
+  // that did not change. `unreadable` rows are in `totalCount` but not here.
+  const allPagesLoaded = !connection?.pageInfo?.hasNextPage && unreadable === 0;
+  const activeCount = allPagesLoaded
+    ? batches.filter(b => b.status === BatchStatus.Active).length
+    : null;
   const hasNextPage = connection?.pageInfo?.hasNextPage ?? false;
   const endCursor = connection?.pageInfo?.endCursor ?? null;
   // networkStatus 3 = fetchMore in flight.
@@ -134,129 +119,43 @@ export const PantryBatchHistoryScreen: React.FC<
     );
   };
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <ThemedBackButton onPress={goBack} style={styles.backButton} />
-        <View style={styles.headerContent}>
-          <Text size="lg" weight="semibold">
-            {t('pantryItemDetail.batch.historyTitle')}
-          </Text>
-          <Text size="sm" tone="secondary" style={styles.headerSubtitle}>
-            {itemName}
-          </Text>
-        </View>
-        <View style={styles.headerSpacer} />
-      </View>
+  const renderItem = ({
+    item,
+  }: ListRenderItemInfo<PantryItemBatchFragment>) => (
+    <BatchListItem
+      batch={item}
+      unitSymbol={unitSymbol}
+      onOpen={openBatch}
+      onWaste={wasteBatch}
+    />
+  );
 
-      {state === 'loading' ? (
-        <View style={styles.loadingContainer}>
-          <ThemedActivityIndicator />
-        </View>
-      ) : (
-        <FlashList
-          ref={flashListRef}
-          CellRendererComponent={perfCallbacks.CellRendererComponent}
-          onLoad={perfCallbacks.onLoad}
-          onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
-          onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
-          data={batches}
-          keyExtractor={keyExtractor}
-          renderItem={({
-            item,
-          }: ListRenderItemInfo<PantryItemBatchFragment>) => (
-            <BatchListItem
-              batch={item}
-              unitSymbol={unitSymbol}
-              onOpen={openBatch}
-              onWaste={wasteBatch}
-            />
-          )}
-          getItemType={getItemType}
-          {...FLASHLIST_DEFAULTS.fullScreen}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.4}
-          ListHeaderComponent={
-            batches.length > 0 ? (
-              <Text size="sm" tone="secondary" style={styles.summary}>
-                {t('pantryItemDetail.batch.historySummary', {
-                  active: activeCount,
-                  total: totalCount,
-                })}
-              </Text>
-            ) : null
-          }
-          ListFooterComponent={
-            loadingMore ? (
-              <ThemedActivityIndicator style={styles.footerLoader} />
-            ) : null
-          }
-          ListEmptyComponent={
-            state === 'error' || state === 'offline' ? (
-              <DataStateView state={state} onRetry={handleRetry} />
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Icon name="layers-outline" size={64} tone="iconDisabled" />
-                <Text size="lg" weight="semibold" style={styles.emptyText}>
-                  {t('pantryItemDetail.batch.emptyTitle')}
-                </Text>
-              </View>
-            )
-          }
-          contentContainerStyle={styles.content}
-          style={styles.scrollView}
-        />
-      )}
-    </View>
+  return (
+    <PaginatedHistoryScreen
+      title={t('pantryItemDetail.batch.historyTitle')}
+      subtitle={itemName}
+      items={batches}
+      state={state}
+      onRetry={handleRetry}
+      onEndReached={loadMore}
+      isFetchingMore={loadingMore}
+      keyExtractor={keyExtractor}
+      renderItem={renderItem}
+      getItemType={getItemType}
+      summary={
+        <Text size="sm" tone="secondary">
+          {activeCount === null
+            ? t('pantryItemDetail.batch.historyTotal', { count: totalCount })
+            : t('pantryItemDetail.batch.historySummary', {
+                active: activeCount,
+                total: totalCount,
+                count: activeCount,
+              })}
+        </Text>
+      }
+      emptyIcon="layers-outline"
+      emptyTitle={t('pantryItemDetail.batch.emptyTitle')}
+      componentName="PantryBatchHistoryScreen"
+    />
   );
 };
-
-const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-  },
-  backButton: {
-    marginRight: theme.spacing.sm,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerSubtitle: {
-    marginTop: theme.spacing.xs,
-  },
-  headerSpacer: {
-    width: theme.spacing.xl,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: theme.spacing.md,
-  },
-  summary: {
-    marginBottom: theme.spacing.sm,
-  },
-  footerLoader: {
-    marginVertical: theme.spacing.lg,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xl,
-  },
-  emptyText: {
-    marginTop: theme.spacing.md,
-  },
-}));

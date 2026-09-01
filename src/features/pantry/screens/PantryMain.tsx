@@ -461,17 +461,17 @@ const PantryMainFallback: React.FC = () => {
     { id: 'all', label: t('pantryScreen.tabAll') },
     {
       id: 'fridge',
-      label: t('pantryScreen.tabFridge'),
+      label: t('labels.storageRefrigerated'),
       icon: 'thermometer-outline',
     },
     {
       id: 'freezer',
-      label: t('pantryScreen.tabFreezer'),
+      label: t('labels.storageFrozen'),
       icon: 'snow-outline',
     },
     {
       id: 'pantry',
-      label: t('pantryScreen.tabPantry'),
+      label: t('labels.storageAmbient'),
       icon: 'cube-outline',
     },
   ];

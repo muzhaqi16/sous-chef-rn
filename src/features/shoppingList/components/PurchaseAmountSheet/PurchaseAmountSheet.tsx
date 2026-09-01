@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { BottomSheetView } from '@gorhom/bottom-sheet';
 import {
   BottomSheetModal,
   useStandardBottomSheet,
@@ -19,6 +18,7 @@ import {
   localizeNumericHint,
 } from '#/utils/formatters/number';
 import { totalFromUnitPrice, unitPriceFromTotal } from '#/utils/purchasePrice';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 
 interface PurchaseAmountSheetItem {
   id: string;
@@ -125,9 +125,12 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      {/* `BottomSheetView` reports its own height as the sheet's content
-          height, so everything the sheet shows must sit inside this one. */}
-      <BottomSheetView style={[styles.content, contentContainerStyle]}>
+      {/* Two inputs and a keyboard can exceed the sheet, and `BottomSheetView`
+          is absolutely positioned with no height — anything past the fold is
+          unreachable. */}
+      <BottomSheetFormScrollView
+        contentContainerStyle={[styles.content, contentContainerStyle]}
+      >
         <Header
           title={t('purchaseAmountSheet.title')}
           centerTitle
@@ -228,7 +231,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
             ) : null}
           </View>
         </View>
-      </BottomSheetView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 };

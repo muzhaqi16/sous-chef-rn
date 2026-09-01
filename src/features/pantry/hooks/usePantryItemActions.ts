@@ -489,15 +489,16 @@ export function usePantryItemActions({
       return;
     }
 
-    // The new batch carries the price this restock was made at, and the detail
-    // header's costs are derived from the batches. Nothing here can build the
-    // row — its id, number and converted quantity are the server's — so drop the
-    // connection and let the screen's cache-and-network query refill it.
-    client.cache.evict({
-      id: 'ROOT_QUERY',
-      fieldName: 'pantryItemBatchesConnection',
-      args: { pantryItemId: itemId },
-    });
+    // The new batch row is the server's to build, so drop the connection and
+    // let the screen refetch it — but only once a response arrived. Offline
+    // `queueLink` resolves null, and nothing would refill it.
+    if (restockPayload) {
+      client.cache.evict({
+        id: 'ROOT_QUERY',
+        fieldName: 'pantryItemBatchesConnection',
+        args: { pantryItemId: itemId },
+      });
+    }
 
     closeModal();
   };

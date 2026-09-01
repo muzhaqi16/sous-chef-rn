@@ -12,7 +12,7 @@ describe('routeNotificationTap', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('routes a SHOPPING notification to the shopping list', () => {
-    routeNotificationTap({ category: 'SHOPPING', notificationId: 'n1' });
+    routeNotificationTap({ category: 'SHOPPING' });
 
     expect(mockNavigate).toHaveBeenCalledWith('Home', {
       screen: 'ShoppingList',
@@ -21,7 +21,7 @@ describe('routeNotificationTap', () => {
   });
 
   it('routes a PANTRY notification to the pantry', () => {
-    routeNotificationTap({ category: 'PANTRY', notificationId: 'n1' });
+    routeNotificationTap({ category: 'PANTRY' });
 
     expect(mockNavigate).toHaveBeenCalledWith('Home', {
       screen: 'Pantry',
@@ -30,7 +30,7 @@ describe('routeNotificationTap', () => {
   });
 
   it('routes a RECIPE notification to the recipes tab', () => {
-    routeNotificationTap({ category: 'RECIPE', notificationId: 'n1' });
+    routeNotificationTap({ category: 'RECIPE' });
 
     expect(mockNavigate).toHaveBeenCalledWith('Home', {
       screen: 'Recipe',
@@ -39,7 +39,7 @@ describe('routeNotificationTap', () => {
   });
 
   it('matches the category case-insensitively', () => {
-    routeNotificationTap({ category: 'pantry', notificationId: 'n1' });
+    routeNotificationTap({ category: 'pantry' });
 
     expect(mockNavigate).toHaveBeenCalledWith('Home', {
       screen: 'Pantry',
@@ -48,7 +48,7 @@ describe('routeNotificationTap', () => {
   });
 
   it('opens the feed for home/system categories', () => {
-    routeNotificationTap({ category: 'SYSTEM', notificationId: 'n1' });
+    routeNotificationTap({ category: 'SYSTEM' });
 
     expect(mockNavigate).toHaveBeenCalledWith('Notifications');
   });
@@ -70,42 +70,71 @@ describe('routeNotificationTap', () => {
 
   it('ignores a non-string category value', () => {
     // Notifee payloads can technically carry non-string values.
-    const payload: Record<string, unknown> = {
-      category: 42,
-      notificationId: 'n1',
-    };
+    const payload: Record<string, unknown> = { category: 42 };
     routeNotificationTap(payload);
 
     expect(mockNavigate).toHaveBeenCalledWith('Notifications');
   });
   /**
-   * A push the server coalesced over a quiet-hours window stands for several
-   * notifications: it carries no `notificationId`, its body names more than one
-   * item, and `sourceId` survives pointing at the first alone. Routing it by
-   * category opens one item out of four and reads as having lost the rest.
+   * `notificationId` is OPTIONAL on the wire. `readPushMessage` reads
+   * `data.notificationId || message.messageId` precisely because an ordinary
+   * push can arrive without it — an alternate sender, a nested APNs payload, a
+   * Notifee local notification. So its absence says nothing about coalescing,
+   * and treating it as a claim drops the deep link for every payload that
+   * merely omits it.
    */
-  describe('a coalesced quiet-hours push', () => {
-    it('opens the feed even though it carries a routable category', () => {
-      routeNotificationTap({
-        category: 'PANTRY',
-        sourceId: 'pib_first',
-        sourceType: 'PANTRY_ITEM_BATCH',
-      });
+  describe('a payload carrying no notificationId', () => {
+    it('still deep-links on its category', () => {
+      routeNotificationTap({ category: 'PANTRY' });
 
-      expect(mockNavigate).toHaveBeenCalledWith('Notifications');
+      expect(mockNavigate).toHaveBeenCalledWith('Home', {
+        screen: 'Pantry',
+        params: { screen: 'PantryMain' },
+      });
+    });
+
+    it('deep-links a locally raised notification', () => {
+      // Notifee builds this one on-device; there is no server id to carry.
+      routeNotificationTap({ category: 'SHOPPING' });
+
+      expect(mockNavigate).toHaveBeenCalledWith('Home', {
+        screen: 'ShoppingList',
+        params: { screen: 'ShoppingListMain' },
+      });
     });
 
     it('never routes on sourceId', () => {
-      routeNotificationTap({ sourceId: 'pib_first', category: 'SHOPPING' });
+      // `sourceId` names one entity; the category is what maps to a screen.
+      routeNotificationTap({ sourceId: 'pib_first' });
 
       expect(mockNavigate).toHaveBeenCalledTimes(1);
       expect(mockNavigate).toHaveBeenCalledWith('Notifications');
     });
+  });
 
-    // A window holding one notification still sends that notification's own
-    // payload, so the single-item case deep-links as it always did.
-    it('still deep-links a window that held a single notification', () => {
-      routeNotificationTap({ category: 'PANTRY', notificationId: 'n1' });
+  /**
+   * `docs/api/notifications.md` lists `notificationId` as ALWAYS present, and
+   * quiet hours DELAY each push rather than merging several into one. So an
+   * absent id says nothing about coalescing — routing keys off `category`.
+   */
+  describe('a payload the sender did not fully populate', () => {
+    it('deep-links on category alone', () => {
+      routeNotificationTap({ category: 'PANTRY' });
+
+      expect(mockNavigate).toHaveBeenCalledWith('Home', {
+        screen: 'Pantry',
+        params: { screen: 'PantryMain' },
+      });
+    });
+
+    it('ignores an unmodelled correlation key', () => {
+      routeNotificationTap({
+        category: 'PANTRY',
+        notificationId: 'n1',
+        sourceId: 'pib_1',
+        sourceType: 'PANTRY_ITEM_BATCH',
+        type: 'LOW_STOCK',
+      });
 
       expect(mockNavigate).toHaveBeenCalledWith('Home', {
         screen: 'Pantry',

@@ -146,6 +146,7 @@ export function writeOptimisticPantry(
           refrigerated: 0,
           frozen: 0,
           ambient: 0,
+          none: 0,
         },
         storageLocationCounts: [],
       },

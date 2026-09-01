@@ -22,9 +22,9 @@ export const StorageStateControl: React.FC<StorageStateControlProps> = ({
   const { t } = useTranslation();
 
   const storageStateLabel: Record<StorageState, string> = {
-    [StorageState.Ambient]: t('moveToPantry.stateAmbient'),
-    [StorageState.Refrigerated]: t('moveToPantry.stateRefrigerated'),
-    [StorageState.Frozen]: t('moveToPantry.stateFrozen'),
+    [StorageState.Ambient]: t('labels.storageAmbient'),
+    [StorageState.Refrigerated]: t('labels.storageRefrigerated'),
+    [StorageState.Frozen]: t('labels.storageFrozen'),
     [StorageState.None]: '',
   };
 

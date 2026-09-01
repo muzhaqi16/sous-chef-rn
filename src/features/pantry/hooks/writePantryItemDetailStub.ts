@@ -32,6 +32,7 @@ import {
   WritePantryItemDetailStub_UnitRefFragmentDoc,
 } from './writePantryItemDetailStub.generated';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import { localItemIdFor } from '#/apollo/utils/pantryCacheUpdaters';
 
 /** The detail-only facts a create site can supply. All optional. */
 export interface PantryItemDetailStubFields {
@@ -207,7 +208,7 @@ function singleFieldFragment(
 const resolveItemId = (
   pantryItemId: string,
   itemId: string | null | undefined,
-): string => itemId || `local-item-${pantryItemId}`;
+): string => itemId || localItemIdFor(pantryItemId);
 
 /**
  * The id of the Unit the optimistic builder just linked, or null when the row
@@ -365,6 +366,11 @@ export function writePantryItemDetailStub(
       usageRecords: {
         __typename: 'PantryItemUsageConnection',
         totalCount: 0,
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: false,
+          endCursor: null,
+        },
         edges: [],
       },
     },
@@ -382,6 +388,11 @@ export function writePantryItemDetailStub(
       pantryItemBatchesConnection: {
         __typename: 'PantryItemBatchConnection',
         totalCount: 0,
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: false,
+          endCursor: null,
+        },
         edges: [],
       },
     },

@@ -12,10 +12,12 @@ import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters
 import { errorService } from '#/services/errorService';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
+import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import {
   addToPantryItemsCache,
   adjustPantryItemCount,
   removeFromPantryItemsCache,
+  evictPantryItemDetailStub,
 } from '#/apollo/utils/pantryCacheUpdaters';
 import {
   removeItemFromShoppingListForMoveToPantry,
@@ -235,6 +237,9 @@ export function useMoveToPantry({
       quantity: input.actualQuantity,
     };
     try {
+      // A detail read on a client-minted id 404s and renders the deleted
+      // state; `useIsCreateUnconfirmed` skips it until the server confirms.
+      unconfirmedCreates.mark(pantryItemId);
       addToPantryItemsCache(client.cache, input.pantryId, optimisticPantryItem);
       // Detail-shape the row so the moved item's detail screen renders its
       // costs from cache — offline this local write is the only source.
@@ -292,6 +297,7 @@ export function useMoveToPantry({
       try {
         removeFromPantryItemsCache(client.cache, input.pantryId, pantryItemId);
         adjustPantryItemCount(client.cache, input.pantryId, -1);
+        evictPantryItemDetailStub(client.cache, pantryItemId);
         if (input.removeFromList) {
           restoreItemToShoppingListAfterMoveToPantry(client.cache, item.id);
         }
@@ -308,6 +314,7 @@ export function useMoveToPantry({
       // A refusal resolves with HTTP 200 and no `error`, so nothing else tells
       // the shopper: the row simply reappears on the list. Reachable now that a
       // target whose unit changed mid-move comes back as a retryable conflict.
+      unconfirmedCreates.confirm(pantryItemId);
       alertRejectedMutation(result, tGlobal('errors.moveToPantryFailedRetry'));
       return false;
     }
@@ -324,12 +331,17 @@ export function useMoveToPantry({
       try {
         removeFromPantryItemsCache(client.cache, input.pantryId, pantryItemId);
         adjustPantryItemCount(client.cache, input.pantryId, -1);
+        // The stub's writes survive evicting the row, and persist.
+        evictPantryItemDetailStub(client.cache, pantryItemId);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Evict superseded optimistic pantry row',
         });
       }
     }
+
+    // The id is the server's now, so the detail screen may query it.
+    unconfirmedCreates.confirm(pantryItemId);
 
     Telemetry.trackEvent('shopping_item_moved_to_pantry', {
       shopping_list_id: currentListId,

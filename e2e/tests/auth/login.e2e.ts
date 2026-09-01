@@ -10,7 +10,7 @@ import { launchAppWithFabricWorkaround } from '../../init';
 import { LandingAuthScreen } from '../../screens/LandingAuthScreen';
 import { LoginScreen } from '../../screens/LoginScreen';
 import { dismissBiometricPromptIfPresent } from '../../helpers/auth';
-import { TIMEOUTS, exists, waitForNetworkIdle } from '../../helpers/waitFor';
+import { TIMEOUTS, isOnScreen, waitForNetworkIdle } from '../../helpers/waitFor';
 import { TEST_USER } from '../../fixtures/testData';
 
 describe('Login', () => {
@@ -39,7 +39,7 @@ describe('Login', () => {
    * screen check a drifted test clears nothing and runs against the wrong view.
    */
   async function ensureEmptyLoginForm() {
-    if (await exists('login-screen')) {
+    if (await isOnScreen('login-screen')) {
       await loginScreen.clearForm();
       return;
     }

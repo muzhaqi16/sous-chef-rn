@@ -116,11 +116,17 @@ export abstract class BaseScreen {
   protected blurTarget?: string;
 
   /**
-   * Drop the keyboard. The return key alone is not enough on a form using
-   * `focusChaining`, where it ADVANCES to the next field and the keyboard
-   * stays up — so a declared {@link blurTarget} is tapped after it.
+   * Drop the keyboard. The return key alone is not enough under `focusChaining`,
+   * where it ADVANCES a field and the keyboard stays up, so a declared
+   * {@link blurTarget} is tapped after it. A screen with NEITHER cannot act,
+   * and returning quietly would report success for work not done.
    */
   async dismissKeyboard(inputTestID: string | undefined = this.keyboardInput) {
+    if (!inputTestID && !this.blurTarget) {
+      throw new Error(
+        `${this.constructor.name} has no keyboardInput or blurTarget, so dismissKeyboard cannot act. Declare a blurTarget: a testID above the keyboard that carries no press handler.`,
+      );
+    }
     if (inputTestID) {
       try {
         await this.getElementById(inputTestID).tapReturnKey();

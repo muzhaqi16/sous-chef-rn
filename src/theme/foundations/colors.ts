@@ -123,7 +123,9 @@ export const colors = {
   // Light-mode canonical shape; `darkFilterTab` below mirrors the keys exactly.
   filterTab: {
     activeBg: '#F97316',
-    activeText: '#FFFFFF',
+    // White on this orange is 2.80:1, below AA. `onColor` picks this for the
+    // same fill, so the tab matches a primary button on it.
+    activeText: '#211E18',
     inactiveBg: '#F3F4F6',
     inactiveText: '#000000',
     filteredBg: '#FFF7ED', // Subtle orange tint for filtered state

@@ -1642,4 +1642,284 @@ describe('cache pagination integration', () => {
       expect(ids).toContain('si-2');
     });
   });
+
+  // =========================================================================
+  // Section F: the two pantry-item history connections added with the history
+  // screens. Both are shared by more than one operation, which is what makes
+  // the merge policy and the selection compatibility load-bearing.
+  // =========================================================================
+
+  describe('PantryItem.usageRecords (keyArgs = orderBy)', () => {
+    const QUERY = gql`
+      query GetUsage($id: ID!, $first: Int, $after: String) {
+        pantryItem(id: $id) {
+          id
+          usageRecords(
+            first: $first
+            after: $after
+            orderBy: { usedAt: DESC }
+          ) {
+            edges {
+              node {
+                id
+                usedAt
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            totalCount
+          }
+        }
+      }
+    `;
+
+    interface UsageResult {
+      pantryItem?: { usageRecords?: TestConnection };
+    }
+
+    const usageEdge = (id: string) =>
+      buildEdge('PantryItemUsage', 'PantryItemUsageEdge', {
+        id,
+        usedAt: `2026-08-${id.slice(-2)}T00:00:00Z`,
+      });
+
+    const writeUsage = (
+      cache: ReturnType<typeof makeCache>,
+      edges: ReturnType<typeof buildEdge>[],
+      pageInfo: { hasNextPage: boolean; endCursor: string | null },
+      vars?: Record<string, unknown>,
+      totalCount?: number,
+    ) =>
+      cache.writeQuery({
+        query: QUERY,
+        variables: { id: 'pi-1', first: 30, ...vars },
+        data: {
+          pantryItem: {
+            __typename: 'PantryItem',
+            id: 'pi-1',
+            usageRecords: buildConnection(
+              'PantryItemUsageConnection',
+              edges,
+              pageInfo,
+              totalCount,
+            ),
+          },
+        },
+      });
+
+    it('accumulates a further page instead of storing it separately', () => {
+      // Without a field policy the default keyArgs is EVERY argument, so page
+      // two lands under its own `after` cursor: the watching query keeps
+      // reading page one and the list can never grow.
+      const cache = makeCache();
+      writeUsage(
+        cache,
+        [usageEdge('u-01')],
+        {
+          hasNextPage: true,
+          endCursor: 'c1',
+        },
+        undefined,
+        2,
+      );
+      writeUsage(
+        cache,
+        [usageEdge('u-02')],
+        {
+          hasNextPage: false,
+          endCursor: 'c2',
+        },
+        { after: 'c1' },
+        2,
+      );
+
+      const result = cache.readQuery<UsageResult>({
+        query: QUERY,
+        variables: { id: 'pi-1', first: 30 },
+      });
+      const ids = (result?.pantryItem?.usageRecords?.edges ?? []).map(
+        e => e.node.id,
+      );
+
+      expect(ids).toEqual(['u-01', 'u-02']);
+    });
+
+    it('advances the cursor, so the end-of-list trigger cannot re-fire', () => {
+      const cache = makeCache();
+      writeUsage(cache, [usageEdge('u-01')], {
+        hasNextPage: true,
+        endCursor: 'c1',
+      });
+      writeUsage(
+        cache,
+        [usageEdge('u-02')],
+        {
+          hasNextPage: false,
+          endCursor: 'c2',
+        },
+        { after: 'c1' },
+      );
+
+      const after = cache.readQuery<UsageResult>({
+        query: QUERY,
+        variables: { id: 'pi-1', first: 30 },
+      });
+
+      expect(after?.pantryItem?.usageRecords?.pageInfo).toEqual({
+        __typename: 'PageInfo',
+        hasNextPage: false,
+        endCursor: 'c2',
+      });
+    });
+  });
+
+  describe('pantryItemBatchesConnection shared by two operations', () => {
+    // The detail screen reads a 100-edge window with no cursor; the history
+    // screen pages. Both key to pantryItemBatchesConnection({pantryItemId}),
+    // so each write has to leave the field able to satisfy the other's read.
+    const DETAIL = gql`
+      query GetBatches($pantryItemId: ID!) {
+        pantryItemBatchesConnection(pantryItemId: $pantryItemId, first: 100) {
+          totalCount
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          edges {
+            node {
+              id
+            }
+          }
+        }
+      }
+    `;
+
+    const HISTORY = gql`
+      query GetBatchHistory($pantryItemId: ID!, $first: Int, $after: String) {
+        pantryItemBatchesConnection(
+          pantryItemId: $pantryItemId
+          first: $first
+          after: $after
+        ) {
+          totalCount
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          edges {
+            node {
+              id
+            }
+          }
+        }
+      }
+    `;
+
+    interface BatchResult {
+      pantryItemBatchesConnection?: TestConnection;
+    }
+
+    const batchEdge = (id: string) =>
+      buildEdge('PantryItemBatch', 'PantryItemBatchEdge', { id });
+
+    const write = (
+      cache: ReturnType<typeof makeCache>,
+      query: typeof DETAIL,
+      edges: ReturnType<typeof buildEdge>[],
+      pageInfo: { hasNextPage: boolean; endCursor: string | null },
+      vars?: Record<string, unknown>,
+    ) =>
+      cache.writeQuery({
+        query,
+        variables: { pantryItemId: 'pi-1', ...vars },
+        data: {
+          pantryItemBatchesConnection: buildConnection(
+            'PantryItemBatchConnection',
+            edges,
+            pageInfo,
+          ),
+        },
+      });
+
+    const readHistory = (cache: ReturnType<typeof makeCache>) =>
+      cache.readQuery<BatchResult>({
+        query: HISTORY,
+        variables: { pantryItemId: 'pi-1', first: 30 },
+      });
+
+    it('keeps the history read complete after the detail query writes', () => {
+      // A detail write selecting no pageInfo strips it off the shared field,
+      // and the history screen's read then goes permanently incomplete —
+      // offline it renders empty over a cache holding every batch.
+      const cache = makeCache();
+      write(
+        cache,
+        HISTORY,
+        [batchEdge('b-1')],
+        {
+          hasNextPage: true,
+          endCursor: 'c1',
+        },
+        { first: 30 },
+      );
+      write(cache, DETAIL, [batchEdge('b-1')], {
+        hasNextPage: false,
+        endCursor: 'c1',
+      });
+
+      expect(readHistory(cache)).not.toBeNull();
+    });
+
+    it('keeps the history read complete in the other write order', () => {
+      const cache = makeCache();
+      write(cache, DETAIL, [batchEdge('b-1')], {
+        hasNextPage: false,
+        endCursor: 'c1',
+      });
+      write(
+        cache,
+        HISTORY,
+        [batchEdge('b-1')],
+        {
+          hasNextPage: true,
+          endCursor: 'c1',
+        },
+        { first: 30 },
+      );
+
+      expect(readHistory(cache)).not.toBeNull();
+    });
+
+    it("does not let the history's narrower page truncate the detail window", () => {
+      const cache = makeCache();
+      write(
+        cache,
+        DETAIL,
+        [batchEdge('b-1'), batchEdge('b-2'), batchEdge('b-3')],
+        { hasNextPage: false, endCursor: 'c3' },
+      );
+      // Page one of the history screen: fewer edges, and more to come.
+      write(
+        cache,
+        HISTORY,
+        [batchEdge('b-1')],
+        {
+          hasNextPage: true,
+          endCursor: 'c1',
+        },
+        { first: 30 },
+      );
+
+      const ids = (
+        cache.readQuery<BatchResult>({
+          query: DETAIL,
+          variables: { pantryItemId: 'pi-1' },
+        })?.pantryItemBatchesConnection?.edges ?? []
+      ).map(e => e.node.id);
+
+      expect(ids).toEqual(['b-1', 'b-2', 'b-3']);
+    });
+  });
 });

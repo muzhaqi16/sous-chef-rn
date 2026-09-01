@@ -1,27 +1,12 @@
-import React, { useRef } from 'react';
-import { View } from 'react-native';
+import React from 'react';
 import { useTranslation } from '#/i18n';
 import { useQuery } from '@apollo/client/react';
 import type { StaticScreenProps } from '@react-navigation/native';
-import {
-  FlashList,
-  type ListRenderItemInfo,
-  type FlashListRef,
-} from '@shopify/flash-list';
+import type { ListRenderItemInfo } from '@shopify/flash-list';
 import { GetPantryItemUsageHistoryDocument } from '#features/pantry/graphql/pantry.generated';
 import { errorService } from '#/services/errorService';
-import {
-  ThemedActivityIndicator,
-  ThemedBackButton,
-} from '#components/atoms/themedComponents';
-import { StyleSheet } from 'react-native-unistyles';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { Icon } from '#utils/iconUtils';
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
-import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
-import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
-import { DataStateView } from '#components/molecules/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
+import { PaginatedHistoryScreen } from '#components/templates/PaginatedHistoryScreen';
 import { Text } from '#components/atoms/Text';
 import {
   UsageHistoryRow,
@@ -30,6 +15,9 @@ import {
 
 const keyExtractor = (item: UsageRecord) => item.id;
 const getItemType = () => 'usage';
+const renderItem = ({ item }: ListRenderItemInfo<UsageRecord>) => (
+  <UsageHistoryRow usage={item} />
+);
 
 const PAGE_SIZE = 30;
 
@@ -42,7 +30,6 @@ export const PantryUsageHistoryScreen: React.FC<
   StaticScreenProps<RouteParams>
 > = ({ route }) => {
   const { t } = useTranslation();
-  const { goBack } = useAppNavigation();
   const { pantryItemId, itemName } = route.params;
 
   const { data, loading, error, refetch, fetchMore, networkStatus } = useQuery(
@@ -60,17 +47,6 @@ export const PantryUsageHistoryScreen: React.FC<
 
   const connection = data?.pantryItem?.usageRecords;
   const records: UsageRecord[] = connection?.edges?.map(e => e.node) ?? [];
-
-  const flashListRef = useRef<FlashListRef<UsageRecord>>(null);
-  const perfCallbacks = useFlashListPerformance(flashListRef, {
-    componentName: 'PantryUsageHistoryScreen',
-    hasRealContent: records.length > 0,
-  });
-  useDataReferenceTracker(
-    records,
-    'PantryUsageHistoryScreen.items',
-    perfCallbacks.onDataReferenceChange,
-  );
 
   const totalCount = connection?.totalCount ?? records.length;
   const hasNextPage = connection?.pageInfo?.hasNextPage ?? false;
@@ -109,120 +85,25 @@ export const PantryUsageHistoryScreen: React.FC<
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <ThemedBackButton onPress={goBack} style={styles.backButton} />
-        <View style={styles.headerContent}>
-          <Text size="lg" weight="semibold">
-            {t('pantryItemDetail.usageHistory')}
-          </Text>
-          <Text size="sm" tone="secondary" style={styles.headerSubtitle}>
-            {itemName}
-          </Text>
-        </View>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      {state === 'loading' ? (
-        <View style={styles.loadingContainer}>
-          <ThemedActivityIndicator />
-        </View>
-      ) : (
-        <FlashList
-          ref={flashListRef}
-          CellRendererComponent={perfCallbacks.CellRendererComponent}
-          onLoad={perfCallbacks.onLoad}
-          onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
-          onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
-          data={records}
-          keyExtractor={keyExtractor}
-          renderItem={({ item }: ListRenderItemInfo<UsageRecord>) => (
-            <UsageHistoryRow usage={item} />
-          )}
-          getItemType={getItemType}
-          {...FLASHLIST_DEFAULTS.fullScreen}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.4}
-          ListHeaderComponent={
-            records.length > 0 ? (
-              <Text size="sm" tone="secondary" style={styles.summary}>
-                {t('pantryItemDetail.usage.totalEntries', {
-                  count: totalCount,
-                })}
-              </Text>
-            ) : null
-          }
-          ListFooterComponent={
-            loadingMore ? (
-              <ThemedActivityIndicator style={styles.footerLoader} />
-            ) : null
-          }
-          ListEmptyComponent={
-            state === 'error' || state === 'offline' ? (
-              <DataStateView state={state} onRetry={handleRetry} />
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Icon name="time-outline" size={64} tone="iconDisabled" />
-                <Text size="lg" weight="semibold" style={styles.emptyText}>
-                  {t('pantryItemDetail.usage.emptyTitle')}
-                </Text>
-              </View>
-            )
-          }
-          contentContainerStyle={styles.content}
-          style={styles.scrollView}
-        />
-      )}
-    </View>
+    <PaginatedHistoryScreen
+      title={t('pantryItemDetail.usageHistory')}
+      subtitle={itemName}
+      items={records}
+      state={state}
+      onRetry={handleRetry}
+      onEndReached={loadMore}
+      isFetchingMore={loadingMore}
+      keyExtractor={keyExtractor}
+      renderItem={renderItem}
+      getItemType={getItemType}
+      summary={
+        <Text size="sm" tone="secondary">
+          {t('pantryItemDetail.usage.totalEntries', { count: totalCount })}
+        </Text>
+      }
+      emptyIcon="time-outline"
+      emptyTitle={t('pantryItemDetail.usage.emptyTitle')}
+      componentName="PantryUsageHistoryScreen"
+    />
   );
 };
-
-const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-  },
-  backButton: {
-    marginRight: theme.spacing.sm,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerSubtitle: {
-    marginTop: theme.spacing.xs,
-  },
-  headerSpacer: {
-    width: theme.spacing.xl,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: theme.spacing.md,
-  },
-  summary: {
-    marginBottom: theme.spacing.sm,
-  },
-  footerLoader: {
-    marginVertical: theme.spacing.lg,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xl,
-  },
-  emptyText: {
-    marginTop: theme.spacing.md,
-  },
-}));

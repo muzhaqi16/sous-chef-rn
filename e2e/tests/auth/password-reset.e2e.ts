@@ -9,7 +9,7 @@ import { ForgotPasswordScreen } from '../../screens/ForgotPasswordScreen';
 import { LandingAuthScreen } from '../../screens/LandingAuthScreen';
 import { LoginScreen } from '../../screens/LoginScreen';
 import {
-  exists,
+  isOnScreen,
   TIMEOUTS,
   waitForNetworkIdle,
 } from '../../helpers/waitFor';
@@ -46,15 +46,15 @@ describe('Password Reset', () => {
     // every probe below reads as "not visible" until it is dismissed. Detox's
     // system-alert matchers cannot reach it — `alertService` renders its own
     // modal — so it is dismissed by testID.
-    if (await exists('alert-modal')) {
+    if (await isOnScreen('alert-modal')) {
       await element(by.id('alert-button-0')).tap();
     }
 
-    if (await exists('forgot-password-screen')) return;
+    if (await isOnScreen('forgot-password-screen')) return;
 
-    if (await exists('forgot-password-sent')) {
+    if (await isOnScreen('forgot-password-sent')) {
       await element(by.id('forgot-password-back-to-login-button')).tap();
-    } else if (await exists('landing-auth-screen')) {
+    } else if (await isOnScreen('landing-auth-screen')) {
       await landingScreen.tapLogin();
     }
 
@@ -89,6 +89,12 @@ describe('Password Reset', () => {
 
   describe('Happy Path', () => {
     it('shows the sent view, and the form cannot be submitted again', async () => {
+      // Establish the button first: asserting only its absence passes whether
+      // the form was replaced or the id was never right.
+      await expect(
+        element(by.id('forgot-password-submit-button')),
+      ).toBeVisible();
+
       await forgotPasswordScreen.requestPasswordReset(TEST_USER.email);
 
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);

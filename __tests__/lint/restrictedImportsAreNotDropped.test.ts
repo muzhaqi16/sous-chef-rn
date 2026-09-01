@@ -6,7 +6,8 @@
  * and named; this asserts none reappears by omission.
  */
 type PathEntry = { name: string; importNames?: string[] };
-type RuleConfig = ['error', { paths: PathEntry[]; patterns: unknown[] }];
+type PatternEntry = { group: string[]; importNames?: string[] };
+type RuleConfig = ['error', { paths: PathEntry[]; patterns: PatternEntry[] }];
 type Override = {
   files: string | string[];
   rules?: Record<string, RuleConfig | 'off' | undefined>;
@@ -19,13 +20,27 @@ const config = require('../../.eslintrc.js') as {
 
 const RULE = 'no-restricted-imports';
 
-/** Every module+name pair the config bans, as `<module>#<importName>`. */
-const bannedPairs = (rule: RuleConfig) =>
-  rule[1].paths.flatMap(entry =>
+/**
+ * Every module+name pair the config bans, as `<module>#<importName>`.
+ *
+ * `patterns` counts alongside `paths`: an override replaces the whole rule
+ * config, so a redeclared rule that omits the patterns array un-bans every
+ * generated fragment for those files exactly as omitting a path un-bans a
+ * module. Reading only `paths` makes this check blind to the half the
+ * docblock above names as its motivation.
+ */
+const bannedPairs = (rule: RuleConfig) => [
+  ...rule[1].paths.flatMap(entry =>
     entry.importNames
       ? entry.importNames.map(name => `${entry.name}#${name}`)
       : [`${entry.name}#*`],
-  );
+  ),
+  ...(rule[1].patterns ?? []).flatMap(entry =>
+    entry.importNames
+      ? entry.importNames.map(name => `${entry.group.join(',')}#${name}`)
+      : [`${entry.group.join(',')}#*`],
+  ),
+];
 
 /**
  * An override may legitimately allow a ban — a re-export site, or a test
@@ -54,6 +69,16 @@ describe('no-restricted-imports overrides', () => {
     // A config that stopped declaring the rule would pass every check below.
     expect(bannedPairs(base).length).toBeGreaterThan(10);
     expect(activeOverrides.length).toBeGreaterThan(1);
+  });
+
+  it('reads both halves of the rule, so neither can be dropped unseen', () => {
+    // Each half alone is a scan that passes identically whether its contract
+    // holds or its array was emptied.
+    expect(base[1].paths.length).toBeGreaterThan(0);
+    expect(base[1].patterns.length).toBeGreaterThan(0);
+    expect(bannedPairs(base).some(p => p.includes('*Fragments.generated'))).toBe(
+      true,
+    );
   });
 
   it('bans a raw TextInput, which is what makes an input themed by default', () => {

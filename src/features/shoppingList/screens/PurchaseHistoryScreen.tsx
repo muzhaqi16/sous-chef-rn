@@ -1,35 +1,25 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { useQuery } from '@apollo/client/react';
 import type { StaticScreenProps } from '@react-navigation/native';
-import {
-  FlashList,
-  type ListRenderItemInfo,
-  type FlashListRef,
-} from '@shopify/flash-list';
+import type { ListRenderItemInfo } from '@shopify/flash-list';
 import {
   GetItemPurchaseHistoryDocument,
   type GetItemPurchaseHistoryQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { errorService } from '#/services/errorService';
-import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
-import { ThemedBackButton } from '#components/atoms/themedComponents';
 import { commonStyles } from '#/styles/commonStyles';
 
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
-import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
-import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
-import { DataStateView } from '#components/molecules/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 import {
   PurchaseHistoryProvider,
   usePurchaseHistoryContext,
 } from './PurchaseHistoryContext';
 import { Text } from '#components/atoms/Text';
+import { PaginatedHistoryScreen } from '#components/templates/PaginatedHistoryScreen';
 import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 
 const keyExtractor = (item: { id: string }) => item.id;
@@ -83,9 +73,10 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
   const { t } = useTranslation();
   const { totalCount } = usePurchaseHistoryContext();
   const priceText = formatPrice(purchase.totalPrice, purchase.currency.code);
-  // At quantity 1 the per-unit price IS the total; repeating it reads as noise.
+  // At quantity 1 the per-unit price IS the total. Every other quantity gets
+  // the rate — a fractional one most of all.
   const perUnitText =
-    purchase.quantity > 1
+    purchase.quantity !== 1
       ? formatPrice(purchase.unitPrice, purchase.currency.code)
       : null;
 
@@ -165,6 +156,10 @@ const PurchaseHistoryItem = PurchaseHistoryItemComponent;
 
 const getPurchaseItemType = () => 'item';
 
+const renderItem = (info: ListRenderItemInfo<PurchaseItem>) => (
+  <PurchaseHistoryItem {...info} />
+);
+
 const PurchaseHistoryHeader: React.FC<{
   totalCount: number;
   totalSpent: string | null;
@@ -199,31 +194,10 @@ const PurchaseHistoryHeader: React.FC<{
   );
 };
 
-const PurchaseHistoryEmpty: React.FC = () => {
-  const { t } = useTranslation();
-  return (
-    <View style={styles.emptyContainer}>
-      <Icon name="receipt-outline" size={64} tone="iconDisabled" />
-      <Text size="lg" weight="semibold" style={styles.emptyText}>
-        {t('purchaseHistory.emptyTitle')}
-      </Text>
-      <Text
-        size="sm"
-        tone="secondary"
-        align="center"
-        style={styles.emptySubtext}
-      >
-        {t('purchaseHistory.emptySubtitle')}
-      </Text>
-    </View>
-  );
-};
-
 export const PurchaseHistoryScreen: React.FC<
   StaticScreenProps<RouteParams>
 > = ({ route }) => {
   const { t } = useTranslation();
-  const { goBack } = useAppNavigation();
   const { itemId, itemName } = route.params;
 
   // On demand: ItemDetail carries only the summary, and a frequently re-bought
@@ -245,19 +219,6 @@ export const PurchaseHistoryScreen: React.FC<
   const connection = data?.shoppingListItem?.purchasesConnection;
   const purchases: PurchaseItem[] =
     connection?.edges?.map(edge => edge.node) ?? [];
-
-  // A full screen, so `flashlist_initial_load_ms` and blank-cell episodes are
-  // worth the per-cell wrapper's cost (sampled 5% in release).
-  const flashListRef = useRef<FlashListRef<PurchaseItem>>(null);
-  const perfCallbacks = useFlashListPerformance(flashListRef, {
-    componentName: 'PurchaseHistoryScreen',
-    hasRealContent: purchases.length > 0,
-  });
-  useDataReferenceTracker(
-    purchases,
-    'PurchaseHistoryScreen.items',
-    perfCallbacks.onDataReferenceChange,
-  );
 
   const totalCount = connection?.totalCount ?? purchases.length;
   const hasNextPage = connection?.pageInfo?.hasNextPage ?? false;
@@ -308,110 +269,35 @@ export const PurchaseHistoryScreen: React.FC<
     : null;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <ThemedBackButton onPress={goBack} style={styles.backButton} />
-        <View style={styles.headerContent}>
-          <Text size="lg" weight="semibold">
-            {t('labels.purchaseHistory')}
-          </Text>
-          <Text size="sm" tone="secondary" style={styles.headerSubtitle}>
-            {itemName}
-          </Text>
-        </View>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      {state === 'loading' ? (
-        <View style={styles.loadingContainer}>
-          <ThemedActivityIndicator />
-        </View>
-      ) : (
-        <PurchaseHistoryProvider value={{ totalCount }}>
-          <FlashList
-            ref={flashListRef}
-            CellRendererComponent={perfCallbacks.CellRendererComponent}
-            onLoad={perfCallbacks.onLoad}
-            onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
-            onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
-            data={purchases}
-            keyExtractor={keyExtractor}
-            renderItem={(info: ListRenderItemInfo<PurchaseItem>) => (
-              <PurchaseHistoryItem {...info} />
-            )}
-            getItemType={getPurchaseItemType}
-            {...FLASHLIST_DEFAULTS.fullScreen}
-            onEndReached={loadMore}
-            onEndReachedThreshold={0.4}
-            ListHeaderComponent={
-              purchases.length > 0 ? (
-                <PurchaseHistoryHeader
-                  totalCount={totalCount}
-                  totalSpent={totalSpent}
-                  averageSpent={averageSpent}
-                />
-              ) : null
-            }
-            ListFooterComponent={
-              loadingMore ? (
-                <ThemedActivityIndicator style={styles.footerLoader} />
-              ) : null
-            }
-            ListEmptyComponent={
-              state === 'error' || state === 'offline' ? (
-                <DataStateView state={state} onRetry={handleRetry} />
-              ) : (
-                <PurchaseHistoryEmpty />
-              )
-            }
-            contentContainerStyle={styles.content}
-            style={styles.scrollView}
+    <PurchaseHistoryProvider value={{ totalCount }}>
+      <PaginatedHistoryScreen
+        title={t('labels.purchaseHistory')}
+        subtitle={itemName}
+        items={purchases}
+        state={state}
+        onRetry={handleRetry}
+        onEndReached={loadMore}
+        isFetchingMore={loadingMore}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        getItemType={getPurchaseItemType}
+        summary={
+          <PurchaseHistoryHeader
+            totalCount={totalCount}
+            totalSpent={totalSpent}
+            averageSpent={averageSpent}
           />
-        </PurchaseHistoryProvider>
-      )}
-    </View>
+        }
+        emptyIcon="receipt-outline"
+        emptyTitle={t('purchaseHistory.emptyTitle')}
+        emptyDescription={t('purchaseHistory.emptySubtitle')}
+        componentName="PurchaseHistoryScreen"
+      />
+    </PurchaseHistoryProvider>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  backButton: {
-    padding: theme.spacing.xs,
-  },
-  headerContent: {
-    flex: 1,
-    marginLeft: theme.spacing.sm,
-  },
-  headerSubtitle: {
-    marginTop: 2,
-  },
-  headerSpacer: {
-    width: 40, // Balance the back button
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: theme.spacing.md,
-    flexGrow: 1,
-  },
   statsContainer: {
     backgroundColor: theme.colors.infoLight,
     padding: theme.spacing.md,
@@ -489,22 +375,6 @@ const styles = StyleSheet.create(theme => ({
   },
   purchaseDetailValue: {
     flex: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: theme.spacing.xl * 2,
-  },
-  emptyText: {
-    marginTop: theme.spacing.md,
-  },
-  emptySubtext: {
-    marginTop: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.xl,
-  },
-  footerLoader: {
-    paddingVertical: theme.spacing.md,
   },
   pressed: {
     opacity: theme.opacity.pressed,

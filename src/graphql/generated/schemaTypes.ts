@@ -14889,10 +14889,18 @@ export enum StorageState {
  */
 export type StorageStateCounts = {
   __typename: 'StorageStateCounts';
-  /** Count of items with storageState = AMBIENT, NONE, or null */
+  /**
+   * Count of items with storageState = AMBIENT — shelf-stable, chosen.
+   * Does NOT include NONE; see the none field.
+   */
   ambient: Scalars['Int']['output'];
   /** Count of items with storageState = FROZEN */
   frozen: Scalars['Int']['output'];
+  /**
+   * Count of items with no storage state chosen. Distinct from AMBIENT: nobody
+   * said where this lives, rather than somebody saying it needs no cold chain.
+   */
+  none: Scalars['Int']['output'];
   /** Count of items with storageState = REFRIGERATED */
   refrigerated: Scalars['Int']['output'];
 };

@@ -41,6 +41,9 @@ query GetPantry(
         refrigerated
         frozen
         ambient
+        # Its own bucket: `ambient` counts a DELIBERATE shelf-stable choice, so
+        # an item nobody assigned would otherwise be counted nowhere.
+        none
       }
       storageLocationCounts {
         storageLocationId
@@ -719,6 +722,7 @@ mutation UpdatePantryItem($input: UpdatePantryItemInput!) {
             refrigerated
             frozen
             ambient
+            none
           }
           storageLocationCounts {
             storageLocationId
@@ -994,6 +998,15 @@ query GetPantryItemBatches($pantryItemId: ID!, $status: BatchStatus) {
     first: 100
   ) {
     totalCount
+    # Shares a cache field with GetPantryItemBatchHistory (keyArgs is
+    # pantryItemId + status, and neither passes a status). Without `pageInfo`
+    # here, `mergeAuthoritativeFirstPage` reads a missing `hasNextPage` as
+    # "covers the whole list" and this write strips the cursor the history
+    # screen's selection requires — leaving that screen's cache read incomplete.
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
     edges {
       node {
         id
@@ -1223,7 +1236,14 @@ query GetPantryItemUsageHistory(
 ) {
   pantryItem(id: $pantryItemId) {
     id
-    usageRecords(first: $first, after: $after) {
+    # Newest first, stated rather than assumed: the summary panel labels
+    # `usageRecords[0]` the most recent entry, and a default order is the
+    # server's to change.
+    usageRecords(
+      first: $first
+      after: $after
+      orderBy: { usedAt: DESC }
+    ) {
       totalCount
       pageInfo {
         hasNextPage

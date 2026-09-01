@@ -7,6 +7,7 @@ import { PressableScale } from '#components/atoms/PressableScale';
 import { Text } from '#components/atoms/Text';
 import {
   OnPrimaryActivityIndicator,
+  OnErrorActivityIndicator,
   ThemedActivityIndicator,
 } from '#components/atoms/themedComponents';
 
@@ -74,8 +75,12 @@ export const Button: React.FC<ButtonProps> = ({
       accessibilityState={{ disabled: disabled || loading, busy: loading }}
     >
       {loading ? (
-        useWhiteRipple ? (
+        // The same three-way split the icon's `tone` makes below; `danger`
+        // sits on `error`, not `primary`.
+        variant === 'primary' ? (
           <OnPrimaryActivityIndicator size="small" />
+        ) : variant === 'danger' ? (
+          <OnErrorActivityIndicator size="small" />
         ) : (
           <ThemedActivityIndicator size="small" />
         )

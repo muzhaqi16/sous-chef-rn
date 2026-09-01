@@ -200,3 +200,81 @@ describe('findCachedPantryItemDuplicate', () => {
     });
   });
 });
+
+describe('server mode, where the field is keyed on the live filter and sort', () => {
+  /**
+   * Above `PAGE_SIZE.MAX` while online the pantry queries the server with the
+   * user's filter and sort, so the rows cache under `itemsConnection({filters:
+   * …, orderBy: …})`. The client-mode key the fast path reads does not exist
+   * there, and a miss treated as "no duplicate" makes the same add behave one
+   * way on a small pantry and another on a large one.
+   */
+  const SERVER_MODE_VARIABLES = {
+    itemsFirst: 100,
+    itemsFilter: { search: 'app' },
+    itemsOrderBy: { itemName: 'ASC' },
+  };
+
+  const seedServerMode = (pantryId = 'p-1') => {
+    const cache = makeCache();
+    cache.writeQuery({
+      query: PANTRY,
+      variables: { ...SERVER_MODE_VARIABLES, id: pantryId },
+      data: {
+        pantry: {
+          __typename: 'Pantry',
+          id: pantryId,
+          itemsConnection: {
+            __typename: 'PantryItemConnection',
+            totalCount: 2,
+            edges: [
+              edge('pi-1', 'Chicken Broth', 'item-broth', 3),
+              edge('pi-2', 'Tart Apples', 'item-apples', 1),
+            ],
+          },
+        },
+      },
+    });
+    return cache;
+  };
+
+  it('finds a duplicate by catalog id', () => {
+    expect(
+      findCachedPantryItemDuplicate(seedServerMode(), 'p-1', {
+        itemId: 'item-apples',
+      }),
+    ).toEqual({
+      existingPantryItemId: 'pi-2',
+      existingPantryItemIds: ['pi-2'],
+      quantity: 1,
+    });
+  });
+
+  it('finds a duplicate by name', () => {
+    expect(
+      findCachedPantryItemDuplicate(seedServerMode(), 'p-1', {
+        itemName: '  chicken broth ',
+      }),
+    ).toEqual({
+      existingPantryItemId: 'pi-1',
+      existingPantryItemIds: ['pi-1'],
+      quantity: 3,
+    });
+  });
+
+  it('still reports no duplicate for an item the pantry does not stock', () => {
+    expect(
+      findCachedPantryItemDuplicate(seedServerMode(), 'p-1', {
+        itemId: 'item-flour',
+      }),
+    ).toBeNull();
+  });
+
+  it('answers the same either side of the client/server-mode threshold', () => {
+    const match = { itemId: 'item-apples' };
+
+    expect(
+      findCachedPantryItemDuplicate(seedServerMode(), 'p-1', match),
+    ).toEqual(findCachedPantryItemDuplicate(seed(), 'p-1', match));
+  });
+});

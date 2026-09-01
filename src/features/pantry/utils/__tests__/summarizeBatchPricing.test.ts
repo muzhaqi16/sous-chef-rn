@@ -120,3 +120,74 @@ describe('summarizeBatchPricing', () => {
     });
   });
 });
+
+describe('a batch recorded at zero cost', () => {
+  // `costPerUnit` is a nullable Float, so 0.00 is a recordable price — a gift or
+  // a sample. Treating it as UNPRICED makes a fully-known set look partial.
+  it('counts as priced, not as unknown', () => {
+    const summary = summarizeBatchPricing([
+      batch({ id: 'b1', quantity: 5, costPerUnit: 2 }),
+      batch({ id: 'b2', quantity: 1, costPerUnit: 0 }),
+    ]);
+
+    expect(summary.isRateDiluted).toBe(false);
+  });
+
+  it('still dilutes when a batch has no recorded cost at all', () => {
+    const summary = summarizeBatchPricing([
+      batch({ id: 'b1', quantity: 5, costPerUnit: 2 }),
+      batch({ id: 'b2', quantity: 1, costPerUnit: null }),
+    ]);
+
+    expect(summary.isRateDiluted).toBe(true);
+  });
+});
+
+describe('which acquisition is the newest', () => {
+  it('compares timestamps as instants, not as text', () => {
+    // Same moment, two ISO spellings the API may both emit. Lexicographically
+    // '.' (0x2E) sorts below 'Z' (0x5A), so the millisecond form loses.
+    const summary = summarizeBatchPricing([
+      batch({
+        id: 'older',
+        costPerUnit: 1,
+        totalCost: 10,
+        createdAt: '2026-08-20T00:00:00Z',
+      }),
+      batch({
+        id: 'newer',
+        costPerUnit: 2,
+        totalCost: 99,
+        createdAt: '2026-08-20T00:00:00.500Z',
+      }),
+    ]);
+
+    expect(summary.lastPurchase?.totalCost).toBe(99);
+  });
+
+  it('does not move backwards when the newest batch is consumed', () => {
+    // A summary that walks back to an older acquisition reports a purchase that
+    // did not happen — an earlier date and a smaller total than a moment ago.
+    const older = batch({
+      id: 'older',
+      costPerUnit: 1,
+      totalCost: 10,
+      createdAt: '2026-08-01T00:00:00Z',
+    });
+    const newest = batch({
+      id: 'newest',
+      costPerUnit: 2,
+      totalCost: 40,
+      createdAt: '2026-08-28T00:00:00Z',
+    });
+
+    const before = summarizeBatchPricing([older, newest]);
+    const after = summarizeBatchPricing([
+      older,
+      { ...newest, status: BatchStatus.Depleted },
+    ]);
+
+    expect(after.lastPurchase?.date).toBe(before.lastPurchase?.date);
+    expect(after.lastPurchase?.totalCost).toBe(before.lastPurchase?.totalCost);
+  });
+});
