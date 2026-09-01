@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { View, Platform } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
-import DateTimePicker, {
-  DateTimePickerEvent,
-} from '@react-native-community/datetimepicker';
+import { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { ThemedDateTimePicker } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Label } from '#components/atoms/Label';
@@ -86,7 +85,7 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
         </Text>
       ) : null}
       {!!showPicker && (
-        <DateTimePicker
+        <ThemedDateTimePicker
           style={styles.calendarPicker}
           value={value || new Date()}
           mode="date"

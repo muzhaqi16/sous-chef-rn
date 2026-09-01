@@ -38,6 +38,7 @@ fragment writePantryItemDetailStub_pantryItem on PantryItem {
   # Field arguments are part of the cache key, so `first: 5` must match
   # `PantryItemDetail_pantryItem` exactly or this seeds a different field.
   usageRecords(first: 5) {
+    totalCount
     edges {
       node {
         id

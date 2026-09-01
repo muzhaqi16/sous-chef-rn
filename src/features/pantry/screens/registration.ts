@@ -6,6 +6,8 @@ import { PantryItemDetail } from './PantryItemDetail';
 import { FilteredPantryItems } from './FilteredPantryItems';
 import { PantrySettings } from './PantrySettings';
 import { NutritionScreen } from './NutritionScreen';
+import { PantryBatchHistoryScreen } from './PantryBatchHistoryScreen';
+import { PantryUsageHistoryScreen } from './PantryUsageHistoryScreen';
 
 // Lazy so Skia + victory-native are not in the startup bundle.
 const PantryAnalytics = React.lazy(() =>
@@ -53,6 +55,16 @@ export const pantryDetailScreens = {
   }),
   NutritionScreen: createNativeStackScreen({
     screen: NutritionScreen,
+    options: detailScreenOptions,
+    linking: null,
+  }),
+  PantryBatchHistory: createNativeStackScreen({
+    screen: PantryBatchHistoryScreen,
+    options: detailScreenOptions,
+    linking: null,
+  }),
+  PantryUsageHistory: createNativeStackScreen({
+    screen: PantryUsageHistoryScreen,
     options: detailScreenOptions,
     linking: null,
   }),

@@ -22,6 +22,7 @@
       "minStock": "Scorta minima",
       "restockAt": "Rifornire a",
       "purchased": "Acquistato",
+      "lastPurchase": "Ultimo acquisto",
       "lastUsed": "Ultimo utilizzo",
       "added": "Aggiunto"
     },
@@ -34,7 +35,10 @@
       "depletedOn": "Esaurito il {{date}}",
       "costPerUnit": "{{cost}}/unità",
       "sectionHeader_one": "Lotto ({{count}} attivo)",
-      "sectionHeader_other": "Lotti ({{count}} attivi)"
+      "sectionHeader_other": "Lotti ({{count}} attivi)",
+      "historyTitle": "Cronologia lotti",
+      "historySummary": "{{active}} attivi su {{total}}",
+      "emptyTitle": "Nessun lotto"
     },
     "deleteTitle": "Elimina articolo",
     "discardBatchesTitle": "Scarta i lotti scaduti",
@@ -42,7 +46,14 @@
     "discardItemTitle": "Scarta articolo scaduto",
     "discardItemBody": "Questo segnerà i {{quantity}} {{unit}} rimanenti come sprecati per scadenza.",
     "moreUsageEntries_one": "+{{count}} altra voce",
-    "moreUsageEntries_other": "+{{count}} altre voci"
+    "moreUsageEntries_other": "+{{count}} altre voci",
+    "usage": {
+      "entries": "Voci",
+      "mostRecent": "Più recente",
+      "totalEntries_one": "{{count}} voce",
+      "totalEntries_other": "{{count}} voci",
+      "emptyTitle": "Nessun utilizzo"
+    }
   },
   "pantrySettings": {
     "createTitle": "Crea nuova dispensa",
@@ -91,7 +102,6 @@
     "additions": "Aggiunte",
     "consumptions": "Consumi",
     "transactions": "transazioni",
-    "avgCostPerUnit": "Costo medio/unità",
     "usageTrend": "Andamento utilizzo",
     "usageTrendSubtitle": "Articoli usati nel tempo",
     "usageByPurpose": "Utilizzo per scopo",
@@ -208,12 +218,12 @@
     "selectPantryError": "Seleziona una dispensa",
     "selectUnitError": "Seleziona un'unità",
     "title": "Sposta in dispensa",
-    "shoppingListQuantityPrefix": "Quantità lista della spesa: ",
+    "purchasedAmount": "Acquistato: {{amount}} {{unit}}",
+    "requestedAmount": "Quantità lista della spesa: {{amount}} {{unit}}",
     "requiredAsterisk": " *",
     "defaultLabel": "Predefinita",
     "unitPlaceholder": "pcs, kg",
     "storageType": "Tipo di conservazione",
-    "purchasePrice": "Prezzo di acquisto (per unità)",
     "notesPlaceholder": "Aggiungi note su questo acquisto...",
     "removeFromShopping": "Rimuovi dalla lista della spesa",
     "removeFromShoppingDesc": "Disattiva per mantenere l'articolo nella lista della spesa",
@@ -253,6 +263,7 @@
     "reasonPlaceholder": "Perché stai correggendo il peso?"
   },
   "addToPantry": {
+    "restocked": "Scorta di {{name}} aggiornata",
     "lowStockSettings": "Impostazioni scorte basse",
     "lowStockHint": "Ricevi una notifica quando questo articolo sta per finire.",
     "emptyHint": "Lascia vuoto per disattivare gli avvisi di scorte basse per questo articolo.",
@@ -405,7 +416,7 @@
     "REFRIGERATED": "Frigo"
   },
   "batchSection": {
-    "showAll": "Mostra tutti i lotti",
-    "hideInactive": "Nascondi lotti inattivi"
+    "viewAll_one": "Vedi il lotto",
+    "viewAll_other": "Vedi tutti i {{count}} lotti"
   }
 }

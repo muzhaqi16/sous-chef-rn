@@ -18,6 +18,8 @@ describe('emailRule', () => {
   });
 });
 
+// Sign-in only asserts the field is filled: the server checks non-emptiness and
+// nothing more, so every rule below it would refuse a password an account has.
 describe('passwordRule', () => {
   it('accepts valid password', async () => {
     await expect(passwordRule.validate('MyPass12')).resolves.toBe('MyPass12');
@@ -27,17 +29,12 @@ describe('passwordRule', () => {
     await expect(passwordRule.validate('')).rejects.toThrow('required');
   });
 
-  it('rejects < 8 chars', async () => {
-    await expect(passwordRule.validate('Ab1')).rejects.toThrow('8 characters');
-  });
-
-  it('rejects no letter', async () => {
-    await expect(passwordRule.validate('12345678')).rejects.toThrow('letter');
-  });
-
-  it('rejects no number', async () => {
-    await expect(passwordRule.validate('Abcdefgh')).rejects.toThrow('number');
-  });
+  it.each(['Ab1', '12345678', 'Abcdefgh', 'a'])(
+    'accepts %p, which the SET policy would refuse',
+    async password => {
+      await expect(passwordRule.validate(password)).resolves.toBe(password);
+    },
+  );
 });
 
 describe('nameRule', () => {

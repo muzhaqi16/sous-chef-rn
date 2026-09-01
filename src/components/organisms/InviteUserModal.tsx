@@ -444,7 +444,7 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.medium,
   },
   submitButtonText: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
   },

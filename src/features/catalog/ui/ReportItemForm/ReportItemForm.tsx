@@ -197,6 +197,7 @@ const styles = StyleSheet.create(theme => ({
   reasonInput: {
     minHeight: 96,
     textAlignVertical: 'top',
+    fontSize: theme.fonts.size.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,

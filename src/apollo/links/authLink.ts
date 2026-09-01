@@ -3,7 +3,7 @@ import { useStore } from '#store';
 import { env } from '#/config/env';
 import { LogoutCleanup } from '../logoutCleanup';
 import { getDeviceIdSync } from '#/utils/deviceId';
-import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
+import { isTokenExpired, isTokenExpiringSoon } from '#/utils/tokenExpiry';
 import { proactiveTokenRefresh } from './refreshToken';
 import { logger } from '#/utils/environment';
 
@@ -41,7 +41,7 @@ export const authLink = new SetContextLink(async ({ headers }, operation) => {
   }
 
   // Get the access token for authentication (if available)
-  const token = useStore.getState().accessToken;
+  let token = useStore.getState().accessToken;
 
   // Refresh ahead of the request when the access token is near expiry. Never
   // decide LOCALLY that a session is dead — a clock-skew guess misfires, and an
@@ -53,11 +53,17 @@ export const authLink = new SetContextLink(async ({ headers }, operation) => {
       // latency to every request). Defer — the request hits cache or fails at
       // the network layer, and we re-auth when back online.
       useStore.getState().setNeedsTokenRefresh(true);
+    } else if (isTokenExpired(token)) {
+      // This token cannot authenticate anything, so sending it costs a
+      // guaranteed 401. Awaiting the SINGLE-FLIGHT refresh is what stops N
+      // concurrent operations each presenting the same dead JWT and each
+      // drawing its own rotation. A failure resolves null: fall through on the
+      // old token and let the reactive 401 path decide, as before.
+      token = (await proactiveTokenRefresh()) ?? token;
     } else {
-      // Fire-and-forget — do NOT await. The token is still valid, so nothing
-      // needs the refresh to finish, and awaiting stalls EVERY concurrent
-      // request behind one shared retry loop (dedupe means they all queue on
-      // it). If it fails, the reactive 401 path is the fallback.
+      // Still valid, so nothing needs the refresh to finish — fire-and-forget
+      // rather than stalling every concurrent request behind one shared retry
+      // loop. If it fails, the reactive 401 path is the fallback.
       void proactiveTokenRefresh();
     }
   }

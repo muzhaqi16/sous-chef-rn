@@ -1,5 +1,5 @@
 import React from 'react';
-import { screen, userEvent } from '@testing-library/react-native';
+import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import { useRoute } from '@react-navigation/native';
 import {
   renderWithApollo,
@@ -10,7 +10,10 @@ import {
   ResetPasswordDocument,
   ValidatePasswordResetTokenDocument,
 } from '#operations/auth/auth.generated';
-import { PasswordActionStatus } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  PasswordActionStatus,
+} from '#/graphql/generated/schemaTypes';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { ResetPasswordScreen } from '../ResetPasswordScreen';
 
@@ -352,6 +355,70 @@ describe('ResetPasswordScreen', () => {
 
     // A spent link must take the user off the form — it can never succeed.
     expect(await screen.findByText('Invalid Reset Link')).toBeTruthy();
+  });
+
+  it('reports a refused password on the field, in the reader’s language', async () => {
+    (executeWithLoadingState as jest.Mock).mockImplementation(
+      async (
+        fn: () => Promise<void>,
+        setLoading: (v: boolean) => void,
+        onError?: (e: unknown) => void,
+      ) => {
+        setLoading(true);
+        try {
+          await fn();
+        } catch (error) {
+          onError?.(error);
+        } finally {
+          setLoading(false);
+        }
+      },
+    );
+
+    const SERVER_PROSE = 'Password must contain an uppercase letter';
+    const operationMocks: MockedResponse[] = [
+      {
+        request: {
+          query: ResetPasswordDocument,
+          variables: {
+            input: {
+              token: 'valid-token-0123456789',
+              newPassword: 'Test123!',
+            },
+          },
+        },
+        result: {
+          data: {
+            resetPassword: {
+              __typename: 'ValidationError',
+              code: ErrorCode.ValidationFailed,
+              message: SERVER_PROSE,
+              field: 'newPassword',
+            },
+          },
+        },
+      },
+    ];
+
+    const user = userEvent.setup();
+    await renderOnForm(operationMocks);
+
+    await user.type(NEW_PASSWORD_INPUT(), 'Test123!');
+    await user.type(CONFIRM_PASSWORD_INPUT(), 'Test123!');
+    await user.press(screen.getByTestId('button-Reset Password'));
+
+    // The mocked PasswordInput surfaces its errorMessage as the a11y hint.
+    await waitFor(() =>
+      expect(NEW_PASSWORD_INPUT().props.accessibilityHint).toBe(
+        'That password doesn’t meet the rules: 8–72 characters, with an uppercase letter, a lowercase letter and a number.',
+      ),
+    );
+
+    // The server's own prose is English by construction and must never render.
+    expect(screen.queryByText(SERVER_PROSE)).toBeNull();
+    expect(mockToast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ message: SERVER_PROSE }),
+    );
   });
 });
 

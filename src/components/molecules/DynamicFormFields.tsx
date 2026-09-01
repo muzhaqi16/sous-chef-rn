@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { View, type TextInput } from 'react-native';
+import { View } from 'react-native';
+import type { ThemedTextInputRef } from '#components/atoms/themedComponents';
 import {
   type FieldValues,
   Control,
@@ -62,7 +63,7 @@ export function DynamicFormFields<T extends FieldValues>({
   // Focus is only reachable imperatively in React Native, so moving between
   // fields needs a handle on each one. Populated by callback refs at commit,
   // read only from the return-key handler.
-  const inputRefs = useRef<Array<TextInput | null>>([]);
+  const inputRefs = useRef<Array<ThemedTextInputRef | null>>([]);
   const renderers = useFieldRenderers();
   // Memoize the field components to prevent recreation
   const memoizedFields = (() => {
@@ -206,7 +207,7 @@ export function DynamicFormFields<T extends FieldValues>({
                     ...(placeholder && { placeholder }),
                     ...(testID && { testID }),
                     ...(focusChaining && {
-                      ref: (node: TextInput | null) => {
+                      ref: (node: ThemedTextInputRef | null) => {
                         inputRefs.current[index] = node;
                       },
                     }),

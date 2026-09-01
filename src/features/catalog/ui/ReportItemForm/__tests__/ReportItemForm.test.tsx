@@ -119,6 +119,21 @@ describe('ReportItemForm', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  // RN's TextInput defaults to dark text, so an input style without an explicit
+  // color renders what the user typed nearly invisible on the dark theme.
+  it('gives the reason input a themed text color', () => {
+    renderForm({ candidates: [CANDIDATES[0]] });
+
+    const input = screen.getByTestId('report-item-reason-input');
+    const color = [input.props.style]
+      .flat(Infinity)
+      .filter(Boolean)
+      .map(style => (style as { color?: string }).color)
+      .find(Boolean);
+
+    expect(color).toBeTruthy();
+  });
+
   it('returns to the search step without reporting when cancelled', async () => {
     const { onClose } = renderForm();
 

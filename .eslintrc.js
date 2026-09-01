@@ -180,6 +180,119 @@ const RESTRICTED_SYNTAX = [
   },
 ];
 
+/**
+ * `no-restricted-imports`, shared rather than duplicated — the same hazard as
+ * RESTRICTED_SYNTAX above: an `overrides` block REPLACES a rule's config, so an
+ * override retyping a shorter list silently un-bans the rest. Going through
+ * `restrictedImports({ allow })` makes an override name what it drops.
+ */
+const RESTRICTED_IMPORT_PATHS = [
+  {
+    name: 'react-native',
+    importNames: [
+      'StyleSheet',
+      'Text',
+      'TextInput',
+      'Pressable',
+      'TouchableOpacity',
+      'TouchableHighlight',
+      'TouchableNativeFeedback',
+      'TouchableWithoutFeedback',
+    ],
+    message:
+      'Use the project re-exports/atoms for app-wide consistency: StyleSheet → "react-native-unistyles"; Text → "#components/atoms/Text" (variant/tone/weight typography with consistent line-heights); Pressable → "#components/atoms/themedComponents" (or AppPressable/PressableScale for press feedback, or react-native-gesture-handler\'s Pressable for gesture composition). TextInput → "#components/atoms/themedComponents" (ThemedTextInput carries the theme\'s field color, placeholder, keyboard appearance and caret; a raw one renders dark text on the dark theme). Touchables are deprecated — use Pressable. For RN Text/Pressable *types*, import `type { TextProps, TextStyle, PressableProps }` (type-only imports are fine); for a TextInput ref import `type { ThemedTextInputRef }` from the same atom, because this rule matches the name whether or not the import is type-only.',
+  },
+  {
+    name: 'react',
+    importNames: ['useMemo', 'useCallback'],
+    message:
+      'useMemo/useCallback are unnecessary — the React Compiler handles memoization automatically.',
+  },
+  {
+    name: 'react-i18next',
+    message:
+      "Import from '#/i18n' instead — it is the single entry point for translation, and it pins the namespace so call sites cannot drift onto a second one. `const { t } = useTranslation()` in components and hooks; `import { t }` at module scope. Only src/i18n's own entry files may reach for react-i18next directly (exempted in this config).",
+  },
+  {
+    name: '@gorhom/bottom-sheet',
+    importNames: ['BottomSheetModal', 'BottomSheetTextInput'],
+    message:
+      "Import BottomSheetModal from '#hooks/useStandardBottomSheet' instead. That re-export is theme-wrapped and composes the global backdrop claim via modalProps.onChange — importing from @gorhom/bottom-sheet directly bypasses both. For type-only usage, import { BottomSheetModalRef } from '#hooks/useStandardBottomSheet'. BottomSheetTextInput → ThemedBottomSheetTextInput from '#components/atoms/themedComponents' (ref type: ThemedBottomSheetTextInputRef).",
+  },
+  {
+    name: '#hooks/useBottomSheetBackdropClaim',
+    message:
+      'useBottomSheetBackdropClaim is an internal helper for useStandardBottomSheet. Consumers should use useStandardBottomSheet instead — it wires animatedIndex, onChange, the back handler, focus-aware dismiss-on-blur, and theme styles all together. Importing the lower-level hook directly bypasses every other affordance.',
+  },
+];
+
+const RESTRICTED_IMPORT_PATTERNS = [
+  {
+    group: ['**/*Fragments.generated'],
+    importNames: [
+      // Deleted dead scalar/leaf fragments — fields are inlined where used.
+      'UnitBasicFragment',
+      'UnitBasicFragmentDoc',
+      'UnitFullFragment',
+      'UnitFullFragmentDoc',
+      'StoreFieldsFragment',
+      'StoreFieldsFragmentDoc',
+      'BrandFieldsFragment',
+      'BrandFieldsFragmentDoc',
+      'UserProfileFieldsFragment',
+      'UserProfileFieldsFragmentDoc',
+      'UserProfileFullFragment',
+      'UserProfileFullFragmentDoc',
+      'UserSummaryFragment',
+      'UserSummaryFragmentDoc',
+      // Deleted "god" fragments — decomposed into colocated component
+      // fragments (PantryItemDetail_pantryItem, PantryItemForm_pantryItem,
+      // useUpdatePantryItem_pantryItem, etc.).
+      'PantryItemFragment',
+      'PantryItemFragmentDoc',
+      'PantryItemDisplay',
+      'PantryItemDisplayFragment',
+      'PantryItemDisplayFragmentDoc',
+      'ShoppingListItemFragment',
+      'ShoppingListItemFragmentDoc',
+      'MealPlanFullFragment',
+      'MealPlanFullFragmentDoc',
+      'RecipeFragment',
+      'RecipeFragmentDoc',
+      'ItemFragment',
+      'ItemFragmentDoc',
+      'ItemDisplayFragment',
+      'ItemDisplayFragmentDoc',
+      'ItemCoreFragment',
+      'ItemCoreFragmentDoc',
+      'HomeFragment',
+      'HomeFragmentDoc',
+    ],
+    message:
+      'This fragment was deleted or decomposed. Use a colocated `<Consumer>_<entity>` fragment instead (sibling .graphql file next to the consumer). See CLAUDE.md "Apollo: Fragment composition + `useFragment` convention".',
+  },
+];
+
+/** `allow`: { '<module>': true | ['<importName>'] }. `add`: extra path entries. */
+const restrictedImports = ({ allow = {}, add = [] } = {}) => [
+  'error',
+  {
+    paths: [
+      ...RESTRICTED_IMPORT_PATHS.flatMap(entry => {
+        const allowed = allow[entry.name];
+        if (allowed === true) return [];
+        if (!allowed || !entry.importNames) return [entry];
+        const importNames = entry.importNames.filter(
+          name => !allowed.includes(name),
+        );
+        return importNames.length ? [{ ...entry, importNames }] : [];
+      }),
+      ...add,
+    ],
+    patterns: RESTRICTED_IMPORT_PATTERNS,
+  },
+];
+
 module.exports = {
   root: true,
   extends: ['@react-native', 'plugin:react-hooks/recommended-latest'],
@@ -657,82 +770,26 @@ module.exports = {
         'src/components/templates/ActionTray/ActionTray.tsx',
       ],
       rules: {
-        'no-restricted-imports': [
-          'error',
-          {
-            paths: [
-              {
-                name: 'react-native',
-                importNames: ['StyleSheet'],
-                message:
-                  'Import StyleSheet from "react-native-unistyles" instead.',
-              },
-              {
-                name: 'react',
-                importNames: ['useMemo', 'useCallback'],
-                message:
-                  'Default to NOT memoizing — the React Compiler does it for you. ' +
-                  'Reach for useMemo/useCallback only where you need referential ' +
-                  'stability the compiler cannot give you: a value in a dependency ' +
-                  'array, a prop read by something the compiler did not compile, or a ' +
-                  'file it bails out of (see scripts/check-compiler-bailouts.mjs). ' +
-                  'When one of those applies, add an eslint-disable-next-line with the reason.',
-              },
-              {
-                name: '@react-native-picker/picker',
-                message:
-                  'Use ModalPicker (#components/molecules/ModalPicker) instead. ' +
-                  'On Android the native picker opens an Activity-themed DIALOG: it ' +
-                  'follows the OS uiMode and ignores the in-app theme, and nothing ' +
-                  'reachable from RN retints it — so with the OS in dark mode and the ' +
-                  'app in light (or the reverse) the options are unreadable. Inside a ' +
-                  'bottom sheet, pass stackBehavior="push".',
-              },
-            ],
-            patterns: [
-              {
-                group: ['**/*Fragments.generated'],
-                importNames: [
-                  'UnitBasicFragment',
-                  'UnitBasicFragmentDoc',
-                  'UnitFullFragment',
-                  'UnitFullFragmentDoc',
-                  'StoreFieldsFragment',
-                  'StoreFieldsFragmentDoc',
-                  'BrandFieldsFragment',
-                  'BrandFieldsFragmentDoc',
-                  'UserProfileFieldsFragment',
-                  'UserProfileFieldsFragmentDoc',
-                  'UserProfileFullFragment',
-                  'UserProfileFullFragmentDoc',
-                  'UserSummaryFragment',
-                  'UserSummaryFragmentDoc',
-                  'PantryItemFragment',
-                  'PantryItemFragmentDoc',
-                  'PantryItemDisplay',
-                  'PantryItemDisplayFragment',
-                  'PantryItemDisplayFragmentDoc',
-                  'ShoppingListItemFragment',
-                  'ShoppingListItemFragmentDoc',
-                  'MealPlanFullFragment',
-                  'MealPlanFullFragmentDoc',
-                  'RecipeFragment',
-                  'RecipeFragmentDoc',
-                  'ItemFragment',
-                  'ItemFragmentDoc',
-                  'ItemDisplayFragment',
-                  'ItemDisplayFragmentDoc',
-                  'ItemCoreFragment',
-                  'ItemCoreFragmentDoc',
-                  'HomeFragment',
-                  'HomeFragmentDoc',
-                ],
-                message:
-                  'This fragment was deleted or decomposed. Use a colocated `<Consumer>_<entity>` fragment instead (sibling .graphql file next to the consumer). See CLAUDE.md "Apollo: Fragment composition + `useFragment` convention".',
-              },
-            ],
+        'no-restricted-imports': restrictedImports({
+          // These three ARE the gorhom re-export site (and its circular-import
+          // helper), so they are the one place those modules may be imported.
+          allow: {
+            '@gorhom/bottom-sheet': true,
+            '#hooks/useBottomSheetBackdropClaim': true,
           },
-        ],
+          add: [
+            {
+              name: '@react-native-picker/picker',
+              message:
+                'Use ModalPicker (#components/molecules/ModalPicker) instead. ' +
+                'On Android the native picker opens an Activity-themed DIALOG: it ' +
+                'follows the OS uiMode and ignores the in-app theme, and nothing ' +
+                'reachable from RN retints it — so with the OS in dark mode and the ' +
+                'app in light (or the reverse) the options are unreadable. Inside a ' +
+                'bottom sheet, pass stackBehavior="push".',
+            },
+          ],
+        }),
       },
     },
     {
@@ -746,6 +803,18 @@ module.exports = {
       ],
       rules: {
         'no-restricted-imports': 'off',
+      },
+    },
+    {
+      // A test may render RN's TextInput directly: it stands in for an input
+      // with a double, or queries one by identity via UNSAFE_getAllByType. The
+      // ban exists so SHIPPED inputs are themed, and a test ships nothing —
+      // every other base ban still applies here.
+      files: ['**/__tests__/**/*.{ts,tsx}', '**/*.test.{ts,tsx}'],
+      rules: {
+        'no-restricted-imports': restrictedImports({
+          allow: { 'react-native': ['TextInput'] },
+        }),
       },
     },
     {
@@ -769,95 +838,26 @@ module.exports = {
       // useMemo/useCallback) and layers the RN-Pressable-wrapper bans on top.
       files: ['src/components/molecules/SwipeableItem/**/*.{ts,tsx}'],
       rules: {
-        'no-restricted-imports': [
-          'error',
-          {
-            paths: [
-              {
-                name: 'react-native',
-                importNames: [
-                  'StyleSheet',
-                  'Text',
-                  'Pressable',
-                  'TouchableOpacity',
-                  'TouchableHighlight',
-                  'TouchableNativeFeedback',
-                  'TouchableWithoutFeedback',
-                ],
-                message:
-                  "Use project re-exports/atoms: StyleSheet → 'react-native-unistyles'; Text → '#components/atoms/Text'. Inside a Swipeable, tappable surfaces MUST use RNGH's Pressable: import { Pressable } from 'react-native-gesture-handler'.",
-              },
-              {
-                name: 'react',
-                importNames: ['useMemo', 'useCallback'],
-                message:
-                  'useMemo/useCallback are unnecessary — the React Compiler handles memoization automatically.',
-              },
-              {
-                name: '#components/atoms/themedComponents',
-                importNames: ['Pressable'],
-                message:
-                  "themedComponents' Pressable is RN's Pressable — inside a Swipeable use RNGH's: import { Pressable } from 'react-native-gesture-handler'.",
-              },
-              {
-                name: '#components/atoms/AppPressable',
-                message:
-                  "AppPressable wraps RN's Pressable — inside a Swipeable use RNGH's Pressable from 'react-native-gesture-handler'.",
-              },
-              {
-                name: '#components/atoms/PressableScale',
-                message:
-                  "PressableScale wraps RN's Pressable — inside a Swipeable use RNGH's Pressable from 'react-native-gesture-handler'.",
-              },
-            ],
-            // Re-declared from the base config: an `overrides` entry REPLACES
-            // the rule it names rather than extending it, so this block used to
-            // silence every banned generated-fragment import for this directory
-            // while reading as a narrowing of the ban.
-            patterns: [
-              {
-                group: ['**/*Fragments.generated'],
-                importNames: [
-                  'UnitBasicFragment',
-                  'UnitBasicFragmentDoc',
-                  'UnitFullFragment',
-                  'UnitFullFragmentDoc',
-                  'StoreFieldsFragment',
-                  'StoreFieldsFragmentDoc',
-                  'BrandFieldsFragment',
-                  'BrandFieldsFragmentDoc',
-                  'UserProfileFieldsFragment',
-                  'UserProfileFieldsFragmentDoc',
-                  'UserProfileFullFragment',
-                  'UserProfileFullFragmentDoc',
-                  'UserSummaryFragment',
-                  'UserSummaryFragmentDoc',
-                  'PantryItemFragment',
-                  'PantryItemFragmentDoc',
-                  'PantryItemDisplay',
-                  'PantryItemDisplayFragment',
-                  'PantryItemDisplayFragmentDoc',
-                  'ShoppingListItemFragment',
-                  'ShoppingListItemFragmentDoc',
-                  'MealPlanFullFragment',
-                  'MealPlanFullFragmentDoc',
-                  'RecipeFragment',
-                  'RecipeFragmentDoc',
-                  'ItemFragment',
-                  'ItemFragmentDoc',
-                  'ItemDisplayFragment',
-                  'ItemDisplayFragmentDoc',
-                  'ItemCoreFragment',
-                  'ItemCoreFragmentDoc',
-                  'HomeFragment',
-                  'HomeFragmentDoc',
-                ],
-                message:
-                  'This fragment was deleted or decomposed. Use a colocated `<Consumer>_<entity>` fragment instead (sibling .graphql file next to the consumer). See CLAUDE.md "Apollo: Fragment composition + `useFragment` convention".',
-              },
-            ],
-          },
-        ],
+        'no-restricted-imports': restrictedImports({
+          add: [
+            {
+              name: '#components/atoms/themedComponents',
+              importNames: ['Pressable'],
+              message:
+                "themedComponents' Pressable is RN's Pressable — inside a Swipeable use RNGH's: import { Pressable } from 'react-native-gesture-handler'.",
+            },
+            {
+              name: '#components/atoms/AppPressable',
+              message:
+                "AppPressable wraps RN's Pressable — inside a Swipeable use RNGH's Pressable from 'react-native-gesture-handler'.",
+            },
+            {
+              name: '#components/atoms/PressableScale',
+              message:
+                "PressableScale wraps RN's Pressable — inside a Swipeable use RNGH's Pressable from 'react-native-gesture-handler'.",
+            },
+          ],
+        }),
       },
     },
   ],
@@ -884,95 +884,7 @@ module.exports = {
     // colocated fragments + a small documented set of shared fragments. The
     // names listed below were either deleted (inlined into consumers) or
     // decomposed into per-consumer fragments and should not return.
-    'no-restricted-imports': [
-      'error',
-      {
-        paths: [
-          {
-            name: 'react-native',
-            importNames: [
-              'StyleSheet',
-              'Text',
-              'Pressable',
-              'TouchableOpacity',
-              'TouchableHighlight',
-              'TouchableNativeFeedback',
-              'TouchableWithoutFeedback',
-            ],
-            message:
-              'Use the project re-exports/atoms for app-wide consistency: StyleSheet → "react-native-unistyles"; Text → "#components/atoms/Text" (variant/tone/weight typography with consistent line-heights); Pressable → "#components/atoms/themedComponents" (or AppPressable/PressableScale for press feedback, or react-native-gesture-handler\'s Pressable for gesture composition). Touchables are deprecated — use Pressable. For RN Text/Pressable *types*, import `type { TextProps, TextStyle, PressableProps }` (type-only imports are fine).',
-          },
-          {
-            name: 'react',
-            importNames: ['useMemo', 'useCallback'],
-            message:
-              'useMemo/useCallback are unnecessary — the React Compiler handles memoization automatically.',
-          },
-          {
-            name: 'react-i18next',
-            message:
-              "Import from '#/i18n' instead — it is the single entry point for translation, and it pins the namespace so call sites cannot drift onto a second one. `const { t } = useTranslation()` in components and hooks; `import { t }` at module scope. Only src/i18n's own entry files may reach for react-i18next directly (exempted in this config).",
-          },
-          {
-            name: '@gorhom/bottom-sheet',
-            importNames: ['BottomSheetModal'],
-            message:
-              "Import BottomSheetModal from '#hooks/useStandardBottomSheet' instead. That re-export is theme-wrapped and composes the global backdrop claim via modalProps.onChange — importing from @gorhom/bottom-sheet directly bypasses both. For type-only usage, import { BottomSheetModalRef } from '#hooks/useStandardBottomSheet'.",
-          },
-          {
-            name: '#hooks/useBottomSheetBackdropClaim',
-            message:
-              'useBottomSheetBackdropClaim is an internal helper for useStandardBottomSheet. Consumers should use useStandardBottomSheet instead — it wires animatedIndex, onChange, the back handler, focus-aware dismiss-on-blur, and theme styles all together. Importing the lower-level hook directly bypasses every other affordance.',
-          },
-        ],
-        patterns: [
-          {
-            group: ['**/*Fragments.generated'],
-            importNames: [
-              // Deleted dead scalar/leaf fragments — fields are inlined where used.
-              'UnitBasicFragment',
-              'UnitBasicFragmentDoc',
-              'UnitFullFragment',
-              'UnitFullFragmentDoc',
-              'StoreFieldsFragment',
-              'StoreFieldsFragmentDoc',
-              'BrandFieldsFragment',
-              'BrandFieldsFragmentDoc',
-              'UserProfileFieldsFragment',
-              'UserProfileFieldsFragmentDoc',
-              'UserProfileFullFragment',
-              'UserProfileFullFragmentDoc',
-              'UserSummaryFragment',
-              'UserSummaryFragmentDoc',
-              // Deleted "god" fragments — decomposed into colocated component
-              // fragments (PantryItemDetail_pantryItem, PantryItemForm_pantryItem,
-              // useUpdatePantryItem_pantryItem, etc.).
-              'PantryItemFragment',
-              'PantryItemFragmentDoc',
-              'PantryItemDisplay',
-              'PantryItemDisplayFragment',
-              'PantryItemDisplayFragmentDoc',
-              'ShoppingListItemFragment',
-              'ShoppingListItemFragmentDoc',
-              'MealPlanFullFragment',
-              'MealPlanFullFragmentDoc',
-              'RecipeFragment',
-              'RecipeFragmentDoc',
-              'ItemFragment',
-              'ItemFragmentDoc',
-              'ItemDisplayFragment',
-              'ItemDisplayFragmentDoc',
-              'ItemCoreFragment',
-              'ItemCoreFragmentDoc',
-              'HomeFragment',
-              'HomeFragmentDoc',
-            ],
-            message:
-              'This fragment was deleted or decomposed. Use a colocated `<Consumer>_<entity>` fragment instead (sibling .graphql file next to the consumer). See CLAUDE.md "Apollo: Fragment composition + `useFragment` convention".',
-          },
-        ],
-      },
-    ],
+    'no-restricted-imports': restrictedImports(),
 
     // Enforce the Feature API Boundary Convention (CLAUDE.md).
     //

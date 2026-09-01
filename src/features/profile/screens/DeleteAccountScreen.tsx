@@ -345,7 +345,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
   },
   retryButtonText: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
   },
@@ -421,7 +421,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   goBackButtonText: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
   },
@@ -492,7 +492,7 @@ const styles = StyleSheet.create(theme => ({
     opacity: theme.opacity.disabled,
   },
   deleteButtonText: {
-    color: theme.colors.white,
+    color: theme.colors.onError,
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
   },

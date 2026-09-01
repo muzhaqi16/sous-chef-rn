@@ -1,8 +1,9 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { View, TextInput } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
 
 import {
   type EditableMatch,
@@ -95,7 +96,7 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
             <Text size="sm" tone="secondary">
               {t('ingredientMatch.qtyLabel')}
             </Text>
-            <TextInput
+            <ThemedTextInput
               style={styles.quantityInput}
               value={formatNumberForInput(adjustedQuantity)}
               onChangeText={text => {

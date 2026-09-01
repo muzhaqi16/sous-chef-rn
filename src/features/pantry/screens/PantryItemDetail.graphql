@@ -125,7 +125,10 @@ fragment PantryItemDetail_pantryItem on PantryItem {
     totalPrice
     quantity
   }
+  # A few for the summary panel; `totalCount` is the real figure it reports,
+  # since usage records are append-only and the fetched slice is not the total.
   usageRecords(first: 5) {
+    totalCount
     edges {
       node {
         id

@@ -74,8 +74,12 @@ export function filterByLocation<
       case 'freezer':
         return item.storageState === StorageState.Frozen;
       case 'pantry':
-        // No storage state defaults to Pantry.
-        return item.storageState === StorageState.Ambient || !item.storageState;
+        // Strictly AMBIENT, so this stays the mirror its docblock claims: the
+        // badge reads the server's `storageStateCounts.ambient` and server mode
+        // queries `{ storageState: AMBIENT }`. Treating an unset state as
+        // Pantry made the tab disagree with its own count, and show different
+        // rows either side of the client/server-mode threshold.
+        return item.storageState === StorageState.Ambient;
       default:
         return item.storageLocation?.id === locationFilter;
     }

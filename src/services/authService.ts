@@ -145,9 +145,23 @@ async function loadStoredCredentials(
 
 // --- Device registration (fire-and-forget) ---
 
+/**
+ * `undefined` leaves the server's stored push token alone; `null` clears it.
+ * Revoking OS notifications does not invalidate an FCM token, so the device is
+ * the only party that can tell the server to stop treating it as reachable.
+ */
+function resolvePushTokenWrite(
+  permissionGranted: boolean,
+  acquired: string | null,
+): string | null | undefined {
+  if (!permissionGranted) return null;
+  if (acquired) return acquired;
+  return undefined;
+}
+
 function buildDeviceInput(
   deviceInfo: Awaited<ReturnType<typeof collectDeviceInformation>>,
-  pushToken: string | null,
+  pushToken: string | null | undefined,
 ): RegisterDeviceInput {
   return {
     deviceId: deviceInfo.deviceId,
@@ -155,7 +169,7 @@ function buildDeviceInput(
     deviceType: deviceInfo.deviceType,
     platform: deviceInfo.platform,
     appVersion: deviceInfo.appVersion,
-    pushToken: pushToken ?? undefined,
+    pushToken,
     details: {
       browserOs: {
         osName: deviceInfo.osName,
@@ -283,15 +297,19 @@ async function registerDeviceOnce(): Promise<boolean> {
     // Acquire the push token only when OS notification permission is already
     // granted, so login never triggers the permission prompt. The prompt happens
     // in-context when the user enables push in settings, which then re-runs
-    // registration (registerDeviceInBackground) to deliver the token. A null
-    // token registers the device without push, as before.
+    // registration to deliver the token.
     const notificationStatus = await PermissionService.check('notifications');
-    const pushToken =
-      notificationStatus === 'granted' ? await acquirePushToken() : null;
+    const permissionGranted = notificationStatus === 'granted';
+    const acquiredToken = permissionGranted ? await acquirePushToken() : null;
 
     const result = await client.mutate({
       mutation: RegisterDeviceDocument,
-      variables: { input: buildDeviceInput(deviceInfo, pushToken) },
+      variables: {
+        input: buildDeviceInput(
+          deviceInfo,
+          resolvePushTokenWrite(permissionGranted, acquiredToken),
+        ),
+      },
     });
 
     const registerPayload = result.data?.registerDevice;
@@ -319,9 +337,9 @@ async function registerDeviceOnce(): Promise<boolean> {
       // subscribed just above — that token is cached yet was pushed to nobody.
       // Re-check now (after subscribing, so any later arrival still hits the
       // listener) and update the device if a token has since materialized.
-      if (notificationStatus === 'granted') {
+      if (permissionGranted) {
         const laterToken = await getPushTokenProvider().getToken();
-        if (laterToken && laterToken !== pushToken) {
+        if (laterToken && laterToken !== acquiredToken) {
           await pushRotatedTokenToServer(deviceId, laterToken);
         }
       }

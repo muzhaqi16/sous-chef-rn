@@ -364,6 +364,7 @@ export function writePantryItemDetailStub(
       purchase: null,
       usageRecords: {
         __typename: 'PantryItemUsageConnection',
+        totalCount: 0,
         edges: [],
       },
     },
@@ -380,6 +381,7 @@ export function writePantryItemDetailStub(
       __typename: 'Query',
       pantryItemBatchesConnection: {
         __typename: 'PantryItemBatchConnection',
+        totalCount: 0,
         edges: [],
       },
     },

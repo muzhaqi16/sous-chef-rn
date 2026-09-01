@@ -254,8 +254,36 @@ while backfilling the required `pantryId` from cache.
   row's PK** and increments quantity, so the returned `serverId` may differ from the client cuid. The
   shopping add hooks detect this in `update()` (returned id ≠ our cuid) and **adopt the serverId** (evict
   the stale cuid entity). PantryItems and custom (non-catalog) shopping items always keep the cuid.
-- **Pantry duplicates.** A same-item create returns a duplicate error; the add sites evict the optimistic
-  cuid item and offer restock / add-anyway (online), since the server keeps the existing row.
+- **Pantry duplicates — decided locally.** `createPantryItem` never merges: it REFUSES with
+  `DuplicatePantryItemError` and writes nothing. The key is `(pantryId, itemId, deletedAt: null)` — location,
+  unit, expiry and brand are not part of it, and `forceAdd` skips the guard. **`SyncPantryItem` runs the same
+  guard on its create branch**, but its result union cannot carry the typed error, so on replay the refusal
+  escapes as top-level `PANTRY_ITEM_ALREADY_EXISTS` — and that code is not in the API's
+  `NEVER_MASK_ERROR_CODES`, so production strips `existingPantryItemIds` from it. Nothing downstream can
+  learn which row to restock, which is why the decision cannot live on the response.
+  So the add sites ask the CACHE first, via `findCachedPantryItemDuplicate`
+  (`apollo/utils/pantryCacheReaders.ts`): the list query already caches `item { id }` and `itemName` on every
+  node, so the server's key is reproducible locally with no round trip. Quick-add matches on the catalog id
+  and restocks (bumping `quantity` through `optimisticFieldUpdate`, because offline the restock's `update`
+  never runs); the details form has no catalog id, so it matches on the name and only ever PROMPTS on that
+  match. A match means no create is fired at all — nothing to undo on reconnect.
+  **The read must carry the connection's key args.** `itemsConnection` is keyed on `filters`/`orderBy`, and
+  client mode sends neither — which stores it as **`itemsConnection:{}`**, not a bare `itemsConnection`. A
+  fragment that omits the args resolves a store key that does not exist and matches nothing, with no error:
+  that shipped once and was only caught on device, because the server refusal produces the same toast and
+  hides it. A seed query in a test must therefore declare the same args, or it pins a shape the app never
+  writes; `pantryCacheReaders.test.ts` asserts the literal key.
+  The server refusal remains the BACKSTOP for what the cache cannot see: a windowed list (`itemsFirst` is
+  100, and server mode keys the field by its real filters so the read misses), or a collaborator's add. The
+  barcode scanner keeps server-only detection — its UPC lookup is `network-only`, so it has no offline path.
+  When the backstop fires, the add sites withdraw the optimistic row and then differ:
+  the details form and the barcode scanner prompt restock / add-anyway, while the sheet's **quick-add
+  silently restocks the existing row by 1** and corrects its eager "added" toast. The withdrawal is
+  `revertOptimisticPantryItem` (`apollo/utils/pantryCacheUpdaters.ts`), the enforced mirror of
+  `addPantryItemLocally` — it must reverse BOTH counters the publish moved. Only the connection's
+  `totalCount` self-heals (the field policy drops a dangling edge on read); `Pantry.stats.totalItems`
+  does not, and the header, the "All" tab badge and `usePantryScreen`'s server/client sort mode all read
+  it. Ratcheted by `__tests__/apollo/pantryOptimisticRevertWiring.test.ts`.
 
 ## 8. Connectivity — two failure modes, one signal
 

@@ -120,6 +120,60 @@ beforeEach(() => {
   });
 });
 
+/** The RegisterDevice input (it carries `deviceId`, not `id`). */
+const registerCall = () =>
+  mockMutate.mock.calls
+    .map(([opts]) => opts?.variables?.input)
+    .find(
+      (input): input is Record<string, unknown> =>
+        !!input && 'deviceId' in input,
+    );
+
+/**
+ * Revoking OS notifications leaves the FCM token valid, so nothing server-side
+ * reports the device unreachable and the dead-token pruning never fires. The
+ * client is the only party that knows, and registration is where it says so.
+ */
+describe('registerDeviceInBackground — push token write intent', () => {
+  it('sends the token it acquired when permission is granted', async () => {
+    mockPermissionCheck.mockResolvedValueOnce('granted');
+    mockAcquireToken.mockResolvedValueOnce('apns-1');
+    mockGetToken.mockResolvedValueOnce('apns-1');
+
+    authService.registerDeviceInBackground();
+    await flush();
+
+    expect(registerCall()).toMatchObject({ pushToken: 'apns-1' });
+  });
+
+  it('clears the stored token when permission is not granted', async () => {
+    mockPermissionCheck.mockResolvedValueOnce('blocked');
+
+    authService.registerDeviceInBackground();
+    await flush();
+
+    expect(registerCall()?.pushToken).toBeNull();
+    // The provider is never consulted — a blocked permission cannot yield one.
+    expect(mockAcquireToken).not.toHaveBeenCalled();
+  });
+
+  /**
+   * A timed-out acquire is not evidence the device is unreachable, so the field
+   * is omitted and the server keeps whatever it already holds. The dead-window
+   * re-check below is what delivers the token if it turns up late.
+   */
+  it('leaves the stored token alone when acquisition fails under a grant', async () => {
+    mockPermissionCheck.mockResolvedValueOnce('granted');
+    mockAcquireToken.mockResolvedValueOnce(null);
+    mockGetToken.mockResolvedValueOnce(null);
+
+    authService.registerDeviceInBackground();
+    await flush();
+
+    expect(registerCall()?.pushToken).toBeUndefined();
+  });
+});
+
 describe('registerDeviceInBackground — getToken dead-window re-check (P2-13)', () => {
   it('sends a token that materialized after the acquire timeout', async () => {
     // acquirePushToken timed out (null); the token arrives before the re-check.

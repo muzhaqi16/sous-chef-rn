@@ -6,6 +6,7 @@ import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 import { optimisticDataPersistence } from './offline/OptimisticDataPersistence';
 import { cancelTokenRefresh } from './links/tokenScheduler';
 import { disposeWebSocket } from './links/wsLink';
+import { clearRefreshState } from './links/refreshToken';
 import { registerSessionTeardown } from '#store/sessionTeardown';
 import { logger } from '#/utils/environment';
 
@@ -143,6 +144,10 @@ export class LogoutCleanup {
       // again on the credentials this is in the middle of clearing.
       disposeWebSocket();
       logger.info('🔌 WebSocket connection disposed');
+
+      // `lastRefreshTime` and `retryCount` are module state, so without this the
+      // next account's first refresh is throttled by the previous one's clock.
+      clearRefreshState();
 
       logger.info('🛑 Stopped all in-flight queries and connections');
     } catch (error) {

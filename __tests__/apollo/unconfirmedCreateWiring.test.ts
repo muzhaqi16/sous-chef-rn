@@ -70,6 +70,7 @@ const sources = collectSourceFiles(SRC).map(file => ({
 const OPTIMISTIC_PUBLISHERS = [
   'addToPantryItemsCache(',
   'addToPantryItemsConnection(',
+  'addPantryItemLocally(',
 ];
 
 /**

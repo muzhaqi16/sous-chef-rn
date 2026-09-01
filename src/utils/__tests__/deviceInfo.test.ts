@@ -66,6 +66,7 @@ import {
   validateDeviceInformation,
   type DeviceInformation,
 } from '../deviceInfo';
+import { storage } from '#/storage/mmkv';
 
 describe('deviceInfo', () => {
   const originalPlatformOS = Platform.OS;
@@ -252,16 +253,37 @@ describe('deviceInfo', () => {
   // generateDeviceFingerprint
   // ==========================================================================
   describe('generateDeviceFingerprint', () => {
+    // The fingerprint persists, so a case that varies the device mocks has to
+    // start from an empty keystore or it reads the previous case's value.
+    beforeEach(() => {
+      storage.clearAll();
+    });
+
     it('generates a fingerprint containing platform prefix', async () => {
       const fingerprint = await generateDeviceFingerprint();
       expect(fingerprint).toContain('ios-');
     });
 
-    it('generates different fingerprints on repeated calls (has timestamp)', async () => {
+    /**
+     * The API keys `Device` rows on this value and updates the matching row
+     * rather than inserting, so a fingerprint that varies between calls
+     * registers a new device on every launch — 147 rows for one account.
+     */
+    it('returns the same fingerprint on repeated calls', async () => {
       const fp1 = await generateDeviceFingerprint();
       await new Promise(r => setTimeout(r, 5));
       const fp2 = await generateDeviceFingerprint();
-      expect(fp1).not.toEqual(fp2);
+      expect(fp2).toEqual(fp1);
+    });
+
+    it('reuses the persisted value rather than recomposing it', async () => {
+      storage.set('device_fingerprint', 'ios-persisted');
+      await expect(generateDeviceFingerprint()).resolves.toBe('ios-persisted');
+    });
+
+    it('persists a freshly composed fingerprint', async () => {
+      const fingerprint = await generateDeviceFingerprint();
+      expect(storage.getString('device_fingerprint')).toBe(fingerprint);
     });
 
     it('generates fingerprint for android platform', async () => {

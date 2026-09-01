@@ -22,6 +22,7 @@
       "minStock": "Min Stock",
       "restockAt": "Restock At",
       "purchased": "Purchased",
+      "lastPurchase": "Last purchase",
       "lastUsed": "Last Used",
       "added": "Added"
     },
@@ -34,7 +35,10 @@
       "depletedOn": "Depleted {{date}}",
       "costPerUnit": "{{cost}}/unit",
       "sectionHeader_one": "Batch ({{count}} active)",
-      "sectionHeader_other": "Batches ({{count}} active)"
+      "sectionHeader_other": "Batches ({{count}} active)",
+      "historyTitle": "Batch history",
+      "historySummary": "{{active}} active of {{total}}",
+      "emptyTitle": "No batches yet"
     },
     "deleteTitle": "Delete Item",
     "discardBatchesTitle": "Discard Expired Batches",
@@ -42,7 +46,14 @@
     "discardItemTitle": "Discard Expired Item",
     "discardItemBody": "This will mark the remaining {{quantity}} {{unit}} as wasted due to expiration.",
     "moreUsageEntries_one": "+{{count}} more entry",
-    "moreUsageEntries_other": "+{{count}} more entries"
+    "moreUsageEntries_other": "+{{count}} more entries",
+    "usage": {
+      "entries": "Entries",
+      "mostRecent": "Most recent",
+      "totalEntries_one": "{{count}} entry",
+      "totalEntries_other": "{{count}} entries",
+      "emptyTitle": "No usage yet"
+    }
   },
   "pantrySettings": {
     "createTitle": "Create New Pantry",
@@ -91,7 +102,6 @@
     "additions": "Additions",
     "consumptions": "Consumptions",
     "transactions": "transactions",
-    "avgCostPerUnit": "Avg Cost/Unit",
     "usageTrend": "Usage Trend",
     "usageTrendSubtitle": "Items used over time",
     "usageByPurpose": "Usage by Purpose",
@@ -208,12 +218,12 @@
     "selectPantryError": "Please select a pantry",
     "selectUnitError": "Please select a unit",
     "title": "Move to Pantry",
-    "shoppingListQuantityPrefix": "Shopping list quantity: ",
+    "purchasedAmount": "Purchased: {{amount}} {{unit}}",
+    "requestedAmount": "Shopping list quantity: {{amount}} {{unit}}",
     "requiredAsterisk": " *",
     "defaultLabel": "Default",
     "unitPlaceholder": "pcs, kg",
     "storageType": "Storage Type",
-    "purchasePrice": "Purchase Price (per unit)",
     "notesPlaceholder": "Add any notes about this purchase...",
     "removeFromShopping": "Remove from shopping list",
     "removeFromShoppingDesc": "Turn off to keep the item in your shopping list",
@@ -253,6 +263,7 @@
     "reasonPlaceholder": "Why is the weight being corrected?"
   },
   "addToPantry": {
+    "restocked": "Restocked {{name}}",
     "lowStockSettings": "Low Stock Settings",
     "lowStockHint": "Get notified when this item is running low.",
     "emptyHint": "Leave empty to disable low stock alerts for this item.",
@@ -405,7 +416,7 @@
     "REFRIGERATED": "Fridge"
   },
   "batchSection": {
-    "showAll": "Show all batches",
-    "hideInactive": "Hide inactive batches"
+    "viewAll_one": "View all {{count}} batch",
+    "viewAll_other": "View all {{count}} batches"
   }
 }

@@ -267,8 +267,59 @@ describe('ShoppingListItemDetail', () => {
 
     await waitFor(() => expect(screen.getByText('Purchased By')).toBeTruthy());
     expect(screen.getByText('Sam')).toBeTruthy();
-    // The amounts row alongside it.
-    expect(screen.getByText('2 @ $3.50')).toBeTruthy();
+  });
+
+  it('shows the total paid, with the per-unit price beneath it', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [
+        buildItemMock(
+          'si1',
+          buildShoppingListItem({
+            purchaseInfo: {
+              __typename: 'ShoppingListItemPurchaseInfo',
+              isPurchased: true,
+              movedToPantryAt: null,
+              purchasedQuantity: 2,
+              purchasedPrice: 3.5,
+              purchaseDate: '2026-08-19T00:00:00Z',
+              purchasedBy: null,
+            },
+          }),
+        ),
+      ],
+    });
+
+    await waitFor(() => expect(screen.getByText('Total paid')).toBeTruthy());
+    // The API stores 3.50 PER UNIT; the shopper paid 7.00 for the two.
+    expect(screen.getByText('$7.00')).toBeTruthy();
+    expect(screen.getByText('$3.50 per loaves')).toBeTruthy();
+    // Purchased amount and requested quantity are separate rows, both "2 loaves".
+    expect(screen.getAllByText('2 loaves')).toHaveLength(2);
+  });
+
+  it('omits the per-unit line when one unit was bought', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [
+        buildItemMock(
+          'si1',
+          buildShoppingListItem({
+            purchaseInfo: {
+              __typename: 'ShoppingListItemPurchaseInfo',
+              isPurchased: true,
+              movedToPantryAt: null,
+              purchasedQuantity: 1,
+              purchasedPrice: 3.5,
+              purchaseDate: '2026-08-19T00:00:00Z',
+              purchasedBy: null,
+            },
+          }),
+        ),
+      ],
+    });
+
+    await waitFor(() => expect(screen.getByText('Total paid')).toBeTruthy());
+    expect(screen.getByText('$3.50')).toBeTruthy();
+    expect(screen.queryByText('$3.50 per loaves')).toBeNull();
   });
 
   it('omits the purchaser row when the item is not purchased', async () => {

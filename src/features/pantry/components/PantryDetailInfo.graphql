@@ -35,6 +35,8 @@ fragment PantryDetailInfo_pantryItem on PantryItem {
   purchase {
     id
     purchaseDate
+    # Both: the Purchased row shows the total, Cost/Unit already shows the split.
     unitPrice
+    totalPrice
   }
 }

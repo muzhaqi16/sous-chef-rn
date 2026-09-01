@@ -12,7 +12,11 @@ import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { isSuccessPayload } from '#/utils/errors/mutationPayload';
 import { useStore } from '#store';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
-import { reconnectWebSocket, registerTokenRefresh } from './wsLink';
+import {
+  reconnectWebSocket,
+  registerRefreshInFlightCheck,
+  registerTokenRefresh,
+} from './wsLink';
 
 // The Apollo client singleton is injected after creation rather than imported
 // directly, which would form a circular dependency:
@@ -457,6 +461,14 @@ export const proactiveTokenRefresh = async (): Promise<string | null> => {
     return refreshState.refreshPromise;
   }
 
+  // Only a caller that would open a NEW rotation is throttled; the joiners
+  // above never are. authLink AWAITS this once the token is expired, so without
+  // the guard a refresh that keeps failing would start a fresh doomed exchange
+  // per request instead of one per MIN_REFRESH_INTERVAL.
+  if (!canAttemptRefresh()) {
+    return null;
+  }
+
   // Start refresh process
   refreshState.isRefreshing = true;
   refreshState.refreshPromise = performTokenRefresh();
@@ -483,3 +495,8 @@ export const proactiveTokenRefresh = async (): Promise<string | null> => {
 // survivable. Registered rather than imported because wsLink cannot import this
 // module back without a cycle.
 registerTokenRefresh(proactiveTokenRefresh);
+
+// Rotation is single-use, so only one transport may present the refresh token
+// at a time. This lets `connectionParams` hold its copy back while an HTTP
+// exchange is in flight; the re-dial re-runs it once this reads false again.
+registerRefreshInFlightCheck(() => refreshState.isRefreshing);

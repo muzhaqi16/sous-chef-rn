@@ -22,6 +22,7 @@
       "minStock": "Stoku minimal",
       "restockAt": "Rimbush në",
       "purchased": "Blerë",
+      "lastPurchase": "Blerja e fundit",
       "lastUsed": "Përdorur së fundi",
       "added": "Shtuar"
     },
@@ -34,7 +35,10 @@
       "depletedOn": "Mbaruar më {{date}}",
       "costPerUnit": "{{cost}}/njësi",
       "sectionHeader_one": "Grupi ({{count}} aktiv)",
-      "sectionHeader_other": "Grupet ({{count}} aktive)"
+      "sectionHeader_other": "Grupet ({{count}} aktive)",
+      "historyTitle": "Historiku i loteve",
+      "historySummary": "{{active}} aktive nga {{total}}",
+      "emptyTitle": "Ende pa lote"
     },
     "deleteTitle": "Fshi artikullin",
     "discardBatchesTitle": "Hidh grupet e skaduara",
@@ -42,7 +46,14 @@
     "discardItemTitle": "Hidh artikullin e skaduar",
     "discardItemBody": "Kjo do të shënojë {{quantity}} {{unit}} të mbetura si të shpenzuara për shkak të skadimit.",
     "moreUsageEntries_one": "+{{count}} regjistrim tjetër",
-    "moreUsageEntries_other": "+{{count}} regjistrime të tjera"
+    "moreUsageEntries_other": "+{{count}} regjistrime të tjera",
+    "usage": {
+      "entries": "Regjistrime",
+      "mostRecent": "Më i fundit",
+      "totalEntries_one": "{{count}} regjistrim",
+      "totalEntries_other": "{{count}} regjistrime",
+      "emptyTitle": "Ende pa përdorim"
+    }
   },
   "pantrySettings": {
     "createTitle": "Krijo qilar të ri",
@@ -91,7 +102,6 @@
     "additions": "Shtimet",
     "consumptions": "Konsumet",
     "transactions": "transaksione",
-    "avgCostPerUnit": "Kosto mes./njësi",
     "usageTrend": "Tendenca e përdorimit",
     "usageTrendSubtitle": "Artikuj të përdorur me kohë",
     "usageByPurpose": "Përdorimi sipas qëllimit",
@@ -208,12 +218,12 @@
     "selectPantryError": "Zgjidh një qilar",
     "selectUnitError": "Zgjidh një njësi",
     "title": "Zhvendos te qilari",
-    "shoppingListQuantityPrefix": "Sasia në listën e blerjeve: ",
+    "purchasedAmount": "Blerë: {{amount}} {{unit}}",
+    "requestedAmount": "Sasia në listën e blerjeve: {{amount}} {{unit}}",
     "requiredAsterisk": " *",
     "defaultLabel": "I parazgjedhur",
     "unitPlaceholder": "pcs, kg",
     "storageType": "Lloji i ruajtjes",
-    "purchasePrice": "Çmimi i blerjes (për njësi)",
     "notesPlaceholder": "Shto shënime për këtë blerje...",
     "removeFromShopping": "Hiq nga lista e blerjeve",
     "removeFromShoppingDesc": "Çaktivizoje për ta mbajtur artikullin në listën tënde të blerjeve",
@@ -253,6 +263,7 @@
     "reasonPlaceholder": "Pse po korrigjohet pesha?"
   },
   "addToPantry": {
+    "restocked": "U rimbush {{name}}",
     "lowStockSettings": "Cilësimet e stokut të ulët",
     "lowStockHint": "Merr njoftim kur ky artikull po mbaron.",
     "emptyHint": "Lëre bosh për të çaktivizuar sinjalizimet e stokut të ulët për këtë artikull.",
@@ -405,7 +416,7 @@
     "REFRIGERATED": "Frigorifer"
   },
   "batchSection": {
-    "showAll": "Shfaq të gjitha grupet",
-    "hideInactive": "Fshih grupet joaktive"
+    "viewAll_one": "Shih {{count}} lot",
+    "viewAll_other": "Shih të gjitha {{count}} lotet"
   }
 }

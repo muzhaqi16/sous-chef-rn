@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { useFragment } from '@apollo/client/react';
+import { useFragment, useQuery } from '@apollo/client/react';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
@@ -17,15 +17,21 @@ import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAut
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { Text } from '#components/atoms/Text';
 import { StorageState } from '#/graphql/generated/schemaTypes';
-import { MoveToPantryModal_ShoppingListItemFragmentDoc } from './MoveToPantryModal.generated';
+import {
+  MoveToPantryModal_ShoppingListItemFragmentDoc,
+  MoveToPantryPurchaseInfoDocument,
+} from './MoveToPantryModal.generated';
 import { PantrySelector } from './PantrySelector';
 import { StorageStateControl } from './StorageStateControl';
 import { ExpirationDateField } from './ExpirationDateField';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
+  DEFAULT_CURRENCY,
+  formatCurrency,
   formatNumberForInput,
   localizeNumericHint,
 } from '#/utils/formatters/number';
+import { totalFromUnitPrice, unitPriceFromTotal } from '#/utils/purchasePrice';
 
 interface MoveToPantryModalProps {
   visible: boolean;
@@ -67,6 +73,30 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   });
   const shoppingListItem = shoppingListItemId && complete ? data : null;
 
+  // What was actually bought, which the amounts below are seeded from. A query
+  // rather than a field on the fragment above: that one gates the whole sheet on
+  // `complete`, and the list query caches only `{ isPurchased movedToPantryAt }`
+  // — so on a cold start the missing amounts would blank the sheet instead of
+  // just the prefill. `cache-first` means no network leg once they are cached.
+  const { data: purchaseData } = useQuery(MoveToPantryPurchaseInfoDocument, {
+    variables: { id: shoppingListItemId ?? '' },
+    skip: !visible || !shoppingListItemId,
+    fetchPolicy: 'cache-first',
+    // NOT the app-wide `'all'`: a field error nulls the non-null `purchaseInfo`
+    // and so `shoppingListItem`, and `'all'` WRITES that null onto
+    // `ROOT_QUERY.shoppingListItem({id})` — the field ItemDetail reads — where
+    // it sticks and persists to MMKV. Losing the prefill costs far less.
+    errorPolicy: 'none',
+  });
+  const purchaseInfo = purchaseData?.shoppingListItem?.purchaseInfo ?? null;
+  const purchasedQuantity = purchaseInfo?.isPurchased
+    ? purchaseInfo.purchasedQuantity ?? null
+    : null;
+  // PER UNIT, as the API stores it; the field below shows the total.
+  const purchasedUnitPrice = purchaseInfo?.isPurchased
+    ? purchaseInfo.purchasedPrice ?? null
+    : null;
+
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible: visible && !!shoppingListItem,
     onDismiss: onClose,
@@ -88,6 +118,17 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   const [removeFromList, setRemoveFromList] = useState(true);
   const [actualPriceInput, setActualPriceInput] = useState('');
   const [notes, setNotes] = useState('');
+  // The per-unit price the total was seeded from, and whether the shopper has
+  // since typed over either field. Between them they decide which of the two
+  // amounts survives an edit — see `handleQuantityChange`.
+  const [seededUnitPrice, setSeededUnitPrice] = useState<number | null>(null);
+  const [amountsTouched, setAmountsTouched] = useState(false);
+  const [priceTouched, setPriceTouched] = useState(false);
+
+  // What the amounts are seeded from: what was BOUGHT, falling back to what was
+  // requested. Prefilling the request is how a line asked for as 1 piece and
+  // bought as 5 reached the pantry as 1.
+  const seedQuantity = purchasedQuantity ?? shoppingListItem?.quantity ?? null;
 
   // Reset form when modal opens with new item (render-time state update).
   // Key on the item id (not the materialized object) so cache updates to the
@@ -107,7 +148,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     setPrevShoppingListItemId(shoppingListItem?.id);
     setPrevSelectedPantryId(selectedPantryId);
     if (visible && shoppingListItem) {
-      setQuantityInput(formatNumberForInput(shoppingListItem.quantity) || '1');
+      setQuantityInput(formatNumberForInput(seedQuantity) || '1');
       setUnitValue(
         shoppingListItem.unit?.symbol || shoppingListItem.unitName || '',
       );
@@ -117,10 +158,75 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       setExpirationDate(undefined);
       setShowDatePicker(false);
       setRemoveFromList(true);
-      setActualPriceInput('');
+      setActualPriceInput(
+        formatNumberForInput(
+          totalFromUnitPrice(purchasedUnitPrice, seedQuantity ?? 1),
+        ),
+      );
+      setSeededUnitPrice(purchasedUnitPrice);
+      setAmountsTouched(false);
+      setPriceTouched(false);
       setNotes('');
     }
   }
+
+  // A cold start has no cached purchase, so the amounts can land a beat after
+  // the sheet opens. Seed them then too — but never over something typed.
+  const [prevSeed, setPrevSeed] = useState<string | null>(null);
+  const seedKey = `${purchasedQuantity ?? ''}|${purchasedUnitPrice ?? ''}`;
+  if (visible && seedKey !== prevSeed) {
+    setPrevSeed(seedKey);
+    if (!amountsTouched && purchasedQuantity != null) {
+      setQuantityInput(formatNumberForInput(purchasedQuantity) || '1');
+      setActualPriceInput(
+        formatNumberForInput(
+          totalFromUnitPrice(purchasedUnitPrice, purchasedQuantity),
+        ),
+      );
+      setSeededUnitPrice(purchasedUnitPrice);
+    }
+  }
+
+  // Editing the quantity holds the PER-UNIT price and re-derives the total:
+  // stocking 3 of 5 bought at $0.59 records $1.77, not the whole $2.95. Once
+  // the shopper types a total of their own, that total wins instead.
+  const handleQuantityChange = (value: string) => {
+    setQuantityInput(value);
+    setAmountsTouched(true);
+    if (priceTouched || seededUnitPrice == null) return;
+    const parsed = parseFractionalInput(value);
+    const usable = parsed !== null && !isNaN(parsed) && parsed > 0;
+    setActualPriceInput(
+      usable
+        ? formatNumberForInput(totalFromUnitPrice(seededUnitPrice, parsed))
+        : '',
+    );
+  };
+
+  const handlePriceChange = (value: string) => {
+    setActualPriceInput(value);
+    setAmountsTouched(true);
+    setPriceTouched(true);
+  };
+
+  const lineUnitLabel =
+    shoppingListItem?.unit?.symbol || shoppingListItem?.unitName || '';
+
+  // Shown only when the split is not trivial — at quantity 1 the per-unit price
+  // IS the total. Mirrors PurchaseAmountSheet.
+  const enteredQuantity = parseFractionalInput(quantityInput);
+  const enteredTotal = actualPriceInput
+    ? parseDecimalInput(actualPriceInput)
+    : null;
+  const perUnitPrice =
+    enteredQuantity !== null &&
+    !isNaN(enteredQuantity) &&
+    enteredQuantity > 0 &&
+    enteredQuantity !== 1 &&
+    enteredTotal !== null &&
+    !isNaN(enteredTotal)
+      ? unitPriceFromTotal(enteredTotal, enteredQuantity)
+      : null;
 
   const handleConfirm = () => {
     if (!shoppingListItem) return;
@@ -146,10 +252,15 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       return;
     }
 
-    // Parse price value (optional)
-    const actualPrice = actualPriceInput
+    // The field asks for the TOTAL paid, as Mark Purchased does; `actualPrice`
+    // is per unit. Unrounded on purpose — the server rounds the product back.
+    const totalPaid = actualPriceInput
       ? parseDecimalInput(actualPriceInput)
       : undefined;
+    const actualPrice =
+      totalPaid === undefined || isNaN(totalPaid)
+        ? undefined
+        : unitPriceFromTotal(totalPaid, quantityValue) ?? undefined;
 
     onConfirm({
       pantryId,
@@ -158,7 +269,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       storageState,
       expiresAt: expirationDate?.toISOString(),
       removeFromList,
-      actualPrice: isNaN(actualPrice!) ? undefined : actualPrice,
+      actualPrice,
       notes: notes || undefined,
     });
     onClose();
@@ -209,11 +320,17 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                 {shoppingListItem.itemName}
               </Text>
               <Text size="base" tone="secondary">
-                {t('moveToPantry.shoppingListQuantityPrefix')}
-                {shoppingListItem.quantity || 1}{' '}
-                {shoppingListItem.unit?.symbol ||
-                  shoppingListItem.unitName ||
-                  ''}
+                {purchasedQuantity != null
+                  ? t('moveToPantry.purchasedAmount', {
+                      amount: formatNumberForInput(purchasedQuantity),
+                      unit: lineUnitLabel,
+                    })
+                  : t('moveToPantry.requestedAmount', {
+                      amount: formatNumberForInput(
+                        shoppingListItem.quantity || 1,
+                      ),
+                      unit: lineUnitLabel,
+                    })}
               </Text>
             </View>
 
@@ -232,7 +349,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                     <FractionInput
                       label={t('labels.quantity')}
                       value={quantityInput}
-                      onChangeText={setQuantityInput}
+                      onChangeText={handleQuantityChange}
                       placeholder={t('labels.eG1114')}
                       keyboardType="numeric"
                       required
@@ -269,15 +386,28 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                 onClear={clearExpirationDate}
               />
 
-              {/* Purchase Price (Optional) */}
+              {/* Total paid (Optional) */}
               <View style={styles.section}>
                 <FormInput
-                  label={t('moveToPantry.purchasePrice')}
+                  label={t('purchaseAmountSheet.totalPrice')}
                   value={actualPriceInput}
-                  onChangeText={setActualPriceInput}
+                  onChangeText={handlePriceChange}
                   placeholder={localizeNumericHint('0.00')}
                   keyboardType="decimal-pad"
                 />
+                {perUnitPrice != null ? (
+                  <Text size="xs" tone="secondary" style={styles.perUnitHint}>
+                    {t(
+                      lineUnitLabel
+                        ? 'purchaseAmountSheet.perUnitOfHint'
+                        : 'purchaseAmountSheet.perUnitHint',
+                      {
+                        price: formatCurrency(perUnitPrice, DEFAULT_CURRENCY),
+                        unit: lineUnitLabel,
+                      },
+                    )}
+                  </Text>
+                ) : null}
               </View>
 
               {/* Notes (Optional) */}
@@ -322,6 +452,9 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
 const styles = StyleSheet.create(theme => ({
   scrollView: {
     flex: 1,
+  },
+  perUnitHint: {
+    marginTop: theme.spacing.xs,
   },
   contentContainer: {
     paddingHorizontal: theme.spacing.md,

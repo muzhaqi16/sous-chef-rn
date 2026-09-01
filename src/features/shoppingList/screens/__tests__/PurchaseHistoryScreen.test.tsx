@@ -142,6 +142,29 @@ describe('PurchaseHistoryScreen', () => {
     );
   });
 
+  it('splits the total into a per-unit line', async () => {
+    renderWithApollo(<PurchaseHistoryScreen route={route} />, {
+      operationMocks: [historyMock([purchase])],
+    });
+    // 2 kg for $5.00 total; the API stores the $2.50 per unit.
+    await waitFor(() => expect(screen.getByText('$2.50 per kg')).toBeTruthy());
+  });
+
+  it('omits the per-unit line when one unit was bought', async () => {
+    const single: PurchaseNode = {
+      ...purchase,
+      id: 'p3',
+      quantity: 1,
+      unitPrice: 5,
+      totalPrice: 5,
+    };
+    renderWithApollo(<PurchaseHistoryScreen route={route} />, {
+      operationMocks: [historyMock([single])],
+    });
+    await waitFor(() => expect(screen.getByText('1 kg')).toBeTruthy());
+    expect(screen.queryByText('$5.00 per kg')).toBeNull();
+  });
+
   it('omits price when a purchase has no recorded amount', async () => {
     const unpriced: PurchaseNode = {
       __typename: 'Purchase',

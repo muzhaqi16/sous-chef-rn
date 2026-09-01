@@ -351,4 +351,77 @@ describe('authLink', () => {
       expect(mockStoreState.setNeedsTokenRefresh).not.toHaveBeenCalled();
     });
   });
+
+  describe('a token that has already expired, while online', () => {
+    it('sends the refreshed token, never the dead one', async () => {
+      const expired = makeToken(-60);
+      mockStoreState.accessToken = expired;
+      mockedProactiveRefresh.mockResolvedValue('rotated-token');
+
+      const headers = await run('GetPantry');
+
+      expect(headers.authorization).toBe('Bearer rotated-token');
+      expect(headers.authorization).not.toContain(expired);
+    });
+
+    it('holds the request until the refresh settles', async () => {
+      let releaseRefresh: (token: string) => void = () => {};
+      mockedProactiveRefresh.mockReturnValue(
+        new Promise<string>(resolve => {
+          releaseRefresh = resolve;
+        }),
+      );
+      mockStoreState.accessToken = makeToken(-60);
+
+      const inFlight = run('GetPantry');
+      let settled = false;
+      void inFlight.then(() => {
+        settled = true;
+      });
+      // Drain the microtask queue. A fire-and-forget link would have sent the
+      // request — on the dead token — by this point.
+      await new Promise(resolve => setImmediate(resolve));
+      expect(settled).toBe(false);
+
+      releaseRefresh('rotated-token');
+      expect((await inFlight).authorization).toBe('Bearer rotated-token');
+    });
+
+    it('never lets a concurrent batch go out on the dead token', async () => {
+      const expired = makeToken(-60);
+      mockStoreState.accessToken = expired;
+      mockedProactiveRefresh.mockResolvedValue('rotated-token');
+
+      const batch = await Promise.all(
+        [
+          'GetPantry',
+          'GetShoppingList',
+          'GetRecipes',
+          'GetNotifications',
+          'GetHome',
+          'GetMealPlan',
+        ].map(run),
+      );
+
+      // The reported production signature: six concurrent requests carrying the
+      // same expired JWT, each drawing its own 401 and its own rotation.
+      expect(batch.map(headers => headers.authorization)).toEqual(
+        Array(6).fill('Bearer rotated-token'),
+      );
+    });
+
+    it('falls back to the held token when the refresh cannot complete', async () => {
+      // An offline or refused refresh resolves null. Sending nothing would turn
+      // a recoverable expiry into an unauthenticated request; the reactive 401
+      // path is what decides whether the session is actually over.
+      const expired = makeToken(-60);
+      mockStoreState.accessToken = expired;
+      mockedProactiveRefresh.mockResolvedValue(null);
+
+      const headers = await run('GetPantry');
+
+      expect(headers.authorization).toBe(`Bearer ${expired}`);
+      expect(mockStoreState.tokenRefreshFailed).not.toHaveBeenCalled();
+    });
+  });
 });

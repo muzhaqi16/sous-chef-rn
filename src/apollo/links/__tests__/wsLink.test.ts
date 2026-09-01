@@ -78,6 +78,7 @@ import {
   resumeWebSocketAfterOnline,
   onWebSocketReconnected,
   registerTokenRefresh,
+  registerRefreshInFlightCheck,
 } from '../wsLink';
 
 describe('wsLink', () => {
@@ -920,6 +921,36 @@ describe('wsLink', () => {
       const params = connectionParams();
       expect(params.authorization).toBeUndefined();
       expect(params.refreshToken).toBe('refresh-token');
+    });
+
+    describe('while the HTTP half is mid-rotation', () => {
+      afterEach(() => {
+        registerRefreshInFlightCheck(() => false);
+      });
+
+      it('withholds the refresh token', () => {
+        // Rotation is single-use, so two transports presenting the same token
+        // makes one of them a loser — a wasted round trip and a superseded
+        // rotation in the server's log. The next dial re-runs this function.
+        setStoredTokens('access-token', 'refresh-token');
+        registerRefreshInFlightCheck(() => true);
+
+        expect(connectionParams().refreshToken).toBeUndefined();
+      });
+
+      it('still authenticates the dial', () => {
+        setStoredTokens('access-token', 'refresh-token');
+        registerRefreshInFlightCheck(() => true);
+
+        expect(connectionParams().authorization).toBe('Bearer access-token');
+      });
+
+      it('sends it again once the rotation has settled', () => {
+        setStoredTokens('access-token', 'refresh-token');
+        registerRefreshInFlightCheck(() => false);
+
+        expect(connectionParams().refreshToken).toBe('refresh-token');
+      });
     });
   });
 

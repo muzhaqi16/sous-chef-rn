@@ -198,7 +198,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   copyAllButtonText: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   section: {
     marginVertical: theme.spacing['3'],

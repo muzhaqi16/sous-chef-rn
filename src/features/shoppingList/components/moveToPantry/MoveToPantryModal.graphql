@@ -9,3 +9,33 @@ fragment MoveToPantryModal_shoppingListItem on ShoppingListItem {
     symbol
   }
 }
+
+# What the shopper actually bought, which the sheet prefills from. Fetched
+# rather than added to the fragment above: that one is read with `useFragment`
+# and gated on `complete`, and the list query selects only
+# `purchaseInfo { isPurchased movedToPantryAt }` — so a cold start would leave
+# the amounts uncached and blank the whole sheet.
+#
+# Selected inline rather than spreading ShoppingListItemPurchaseInfoFragment:
+# under `dataMasking` a named spread hides these fields from the sheet's own
+# reads. Kept complete by __tests__/graphql/purchaseInfoCompleteness.test.ts.
+query MoveToPantryPurchaseInfo($id: ID!) {
+  shoppingListItem(id: $id) {
+    id
+    purchaseInfo {
+      isPurchased
+      movedToPantryAt
+      purchasedQuantity
+      purchasedPrice
+      purchaseDate
+      purchasedBy {
+        id
+        profile {
+          id
+          displayName
+          avatar
+        }
+      }
+    }
+  }
+}

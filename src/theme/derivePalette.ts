@@ -49,3 +49,15 @@ export function derivePalette(hex: string): DerivedPalette {
 
   return palette;
 }
+
+/**
+ * Whichever of `light`/`dark` reads better on `fill`. "On primary" is a function
+ * of the fill's luminance, not of the theme — the brand colour is user-overridable
+ * and identical in both themes, so a per-theme constant is right for at most half
+ * the palette.
+ */
+export function onColor(fill: string, light: string, dark: string): string {
+  return chroma.contrast(fill, light) >= chroma.contrast(fill, dark)
+    ? light
+    : dark;
+}

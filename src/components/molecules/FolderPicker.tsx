@@ -492,7 +492,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.border,
   },
   createButtonText: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   createButtonTextDisabled: {
     color: theme.colors.textSecondary,

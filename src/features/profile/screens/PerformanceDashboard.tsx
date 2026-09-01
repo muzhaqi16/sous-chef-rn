@@ -816,7 +816,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   clearButtonText: {
-    color: theme.colors.white,
+    color: theme.colors.onError,
   },
   pressed: {
     opacity: theme.opacity.pressed,

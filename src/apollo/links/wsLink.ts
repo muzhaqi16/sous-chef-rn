@@ -93,6 +93,14 @@ export const registerTokenRefresh = (
   refreshAccessToken = refresh;
 };
 
+// Same hand-off, one question: is the HTTP half mid-rotation right now?
+let isHttpRefreshInFlight: (() => boolean) | null = null;
+export const registerRefreshInFlightCheck = (
+  isInFlight: () => boolean,
+): void => {
+  isHttpRefreshInFlight = isInFlight;
+};
+
 let connectionStableTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 const clearConnectionStableTimer = () => {
@@ -265,12 +273,12 @@ const createWsClient = () => {
       }
 
       // Rides along so the handshake can rotate an expired access token itself
-      // rather than being refused 4403; the new pair returns in the ack. This
-      // is what makes 4403 recoverable by a plain re-dial, since the retry
-      // re-runs this function. Racing the HTTP path is safe — the losing
-      // rotation is refused as superseded and retries with the winner's
-      // successor.
-      if (refreshToken) {
+      // rather than being refused 4403; the new pair returns in the ack, and a
+      // re-dial re-runs this function. Withheld while the HTTP half holds it:
+      // rotation is single-use, so two transports presenting the same token
+      // makes one of them a loser. A dial in that window is refused 4403; the
+      // next carries both, the refresh having stored its pair by then.
+      if (refreshToken && !isHttpRefreshInFlight?.()) {
         params.refreshToken = refreshToken;
       }
 

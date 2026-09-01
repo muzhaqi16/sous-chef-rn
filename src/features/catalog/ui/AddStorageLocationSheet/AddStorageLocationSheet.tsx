@@ -2,12 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { BottomSheetTextInput, BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   ThemedActivityIndicator,
   ThemedBottomSheetTextInput,
+  type ThemedBottomSheetTextInputRef,
 } from '#components/atoms/themedComponents';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StorageType } from '#/graphql/generated/schemaTypes';
@@ -46,8 +47,7 @@ export const AddStorageLocationSheet: React.FC<
     onDismiss: onClose,
     snapPoints: ['35%'],
   });
-  const inputRef =
-    useRef<React.ComponentRef<typeof BottomSheetTextInput>>(null);
+  const inputRef = useRef<ThemedBottomSheetTextInputRef>(null);
 
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);

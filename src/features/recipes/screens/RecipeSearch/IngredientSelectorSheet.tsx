@@ -198,7 +198,7 @@ const styles = StyleSheet.create(theme => ({
   },
   searchButtonDisabled: { opacity: theme.opacity.disabled },
   searchButtonText: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   emptyText: {
     marginTop: theme.spacing.xl,

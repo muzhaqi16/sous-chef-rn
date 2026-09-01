@@ -91,7 +91,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.chipText,
     variants: {
       selected: {
-        true: { color: theme.colors.white },
+        true: { color: theme.colors.onPrimary },
       },
     },
   },

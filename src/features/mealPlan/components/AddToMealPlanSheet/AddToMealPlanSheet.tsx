@@ -271,14 +271,14 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
   },
   planChipTextSelected: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   planChipDate: {
     color: theme.colors.textSecondary,
     marginTop: 2,
   },
   planChipDateSelected: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
     opacity: 0.8,
   },
   mealTypeRow: {

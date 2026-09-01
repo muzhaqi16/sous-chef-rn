@@ -83,6 +83,11 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
   const { t } = useTranslation();
   const { totalCount } = usePurchaseHistoryContext();
   const priceText = formatPrice(purchase.totalPrice, purchase.currency.code);
+  // At quantity 1 the per-unit price IS the total; repeating it reads as noise.
+  const perUnitText =
+    purchase.quantity > 1
+      ? formatPrice(purchase.unitPrice, purchase.currency.code)
+      : null;
 
   return (
     <View style={[styles.purchaseCard, commonStyles.shadow]}>
@@ -119,9 +124,21 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
               >
                 {t('purchaseHistory.priceLabel')}
               </Text>
-              <Text size="sm" weight="medium">
-                {priceText}
-              </Text>
+              <View style={styles.purchasePriceCell}>
+                <Text size="sm" weight="medium">
+                  {priceText}
+                </Text>
+                {!!perUnitText && (
+                  <Text size="xs" tone="secondary">
+                    {t(
+                      purchase.unitSymbol
+                        ? 'purchaseAmountSheet.perUnitOfHint'
+                        : 'purchaseAmountSheet.perUnitHint',
+                      { price: perUnitText, unit: purchase.unitSymbol },
+                    )}
+                  </Text>
+                )}
+              </View>
             </View>
           )}
         </View>
@@ -435,7 +452,7 @@ const styles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.sm,
   },
   purchaseNumberText: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   purchaseDate: {
     flex: 1,
@@ -462,6 +479,9 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.xs,
+  },
+  purchasePriceCell: {
+    alignItems: 'flex-end',
   },
   purchaseDetailLabel: {
     marginLeft: theme.spacing.xs,

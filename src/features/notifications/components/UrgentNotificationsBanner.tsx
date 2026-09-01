@@ -39,7 +39,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
   },
   urgentText: {
-    color: theme.colors.white,
+    color: theme.colors.onError,
     marginLeft: theme.spacing.sm,
   },
 }));

@@ -8,9 +8,9 @@ import { View } from 'react-native';
 import {
   ThemedActivityIndicator,
   ThemedBottomSheetTextInput,
+  type ThemedBottomSheetTextInputRef,
 } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon, type IconLibrary } from '#utils/iconUtils';
 
@@ -68,8 +68,7 @@ export const BottomSheetSearchBar = forwardRef<
     },
     ref,
   ) => {
-    const inputRef =
-      useRef<React.ComponentRef<typeof BottomSheetTextInput>>(null);
+    const inputRef = useRef<ThemedBottomSheetTextInputRef>(null);
     const inputValueRef = useRef('');
     const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 

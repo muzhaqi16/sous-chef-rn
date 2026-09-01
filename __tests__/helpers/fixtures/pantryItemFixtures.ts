@@ -38,6 +38,9 @@ export interface PantryItemFixture {
   storageLocationName?: string | null;
   unitName?: string;
   unitSymbol?: string;
+  /** The item's OWN cost fields — the first stock's, which a restock leaves be. */
+  costPerUnit?: number | null;
+  totalCost?: number | null;
 }
 
 function unit(symbol = 'L', name = 'liters'): UnitData {
@@ -139,11 +142,12 @@ export function pantryItemData(
       acquisitionMethod:
         (fixture.acquisitionMethod as AcquisitionMethod | undefined) ??
         AcquisitionMethod.Purchased,
-      costPerUnit: null,
-      totalCost: null,
+      costPerUnit: fixture.costPerUnit ?? null,
+      totalCost: fixture.totalCost ?? null,
       purchase: null,
       usageRecords: {
         __typename: 'PantryItemUsageConnection',
+        totalCount: 0,
         edges: [],
       },
     },

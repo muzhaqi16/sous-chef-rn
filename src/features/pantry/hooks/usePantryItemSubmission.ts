@@ -15,10 +15,12 @@ import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
 import {
   addToPantryItemsCache,
-  adjustPantryItemCount,
+  addPantryItemLocally,
+  revertOptimisticPantryItem,
 } from '#/apollo/utils/pantryCacheUpdaters';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
-import { safeEvict, adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
+import { findCachedPantryItemDuplicate } from '#features/pantry/utils/pantryCacheReaders';
+import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import {
   alertIfRejected,
@@ -327,12 +329,13 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     // has withdrawn it. Named here so the two halves cannot drift.
     const applyOptimisticItem = () => {
       try {
-        addToPantryItemsCache(client.cache, pantryId, optimisticItem);
+        // Publishes the row AND counts it. The count cannot live in the
+        // mutation's `update:` callback — that only runs with a server
+        // payload, so offline the row would appear while the header kept the
+        // old count. The helper counts only a row it actually added, so the
+        // force-add retry below cannot double-count.
+        addPantryItemLocally(client.cache, pantryId, optimisticItem);
         writePantryItemDetailStub(client.cache, id, detailStubFields);
-        // Beside the optimistic row, not in the mutation's `update:` callback
-        // — that callback only runs with a server payload, so offline the row
-        // would appear while the header kept the old count.
-        adjustPantryItemCount(client.cache, pantryId, 1);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Add Pantry Item (optimistic)',
@@ -340,52 +343,21 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       }
     };
     const revertOptimisticItem = () => {
-      safeEvict(client.cache, 'PantryItem', id);
-      adjustPantryItemCount(client.cache, pantryId, -1);
+      revertOptimisticPantryItem(client.cache, pantryId, id);
     };
-
-    applyOptimisticItem();
-
-    let result;
-    try {
-      result = await createPantryItem({
-        variables: { input: mutationInput },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Create pantry item error:',
-      });
-    }
-    // Released on every outcome: acknowledged and rejected both leave nothing
-    // for a detail read to miss, and a create that went to the queue has
-    // already been handed off to `queueStore`'s pending set by now.
-    unconfirmedCreates.confirm(id);
-    if (!result) {
-      // Hard failure (threw) → revert the optimistic item.
-      revertOptimisticItem();
-      alertService.alert(t('labels.error'), t('errors.addItemFailed'));
-      return;
-    }
-
-    // Check for a duplicate (typed DuplicatePantryItemError member in `data` or
-    // the legacy PANTRY_ITEM_ALREADY_EXISTS GraphQL error). Outside try for the
-    // React Compiler.
-    const duplicateInfo = getPantryItemDuplicateFromResult(
-      result.data?.createPantryItem,
-      result.error,
-    );
-    if (duplicateInfo) {
-      // Already in the pantry → the server keeps the existing row, not our
-      // optimistic cuid. Evict the phantom optimistic item.
-      revertOptimisticItem();
+    /**
+     * The shared recovery for "you already have this". Reached from the local
+     * cache check below and, when that could not see the row, from the server's
+     * refusal — so both offer the same choice.
+     */
+    const promptDuplicateRecovery = (existingPantryItemId: string) => {
       promptPantryDuplicate({
         onRestock: async () => {
           let restockResult;
           const restockPantryItemOptions = {
             variables: {
               input: {
-                id: duplicateInfo.existingPantryItemId,
+                id: existingPantryItemId,
                 quantity,
                 // Forward the purchase details the user just entered so the
                 // restock records an ItemPriceHistory observation instead of
@@ -433,12 +405,11 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
           onSuccess();
         },
         onAddAnyway: async () => {
-          // The duplicate branch above evicted the optimistic row, so put it
-          // back before firing — otherwise a force-add that queues offline
-          // leaves the user with nothing on screen until the replay lands.
-          // The id is reused deliberately: the duplicate was a refusal, so it
-          // committed no row, and the same id is what makes the replay
-          // idempotent.
+          // Nothing is on screen at this point — either no row was ever
+          // published, or the refusal branch withdrew it — so publish before
+          // firing, or a force-add that queues offline shows nothing until the
+          // replay lands. The id is reused deliberately: no row was committed
+          // under it, and reusing it is what makes the replay idempotent.
           unconfirmedCreates.mark(id);
           applyOptimisticItem();
           let retryResult;
@@ -476,6 +447,64 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
           onSuccess();
         },
       });
+    };
+
+    // Offline-first: the pantry answers "do I already stock this?" itself, so
+    // nothing is published and no doomed create is queued. This form sends an
+    // inline item and has no catalog id, so it matches on the name — the same
+    // resolution the server does — and only ever prompts, never acts on it.
+    const cachedDuplicate = findCachedPantryItemDuplicate(
+      client.cache,
+      pantryId,
+      {
+        itemName: itemName.trim(),
+      },
+    );
+    if (cachedDuplicate) {
+      // Nothing was published under this id; release the detail-read gate the
+      // force-add path re-claims for itself.
+      unconfirmedCreates.confirm(id);
+      promptDuplicateRecovery(cachedDuplicate.existingPantryItemId);
+      return;
+    }
+
+    applyOptimisticItem();
+
+    let result;
+    try {
+      result = await createPantryItem({
+        variables: { input: mutationInput },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Create pantry item error:',
+      });
+    }
+    // Released on every outcome: acknowledged and rejected both leave nothing
+    // for a detail read to miss, and a create that went to the queue has
+    // already been handed off to `queueStore`'s pending set by now.
+    unconfirmedCreates.confirm(id);
+    if (!result) {
+      // Hard failure (threw) → revert the optimistic item.
+      revertOptimisticItem();
+      alertService.alert(t('labels.error'), t('errors.addItemFailed'));
+      return;
+    }
+
+    // Check for a duplicate (typed DuplicatePantryItemError member in `data` or
+    // the legacy PANTRY_ITEM_ALREADY_EXISTS GraphQL error). Outside try for the
+    // React Compiler.
+    const duplicateInfo = getPantryItemDuplicateFromResult(
+      result.data?.createPantryItem,
+      result.error,
+    );
+    if (duplicateInfo) {
+      // Backstop for what the local check could not see — a windowed list, or a
+      // collaborator's add. The server writes nothing on a refusal, so withdraw
+      // the row we published, count included.
+      revertOptimisticItem();
+      promptDuplicateRecovery(duplicateInfo.existingPantryItemId);
       return;
     }
 

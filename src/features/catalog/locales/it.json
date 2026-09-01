@@ -138,7 +138,7 @@
     "reasonLabel": "Cosa c'è che non va?",
     "reasonPlaceholder": "es. il marchio è sbagliato, la foto è di un altro prodotto",
     "reasonTooShort": "Aggiungi almeno {{count}} caratteri, così un amministratore sa cosa controllare.",
-    "submit": "Invia segnalazione",
+    "submit": "Invia",
     "sentTitle": "Segnalazione inviata",
     "sentBody": "Grazie: un amministratore esaminerà questo articolo.",
     "failedBody": "Si è verificato un problema durante l'invio della segnalazione. Riprova.",

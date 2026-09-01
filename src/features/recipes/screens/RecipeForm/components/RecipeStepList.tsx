@@ -90,7 +90,7 @@ const styles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.sm,
   },
   stepNumberText: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   stepText: {
     flex: 1,

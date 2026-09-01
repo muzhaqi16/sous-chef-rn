@@ -1,5 +1,6 @@
 import { colors, darkExpiration, darkFilterTab } from './foundations/colors';
 import { brand } from './foundations/brand';
+import { onColor } from './derivePalette';
 import { spacing } from './foundations/spacing';
 import { typography, fonts } from './foundations/typography';
 import { radii } from './foundations/radii';
@@ -32,7 +33,11 @@ export const lightTheme = {
     primary: brand[500],
     primaryLight: brand[100],
     primaryDark: brand[700],
-    onPrimary: colors.neutral[0],
+    onPrimary: onColor(brand[500], colors.neutral[0], colors.neutral[900]),
+    onError: onColor(colors.error, colors.neutral[0], colors.neutral[900]),
+    onSuccess: onColor(colors.success, colors.neutral[0], colors.neutral[900]),
+    onWarning: onColor(colors.warning, colors.neutral[0], colors.neutral[900]),
+    onInfo: onColor(colors.info, colors.neutral[0], colors.neutral[900]),
 
     // Secondary
     secondary: colors.charade[400],
@@ -84,14 +89,18 @@ export const lightTheme = {
     chipBackground: colors.neutral[200],
     chipText: colors.neutral[700],
     chipSelectedBackground: brand[300],
-    chipSelectedText: colors.neutral[0],
+    chipSelectedText: onColor(
+      brand[300],
+      colors.neutral[0],
+      colors.neutral[900],
+    ),
 
     // Icon colors - semantic tokens for consistent icon styling
     iconPrimary: brand[500],
     iconSecondary: colors.neutral[600],
     iconTertiary: colors.neutral[500],
     iconDisabled: colors.neutral[400],
-    iconOnPrimary: colors.neutral[0],
+    iconOnPrimary: onColor(brand[500], colors.neutral[0], colors.neutral[900]),
     iconOnSurface: colors.neutral[900],
 
     // Status colors - for invites, tasks, etc.
@@ -145,7 +154,11 @@ export const darkTheme = {
     primary: brand[500],
     primaryLight: brand[400] + '20',
     primaryDark: brand[600],
-    onPrimary: colors.neutral[900],
+    onPrimary: onColor(brand[500], colors.neutral[0], colors.neutral[900]),
+    onError: onColor(colors.error, colors.neutral[0], colors.neutral[900]),
+    onSuccess: onColor(colors.success, colors.neutral[0], colors.neutral[900]),
+    onWarning: onColor(colors.warning, colors.neutral[0], colors.neutral[900]),
+    onInfo: onColor(colors.info, colors.neutral[0], colors.neutral[900]),
 
     // Secondary
     secondary: colors.charade[400],
@@ -195,14 +208,18 @@ export const darkTheme = {
     chipBackground: colors.neutral[700],
     chipText: colors.neutral[200],
     chipSelectedBackground: brand[400],
-    chipSelectedText: colors.neutral[900],
+    chipSelectedText: onColor(
+      brand[400],
+      colors.neutral[0],
+      colors.neutral[900],
+    ),
 
     // Icon colors - semantic tokens for consistent icon styling
     iconPrimary: brand[400],
     iconSecondary: colors.neutral[300],
     iconTertiary: colors.neutral[400],
     iconDisabled: colors.neutral[500],
-    iconOnPrimary: colors.neutral[900],
+    iconOnPrimary: onColor(brand[500], colors.neutral[0], colors.neutral[900]),
     iconOnSurface: colors.neutral[50],
 
     // Status colors — dark-adapted for visibility on dark surfaces

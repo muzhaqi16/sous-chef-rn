@@ -22,6 +22,7 @@
       "minStock": "Stock mínimo",
       "restockAt": "Reponer en",
       "purchased": "Comprado",
+      "lastPurchase": "Última compra",
       "lastUsed": "Último uso",
       "added": "Añadido"
     },
@@ -34,7 +35,10 @@
       "depletedOn": "Agotado el {{date}}",
       "costPerUnit": "{{cost}}/unidad",
       "sectionHeader_one": "Lote ({{count}} activo)",
-      "sectionHeader_other": "Lotes ({{count}} activos)"
+      "sectionHeader_other": "Lotes ({{count}} activos)",
+      "historyTitle": "Historial de lotes",
+      "historySummary": "{{active}} activos de {{total}}",
+      "emptyTitle": "Aún sin lotes"
     },
     "deleteTitle": "Eliminar artículo",
     "discardBatchesTitle": "Descartar lotes caducados",
@@ -42,7 +46,14 @@
     "discardItemTitle": "Descartar artículo caducado",
     "discardItemBody": "Esto marcará los {{quantity}} {{unit}} restantes como desperdiciados por caducidad.",
     "moreUsageEntries_one": "+{{count}} entrada más",
-    "moreUsageEntries_other": "+{{count}} entradas más"
+    "moreUsageEntries_other": "+{{count}} entradas más",
+    "usage": {
+      "entries": "Registros",
+      "mostRecent": "Más reciente",
+      "totalEntries_one": "{{count}} registro",
+      "totalEntries_other": "{{count}} registros",
+      "emptyTitle": "Aún sin uso"
+    }
   },
   "pantrySettings": {
     "createTitle": "Crear nueva despensa",
@@ -91,7 +102,6 @@
     "additions": "Adiciones",
     "consumptions": "Consumos",
     "transactions": "transacciones",
-    "avgCostPerUnit": "Costo prom./unidad",
     "usageTrend": "Tendencia de uso",
     "usageTrendSubtitle": "Artículos usados a lo largo del tiempo",
     "usageByPurpose": "Uso por propósito",
@@ -208,12 +218,12 @@
     "selectPantryError": "Selecciona una despensa",
     "selectUnitError": "Selecciona una unidad",
     "title": "Mover a la despensa",
-    "shoppingListQuantityPrefix": "Cantidad en la lista de la compra: ",
+    "purchasedAmount": "Comprado: {{amount}} {{unit}}",
+    "requestedAmount": "Cantidad en la lista de la compra: {{amount}} {{unit}}",
     "requiredAsterisk": " *",
     "defaultLabel": "Predeterminada",
     "unitPlaceholder": "pcs, kg",
     "storageType": "Tipo de almacenamiento",
-    "purchasePrice": "Precio de compra (por unidad)",
     "notesPlaceholder": "Añade notas sobre esta compra...",
     "removeFromShopping": "Quitar de la lista de la compra",
     "removeFromShoppingDesc": "Desactívalo para mantener el artículo en tu lista de la compra",
@@ -253,6 +263,7 @@
     "reasonPlaceholder": "¿Por qué se corrige el peso?"
   },
   "addToPantry": {
+    "restocked": "Se reabasteció {{name}}",
     "lowStockSettings": "Ajustes de stock bajo",
     "lowStockHint": "Recibe una notificación cuando este artículo se esté agotando.",
     "emptyHint": "Déjalo vacío para desactivar las alertas de stock bajo de este artículo.",
@@ -405,7 +416,7 @@
     "REFRIGERATED": "Nevera"
   },
   "batchSection": {
-    "showAll": "Mostrar todos los lotes",
-    "hideInactive": "Ocultar lotes inactivos"
+    "viewAll_one": "Ver el lote",
+    "viewAll_other": "Ver los {{count}} lotes"
   }
 }

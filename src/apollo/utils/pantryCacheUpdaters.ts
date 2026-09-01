@@ -1,13 +1,12 @@
 /**
- * Cache updaters for the `Pantry.itemsConnection` edge list — shared because
- * `features/pantry`, `features/barcode`, `components/modals/AddToPantrySheet` and
- * `screens/onBoarding` all write it, and two copies of the same factory call can
- * drift into writing the same connection differently.
+ * Cache updaters for the `Pantry.itemsConnection` edge list, shared because four
+ * features write it and two copies of one factory call silently drift apart.
  */
 import type { ApolloCache } from '@apollo/client';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
+  safeEvict,
 } from './cacheUpdaters';
 
 export const addToPantryItemsCache = createAddToParentConnectionUpdater<{
@@ -22,10 +21,9 @@ export const removeFromPantryItemsCache =
   );
 
 /**
- * Adjust `Pantry.stats.totalItems` by `delta` after a local add or remove: the
- * responses carry no parent aggregate and `Pantry.stats` merges rather than
- * recomputes, so the header otherwise contradicts the list beneath it. Only
- * `totalItems` — the other stats depend on item state the caller may not know.
+ * Adjust `Pantry.stats.totalItems` by `delta`: the responses carry no parent
+ * aggregate and `Pantry.stats` merges rather than recomputes, so the header
+ * otherwise contradicts the list. Only `totalItems` — the rest need item state.
  */
 export function adjustPantryItemCount(
   cache: ApolloCache,
@@ -83,4 +81,17 @@ export function removePantryItemLocally(
   const removed = removeFromPantryItemsCache(cache, pantryId, itemId, options);
   if (removed) adjustPantryItemCount(cache, pantryId, -1);
   return removed;
+}
+
+/**
+ * Withdraw a refused optimistic row: edge first, so `cache.modify` still sees it
+ * and takes both counters with it. Evicting alone strands `stats.totalItems`.
+ */
+export function revertOptimisticPantryItem(
+  cache: ApolloCache,
+  pantryId: string,
+  itemId: string,
+): void {
+  removePantryItemLocally(cache, pantryId, itemId);
+  safeEvict(cache, 'PantryItem', itemId);
 }

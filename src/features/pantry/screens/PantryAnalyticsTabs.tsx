@@ -20,6 +20,10 @@ import type { Translate } from '#/i18n/types';
 const TrendLineChart = withUnistyles(BaseTrendLineChart);
 import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 const TopItemsBarChart = withUnistyles(BaseTopItemsBarChart);
+/** An em dash, as InfoRow uses: an amount nobody recorded is not $0.00. */
+const money = (amount: number | null | undefined): string =>
+  amount == null ? '—' : formatCurrency(amount, DEFAULT_CURRENCY);
+
 const AnalyticsSummaryCard = withUnistyles(BaseAnalyticsSummaryCard);
 
 type AnalyticsResult = ReturnType<typeof usePantryAnalytics>;
@@ -535,19 +539,13 @@ export const LedgerTab: React.FC<
         <View style={styles.summaryRow}>
           <AnalyticsSummaryCard
             title={t('labels.totalSpent')}
-            value={formatCurrency(
-              ledgerData.costAnalytics.totalSpent ?? 0,
-              DEFAULT_CURRENCY,
-            )}
+            value={money(ledgerData.costAnalytics.totalSpent)}
             icon="cash-outline"
             uniProps={theme => ({ color: theme.colors.warning })}
           />
           <AnalyticsSummaryCard
-            title={t('pantryAnalytics.avgCostPerUnit')}
-            value={formatCurrency(
-              ledgerData.costAnalytics.averageCostPerUnit ?? 0,
-              DEFAULT_CURRENCY,
-            )}
+            title={t('labels.avgCostPerUnit')}
+            value={money(ledgerData.costAnalytics.averageCostPerUnit)}
             icon="calculator-outline"
             uniProps={theme => ({ color: theme.colors.warning })}
           />
@@ -740,7 +738,7 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   granularityButtonTextActive: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   pressed: {
     opacity: theme.opacity.pressed,

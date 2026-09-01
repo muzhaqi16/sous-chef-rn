@@ -1,8 +1,13 @@
 import React from 'react';
-import { screen } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import type { ViewProps } from 'react-native';
 import { MoveToPantryModal } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal';
-import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
+import {
+  type MockedResponse,
+  renderWithApollo,
+  seedCache,
+} from '#/test-utils/apolloMockProvider';
+import { MoveToPantryPurchaseInfoDocument } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal.generated';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -39,8 +44,31 @@ jest.mock('#components/molecules/Header', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    Header: ({ title }: { title: string }) =>
-      R.createElement(RN.View, null, R.createElement(RN.Text, null, title)),
+    // Actions are rendered, not just the title: the confirm tap is the only way
+    // to observe what the sheet sends.
+    Header: ({
+      title,
+      rightActions = [],
+    }: {
+      title: string;
+      rightActions?: Array<{ icon: string; onPress: () => void }>;
+    }) =>
+      R.createElement(
+        RN.View,
+        null,
+        R.createElement(RN.Text, null, title),
+        ...rightActions.map((action, index) =>
+          R.createElement(
+            RN.Text,
+            {
+              key: index,
+              testID: `header-action-${action.icon}`,
+              onPress: action.onPress,
+            },
+            action.icon,
+          ),
+        ),
+      ),
   };
 });
 
@@ -61,7 +89,11 @@ jest.mock('#components/molecules/FractionInput', () => {
         RN.View,
         null,
         R.createElement(RN.Text, null, label),
-        R.createElement(RN.TextInput, { value, onChangeText }),
+        R.createElement(RN.TextInput, {
+          testID: 'move-to-pantry-quantity',
+          value,
+          onChangeText,
+        }),
       ),
   };
 });
@@ -95,10 +127,19 @@ jest.mock('#components/molecules/FormInput', () => {
         RN.View,
         null,
         R.createElement(RN.Text, null, label),
-        R.createElement(RN.TextInput, { value, onChangeText, placeholder }),
+        R.createElement(RN.TextInput, {
+          testID: `move-to-pantry-field-${label}`,
+          value,
+          onChangeText,
+          placeholder,
+        }),
       ),
   };
 });
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
@@ -269,11 +310,131 @@ describe('MoveToPantryModal', () => {
     expect(screen.getByText('Select date')).toBeTruthy();
   });
 
-  it('renders Purchase Price input', () => {
+  it('asks for the total paid, the same question Mark Purchased asks', () => {
     renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
       cache: makeCache(),
     });
-    expect(screen.getByText('Purchase Price (per unit)')).toBeTruthy();
+    expect(screen.getByText('Total price')).toBeTruthy();
+  });
+
+  describe('seeding from the recorded purchase', () => {
+    // A line requested as 2 but BOUGHT as 5 for $2.95 the whole lot.
+    const purchaseMock = (
+      purchasedQuantity: number | null,
+      purchasedPrice: number | null,
+    ): MockedResponse => ({
+      request: {
+        query: MoveToPantryPurchaseInfoDocument,
+        variables: { id: ITEM_ID },
+      },
+      result: {
+        data: {
+          shoppingListItem: {
+            __typename: 'ShoppingListItem',
+            id: ITEM_ID,
+            purchaseInfo: {
+              __typename: 'ShoppingListItemPurchaseInfo',
+              isPurchased: true,
+              movedToPantryAt: null,
+              purchasedQuantity,
+              purchasedPrice,
+              purchaseDate: '2026-08-30T00:00:00Z',
+              purchasedBy: null,
+            },
+          },
+        },
+      },
+    });
+
+    // Mounted closed, then opened: the seed runs on the closed -> open
+    // transition, which is the lifecycle the sheet actually sees.
+    const openWithPurchase = (
+      purchasedQuantity: number | null,
+      purchasedPrice: number | null,
+      onConfirm = jest.fn(),
+    ) => {
+      const { rerender } = renderWithApollo(
+        <MoveToPantryModal
+          {...defaultProps}
+          visible={false}
+          onConfirm={onConfirm}
+        />,
+        {
+          cache: makeCache(),
+          operationMocks: [purchaseMock(purchasedQuantity, purchasedPrice)],
+        },
+      );
+      rerender(
+        <MoveToPantryModal
+          {...defaultProps}
+          visible={true}
+          onConfirm={onConfirm}
+        />,
+      );
+      return onConfirm;
+    };
+
+    it('prefills the amounts that were bought, not the ones requested', async () => {
+      openWithPurchase(5, 0.59);
+
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+      );
+      expect(screen.getByTestId('move-to-pantry-quantity').props.value).toBe(
+        '5',
+      );
+      // The field shows the TOTAL; the API stores the $0.59 per unit.
+      expect(
+        screen.getByTestId('move-to-pantry-field-Total price').props.value,
+      ).toBe('2.95');
+    });
+
+    it('sends the per-unit price the API expects', async () => {
+      const onConfirm = openWithPurchase(5, 0.59);
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+      );
+
+      fireEvent.press(screen.getByTestId('header-action-checkmark'));
+      const sent = onConfirm.mock.calls[0][0];
+      expect(sent.actualQuantity).toBe(5);
+      // Unrounded on purpose (`unitPriceFromTotal`): the server rounds the
+      // PRODUCT, so a total that does not divide evenly still comes back whole.
+      expect(sent.actualPrice).toBeCloseTo(0.59, 10);
+    });
+
+    it('holds the per-unit price when fewer units are stocked', async () => {
+      const onConfirm = openWithPurchase(5, 0.59);
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+      );
+
+      fireEvent.changeText(screen.getByTestId('move-to-pantry-quantity'), '3');
+
+      // The total follows the quantity; the unit price is what was paid.
+      expect(
+        screen.getByTestId('move-to-pantry-field-Total price').props.value,
+      ).toBe('1.77');
+
+      fireEvent.press(screen.getByTestId('header-action-checkmark'));
+      expect(onConfirm).toHaveBeenCalledWith(
+        expect.objectContaining({ actualQuantity: 3, actualPrice: 0.59 }),
+      );
+    });
+
+    it('falls back to the requested quantity when nothing was recorded', async () => {
+      openWithPurchase(null, null);
+
+      await waitFor(() =>
+        expect(screen.getByText('Shopping list quantity: 2 gal')).toBeTruthy(),
+      );
+      expect(screen.getByTestId('move-to-pantry-quantity').props.value).toBe(
+        '2',
+      );
+      expect(
+        screen.getByTestId('move-to-pantry-field-Total price').props.value,
+      ).toBe('');
+    });
   });
 
   it('resets form when modal opens with new item', () => {

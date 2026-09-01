@@ -455,6 +455,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   acceptButtonText: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
 }));

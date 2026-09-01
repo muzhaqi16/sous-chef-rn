@@ -237,7 +237,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.semibold,
   },
   buttonTextPrimary: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   buttonTextSecondary: {
     color: theme.colors.textPrimary,
@@ -509,7 +509,7 @@ export const commonStyles = StyleSheet.create(theme => ({
   badgeText: {
     fontSize: theme.fonts.size.xs,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   chip: {
     paddingHorizontal: theme.spacing.md,

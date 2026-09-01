@@ -983,15 +983,44 @@ mutation ConvertExpiredToWaste($input: ConvertExpiredToWasteInput!) {
 # BATCH OPERATIONS
 # ============================================
 
-# An explicit generous `first` rather than the server's implicit default page
-# size: an item's batch count is small in practice and no consumer paginates,
-# so relying on the default risks silent truncation with no load-more path.
+# The detail screen's read: a generous `first` because it derives from the WHOLE
+# active set (cost dilution, expired batches) while showing only the first few.
+# `totalCount` is what its "view all" affordance counts, so a stack past this
+# page still names its real size instead of silently reading 100.
 query GetPantryItemBatches($pantryItemId: ID!, $status: BatchStatus) {
   pantryItemBatchesConnection(
     pantryItemId: $pantryItemId
     status: $status
     first: 100
   ) {
+    totalCount
+    edges {
+      node {
+        id
+        ...PantryItemBatchFragment
+      }
+    }
+  }
+}
+
+# The batch-history screen's read. Depleted and wasted batches are never pruned,
+# so this is the one unbounded list in the pantry — it pages rather than taking
+# a fixed slice.
+query GetPantryItemBatchHistory(
+  $pantryItemId: ID!
+  $first: Int
+  $after: String
+) {
+  pantryItemBatchesConnection(
+    pantryItemId: $pantryItemId
+    first: $first
+    after: $after
+  ) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
     edges {
       node {
         id
@@ -1180,6 +1209,39 @@ subscription PantryEvents($pantryId: ID!) {
       }
       ... on ExpirationNotification {
         id
+      }
+    }
+  }
+}
+
+# The usage-history screen's read. Usage records are append-only and never
+# pruned, so this is the pantry's other unbounded list.
+query GetPantryItemUsageHistory(
+  $pantryItemId: ID!
+  $first: Int
+  $after: String
+) {
+  pantryItem(id: $pantryItemId) {
+    id
+    usageRecords(first: $first, after: $after) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        node {
+          id
+          quantityUsed
+          usageUnit {
+            id
+            name
+            symbol
+          }
+          usedAt
+          purpose
+          adjustmentReason
+        }
       }
     }
   }

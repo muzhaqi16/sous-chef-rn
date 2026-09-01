@@ -2,12 +2,16 @@ import { gql, type ApolloCache } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import {
+  AcquisitionMethod,
+  StorageState,
+} from '#/graphql/generated/schemaTypes';
 import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { Telemetry } from '#/services/telemetry';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { errorService } from '#/services/errorService';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
+import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
 import {
   addToPantryItemsCache,
   adjustPantryItemCount,
@@ -19,6 +23,8 @@ import {
   writePurchaseInfo,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import { t as tGlobal } from '#/i18n';
 import { generateEntityId } from '#/utils/generateEntityId';
 
 export interface MoveToPantryInput {
@@ -219,8 +225,20 @@ export function useMoveToPantry({
     // Resolved BEFORE the try: `&&` is a value block, and the React Compiler
     // bails out of the whole hook when one appears inside a try body.
     const unlinkFromListId = input.removeFromList ? currentListId : undefined;
+    // Same reason. `actualPrice` is per unit, so the stub's own
+    // `costPerUnit x quantity` reproduces what the server will compute.
+    const detailStubFields = {
+      itemId: item.item?.id,
+      itemName: item.itemName ?? '',
+      acquisitionMethod: AcquisitionMethod.ShoppingList,
+      costPerUnit: input.actualPrice ?? null,
+      quantity: input.actualQuantity,
+    };
     try {
       addToPantryItemsCache(client.cache, input.pantryId, optimisticPantryItem);
+      // Detail-shape the row so the moved item's detail screen renders its
+      // costs from cache — offline this local write is the only source.
+      writePantryItemDetailStub(client.cache, pantryItemId, detailStubFields);
       // The count travels with the row: offline the mutation's `update` never
       // runs, and `usePantryScreen` branches on this value to pick server vs
       // client sorting, so a stale one selects the wrong mode too.
@@ -287,6 +305,10 @@ export function useMoveToPantry({
           operation: 'Failed to move item to pantry:',
         });
       }
+      // A refusal resolves with HTTP 200 and no `error`, so nothing else tells
+      // the shopper: the row simply reappears on the list. Reachable now that a
+      // target whose unit changed mid-move comes back as a retryable conflict.
+      alertRejectedMutation(result, tGlobal('errors.moveToPantryFailedRetry'));
       return false;
     }
 

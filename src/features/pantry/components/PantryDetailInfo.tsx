@@ -21,6 +21,7 @@ import {
   formatDate,
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
+import type { BatchPricingSummary } from '#features/pantry/utils/summarizeBatchPricing';
 
 interface PantryDetailInfoProps {
   itemRef:
@@ -35,6 +36,11 @@ interface PantryDetailInfoProps {
   shelfLifeOpenedDays: number | null | undefined;
   onCorrectWeight?: () => void;
   /** Server unreachable (offline / API down) — disables the correct-weight edit. */
+  /**
+   * What the batches say about the item's money fields — which rows to label as
+   * a blend, and when the rate is too diluted to show. {@link summarizeBatchPricing}
+   */
+  pricing?: BatchPricingSummary;
 }
 
 export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
@@ -47,6 +53,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   shelfLifeDays,
   shelfLifeOpenedDays,
   onCorrectWeight,
+  pricing,
 }) => {
   const { t } = useTranslation();
   // Per-entity cache subscription: re-renders only when this PantryItem's
@@ -63,6 +70,20 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
 
   const isCriticalCondition =
     item.condition === 'SPOILED' || item.condition === 'EXPIRED';
+
+  // The server derives both from the active batches; `costPerUnit` is a display
+  // rate rounded to cents, so it is never multiplied back — `totalCost` is the
+  // authoritative value. Null means no priced stock, and the row is omitted.
+  const isAveraged = pricing?.isAveraged ?? false;
+  // Unpriced stock dilutes the rate below any price actually paid; the value is
+  // still honest about the part it knows.
+  const costPerUnit = pricing?.isRateDiluted ? null : item.costPerUnit;
+  // `item.purchase` is the FIRST acquisition; a restock's is on its own batch.
+  const purchaseDate =
+    pricing?.lastPurchase?.date ?? item.purchase?.purchaseDate;
+  const purchaseTotal = pricing?.lastPurchase
+    ? pricing.lastPurchase.totalCost
+    : item.purchase?.totalPrice;
 
   return (
     <>
@@ -227,10 +248,14 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         />
       )}
       {/* Cost Per Unit Row */}
-      {!!formatCurrency(item.costPerUnit) && (
+      {!!formatCurrency(costPerUnit) && (
         <InfoRow
-          label={t('pantryItemDetail.fields.costPerUnit')}
-          value={formatCurrency(item.costPerUnit)}
+          label={t(
+            isAveraged
+              ? 'labels.avgCostPerUnit'
+              : 'pantryItemDetail.fields.costPerUnit',
+          )}
+          value={formatCurrency(costPerUnit)}
           icon="cash-outline"
           showColon={false}
           labelStyle={styles.labelText}
@@ -241,7 +266,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Total Cost Row */}
       {!!formatCurrency(item.totalCost) && (
         <InfoRow
-          label={t('labels.totalCost')}
+          label={t('labels.stockValue')}
           value={formatCurrency(item.totalCost)}
           icon="wallet-outline"
           showColon={false}
@@ -275,12 +300,17 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         />
       )}
       {/* Purchase Date Row */}
-      {!!item.purchase?.purchaseDate && (
+      {!!purchaseDate && (
         <InfoRow
-          label={t('pantryItemDetail.fields.purchased')}
-          value={`${formatDate(item.purchase.purchaseDate)}${
-            item.purchase.unitPrice != null && item.purchase.unitPrice > 0
-              ? ` @ ${formatCurrency(item.purchase.unitPrice)}`
+          label={t(
+            isAveraged
+              ? 'pantryItemDetail.fields.lastPurchase'
+              : 'pantryItemDetail.fields.purchased',
+          )}
+          // The TOTAL, not the unit price the Cost/Unit row above already shows.
+          value={`${formatDate(purchaseDate)}${
+            purchaseTotal != null && purchaseTotal > 0
+              ? ` · ${formatCurrency(purchaseTotal)}`
               : ''
           }`}
           icon="receipt-outline"

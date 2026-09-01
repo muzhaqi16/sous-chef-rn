@@ -24,9 +24,11 @@ describe('pantryDetailScreens', () => {
       'FilteredPantryItems',
       'NutritionScreen',
       'PantryAnalytics',
+      'PantryBatchHistory',
       'PantryItem',
       'PantryItemDetail',
       'PantrySettings',
+      'PantryUsageHistory',
     ]);
   });
 

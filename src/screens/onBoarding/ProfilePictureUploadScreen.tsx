@@ -473,7 +473,7 @@ const styles = StyleSheet.create(theme => ({
   cropButtonText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   cropHint: {
     fontSize: theme.typography.fontSize.xs,

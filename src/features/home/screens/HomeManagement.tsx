@@ -468,7 +468,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   modeButtonTextActive: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   joinForm: {
     backgroundColor: theme.colors.surface,

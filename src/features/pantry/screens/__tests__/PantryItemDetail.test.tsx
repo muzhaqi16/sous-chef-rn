@@ -4,7 +4,11 @@ import React from 'react';
 import { screen } from '@testing-library/react-native';
 import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { GetPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  GetPantryItemBatchesDocument,
+  GetPantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import { BatchStatus } from '#/graphql/generated/schemaTypes';
 import {
   pantryItemData,
   type PantryItemFixture,
@@ -120,6 +124,42 @@ function itemMock(fixture: PantryItemFixture = {}) {
   }).mock;
 }
 
+/**
+ * The batch query the screen fires alongside the item. Its costs are what the
+ * detail header shows: a restock adds a batch and the server recomputes only
+ * `PantryItem.quantity`, leaving the item's own cost fields on the first stock.
+ */
+function batchesMock(
+  batches: Array<{
+    id: string;
+    quantity: number;
+    costPerUnit: number | null;
+    totalCost?: number | null;
+    createdAt?: string;
+  }>,
+) {
+  return recordMock(GetPantryItemBatchesDocument, {
+    data: {
+      pantryItemBatchesConnection: {
+        __typename: 'PantryItemBatchConnection' as const,
+        edges: batches.map((b, index) => ({
+          __typename: 'PantryItemBatchEdge' as const,
+          node: {
+            __typename: 'PantryItemBatch' as const,
+            id: b.id,
+            batchNumber: index + 1,
+            quantity: b.quantity,
+            status: BatchStatus.Active,
+            costPerUnit: b.costPerUnit,
+            totalCost: b.totalCost ?? null,
+            createdAt: b.createdAt ?? '2026-08-01T00:00:00Z',
+          },
+        })),
+      },
+    },
+  }).mock;
+}
+
 const fullItem: PantryItemFixture = {
   itemName: 'Milk',
   quantity: 2,
@@ -131,6 +171,99 @@ const fullItem: PantryItemFixture = {
 };
 
 describe('PantryItemDetail (integration)', () => {
+  describe('cost after a restock', () => {
+    // The server now values the REMAINING stock: 5 @ $0.59 plus 3 @ $1.00 is
+    // $5.95 over 8 units. The screen renders those, and reads the batches only
+    // to decide the labels.
+    const restocked: PantryItemFixture = {
+      ...fullItem,
+      quantity: 8,
+      costPerUnit: 0.74,
+      totalCost: 5.95,
+    };
+
+    it('labels the server rate as an average and names the last purchase', async () => {
+      renderWithApollo(<PantryItemDetail route={route} />, {
+        operationMocks: [
+          itemMock(restocked),
+          batchesMock([
+            { id: 'b1', quantity: 5, costPerUnit: 0.59, totalCost: 2.95 },
+            {
+              id: 'b2',
+              quantity: 3,
+              costPerUnit: 1,
+              totalCost: 3,
+              createdAt: '2026-08-31T00:00:00Z',
+            },
+          ]),
+        ],
+      });
+
+      expect(await screen.findByText('Avg Cost/Unit')).toBeTruthy();
+      expect(screen.getByText('$0.74')).toBeTruthy();
+      expect(screen.getByText('Stock value')).toBeTruthy();
+      expect(screen.getByText('$5.95')).toBeTruthy();
+      expect(screen.getByText('Last purchase')).toBeTruthy();
+    });
+
+    it('leaves a single-batch item reading plainly', async () => {
+      renderWithApollo(<PantryItemDetail route={route} />, {
+        operationMocks: [
+          itemMock({
+            ...fullItem,
+            quantity: 5,
+            costPerUnit: 0.59,
+            totalCost: 2.95,
+          }),
+          batchesMock([
+            { id: 'b1', quantity: 5, costPerUnit: 0.59, totalCost: 2.95 },
+          ]),
+        ],
+      });
+
+      expect(await screen.findByText('Cost/Unit')).toBeTruthy();
+      expect(screen.getByText('$0.59')).toBeTruthy();
+      expect(screen.getByText('$2.95')).toBeTruthy();
+      expect(screen.queryByText('Avg Cost/Unit')).toBeNull();
+    });
+
+    it('hides a rate diluted by stock with no recorded cost', async () => {
+      renderWithApollo(<PantryItemDetail route={route} />, {
+        operationMocks: [
+          // The server spread $2.95 of known cost over all 8 units.
+          itemMock({
+            ...fullItem,
+            quantity: 8,
+            costPerUnit: 0.37,
+            totalCost: 2.95,
+          }),
+          batchesMock([
+            { id: 'paid', quantity: 5, costPerUnit: 0.59, totalCost: 2.95 },
+            { id: 'gifted', quantity: 3, costPerUnit: null },
+          ]),
+        ],
+      });
+
+      expect(await screen.findByText('Stock value')).toBeTruthy();
+      expect(screen.queryByText('Cost/Unit')).toBeNull();
+      expect(screen.queryByText('$0.37')).toBeNull();
+    });
+
+    it('omits both money rows when nothing left has a known cost', async () => {
+      renderWithApollo(<PantryItemDetail route={route} />, {
+        operationMocks: [
+          itemMock({ ...fullItem, costPerUnit: null, totalCost: null }),
+          batchesMock([{ id: 'b1', quantity: 5, costPerUnit: null }]),
+        ],
+      });
+
+      await screen.findAllByText('Milk');
+      expect(screen.queryByText('Cost/Unit')).toBeNull();
+      expect(screen.queryByText('Stock value')).toBeNull();
+      expect(screen.queryByText('$0.00')).toBeNull();
+    });
+  });
+
   it('renders the item name', async () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],
