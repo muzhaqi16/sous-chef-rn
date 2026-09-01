@@ -37,5 +37,18 @@ query MoveToPantryPurchaseInfo($id: ID!) {
         }
       }
     }
+    # The unit the purchase was recorded in. `purchaseInfo` carries the amounts
+    # but no unit, and the LINE's unit is nullable — while `Purchase.unitId` is
+    # not, because the server falls back to the item's tracking unit or "piece".
+    # An explicit ordering: `first: 1` unordered is not the latest purchase.
+    purchasesConnection(first: 1, orderBy: { purchaseDate: DESC }) {
+      edges {
+        node {
+          id
+          unitId
+          unitSymbol
+        }
+      }
+    }
   }
 }

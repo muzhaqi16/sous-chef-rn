@@ -96,6 +96,12 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   const purchasedUnitPrice = purchaseInfo?.isPurchased
     ? purchaseInfo.purchasedPrice ?? null
     : null;
+  // What the purchase was recorded in. Only reached when the LINE carries no
+  // unit of its own — the two agree otherwise, since the server derives one
+  // from the other.
+  const purchasedUnit =
+    purchaseData?.shoppingListItem?.purchasesConnection?.edges?.[0]?.node ??
+    null;
 
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible: visible && !!shoppingListItem,
@@ -150,9 +156,12 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     if (visible && shoppingListItem) {
       setQuantityInput(formatNumberForInput(seedQuantity) || '1');
       setUnitValue(
-        shoppingListItem.unit?.symbol || shoppingListItem.unitName || '',
+        shoppingListItem.unit?.symbol ||
+          shoppingListItem.unitName ||
+          purchasedUnit?.unitSymbol ||
+          '',
       );
-      setUnitId(shoppingListItem.unit?.id || null);
+      setUnitId(shoppingListItem.unit?.id || purchasedUnit?.unitId || null);
       setPantryId(selectedPantryId);
       setStorageState(StorageState.Ambient);
       setExpirationDate(undefined);
@@ -173,9 +182,17 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   // A cold start has no cached purchase, so the amounts can land a beat after
   // the sheet opens. Seed them then too — but never over something typed.
   const [prevSeed, setPrevSeed] = useState<string | null>(null);
-  const seedKey = `${purchasedQuantity ?? ''}|${purchasedUnitPrice ?? ''}`;
+  const seedKey = `${purchasedQuantity ?? ''}|${purchasedUnitPrice ?? ''}|${
+    purchasedUnit?.unitId ?? ''
+  }`;
   if (visible && seedKey !== prevSeed) {
     setPrevSeed(seedKey);
+    // A line with no unit of its own takes the purchase's, which arrives with
+    // the amounts rather than with the fragment.
+    if (!unitId && purchasedUnit) {
+      setUnitValue(purchasedUnit.unitSymbol);
+      setUnitId(purchasedUnit.unitId);
+    }
     if (!amountsTouched && purchasedQuantity != null) {
       setQuantityInput(formatNumberForInput(purchasedQuantity) || '1');
       setActualPriceInput(

@@ -332,6 +332,20 @@ describe('MoveToPantryModal', () => {
           shoppingListItem: {
             __typename: 'ShoppingListItem',
             id: ITEM_ID,
+            purchasesConnection: {
+              __typename: 'PurchaseConnection',
+              edges: [
+                {
+                  __typename: 'PurchaseEdge',
+                  node: {
+                    __typename: 'Purchase',
+                    id: 'pu1',
+                    unitId: 'u-purchase',
+                    unitSymbol: 'lb',
+                  },
+                },
+              ],
+            },
             purchaseInfo: {
               __typename: 'ShoppingListItemPurchaseInfo',
               isPurchased: true,
@@ -420,6 +434,36 @@ describe('MoveToPantryModal', () => {
       expect(onConfirm).toHaveBeenCalledWith(
         expect.objectContaining({ actualQuantity: 3, actualPrice: 0.59 }),
       );
+    });
+
+    it('takes the unit from the purchase when the line carries none', async () => {
+      // `purchaseInfo` has the amounts but no unit, and a line's own unit is
+      // nullable — `Purchase.unitId` is not.
+      const onConfirm = jest.fn();
+      const { rerender } = renderWithApollo(
+        <MoveToPantryModal
+          {...defaultProps}
+          visible={false}
+          onConfirm={onConfirm}
+        />,
+        {
+          cache: makeCache({ unit: null, unitName: null }),
+          operationMocks: [purchaseMock(5, 0.59)],
+        },
+      );
+      rerender(
+        <MoveToPantryModal
+          {...defaultProps}
+          visible={true}
+          onConfirm={onConfirm}
+        />,
+      );
+
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 ')).toBeTruthy(),
+      );
+      fireEvent.press(screen.getByTestId('header-action-checkmark'));
+      expect(onConfirm.mock.calls[0][0].actualUnitId).toBe('u-purchase');
     });
 
     it('falls back to the requested quantity when nothing was recorded', async () => {
