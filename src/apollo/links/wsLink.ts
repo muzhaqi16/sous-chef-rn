@@ -3,6 +3,8 @@ import { createClient, Client } from 'graphql-ws';
 import { Platform } from 'react-native';
 import { env } from '#/config/env';
 import { useStore } from '#store';
+import { isApiUnavailable } from '#store/slices/networkSlice';
+import { Telemetry } from '#/services/telemetry';
 import { Environment, logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import { getDeviceId } from '#/utils/deviceId';
@@ -64,6 +66,21 @@ function notifyReconnectListeners(): void {
 // after would never escalate the curve. Only a connection that proves stable
 // clears this one.
 let dialAttempts = 0;
+
+// How far the current dial got. graphql-ws sends `connectionParams` only after
+// `opened`, so a close still at 'dialing' means the upgrade was refused before
+// the API key left the device — a failure no close code describes.
+type DialStage = 'dialing' | 'opened' | 'acked';
+let dialStage: DialStage = 'dialing';
+const WS_CLOSE_NORMAL = 1000;
+const WS_CLOSE_TERMINATED = 4499; // graphql-ws's code for our own terminate()
+
+// One record per streak, then one per interval; the counter still counts every
+// dial. The backoff caps at 30s, so an unattended refusal would otherwise write
+// two error logs a minute for as long as the app stays open.
+const REFUSED_LOG_INTERVAL_MS = 300_000;
+let lastRefusedLogAt = 0;
+
 const BASE_RECONNECT_DELAY_MS = 1000;
 const MAX_RECONNECT_DELAY_MS = 30000;
 let shouldAutoReconnect = true;
@@ -108,6 +125,39 @@ const clearConnectionStableTimer = () => {
     clearTimeout(connectionStableTimeoutId);
     connectionStableTimeoutId = null;
   }
+};
+
+/**
+ * A dial that closed before opening was refused at the HTTP layer: the upgrade
+ * never completed, so the server saw a plain request and the client has no
+ * close code to classify it by. Split on reachability — refused while HTTP
+ * works is a transport fault, not a dead radio.
+ */
+const reportRefusedHandshake = (code: number | undefined): void => {
+  const { isOnline, apiReachable } = useStore.getState();
+  const reachable = apiReachable === null ? 'unknown' : String(apiReachable);
+
+  Telemetry.increment('ws_handshake_failures_total', 1, { reachable });
+
+  const now = Date.now();
+  if (now - lastRefusedLogAt < REFUSED_LOG_INTERVAL_MS) return;
+  lastRefusedLogAt = now;
+
+  const detail = {
+    close_code: code,
+    dial_attempt: dialAttempts,
+    is_online: isOnline,
+    api_reachable: apiReachable,
+    url: WS_URL,
+  };
+
+  if (isApiUnavailable({ isOnline, apiReachable })) {
+    logger.warn('🔌 WebSocket handshake failed while offline', detail);
+    Telemetry.warn('WebSocket handshake failed while offline', detail);
+    return;
+  }
+  logger.error('🔌 WebSocket handshake refused before upgrade', detail);
+  Telemetry.error('WebSocket handshake refused before upgrade', detail);
 };
 
 /**
@@ -304,6 +354,7 @@ const createWsClient = () => {
     },
     on: {
       connected: (_socket: unknown, payload: unknown) => {
+        dialStage = 'acked';
         persistRotatedTokensFromAck(payload);
 
         // A connect that follows a previous connection is a reconnect — backfill
@@ -322,6 +373,7 @@ const createWsClient = () => {
           // The ONLY place the curve resets. Not on `connected`: a socket
           // accepted and closed straight away has proved nothing.
           dialAttempts = 0;
+          lastRefusedLogAt = 0;
           // The connection held with the current token — a future 4403 is a
           // fresh expiry, so the one-shot refresh fast path re-arms.
           sessionAuthRefreshAttempted = false;
@@ -346,6 +398,17 @@ const createWsClient = () => {
         const code = closeEvent?.code;
         const reason =
           typeof closeEvent?.reason === 'string' ? closeEvent.reason : '';
+
+        // A refused upgrade closes abnormally and matches none of the
+        // branches below, so it is recorded here or nowhere. A clean code at
+        // this stage is our own dispose/terminate, not the server.
+        if (
+          dialStage === 'dialing' &&
+          code !== WS_CLOSE_NORMAL &&
+          code !== WS_CLOSE_TERMINATED
+        ) {
+          reportRefusedHandshake(code);
+        }
 
         // Everything below records a verdict or spends one fast-path refresh.
         // None of it dials — `shouldRetry` + `retryWait` own that.
@@ -466,7 +529,11 @@ const createWsClient = () => {
           );
         }
       },
+      opened: () => {
+        dialStage = 'opened';
+      },
       connecting: () => {
+        dialStage = 'dialing';
         if (__DEV__) {
           logger.info('🔌 WebSocket connecting...', {
             url: WS_URL,

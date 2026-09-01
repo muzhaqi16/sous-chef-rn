@@ -333,6 +333,33 @@ Re-check:
 grep -n "InteractionManagerStub\|setImmediate(\|return -1" node_modules/react-native/Libraries/Interaction/InteractionManager.js
 ```
 
+### A refused WebSocket upgrade emits closed without opened
+
+**Claim:** when the HTTP upgrade is refused, graphql-ws emits `closed` and never
+`opened`, and `connectionParams` is never called — so the API key never leaves
+the device, and the server records a plain unauthenticated `GET /graphql`. An
+accepted upgrade does emit `opened`, so the absence of it identifies a refusal
+and nothing else.
+
+This is the only signal a refused handshake has. It carries no graphql-ws close
+code (those travel over an open socket), so `wsCloseCodes.ts` cannot classify
+it, and the client cannot tell the server who it is: `connectionParams` is
+built inside `socket.onopen` (`graphql-ws/dist/client.js:165-176`), which a
+refused upgrade never reaches. `wsLink` reports it from the dial stage instead
+— see `reportRefusedHandshake`.
+
+**Verified 2026-09-01 vs `graphql-ws@6.2.1` + `ws@8.21.3`** — re-check:
+`node scripts/probe-ws-refused-upgrade.mjs`. Measured event order:
+
+| upgrade  | events                                | `connectionParams` called |
+| -------- | ------------------------------------- | ------------------------- |
+| refused  | `connecting → error → closed(1006)`          | no                 |
+| accepted | `connecting → opened → error → closed(1006)` | yes                |
+
+Both legs close 1006; only the presence of `opened` separates them. The probe's
+accepting server completes the upgrade and then drops the socket, so the close
+code says nothing about which case it was — which is the point.
+
 ### graphql-ws fatal close codes
 
 **Claim:** graphql-ws rethrows close codes 4400, 4401, 4406, 4409, 4429, 4500

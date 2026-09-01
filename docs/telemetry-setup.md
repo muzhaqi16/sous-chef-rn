@@ -204,6 +204,7 @@ both sides.
 | `graphql_errors_total` | `name` | GraphQL errors |
 | `graphql_network_errors_total` | | Network-level GraphQL failures |
 | `graphql_slow_queries_total` | | Queries > 1s |
+| `ws_handshake_failures_total` | `reachable` | Subscription dials that closed before the WebSocket upgrade completed. `reachable` is the API-reachability verdict at the time (`true`/`false`/`unknown`); `reachable="true"` means HTTP works and the socket alone is being refused — the upgrade never reaches `connectionParams`, so the API key is not sent and the server logs a plain 401 GET. |
 | `component_render_count` | `component` | Commits per component (re-render churn) |
 | `slow_screen_transitions_total` | `screen` | Transitions > 500ms. Threshold-gated: read durations from `screen_interactive_duration_ms`, never from this counter's labels. |
 | `offline_queue_permanent_failures_total` | | Queued writes the client gave up on |

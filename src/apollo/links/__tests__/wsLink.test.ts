@@ -8,6 +8,7 @@ jest.mock('#store', () => ({
     getState: jest.fn(() => ({
       accessToken: 'mock-token',
       isOnline: true,
+      apiReachable: true,
       setTokens: mockSetTokens,
       endSession: mockEndSession,
     })),
@@ -23,6 +24,8 @@ import { Environment } from '#/utils/environment';
 // beforeAll — the per-test `clearAllMocks()` wipes `createClient.mock.calls`,
 // but the captured object itself survives.
 type WsLifecycleHandlers = {
+  connecting: () => void;
+  opened: (socket: unknown) => void;
   connected: (socket: unknown, payload?: Record<string, unknown>) => void;
   closed: (event: unknown) => void;
 };
@@ -68,6 +71,7 @@ jest.mock('#/utils/deviceId', () => ({
 // registerTokenRefresh (in the app, refreshToken.ts registers
 // proactiveTokenRefresh at module init). Tests register their own mock.
 
+import { Telemetry } from '#/services/telemetry';
 import { isLibraryFatalCloseCode } from '../wsCloseCodes';
 import {
   reconnectWebSocket,
@@ -1011,5 +1015,123 @@ describe('wsLink', () => {
   afterAll(() => {
     disableAutoReconnect();
     disposeWebSocket();
+  });
+  describe('a refused handshake', () => {
+    const seedStore = (over: Record<string, unknown> = {}) => {
+      const { useStore } = require('#store');
+      (useStore.getState as jest.Mock).mockImplementation(() => ({
+        accessToken: 'mock-token',
+        isOnline: true,
+        apiReachable: true,
+        setTokens: mockSetTokens,
+        endSession: mockEndSession,
+        ...over,
+      }));
+    };
+
+    beforeEach(() => {
+      seedStore();
+      jest.useFakeTimers();
+      // A stable connection is the module's own streak reset, and it clears the
+      // log throttle — otherwise one test's record mutes the next.
+      onHandlers.connecting();
+      onHandlers.opened({});
+      onHandlers.connected({}, undefined);
+      jest.advanceTimersByTime(11_000);
+      jest.clearAllMocks();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      // clearAllMocks leaves an implementation in place, so put the default
+      // back rather than leaking one test's seeded store into the next.
+      seedStore();
+    });
+
+    it('reports a dial that closes before the upgrade completes', () => {
+      onHandlers.connecting();
+      onHandlers.closed({ code: 1006, reason: '', wasClean: false });
+
+      expect(Telemetry.increment).toHaveBeenCalledWith(
+        'ws_handshake_failures_total',
+        1,
+        { reachable: 'true' },
+      );
+      expect(Telemetry.error).toHaveBeenCalledWith(
+        'WebSocket handshake refused before upgrade',
+        expect.objectContaining({ close_code: 1006, is_online: true }),
+      );
+    });
+
+    it('stays silent when the socket opened — that failure has a close code', () => {
+      onHandlers.connecting();
+      onHandlers.opened({});
+      onHandlers.closed({ code: 4413, reason: 'API key refused' });
+
+      expect(Telemetry.increment).not.toHaveBeenCalledWith(
+        'ws_handshake_failures_total',
+        expect.anything(),
+        expect.anything(),
+      );
+      expect(Telemetry.error).not.toHaveBeenCalledWith(
+        'WebSocket handshake refused before upgrade',
+        expect.anything(),
+      );
+    });
+
+    it('stays silent for our own terminate, which also never opens', () => {
+      onHandlers.connecting();
+      onHandlers.closed({ code: 4499, reason: 'Terminated' });
+      onHandlers.connecting();
+      onHandlers.closed({ code: 1000, reason: '', wasClean: true });
+
+      expect(Telemetry.increment).not.toHaveBeenCalledWith(
+        'ws_handshake_failures_total',
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it('counts every dial but logs once per streak', () => {
+      for (let i = 0; i < 4; i++) {
+        onHandlers.connecting();
+        onHandlers.closed({ code: 1006, reason: '', wasClean: false });
+      }
+
+      expect(Telemetry.increment).toHaveBeenCalledTimes(4);
+      expect(Telemetry.error).toHaveBeenCalledTimes(1);
+    });
+
+    it('demotes to warn when the device is the thing that is offline', () => {
+      seedStore({ isOnline: false, apiReachable: false });
+      onHandlers.connecting();
+      onHandlers.closed({ code: 1006, reason: '', wasClean: false });
+
+      expect(Telemetry.increment).toHaveBeenCalledWith(
+        'ws_handshake_failures_total',
+        1,
+        { reachable: 'false' },
+      );
+      expect(Telemetry.warn).toHaveBeenCalledWith(
+        'WebSocket handshake failed while offline',
+        expect.objectContaining({ close_code: 1006 }),
+      );
+      expect(Telemetry.error).not.toHaveBeenCalled();
+    });
+
+    it('logs the next streak after a connection proves stable', () => {
+      onHandlers.connecting();
+      onHandlers.closed({ code: 1006, reason: '', wasClean: false });
+      expect(Telemetry.error).toHaveBeenCalledTimes(1);
+
+      onHandlers.connecting();
+      onHandlers.opened({});
+      onHandlers.connected({}, undefined);
+      jest.advanceTimersByTime(11_000);
+
+      onHandlers.connecting();
+      onHandlers.closed({ code: 1006, reason: '', wasClean: false });
+      expect(Telemetry.error).toHaveBeenCalledTimes(2);
+    });
   });
 });
