@@ -21,11 +21,31 @@ import {
 } from './wsCloseCodes';
 import { LaunchArguments } from 'react-native-launch-arguments';
 
-// pick the right WebSocket constructor
-const webSocketImpl =
+// RN's WebSocket takes a third `options` argument that graphql-ws, which
+// constructs the socket as `new Impl(url, protocols)`, never passes.
+type WebSocketWithHeaders = new (
+  url: string,
+  protocols?: string | string[],
+  options?: { headers: Record<string, string> },
+) => WebSocket;
+
+const BaseWebSocket: WebSocketWithHeaders =
   Platform.OS === 'web'
     ? WebSocket // for RN-Web
     : global.WebSocket; // for iOS & Android
+
+// The key has to ride the upgrade REQUEST. `connectionParams` reaches the
+// server only once the socket is open, so a dial an intermediary re-issues
+// without its upgrade headers arrives anonymous and is refused as a scanner.
+const upgradeHeaders: Record<string, string> = env.API_KEY
+  ? { 'x-api-key': env.API_KEY }
+  : {};
+
+const webSocketImpl: WebSocketWithHeaders = class extends BaseWebSocket {
+  constructor(url: string, protocols?: string | string[]) {
+    super(url, protocols, { headers: upgradeHeaders });
+  }
+};
 
 // Use env.WEB_SOCKET_URL from .env if set, otherwise use environment-specific default
 const WS_URL = env.WEB_SOCKET_URL || Environment.getApiConfig().wsUrl;
@@ -81,6 +101,14 @@ const WS_CLOSE_TERMINATED = 4499; // graphql-ws's code for our own terminate()
 const REFUSED_LOG_INTERVAL_MS = 300_000;
 let lastRefusedLogAt = 0;
 
+// A refused upgrade does not recover within a session the way a dropped socket
+// does — the dial never reaches the server's protocol at all. Past this many in
+// a row the ceiling stretches, so a network that strips upgrades costs one dial
+// every few minutes rather than two a minute for as long as the app is open.
+const REFUSED_STREAK_LIMIT = 5;
+const REFUSED_MAX_RECONNECT_DELAY_MS = 300_000;
+let refusedHandshakeStreak = 0;
+
 const BASE_RECONNECT_DELAY_MS = 1000;
 const MAX_RECONNECT_DELAY_MS = 30000;
 let shouldAutoReconnect = true;
@@ -134,6 +162,7 @@ const clearConnectionStableTimer = () => {
  * works is a transport fault, not a dead radio.
  */
 const reportRefusedHandshake = (code: number | undefined): void => {
+  refusedHandshakeStreak++;
   const { isOnline, apiReachable } = useStore.getState();
   const reachable = apiReachable === null ? 'unknown' : String(apiReachable);
 
@@ -164,9 +193,13 @@ const reportRefusedHandshake = (code: number | undefined): void => {
  * Calculate reconnection delay with exponential backoff and jitter
  */
 const getReconnectDelay = (attempt: number): number => {
+  const ceiling =
+    refusedHandshakeStreak >= REFUSED_STREAK_LIMIT
+      ? REFUSED_MAX_RECONNECT_DELAY_MS
+      : MAX_RECONNECT_DELAY_MS;
   const delay = Math.min(
     BASE_RECONNECT_DELAY_MS * Math.pow(2, attempt),
-    MAX_RECONNECT_DELAY_MS,
+    ceiling,
   );
   // Add jitter (up to 25% variance) to prevent thundering herd
   const jitter = delay * 0.25 * Math.random();
@@ -531,6 +564,7 @@ const createWsClient = () => {
       },
       opened: () => {
         dialStage = 'opened';
+        refusedHandshakeStreak = 0;
       },
       connecting: () => {
         dialStage = 'dialing';

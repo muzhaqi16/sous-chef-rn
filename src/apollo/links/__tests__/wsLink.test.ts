@@ -1119,6 +1119,29 @@ describe('wsLink', () => {
       expect(Telemetry.error).not.toHaveBeenCalled();
     });
 
+    it('stretches the dial ceiling once refusals become a streak', async () => {
+      jest.useRealTimers();
+      const before = getWebSocketState().reconnectAttempts;
+      for (let i = 0; i < 6; i++) {
+        onHandlers.connecting();
+        onHandlers.closed({ code: 1006, reason: '', wasClean: false });
+      }
+      expect(getWebSocketState().reconnectAttempts).toBeGreaterThanOrEqual(
+        before,
+      );
+
+      // Past the streak limit the gate must not resolve on the 30s curve.
+      jest.useFakeTimers();
+      let resolved = false;
+      void dialGate().then(() => {
+        resolved = true;
+      });
+      await Promise.resolve();
+      jest.advanceTimersByTime(40_000);
+      await Promise.resolve();
+      expect(resolved).toBe(false);
+    });
+
     it('logs the next streak after a connection proves stable', () => {
       onHandlers.connecting();
       onHandlers.closed({ code: 1006, reason: '', wasClean: false });
