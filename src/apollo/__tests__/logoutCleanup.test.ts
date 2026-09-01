@@ -46,6 +46,15 @@ jest.mock('#/storage/mmkv');
 jest.mock('../links/wsLink', () => ({
   disposeWebSocket: jest.fn(),
   registerTokenRefresh: jest.fn(),
+  registerRefreshInFlightCheck: jest.fn(),
+}));
+
+// The same seam: the assertion here is that cleanup asks the refresh module to
+// forget its throttle clock. What clearing actually does — zeroing
+// `lastRefreshTime` so the next account is not throttled by the previous one's
+// — is asserted against the real module in refreshToken.test.ts.
+jest.mock('../links/refreshToken', () => ({
+  clearRefreshState: jest.fn(),
 }));
 
 // ---------------------------------------------------------------------------
@@ -299,6 +308,17 @@ describe('session teardown step', () => {
     expect(client.stop).toHaveBeenCalled();
     expect(disposeWebSocket).toHaveBeenCalled();
     expect(apolloCachePersistence.clear).toHaveBeenCalled();
+  });
+
+  it('clears the refresh throttle so the next account is not held by this one', async () => {
+    // `lastRefreshTime` and `retryCount` are module state that outlives the
+    // session, so a sign-out that leaves them set makes the next user's first
+    // refresh a no-op inside MIN_REFRESH_INTERVAL.
+    await runStep();
+
+    const { clearRefreshState } = require('../links/refreshToken');
+
+    expect(clearRefreshState).toHaveBeenCalled();
   });
 
   it('leaves the logout latch clear so the next sign-in can send its login', async () => {

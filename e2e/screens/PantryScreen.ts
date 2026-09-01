@@ -10,6 +10,12 @@ export class PantryScreen extends BaseScreen {
   private readonly addButton = 'tab-bar-add-button';
   private readonly listContainer = 'pantry-list';
   private readonly searchInput = 'pantry-search-input';
+
+  /** Last field filled here, so it is the one holding the keyboard. */
+  protected keyboardInput = this.searchInput;
+
+  /** The greeting row: above the keyboard and carries no press handler. */
+  protected blurTarget = 'pantry-greeting-row';
   private readonly sortButton = 'pantry-sort-button';
   private readonly emptyState = 'pantry-empty-state';
   private readonly loadingIndicator = 'pantry-loading';

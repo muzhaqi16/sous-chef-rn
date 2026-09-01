@@ -807,7 +807,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   inviteAcceptButtonText: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   orDivider: {
     flexDirection: 'row',

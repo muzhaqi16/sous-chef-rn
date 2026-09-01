@@ -28,9 +28,12 @@ import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import {
   addPantryItemLocally,
   addToPantryItemsCache,
+  revertOptimisticPantryItem,
 } from '#/apollo/utils/pantryCacheUpdaters';
+import { findCachedPantryItemDuplicate } from '#features/pantry/utils/pantryCacheReaders';
+import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
-import { safeEvict, adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
+import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
@@ -203,10 +206,86 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     setPrefilledItemName(searchValue);
   };
 
+  /**
+   * Restock the row this pantry already stocks instead of creating a second
+   * one. `cachedQuantity` drives a local bump because offline the mutation's
+   * `update` never runs, and a toast claiming a change the list does not show
+   * is worse than no toast. The server's value overwrites it on reply/replay.
+   */
+  const restockExisting = (
+    existingPantryItemId: string,
+    name: string,
+    cachedQuantity: number | null,
+    onSettled: () => void,
+  ) => {
+    const optimistic = optimisticFieldUpdate(
+      client.cache,
+      client.cache.identify({
+        __typename: 'PantryItem',
+        id: existingPantryItemId,
+      }),
+      cachedQuantity === null ? null : { quantity: cachedQuantity },
+      { quantity: (cachedQuantity ?? 0) + 1 },
+      'Restock Pantry Item',
+    );
+    toastService.success(t('addToPantry.restocked', { name }));
+    restockPantryItem({
+      variables: {
+        input: {
+          id: existingPantryItemId,
+          quantity: 1,
+          // idempotencyKey dedups the restock ledger row on replay.
+          idempotencyKey: generateEntityId(),
+        },
+      },
+      // Local-first: queued offline, replayed as the canonical mutation
+      // (deduped by its idempotencyKey).
+      context: { localFirst: true },
+    })
+      .then(result => {
+        // A refused mutation RESOLVES under `errorPolicy: 'all'`, so failure
+        // arrives here, not in `catch`. Handling it only there left the +1
+        // permanently in the cache under a success toast — the revert and the
+        // error copy were unreachable. `classifyCreateResult` keeps the row for
+        // a queued create and for IDEMPOTENT_REPLAY, as the sibling paths do.
+        if (classifyCreateResult(result) === 'rejected') {
+          optimistic.revert();
+          toastService.error(t('addToPantry.restockFailed'));
+          return;
+        }
+        onItemAdded?.();
+      })
+      .catch(() => {
+        optimistic.revert();
+        toastService.error(t('addToPantry.restockFailed'));
+      })
+      .finally(onSettled);
+  };
+
   // Handle quick add from autocomplete suggestion (fire-and-forget)
   // On duplicate: auto-restock by 1 silently
   const handleQuickAddSearchSuggestion = (item: ItemSuggestion) => {
     if (!pantryId || pendingItemIds.current.has(item.id)) return;
+
+    // Offline-first: the pantry answers "do I already stock this?" itself. The
+    // server would refuse the create anyway, and offline it never gets asked —
+    // so route to the restock now rather than queueing a doomed create.
+    const cachedDuplicate = findCachedPantryItemDuplicate(
+      client.cache,
+      pantryId,
+      { itemId: item.id },
+    );
+    if (cachedDuplicate) {
+      pendingItemIds.current.add(item.id);
+      removeSuggestionFromCache(item.id);
+      restockExisting(
+        cachedDuplicate.existingPantryItemId,
+        item.name,
+        cachedDuplicate.quantity,
+        () => pendingItemIds.current.delete(item.id),
+      );
+      return;
+    }
 
     const id = generateEntityId();
     // Publishing this id to `Pantry.itemsConnection` below makes the row
@@ -276,26 +355,18 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
           result.error,
         );
         if (duplicateInfo) {
-          // Already in the pantry → the server restocks the existing row, not
-          // our optimistic cuid. Evict the phantom optimistic item.
-          safeEvict(client.cache, 'PantryItem', id);
-          // Auto-restock by 1 for quick-add
-          restockPantryItem({
-            variables: {
-              input: {
-                id: duplicateInfo.existingPantryItemId,
-                quantity: 1,
-                // idempotencyKey dedups the restock ledger row on replay.
-                idempotencyKey: generateEntityId(),
-              },
-            },
-            // Local-first: queued offline, replayed as the canonical mutation
-            // (deduped by its idempotencyKey).
-            context: { localFirst: true },
-          })
-            .then(() => onItemAdded?.())
-            .catch(() => toastService.error(t('addToPantry.restockFailed')))
-            .finally(() => pendingItemIds.current.delete(item.id));
+          // Backstop for what the local check could not see — a windowed list,
+          // or a collaborator's add. The server writes nothing on a refusal, so
+          // withdraw the row we published, count included.
+          revertOptimisticPantryItem(client.cache, pantryId, id);
+          // No local bump: a server refusal only reaches us online, so the
+          // restock's own response carries the authoritative quantity.
+          restockExisting(
+            duplicateInfo.existingPantryItemId,
+            item.name,
+            null,
+            () => pendingItemIds.current.delete(item.id),
+          );
           return;
         }
         pendingItemIds.current.delete(item.id);
@@ -306,7 +377,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         // `classifyCreateResult` reads the payload's `__typename`, and keeps
         // the row for a queued create and for IDEMPOTENT_REPLAY.
         if (classifyCreateResult(result) === 'rejected') {
-          safeEvict(client.cache, 'PantryItem', id);
+          revertOptimisticPantryItem(client.cache, pantryId, id);
           // The success toast has already fired; correct it.
           toastService.error(t('errors.addItemFailedRetry'));
         } else {
@@ -316,7 +387,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       .catch(() => {
         pendingItemIds.current.delete(item.id);
         // Real failure → revert the optimistic item.
-        safeEvict(client.cache, 'PantryItem', id);
+        revertOptimisticPantryItem(client.cache, pantryId, id);
         toastService.error(t('errors.addItemFailedRetry'));
       })
       // Released on every outcome; a queued create is tracked by the offline
@@ -334,6 +405,23 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     )
       return;
     pendingItemIds.current.add(pantryItem.itemId);
+
+    // Same local-first check as the search handler above.
+    const cachedDuplicate = findCachedPantryItemDuplicate(
+      client.cache,
+      pantryId,
+      { itemId: pantryItem.itemId },
+    );
+    if (cachedDuplicate) {
+      state.startExitAnimation(pantryItem.itemId);
+      restockExisting(
+        cachedDuplicate.existingPantryItemId,
+        pantryItem.name,
+        cachedDuplicate.quantity,
+        () => pendingItemIds.current.delete(pantryItem.itemId),
+      );
+      return;
+    }
 
     const id = generateEntityId();
     // Publishing this id to `Pantry.itemsConnection` below makes the row
@@ -398,26 +486,18 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
           result.error,
         );
         if (duplicateInfo) {
-          // Already in the pantry → the server restocks the existing row, not
-          // our optimistic cuid. Evict the phantom optimistic item.
-          safeEvict(client.cache, 'PantryItem', id);
-          // Auto-restock by 1 for quick-add
-          restockPantryItem({
-            variables: {
-              input: {
-                id: duplicateInfo.existingPantryItemId,
-                quantity: 1,
-                // idempotencyKey dedups the restock ledger row on replay.
-                idempotencyKey: generateEntityId(),
-              },
-            },
-            // Local-first: queued offline, replayed as the canonical mutation
-            // (deduped by its idempotencyKey).
-            context: { localFirst: true },
-          })
-            .then(() => onItemAdded?.())
-            .catch(() => toastService.error(t('addToPantry.restockFailed')))
-            .finally(() => pendingItemIds.current.delete(pantryItem.itemId));
+          // Backstop for what the local check could not see — a windowed list,
+          // or a collaborator's add. The server writes nothing on a refusal, so
+          // withdraw the row we published, count included.
+          revertOptimisticPantryItem(client.cache, pantryId, id);
+          // No local bump: a server refusal only reaches us online, so the
+          // restock's own response carries the authoritative quantity.
+          restockExisting(
+            duplicateInfo.existingPantryItemId,
+            pantryItem.name,
+            null,
+            () => pendingItemIds.current.delete(pantryItem.itemId),
+          );
           return;
         }
         pendingItemIds.current.delete(pantryItem.itemId);
@@ -426,7 +506,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         // than reading `result.error`. Rejected → revert the optimistic item
         // and restore the suggestion (undo the exit animation).
         if (classifyCreateResult(result) === 'rejected') {
-          safeEvict(client.cache, 'PantryItem', id);
+          revertOptimisticPantryItem(client.cache, pantryId, id);
           state.completeExitAnimation(pantryItem.itemId);
           // The success toast has already fired; correct it.
           toastService.error(t('errors.addItemFailed'));
@@ -437,7 +517,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       .catch(() => {
         pendingItemIds.current.delete(pantryItem.itemId);
         // Real failure → revert the optimistic item.
-        safeEvict(client.cache, 'PantryItem', id);
+        revertOptimisticPantryItem(client.cache, pantryId, id);
         state.completeExitAnimation(pantryItem.itemId);
         toastService.error(t('errors.addItemFailed'));
       })

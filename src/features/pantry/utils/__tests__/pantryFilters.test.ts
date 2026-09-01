@@ -1,5 +1,6 @@
 import {
   filterByLocation,
+  locationFilterToQueryFilter,
   isBuiltInFilter,
   sortOptionToOrderBy,
 } from '../pantryFilters';
@@ -58,9 +59,32 @@ describe('filterByLocation', () => {
     expect(result.map(i => i.id)).toEqual(['2']);
   });
 
-  it('filters by pantry (Ambient or no state)', () => {
+  it('filters by pantry (Ambient only, matching the badge count)', () => {
     const result = filterByLocation(items, 'pantry');
-    expect(result.map(i => i.id)).toEqual(['3', '4']);
+    expect(result.map(i => i.id)).toEqual(['3']);
+  });
+
+  it('puts an item with no storage state in no location tab', () => {
+    // Item 4 has no state. It is not a location, so it belongs under "All"
+    // only — the same treatment fridge and freezer already give it. Counting it
+    // as Pantry put 7 rows under a badge that read 2.
+    for (const filter of ['fridge', 'freezer', 'pantry'] as const) {
+      expect(filterByLocation(items, filter).map(i => i.id)).not.toContain('4');
+    }
+    expect(filterByLocation(items, 'all').map(i => i.id)).toContain('4');
+  });
+
+  it('filters by unassigned (NONE), which has its own tab now', () => {
+    const withNone = [
+      ...items,
+      { id: '6', storageState: StorageState.None, storageLocation: null },
+    ];
+    expect(filterByLocation(withNone, 'unassigned').map(i => i.id)).toEqual([
+      '6',
+    ]);
+    // And it stays out of ambient — the server's AMBIENT filter excludes it, so
+    // folding it in here would put rows under a badge that does not count them.
+    expect(filterByLocation(withNone, 'pantry').map(i => i.id)).toEqual(['3']);
   });
 
   it('filters by custom location ID', () => {
@@ -74,6 +98,30 @@ describe('filterByLocation', () => {
 
   it('handles empty items array', () => {
     expect(filterByLocation([], 'fridge')).toEqual([]);
+  });
+});
+
+describe('locationFilterToQueryFilter', () => {
+  it('asks the server for exactly what each built-in tab shows', () => {
+    expect(locationFilterToQueryFilter('all')).toBeNull();
+    expect(locationFilterToQueryFilter('fridge')).toEqual({
+      storageState: StorageState.Refrigerated,
+    });
+    expect(locationFilterToQueryFilter('freezer')).toEqual({
+      storageState: StorageState.Frozen,
+    });
+    expect(locationFilterToQueryFilter('pantry')).toEqual({
+      storageState: StorageState.Ambient,
+    });
+    expect(locationFilterToQueryFilter('unassigned')).toEqual({
+      storageState: StorageState.None,
+    });
+  });
+
+  it('treats anything else as a custom storage location', () => {
+    expect(locationFilterToQueryFilter('loc-1')).toEqual({
+      storageLocationId: 'loc-1',
+    });
   });
 });
 

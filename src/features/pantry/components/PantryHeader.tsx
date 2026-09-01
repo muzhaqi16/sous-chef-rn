@@ -68,7 +68,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
             accent-colored name span goes stale on App Color changes until a
             remount. Standalone host <Text> nodes update via the ShadowTree
             without any re-render. */}
-        <View style={styles.greetingTextRow}>
+        <View style={styles.greetingTextRow} testID="pantry-greeting-row">
           {!!greetingBefore && (
             <Text weight="bold" style={styles.greeting}>
               {greetingBefore}

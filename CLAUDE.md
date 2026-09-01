@@ -349,12 +349,33 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
   `queueManager.onLogout()` fires only on deliberate sign-out (a rejected
   refresh token must not delete queued writes); the unauthenticated `/health`
   probe keeps running.
-- Both transports rotate tokens. `AUTH_REFRESH_TOKEN_SUPERSEDED` ≠
+- Both transports can rotate tokens. `AUTH_REFRESH_TOKEN_SUPERSEDED` ≠
   `AUTH_REFRESH_TOKEN_INVALID` — never sign out on the first. Retry a lost
   rotation **only once a different token is stored**
   (`retryWithSuccessorToken` in `src/apollo/links/refreshToken.ts`);
   re-presenting a spent token past the ten-second replay window revokes the
   whole lineage.
+- **Only ONE transport presents the refresh token at a time.** The socket's
+  `connectionParams` withholds it while an HTTP refresh is in flight
+  (`registerRefreshInFlightCheck`); the losing rotation is recoverable but costs
+  a round trip and a superseded rotation in the server's log every time.
+- **Never send a request on an access token that has already expired.**
+  `isTokenExpiringSoon(token, 5min)` is true both for a token with four minutes
+  left and for one that died an hour ago; `authLink` must separate them —
+  refresh AHEAD for the first, `await proactiveTokenRefresh()` for the second.
+  Collapsing them is how six concurrent operations came to present the same dead
+  JWT and draw six rotations between them. The refresh is single-flight
+  (`refreshState` + `refreshQueue`); the REQUESTS have to be gated on it too.
+- **A password being SET goes through `newPasswordRule`, not `passwordRule`**
+  (`src/utils/validation/common.ts`), and each rule mirrors the server exactly.
+  SETTING one (register, reset, change) is 8–72 characters with a lowercase
+  letter, an uppercase letter and a digit — worth checking locally, since a
+  doomed round trip spends the rate budget and comes back as an unlocalizable
+  English `message`. SIGNING IN reads back a password the account ALREADY has,
+  and the server asserts only that it is non-empty, so `passwordRule` asserts
+  only that too: any extra rule there refuses a real password, and the reset
+  flow needs the account it cannot reach. `auth.test.ts` § "the password policy
+  for a password being SET" pins both halves.
 - A session end must DROP the socket client, not just dispose it — graphql-ws's
   `dispose()` is a one-way latch (`disposeWebSocket()` clears the reference).
   Do not add a second reconnect or backoff loop beside graphql-ws's own;

@@ -307,7 +307,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   modeTextActive: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   listItem: {
     flexDirection: 'row',

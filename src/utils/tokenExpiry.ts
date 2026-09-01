@@ -14,3 +14,11 @@ export const isTokenExpiringSoon = (token: string, bufferMs = 0): boolean => {
     return true;
   }
 };
+
+/**
+ * Past `exp` now, so this token cannot authenticate a request. The distinction
+ * from a zero-buffer {@link isTokenExpiringSoon} call is the point: `authLink`
+ * refreshes AHEAD of expiry without stalling, but must never SEND one of these.
+ */
+export const isTokenExpired = (token: string): boolean =>
+  isTokenExpiringSoon(token);

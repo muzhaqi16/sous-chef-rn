@@ -5,13 +5,13 @@
 // ============================================
 
 import { StateCreator } from 'zustand';
-import { jwtDecode } from 'jwt-decode';
 import { RootState } from '../index';
 import {
   scheduleTokenRefresh,
   cancelTokenRefresh,
 } from '../../apollo/links/tokenScheduler';
 import { proactiveTokenRefresh } from '../../apollo/links/refreshToken';
+import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
 import { saveSessionTokens, clearSessionTokens } from '#storage/keychain';
 import { logger } from '#/utils/environment';
 
@@ -21,21 +21,8 @@ import { logger } from '#/utils/environment';
 // (setTimeout doesn't fire reliably when backgrounded)
 // ============================================
 
-/**
- * Check if token is expired or about to expire
- */
-const isTokenExpiredOrExpiring = (accessToken: string | null): boolean => {
-  if (!accessToken) return true;
-  try {
-    const decoded = jwtDecode<{ exp: number }>(accessToken);
-    const expiresAt = decoded.exp * 1000;
-    const now = Date.now();
-    // Consider expired if less than 1 minute remaining
-    return expiresAt - now < 60 * 1000;
-  } catch {
-    return true;
-  }
-};
+// A resume is worth a refresh only when the token is about to stop working.
+const RESUME_REFRESH_BUFFER_MS = 60 * 1000;
 
 /**
  * Refresh the access token if it's expired or expiring. Call this on
@@ -47,7 +34,11 @@ export const handleTokenRefreshOnResume = async (
   getAccessToken: () => string | null,
 ): Promise<void> => {
   const accessToken = getAccessToken();
-  if (!accessToken || !isTokenExpiredOrExpiring(accessToken)) return;
+  if (
+    !accessToken ||
+    !isTokenExpiringSoon(accessToken, RESUME_REFRESH_BUFFER_MS)
+  )
+    return;
 
   logger.debug(
     '[AuthSlice] Token expired/expiring on app resume, refreshing...',

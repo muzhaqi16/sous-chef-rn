@@ -350,14 +350,14 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.semibold,
   },
   defaultButtonText: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   cancelButtonText: {
     color: theme.colors.textSecondary,
     fontWeight: theme.fonts.weight.medium,
   },
   destructiveButtonText: {
-    color: theme.colors.white,
+    color: theme.colors.onError,
   },
   pressed: {
     opacity: theme.opacity.pressed,

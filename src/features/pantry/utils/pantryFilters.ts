@@ -9,7 +9,12 @@ import {
   PantrySortDirection,
 } from '#store/slices/preferenceTypes';
 
-export type BuiltInLocationFilter = 'all' | 'fridge' | 'freezer' | 'pantry';
+export type BuiltInLocationFilter =
+  | 'all'
+  | 'fridge'
+  | 'freezer'
+  | 'pantry'
+  | 'unassigned';
 
 /** A built-in filter or a custom storage location ID. */
 export type LocationFilter = BuiltInLocationFilter | string;
@@ -17,7 +22,7 @@ export type LocationFilter = BuiltInLocationFilter | string;
 export function isBuiltInFilter(
   filter: LocationFilter,
 ): filter is BuiltInLocationFilter {
-  return ['all', 'fridge', 'freezer', 'pantry'].includes(filter);
+  return ['all', 'fridge', 'freezer', 'pantry', 'unassigned'].includes(filter);
 }
 
 /** Server-side filter for a LocationFilter; null for 'all' (no filter). */
@@ -33,6 +38,8 @@ export function locationFilterToQueryFilter(
       return { storageState: StorageState.Frozen };
     case 'pantry':
       return { storageState: StorageState.Ambient };
+    case 'unassigned':
+      return { storageState: StorageState.None };
     default:
       return { storageLocationId: filter };
   }
@@ -74,8 +81,14 @@ export function filterByLocation<
       case 'freezer':
         return item.storageState === StorageState.Frozen;
       case 'pantry':
-        // No storage state defaults to Pantry.
-        return item.storageState === StorageState.Ambient || !item.storageState;
+        // Strictly AMBIENT, so this stays the mirror its docblock claims: the
+        // badge reads the server's `storageStateCounts.ambient` and server mode
+        // queries `{ storageState: AMBIENT }`. Treating an unset state as
+        // Pantry made the tab disagree with its own count, and show different
+        // rows either side of the client/server-mode threshold.
+        return item.storageState === StorageState.Ambient;
+      case 'unassigned':
+        return item.storageState === StorageState.None;
       default:
         return item.storageLocation?.id === locationFilter;
     }

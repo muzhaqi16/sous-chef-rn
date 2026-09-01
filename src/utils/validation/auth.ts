@@ -1,5 +1,5 @@
 import { object, string, ref } from 'yup';
-import { emailRule, passwordRule } from './common';
+import { emailRule, newPasswordRule, passwordRule } from './common';
 import { getI18n } from '#/i18n/config';
 
 /**
@@ -32,7 +32,7 @@ export const getLoginValidationSchema = () => loginSchema;
 export const signUpSchema = object({
   name: string().required(msg('fullNameRequired')).min(2, msg('fullNameMin')),
   email: emailRule,
-  password: passwordRule,
+  password: newPasswordRule,
   confirmPassword: string()
     .oneOf([ref('password')], msg('passwordsMustMatch'))
     .required(msg('passwordConfirmRequired')),
@@ -81,16 +81,16 @@ export const getEmailVerificationValidationSchema = () =>
 
 // 5) reset-password (new password + confirm)
 export const resetPasswordSchema = object({
-  password: passwordRule,
+  newPassword: newPasswordRule,
   confirmPassword: string()
-    .oneOf([ref('password')], msg('passwordsMustMatch'))
+    .oneOf([ref('newPassword')], msg('passwordsMustMatch'))
     .required(msg('newPasswordConfirmRequired')),
 });
 
 // usage in ResetPasswordScreen:
-// const { control, handleSubmit, formState } = useForm<{password:string;confirmPassword:string}>({
+// const { control, handleSubmit, formState } = useForm<ResetPasswordForm>({
 //   resolver: yupResolver(resetPasswordSchema),
-//   defaultValues: { password: '', confirmPassword: '' },
+//   defaultValues: { newPassword: '', confirmPassword: '' },
 // })
 
 export const getResetPasswordValidationSchema = () => resetPasswordSchema;
@@ -100,7 +100,7 @@ export const getResetPasswordValidationSchema = () => resetPasswordSchema;
 // 6) change-password (current password + new password + confirm)
 export const changePasswordSchema = object({
   currentPassword: string().required(msg('currentPasswordRequired')),
-  newPassword: passwordRule.notOneOf(
+  newPassword: newPasswordRule.notOneOf(
     [ref('currentPassword')],
     msg('newPasswordMustDiffer'),
   ),

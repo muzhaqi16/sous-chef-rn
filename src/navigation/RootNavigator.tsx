@@ -248,7 +248,7 @@ export function Navigation() {
   // React Navigation's `theme` prop must be a plain object, so `useUnistyles()` is
   // required. Reads are narrowed to `theme.colors.*` so its Proxy subscriptions
   // fire on color changes only, not on every runtime tick.
-  const { theme } = useUnistyles();
+  const { theme, rt } = useUnistyles();
   const isHydrated = useIsHydrated();
   const user = useUser();
   const { navigationState, postLoginCredentials, setNavigationState } =
@@ -316,12 +316,11 @@ export function Navigation() {
     setNavigationState,
   ]);
 
+  const base = rt.themeName === 'dark' ? DarkTheme : DefaultTheme;
   const navigationTheme: Theme = {
-    ...(theme.colors.background === '#FFFFFF' ? DefaultTheme : DarkTheme),
+    ...base,
     colors: {
-      ...(theme.colors.background === '#FFFFFF'
-        ? DefaultTheme.colors
-        : DarkTheme.colors),
+      ...base.colors,
       primary: theme.colors.primary,
       background: theme.colors.background,
       card: theme.colors.surface,

@@ -105,25 +105,56 @@ export abstract class BaseScreen {
     await expect(this.getElementById(testID)).toHaveText(text);
   }
 
-  async dismissKeyboard() {
-    if (device.getPlatform() === 'ios') {
-      // The Return key's label varies (Return, Done, Go), so `by.label('return')`
-      // often misses; tapping the screen container to blur is the fallback.
+  /** The field holding the keyboard, for screens whose return key blurs. */
+  protected keyboardInput?: string;
+
+  /**
+   * A hittable region ABOVE the keyboard. Tapping the screen container instead
+   * cannot work: a tap needs the element 100% hittable and the keyboard is
+   * exactly what covers it.
+   */
+  protected blurTarget?: string;
+
+  /**
+   * Drop the keyboard. The return key alone is not enough under `focusChaining`,
+   * where it ADVANCES a field and the keyboard stays up, so a declared
+   * {@link blurTarget} is tapped after it. A screen with NEITHER cannot act,
+   * and returning quietly would report success for work not done.
+   */
+  async dismissKeyboard(inputTestID: string | undefined = this.keyboardInput) {
+    if (!inputTestID && !this.blurTarget) {
+      throw new Error(
+        `${this.constructor.name} has no keyboardInput or blurTarget, so dismissKeyboard cannot act. Declare a blurTarget: a testID above the keyboard that carries no press handler.`,
+      );
+    }
+    if (inputTestID) {
       try {
-        await element(by.label('return')).atIndex(0).tap();
+        await this.getElementById(inputTestID).tapReturnKey();
       } catch {
-        try {
-          await this.screen.tap({ x: 10, y: 10 });
-        } catch {
-          // No keyboard up — nothing to dismiss.
-        }
+        // Nothing focused.
       }
-    } else {
-      // pressBack() can navigate away from the screen, so tap outside first.
+    }
+    if (!this.blurTarget) return;
+    try {
+      await this.getElementById(this.blurTarget).tap();
+    } catch {
+      // Already blurred, or the target is off screen.
+    }
+  }
+
+  /**
+   * Tap a control the keyboard may cover, re-blurring between attempts. Neither
+   * dismissal alone is reliable across these forms — the return key submits on
+   * some and only chains focus on others — so retry rather than pick one.
+   */
+  protected async tapPastKeyboard(testID: string, attempts: number = 3) {
+    for (let attempt = 1; attempt <= attempts; attempt++) {
       try {
-        await this.screen.tap({ x: 10, y: 10 });
-      } catch {
-        await device.pressBack();
+        await this.tapByID(testID);
+        return;
+      } catch (error) {
+        if (attempt === attempts) throw error;
+        await this.dismissKeyboard();
       }
     }
   }

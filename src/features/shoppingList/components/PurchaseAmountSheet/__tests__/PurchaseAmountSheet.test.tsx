@@ -19,9 +19,12 @@ interface ChildrenProps {
 }
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
+  // Mirrors the real return: a mock omitting `contentContainerStyle` is why the
+  // sheet went so long without its bottom inset.
   useStandardBottomSheet: jest.fn(() => ({
     ref: { current: { present: jest.fn(), dismiss: jest.fn() } },
     modalProps: {},
+    contentContainerStyle: { paddingBottom: 16 },
   })),
   BottomSheetModal: ({ children }: ChildrenProps) => children,
 }));
@@ -102,6 +105,18 @@ describe('PurchaseAmountSheet', () => {
     expect(screen.getByText('Milk')).toBeTruthy();
   });
 
+  it('sizes itself to its content so the keyboard seats it', () => {
+    render(<PurchaseAmountSheet {...buildProps()} />);
+    const { useStandardBottomSheet } = jest.requireMock(
+      '#hooks/useStandardBottomSheet',
+    ) as { useStandardBottomSheet: jest.Mock };
+    // A fixed detent stretches up the screen under the keyboard and pushes the
+    // price field off the bottom edge; measured content seats on it instead.
+    expect(useStandardBottomSheet).toHaveBeenCalledWith(
+      expect.objectContaining({ snapPoints: [], enableDynamicSizing: true }),
+    );
+  });
+
   it('renders Quantity and Total price section labels', () => {
     render(<PurchaseAmountSheet {...buildProps()} />);
     expect(screen.getByText('Quantity')).toBeTruthy();
@@ -121,10 +136,17 @@ describe('PurchaseAmountSheet', () => {
 
   it('shows how the total splits per unit when the quantity is not 1', () => {
     renderWithInit(buildProps());
-    expect(screen.getByText(/4\.99 per unit/)).toBeTruthy();
+    // Named in the line's OWN unit — the field beside it already says "cups",
+    // so a generic "per unit" reads as a different measure.
+    expect(screen.getByText(/4\.99 per cups/)).toBeTruthy();
 
     fireEvent.changeText(screen.getByTestId('purchase-price-input'), '3');
-    expect(screen.getByText(/1\.50 per unit/)).toBeTruthy();
+    expect(screen.getByText(/1\.50 per cups/)).toBeTruthy();
+  });
+
+  it('falls back to a generic unit when the line carries none', () => {
+    renderWithInit(buildProps({ item: makeItem({ unitName: null }) }));
+    expect(screen.getByText(/4\.99 per unit/)).toBeTruthy();
   });
 
   it('hides the per-unit hint at quantity 1, where it would repeat the total', () => {

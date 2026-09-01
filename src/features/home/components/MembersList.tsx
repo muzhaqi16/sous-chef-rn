@@ -164,7 +164,7 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       currentUser: {
         true: {
-          color: theme.colors.white,
+          color: theme.colors.onPrimary,
           fontWeight: theme.fonts.weight.bold,
         },
         false: {
@@ -179,7 +179,7 @@ const styles = StyleSheet.create(theme => ({
     textAlign: 'center',
     variants: {
       currentUser: {
-        true: { color: theme.colors.white },
+        true: { color: theme.colors.onPrimary },
         false: { color: theme.colors.textSecondary },
       },
     },

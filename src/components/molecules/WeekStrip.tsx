@@ -175,7 +175,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: 2,
   },
   dayLabelSelected: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   dayLabelToday: {
     color: theme.colors.primary,
@@ -187,7 +187,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
   },
   dayNumberSelected: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   dayNumberToday: {
     color: theme.colors.primary,

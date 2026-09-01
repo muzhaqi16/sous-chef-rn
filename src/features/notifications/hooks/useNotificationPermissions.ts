@@ -11,9 +11,12 @@ export const useNotificationPermissions = () => {
     return granted;
   };
 
-  const checkPermissions = async () => {
+  /** Returns the resolved grant so a caller can act on a just-made grant. */
+  const checkPermissions = async (): Promise<boolean> => {
     const status = await PermissionService.check('notifications');
-    setHasPermission(status === 'granted');
+    const granted = status === 'granted';
+    setHasPermission(granted);
+    return granted;
   };
 
   useEffect(() => {

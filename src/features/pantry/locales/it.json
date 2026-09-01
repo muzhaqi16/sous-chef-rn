@@ -22,6 +22,7 @@
       "minStock": "Scorta minima",
       "restockAt": "Rifornire a",
       "purchased": "Acquistato",
+      "lastPurchase": "Ultimo acquisto",
       "lastUsed": "Ultimo utilizzo",
       "added": "Aggiunto"
     },
@@ -32,17 +33,29 @@
       "depleted": "Esaurito",
       "expired": "Scaduto",
       "depletedOn": "Esaurito il {{date}}",
+      "wastedOn": "Sprecato {{date}}",
       "costPerUnit": "{{cost}}/unità",
       "sectionHeader_one": "Lotto ({{count}} attivo)",
-      "sectionHeader_other": "Lotti ({{count}} attivi)"
+      "sectionHeader_other": "Lotti ({{count}} attivi)",
+      "historyTitle": "Cronologia lotti",
+      "historySummary_one": "{{active}} attivo su {{total}}",
+      "historySummary_other": "{{active}} attivi su {{total}}",
+      "historyTotal_one": "{{count}} lotto",
+      "historyTotal_other": "{{count}} lotti",
+      "emptyTitle": "Nessun lotto"
     },
     "deleteTitle": "Elimina articolo",
     "discardBatchesTitle": "Scarta i lotti scaduti",
     "discardBatchesBody": "Questo segnerà tutti i lotti scaduti come sprecati.",
     "discardItemTitle": "Scarta articolo scaduto",
     "discardItemBody": "Questo segnerà i {{quantity}} {{unit}} rimanenti come sprecati per scadenza.",
-    "moreUsageEntries_one": "+{{count}} altra voce",
-    "moreUsageEntries_other": "+{{count}} altre voci"
+    "usage": {
+      "entries": "Voci",
+      "mostRecent": "Più recente",
+      "totalEntries_one": "{{count}} voce",
+      "totalEntries_other": "{{count}} voci",
+      "emptyTitle": "Nessun utilizzo"
+    }
   },
   "pantrySettings": {
     "createTitle": "Crea nuova dispensa",
@@ -91,7 +104,6 @@
     "additions": "Aggiunte",
     "consumptions": "Consumi",
     "transactions": "transazioni",
-    "avgCostPerUnit": "Costo medio/unità",
     "usageTrend": "Andamento utilizzo",
     "usageTrendSubtitle": "Articoli usati nel tempo",
     "usageByPurpose": "Utilizzo per scopo",
@@ -208,18 +220,15 @@
     "selectPantryError": "Seleziona una dispensa",
     "selectUnitError": "Seleziona un'unità",
     "title": "Sposta in dispensa",
-    "shoppingListQuantityPrefix": "Quantità lista della spesa: ",
+    "purchasedAmount": "Acquistato: {{amount}} {{unit}}",
+    "requestedAmount": "Quantità lista della spesa: {{amount}} {{unit}}",
     "requiredAsterisk": " *",
     "defaultLabel": "Predefinita",
     "unitPlaceholder": "pcs, kg",
     "storageType": "Tipo di conservazione",
-    "purchasePrice": "Prezzo di acquisto (per unità)",
     "notesPlaceholder": "Aggiungi note su questo acquisto...",
     "removeFromShopping": "Rimuovi dalla lista della spesa",
     "removeFromShoppingDesc": "Disattiva per mantenere l'articolo nella lista della spesa",
-    "stateAmbient": "Ambiente",
-    "stateRefrigerated": "Refrigerato",
-    "stateFrozen": "Congelato",
     "noListSelected": "Nessuna lista della spesa selezionata",
     "movedItems_one": "Spostato {{count}} articolo in dispensa{{skipped}}",
     "movedItems_other": "Spostati {{count}} articoli in dispensa{{skipped}}",
@@ -253,6 +262,7 @@
     "reasonPlaceholder": "Perché stai correggendo il peso?"
   },
   "addToPantry": {
+    "restocked": "Scorta di {{name}} aggiornata",
     "lowStockSettings": "Impostazioni scorte basse",
     "lowStockHint": "Ricevi una notifica quando questo articolo sta per finire.",
     "emptyHint": "Lascia vuoto per disattivare gli avvisi di scorte basse per questo articolo.",
@@ -298,9 +308,8 @@
     "itemCount_other": "{{count}} articoli",
     "sort": "Ordina",
     "tabAll": "Tutti",
-    "tabFridge": "Frigorifero",
-    "tabFreezer": "Congelatore",
     "tabPantry": "Dispensa",
+    "tabUnassigned": "Non assegnati",
     "expiringCount": "{{count}} in scadenza",
     "expiredCount": "{{count}} scaduti",
     "lowStockCount": "{{count}} scorta bassa",
@@ -376,10 +385,7 @@
     }
   },
   "pantryTabs": {
-    "all": "Tutti",
-    "fridge": "Frigorifero",
-    "freezer": "Congelatore",
-    "pantry": "Dispensa"
+    "all": "Tutti"
   },
   "expiration": {
     "noExpiryDate": "Nessuna data di scadenza",
@@ -405,7 +411,7 @@
     "REFRIGERATED": "Frigo"
   },
   "batchSection": {
-    "showAll": "Mostra tutti i lotti",
-    "hideInactive": "Nascondi lotti inattivi"
+    "viewAll_one": "Vedi il lotto",
+    "viewAll_other": "Vedi tutti i {{count}} lotti"
   }
 }

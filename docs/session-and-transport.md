@@ -53,11 +53,12 @@ its own step at module init — `logoutCleanup` the Apollo teardown,
 
 ## Token rotation
 
-**Both transports rotate, and that is safe** — but only because the server
-tells a lost race apart from a dead session. Rotation is single-use; when an
-HTTP refresh and a WebSocket handshake reach for the same token, the loser is
+**Both transports can rotate, and a lost race is survivable** — the server
+tells one apart from a dead session. Rotation is single-use; when an HTTP
+refresh and a WebSocket handshake reach for the same token, the loser is
 refused `AUTH_REFRESH_TOKEN_SUPERSEDED`, which means the winner's successor is
-valid and the session is alive. `AUTH_REFRESH_TOKEN_INVALID` is the terminal
+valid and the session is alive. Survivable is not free, though, which is why
+the two are kept out of each other's way in the first place — see below. `AUTH_REFRESH_TOKEN_INVALID` is the terminal
 one. Never collapse the two: signing out on the first ends a session the
 server considers perfectly healthy.
 
@@ -73,17 +74,31 @@ decision lives in one place, and the socket's 4403 handling routes through it
 rather than reconnecting straight into a second rotation attempt — the
 reconnect backoff crosses the ten-second window by its fourth attempt.
 
-`connectionParams` sends the refresh token on every connect. The server spends
-it only when the access token has actually expired, so an ordinary connect
-costs nothing, and the rotated pair comes back in the `connection_ack` payload
-— the only delivery there will ever be.
+**Only one transport presents the refresh token at a time.**
+`connectionParams` sends it on a dial, and the rotated pair comes back in the
+`connection_ack` payload — the only delivery there will ever be. But it is
+WITHHELD while an HTTP refresh is in flight (`registerRefreshInFlightCheck`,
+registered by `refreshToken.ts`): rotation is single-use, so two transports
+presenting the same token makes one of them a loser, and recovering costs a
+round trip and a superseded rotation in the server's log. A dial in that window
+is refused 4403; the next carries both, the refresh having stored its pair by
+then. The server spends the token only when the access token has actually
+expired, so an ordinary connect still costs nothing.
+
+**A request is never sent with an access token that has already expired.**
+`authLink` tells "expires in four minutes" from "expired an hour ago": the
+first refreshes ahead without stalling, the second AWAITS the single-flight
+refresh and sends what it returns. Both looked alike under one
+`isTokenExpiringSoon(token, 5min)` call, which is how six concurrent operations
+came to present the same dead JWT and draw six rotations between them.
 
 ## WebSocket close codes
 
 **graphql-ws owns the reconnect loop. The app owns only the verdict.** The
 library re-dials after every retryable close, re-evaluating `connectionParams`
-each attempt; `retryWait` in `src/apollo/links/wsLink.ts` supplies the backoff
-curve and parks a retry while the device is offline. `shouldRetry` is the
+each attempt; `url()` in `src/apollo/links/wsLink.ts` supplies the backoff curve
+and parks a retry while the device is offline (see `awaitDialPermission`, and
+the paragraph below on why `retryWait` cannot hold it). `shouldRetry` is the
 single hook over that loop and answers one question — **is this verdict
 terminal** — reading `src/apollo/links/wsCloseCodes.ts`.
 `shouldAutoReconnect` is folded into it, because it is now the only thing that

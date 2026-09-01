@@ -26,7 +26,11 @@ export const IMAGE_PRELOAD_COUNT = 24;
 // language was active when the module loaded, and never see a change.
 export const getDefaultPantryTabs = (): FilterTabConfig<LocationFilter>[] => [
   { id: 'all', label: t('pantryTabs.all') },
-  { id: 'fridge', label: t('pantryTabs.fridge'), icon: 'thermometer-outline' },
-  { id: 'freezer', label: t('pantryTabs.freezer'), icon: 'snow-outline' },
-  { id: 'pantry', label: t('pantryTabs.pantry'), icon: 'cube-outline' },
+  {
+    id: 'fridge',
+    label: t('labels.storageRefrigerated'),
+    icon: 'thermometer-outline',
+  },
+  { id: 'freezer', label: t('labels.storageFrozen'), icon: 'snow-outline' },
+  { id: 'pantry', label: t('labels.storageAmbient'), icon: 'cube-outline' },
 ];

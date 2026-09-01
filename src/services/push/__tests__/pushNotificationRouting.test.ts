@@ -75,4 +75,71 @@ describe('routeNotificationTap', () => {
 
     expect(mockNavigate).toHaveBeenCalledWith('Notifications');
   });
+  /**
+   * `notificationId` is OPTIONAL on the wire. `readPushMessage` reads
+   * `data.notificationId || message.messageId` precisely because an ordinary
+   * push can arrive without it — an alternate sender, a nested APNs payload, a
+   * Notifee local notification. So its absence says nothing about coalescing,
+   * and treating it as a claim drops the deep link for every payload that
+   * merely omits it.
+   */
+  describe('a payload carrying no notificationId', () => {
+    it('still deep-links on its category', () => {
+      routeNotificationTap({ category: 'PANTRY' });
+
+      expect(mockNavigate).toHaveBeenCalledWith('Home', {
+        screen: 'Pantry',
+        params: { screen: 'PantryMain' },
+      });
+    });
+
+    it('deep-links a locally raised notification', () => {
+      // Notifee builds this one on-device; there is no server id to carry.
+      routeNotificationTap({ category: 'SHOPPING' });
+
+      expect(mockNavigate).toHaveBeenCalledWith('Home', {
+        screen: 'ShoppingList',
+        params: { screen: 'ShoppingListMain' },
+      });
+    });
+
+    it('never routes on sourceId', () => {
+      // `sourceId` names one entity; the category is what maps to a screen.
+      routeNotificationTap({ sourceId: 'pib_first' });
+
+      expect(mockNavigate).toHaveBeenCalledTimes(1);
+      expect(mockNavigate).toHaveBeenCalledWith('Notifications');
+    });
+  });
+
+  /**
+   * `docs/api/notifications.md` lists `notificationId` as ALWAYS present, and
+   * quiet hours DELAY each push rather than merging several into one. So an
+   * absent id says nothing about coalescing — routing keys off `category`.
+   */
+  describe('a payload the sender did not fully populate', () => {
+    it('deep-links on category alone', () => {
+      routeNotificationTap({ category: 'PANTRY' });
+
+      expect(mockNavigate).toHaveBeenCalledWith('Home', {
+        screen: 'Pantry',
+        params: { screen: 'PantryMain' },
+      });
+    });
+
+    it('ignores an unmodelled correlation key', () => {
+      routeNotificationTap({
+        category: 'PANTRY',
+        notificationId: 'n1',
+        sourceId: 'pib_1',
+        sourceType: 'PANTRY_ITEM_BATCH',
+        type: 'LOW_STOCK',
+      });
+
+      expect(mockNavigate).toHaveBeenCalledWith('Home', {
+        screen: 'Pantry',
+        params: { screen: 'PantryMain' },
+      });
+    });
+  });
 });

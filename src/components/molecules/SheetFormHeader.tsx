@@ -81,6 +81,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
   },
@@ -101,6 +102,6 @@ const styles = StyleSheet.create(theme => ({
     opacity: theme.opacity.disabled,
   },
   saveButtonText: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
 }));

@@ -22,6 +22,7 @@
       "minStock": "Stoku minimal",
       "restockAt": "Rimbush në",
       "purchased": "Blerë",
+      "lastPurchase": "Blerja e fundit",
       "lastUsed": "Përdorur së fundi",
       "added": "Shtuar"
     },
@@ -32,17 +33,29 @@
       "depleted": "Mbaruar",
       "expired": "Skaduar",
       "depletedOn": "Mbaruar më {{date}}",
+      "wastedOn": "Hedhur {{date}}",
       "costPerUnit": "{{cost}}/njësi",
       "sectionHeader_one": "Grupi ({{count}} aktiv)",
-      "sectionHeader_other": "Grupet ({{count}} aktive)"
+      "sectionHeader_other": "Grupet ({{count}} aktive)",
+      "historyTitle": "Historiku i loteve",
+      "historySummary_one": "{{active}} aktiv nga {{total}}",
+      "historySummary_other": "{{active}} aktive nga {{total}}",
+      "historyTotal_one": "{{count}} grup",
+      "historyTotal_other": "{{count}} grupe",
+      "emptyTitle": "Ende pa lote"
     },
     "deleteTitle": "Fshi artikullin",
     "discardBatchesTitle": "Hidh grupet e skaduara",
     "discardBatchesBody": "Kjo do t'i shënojë të gjitha grupet e skaduara si të shpenzuara.",
     "discardItemTitle": "Hidh artikullin e skaduar",
     "discardItemBody": "Kjo do të shënojë {{quantity}} {{unit}} të mbetura si të shpenzuara për shkak të skadimit.",
-    "moreUsageEntries_one": "+{{count}} regjistrim tjetër",
-    "moreUsageEntries_other": "+{{count}} regjistrime të tjera"
+    "usage": {
+      "entries": "Regjistrime",
+      "mostRecent": "Më i fundit",
+      "totalEntries_one": "{{count}} regjistrim",
+      "totalEntries_other": "{{count}} regjistrime",
+      "emptyTitle": "Ende pa përdorim"
+    }
   },
   "pantrySettings": {
     "createTitle": "Krijo qilar të ri",
@@ -91,7 +104,6 @@
     "additions": "Shtimet",
     "consumptions": "Konsumet",
     "transactions": "transaksione",
-    "avgCostPerUnit": "Kosto mes./njësi",
     "usageTrend": "Tendenca e përdorimit",
     "usageTrendSubtitle": "Artikuj të përdorur me kohë",
     "usageByPurpose": "Përdorimi sipas qëllimit",
@@ -208,18 +220,15 @@
     "selectPantryError": "Zgjidh një qilar",
     "selectUnitError": "Zgjidh një njësi",
     "title": "Zhvendos te qilari",
-    "shoppingListQuantityPrefix": "Sasia në listën e blerjeve: ",
+    "purchasedAmount": "Blerë: {{amount}} {{unit}}",
+    "requestedAmount": "Sasia në listën e blerjeve: {{amount}} {{unit}}",
     "requiredAsterisk": " *",
     "defaultLabel": "I parazgjedhur",
     "unitPlaceholder": "pcs, kg",
     "storageType": "Lloji i ruajtjes",
-    "purchasePrice": "Çmimi i blerjes (për njësi)",
     "notesPlaceholder": "Shto shënime për këtë blerje...",
     "removeFromShopping": "Hiq nga lista e blerjeve",
     "removeFromShoppingDesc": "Çaktivizoje për ta mbajtur artikullin në listën tënde të blerjeve",
-    "stateAmbient": "Ambient",
-    "stateRefrigerated": "Në frigorifer",
-    "stateFrozen": "I ngrirë",
     "noListSelected": "Asnjë listë blerjesh e zgjedhur",
     "movedItems_one": "U zhvendos {{count}} artikull te qilari{{skipped}}",
     "movedItems_other": "U zhvendosën {{count}} artikuj te qilari{{skipped}}",
@@ -253,6 +262,7 @@
     "reasonPlaceholder": "Pse po korrigjohet pesha?"
   },
   "addToPantry": {
+    "restocked": "U rimbush {{name}}",
     "lowStockSettings": "Cilësimet e stokut të ulët",
     "lowStockHint": "Merr njoftim kur ky artikull po mbaron.",
     "emptyHint": "Lëre bosh për të çaktivizuar sinjalizimet e stokut të ulët për këtë artikull.",
@@ -298,9 +308,8 @@
     "itemCount_other": "{{count}} artikuj",
     "sort": "Rendit",
     "tabAll": "Të gjitha",
-    "tabFridge": "Frigorifer",
-    "tabFreezer": "Ngrirës",
     "tabPantry": "Qilar",
+    "tabUnassigned": "Pa caktuar",
     "expiringCount": "{{count}} po skadojnë",
     "expiredCount": "{{count}} të skaduar",
     "lowStockCount": "{{count}} pak gjendje",
@@ -376,10 +385,7 @@
     }
   },
   "pantryTabs": {
-    "all": "Të gjitha",
-    "fridge": "Frigorifer",
-    "freezer": "Ngrirës",
-    "pantry": "Qilar"
+    "all": "Të gjitha"
   },
   "expiration": {
     "noExpiryDate": "Pa datë skadimi",
@@ -405,7 +411,7 @@
     "REFRIGERATED": "Frigorifer"
   },
   "batchSection": {
-    "showAll": "Shfaq të gjitha grupet",
-    "hideInactive": "Fshih grupet joaktive"
+    "viewAll_one": "Shih {{count}} lot",
+    "viewAll_other": "Shih të gjitha {{count}} lotet"
   }
 }

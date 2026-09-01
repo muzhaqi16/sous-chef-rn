@@ -3,13 +3,19 @@ import {
   Pressable as RNPressable,
   RefreshControl as RNRefreshControl,
   TextInput,
+  type TextInputProps,
 } from 'react-native';
 // RNGH's, not RN's — see `ThemedRefreshControl` below.
 import { RefreshControl } from 'react-native-gesture-handler';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import DateTimePicker, {
+  type IOSNativeProps,
+} from '@react-native-community/datetimepicker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { withUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+
+import type { Theme } from '#/theme/themes';
 
 import { BackButton } from './BackButton';
 import { IconButton } from './IconButton';
@@ -25,19 +31,85 @@ import { Icon } from '#utils/iconUtils';
 export const Pressable = RNPressable;
 
 // `inputPlaceholder` is the palette's placeholder tone (~3.6:1); a body-text tone
-// here renders an empty field as dark as a filled one.
-
-/** Plain RN TextInput with a theme-reactive placeholder color. */
-export const ThemedTextInput = withUnistyles(TextInput, theme => ({
+// here renders an empty field as dark as a filled one. `keyboardAppearance` reads
+// `rt.themeName`, not `rt.colorScheme`: an explicit theme preference calls
+// `setAdaptiveThemes(false)`, so the OS scheme is the wrong answer.
+const inputProps = (
+  theme: Theme,
+  themeName?: string,
+): Pick<
+  TextInputProps,
+  'placeholderTextColor' | 'keyboardAppearance' | 'cursorColor'
+> => ({
   placeholderTextColor: theme.colors.inputPlaceholder,
+  keyboardAppearance: themeName === 'dark' ? 'dark' : 'light',
+  cursorColor: theme.colors.primary,
+});
+
+const UniTextInput = withUnistyles(TextInput, (theme, rt) =>
+  inputProps(theme, rt.themeName),
+);
+const UniBottomSheetTextInput = withUnistyles(
+  BottomSheetTextInput,
+  (theme, rt) => inputProps(theme, rt.themeName),
+);
+
+// The color is a base STYLE, not a mapping prop: `withUnistyles` replaces its
+// mapped `style` with the caller's whenever one is passed, but flattens a style
+// ARRAY left to right, so a base first still lets a call site override.
+const inputStyles = StyleSheet.create(theme => ({
+  base: { color: theme.colors.inputText },
 }));
 
-/** TextInput inside a BottomSheet that needs a theme-reactive placeholder. */
-export const ThemedBottomSheetTextInput = withUnistyles(
-  BottomSheetTextInput,
-  theme => ({
-    placeholderTextColor: theme.colors.inputPlaceholder,
-  }),
+export type ThemedTextInputRef = React.ComponentRef<typeof TextInput>;
+export type ThemedBottomSheetTextInputRef = React.ComponentRef<
+  typeof BottomSheetTextInput
+>;
+
+/** `withUnistyles` flattens once, so `[base, [a, b]]` leaves a, b unresolved. */
+const withFieldStyle = (
+  style: React.ComponentProps<typeof UniTextInput>['style'],
+) =>
+  Array.isArray(style)
+    ? [inputStyles.base, ...style]
+    : [inputStyles.base, style];
+
+/** RN TextInput carrying the theme's field color, placeholder and keyboard. */
+export const ThemedTextInput = ({
+  style,
+  ...rest
+}: React.ComponentProps<typeof UniTextInput>) => (
+  <UniTextInput {...rest} style={withFieldStyle(style)} />
+);
+
+/** The same, for a TextInput inside a BottomSheet. */
+export const ThemedBottomSheetTextInput = ({
+  style,
+  ...rest
+}: React.ComponentProps<typeof UniBottomSheetTextInput>) => (
+  <UniBottomSheetTextInput {...rest} style={withFieldStyle(style)} />
+);
+
+/**
+ * iOS renders the date picker in the OS appearance, which diverges from the app
+ * theme whenever a preference is set (`setAdaptiveThemes(false)`). Android's is
+ * an Activity-themed dialog and takes neither prop.
+ */
+const pickerProps = (
+  theme: Theme,
+  themeName?: string,
+): Pick<IOSNativeProps, 'themeVariant' | 'accentColor'> => ({
+  themeVariant: themeName === 'dark' ? 'dark' : 'light',
+  accentColor: theme.colors.primary,
+});
+
+// The component's props are a platform union, and these two live only on the
+// iOS member, so the wrapper is typed to it.
+const IOSDateTimePicker = DateTimePicker as React.ComponentType<IOSNativeProps>;
+
+export const ThemedDateTimePicker = withUnistyles(
+  IOSDateTimePicker,
+  (theme, rt) => pickerProps(theme, rt.themeName),
 );
 
 /** Keyboard-aware scroller for full-screen forms; `bottomOffset` defaults to
@@ -63,6 +135,14 @@ export const OnPrimaryActivityIndicator = withUnistyles(
   ActivityIndicator,
   theme => ({
     color: theme.colors.onPrimary,
+  }),
+);
+
+/** Spinner colored by `onError` — for use on error/danger-colored fills. */
+export const OnErrorActivityIndicator = withUnistyles(
+  ActivityIndicator,
+  theme => ({
+    color: theme.colors.onError,
   }),
 );
 

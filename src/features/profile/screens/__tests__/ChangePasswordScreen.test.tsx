@@ -1,7 +1,13 @@
 'use no memo';
 import React from 'react';
-import { screen, userEvent } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import {
+  renderWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
+import { ChangePasswordDocument } from '#operations/auth/auth.generated';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import type { Header } from '#components/molecules/Header';
 import type { PasswordInputProps } from '#components/atoms/PasswordInput';
 import { ChangePasswordScreen } from '../ChangePasswordScreen';
@@ -64,12 +70,17 @@ jest.mock('#components/atoms/PasswordInput', () => {
       value,
       onChangeText,
       placeholder,
-    }: Pick<PasswordInputProps, 'value' | 'onChangeText' | 'placeholder'>) => (
+      errorMessage,
+    }: Pick<
+      PasswordInputProps,
+      'value' | 'onChangeText' | 'placeholder' | 'errorMessage'
+    >) => (
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
         testID={`password-input-${placeholder}`}
+        accessibilityHint={errorMessage}
       />
     ),
   };
@@ -125,6 +136,80 @@ describe('ChangePasswordScreen', () => {
     renderWithApollo(<ChangePasswordScreen />);
     await user.press(screen.getByTestId('header-back'));
     expect(mockNav.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  // The server refuses a weak password with a ValidationError naming the field.
+  // Its `message` is English by construction, so the copy has to come from the
+  // field key — and it belongs on the input, not in a toast that covers the
+  // form and, once dismissed, cannot say which input it meant.
+  it('reports a refused password on the field, in the reader’s language', async () => {
+    (executeWithLoadingState as jest.Mock).mockImplementation(
+      async (
+        fn: () => Promise<void>,
+        setLoading: (v: boolean) => void,
+        onError?: (e: unknown) => void,
+      ) => {
+        setLoading(true);
+        try {
+          await fn();
+        } catch (error) {
+          onError?.(error);
+        } finally {
+          setLoading(false);
+        }
+      },
+    );
+
+    const SERVER_PROSE = 'Password must contain an uppercase letter';
+    const operationMocks: MockedResponse[] = [
+      {
+        request: {
+          query: ChangePasswordDocument,
+          variables: () => true,
+        },
+        result: {
+          data: {
+            changePassword: {
+              __typename: 'ValidationError',
+              code: ErrorCode.ValidationFailed,
+              message: SERVER_PROSE,
+              field: 'newPassword',
+            },
+          },
+        },
+      },
+    ];
+
+    const user = userEvent.setup();
+    renderWithApollo(<ChangePasswordScreen />, { operationMocks });
+
+    await user.type(
+      screen.getByTestId('password-input-Enter your current password'),
+      'OldPass1',
+    );
+    await user.type(
+      screen.getByTestId('password-input-Enter your new password'),
+      'NewPass1',
+    );
+    await user.type(
+      screen.getByTestId('password-input-Confirm your new password'),
+      'NewPass1',
+    );
+    await user.press(screen.getByRole('button', { name: 'Change Password' }));
+
+    // The mocked PasswordInput surfaces its errorMessage as the a11y hint.
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('password-input-Enter your new password').props
+          .accessibilityHint,
+      ).toBe(
+        'That password doesn’t meet the rules: 8–72 characters, with an uppercase letter, a lowercase letter and a number.',
+      ),
+    );
+
+    expect(mockToast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ message: SERVER_PROSE }),
+    );
   });
 
   it('renders password input placeholders', () => {

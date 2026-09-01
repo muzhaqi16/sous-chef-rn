@@ -3,9 +3,8 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import DateTimePicker, {
-  type DateTimePickerEvent,
-} from '@react-native-community/datetimepicker';
+import { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { ThemedDateTimePicker } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
@@ -50,7 +49,7 @@ export const ExpirationDateField: React.FC<ExpirationDateFieldProps> = ({
         )}
       </View>
       {!!showPicker && (
-        <DateTimePicker
+        <ThemedDateTimePicker
           value={expirationDate || new Date()}
           mode="date"
           minimumDate={new Date()}

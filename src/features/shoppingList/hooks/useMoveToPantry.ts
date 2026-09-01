@@ -2,16 +2,22 @@ import { gql, type ApolloCache } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import {
+  AcquisitionMethod,
+  StorageState,
+} from '#/graphql/generated/schemaTypes';
 import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { Telemetry } from '#/services/telemetry';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { errorService } from '#/services/errorService';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
+import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
+import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import {
   addToPantryItemsCache,
   adjustPantryItemCount,
   removeFromPantryItemsCache,
+  evictPantryItemDetailStub,
 } from '#/apollo/utils/pantryCacheUpdaters';
 import {
   removeItemFromShoppingListForMoveToPantry,
@@ -19,6 +25,8 @@ import {
   writePurchaseInfo,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import { t as tGlobal } from '#/i18n';
 import { generateEntityId } from '#/utils/generateEntityId';
 
 export interface MoveToPantryInput {
@@ -219,8 +227,23 @@ export function useMoveToPantry({
     // Resolved BEFORE the try: `&&` is a value block, and the React Compiler
     // bails out of the whole hook when one appears inside a try body.
     const unlinkFromListId = input.removeFromList ? currentListId : undefined;
+    // Same reason. `actualPrice` is per unit, so the stub's own
+    // `costPerUnit x quantity` reproduces what the server will compute.
+    const detailStubFields = {
+      itemId: item.item?.id,
+      itemName: item.itemName ?? '',
+      acquisitionMethod: AcquisitionMethod.ShoppingList,
+      costPerUnit: input.actualPrice ?? null,
+      quantity: input.actualQuantity,
+    };
     try {
+      // A detail read on a client-minted id 404s and renders the deleted
+      // state; `useIsCreateUnconfirmed` skips it until the server confirms.
+      unconfirmedCreates.mark(pantryItemId);
       addToPantryItemsCache(client.cache, input.pantryId, optimisticPantryItem);
+      // Detail-shape the row so the moved item's detail screen renders its
+      // costs from cache — offline this local write is the only source.
+      writePantryItemDetailStub(client.cache, pantryItemId, detailStubFields);
       // The count travels with the row: offline the mutation's `update` never
       // runs, and `usePantryScreen` branches on this value to pick server vs
       // client sorting, so a stale one selects the wrong mode too.
@@ -274,6 +297,7 @@ export function useMoveToPantry({
       try {
         removeFromPantryItemsCache(client.cache, input.pantryId, pantryItemId);
         adjustPantryItemCount(client.cache, input.pantryId, -1);
+        evictPantryItemDetailStub(client.cache, pantryItemId);
         if (input.removeFromList) {
           restoreItemToShoppingListAfterMoveToPantry(client.cache, item.id);
         }
@@ -287,6 +311,11 @@ export function useMoveToPantry({
           operation: 'Failed to move item to pantry:',
         });
       }
+      // A refusal resolves with HTTP 200 and no `error`, so nothing else tells
+      // the shopper: the row simply reappears on the list. Reachable now that a
+      // target whose unit changed mid-move comes back as a retryable conflict.
+      unconfirmedCreates.confirm(pantryItemId);
+      alertRejectedMutation(result, tGlobal('errors.moveToPantryFailedRetry'));
       return false;
     }
 
@@ -302,12 +331,17 @@ export function useMoveToPantry({
       try {
         removeFromPantryItemsCache(client.cache, input.pantryId, pantryItemId);
         adjustPantryItemCount(client.cache, input.pantryId, -1);
+        // The stub's writes survive evicting the row, and persist.
+        evictPantryItemDetailStub(client.cache, pantryItemId);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Evict superseded optimistic pantry row',
         });
       }
     }
+
+    // The id is the server's now, so the detail screen may query it.
+    unconfirmedCreates.confirm(pantryItemId);
 
     Telemetry.trackEvent('shopping_item_moved_to_pantry', {
       shopping_list_id: currentListId,

@@ -13,6 +13,10 @@ fragment useMoveToPantry_pantryItem on PantryItem {
   itemId
   itemName
   quantity
+  # The server's computed costs, so the moved row's detail screen has them
+  # without a second fetch. `totalCost` is `costPerUnit x actualQuantity`.
+  costPerUnit
+  totalCost
   version
   updatedAt
   storageState

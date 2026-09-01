@@ -13,6 +13,7 @@ import {
 import { formatQuantity } from '#/utils/formatQuantity';
 import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 import { Text } from '#components/atoms/Text';
+import { Badge } from '#components/atoms/Badge';
 
 interface BatchListItemProps {
   batch: PantryItemBatchFragment;
@@ -90,25 +91,15 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
             {t('pantryItemDetail.batch.number', { number: batch.batchNumber })}
           </Text>
           {!!batch.isOpened && (
-            <View style={styles.openedBadge}>
-              <Text size="xs" weight="medium" tone="accent">
-                {t('pantryItemDetail.batch.opened')}
-              </Text>
-            </View>
+            <Badge variant="primary">
+              {t('pantryItemDetail.batch.opened')}
+            </Badge>
           )}
           {batch.status === BatchStatus.Wasted && (
-            <View style={styles.wastedBadge}>
-              <Text size="xs" weight="medium" tone="error">
-                {t('pantryItemDetail.batch.wasted')}
-              </Text>
-            </View>
+            <Badge variant="danger">{t('pantryItemDetail.batch.wasted')}</Badge>
           )}
           {batch.status === BatchStatus.Depleted && (
-            <View style={styles.depletedBadge}>
-              <Text size="xs" weight="medium" tone="tertiary">
-                {t('pantryItemDetail.batch.depleted')}
-              </Text>
-            </View>
+            <Badge>{t('pantryItemDetail.batch.depleted')}</Badge>
           )}
         </View>
 
@@ -141,6 +132,19 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
           </Text>
         ) : null}
 
+        {batch.depletedAt ? (
+          <Text size="xs" tone="tertiary" style={styles.metaText}>
+            {/* `depletedAt` is when the batch reached zero, whichever way —
+                so the label follows the STATUS. */}
+            {t(
+              batch.status === BatchStatus.Wasted
+                ? 'pantryItemDetail.batch.wastedOn'
+                : 'pantryItemDetail.batch.depletedOn',
+              { date: formatDate(batch.depletedAt) },
+            )}
+          </Text>
+        ) : null}
+
         {batch.notes ? (
           <Text
             size="xs"
@@ -149,14 +153,6 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
             numberOfLines={1}
           >
             {batch.notes}
-          </Text>
-        ) : null}
-
-        {batch.depletedAt ? (
-          <Text size="xs" tone="tertiary" style={styles.metaText}>
-            {t('pantryItemDetail.batch.depletedOn', {
-              date: formatDate(batch.depletedAt),
-            })}
           </Text>
         ) : null}
       </View>
@@ -197,7 +193,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
@@ -207,43 +203,27 @@ const styles = StyleSheet.create(theme => ({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs,
-    marginBottom: 2,
-  },
-  openedBadge: {
-    paddingHorizontal: theme.spacing.xs,
-    paddingVertical: 1,
-    backgroundColor: theme.colors.primaryLight,
-    borderRadius: theme.radii.full,
-  },
-  wastedBadge: {
-    paddingHorizontal: theme.spacing.xs,
-    paddingVertical: 1,
-    backgroundColor: theme.colors.errorLight ?? theme.colors.error + '20',
-    borderRadius: theme.radii.full,
-  },
-  depletedBadge: {
-    paddingHorizontal: theme.spacing.xs,
-    paddingVertical: 1,
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.full,
+    // Wider than the meta gaps: the badge qualifies the title but is not part
+    // of it, so the space has to read as a separation rather than a word break.
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
   },
   quantityText: {
-    marginTop: 2,
+    marginTop: theme.spacing.xs,
   },
   expiryRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
-    marginTop: 2,
+    marginTop: theme.spacing.xs,
   },
   metaText: {
-    marginTop: 1,
+    marginTop: theme.spacing.xs,
   },
   actions: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
-    marginLeft: theme.spacing.sm,
+    marginLeft: theme.spacing.md,
     paddingTop: 2,
   },
   actionButton: {

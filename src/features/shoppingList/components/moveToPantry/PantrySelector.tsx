@@ -113,7 +113,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
   },
   pantryOptionTextActive: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   defaultBadge: {
     paddingVertical: theme.spacing.xs / 2,

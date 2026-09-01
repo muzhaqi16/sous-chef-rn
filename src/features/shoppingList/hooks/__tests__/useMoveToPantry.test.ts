@@ -13,6 +13,8 @@ import {
   restoreItemToShoppingListAfterMoveToPantry,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { useStore } from '#store';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { alertService } from '#/services/alertService';
 import { useMoveToPantry } from '../useMoveToPantry';
 
 jest.mock('#/services/telemetry', () => ({
@@ -184,6 +186,41 @@ describe('useMoveToPantry', () => {
     });
 
     expect(moveResult).toBe(false);
+  });
+
+  it('tells the shopper when the server refuses the move', async () => {
+    // A refusal resolves 200 with no `error`, so nothing else surfaces it — and
+    // a target whose unit changed mid-move now comes back exactly this way.
+    const conflicted = recordMock(MoveShoppingItemToPantryDocument, {
+      data: {
+        moveShoppingItemToPantry: {
+          __typename: 'ConflictError' as const,
+          message: 'Pantry item was modified',
+          code: ErrorCode.Conflict,
+        },
+      },
+    });
+    const alertSpy = jest.spyOn(alertService, 'alert');
+
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [conflicted.mock] },
+    );
+
+    let moveResult: boolean = true;
+    await act(async () => {
+      moveResult = await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 1,
+        removeFromList: true,
+      });
+    });
+
+    expect(moveResult).toBe(false);
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Error',
+      'Failed to move item to the pantry. Please try again.',
+    );
   });
 
   it('accepts onSuccess callback', () => {
@@ -426,6 +463,45 @@ describe('useMoveToPantry pantry item count', () => {
     });
 
     expect(readTotal(cache)).toBe(64);
+  });
+
+  it('detail-shapes the row it publishes, so it reads offline', async () => {
+    const cache = seededCache();
+    const move = echoingMoveMock();
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [move.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 5,
+        actualPrice: 0.59,
+        removeFromList: true,
+      });
+    });
+
+    const mintedId = (move.fired[0].input as { pantryItemId: string })
+      .pantryItemId;
+    const DETAIL_FRAGMENT = gql`
+      fragment PantryDetailProbe on PantryItem {
+        id
+        acquisitionMethod
+        costPerUnit
+        totalCost
+      }
+    `;
+    // `acquisitionMethod` is NOT in the mutation's response fragment, so its
+    // presence is the stub's signature: the detail screen reads from cache
+    // instead of dead-ending, which offline is the only thing that runs.
+    // The stub's own arithmetic is pinned in writePantryItemDetailStub.test.ts.
+    expect(
+      cache.readFragment({
+        id: `PantryItem:${mintedId}`,
+        fragment: DETAIL_FRAGMENT,
+      }),
+    ).toMatchObject({ acquisitionMethod: 'SHOPPING_LIST' });
   });
 
   it('withdraws the count when the move is refused', async () => {

@@ -30,10 +30,14 @@ import { join, relative } from 'path';
 
 const SRC = join(process.cwd(), 'src');
 
-/** Mutations that create a PantryItem with a client-minted `input.id`. */
+/**
+ * Mutations creating a PantryItem with a client-minted id. `MoveShoppingItemToPantry`
+ * mints one in `input.pantryItemId`, not `input.id`.
+ */
 const CREATE_DOCUMENTS = [
   'CreatePantryItemDocument',
   'BarcodeCreatePantryItemDocument',
+  'MoveShoppingItemToPantryDocument',
 ];
 
 const stripComments = (source: string): string =>
@@ -70,6 +74,7 @@ const sources = collectSourceFiles(SRC).map(file => ({
 const OPTIMISTIC_PUBLISHERS = [
   'addToPantryItemsCache(',
   'addToPantryItemsConnection(',
+  'addPantryItemLocally(',
 ];
 
 /**
@@ -95,12 +100,13 @@ const creators = sources
 
 describe('unconfirmed-create wiring (pantry items)', () => {
   it('finds the create paths at all, so the checks below are not vacuous', () => {
-    expect(creators.length).toBeGreaterThanOrEqual(3);
+    expect(creators.length).toBeGreaterThanOrEqual(4);
     expect(creators).toEqual(
       expect.arrayContaining([
         'src/features/barcode/components/SearchResults.tsx',
         'src/features/pantry/components/modals/AddToPantrySheet/AddToPantrySheet.tsx',
         'src/features/pantry/hooks/usePantryItemSubmission.ts',
+        'src/features/shoppingList/hooks/useMoveToPantry.ts',
       ]),
     );
   });
@@ -113,15 +119,24 @@ describe('unconfirmed-create wiring (pantry items)', () => {
 
   it.each(creators)(
     '%s reconciles a server-resolved id divergence',
-    // The connection updaters dedupe BY ID, so a payload whose `pantryItem.id`
-    // differs from `input.id` leaves the client cuid behind as a second,
+    // The connection updaters dedupe BY ID, so a payload whose returned id
+    // differs from the minted one leaves the client cuid behind as a second,
     // permanently unresolvable edge — a row that 404s on every tap for the rest
     // of the session.
+    //
+    // Two valid reconciliations: adopt the server's id, or withdraw the local
+    // row and let `update` add the server's. The move path must take the
+    // second — its divergence names a row that already exists.
     file => {
       const code = stripComments(
         readFileSync(join(process.cwd(), file), 'utf8'),
       );
-      expect(code).toContain('adoptServerEntityId(');
+      const adopts = code.includes('adoptServerEntityId(');
+      const withdraws =
+        code.includes('removeFromPantryItemsCache(') &&
+        code.includes('evictPantryItemDetailStub(');
+
+      expect(adopts || withdraws).toBe(true);
     },
   );
 

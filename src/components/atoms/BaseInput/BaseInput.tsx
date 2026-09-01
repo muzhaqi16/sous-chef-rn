@@ -1,12 +1,6 @@
 import React, { ReactNode, useState } from 'react';
 import { useTranslation } from '#/i18n';
-import {
-  View,
-  TextInput,
-  TextInputProps,
-  StyleProp,
-  ViewStyle,
-} from 'react-native';
+import { View, TextInputProps, StyleProp, ViewStyle } from 'react-native';
 import { Text } from '#components/atoms/Text';
 
 /** The event passed to TextInput's onFocus/onBlur, derived from RN's own prop type. */
@@ -14,15 +8,14 @@ type TextInputFocusEvent = Parameters<
   NonNullable<TextInputProps['onFocus']>
 >[0];
 import { AppPressable } from '#components/atoms/AppPressable';
-import { withUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
 import styles from './BaseInput.styles';
 import { Icon } from '#/utils/iconUtils';
-
-const ThemedTextInput = withUnistyles(TextInput, theme => ({
-  placeholderTextColor: theme.colors.inputPlaceholder,
-}));
+import {
+  ThemedTextInput,
+  type ThemedTextInputRef,
+} from '#components/atoms/themedComponents';
 
 export interface BaseInputProps extends TextInputProps {
   label?: string;
@@ -36,7 +29,7 @@ export interface BaseInputProps extends TextInputProps {
    * Handed to the underlying TextInput. Focus is only reachable imperatively
    * in React Native, so moving from one field to the next needs this.
    */
-  ref?: React.Ref<TextInput>;
+  ref?: React.Ref<ThemedTextInputRef>;
 }
 
 export const BaseInput: React.FC<BaseInputProps> = ({

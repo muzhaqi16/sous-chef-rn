@@ -107,6 +107,10 @@ export function useAppNavigation() {
       navigation.navigate('PantryAnalytics', params),
     toPantrySettings: (params?: RootStackParamList['PantrySettings']) =>
       navigation.navigate('PantrySettings', params),
+    toPantryBatchHistory: (params: RootStackParamList['PantryBatchHistory']) =>
+      navigation.navigate('PantryBatchHistory', params),
+    toPantryUsageHistory: (params: RootStackParamList['PantryUsageHistory']) =>
+      navigation.navigate('PantryUsageHistory', params),
     toFilteredPantryItems: (
       params: RootStackParamList['FilteredPantryItems'],
     ) => navigation.navigate('FilteredPantryItems', params),

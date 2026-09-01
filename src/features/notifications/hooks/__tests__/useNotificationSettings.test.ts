@@ -58,17 +58,6 @@ const mockPreferencesData = {
 
 jest.mock('#/utils/finallyHelpers');
 
-// Pinned so the timezone self-heal stays inert for every suite that isn't
-// exercising it — otherwise the effect fires an unmocked mutation on whatever
-// zone the test machine happens to be in.
-jest.mock('#/utils/notifications/quietHours', () => ({
-  ...jest.requireActual('#/utils/notifications/quietHours'),
-  getDeviceTimezone: jest.fn(() => 'America/New_York'),
-}));
-const mockGetDeviceTimezone = jest.requireMock(
-  '#/utils/notifications/quietHours',
-).getDeviceTimezone as jest.Mock;
-
 jest.mock('#/services/errorService');
 
 jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
@@ -81,7 +70,6 @@ jest.mock('#/services/alertService', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockGetDeviceTimezone.mockReturnValue('America/New_York');
 });
 
 /**
@@ -402,72 +390,5 @@ describe('useNotificationSettings', () => {
       expect(result.current.settings.quietHoursEnabled).toBe(true),
     );
     expect(result.current.isQuietTime()).toBe(true);
-  });
-
-  describe('quiet-hours timezone self-heal', () => {
-    it('rewrites the API default of UTC to the device zone', async () => {
-      const update = recordMock(UpdateNotificationPreferencesDocument, {
-        data: updatedPrefs({
-          quietHoursEnabled: true,
-          quietHoursTimezone: 'America/New_York',
-        }),
-      });
-
-      renderHookWithApollo(() => useNotificationSettings(), {
-        operationMocks: [
-          prefsQueryMock({
-            quietHoursEnabled: true,
-            quietHoursTimezone: 'UTC',
-          }),
-          update.mock,
-        ],
-      });
-
-      await waitFor(() =>
-        expect(update.fired).toContainEqual({
-          input: { quietHours: { quietHoursTimezone: 'America/New_York' } },
-        }),
-      );
-    });
-
-    it('leaves a matching zone alone', async () => {
-      const update = recordMock(UpdateNotificationPreferencesDocument, {
-        data: updatedPrefs({ quietHoursEnabled: true }),
-      });
-
-      const { result } = renderHookWithApollo(() => useNotificationSettings(), {
-        operationMocks: [
-          prefsQueryMock({
-            quietHoursEnabled: true,
-            quietHoursTimezone: 'America/New_York',
-          }),
-          update.mock,
-        ],
-      });
-
-      await waitFor(() =>
-        expect(result.current.settings.quietHoursEnabled).toBe(true),
-      );
-      expect(update.fired).toEqual([]);
-    });
-
-    it('stays quiet while quiet hours are disabled', async () => {
-      const update = recordMock(UpdateNotificationPreferencesDocument, {
-        data: updatedPrefs({}),
-      });
-
-      const { result } = renderHookWithApollo(() => useNotificationSettings(), {
-        operationMocks: [
-          prefsQueryMock({
-            quietHoursEnabled: false,
-            quietHoursTimezone: 'UTC',
-          }),
-          update.mock,
-        ],
-      });
-
-      await waitFor(() => expect(result.current.loading).toBe(false));
-      expect(update.fired).toEqual([]);
-    });
   });
 });

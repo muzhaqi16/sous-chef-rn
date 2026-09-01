@@ -687,6 +687,9 @@ export function applyOptimisticFragmentPatch<TFragment>(
 }
 
 /** Evict one entity and gc(resetResultCache); use instead of evict + gc. */
+/** Retains on one id, bounded so a miscount cannot spin. */
+const MAX_RETAIN_DRAIN = 16;
+
 export function safeEvict(
   cache: ApolloCache,
   typename: string,
@@ -696,6 +699,12 @@ export function safeEvict(
     const cacheId = cache.identify({ __typename: typename, id: itemId });
     if (!cacheId) return;
     cache.evict({ id: cacheId });
+    // `evict` drops the record but not the retains `writeFragment` took, which
+    // `extract()` persists. `retain` counts, so drain it.
+    const retaining = cache as { release?: (rootId: string) => number };
+    for (let i = 0; i < MAX_RETAIN_DRAIN; i++) {
+      if (!retaining.release || retaining.release(cacheId) <= 0) break;
+    }
     gcResetResultCache(cache);
   } catch (error) {
     logger.warn(

@@ -11109,6 +11109,18 @@ export type PantryItem = {
   brandId: Maybe<Scalars['ID']['output']>;
   changeHistory: PantryItemChangeConnection;
   condition: ItemCondition;
+  /**
+   * Value of the REMAINING stock, per unit of quantity — derived from the
+   * item's active batches alongside quantity itself.
+   *
+   * A DISPLAY RATE over totalCost, which is the authoritative figure. It is
+   * rounded to cents, so multiplying it back by quantity does not reproduce
+   * totalCost; render totalCost for value rather than recomputing it.
+   *
+   * Null, not zero, when no remaining batch carries a known cost: an unpriced
+   * pantry has no average, and reporting one as $0.00 is worse than reporting
+   * nothing. For what a particular acquisition cost, read its batch.
+   */
   costPerUnit: Maybe<Scalars['Float']['output']>;
   createdAt: Scalars['DateTime']['output'];
   earliestBatchExpiration: Maybe<Scalars['DateTime']['output']>;
@@ -11142,7 +11154,22 @@ export type PantryItem = {
   pantryId: Scalars['ID']['output'];
   photos: Array<PantryItemPhoto>;
   purchase: Maybe<Purchase>;
+  /**
+   * The purchase behind this stack's FIRST acquisition. It does not move when
+   * the stack is restocked — a later acquisition's purchase is on its own batch,
+   * as PantryItemBatch.purchaseId.
+   */
   purchaseId: Maybe<Scalars['ID']['output']>;
+  /**
+   * Current amount, derived from the item's ACTIVE batches. Every path that adds
+   * or removes stock writes a batch and recomputes this; it is never set
+   * directly.
+   *
+   * Historical data comes from PantryItemUsage records:
+   * - Initial quantity: first RESTOCK record
+   * - Consumed: SUM(quantityUsed) WHERE purpose != RESTOCK
+   * - Wasted: SUM(quantityUsed) WHERE purpose = WASTE
+   */
   quantity: Scalars['Float']['output'];
   quantityBreakdown: Maybe<QuantityBreakdown>;
   remainingNetWeight: Maybe<Scalars['Float']['output']>;
@@ -11154,6 +11181,11 @@ export type PantryItem = {
   store: Maybe<Store>;
   storeId: Maybe<Scalars['ID']['output']>;
   tags: Array<Scalars['String']['output']>;
+  /**
+   * Value of the REMAINING stock. Batches whose cost was never recorded are
+   * excluded rather than counted as free, so this is the value of the stock
+   * whose price is known — null when that is none of it.
+   */
   totalCost: Maybe<Scalars['Float']['output']>;
   unit: Maybe<Unit>;
   unitId: Maybe<Scalars['ID']['output']>;
@@ -11198,6 +11230,11 @@ export type PantryItemBatch = {
   __typename: 'PantryItemBatch';
   addedBy: Maybe<User>;
   batchNumber: Scalars['Int']['output'];
+  /**
+   * What was paid per unit of the amount ENTERED at intake — the shopper's
+   * receipt figure. A record of the purchase, unchanged as the batch is drawn
+   * down.
+   */
   costPerUnit: Maybe<Scalars['Float']['output']>;
   createdAt: Scalars['DateTime']['output'];
   depletedAt: Maybe<Scalars['DateTime']['output']>;
@@ -11208,11 +11245,33 @@ export type PantryItemBatch = {
   notes: Maybe<Scalars['String']['output']>;
   openedAt: Maybe<Scalars['DateTime']['output']>;
   pantryItemId: Scalars['ID']['output'];
+  /**
+   * The purchase this acquisition was recorded under, where one exists. A
+   * restock's purchase belongs here rather than on the item, whose purchaseId
+   * names only the acquisition that first stocked it.
+   */
+  purchaseId: Maybe<Scalars['ID']['output']>;
   quantity: Scalars['Float']['output'];
   remainingNetWeight: Maybe<Scalars['Float']['output']>;
+  /** The RESTOCK ledger entry this batch was created alongside. */
+  sourceUsageId: Maybe<Scalars['ID']['output']>;
   status: BatchStatus;
   store: Maybe<Store>;
+  /**
+   * What the whole batch cost at intake. Like costPerUnit, this describes the
+   * ACQUISITION and does not shrink as the batch is consumed — for the value of
+   * what is left, see unitCostBasis, or PantryItem.totalCost for the stack.
+   */
   totalCost: Maybe<Scalars['Float']['output']>;
+  /**
+   * Cost per one unit of this batch's value basis: its remainingNetWeight when
+   * the stack tracks weight, otherwise its quantity. Fixed at intake.
+   *
+   * This is the term the parent item's derived value is summed from. Null when
+   * the cost was never known, which is why an unpriced batch leaves the stack's
+   * value incomplete rather than dragging it toward zero.
+   */
+  unitCostBasis: Maybe<Scalars['Float']['output']>;
   updatedAt: Scalars['DateTime']['output'];
   wasteReason: Maybe<WasteReason>;
 };
@@ -14830,10 +14889,18 @@ export enum StorageState {
  */
 export type StorageStateCounts = {
   __typename: 'StorageStateCounts';
-  /** Count of items with storageState = AMBIENT, NONE, or null */
+  /**
+   * Count of items with storageState = AMBIENT — shelf-stable, chosen.
+   * Does NOT include NONE; see the none field.
+   */
   ambient: Scalars['Int']['output'];
   /** Count of items with storageState = FROZEN */
   frozen: Scalars['Int']['output'];
+  /**
+   * Count of items with no storage state chosen. Distinct from AMBIENT: nobody
+   * said where this lives, rather than somebody saying it needs no cold chain.
+   */
+  none: Scalars['Int']['output'];
   /** Count of items with storageState = REFRIGERATED */
   refrigerated: Scalars['Int']['output'];
 };

@@ -157,7 +157,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   actionButtonText: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   errorText: {
     marginTop: theme.spacing.xl,

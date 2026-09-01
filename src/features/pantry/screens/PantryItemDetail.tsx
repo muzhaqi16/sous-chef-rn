@@ -44,6 +44,7 @@ import {
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import { getUnitDisplayText } from '#utils/formatQuantity';
 import { PantryDetailInfo } from '#features/pantry/components/PantryDetailInfo';
+import { summarizeBatchPricing } from '#features/pantry/utils/summarizeBatchPricing';
 import { PantryUsageHistory } from '#features/pantry/components/PantryUsageHistory';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
@@ -88,11 +89,11 @@ export const PantryItemDetail: React.FC<
     toPantryItem,
     toRecipeDetail,
     toNutritionScreen,
+    toPantryBatchHistory,
+    toPantryUsageHistory,
   } = useAppNavigation();
   const selectedShoppingListId = useSelectedShoppingListId();
   const selectedPantryId = useSelectedPantryId();
-
-  const [purchaseHistoryExpanded, setPurchaseHistoryExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
@@ -114,8 +115,8 @@ export const PantryItemDetail: React.FC<
   });
   const client = useApolloClient();
 
-  // No status filter: BatchSection's active list AND its "show all inactive"
-  // affordance both read from this one fetch.
+  // No status filter: the derived costs and the expired-batch check both read
+  // the whole active set from this one fetch, while the section shows a few.
   const { data: batchesData, refetch: refetchBatches } = useQuery(
     GetPantryItemBatchesDocument,
     {
@@ -178,6 +179,10 @@ export const PantryItemDetail: React.FC<
         }),
       )
       .filter((b): b is PantryItemBatchFragment => b != null) ?? [];
+
+  // Only how to LABEL the item's own money fields — the server derives their
+  // values from these same batches.
+  const batchPricing = summarizeBatchPricing(batches);
 
   const { suggestedRecipes, loadingRecipes } = useRecipeSuggestionsForItem(
     item?.itemName ?? undefined,
@@ -426,6 +431,7 @@ export const PantryItemDetail: React.FC<
             shelfLifeDays={item.item?.shelfLifeDays}
             shelfLifeOpenedDays={item.item?.shelfLifeOpenedDays}
             onCorrectWeight={() => actions.setCorrectWeightVisible(true)}
+            pricing={batchPricing}
           />
         </DetailSection>
 
@@ -434,17 +440,31 @@ export const PantryItemDetail: React.FC<
             <BatchSection
               batches={batches}
               unitSymbol={item.unit?.symbol ?? undefined}
+              totalCount={
+                batchesData?.pantryItemBatchesConnection?.totalCount ??
+                undefined
+              }
+              onViewAll={() =>
+                toPantryBatchHistory({
+                  pantryItemId: itemId,
+                  itemName: item.itemName ?? '',
+                  unitSymbol: item.unit?.symbol ?? undefined,
+                })
+              }
             />
           </DetailSection>
         )}
 
         {!!item.usageRecords && item.usageRecords.edges.length > 0 && (
-          <DetailSection flush>
+          <DetailSection>
             <PantryUsageHistory
               usageRecords={item.usageRecords.edges}
-              expanded={purchaseHistoryExpanded}
-              onToggle={() =>
-                setPurchaseHistoryExpanded(!purchaseHistoryExpanded)
+              totalCount={item.usageRecords.totalCount ?? undefined}
+              onViewAll={() =>
+                toPantryUsageHistory({
+                  pantryItemId: itemId,
+                  itemName: item.itemName ?? '',
+                })
               }
             />
           </DetailSection>

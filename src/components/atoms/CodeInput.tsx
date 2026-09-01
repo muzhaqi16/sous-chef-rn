@@ -1,8 +1,12 @@
 import React, { useRef, useState } from 'react';
-import { TextInput, View } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { Pressable } from '#components/atoms/themedComponents';
+import {
+  Pressable,
+  ThemedTextInput,
+  type ThemedTextInputRef,
+} from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 
 const CODE_LENGTH = 6;
@@ -16,7 +20,7 @@ export const CodeInput: React.FC<{
   error?: string;
 }> = ({ value, onChange, onComplete, onBlur }) => {
   const { t } = useTranslation();
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<ThemedTextInputRef>(null);
   const [isFocused, setIsFocused] = useState(false);
 
   const handleChangeText = (raw: string) => {
@@ -45,7 +49,7 @@ export const CodeInput: React.FC<{
       style={({ pressed }) => pressed && styles.pressed}
     >
       <View style={styles.formInput}>
-        <TextInput
+        <ThemedTextInput
           ref={inputRef}
           style={styles.formInputControl}
           keyboardType="number-pad"

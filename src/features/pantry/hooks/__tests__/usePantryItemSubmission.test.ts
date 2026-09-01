@@ -1,6 +1,8 @@
 'use no memo';
 
 import { act } from '@testing-library/react-native';
+import { gql } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -529,6 +531,123 @@ describe('usePantryItemSubmission', () => {
       input: expect.objectContaining({
         unit: undefined,
       }),
+    });
+  });
+
+  /**
+   * Offline-first: this form is reachable with no network, so a duplicate it
+   * could have seen in its own cache must not become a create the server will
+   * only refuse later. It sends an inline item with no catalog id, so the match
+   * is on the name — and it only ever prompts on that match, never acts.
+   */
+  describe('a duplicate the cache can already see', () => {
+    // Args are load-bearing — see the reader's own suite: the connection is
+    // keyed on them, so a seed without them writes a key the app never has.
+    const STOCKED_PANTRY = gql`
+      query SeedStockedPantry(
+        $id: ID!
+        $itemsFirst: Int
+        $itemsFilter: PantryItemFilters
+        $itemsOrderBy: PantryItemOrderBy
+      ) {
+        pantry(id: $id) {
+          __typename
+          id
+          itemsConnection(
+            first: $itemsFirst
+            filters: $itemsFilter
+            orderBy: $itemsOrderBy
+          ) {
+            __typename
+            totalCount
+            edges {
+              __typename
+              cursor
+              node {
+                __typename
+                id
+                itemName
+                quantity
+                item {
+                  __typename
+                  id
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const seedStocked = (itemName: string) => {
+      const cache = makeCache();
+      cache.writeQuery({
+        query: STOCKED_PANTRY,
+        variables: {
+          id: 'pantry-1',
+          itemsFirst: 100,
+          itemsFilter: undefined,
+          itemsOrderBy: undefined,
+        },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'pantry-1',
+            itemsConnection: {
+              __typename: 'PantryItemConnection',
+              totalCount: 1,
+              edges: [
+                {
+                  __typename: 'PantryItemEdge',
+                  cursor: 'pi-1',
+                  node: {
+                    __typename: 'PantryItem',
+                    id: 'pi-1',
+                    itemName,
+                    quantity: 3,
+                    item: { __typename: 'Item', id: 'item-1' },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      });
+      return cache;
+    };
+
+    it('prompts without firing a create', async () => {
+      const m = createMock();
+      const { result } = renderHookWithApollo(
+        () => usePantryItemSubmission(defaultParams),
+        { cache: seedStocked('  MILK '), operationMocks: [m.mock] },
+      );
+
+      await act(async () => {
+        await result.current.handleConfirm();
+      });
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Item Already in Pantry',
+        expect.stringContaining('already in your pantry'),
+        expect.any(Array),
+      );
+      expect(m.fired).toHaveLength(0);
+    });
+
+    it('still fires the create when the name is not stocked', async () => {
+      const m = createMock();
+      const { result } = renderHookWithApollo(
+        () => usePantryItemSubmission(defaultParams),
+        { cache: seedStocked('Oat Milk'), operationMocks: [m.mock] },
+      );
+
+      await act(async () => {
+        await result.current.handleConfirm();
+      });
+
+      expect(m.fired).toHaveLength(1);
+      expect(mockOnSuccess).toHaveBeenCalled();
     });
   });
 });

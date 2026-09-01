@@ -18,7 +18,6 @@ import {
 import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
 import {
   createAddToParentConnectionUpdater,
-  safeEvict,
   adoptServerEntityId,
 } from '#/apollo/utils/cacheUpdaters';
 import {
@@ -29,8 +28,8 @@ import {
   reconcileShoppingCreate,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import {
-  addToPantryItemsCache,
-  adjustPantryItemCount,
+  addPantryItemLocally,
+  revertOptimisticPantryItem,
 } from '#/apollo/utils/pantryCacheUpdaters';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
@@ -220,7 +219,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           // branch has withdrawn it. Named so the halves cannot drift.
           const applyOptimisticPantryItem = () => {
             try {
-              addToPantryItemsCache(
+              // Publishes the row AND counts it: the header's "N items" reads
+              // `Pantry.stats.totalItems`, which the mutation's `update:`
+              // callback never touches when the create is queued offline.
+              addPantryItemLocally(
                 client.cache,
                 pantryId,
                 optimisticPantryItem,
@@ -235,22 +237,14 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                 acquisitionMethod: AcquisitionMethod.BarcodeScan,
                 quantity,
               });
-              // The connection updater moves the LIST; the header's "N items"
-              // reads `Pantry.stats.totalItems`, which only the mutation's
-              // `update:` callback touched — and that never runs when the create
-              // is queued offline. Same defect as the add sheet had, on the third
-              // create path. It sits beside the optimistic row so both move
-              // together whether or not the create reaches the server.
-              adjustPantryItemCount(client.cache, pantryId, 1);
             } catch (cacheError) {
               errorService.reportError(cacheError, {
                 operation: 'Add Pantry Item (optimistic)',
               });
             }
           };
-          const revertOptimisticPantryItem = () => {
-            safeEvict(client.cache, 'PantryItem', id);
-            adjustPantryItemCount(client.cache, pantryId, -1);
+          const revertPantryItem = () => {
+            revertOptimisticPantryItem(client.cache, pantryId, id);
           };
 
           applyOptimisticPantryItem();
@@ -284,9 +278,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           );
           if (duplicateInfo) {
             setIsLoading(false);
-            // Already in the pantry → the server keeps the existing row, not
-            // our optimistic item. Discard the one we wrote, count included.
-            revertOptimisticPantryItem();
+            // Already in the pantry: the server REFUSES the create and writes
+            // nothing, so withdraw the row we published — count included.
+            revertPantryItem();
             promptPantryDuplicate({
               onRestock: () => {
                 executeWithLoadingState(
@@ -346,7 +340,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                         t('errors.addItemFailedRetry'),
                       )
                     ) {
-                      revertOptimisticPantryItem();
+                      revertPantryItem();
                       return;
                     }
                     setIsAdded(true);
@@ -374,7 +368,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           if (outcome === 'rejected') {
             // The server refused the create — discard the item we wrote,
             // count included.
-            revertOptimisticPantryItem();
+            revertPantryItem();
             // The document selects `... on ValidationError { field }`, so route
             // the refusal to its localized `errors.field.*` copy instead of a
             // fixed string. `alertIfRejected` because this mutation has no

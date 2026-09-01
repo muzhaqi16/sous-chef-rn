@@ -4,6 +4,12 @@ export class ForgotPasswordScreen extends BaseScreen {
   protected screenID = 'forgot-password-screen';
 
   private readonly emailInput = 'forgot-password-email-input';
+
+  /** Last field filled here, so it is the one holding the keyboard. */
+  protected keyboardInput = this.emailInput;
+
+  /** `AuthFormTemplate`'s title row — above the keyboard on every auth screen. */
+  protected blurTarget = 'auth-title-row';
   private readonly submitButton = 'forgot-password-submit-button';
   private readonly loginLink = 'forgot-password-login-link';
   private readonly sentView = 'forgot-password-sent';

@@ -265,7 +265,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
   },
   confirmText: {
-    color: theme.colors.white,
+    color: theme.colors.onSuccess,
   },
   buttonPressed: {
     opacity: theme.opacity.pressed,

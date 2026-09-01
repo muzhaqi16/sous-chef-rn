@@ -118,7 +118,11 @@ export const Header: React.FC<HeaderProps> = ({
         <HeaderActionIcon action={action} />
         {action.badge !== undefined && action.badge > 0 && (
           <View style={[commonStyles.badge, styles.badge]}>
-            <Text style={commonStyles.badgeText}>{action.badge}</Text>
+            {/* `styles.badge` overrides the fill to `error`, so the digit
+                takes `onError`, not the shared `onPrimary`. */}
+            <Text style={[commonStyles.badgeText, styles.badgeText]}>
+              {action.badge}
+            </Text>
           </View>
         )}
       </AppPressable>
@@ -224,6 +228,9 @@ const styles = StyleSheet.create(theme => ({
     minHeight: theme.sizes.touchTarget.md,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  badgeText: {
+    color: theme.colors.onError,
   },
   badge: {
     position: 'absolute',

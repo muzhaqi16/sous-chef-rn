@@ -139,7 +139,7 @@ export function usePantryScreen() {
     { id: 'all', label: t('pantryScreen.tabAll') },
     {
       id: 'fridge',
-      label: t('pantryScreen.tabFridge'),
+      label: t('labels.storageRefrigerated'),
       icon: 'thermometer-outline',
       iconElement: React.createElement(StorageLocationIcon, {
         type: 'REFRIGERATOR',
@@ -148,7 +148,7 @@ export function usePantryScreen() {
     },
     {
       id: 'freezer',
-      label: t('pantryScreen.tabFreezer'),
+      label: t('labels.storageFrozen'),
       icon: 'snow-outline',
       iconElement: React.createElement(StorageLocationIcon, {
         type: 'FREEZER',
@@ -157,7 +157,7 @@ export function usePantryScreen() {
     },
     {
       id: 'pantry',
-      label: t('pantryScreen.tabPantry'),
+      label: t('labels.storageAmbient'),
       icon: 'cube-outline',
       iconElement: React.createElement(StorageLocationIcon, {
         type: 'PANTRY_SHELF',
@@ -186,8 +186,23 @@ export function usePantryScreen() {
       }),
     );
 
+  // Only when something is in it. The API counts a DELIBERATE shelf-stable
+  // choice as ambient, so an unassigned item has no other tab to appear
+  // under — but most pantries have none, and an always-empty tab is noise.
+  const unassignedTabs: FilterTabConfig<LocationFilter>[] =
+    locationCounts.unassigned > 0
+      ? [
+          {
+            id: 'unassigned',
+            label: t('pantryScreen.tabUnassigned'),
+            icon: 'help-circle-outline',
+          },
+        ]
+      : [];
+
   const combinedTabs: FilterTabConfig<LocationFilter>[] = [
     ...defaultTabs,
+    ...unassignedTabs,
     ...customTabs,
   ];
 

@@ -8398,6 +8398,18 @@ type PantryItem {
   brandId: ID
   changeHistory(after: String, before: String, first: Int, last: Int): PantryItemChangeConnection!
   condition: ItemCondition!
+  """
+  Value of the REMAINING stock, per unit of quantity — derived from the
+  item's active batches alongside quantity itself.
+  
+  A DISPLAY RATE over totalCost, which is the authoritative figure. It is
+  rounded to cents, so multiplying it back by quantity does not reproduce
+  totalCost; render totalCost for value rather than recomputing it.
+  
+  Null, not zero, when no remaining batch carries a known cost: an unpriced
+  pantry has no average, and reporting one as $0.00 is worse than reporting
+  nothing. For what a particular acquisition cost, read its batch.
+  """
   costPerUnit: Float
   createdAt: DateTime!
   earliestBatchExpiration: DateTime
@@ -8431,7 +8443,22 @@ type PantryItem {
   pantryId: ID!
   photos: [PantryItemPhoto!]!
   purchase: Purchase
+  """
+  The purchase behind this stack's FIRST acquisition. It does not move when
+  the stack is restocked — a later acquisition's purchase is on its own batch,
+  as PantryItemBatch.purchaseId.
+  """
   purchaseId: ID
+  """
+  Current amount, derived from the item's ACTIVE batches. Every path that adds
+  or removes stock writes a batch and recomputes this; it is never set
+  directly.
+  
+  Historical data comes from PantryItemUsage records:
+  - Initial quantity: first RESTOCK record
+  - Consumed: SUM(quantityUsed) WHERE purpose != RESTOCK
+  - Wasted: SUM(quantityUsed) WHERE purpose = WASTE
+  """
   quantity: Float!
   quantityBreakdown: QuantityBreakdown
   remainingNetWeight: Float
@@ -8443,6 +8470,11 @@ type PantryItem {
   store: Store
   storeId: ID
   tags: [String!]!
+  """
+  Value of the REMAINING stock. Batches whose cost was never recorded are
+  excluded rather than counted as free, so this is the value of the stock
+  whose price is known — null when that is none of it.
+  """
   totalCost: Float
   unit: Unit
   unitId: ID
@@ -8461,6 +8493,11 @@ Consumed FIFO by expiration date.
 type PantryItemBatch {
   addedBy: User
   batchNumber: Int!
+  """
+  What was paid per unit of the amount ENTERED at intake — the shopper's
+  receipt figure. A record of the purchase, unchanged as the batch is drawn
+  down.
+  """
   costPerUnit: Float
   createdAt: DateTime!
   depletedAt: DateTime
@@ -8471,11 +8508,33 @@ type PantryItemBatch {
   notes: String
   openedAt: DateTime
   pantryItemId: ID!
+  """
+  The purchase this acquisition was recorded under, where one exists. A
+  restock's purchase belongs here rather than on the item, whose purchaseId
+  names only the acquisition that first stocked it.
+  """
+  purchaseId: ID
   quantity: Float!
   remainingNetWeight: Float
+  """The RESTOCK ledger entry this batch was created alongside."""
+  sourceUsageId: ID
   status: BatchStatus!
   store: Store
+  """
+  What the whole batch cost at intake. Like costPerUnit, this describes the
+  ACQUISITION and does not shrink as the batch is consumed — for the value of
+  what is left, see unitCostBasis, or PantryItem.totalCost for the stack.
+  """
   totalCost: Float
+  """
+  Cost per one unit of this batch's value basis: its remainingNetWeight when
+  the stack tracks weight, otherwise its quantity. Fixed at intake.
+  
+  This is the term the parent item's derived value is summed from. Null when
+  the cost was never known, which is why an unpriced batch leaves the stack's
+  value incomplete rather than dragging it toward zero.
+  """
+  unitCostBasis: Float
   updatedAt: DateTime!
   wasteReason: WasteReason
 }
@@ -11411,10 +11470,18 @@ Counts of pantry items grouped by storage state.
 Always reflects the full pantry (not affected by itemsConnection filters).
 """
 type StorageStateCounts {
-  """Count of items with storageState = AMBIENT, NONE, or null"""
+  """
+  Count of items with storageState = AMBIENT — shelf-stable, chosen.
+  Does NOT include NONE; see the none field.
+  """
   ambient: Int!
   """Count of items with storageState = FROZEN"""
   frozen: Int!
+  """
+  Count of items with no storage state chosen. Distinct from AMBIENT: nobody
+  said where this lives, rather than somebody saying it needs no cold chain.
+  """
+  none: Int!
   """Count of items with storageState = REFRIGERATED"""
   refrigerated: Int!
 }

@@ -138,7 +138,7 @@
     "reasonLabel": "What's wrong with it?",
     "reasonPlaceholder": "e.g. the brand is wrong, the photo is a different product",
     "reasonTooShort": "Please add at least {{count}} characters so an admin knows what to look at.",
-    "submit": "Send report",
+    "submit": "Send",
     "sentTitle": "Report sent",
     "sentBody": "Thanks — an admin will take a look at this item.",
     "failedBody": "Something went wrong sending your report. Please try again.",

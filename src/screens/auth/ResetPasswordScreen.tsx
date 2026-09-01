@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, type TextInput } from 'react-native';
-import { ThemedKeyboardAwareScrollView } from '#components/atoms/themedComponents';
+import { View } from 'react-native';
+import {
+  ThemedKeyboardAwareScrollView,
+  type ThemedTextInputRef,
+} from '#components/atoms/themedComponents';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { object, string, ref } from 'yup';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { PasswordInput } from '#components/atoms/PasswordInput';
@@ -23,17 +25,18 @@ import {
 import { PasswordActionStatus } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { localizedErrorMessage, errorService } from '#/services/errorService';
+import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 import {
   getRateLimitMessage,
   isRateLimitError,
 } from '#/utils/errors/rateLimit';
 import { logValidationErrors } from '#/utils/validation/common';
+import { getResetPasswordValidationSchema } from '#/utils/validation/auth';
 import { useToast } from '#/hooks/useToast';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import type { ToastFn } from '#/components/atoms/Toast';
 import { Text } from '#components/atoms/Text';
-import type { Translate } from '#/i18n/types';
 
 /** Module-level async function for password reset submission.
  *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
@@ -52,6 +55,7 @@ async function performPasswordReset(
   defaultErrorMessage: string,
   rejectedMessage: string,
   onTokenRejected: () => void,
+  setNewPasswordError: (message: string) => void,
 ): Promise<void> {
   logger.info('Attempting password reset');
 
@@ -88,7 +92,19 @@ async function performPasswordReset(
     throw new Error(defaultErrorMessage);
   }
 
-  throw new Error(payload?.message || defaultErrorMessage);
+  // Never `payload.message` — unlocalizable English by construction.
+  const message = localizedRefusalMessage(payload, defaultErrorMessage);
+
+  // A password the server refuses is a field the user can fix, so the message
+  // belongs on the input. Thrown instead it reaches `localizedErrorMessage`,
+  // which resolves a plain Error to UNKNOWN_ERROR and shows the generic
+  // fallback — losing the one sentence that says what to change.
+  if (payload?.__typename === 'ValidationError') {
+    setNewPasswordError(message);
+    return;
+  }
+
+  throw new Error(message);
 }
 
 interface ResetPasswordRouteParams {
@@ -99,17 +115,6 @@ interface ResetPasswordForm {
   newPassword: string;
   confirmPassword: string;
 }
-
-const getResetPasswordSchema = (t: Translate) =>
-  object().shape({
-    newPassword: string()
-      .required(t('auth.passwordRequired'))
-      .min(8, t('auth.passwordTooShort'))
-      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, t('auth.passwordComplexity')),
-    confirmPassword: string()
-      .required(t('auth.passwordConfirmRequired'))
-      .oneOf([ref('newPassword')], t('auth.passwordsMustMatch')),
-  });
 
 export const ResetPasswordScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -133,7 +138,7 @@ export const ResetPasswordScreen: React.FC = () => {
   );
 
   const form = useForm<ResetPasswordForm>({
-    resolver: yupResolver(getResetPasswordSchema(t)),
+    resolver: yupResolver(getResetPasswordValidationSchema()),
     defaultValues: {
       newPassword: '',
       confirmPassword: '',
@@ -217,6 +222,7 @@ export const ResetPasswordScreen: React.FC = () => {
           t('errors.resetPasswordFailed'),
           t('auth.resetPasswordFailedFallback'),
           handleTokenRejected,
+          message => form.setError('newPassword', { message }),
         ),
       setIsSubmitting,
       (error: unknown) => {
@@ -241,7 +247,7 @@ export const ResetPasswordScreen: React.FC = () => {
 
   // Focus can only be moved imperatively in React Native, so the "next" key on
   // the first field needs a handle on the second one.
-  const confirmPasswordRef = useRef<TextInput>(null);
+  const confirmPasswordRef = useRef<ThemedTextInputRef>(null);
 
   const focusConfirmPassword = () => {
     confirmPasswordRef.current?.focus();

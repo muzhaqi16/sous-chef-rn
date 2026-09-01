@@ -142,6 +142,7 @@ export function pantryData(pantry: PantryFixture): Unmasked<GetPantryQuery> {
           refrigerated: 0,
           frozen: 0,
           ambient: items.length,
+          none: 0,
         },
         storageLocationCounts: [],
       },

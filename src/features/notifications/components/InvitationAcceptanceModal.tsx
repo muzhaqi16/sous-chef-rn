@@ -558,7 +558,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   acceptText: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   pressed: {
     opacity: theme.opacity.pressed,

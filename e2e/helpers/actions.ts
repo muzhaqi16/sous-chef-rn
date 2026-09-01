@@ -180,8 +180,8 @@ export async function multiTap(testID: string, times: number) {
 
 export async function dismissKeyboardAction() {
   if (device.getPlatform() === 'ios') {
-    // The keyboard's own layout view. There is no app-wide root testID to tap
-    // as a fallback, so a screen that needs one taps its own container.
+    // The keyboard's own layout view — visible by definition, unlike whatever
+    // it covers. Screens that know their focused field use `dismissKeyboard`.
     try {
       await element(by.type('_UIKeyboardLayoutView')).tap();
     } catch {

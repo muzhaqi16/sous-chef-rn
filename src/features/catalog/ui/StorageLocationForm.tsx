@@ -1,8 +1,9 @@
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
-import { View, TextInput, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { StorageState } from '#/graphql/generated/schemaTypes';
@@ -160,7 +161,7 @@ export const StorageLocationForm = forwardRef<
           <Text style={commonStyles.label}>
             {t('storageLocationForm.name')}
           </Text>
-          <TextInput
+          <ThemedTextInput
             style={commonStyles.input}
             value={formData.name}
             onChangeText={name => setFormData({ ...formData, name })}

@@ -9,3 +9,53 @@ fragment MoveToPantryModal_shoppingListItem on ShoppingListItem {
     symbol
   }
 }
+
+# What the shopper actually bought, which the sheet prefills from. Fetched
+# rather than added to the fragment above: that one is read with `useFragment`
+# and gated on `complete`, and the list query selects only
+# `purchaseInfo { isPurchased movedToPantryAt }` — so a cold start would leave
+# the amounts uncached and blank the whole sheet.
+#
+# Selected inline rather than spreading ShoppingListItemPurchaseInfoFragment:
+# under `dataMasking` a named spread hides these fields from the sheet's own
+# reads. Kept complete by __tests__/graphql/purchaseInfoCompleteness.test.ts.
+query MoveToPantryPurchaseInfo($id: ID!) {
+  shoppingListItem(id: $id) {
+    id
+    purchaseInfo {
+      isPurchased
+      movedToPantryAt
+      purchasedQuantity
+      purchasedPrice
+      purchaseDate
+      purchasedBy {
+        id
+        profile {
+          id
+          displayName
+          avatar
+        }
+      }
+    }
+    # The unit the purchase was recorded in. `purchaseInfo` carries the amounts
+    # but no unit, and the LINE's unit is nullable — while `Purchase.unitId` is
+    # not, because the server falls back to the item's tracking unit or "piece".
+    # An explicit ordering: `first: 1` unordered is not the latest purchase.
+    purchasesConnection(first: 1, orderBy: { purchaseDate: DESC }) {
+      # A selection writing `edges` writes a PAGE, and a page with no
+      # `pageInfo` merges as "this covers the whole list" — which would strip
+      # the cursor off the shared field if anything else ever keys to it.
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        node {
+          id
+          unitId
+          unitSymbol
+        }
+      }
+    }
+  }
+}

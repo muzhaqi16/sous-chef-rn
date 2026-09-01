@@ -7,6 +7,12 @@ export class SignUpScreen extends BaseScreen {
   private readonly emailInput = 'signup-email-input';
   private readonly passwordInput = 'signup-password-input';
   private readonly confirmPasswordInput = 'signup-confirm-password-input';
+
+  /** Last field filled here, so it is the one holding the keyboard. */
+  protected keyboardInput = this.confirmPasswordInput;
+
+  /** `AuthFormTemplate`'s title row — above the keyboard on every auth screen. */
+  protected blurTarget = 'auth-title-row';
   private readonly submitButton = 'signup-submit-button';
   private readonly loginLink = 'signup-login-link';
 

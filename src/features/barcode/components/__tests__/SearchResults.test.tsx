@@ -20,10 +20,16 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   safeEvict: jest.fn(),
 }));
 
-jest.mock('#/apollo/utils/pantryCacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/pantryCacheUpdaters'),
-  adjustPantryItemCount: jest.fn(),
-}));
+jest.mock('#/apollo/utils/pantryCacheUpdaters', () => {
+  const actual = jest.requireActual('#/apollo/utils/pantryCacheUpdaters');
+  // Spied, not stubbed: the counting these do is what the assertions rest on,
+  // and it is proven against a real cache in `pantryItemLocalWrites.test.ts`.
+  return {
+    ...actual,
+    addPantryItemLocally: jest.fn(actual.addPantryItemLocally),
+    revertOptimisticPantryItem: jest.fn(actual.revertOptimisticPantryItem),
+  };
+});
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
   const { classifyCreateResult } = jest.requireActual(
@@ -229,13 +235,12 @@ describe('SearchResults', () => {
   });
 
   describe('the pantry item count', () => {
-    // `addToPantryItemsCache` moves the LIST; the header's "N items" reads
-    // `Pantry.stats.totalItems`, which only the mutation's `update:` callback
-    // touched — and that never runs when the create is queued offline. The
-    // scanner is the third create path and was the last one still doing it.
-    const { adjustPantryItemCount } = jest.requireMock(
-      '#/apollo/utils/pantryCacheUpdaters',
-    );
+    // The connection write moves the LIST; the header's "N items" reads
+    // `Pantry.stats.totalItems`, which the mutation's `update:` callback never
+    // touches when the create is queued offline. Publishing and withdrawing
+    // both go through the counting helpers so the two cannot drift.
+    const { addPantryItemLocally, revertOptimisticPantryItem } =
+      jest.requireMock('#/apollo/utils/pantryCacheUpdaters');
 
     it('moves with the optimistic row, before the server answers', async () => {
       const rec = recordMock(BarcodeCreatePantryItemDocument, {
@@ -253,10 +258,10 @@ describe('SearchResults', () => {
       fireEvent.press(screen.getByTestId('primary-btn'));
 
       await waitFor(() =>
-        expect(adjustPantryItemCount).toHaveBeenCalledWith(
+        expect(addPantryItemLocally).toHaveBeenCalledWith(
           expect.anything(),
           defaultProps.pantryId,
-          1,
+          expect.objectContaining({ __typename: 'PantryItem' }),
         ),
       );
     });
@@ -279,10 +284,10 @@ describe('SearchResults', () => {
       fireEvent.press(screen.getByTestId('primary-btn'));
 
       await waitFor(() =>
-        expect(adjustPantryItemCount).toHaveBeenCalledWith(
+        expect(revertOptimisticPantryItem).toHaveBeenCalledWith(
           expect.anything(),
           defaultProps.pantryId,
-          -1,
+          expect.any(String),
         ),
       );
 

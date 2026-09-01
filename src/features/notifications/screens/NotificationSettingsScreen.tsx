@@ -17,6 +17,7 @@ import {
 } from '#features/notifications/hooks/useNotificationSettings';
 import { useNotificationPermissions } from '#features/notifications/hooks/useNotificationPermissions';
 import { useNotificationSync } from '#features/notifications/hooks/useNotificationSync';
+import { EXPIRATION_THRESHOLD_DAYS } from '#features/notifications/utils/expirationLadder';
 import { ExpirationFrequency } from '#/graphql/generated/schemaTypes';
 import { useDataState } from '#hooks/data/useDataState';
 import { DataStateView } from '#components/molecules/DataStateView';
@@ -154,26 +155,19 @@ const getFrequencyOptions = (t: Translate) => [
   },
 ];
 
-const getThresholdOptions = (t: Translate) => [
-  { label: t('notifications.thresholdSameDay'), value: '0' },
-  { label: t('notifications.thresholdNDaysBefore', { n: 1 }), value: '1' },
-  {
-    label: t('notifications.thresholdNDaysBeforePlural', { n: 2 }),
-    value: '2',
-  },
-  {
-    label: t('notifications.thresholdNDaysBeforePlural', { n: 3 }),
-    value: '3',
-  },
-  {
-    label: t('notifications.thresholdNDaysBeforePlural', { n: 5 }),
-    value: '5',
-  },
-  {
-    label: t('notifications.thresholdNDaysBeforePlural', { n: 7 }),
-    value: '7',
-  },
-];
+const thresholdLabel = (t: Translate, days: number): string => {
+  if (days === 0) return t('notifications.thresholdSameDay');
+  if (days === 1) return t('notifications.thresholdNDaysBefore', { n: 1 });
+  return t('notifications.thresholdNDaysBeforePlural', { n: days });
+};
+
+// Derived from the ladder, so an offered value always maps to a rung the API
+// can actually fire.
+const getThresholdOptions = (t: Translate) =>
+  EXPIRATION_THRESHOLD_DAYS.map(days => ({
+    label: thresholdLabel(t, days),
+    value: String(days),
+  }));
 
 /**
  * No `loading` prop: `SettingSwitch` forwards it to `disabled`, which drops taps
@@ -200,6 +194,22 @@ const renderSettings = (
       onValueChange={v => handleSettingChange(key, v)}
     />
   ));
+
+/**
+ * A permission changed in system settings reaches the server only from here:
+ * registration carries the push token when permission is granted and clears the
+ * stored one when it is not, so either direction is delivered by the same call.
+ * Module scope keeps the reference dep-array stable.
+ */
+const syncPermissionChange = async (
+  checkPermissions: () => Promise<boolean>,
+  wasGranted: boolean | null,
+  pushEnabled: boolean,
+): Promise<void> => {
+  const granted = await checkPermissions();
+  if (wasGranted === null || granted === wasGranted || !pushEnabled) return;
+  authService.registerDeviceInBackground();
+};
 
 export const NotificationSettingsScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -254,20 +264,30 @@ export const NotificationSettingsScreen: React.FC = () => {
   // Check permission status when screen comes into focus
   useEffect(() => {
     const checkPermsOnFocus = addListener('focus', () => {
-      checkPermissions();
+      void syncPermissionChange(
+        checkPermissions,
+        hasPermission,
+        settings.pushEnabled,
+      );
     });
 
     return checkPermsOnFocus;
-  }, [addListener, checkPermissions]);
+  }, [addListener, checkPermissions, hasPermission, settings.pushEnabled]);
 
   // Re-check permissions when returning from device settings (background -> active)
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
+      // `currentState` is null until Android reports the first state, so the
+      // ref cannot be assumed to hold a string.
       if (
-        appState.current.match(/inactive|background/) &&
+        /inactive|background/.test(String(appState.current)) &&
         nextAppState === 'active'
       ) {
-        checkPermissions();
+        void syncPermissionChange(
+          checkPermissions,
+          hasPermission,
+          settings.pushEnabled,
+        );
       }
       appState.current = nextAppState;
     });
@@ -275,7 +295,7 @@ export const NotificationSettingsScreen: React.FC = () => {
     return () => {
       subscription.remove();
     };
-  }, [checkPermissions]);
+  }, [checkPermissions, hasPermission, settings.pushEnabled]);
 
   const handleSettingChange = (
     key: keyof NotificationSettings,

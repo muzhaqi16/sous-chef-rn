@@ -138,7 +138,7 @@
     "reasonLabel": "Çfarë nuk shkon?",
     "reasonPlaceholder": "p.sh. marka është e gabuar, fotoja është e një produkti tjetër",
     "reasonTooShort": "Shto të paktën {{count}} karaktere që administratori të dijë çfarë të shohë.",
-    "submit": "Dërgo raportin",
+    "submit": "Dërgo",
     "sentTitle": "Raporti u dërgua",
     "sentBody": "Faleminderit — një administrator do ta shohë këtë artikull.",
     "failedBody": "Diçka shkoi keq gjatë dërgimit të raportit. Provo përsëri.",

@@ -1,15 +1,15 @@
 import React from 'react';
-import {
-  ActivityIndicator,
-  type StyleProp,
-  type TextStyle,
-  type ViewStyle,
-} from 'react-native';
+import { type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { RIPPLE } from '#constants/ripple';
 import { Icon } from '#utils/iconUtils';
 import { PressableScale } from '#components/atoms/PressableScale';
 import { Text } from '#components/atoms/Text';
+import {
+  OnPrimaryActivityIndicator,
+  OnErrorActivityIndicator,
+  ThemedActivityIndicator,
+} from '#components/atoms/themedComponents';
 
 interface ButtonProps {
   onPress: () => void;
@@ -75,19 +75,26 @@ export const Button: React.FC<ButtonProps> = ({
       accessibilityState={{ disabled: disabled || loading, busy: loading }}
     >
       {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={useWhiteRipple ? 'white' : undefined}
-        />
+        // The same three-way split the icon's `tone` makes below; `danger`
+        // sits on `error`, not `primary`.
+        variant === 'primary' ? (
+          <OnPrimaryActivityIndicator size="small" />
+        ) : variant === 'danger' ? (
+          <OnErrorActivityIndicator size="small" />
+        ) : (
+          <ThemedActivityIndicator size="small" />
+        )
       ) : (
         <>
           {!!icon && (
             <Icon
               name={icon}
               size={size === 'small' ? 16 : size === 'large' ? 24 : 20}
-              color={
-                variant === 'primary' || variant === 'danger'
-                  ? 'white'
+              tone={
+                variant === 'primary'
+                  ? 'onPrimary'
+                  : variant === 'danger'
+                  ? 'onError'
                   : undefined
               }
             />
@@ -159,9 +166,9 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.md,
     variants: {
       variant: {
-        primary: { color: theme.colors.white },
+        primary: { color: theme.colors.onPrimary },
         secondary: { color: theme.colors.textPrimary },
-        danger: { color: theme.colors.white },
+        danger: { color: theme.colors.onError },
         ghost: { color: theme.colors.primary },
         outline: { color: theme.colors.primary },
       },

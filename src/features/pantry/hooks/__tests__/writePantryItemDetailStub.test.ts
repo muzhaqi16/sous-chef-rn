@@ -268,6 +268,52 @@ describe('writePantryItemDetailStub', () => {
     },
   );
 
+  it('derives the total cost from the per-unit price and the quantity', () => {
+    const cache = makeCache();
+    writePantryItemDetailStub(cache, 'pi-cost', {
+      itemId: 'item-cost',
+      itemName: 'Green onions',
+      costPerUnit: 0.59,
+      quantity: 5,
+    });
+
+    const costFragment = gql`
+      fragment CostProbe on PantryItem {
+        id
+        costPerUnit
+        totalCost
+      }
+    `;
+    const costs = cache.readFragment({
+      id: 'PantryItem:pi-cost',
+      fragment: costFragment,
+    }) as { costPerUnit: number; totalCost: number };
+    expect(costs.costPerUnit).toBe(0.59);
+    // The product, unrounded — which is what the server stores too, and what
+    // `formatCurrency` renders as $2.95.
+    expect(costs.totalCost).toBeCloseTo(2.95, 10);
+  });
+
+  it('leaves the total cost unknown when there is no price', () => {
+    const cache = makeCache();
+    writePantryItemDetailStub(cache, 'pi-free', {
+      itemId: 'item-free',
+      itemName: 'Green onions',
+      quantity: 5,
+    });
+
+    const costFragment = gql`
+      fragment CostProbeEmpty on PantryItem {
+        id
+        costPerUnit
+        totalCost
+      }
+    `;
+    expect(
+      cache.readFragment({ id: 'PantryItem:pi-free', fragment: costFragment }),
+    ).toMatchObject({ costPerUnit: null, totalCost: null });
+  });
+
   it('still supplies neutral values for an item the cache has never seen', () => {
     const cache = makeCache();
     const itemId = 'item-brand-new';

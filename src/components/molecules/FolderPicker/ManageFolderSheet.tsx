@@ -283,7 +283,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.border,
   },
   renameButtonText: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   renameButtonTextDisabled: {
     color: theme.colors.textSecondary,
@@ -337,7 +337,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   deleteConfirmDeleteText: {
-    color: theme.colors.white,
+    color: theme.colors.onError,
   },
   pressed: {
     opacity: theme.opacity.pressed,

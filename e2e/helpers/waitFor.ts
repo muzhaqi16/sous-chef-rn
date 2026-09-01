@@ -306,6 +306,28 @@ export async function tapFirstAvailable(
   return index;
 }
 
+/**
+ * Non-throwing ON-SCREEN probe, for CHOOSING a path rather than asserting one.
+ * The threshold is load-bearing: `toExist` also matches a screen mounted under
+ * a pushed one, while bare `toBeVisible()` wants ~75% and rejects a container
+ * the keyboard covers.
+ */
+const ON_SCREEN_PCT = 1;
+
+export async function isOnScreen(
+  testID: string,
+  timeout: number = 1000,
+): Promise<boolean> {
+  try {
+    await waitFor(element(by.id(testID)))
+      .toBeVisible(ON_SCREEN_PCT)
+      .withTimeout(timeout);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** For optional UI — hints, tooltips. Skips the action if absent. */
 export async function waitIfPresent(
   targetElement: Detox.IndexableNativeElement,

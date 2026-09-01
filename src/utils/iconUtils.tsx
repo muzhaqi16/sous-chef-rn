@@ -37,6 +37,7 @@ const TONE_TO_COLOR: Record<string, (t: Theme) => string> = {
   iconSecondary: t => t.colors.iconSecondary,
   iconTertiary: t => t.colors.iconTertiary,
   onPrimary: t => t.colors.onPrimary,
+  onError: t => t.colors.onError,
   background: t => t.colors.background,
   white: t => t.colors.white,
   black: t => t.colors.black,
@@ -86,18 +87,4 @@ export const Icon: React.FC<IconProps> = ({ name, size = 24, color, tone }) => {
       uniProps={t => ({ color: (t as Theme).colors.textPrimary })}
     />
   );
-};
-
-// Imperative API — kept for the few callsites that build icon elements
-// outside JSX. Not theme-reactive; pass a static `color` or migrate to <Icon>.
-export const renderIcon = ({
-  name,
-  size = 24,
-  color = '#000',
-}: {
-  name: string;
-  size?: number;
-  color?: string;
-}): React.ReactElement => {
-  return <Ionicons size={size} color={color} name={name as IoniconsIconName} />;
 };

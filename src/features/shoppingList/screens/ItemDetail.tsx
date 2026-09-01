@@ -29,6 +29,7 @@ import {
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
 import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
+import { totalFromUnitPrice } from '#/utils/purchasePrice';
 
 type RouteParams = {
   listId: string;
@@ -193,6 +194,20 @@ export const ShoppingListItemDetail: React.FC<
   const estimatedPrice = item.priceEstimate?.estimated;
   const preferredStoreName = item.storeInfo?.preferredStore?.name;
 
+  // The API stores the price PER UNIT; the shopper entered the total. Show the
+  // total they paid, with the split beneath it when it is not the same number.
+  const purchasedQuantity = item.purchaseInfo?.purchasedQuantity ?? null;
+  const perUnitPaid = item.purchaseInfo?.isPurchased
+    ? item.purchaseInfo.purchasedPrice ?? null
+    : null;
+  const purchasedTotal =
+    purchasedQuantity != null
+      ? totalFromUnitPrice(perUnitPaid, purchasedQuantity)
+      : null;
+  // At quantity 1 the per-unit price IS the total; repeating it reads as noise.
+  const perUnitSubline =
+    purchasedQuantity != null && purchasedQuantity !== 1 ? perUnitPaid : null;
+
   return (
     <>
       <CollapsingHeroDetail
@@ -294,18 +309,34 @@ export const ShoppingListItemDetail: React.FC<
           {!!item.purchaseInfo?.isPurchased &&
             item.purchaseInfo.purchasedQuantity != null && (
               <DetailRow label={t('shoppingListScreens.purchased')}>
-                <Text size="sm" weight="medium">
-                  {item.purchaseInfo.purchasedPrice != null
-                    ? `${
-                        item.purchaseInfo.purchasedQuantity
-                      } @ ${formatCurrency(
-                        item.purchaseInfo.purchasedPrice,
-                        DEFAULT_CURRENCY,
-                      )}`
-                    : `${item.purchaseInfo.purchasedQuantity}`}
-                </Text>
+                <FormattedItemSubtitle
+                  quantity={item.purchaseInfo.purchasedQuantity}
+                  unitSymbol={unitSymbol}
+                />
               </DetailRow>
             )}
+          {purchasedTotal != null && (
+            <DetailRow label={t('labels.totalPaid')}>
+              <View style={styles.paidCell}>
+                <Text size="sm" weight="medium">
+                  {formatCurrency(purchasedTotal, DEFAULT_CURRENCY)}
+                </Text>
+                {perUnitSubline != null && (
+                  <Text size="xs" tone="secondary">
+                    {t(
+                      unitSymbol
+                        ? 'purchaseAmountSheet.perUnitOfHint'
+                        : 'purchaseAmountSheet.perUnitHint',
+                      {
+                        price: formatCurrency(perUnitSubline, DEFAULT_CURRENCY),
+                        unit: unitSymbol,
+                      },
+                    )}
+                  </Text>
+                )}
+              </View>
+            </DetailRow>
+          )}
           {!!item.purchaseInfo?.isPurchased &&
             !!item.purchaseInfo.purchasedBy && (
               <DetailRow label={t('shoppingListScreens.purchasedBy')}>
@@ -458,6 +489,9 @@ const styles = StyleSheet.create(theme => ({
     marginLeft: theme.spacing.xs,
   },
   // Overrides on top of InfoRow's defaults (border/structure come from there).
+  paidCell: {
+    alignItems: 'flex-end',
+  },
   detailRow: {
     paddingVertical: theme.spacing.md,
   },

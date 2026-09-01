@@ -30,6 +30,7 @@ jest.mock('#/utils/isNetworkError', () => ({
 jest.mock('../wsLink', () => ({
   reconnectWebSocket: jest.fn(),
   registerTokenRefresh: jest.fn(),
+  registerRefreshInFlightCheck: jest.fn(),
 }));
 
 // Mock Apollo client
@@ -742,6 +743,135 @@ describe('refreshToken', () => {
       const state = getRefreshState();
       expect(state.isRefreshing).toBe(false);
       expect(state.refreshPromise).toBeNull();
+    });
+  });
+
+  /**
+   * The refresh token is single-use, so N concurrent rotations produce one
+   * winner and N-1 losers holding a token their own client spent milliseconds
+   * earlier. Every entry point therefore shares one exchange.
+   */
+  describe('single-flight', () => {
+    const seedStore = () => {
+      const setTokens = jest.fn();
+      (mockedUseStore.getState as jest.Mock).mockReturnValue({
+        refreshToken: 'mock-refresh-token',
+        tokenRefreshFailed: jest.fn(),
+        setTokens,
+        setNeedsTokenRefresh: jest.fn(),
+      });
+      return setTokens;
+    };
+
+    beforeEach(() => {
+      clearRefreshState();
+      seedStore();
+      (mockedClient.mutate as jest.Mock).mockResolvedValue({
+        data: {
+          refresh: {
+            __typename: 'RefreshTokenPayload',
+            accessToken: 'rotated-token',
+            refreshToken: 'rotated-refresh',
+          },
+        },
+      });
+    });
+
+    it('six concurrent callers spend exactly one rotation', async () => {
+      const results = await Promise.all(
+        Array.from({ length: 6 }, () => proactiveTokenRefresh()),
+      );
+
+      expect(mockedClient.mutate).toHaveBeenCalledTimes(1);
+      expect(results).toEqual(Array(6).fill('rotated-token'));
+    });
+
+    it('a joiner is never turned away by the throttle', async () => {
+      // The throttle guards a NEW exchange. Applying it to a caller that would
+      // have joined the in-flight one would hand back a null token while a
+      // perfectly good rotation was already running.
+      const first = proactiveTokenRefresh();
+      const joiner = proactiveTokenRefresh();
+
+      expect(await joiner).toBe('rotated-token');
+      expect(await first).toBe('rotated-token');
+      expect(mockedClient.mutate).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses a new exchange inside MIN_REFRESH_INTERVAL', async () => {
+      // authLink AWAITS this once the token is expired, so an unguarded entry
+      // point would let a refresh that keeps failing start a fresh doomed
+      // exchange per request rather than one per interval.
+      await proactiveTokenRefresh();
+      expect(mockedClient.mutate).toHaveBeenCalledTimes(1);
+
+      const throttled = await proactiveTokenRefresh();
+
+      expect(throttled).toBeNull();
+      expect(mockedClient.mutate).toHaveBeenCalledTimes(1);
+    });
+
+    it('allows a new exchange once the interval has passed', async () => {
+      await proactiveTokenRefresh();
+      const MIN_REFRESH_INTERVAL_MS = 5000;
+      const realNow = Date.now;
+      jest
+        .spyOn(Date, 'now')
+        .mockImplementation(() => realNow() + MIN_REFRESH_INTERVAL_MS + 1);
+
+      expect(await proactiveTokenRefresh()).toBe('rotated-token');
+      expect(mockedClient.mutate).toHaveBeenCalledTimes(2);
+
+      jest.restoreAllMocks();
+    });
+
+    it('lets the socket recovery through the throttle', async () => {
+      // The 4403 fast path needs a token before the socket's backoff elapses.
+      // Throttled, it receives the same `null` a FAILED attempt returns, so the
+      // recovery silently no-ops for the window with nothing to tell the two
+      // apart.
+      await proactiveTokenRefresh();
+      expect(mockedClient.mutate).toHaveBeenCalledTimes(1);
+
+      const recovered = await proactiveTokenRefresh({ reason: 'recovery' });
+
+      expect(recovered).toBe('rotated-token');
+      expect(mockedClient.mutate).toHaveBeenCalledTimes(2);
+    });
+
+    it('still throttles an ordinary caller after a recovery', async () => {
+      await proactiveTokenRefresh({ reason: 'recovery' });
+
+      expect(await proactiveTokenRefresh()).toBeNull();
+    });
+  });
+
+  describe('the contract every return path owes its caller', () => {
+    it("resolves rather than rejects when a JOINER's refresh throws", async () => {
+      // The starter converts its own failure to null in its catch. A joiner was
+      // handed the in-flight promise raw, so it rejected — and authLink's
+      // `?? token` fallback, which absorbs a resolved null, cannot absorb that.
+      (mockedClient.mutate as jest.Mock).mockRejectedValue(
+        new Error('Network down'),
+      );
+
+      const starter = proactiveTokenRefresh();
+      const joiner = proactiveTokenRefresh();
+
+      await expect(joiner).resolves.toBeNull();
+      await expect(starter).resolves.toBeNull();
+    });
+
+    it('gives joiner and starter the same answer', async () => {
+      (mockedClient.mutate as jest.Mock).mockRejectedValue(
+        new Error('Network down'),
+      );
+
+      const [starter, ...joiners] = await Promise.all(
+        Array.from({ length: 6 }, () => proactiveTokenRefresh()),
+      );
+
+      expect(joiners).toEqual(Array(5).fill(starter));
     });
   });
 });

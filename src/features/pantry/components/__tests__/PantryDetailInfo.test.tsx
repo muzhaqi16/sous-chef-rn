@@ -80,6 +80,31 @@ describe('PantryDetailInfo', () => {
     expect(screen.getByText('2 L')).toBeTruthy();
   });
 
+  it('shows the total paid on the Purchased row, not the unit price', () => {
+    render(
+      <PantryDetailInfo
+        {...defaultProps}
+        itemRef={{
+          ...baseItem,
+          quantity: 5,
+          costPerUnit: 0.59,
+          totalCost: 2.95,
+          purchase: {
+            __typename: 'Purchase',
+            id: 'pu1',
+            purchaseDate: '2026-08-30T00:00:00Z',
+            unitPrice: 0.59,
+            totalPrice: 2.95,
+          },
+        }}
+      />,
+    );
+    // Cost/Unit already carries the 0.59; repeating it here read as a bug.
+    expect(screen.getByText('Jan 1, 2024 · $2.95')).toBeTruthy();
+    expect(screen.getByText('$0.59')).toBeTruthy();
+    expect(screen.getByText('$2.95')).toBeTruthy();
+  });
+
   it('always renders Added row', () => {
     render(<PantryDetailInfo {...defaultProps} />);
     expect(screen.getByText('Added')).toBeTruthy();
@@ -200,11 +225,97 @@ describe('PantryDetailInfo', () => {
     expect(screen.getByText('$3.50')).toBeTruthy();
   });
 
-  it('renders Total Cost row when totalCost is positive', () => {
+  it('renders the stock-value row when totalCost is positive', () => {
     const item = { ...baseItem, totalCost: 7.0 };
     render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
-    expect(screen.getByText('Total Cost')).toBeTruthy();
+    expect(screen.getByText('Stock value')).toBeTruthy();
     expect(screen.getByText('$7.00')).toBeTruthy();
+  });
+
+  describe('money the server derived from the batches', () => {
+    it('says the rate is an average, and names the last purchase', () => {
+      // The server already values the remaining stock; the batches only decide
+      // how to label it.
+      const item = { ...baseItem, costPerUnit: 0.74, totalCost: 5.95 };
+      render(
+        <PantryDetailInfo
+          {...defaultProps}
+          itemRef={item}
+          pricing={{
+            isAveraged: true,
+            isRateDiluted: false,
+            lastPurchase: { date: '2026-08-31T00:00:00Z', totalCost: 3 },
+          }}
+        />,
+      );
+
+      expect(screen.getByText('Avg Cost/Unit')).toBeTruthy();
+      expect(screen.getByText('$0.74')).toBeTruthy();
+      expect(screen.getByText('Stock value')).toBeTruthy();
+      expect(screen.getByText('$5.95')).toBeTruthy();
+      expect(screen.getByText('Last purchase')).toBeTruthy();
+    });
+
+    it('keeps the plain labels for a stack with one purchase behind it', () => {
+      const item = { ...baseItem, costPerUnit: 0.59, totalCost: 2.95 };
+      render(
+        <PantryDetailInfo
+          {...defaultProps}
+          itemRef={item}
+          pricing={{
+            isAveraged: false,
+            isRateDiluted: false,
+            lastPurchase: null,
+          }}
+        />,
+      );
+
+      expect(screen.getByText('Cost/Unit')).toBeTruthy();
+      expect(screen.queryByText('Avg Cost/Unit')).toBeNull();
+      expect(screen.queryByText('Last purchase')).toBeNull();
+    });
+
+    it('hides the rate when unpriced stock dilutes it below any price paid', () => {
+      // totalCost covers only the priced batches; costPerUnit spreads it over
+      // ALL units, so the rate is not a price anyone paid. The value stands.
+      const item = { ...baseItem, costPerUnit: 0.3, totalCost: 2.95 };
+      render(
+        <PantryDetailInfo
+          {...defaultProps}
+          itemRef={item}
+          pricing={{
+            isAveraged: false,
+            isRateDiluted: true,
+            lastPurchase: null,
+          }}
+        />,
+      );
+
+      expect(screen.queryByText('Cost/Unit')).toBeNull();
+      expect(screen.queryByText('$0.30')).toBeNull();
+      expect(screen.getByText('Stock value')).toBeTruthy();
+      expect(screen.getByText('$2.95')).toBeTruthy();
+    });
+
+    it('omits both rows when no remaining stock has a known cost', () => {
+      // Null, not zero — rendering $0.00 would claim the stock was free.
+      const item = { ...baseItem, costPerUnit: null, totalCost: null };
+      render(
+        <PantryDetailInfo
+          {...defaultProps}
+          itemRef={item}
+          pricing={{
+            isAveraged: false,
+            isRateDiluted: false,
+            lastPurchase: null,
+          }}
+        />,
+      );
+
+      expect(screen.queryByText('Cost/Unit')).toBeNull();
+      expect(screen.queryByText('Stock value')).toBeNull();
+      expect(screen.queryByText('$0.00')).toBeNull();
+    });
   });
 
   it('renders Min Stock row when minQuantity is set', () => {

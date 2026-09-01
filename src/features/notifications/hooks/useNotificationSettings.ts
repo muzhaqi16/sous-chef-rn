@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useUser } from '#store/useAppStore';
 import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import {
@@ -17,10 +17,7 @@ import {
   updateEntityFieldsLocalFirst,
 } from '#/apollo/utils/localFirstFields';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import {
-  computeIsQuietTime,
-  getDeviceTimezone,
-} from '#/utils/notifications/quietHours';
+import { computeIsQuietTime } from '#/utils/notifications/quietHours';
 import { logger } from '#/utils/environment';
 
 export interface NotificationSettings {
@@ -132,7 +129,7 @@ function reportRefusal(
  * without a per-render dependency that would re-arm it every render. Returns
  * whether the change is safe to treat as saved (queued counts).
  */
-async function applySettingsUpdate({
+export async function applySettingsUpdate({
   cache,
   entity,
   updates,
@@ -327,51 +324,6 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
 
     return updateMultipleSettings(defaultSettings);
   };
-
-  // Nothing else in the app writes quietHoursTimezone, so an account keeps the
-  // API's "UTC" default and the window is applied on a UTC clock — 22:00–08:00
-  // mutes 18:00–04:00 in New York, both here and in the server's suppression.
-  // Point it at the device's zone so the configured window means the user's own
-  // wall clock. Guarded by a ref: a rejected write must not re-fire every render.
-  const syncedTimezone = useRef<string | null>(null);
-  const preferencesId = preferences?.id;
-  const quietHoursEnabled = preferences?.quietHoursEnabled;
-  const quietHoursTimezone = preferences?.quietHoursTimezone;
-  useEffect(() => {
-    const deviceTimezone = getDeviceTimezone();
-    if (
-      !deviceTimezone ||
-      !quietHoursEnabled ||
-      !preferencesId ||
-      quietHoursTimezone === deviceTimezone ||
-      syncedTimezone.current === deviceTimezone
-    ) {
-      return;
-    }
-    syncedTimezone.current = deviceTimezone;
-    void applySettingsUpdate({
-      cache: client.cache,
-      entity: { __typename: 'NotificationPreferences', id: preferencesId },
-      updates: { quietHoursTimezone: deviceTimezone },
-      // Snapshotted from the field itself, not the whole record, so the effect
-      // keeps closing over the fields it already depends on.
-      previous: snapshotFields(
-        { quietHoursTimezone },
-        { quietHoursTimezone: deviceTimezone },
-      ),
-      mutate: input =>
-        updatePreferences({
-          variables: { input },
-          context: { localFirst: true },
-        }),
-    });
-  }, [
-    client,
-    preferencesId,
-    quietHoursEnabled,
-    quietHoursTimezone,
-    updatePreferences,
-  ]);
 
   // Evaluated in the user's configured IANA timezone (not the device's) so
   // client suppression matches the server's. See computeIsQuietTime.

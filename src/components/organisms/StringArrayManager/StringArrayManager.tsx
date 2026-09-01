@@ -3,13 +3,9 @@ import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { BottomSheetTextInput, BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-
-const ThemedSheetTextInput = withUnistyles(BottomSheetTextInput, theme => ({
-  placeholderTextColor: theme.colors.inputPlaceholder,
-}));
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { localizedErrorMessage } from '#/services/errorService';
 import { commonStyles } from '#/styles/commonStyles';
@@ -17,6 +13,7 @@ import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { Text } from '#components/atoms/Text';
+import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 
 const defaultTransform = (item: string) => item.trim();
 
@@ -180,7 +177,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
             confirmDisabled={loading}
           />
 
-          <ThemedSheetTextInput
+          <ThemedBottomSheetTextInput
             style={[styles.sheetInput, error && styles.inputError]}
             value={newItem}
             onChangeText={text => {

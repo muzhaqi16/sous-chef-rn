@@ -138,7 +138,7 @@
     "reasonLabel": "¿Qué está mal?",
     "reasonPlaceholder": "p. ej., la marca es incorrecta, la foto es de otro producto",
     "reasonTooShort": "Añade al menos {{count}} caracteres para que un administrador sepa qué revisar.",
-    "submit": "Enviar informe",
+    "submit": "Enviar",
     "sentTitle": "Informe enviado",
     "sentBody": "Gracias: un administrador revisará este artículo.",
     "failedBody": "Algo salió mal al enviar tu informe. Inténtalo de nuevo.",

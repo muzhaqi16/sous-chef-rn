@@ -167,7 +167,7 @@ const styles = StyleSheet.create(theme => ({
     marginRight: theme.spacing['3'],
   },
   avatarText: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
   },

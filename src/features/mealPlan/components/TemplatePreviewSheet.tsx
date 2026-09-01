@@ -314,7 +314,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   confirmText: {
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   editButton: {
     flexDirection: 'row',

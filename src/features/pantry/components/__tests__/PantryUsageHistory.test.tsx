@@ -2,19 +2,16 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { PantryUsageHistory } from '../PantryUsageHistory';
+import type { UsageRecord } from '../UsageHistoryRow';
 
 jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
   formatDate: jest.fn((d: string) => `formatted:${d}`),
 }));
 
-type UsageRecordNode = React.ComponentProps<
-  typeof PantryUsageHistory
->['usageRecords'][number]['node'];
-
 const makeRecord = (
   id: string,
-  overrides: Partial<UsageRecordNode> = {},
-): { node: UsageRecordNode } => ({
+  overrides: Partial<UsageRecord> = {},
+): { node: UsageRecord } => ({
   node: {
     id,
     usedAt: `2024-01-0${id}`,
@@ -27,10 +24,7 @@ const makeRecord = (
 });
 
 describe('PantryUsageHistory', () => {
-  const defaultProps = {
-    expanded: false,
-    onToggle: jest.fn(),
-  };
+  const onViewAll = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -38,109 +32,48 @@ describe('PantryUsageHistory', () => {
 
   it('returns null when there are no usage records', () => {
     const { toJSON } = render(
-      <PantryUsageHistory {...defaultProps} usageRecords={[]} />,
+      <PantryUsageHistory usageRecords={[]} onViewAll={onViewAll} />,
     );
     expect(toJSON()).toBeNull();
   });
 
-  it('renders CollapsibleSection with title and record count', () => {
-    render(
-      <PantryUsageHistory {...defaultProps} usageRecords={[makeRecord('1')]} />,
-    );
-    expect(screen.getByText('Usage History (1)')).toBeTruthy();
-  });
-
-  it('does not render records when collapsed', () => {
+  it('summarizes rather than listing — the ledger is unbounded', () => {
     render(
       <PantryUsageHistory
-        {...defaultProps}
-        expanded={false}
-        usageRecords={[makeRecord('1')]}
+        usageRecords={[makeRecord('1'), makeRecord('2')]}
+        totalCount={87}
+        onViewAll={onViewAll}
       />,
     );
-    expect(screen.queryByText('formatted:2024-01-01')).toBeNull();
-  });
 
-  it('renders records when expanded', () => {
-    render(
-      <PantryUsageHistory
-        {...defaultProps}
-        expanded={true}
-        usageRecords={[makeRecord('1')]}
-      />,
-    );
+    expect(screen.getByText('Usage History')).toBeTruthy();
+    // The server's total, not the handful the detail query fetched.
+    expect(screen.getByText('87')).toBeTruthy();
     expect(screen.getByText('formatted:2024-01-01')).toBeTruthy();
-    expect(screen.getByText('Consumed')).toBeTruthy();
+    // No second row: this is a summary.
+    expect(screen.queryByText('formatted:2024-01-02')).toBeNull();
   });
 
-  it('shows quantity with unit symbol', () => {
+  it('falls back to the fetched count when the server sent no total', () => {
     render(
       <PantryUsageHistory
-        {...defaultProps}
-        expanded={true}
-        usageRecords={[makeRecord('1', { quantityUsed: 3 })]}
+        usageRecords={[makeRecord('1'), makeRecord('2')]}
+        onViewAll={onViewAll}
       />,
     );
-    expect(screen.getByText(/-3 L/)).toBeTruthy();
+    expect(screen.getByText('2')).toBeTruthy();
   });
 
-  it('shows + prefix for restock records', () => {
-    render(
-      <PantryUsageHistory
-        {...defaultProps}
-        expanded={true}
-        usageRecords={[
-          makeRecord('1', { purpose: 'RESTOCK', quantityUsed: 5 }),
-        ]}
-      />,
-    );
-    expect(screen.getByText(/\+5 L/)).toBeTruthy();
-    expect(screen.getByText('Restocked')).toBeTruthy();
-  });
-
-  it('shows adjustment records with reason', () => {
-    render(
-      <PantryUsageHistory
-        {...defaultProps}
-        expanded={true}
-        usageRecords={[
-          makeRecord('1', {
-            purpose: 'ADJUSTMENT',
-            quantityUsed: 2,
-            adjustmentReason: 'Inventory count',
-          }),
-        ]}
-      />,
-    );
-    expect(screen.getByText('Inventory adjusted')).toBeTruthy();
-    expect(screen.getByText('Inventory count')).toBeTruthy();
-  });
-
-  it('shows only first 5 records and "+N more entries" when more than 5', () => {
-    const records = Array.from({ length: 7 }, (_, i) =>
-      makeRecord(String(i + 1)),
-    );
-    render(
-      <PantryUsageHistory
-        {...defaultProps}
-        expanded={true}
-        usageRecords={records}
-      />,
-    );
-    expect(screen.getByText('+2 more entries')).toBeTruthy();
-  });
-
-  it('calls onToggle when header is pressed', async () => {
+  it('opens the full history when tapped', async () => {
     const user = userEvent.setup();
-    const onToggle = jest.fn();
     render(
       <PantryUsageHistory
-        {...defaultProps}
-        onToggle={onToggle}
         usageRecords={[makeRecord('1')]}
+        onViewAll={onViewAll}
       />,
     );
-    await user.press(screen.getByText('Usage History (1)'));
-    expect(onToggle).toHaveBeenCalledTimes(1);
+
+    await user.press(screen.getByText('View Details'));
+    expect(onViewAll).toHaveBeenCalled();
   });
 });

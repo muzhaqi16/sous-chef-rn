@@ -1,7 +1,8 @@
 import { UnistylesRuntime } from 'react-native-unistyles';
-import { derivePalette } from './derivePalette';
+import { derivePalette, onColor } from './derivePalette';
 import { spacing as baseSpacing } from './foundations/spacing';
 import { typography as baseTypography } from './foundations/typography';
+import { colors } from './foundations/colors';
 import { lightTheme, darkTheme } from './themes';
 import { PREFERENCE_DEFAULTS } from '#store/slices/preferenceTypes';
 import type {
@@ -69,6 +70,23 @@ export function applyAppearanceToRuntime(prefs: AppearancePreferences): void {
         // [500] is the palette anchor and matches the base theme's `primary` in
         // both modes; the rest mirror its per-mode shade mapping.
         primary: palette['500'],
+        // The readable foreground follows the new brand's luminance, not the
+        // theme: four of the seven pickable colours want dark text, three light.
+        onPrimary: onColor(
+          palette['500'],
+          colors.neutral[0],
+          colors.neutral[900],
+        ),
+        iconOnPrimary: onColor(
+          palette['500'],
+          colors.neutral[0],
+          colors.neutral[900],
+        ),
+        chipSelectedText: onColor(
+          isDark ? palette['400'] : palette['300'],
+          colors.neutral[0],
+          colors.neutral[900],
+        ),
         primaryLight: isDark ? palette['400'] + '20' : palette['100'],
         primaryDark: isDark ? palette['600'] : palette['700'],
         iconPrimary: isDark ? palette['400'] : palette['500'],

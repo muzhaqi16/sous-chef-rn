@@ -489,6 +489,17 @@ export function usePantryItemActions({
       return;
     }
 
+    // The new batch row is the server's to build, so drop the connection and
+    // let the screen refetch it — but only once a response arrived. Offline
+    // `queueLink` resolves null, and nothing would refill it.
+    if (restockPayload) {
+      client.cache.evict({
+        id: 'ROOT_QUERY',
+        fieldName: 'pantryItemBatchesConnection',
+        args: { pantryItemId: itemId },
+      });
+    }
+
     closeModal();
   };
 

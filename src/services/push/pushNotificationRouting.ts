@@ -8,8 +8,8 @@
 import NavigationService from '#/services/NavigationService';
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
 
-// FCM/Notifee payloads are flat string maps. Routing keys off `category` alone;
-// the other fields ride along for dedup and correlation, so aren't modeled here.
+// FCM/Notifee payloads are flat string maps. Routing keys off `category`; the
+// other fields ride along for dedup and correlation, so aren't modeled here.
 export interface NotificationTapData {
   category?: string;
 }
@@ -28,6 +28,9 @@ export const routeNotificationTap = (
 ): void => {
   const { category } = readTapData(data);
 
+  // Category alone. Quiet hours DELAY each notification's own push rather than
+  // merging them (`docs/guides/push-notifications.md` § Consent and gating), so
+  // no delivery stands for several and there is nothing to route around.
   switch (category?.toUpperCase()) {
     case NotificationCategory.Shopping:
       NavigationService.navigate('Home', {

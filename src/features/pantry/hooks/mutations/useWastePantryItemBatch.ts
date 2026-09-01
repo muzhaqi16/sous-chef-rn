@@ -25,6 +25,8 @@ const BATCH_STATUS_FRAGMENT = gql`
   fragment useWastePantryItemBatch_state on PantryItemBatch {
     id
     status
+    quantity
+    depletedAt
   }
 `;
 
@@ -52,16 +54,31 @@ export function useWastePantryItemBatch({
       __typename: 'PantryItemBatch',
       id: batchId,
     });
-    const snapshot = client.cache.readFragment<{ status: BatchStatus }>({
+    const snapshot = client.cache.readFragment<{
+      status: BatchStatus;
+      quantity: number | null;
+      depletedAt: string | null;
+    }>({
       id: batchCacheId,
       fragment: BATCH_STATUS_FRAGMENT,
       fragmentName: 'useWastePantryItemBatch_state',
     });
 
-    const writeStatus = (status: BatchStatus) =>
+    // Wasting empties the batch, so the server returns it at zero with a
+    // `depletedAt`. Writing only `status` left the row reading "3 bunch" with
+    // no date under a Wasted badge until a refetch — and offline, for good.
+    const writeState = (
+      status: BatchStatus,
+      quantity: number | null,
+      depletedAt: string | null,
+    ) =>
       client.cache.modify({
         id: batchCacheId,
-        fields: { status: () => status },
+        fields: {
+          status: () => status,
+          quantity: () => quantity,
+          depletedAt: () => depletedAt,
+        },
       });
 
     // Permanent optimistic write before firing — survives an offline/queued waste.
@@ -72,7 +89,7 @@ export function useWastePantryItemBatch({
       BatchStatus.Wasted,
     );
     try {
-      writeStatus(BatchStatus.Wasted);
+      writeState(BatchStatus.Wasted, 0, new Date().toISOString());
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Waste Pantry Item Batch (optimistic)',
@@ -99,8 +116,10 @@ export function useWastePantryItemBatch({
       // Resolved before the try — a `??` inside a try body makes the React
       // Compiler bail out of this hook.
       const revertedStatus = snapshot?.status ?? BatchStatus.Active;
+      const revertedQuantity = snapshot?.quantity ?? null;
+      const revertedDepletedAt = snapshot?.depletedAt ?? null;
       try {
-        writeStatus(revertedStatus);
+        writeState(revertedStatus, revertedQuantity, revertedDepletedAt);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Revert rejected batch waste',

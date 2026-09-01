@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   BottomSheetModal,
@@ -19,6 +18,7 @@ import {
   localizeNumericHint,
 } from '#/utils/formatters/number';
 import { totalFromUnitPrice, unitPriceFromTotal } from '#/utils/purchasePrice';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 
 interface PurchaseAmountSheetItem {
   id: string;
@@ -69,10 +69,14 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   loading = false,
 }) => {
   const { t } = useTranslation();
-  const { ref, modalProps } = useStandardBottomSheet({
+  // No snap points: the sheet measures its own content, so the keyboard lift
+  // seats it on the keyboard instead of stretching a fixed height up the
+  // screen and pushing the price field off the bottom edge.
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible: visible && !!item,
     onDismiss: onClose,
-    snapPoints: ['45%'],
+    snapPoints: [],
+    enableDynamicSizing: true,
   });
 
   const [quantityInput, setQuantityInput] = useState('');
@@ -121,115 +125,124 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      <Header
-        title={t('purchaseAmountSheet.title')}
-        centerTitle
-        onClose={onClose}
-        rightActions={[
-          {
-            icon: 'checkmark',
-            onPress: handleConfirm,
-            variant: 'primary',
-            disabled: loading || !quantityIsUsable,
-            loading,
-          },
-        ]}
-      />
-      <View style={styles.headerSpacer} />
-      <BottomSheetScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+      {/* Two inputs and a keyboard can exceed the sheet, and `BottomSheetView`
+          is absolutely positioned with no height — anything past the fold is
+          unreachable. */}
+      <BottomSheetFormScrollView
+        contentContainerStyle={[styles.content, contentContainerStyle]}
       >
-        <Text size="lg" weight="semibold" style={styles.itemName}>
-          {item?.itemName ?? ''}
-        </Text>
-
-        <View style={styles.section}>
-          <Text
-            size="sm"
-            weight="medium"
-            tone="secondary"
-            style={styles.sectionLabel}
-          >
-            {t('labels.quantity')}
+        <Header
+          title={t('purchaseAmountSheet.title')}
+          centerTitle
+          onClose={onClose}
+          rightActions={[
+            {
+              icon: 'checkmark',
+              onPress: handleConfirm,
+              variant: 'primary',
+              disabled: loading || !quantityIsUsable,
+              loading,
+            },
+          ]}
+        />
+        <View style={styles.headerSpacer} />
+        <View style={styles.sections}>
+          <Text size="lg" weight="semibold" style={styles.itemName}>
+            {item?.itemName ?? ''}
           </Text>
-          <View style={styles.inputRow}>
-            <ThemedBottomSheetTextInput
-              style={styles.input}
-              value={quantityInput}
-              onChangeText={setQuantityInput}
-              keyboardType="decimal-pad"
-              selectTextOnFocus
-              maxLength={10}
-              accessibilityLabel={t('labels.quantity')}
-              testID="purchase-quantity-input"
-            />
-            {item?.unitName ? (
-              <Text size="base" tone="secondary" style={styles.affix}>
-                {item.unitName}
+
+          <View style={styles.section}>
+            <Text
+              size="sm"
+              weight="medium"
+              tone="secondary"
+              style={styles.sectionLabel}
+            >
+              {t('labels.quantity')}
+            </Text>
+            <View style={styles.inputRow}>
+              <ThemedBottomSheetTextInput
+                style={styles.input}
+                value={quantityInput}
+                onChangeText={setQuantityInput}
+                keyboardType="decimal-pad"
+                selectTextOnFocus
+                maxLength={10}
+                accessibilityLabel={t('labels.quantity')}
+                testID="purchase-quantity-input"
+              />
+              {item?.unitName ? (
+                <Text size="base" tone="secondary" style={styles.affix}>
+                  {item.unitName}
+                </Text>
+              ) : null}
+            </View>
+            {quantityError ? (
+              <Text
+                size="sm"
+                tone="error"
+                style={styles.fieldError}
+                testID="purchase-quantity-error"
+              >
+                {quantityError}
               </Text>
             ) : null}
           </View>
-          {quantityError ? (
+
+          <View style={styles.section}>
             <Text
               size="sm"
-              tone="error"
-              style={styles.fieldError}
-              testID="purchase-quantity-error"
+              weight="medium"
+              tone="secondary"
+              style={styles.sectionLabel}
             >
-              {quantityError}
+              {t('purchaseAmountSheet.totalPrice')}
             </Text>
-          ) : null}
-        </View>
-
-        <View style={styles.section}>
-          <Text
-            size="sm"
-            weight="medium"
-            tone="secondary"
-            style={styles.sectionLabel}
-          >
-            {t('purchaseAmountSheet.totalPrice')}
-          </Text>
-          <View style={styles.inputRow}>
-            <Text size="base" tone="secondary" style={styles.prefix}>
-              {t('purchaseAmountSheet.currencySymbol')}
-            </Text>
-            <ThemedBottomSheetTextInput
-              style={styles.input}
-              value={priceInput}
-              onChangeText={setPriceInput}
-              keyboardType="decimal-pad"
-              selectTextOnFocus
-              maxLength={10}
-              placeholder={localizeNumericHint(
-                t('purchaseAmountSheet.pricePlaceholder'),
-              )}
-              accessibilityLabel={t('purchaseAmountSheet.totalPrice')}
-              testID="purchase-price-input"
-            />
+            <View style={styles.inputRow}>
+              <Text size="base" tone="secondary" style={styles.prefix}>
+                {t('purchaseAmountSheet.currencySymbol')}
+              </Text>
+              <ThemedBottomSheetTextInput
+                style={styles.input}
+                value={priceInput}
+                onChangeText={setPriceInput}
+                keyboardType="decimal-pad"
+                selectTextOnFocus
+                maxLength={10}
+                placeholder={localizeNumericHint(
+                  t('purchaseAmountSheet.pricePlaceholder'),
+                )}
+                accessibilityLabel={t('purchaseAmountSheet.totalPrice')}
+                testID="purchase-price-input"
+              />
+            </View>
+            {perUnitPrice != null ? (
+              <Text size="xs" tone="secondary" style={styles.perUnitHint}>
+                {t(
+                  item?.unitName
+                    ? 'purchaseAmountSheet.perUnitOfHint'
+                    : 'purchaseAmountSheet.perUnitHint',
+                  {
+                    price: formatCurrency(perUnitPrice, DEFAULT_CURRENCY),
+                    unit: item?.unitName,
+                  },
+                )}
+              </Text>
+            ) : null}
           </View>
-          {perUnitPrice != null ? (
-            <Text size="xs" tone="secondary" style={styles.perUnitHint}>
-              {t('purchaseAmountSheet.perUnitHint', {
-                price: formatCurrency(perUnitPrice, DEFAULT_CURRENCY),
-              })}
-            </Text>
-          ) : null}
         </View>
-      </BottomSheetScrollView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  scrollView: {
-    flex: 1,
-  },
   content: {
-    paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.sm,
+  },
+  // On the inner view, so the header still spans the sheet's full width.
+  sections: {
+    paddingHorizontal: theme.spacing.lg,
   },
   headerSpacer: {
     height: theme.spacing.md,

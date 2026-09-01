@@ -396,7 +396,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
   },
-  filterChipTextActive: { color: theme.colors.white },
+  filterChipTextActive: { color: theme.colors.onPrimary },
   checkboxGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

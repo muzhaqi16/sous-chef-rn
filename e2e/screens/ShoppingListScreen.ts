@@ -65,10 +65,10 @@ export class ShoppingListScreen extends BaseScreen {
   }
 
   /**
-   * Blur the focused field by tapping the DETAILS SHEET's top-left corner;
-   * `BaseScreen.dismissKeyboard` taps the screen container, which sits BEHIND the
-   * sheet here. `replaceText` requires 100% visibility — stricter than
-   * `toBeVisible`'s 75% — so an overlapping keyboard fails the type.
+   * Blur by tapping the details sheet's top-left corner, which sits ABOVE the
+   * keyboard and so stays hittable. These call sites do not all know which field
+   * holds focus, so `BaseScreen.dismissKeyboard`'s targeted return key does not
+   * apply. `replaceText` needs 100% visibility, which a keyboard overlap denies.
    */
   private async dismissSheetKeyboard() {
     try {

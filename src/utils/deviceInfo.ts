@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import { logger } from './environment';
+import { storage, isStorageReady } from '#/storage/mmkv';
 import { DeviceType, MobilePlatform } from '#/graphql/generated/schemaTypes';
 
 export interface DeviceInformation {
@@ -207,10 +208,10 @@ const collectHardwareInfo = async () => {
 
     // Storage specifications
     hardwareInfo.totalDiskCapacity = await DeviceInfo.getTotalDiskCapacity()
-      .then(storage => storage.toString())
+      .then(bytes => bytes.toString())
       .catch(() => undefined);
     hardwareInfo.freeDiskStorage = await DeviceInfo.getFreeDiskStorage()
-      .then(storage => storage.toString())
+      .then(bytes => bytes.toString())
       .catch(() => undefined);
 
     // App information
@@ -404,10 +405,10 @@ const collectDisplayInfo = async () => {
   return displayInfo;
 };
 
-/**
- * Generates a comprehensive device fingerprint by combining multiple device identifiers
- */
-export const generateDeviceFingerprint = async (): Promise<string> => {
+const DEVICE_FINGERPRINT_KEY = 'device_fingerprint';
+
+/** Combines every device identifier the platform will give us into one string. */
+const computeDeviceFingerprint = async (): Promise<string> => {
   try {
     const [
       uniqueId,
@@ -467,17 +468,34 @@ export const generateDeviceFingerprint = async (): Promise<string> => {
       return fallback;
     }
 
-    // Create hash-like fingerprint with more entropy
     const combined = identifiers.join('-');
     const base64Hash = btoa(combined).replace(/[^a-zA-Z0-9]/g, '');
-    return `${Platform.OS}-${base64Hash.substring(0, 32)}-${Date.now().toString(
-      36,
-    )}`;
+    return `${Platform.OS}-${base64Hash.substring(0, 32)}`;
   } catch (error) {
     logger.error('Error generating device fingerprint:', error);
     // Emergency fallback
     return `${Platform.OS}-emergency-${Date.now()}`;
   }
+};
+
+/**
+ * The device's stable identity. The API keys `Device` rows on this and updates
+ * the matching row rather than inserting, so a value that varies between calls
+ * registers a new device on every launch. Persisted so the two non-deterministic
+ * fallbacks above survive a restart as well.
+ */
+export const generateDeviceFingerprint = async (): Promise<string> => {
+  const storageReady = isStorageReady();
+  if (storageReady) {
+    const stored = storage.getString(DEVICE_FINGERPRINT_KEY);
+    if (stored) return stored;
+  }
+
+  const fingerprint = await computeDeviceFingerprint();
+  if (storageReady) {
+    storage.set(DEVICE_FINGERPRINT_KEY, fingerprint);
+  }
+  return fingerprint;
 };
 
 /**
