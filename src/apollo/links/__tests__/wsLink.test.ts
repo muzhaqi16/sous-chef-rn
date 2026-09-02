@@ -1193,6 +1193,23 @@ describe('wsLink', () => {
       expect(await gateSettlesWithin(31_000)).toBe(true);
     });
 
+    // The throttle stopwatch has to be monotonic: on a wall clock a backwards
+    // step makes the elapsed negative, which reads as "not yet" and mutes the
+    // record until real time catches up.
+    it('is not muted by a wall clock that steps backwards', async () => {
+      onHandlers.connecting();
+      onHandlers.closed({ code: 1006, reason: 'boom', wasClean: false });
+      expect(Telemetry.warn).toHaveBeenCalledTimes(1);
+
+      // An NTP correction or a timezone change, mid-streak.
+      jest.setSystemTime(Date.now() - 3_600_000);
+      await jest.advanceTimersByTimeAsync(300_001);
+
+      onHandlers.connecting();
+      onHandlers.closed({ code: 1006, reason: 'boom', wasClean: false });
+      expect(Telemetry.warn).toHaveBeenCalledTimes(2);
+    });
+
     it('carries the close reason, the only field that says why', () => {
       onHandlers.connecting();
       onHandlers.closed({

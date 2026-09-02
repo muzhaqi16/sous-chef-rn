@@ -99,7 +99,10 @@ let dialStage: DialStage = 'dialing';
 // dial. The backoff is capped, so an unattended failure would otherwise write
 // two records a minute for as long as the app stays open.
 const DIAL_FAILURE_LOG_INTERVAL_MS = 300_000;
-let lastDialFailureLogAt = 0;
+// `performance.now()` rather than `Date.now()`: a wall clock can step backwards
+// and a negative elapsed reads as "not yet", muting the record until real time
+// catches up. Null, not 0, because this clock STARTS near 0.
+let lastDialFailureLogAt: number | null = null;
 
 // A dial that never opens does not recover within a session the way a dropped
 // socket does. Past this many in a row the ceiling stretches, so a network that
@@ -184,8 +187,13 @@ const reportDialFailedBeforeOpen = (
     dialFailureStreak++;
   }
 
-  const now = Date.now();
-  if (now - lastDialFailureLogAt < DIAL_FAILURE_LOG_INTERVAL_MS) return;
+  const now = performance.now();
+  if (
+    lastDialFailureLogAt !== null &&
+    now - lastDialFailureLogAt < DIAL_FAILURE_LOG_INTERVAL_MS
+  ) {
+    return;
+  }
   lastDialFailureLogAt = now;
 
   // Warn, not error: `TelemetryService` flushes an error record immediately, and
@@ -438,7 +446,7 @@ const createWsClient = () => {
           // accepted and closed straight away has proved nothing.
           dialAttempts = 0;
           dialFailureStreak = 0;
-          lastDialFailureLogAt = 0;
+          lastDialFailureLogAt = null;
           // The connection held with the current token — a future 4403 is a
           // fresh expiry, so the one-shot refresh fast path re-arms.
           sessionAuthRefreshAttempted = false;
@@ -719,7 +727,7 @@ export const disableAutoReconnect = () => {
   clearConnectionStableTimer();
   dialAttempts = 0;
   dialFailureStreak = 0;
-  lastDialFailureLogAt = 0;
+  lastDialFailureLogAt = null;
   dialStage = 'dialing';
   cancelDialDelay?.();
   sessionAuthRefreshAttempted = false;
