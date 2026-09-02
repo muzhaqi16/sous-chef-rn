@@ -162,7 +162,7 @@
     "@babel/parser": "^7.25.2",
     "@babel/preset-env": "^7.29.0",
     "@babel/runtime": "^7.28.6",
-    "@babel/traverse": "^7.25.2",
+    "@babel/traverse": "^8.0.4",
     "@commitlint/cli": "^20.4.4",
     "@commitlint/config-conventional": "^20.4.4",
     "@graphql-codegen/add": "^7.1.0",
