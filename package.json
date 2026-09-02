@@ -176,7 +176,7 @@
     "@graphql-codegen/typescript-operations": "^6.1.6",
     "@graphql-eslint/eslint-plugin": "^3.20.1",
     "@graphql-tools/mock": "^9.1.7",
-    "@jest/test-sequencer": "^29.7.0",
+    "@jest/test-sequencer": "^30.4.1",
     "@jest/types": "^29.6.3",
     "@react-native-community/cli": "^20.1.1",
     "@react-native/babel-preset": "0.86.3",
