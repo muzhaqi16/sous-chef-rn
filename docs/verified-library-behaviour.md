@@ -341,14 +341,22 @@ the device, and the server records a plain unauthenticated `GET /graphql`. An
 accepted upgrade does emit `opened`, so the absence of it identifies a refusal
 and nothing else.
 
-This is the only signal a refused handshake has. It carries no graphql-ws close
-code (those travel over an open socket), so `wsCloseCodes.ts` cannot classify
-it, and the client cannot tell the server who it is: `connectionParams` is
-built inside `socket.onopen` (`graphql-ws/dist/client.js:165-176`), which a
-refused upgrade never reaches. `wsLink` reports it from the dial stage instead
-— see `reportRefusedHandshake`.
+A dial that never opens carries no graphql-ws close code — those travel over an
+open socket — so `wsCloseCodes.ts` cannot classify it, and `connectionParams`
+is built inside `socket.onopen` (`graphql-ws/dist/client.js:165-176`), which
+such a dial never reaches. That is why `wsLink` puts the API key on the upgrade
+REQUEST as a header and reports from the dial stage — see
+`reportDialFailedBeforeOpen`.
 
-**Verified 2026-09-01 vs `graphql-ws@6.2.1` + `ws@8.21.3`** — re-check:
+**The absence of `opened` does not by itself mean the upgrade was refused.**
+React Native turns every `websocketFailed` — DNS failure, connection refused,
+TLS error, dead radio — into `CloseEvent{code: 1006}` with no preceding
+`opened` (`react-native/Libraries/WebSocket/WebSocket.js`), so an unreachable
+host is indistinguishable from a refusal by code alone. The probe's third leg
+demonstrates this. The close REASON carries the native error text and is the
+field that separates them.
+
+**Verified 2026-09-01 vs `graphql-ws@6.2.1` on Node's WebSocket** — re-check:
 `node scripts/probe-ws-refused-upgrade.mjs`. Measured event order:
 
 | upgrade  | events                                | `connectionParams` called |

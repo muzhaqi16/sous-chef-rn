@@ -226,12 +226,14 @@ describe('LogoutCleanup', () => {
       expect(LogoutCleanup.shouldSkipOperation('Logout')).toBe(false);
     });
 
-    // The push-token delete dispatches before the flag is set and resolves
-    // after it; cancelled, the server keeps a device row whose token is dead.
-    it('returns false for UpdateDevice, the sign-out device delete', async () => {
+    // `UpdateDevice` is BOTH the sign-out device delete and the push-token
+    // rotation. Allowing it by name would let a rotation land after the delete
+    // and leave the server pushing to a signed-out account; the delete opts in
+    // per call with `allowDuringLogout` instead.
+    it('returns true for UpdateDevice — the name alone earns no exemption', async () => {
       await LogoutCleanup.performLogoutCleanup();
 
-      expect(LogoutCleanup.shouldSkipOperation('UpdateDevice')).toBe(false);
+      expect(LogoutCleanup.shouldSkipOperation('UpdateDevice')).toBe(true);
     });
 
     it('returns true when no operation name during logout', async () => {

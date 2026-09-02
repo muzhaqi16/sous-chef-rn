@@ -260,6 +260,9 @@ async function pushRotatedTokenToServer(
     await client.mutate({
       mutation: UpdateDeviceDocument,
       variables: { input: { id: deviceId, pushToken } },
+      // The response is a bare `device { id }` nothing reads, and writing it
+      // during a sign-out re-seeds the cache `clearStore` has emptied.
+      fetchPolicy: 'no-cache',
     });
     logger.info('Device push token updated after rotation');
   } catch (error) {
@@ -279,6 +282,10 @@ function deregisterDeviceOnLogout(): void {
     .mutate({
       mutation: UpdateDeviceDocument,
       variables: { input: { id: deviceId, delete: true } },
+      // This lands AFTER `performLogoutCleanup` has cleared the store, so a
+      // cache write here outlives the session it is ending.
+      fetchPolicy: 'no-cache',
+      context: { allowDuringLogout: true },
     })
     .then(() => logger.info('Device deregistered on logout'))
     .catch(error =>

@@ -5,6 +5,12 @@
  * {@link isLibraryFatalCloseCode}.
  */
 
+/** A clean close. Ours when we dispose; the server's over the per-user cap. */
+export const WS_CLOSE_NORMAL = 1000;
+/** No close frame arrived. RN synthesises it for every failed dial. */
+export const WS_CLOSE_ABNORMAL = 1006;
+/** graphql-ws's own code for `terminate()` — a close we asked for. */
+export const WS_CLOSE_TERMINATED = 4499;
 /** The access token expired, at connect or mid-stream. Recoverable — see below. */
 export const WS_CLOSE_SESSION_AUTH = 4403;
 /** A subscription hit its lifetime cap. Not an error — reconnect immediately. */

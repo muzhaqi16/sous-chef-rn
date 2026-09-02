@@ -7,7 +7,10 @@
  *      `connectionParams` is not called — so the API key never leaves the
  *      device and the server sees a plain unauthenticated request;
  *   2. an accepted upgrade DOES emit `opened`, so a healthy dial is never
- *      mistaken for a refusal.
+ *      mistaken for a failure; and
+ *   3. an UNREACHABLE host is indistinguishable from a refused upgrade by the
+ *      events alone — which is why wsLink reports "closed before open" and
+ *      carries the close reason rather than claiming a refusal.
  *
  * Uses Node's built-in WebSocket and a hand-rolled 101, so the probe pulls in
  * nothing that is not already a direct dependency.
@@ -51,20 +54,15 @@ const acceptUpgrade = (req, socket) => {
   setTimeout(() => socket.destroy(), 300);
 };
 
-const dial = async server => {
-  await new Promise(r => server.listen(0, '127.0.0.1', r));
-  const { port } = server.address();
-  const events = [];
-  let connectionParamsCalls = 0;
-
-  const client = createClient({
-    url: `ws://127.0.0.1:${port}/graphql`,
+const makeClient = (url, events, onParams) =>
+  createClient({
+    url,
     webSocketImpl: globalThis.WebSocket,
     lazy: true,
     retryAttempts: 0,
     connectionAckWaitTimeout: 1500,
     connectionParams: () => {
-      connectionParamsCalls++;
+      onParams();
       return { 'x-api-key': 'probe-key' };
     },
     on: {
@@ -75,6 +73,32 @@ const dial = async server => {
       error: () => events.push('error'),
     },
   });
+
+const dialUrl = async url => {
+  const events = [];
+  let connectionParamsCalls = 0;
+  const client = makeClient(url, events, () => connectionParamsCalls++);
+  await new Promise(resolve => {
+    client.subscribe(
+      { query: '{ __typename }' },
+      { next: () => {}, error: () => resolve(), complete: () => resolve() },
+    );
+  });
+  void client.dispose().catch(() => {});
+  return { events, connectionParamsCalls };
+};
+
+const dial = async server => {
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  const { port } = server.address();
+  const events = [];
+  let connectionParamsCalls = 0;
+
+  const client = makeClient(
+    `ws://127.0.0.1:${port}/graphql`,
+    events,
+    () => connectionParamsCalls++,
+  );
 
   await new Promise(resolve => {
     client.subscribe(
@@ -105,16 +129,32 @@ const accepting = http.createServer((_req, res) => res.end());
 accepting.on('upgrade', acceptUpgrade);
 const accepted = await dial(accepting);
 
+// 3 — unreachable: a port with nothing listening. Same events as leg 1.
+const unreachablePort = await new Promise(resolve => {
+  const probe = http.createServer();
+  probe.listen(0, '127.0.0.1', () => {
+    const { port } = probe.address();
+    probe.close(() => resolve(port));
+  });
+});
+const unreachable = await dialUrl(`ws://127.0.0.1:${unreachablePort}/graphql`);
+
 const checks = [
   ['refused: closed fires', refused.events.some(e => e.startsWith('closed('))],
   ['refused: opened never fires', !refused.events.includes('opened')],
   ['refused: API key stays on device', refused.connectionParamsCalls === 0],
   ['accepted: opened fires', accepted.events.includes('opened')],
   ['accepted: API key is sent', accepted.connectionParamsCalls > 0],
+  ['unreachable: opened never fires', !unreachable.events.includes('opened')],
+  [
+    'unreachable: indistinguishable from a refusal by events alone',
+    unreachable.events.join(' ') === refused.events.join(' '),
+  ],
 ];
 
 console.log('refused upgrade:  ', refused.events.join(' → '));
 console.log('accepted upgrade: ', accepted.events.join(' → '));
+console.log('unreachable host: ', unreachable.events.join(' → '));
 console.log();
 for (const [label, ok] of checks)
   console.log(`${ok ? 'ok  ' : 'FAIL'}  ${label}`);
@@ -122,7 +162,8 @@ for (const [label, ok] of checks)
 const failed = checks.filter(([, ok]) => !ok);
 console.log(
   failed.length
-    ? '\nFAIL — wsLink cannot classify a refused upgrade by "closed without opened"'
-    : '\nPASS — "closed without opened" identifies a refused upgrade, and only that',
+    ? '\nFAIL — the dial-stage signal does not hold'
+    : '\nPASS — "closed without opened" identifies a dial that never opened.\n' +
+        '       It does NOT identify WHY: an unreachable host looks the same.',
 );
 process.exit(failed.length ? 1 : 0);

@@ -74,7 +74,10 @@ type Headers = Record<string, string>;
  * Drives one operation through `authLink` and resolves with the headers the
  * downstream link was handed — the link's entire observable output.
  */
-const run = (operationName: string): Promise<Headers> =>
+const run = (
+  operationName: string,
+  context: Record<string, unknown> = {},
+): Promise<Headers> =>
   new Promise((resolve, reject) => {
     let headers: Headers = {};
     const downstream = new ApolloLink(
@@ -97,6 +100,7 @@ const run = (operationName: string): Promise<Headers> =>
           }
         `,
         variables: {},
+        context,
       },
       { client },
     ).subscribe({
@@ -202,6 +206,30 @@ describe('authLink', () => {
       await run('GetPantry');
 
       expect(shouldSkipOperation).toHaveBeenCalledWith('GetPantry');
+    });
+
+    // The sign-out's own device delete dispatches before the gate closes and
+    // resolves after it; without the opt-in the logout cancels its own cleanup.
+    it('lets a call opted in with allowDuringLogout through', async () => {
+      shouldSkipOperation.mockReturnValue(true);
+      mockStoreState.accessToken = makeToken(3600);
+
+      const headers = await run('UpdateDevice', { allowDuringLogout: true });
+
+      expect(headers.authorization).toBe(
+        `Bearer ${mockStoreState.accessToken}`,
+      );
+    });
+
+    // Rotating here would write a fresh pair into the store and Keychain right
+    // after resetStore cleared them, re-arming the session being ended.
+    it('never rotates a token for an opted-in call', async () => {
+      shouldSkipOperation.mockReturnValue(true);
+      mockStoreState.accessToken = makeToken(120); // inside the 5-minute buffer
+
+      await run('UpdateDevice', { allowDuringLogout: true });
+
+      expect(mockedProactiveRefresh).not.toHaveBeenCalled();
     });
   });
 
@@ -400,7 +428,7 @@ describe('authLink', () => {
           'GetNotifications',
           'GetHome',
           'GetMealPlan',
-        ].map(run),
+        ].map(name => run(name)),
       );
 
       // The reported production signature: six concurrent requests carrying the

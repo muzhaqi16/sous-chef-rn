@@ -211,12 +211,10 @@ export class LogoutCleanup {
   static shouldSkipOperation(operationName?: string): boolean {
     if (!LogoutCleanup.isLoggingOut) return false;
 
-    // `UpdateDevice` is here for the push-token delete `authService` fires as
-    // part of signing out. It dispatches before this flag is set but resolves
-    // through the link chain after, so cancelling it leaves the server holding
-    // a device row whose token dies with the session — which then answers 404
-    // UNREGISTERED on the next push and is pruned.
-    const allowedOperations = ['RefreshToken', 'Logout', 'UpdateDevice'];
+    // Names only. A call that belongs to the sign-out but shares its name with
+    // one that does not — `UpdateDevice` is both the device delete and the push
+    // token rotation — opts in per call via `allowDuringLogout` instead.
+    const allowedOperations = ['RefreshToken', 'Logout'];
 
     return operationName ? !allowedOperations.includes(operationName) : true;
   }
