@@ -211,7 +211,9 @@ export class LogoutCleanup {
   static shouldSkipOperation(operationName?: string): boolean {
     if (!LogoutCleanup.isLoggingOut) return false;
 
-    // Allow certain operations during logout
+    // Names only. A call that belongs to the sign-out but shares its name with
+    // one that does not — `UpdateDevice` is both the device delete and the push
+    // token rotation — opts in per call via `allowDuringLogout` instead.
     const allowedOperations = ['RefreshToken', 'Logout'];
 
     return operationName ? !allowedOperations.includes(operationName) : true;

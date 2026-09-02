@@ -8,6 +8,7 @@ jest.mock('#store', () => ({
     getState: jest.fn(() => ({
       accessToken: 'mock-token',
       isOnline: true,
+      apiReachable: true,
       setTokens: mockSetTokens,
       endSession: mockEndSession,
     })),
@@ -23,6 +24,8 @@ import { Environment } from '#/utils/environment';
 // beforeAll — the per-test `clearAllMocks()` wipes `createClient.mock.calls`,
 // but the captured object itself survives.
 type WsLifecycleHandlers = {
+  connecting: () => void;
+  opened: (socket: unknown) => void;
   connected: (socket: unknown, payload?: Record<string, unknown>) => void;
   closed: (event: unknown) => void;
 };
@@ -68,6 +71,8 @@ jest.mock('#/utils/deviceId', () => ({
 // registerTokenRefresh (in the app, refreshToken.ts registers
 // proactiveTokenRefresh at module init). Tests register their own mock.
 
+import { AppState } from 'react-native';
+import { Telemetry } from '#/services/telemetry';
 import { isLibraryFatalCloseCode } from '../wsCloseCodes';
 import {
   reconnectWebSocket,
@@ -1011,5 +1016,229 @@ describe('wsLink', () => {
   afterAll(() => {
     disableAutoReconnect();
     disposeWebSocket();
+  });
+  describe('a dial that closes before the socket opens', () => {
+    // The RN jest mock leaves AppState.currentState a jest.fn(); the report
+    // discounts a failure the OS caused by backgrounding, so it has to be real.
+    const setAppState = (state: 'active' | 'background') => {
+      Object.defineProperty(AppState, 'currentState', {
+        configurable: true,
+        get: () => state,
+      });
+    };
+
+    const seedStore = (over: Record<string, unknown> = {}) => {
+      const { useStore } = require('#store');
+      (useStore.getState as jest.Mock).mockImplementation(() => ({
+        accessToken: 'mock-token',
+        isOnline: true,
+        apiReachable: true,
+        setTokens: mockSetTokens,
+        endSession: mockEndSession,
+        ...over,
+      }));
+    };
+
+    beforeEach(() => {
+      seedStore();
+      setAppState('active');
+      jest.useFakeTimers();
+      // A stable connection is the module's own streak reset, and it clears the
+      // log throttle — otherwise one test's record mutes the next.
+      onHandlers.connecting();
+      onHandlers.opened({});
+      onHandlers.connected({}, undefined);
+      jest.advanceTimersByTime(11_000);
+      jest.clearAllMocks();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      // clearAllMocks leaves an implementation in place, so put the default
+      // back rather than leaking one test's seeded store into the next.
+      seedStore();
+    });
+
+    it('reports a dial that closes before the socket opens', () => {
+      onHandlers.connecting();
+      onHandlers.closed({ code: 1006, reason: '', wasClean: false });
+
+      expect(Telemetry.increment).toHaveBeenCalledWith(
+        'ws_dial_failures_total',
+        1,
+        { reachable: 'true' },
+      );
+      // Warn, not error: an error record forces an immediate flush over the
+      // network this path has just found to be in doubt.
+      expect(Telemetry.warn).toHaveBeenCalledWith(
+        'WebSocket dial closed before the socket opened',
+        expect.objectContaining({ close_code: 1006, is_online: true }),
+      );
+      expect(Telemetry.error).not.toHaveBeenCalled();
+    });
+
+    it('stays silent when the socket opened — that failure has a close code', () => {
+      onHandlers.connecting();
+      onHandlers.opened({});
+      onHandlers.closed({ code: 4413, reason: 'API key refused' });
+
+      expect(Telemetry.increment).not.toHaveBeenCalledWith(
+        'ws_dial_failures_total',
+        expect.anything(),
+        expect.anything(),
+      );
+      expect(Telemetry.warn).not.toHaveBeenCalledWith(
+        'WebSocket dial closed before the socket opened',
+        expect.anything(),
+      );
+    });
+
+    it('stays silent for our own terminate, which also never opens', () => {
+      onHandlers.connecting();
+      onHandlers.closed({ code: 4499, reason: 'Terminated' });
+      onHandlers.connecting();
+      onHandlers.closed({ code: 1000, reason: '', wasClean: true });
+
+      expect(Telemetry.increment).not.toHaveBeenCalledWith(
+        'ws_dial_failures_total',
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it('counts every dial but logs once per streak', () => {
+      for (let i = 0; i < 4; i++) {
+        onHandlers.connecting();
+        onHandlers.closed({ code: 1006, reason: '', wasClean: false });
+      }
+
+      expect(Telemetry.increment).toHaveBeenCalledTimes(4);
+      expect(Telemetry.warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('labels the reachability verdict rather than guessing the cause', () => {
+      seedStore({ isOnline: false, apiReachable: false });
+      onHandlers.connecting();
+      onHandlers.closed({ code: 1006, reason: '', wasClean: false });
+
+      expect(Telemetry.increment).toHaveBeenCalledWith(
+        'ws_dial_failures_total',
+        1,
+        { reachable: 'false' },
+      );
+    });
+
+    it('does not count a failure the app was backgrounded for', async () => {
+      setAppState('background');
+      for (let i = 0; i < 6; i++) {
+        onHandlers.connecting();
+        onHandlers.closed({ code: 1006, reason: 'boom', wasClean: false });
+      }
+      setAppState('active');
+      for (let i = 0; i < 8; i++) await gateSettlesWithin(400_000);
+
+      expect(await gateSettlesWithin(31_000)).toBe(true);
+    });
+
+    /** Settle the dial gate, reporting whether `ms` was enough for it. */
+    const gateSettlesWithin = async (ms: number) => {
+      let settled = false;
+      const pending = dialGate().then(() => {
+        settled = true;
+      });
+      await jest.advanceTimersByTimeAsync(ms);
+      // Read BEFORE draining, or the drain answers the question for us.
+      const settledWithin = settled;
+      if (!settled) {
+        // Leave no pending timer behind for the next test.
+        await jest.advanceTimersByTimeAsync(400_000);
+      }
+      await pending;
+      return settledWithin;
+    };
+
+    it('holds the 30s ceiling until failures become a streak', async () => {
+      // One dial short of the limit: still on the ordinary curve.
+      for (let i = 0; i < 4; i++) {
+        onHandlers.connecting();
+        onHandlers.closed({ code: 1006, reason: 'boom', wasClean: false });
+      }
+      // Climb the exponent past the cap so the ceiling is what binds.
+      for (let i = 0; i < 8; i++) await gateSettlesWithin(400_000);
+
+      expect(await gateSettlesWithin(31_000)).toBe(true);
+    });
+
+    it('stretches the ceiling once failures become a streak', async () => {
+      for (let i = 0; i < 6; i++) {
+        onHandlers.connecting();
+        onHandlers.closed({ code: 1006, reason: 'boom', wasClean: false });
+      }
+      for (let i = 0; i < 8; i++) await gateSettlesWithin(400_000);
+
+      // A wait that suffices on the ordinary curve falls short here.
+      expect(await gateSettlesWithin(31_000)).toBe(false);
+      expect(await gateSettlesWithin(400_000)).toBe(true);
+    });
+
+    it('does not count a failure the device was offline for', async () => {
+      seedStore({ isOnline: false, apiReachable: false });
+      for (let i = 0; i < 6; i++) {
+        onHandlers.connecting();
+        onHandlers.closed({ code: 1006, reason: 'boom', wasClean: false });
+      }
+      seedStore();
+      for (let i = 0; i < 8; i++) await gateSettlesWithin(400_000);
+
+      expect(await gateSettlesWithin(31_000)).toBe(true);
+    });
+
+    // The throttle stopwatch has to be monotonic: on a wall clock a backwards
+    // step makes the elapsed negative, which reads as "not yet" and mutes the
+    // record until real time catches up.
+    it('is not muted by a wall clock that steps backwards', async () => {
+      onHandlers.connecting();
+      onHandlers.closed({ code: 1006, reason: 'boom', wasClean: false });
+      expect(Telemetry.warn).toHaveBeenCalledTimes(1);
+
+      // An NTP correction or a timezone change, mid-streak.
+      jest.setSystemTime(Date.now() - 3_600_000);
+      await jest.advanceTimersByTimeAsync(300_001);
+
+      onHandlers.connecting();
+      onHandlers.closed({ code: 1006, reason: 'boom', wasClean: false });
+      expect(Telemetry.warn).toHaveBeenCalledTimes(2);
+    });
+
+    it('carries the close reason, the only field that says why', () => {
+      onHandlers.connecting();
+      onHandlers.closed({
+        code: 1006,
+        reason: "Expected HTTP 101 response but was '401 Unauthorized'",
+        wasClean: false,
+      });
+
+      expect(Telemetry.warn).toHaveBeenCalledWith(
+        'WebSocket dial closed before the socket opened',
+        expect.objectContaining({
+          close_reason: "Expected HTTP 101 response but was '401 Unauthorized'",
+        }),
+      );
+    });
+
+    it('logs the next streak after a connection proves stable', () => {
+      onHandlers.connecting();
+      onHandlers.closed({ code: 1006, reason: '', wasClean: false });
+      expect(Telemetry.warn).toHaveBeenCalledTimes(1);
+
+      onHandlers.connecting();
+      onHandlers.opened({});
+      onHandlers.connected({}, undefined);
+      jest.advanceTimersByTime(11_000);
+
+      onHandlers.connecting();
+      onHandlers.closed({ code: 1006, reason: '', wasClean: false });
+      expect(Telemetry.warn).toHaveBeenCalledTimes(2);
+    });
   });
 });

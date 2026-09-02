@@ -333,6 +333,41 @@ Re-check:
 grep -n "InteractionManagerStub\|setImmediate(\|return -1" node_modules/react-native/Libraries/Interaction/InteractionManager.js
 ```
 
+### A refused WebSocket upgrade emits closed without opened
+
+**Claim:** when the HTTP upgrade is refused, graphql-ws emits `closed` and never
+`opened`, and `connectionParams` is never called — so the API key never leaves
+the device, and the server records a plain unauthenticated `GET /graphql`. An
+accepted upgrade does emit `opened`, so the absence of it identifies a refusal
+and nothing else.
+
+A dial that never opens carries no graphql-ws close code — those travel over an
+open socket — so `wsCloseCodes.ts` cannot classify it, and `connectionParams`
+is built inside `socket.onopen` (`graphql-ws/dist/client.js:165-176`), which
+such a dial never reaches. That is why `wsLink` puts the API key on the upgrade
+REQUEST as a header and reports from the dial stage — see
+`reportDialFailedBeforeOpen`.
+
+**The absence of `opened` does not by itself mean the upgrade was refused.**
+React Native turns every `websocketFailed` — DNS failure, connection refused,
+TLS error, dead radio — into `CloseEvent{code: 1006}` with no preceding
+`opened` (`react-native/Libraries/WebSocket/WebSocket.js`), so an unreachable
+host is indistinguishable from a refusal by code alone. The probe's third leg
+demonstrates this. The close REASON carries the native error text and is the
+field that separates them.
+
+**Verified 2026-09-01 vs `graphql-ws@6.2.1` on Node's WebSocket** — re-check:
+`node scripts/probe-ws-refused-upgrade.mjs`. Measured event order:
+
+| upgrade  | events                                | `connectionParams` called |
+| -------- | ------------------------------------- | ------------------------- |
+| refused  | `connecting → error → closed(1006)`          | no                 |
+| accepted | `connecting → opened → error → closed(1006)` | yes                |
+
+Both legs close 1006; only the presence of `opened` separates them. The probe's
+accepting server completes the upgrade and then drops the socket, so the close
+code says nothing about which case it was — which is the point.
+
 ### graphql-ws fatal close codes
 
 **Claim:** graphql-ws rethrows close codes 4400, 4401, 4406, 4409, 4429, 4500

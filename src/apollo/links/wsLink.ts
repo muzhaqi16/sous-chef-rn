@@ -1,8 +1,10 @@
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { createClient, Client } from 'graphql-ws';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { env } from '#/config/env';
 import { useStore } from '#store';
+import { isApiUnavailable } from '#store/slices/networkSlice';
+import { Telemetry } from '#/services/telemetry';
 import { Environment, logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import { getDeviceId } from '#/utils/deviceId';
@@ -14,16 +16,38 @@ import {
   WS_CLOSE_AUTH_FAILED,
   WS_CLOSE_CLIENT_REJECTED,
   WS_CLOSE_DURATION_EXCEEDED,
+  WS_CLOSE_NORMAL,
   WS_CLOSE_SESSION_AUTH,
+  WS_CLOSE_TERMINATED,
   WS_CLOSE_UPGRADE_REQUIRED,
 } from './wsCloseCodes';
 import { LaunchArguments } from 'react-native-launch-arguments';
 
-// pick the right WebSocket constructor
-const webSocketImpl =
+// RN's WebSocket takes a third `options` argument that graphql-ws, which
+// constructs the socket as `new Impl(url, protocols)`, never passes.
+type WebSocketWithHeaders = new (
+  url: string,
+  protocols?: string | string[],
+  options?: { headers: Record<string, string> },
+) => WebSocket;
+
+const BaseWebSocket: WebSocketWithHeaders =
   Platform.OS === 'web'
     ? WebSocket // for RN-Web
     : global.WebSocket; // for iOS & Android
+
+// The key has to ride the upgrade REQUEST. `connectionParams` reaches the
+// server only once the socket is open, so a dial an intermediary re-issues
+// without its upgrade headers arrives anonymous and is refused as a scanner.
+const upgradeHeaders: Record<string, string> = env.API_KEY
+  ? { 'x-api-key': env.API_KEY }
+  : {};
+
+const webSocketImpl: WebSocketWithHeaders = class extends BaseWebSocket {
+  constructor(url: string, protocols?: string | string[]) {
+    super(url, protocols, { headers: upgradeHeaders });
+  }
+};
 
 // Use env.WEB_SOCKET_URL from .env if set, otherwise use environment-specific default
 const WS_URL = env.WEB_SOCKET_URL || Environment.getApiConfig().wsUrl;
@@ -64,6 +88,30 @@ function notifyReconnectListeners(): void {
 // after would never escalate the curve. Only a connection that proves stable
 // clears this one.
 let dialAttempts = 0;
+
+// How far the current dial got. A close still at 'dialing' means no socket was
+// ever established — RN reports a refused upgrade, an unreachable host and a
+// dead radio identically, so the stage says only that, never why.
+type DialStage = 'dialing' | 'opened' | 'acked';
+let dialStage: DialStage = 'dialing';
+
+// One record per streak, then one per interval; the counter still counts every
+// dial. The backoff is capped, so an unattended failure would otherwise write
+// two records a minute for as long as the app stays open.
+const DIAL_FAILURE_LOG_INTERVAL_MS = 300_000;
+// `performance.now()` rather than `Date.now()`: a wall clock can step backwards
+// and a negative elapsed reads as "not yet", muting the record until real time
+// catches up. Null, not 0, because this clock STARTS near 0.
+let lastDialFailureLogAt: number | null = null;
+
+// A dial that never opens does not recover within a session the way a dropped
+// socket does. Past this many in a row the ceiling stretches, so a network that
+// cannot carry the handshake costs one dial every few minutes rather than two a
+// minute. Only failures the device cannot explain away count — see the report.
+const DIAL_FAILURE_STREAK_LIMIT = 5;
+const STREAK_MAX_RECONNECT_DELAY_MS = 300_000;
+let dialFailureStreak = 0;
+
 const BASE_RECONNECT_DELAY_MS = 1000;
 const MAX_RECONNECT_DELAY_MS = 30000;
 let shouldAutoReconnect = true;
@@ -111,20 +159,94 @@ const clearConnectionStableTimer = () => {
 };
 
 /**
+ * A dial that closed before `opened` never got a socket. RN synthesises the same
+ * 1006 for a refused upgrade, an unreachable host and a dead radio, so the code
+ * carries no verdict — the close REASON and the reachability label are reported
+ * rather than collapsed into a guess here.
+ */
+const reportDialFailedBeforeOpen = (
+  code: number | undefined,
+  reason: string,
+): void => {
+  // A teardown drops the client without awaiting its dispose, so a socket from
+  // the previous session can still close against a fresh one.
+  if (!shouldAutoReconnect) return;
+
+  const { isOnline, apiReachable } = useStore.getState();
+  const reachable = apiReachable === null ? 'unknown' : String(apiReachable);
+
+  Telemetry.increment('ws_dial_failures_total', 1, { reachable });
+
+  // Only a failure the device cannot explain away escalates the backoff. The OS
+  // aborts in-flight sockets when the app leaves the foreground, which is why
+  // `apiReachabilityBreaker` discounts the same case.
+  if (
+    !isApiUnavailable({ isOnline, apiReachable }) &&
+    AppState.currentState === 'active'
+  ) {
+    dialFailureStreak++;
+  }
+
+  const now = performance.now();
+  if (
+    lastDialFailureLogAt !== null &&
+    now - lastDialFailureLogAt < DIAL_FAILURE_LOG_INTERVAL_MS
+  ) {
+    return;
+  }
+  lastDialFailureLogAt = now;
+
+  // Warn, not error: `TelemetryService` flushes an error record immediately, and
+  // this path runs when the network is the thing in doubt. The counter is what
+  // dashboards alert on.
+  const detail = {
+    close_code: code,
+    close_reason: reason,
+    dial_attempt: dialAttempts,
+    dial_failure_streak: dialFailureStreak,
+    is_online: isOnline,
+    api_reachable: apiReachable,
+    url: WS_URL,
+  };
+  logger.warn('🔌 WebSocket dial closed before the socket opened', detail);
+  Telemetry.warn('WebSocket dial closed before the socket opened', detail);
+};
+
+/**
  * Calculate reconnection delay with exponential backoff and jitter
  */
 const getReconnectDelay = (attempt: number): number => {
-  const delay = Math.min(
-    BASE_RECONNECT_DELAY_MS * Math.pow(2, attempt),
-    MAX_RECONNECT_DELAY_MS,
-  );
-  // Add jitter (up to 25% variance) to prevent thundering herd
+  const ceiling =
+    dialFailureStreak >= DIAL_FAILURE_STREAK_LIMIT
+      ? STREAK_MAX_RECONNECT_DELAY_MS
+      : MAX_RECONNECT_DELAY_MS;
+  const delay = BASE_RECONNECT_DELAY_MS * Math.pow(2, attempt);
+  // Jitter (up to 25%) prevents a thundering herd, and is clamped WITH the
+  // delay so the ceiling constant is the real worst case rather than 1.25x it.
   const jitter = delay * 0.25 * Math.random();
-  return delay + jitter;
+  return Math.min(delay + jitter, ceiling);
 };
 
 const sleep = (ms: number) =>
   new Promise<void>(resolve => setTimeout(resolve, ms));
+
+// The backoff wait, interruptible. A bare `sleep` cannot be shortened, so a
+// network that recovers mid-wait would still sit out the whole stretched
+// ceiling with nothing in the app able to reach it.
+let cancelDialDelay: (() => void) | null = null;
+
+const delayDial = (ms: number): Promise<void> =>
+  new Promise<void>(resolve => {
+    const timeout = setTimeout(() => {
+      cancelDialDelay = null;
+      resolve();
+    }, ms);
+    cancelDialDelay = () => {
+      clearTimeout(timeout);
+      cancelDialDelay = null;
+      resolve();
+    };
+  });
 
 /**
  * Park a pending retry until the device is back online. Strict `=== false`
@@ -171,7 +293,7 @@ const awaitDialPermission = async (): Promise<void> => {
         dialAttempts + 1
       } since the last stable connection)`,
     );
-    await sleep(delay);
+    await delayDial(delay);
   }
 
   await waitUntilOnline();
@@ -256,9 +378,9 @@ const createWsClient = () => {
 
       const params: Record<string, string | undefined> = {};
 
-      // Sent by hand because Apollo's clientAwareness only produces HTTP
-      // headers and the socket upgrade carries none. Without it the server
-      // closes 4411 once a minimum version is configured.
+      // Sent by hand because Apollo's clientAwareness produces HTTP headers
+      // for its own transport only. Without it the server closes 4411 once a
+      // minimum version is configured.
       params['apollographql-client-name'] = CLIENT_NAME;
       params['apollographql-client-version'] = CLIENT_VERSION;
 
@@ -304,6 +426,7 @@ const createWsClient = () => {
     },
     on: {
       connected: (_socket: unknown, payload: unknown) => {
+        dialStage = 'acked';
         persistRotatedTokensFromAck(payload);
 
         // A connect that follows a previous connection is a reconnect — backfill
@@ -322,6 +445,8 @@ const createWsClient = () => {
           // The ONLY place the curve resets. Not on `connected`: a socket
           // accepted and closed straight away has proved nothing.
           dialAttempts = 0;
+          dialFailureStreak = 0;
+          lastDialFailureLogAt = null;
           // The connection held with the current token — a future 4403 is a
           // fresh expiry, so the one-shot refresh fast path re-arms.
           sessionAuthRefreshAttempted = false;
@@ -346,6 +471,17 @@ const createWsClient = () => {
         const code = closeEvent?.code;
         const reason =
           typeof closeEvent?.reason === 'string' ? closeEvent.reason : '';
+
+        // A dial that never opened matches none of the branches below, so it
+        // is recorded here or nowhere. A clean code at this stage is our own
+        // dispose or terminate, not a failure.
+        if (
+          dialStage === 'dialing' &&
+          code !== WS_CLOSE_NORMAL &&
+          code !== WS_CLOSE_TERMINATED
+        ) {
+          reportDialFailedBeforeOpen(code, reason);
+        }
 
         // Everything below records a verdict or spends one fast-path refresh.
         // None of it dials — `shouldRetry` + `retryWait` own that.
@@ -466,7 +602,11 @@ const createWsClient = () => {
           );
         }
       },
+      opened: () => {
+        dialStage = 'opened';
+      },
       connecting: () => {
+        dialStage = 'dialing';
         if (__DEV__) {
           logger.info('🔌 WebSocket connecting...', {
             url: WS_URL,
@@ -549,6 +689,9 @@ export const reconnectWebSocket = () => {
   }
 
   lastReconnectTime = now;
+  // A dial parked on the backoff would otherwise hold the new token until the
+  // wait elapsed, which past the streak limit is minutes.
+  cancelDialDelay?.();
 
   try {
     logger.info('🔄 WebSocket reconnecting with new token...');
@@ -566,9 +709,12 @@ export const reconnectWebSocket = () => {
  * Called by useOnlineQueueSync on the offline→online transition.
  */
 export const resumeWebSocketAfterOnline = () => {
-  if (onlineWaiters.length === 0) return;
+  const parked = onlineWaiters.length > 0 || cancelDialDelay !== null;
+  if (!parked) return;
   logger.info('🔌 Device back online — resuming deferred WebSocket reconnect');
   dialAttempts = 0;
+  dialFailureStreak = 0;
+  cancelDialDelay?.();
   releaseOnlineWaiters();
 };
 
@@ -580,6 +726,10 @@ export const disableAutoReconnect = () => {
   shouldAutoReconnect = false;
   clearConnectionStableTimer();
   dialAttempts = 0;
+  dialFailureStreak = 0;
+  lastDialFailureLogAt = null;
+  dialStage = 'dialing';
+  cancelDialDelay?.();
   sessionAuthRefreshAttempted = false;
   // Not `releaseOnlineWaiters` — that would dial. See abandonOnlineWaiters.
   abandonOnlineWaiters();

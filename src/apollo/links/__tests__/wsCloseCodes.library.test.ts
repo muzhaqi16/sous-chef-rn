@@ -22,7 +22,7 @@
 jest.unmock('graphql-ws');
 
 import { createClient } from 'graphql-ws';
-import { isLibraryFatalCloseCode } from '../wsCloseCodes';
+import { isLibraryFatalCloseCode, WS_CLOSE_TERMINATED } from '../wsCloseCodes';
 
 /**
  * A socket that acks the handshake, then closes with `code` as soon as a
@@ -64,11 +64,46 @@ const fakeSocketClosingWith = (code: number) =>
       }
     }
 
-    close() {
+    close(closeCode = 1000, closeReason = '') {
       this.readyState = FakeWebSocket.CLOSED;
-      this.onclose?.({ code: 1000, reason: '' });
+      this.onclose?.({ code: closeCode, reason: closeReason });
     }
   };
+
+/** Acks the handshake and then holds the socket open. */
+class HoldingSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+
+  readyState = HoldingSocket.OPEN;
+  onopen: (() => void) | null = null;
+  onmessage: ((e: { data: string }) => void) | null = null;
+  onclose: ((e: { code: number; reason: string }) => void) | null = null;
+  onerror: (() => void) | null = null;
+
+  constructor() {
+    setTimeout(() => this.onopen?.(), 0);
+  }
+
+  send(raw: string) {
+    if ((JSON.parse(raw) as { type: string }).type === 'connection_init') {
+      setTimeout(
+        () =>
+          this.onmessage?.({
+            data: JSON.stringify({ type: 'connection_ack' }),
+          }),
+        0,
+      );
+    }
+  }
+
+  close(closeCode = 1000, closeReason = '') {
+    this.readyState = HoldingSocket.CLOSED;
+    this.onclose?.({ code: closeCode, reason: closeReason });
+  }
+}
 
 /**
  * Subscribe once against a socket that closes with `code`, always answering
@@ -158,6 +193,30 @@ describe('isLibraryFatalCloseCode matches the installed graphql-ws', () => {
     // Never errors the sink — the control group that gives the assertions above
     // their meaning.
     expect(connects).toBeGreaterThan(1);
+  });
+
+  // `reconnectWebSocket` drops the socket with `terminate()` on every token
+  // rotation, and `wsLink` excludes that close from its dial-failure report. The
+  // code it closes with is the library's choice, not ours.
+  it('terminate() closes with WS_CLOSE_TERMINATED', async () => {
+    const closes: number[] = [];
+    const client = createClient({
+      url: 'ws://localhost:4000/graphql',
+      webSocketImpl: HoldingSocket,
+      lazy: true,
+      retryAttempts: 0,
+      on: { closed: e => closes.push((e as { code: number }).code) },
+    });
+
+    await new Promise<void>(resolve => {
+      client.subscribe(
+        { query: '{ __typename }' },
+        { next: () => {}, error: () => resolve(), complete: () => resolve() },
+      );
+      setTimeout(() => client.terminate(), 20);
+    });
+
+    expect(closes).toContain(WS_CLOSE_TERMINATED);
   });
 
   // Why `wsLink` paces dials in `url()` rather than `retryWait`.
