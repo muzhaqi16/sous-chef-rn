@@ -83,14 +83,14 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing['3'],
+    padding: theme.spacing.base,
     paddingRight: theme.spacing.md,
     marginHorizontal: theme.spacing.md,
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.md,
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     variants: {
       variant: {
         error: {
@@ -119,7 +119,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing['2.5'],
+    marginRight: theme.spacing.smPlus,
     variants: {
       variant: {
         error: { backgroundColor: theme.colors.alertBanner.error.iconBg },

@@ -160,6 +160,31 @@ jobs:
       - name: Check for stale cache fields
         run: node scripts/find-stale-cache-fields.mjs --check
 
+  # A known vulnerability in a production dependency fails the PR. Dependabot
+  # proposes upgrades but fails nothing, so without this a vulnerable package
+  # reaches the default branch with every check green. Reads the lockfile — no
+  # install needed. An advisory that cannot be fixed is recorded in
+  # scripts/accepted-advisories.json with a reason and a revisit date.
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Self-test the dependency audit gate
+        run: node scripts/check-dependency-audit.mjs --self-test
+
+      - name: Audit production dependencies
+        run: node scripts/check-dependency-audit.mjs --level=high
+
   # The bundled-secret scanner runs in the BUILD workflows, against a real
   # artifact. This exercises the scanner itself on every PR so it cannot rot
   # into a no-op unnoticed — it plants a known value and asserts a find.
@@ -240,6 +265,42 @@ jobs:
 
       - name: Dead modules
         run: node scripts/check-dead-modules.mjs
+
+      - name: Data-layer boundary (self-test)
+        run: node scripts/check-data-layer-boundary.mjs --self-test
+
+      - name: Data-layer boundary
+        run: node scripts/check-data-layer-boundary.mjs
+
+      - name: Single-consumer shared modules (self-test)
+        run: node scripts/check-single-consumer.mjs --self-test
+
+      - name: Single-consumer shared modules
+        run: node scripts/check-single-consumer.mjs
+
+      - name: Hand-rolled form state (self-test)
+        run: node scripts/check-form-state.mjs --self-test
+
+      - name: Hand-rolled form state
+        run: node scripts/check-form-state.mjs
+
+      - name: Feature enumeration (self-test)
+        run: node scripts/check-feature-enumeration.mjs --self-test
+
+      - name: Feature enumeration
+        run: node scripts/check-feature-enumeration.mjs
+
+      - name: Canonical mechanisms (self-test)
+        run: node scripts/check-canonical-mechanisms.mjs --self-test
+
+      - name: Canonical mechanisms
+        run: node scripts/check-canonical-mechanisms.mjs
+
+      - name: Design tokens (self-test)
+        run: node scripts/check-design-tokens.mjs --self-test
+
+      - name: Design tokens
+        run: node scripts/check-design-tokens.mjs
 
       - name: Comment budget (self-test)
         run: node scripts/check-comment-budget.mjs --self-test
@@ -402,6 +463,7 @@ jobs:
         compiler-bailouts,
         stale-cache-fields,
         bundled-secret-scanner,
+        dependency-audit,
       ]
     if: always()
 
@@ -427,6 +489,7 @@ jobs:
             echo "- Compiler Bailouts: ${{ needs.compiler-bailouts.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- Stale Cache Fields: ${{ needs.stale-cache-fields.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- Bundled Secrets: ${{ needs.bundled-secret-scanner.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Dependency Audit: ${{ needs.dependency-audit.result }}" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
           echo "✅ All PR checks passed!"
@@ -441,3 +504,4 @@ jobs:
           echo "- ✅ Compiler Bailouts" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Stale Cache Fields" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Bundled Secrets" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Dependency Audit" >> $GITHUB_STEP_SUMMARY

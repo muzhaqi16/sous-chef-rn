@@ -12,12 +12,22 @@ const OPERATION_FILES = globSync('src/**/*.graphql').map(f =>
   relative(process.cwd(), f),
 );
 
-/** Connection fields carrying a merge policy, read from the cache config. */
+/**
+ * Connection fields carrying a merge policy. Globbed rather than read from one
+ * file: the policies live with their features, so a hard-coded path would stop
+ * seeing the policy a change actually lands in.
+ */
+const POLICY_FILES = globSync('src/features/*/cache/typePolicies.ts');
+
 const mergedConnectionFields = (): string[] => {
-  const cache = readFileSync('src/apollo/cache.ts', 'utf8');
+  const declarations = POLICY_FILES.map(f => readFileSync(f, 'utf8')).join('\n');
   return [
     ...new Set(
-      [...cache.matchAll(/^\s*(\w+):\s*(?:\.\.\.)?mergeConnectionByNodeId\(/gm)]
+      [
+        ...declarations.matchAll(
+          /^\s*(\w+):\s*(?:\.\.\.)?mergeConnectionByNodeId\(/gm,
+        ),
+      ]
         .map(m => m[1])
         .filter(name => name !== 'homes'),
     ),
@@ -84,6 +94,7 @@ const offenders = OPERATION_FILES.flatMap(file => {
 describe('operations sharing a merged connection field', () => {
   it('finds the merge policies and the documents to check', () => {
     // Either scan returning nothing would pass this file vacuously.
+    expect(POLICY_FILES.length).toBeGreaterThan(3);
     expect(MERGED_FIELDS.length).toBeGreaterThan(5);
     expect(OPERATION_FILES.length).toBeGreaterThan(10);
   });

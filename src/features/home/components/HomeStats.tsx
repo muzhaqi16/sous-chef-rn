@@ -86,7 +86,7 @@ const styles = StyleSheet.create(theme => ({
   statsContainer: {
     flexDirection: 'row',
     padding: theme.spacing.md,
-    gap: theme.spacing['3'],
+    gap: theme.spacing.base,
   },
   statCard: {
     flex: 1,

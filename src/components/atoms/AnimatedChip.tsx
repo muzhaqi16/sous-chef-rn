@@ -183,7 +183,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     paddingVertical: 6,
     paddingHorizontal: theme.spacing.sm,
-    borderWidth: 1.5,
+    borderWidth: theme.borderWidth.thin,
   },
   image: {
     width: theme.sizes.icon.md,

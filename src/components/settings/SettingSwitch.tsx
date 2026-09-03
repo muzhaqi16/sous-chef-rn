@@ -69,7 +69,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   containerDisabled: {

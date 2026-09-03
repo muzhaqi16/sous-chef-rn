@@ -1,3 +1,4 @@
+import { filterByTerm } from '#hooks/search/useLocalSearch';
 /**
  * Dedupe by `id`, keeping the first occurrence and input order; `max` caps the
  * result. Used by the seen-items LRU merge and the brand autocomplete fallback.
@@ -22,6 +23,5 @@ export function filterByName<T extends { name: string }>(
   term: string,
   items: readonly T[],
 ): T[] {
-  const lower = term.toLowerCase();
-  return items.filter(item => item.name.toLowerCase().includes(lower));
+  return filterByTerm(items, term, ['name']) as T[];
 }

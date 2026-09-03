@@ -17,7 +17,7 @@ import {
 import {
   formatCondition,
   formatAcquisitionMethod,
-  formatCurrency,
+  formatCostOrNull,
   formatDate,
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
@@ -249,14 +249,14 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         />
       )}
       {/* Cost Per Unit Row */}
-      {!!formatCurrency(costPerUnit) && (
+      {!!formatCostOrNull(costPerUnit) && (
         <InfoRow
           label={t(
             isAveraged
               ? 'labels.avgCostPerUnit'
               : 'pantryItemDetail.fields.costPerUnit',
           )}
-          value={formatCurrency(costPerUnit)}
+          value={formatCostOrNull(costPerUnit)}
           icon="cash-outline"
           showColon={false}
           labelStyle={styles.labelText}
@@ -265,10 +265,10 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         />
       )}
       {/* Total Cost Row */}
-      {!!formatCurrency(item.totalCost) && (
+      {!!formatCostOrNull(item.totalCost) && (
         <InfoRow
           label={t('labels.stockValue')}
-          value={formatCurrency(item.totalCost)}
+          value={formatCostOrNull(item.totalCost)}
           icon="wallet-outline"
           showColon={false}
           labelStyle={styles.labelText}
@@ -311,7 +311,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           // The TOTAL, not the unit price the Cost/Unit row above already shows.
           value={`${formatDate(purchaseDate)}${
             purchaseTotal != null && purchaseTotal > 0
-              ? ` · ${formatCurrency(purchaseTotal)}`
+              ? ` · ${formatCostOrNull(purchaseTotal)}`
               : ''
           }`}
           icon="receipt-outline"
@@ -386,7 +386,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
 const styles = StyleSheet.create(theme => ({
   rowContainer: {
     paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.divider,
   },
   labelText: {

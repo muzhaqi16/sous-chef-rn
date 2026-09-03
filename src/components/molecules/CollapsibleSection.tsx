@@ -53,7 +53,7 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       expanded: {
         true: {
-          borderBottomWidth: 1,
+          borderBottomWidth: theme.borderWidth.hairline,
           borderBottomColor: theme.colors.border,
         },
         false: {},

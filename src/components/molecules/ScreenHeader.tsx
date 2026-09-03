@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { ThemedBackButton } from '#components/atoms/themedComponents';
+import { ThemedBackButton } from '#components/atoms/BackButton';
 import { Text } from '#components/atoms/Text';
 
 interface ScreenHeaderProps {
@@ -43,7 +43,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   title: {

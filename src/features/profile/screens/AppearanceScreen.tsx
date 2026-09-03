@@ -198,7 +198,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.full,
   },
   colorSwatchSelected: {
-    borderWidth: 3,
+    borderWidth: theme.borderWidth.thick,
     borderColor: theme.colors.textPrimary,
   },
   switchRow: {

@@ -4,10 +4,18 @@ import { ProfileHeader } from '../ProfileHeader';
 import type { IconButtonProps } from '../../atoms/IconButton';
 import type { BackButtonProps } from '../../atoms/BackButton';
 
+// Both the plain atom and its themed wrapper: the wrapper is declared beside
+// what it wraps, so a factory naming only the atom leaves the consumer's import
+// undefined.
 jest.mock('../../atoms/IconButton', () => {
   const { Pressable, Text } = require('react-native');
   return {
     IconButton: ({ onPress, accessibilityLabel }: IconButtonProps) => (
+      <Pressable onPress={onPress} accessibilityLabel={accessibilityLabel}>
+        <Text>IconButton</Text>
+      </Pressable>
+    ),
+    ThemedIconButton: ({ onPress, accessibilityLabel }: IconButtonProps) => (
       <Pressable onPress={onPress} accessibilityLabel={accessibilityLabel}>
         <Text>IconButton</Text>
       </Pressable>
@@ -19,6 +27,11 @@ jest.mock('../../atoms/BackButton', () => {
   const { Pressable, Text } = require('react-native');
   return {
     BackButton: ({ onPress }: BackButtonProps) => (
+      <Pressable onPress={onPress} accessibilityLabel="Go Back">
+        <Text>Back</Text>
+      </Pressable>
+    ),
+    ThemedBackButton: ({ onPress }: BackButtonProps) => (
       <Pressable onPress={onPress} accessibilityLabel="Go Back">
         <Text>Back</Text>
       </Pressable>

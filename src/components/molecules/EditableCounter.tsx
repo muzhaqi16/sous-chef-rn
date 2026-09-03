@@ -178,7 +178,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     alignItems: 'center',
     height: 48,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.borderLight,
     borderStyle: 'solid',
     borderRadius: theme.radii.md,
@@ -188,7 +188,7 @@ const styles = StyleSheet.create(theme => ({
       focused: {
         true: {
           borderColor: theme.colors.primary,
-          borderWidth: 2,
+          borderWidth: theme.borderWidth.medium,
         },
       },
       disabled: {
@@ -199,7 +199,7 @@ const styles = StyleSheet.create(theme => ({
       error: {
         true: {
           borderColor: theme.colors.error,
-          borderWidth: 2,
+          borderWidth: theme.borderWidth.medium,
         },
       },
     },
@@ -213,7 +213,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   pressed: {

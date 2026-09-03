@@ -208,7 +208,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   metaColumn: {

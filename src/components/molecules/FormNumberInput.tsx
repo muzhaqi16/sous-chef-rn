@@ -61,12 +61,12 @@ export const FormNumberInput: React.FC<FormNumberInputProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   input: {
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     fontSize: theme.typography.fontSize.base,
     backgroundColor: theme.colors.surface,
     color: theme.colors.textPrimary,

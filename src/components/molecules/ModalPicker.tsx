@@ -101,8 +101,8 @@ const styles = StyleSheet.create(theme => ({
   option: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing['3'],
-    borderBottomWidth: 1,
+    paddingVertical: theme.spacing.base,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.divider,
   },
   optionText: {

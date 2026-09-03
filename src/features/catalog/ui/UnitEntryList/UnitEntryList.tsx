@@ -206,7 +206,7 @@ const styles = StyleSheet.create(theme => ({
   sectionTitle: {
     marginBottom: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.borderLight,
   },
   entryRow: {
@@ -231,7 +231,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
     marginLeft: theme.spacing.sm,
     paddingLeft: theme.spacing.md,
-    borderLeftWidth: 2,
+    borderLeftWidth: theme.borderWidth.medium,
     borderLeftColor: theme.colors.borderLight,
   },
   pressed: {

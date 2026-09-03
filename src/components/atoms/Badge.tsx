@@ -50,12 +50,12 @@ const styles = StyleSheet.create(theme => ({
       },
       size: {
         small: {
-          paddingHorizontal: theme.spacing.xs + 2,
+          paddingHorizontal: theme.spacing.xsPlus,
           paddingVertical: 2,
         },
         medium: {
-          paddingHorizontal: theme.spacing['2.5'],
-          paddingVertical: theme.spacing.xs + 2,
+          paddingHorizontal: theme.spacing.smPlus,
+          paddingVertical: theme.spacing.xsPlus,
         },
       },
     },

@@ -384,7 +384,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     backgroundColor: theme.colors.surface,
     borderColor: theme.colors.border,
   },
@@ -408,7 +408,7 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       editing: {
         true: {
-          borderWidth: 2,
+          borderWidth: theme.borderWidth.medium,
           borderRadius: theme.radii.md,
           borderCurve: 'continuous',
           paddingVertical: theme.spacing.xs,

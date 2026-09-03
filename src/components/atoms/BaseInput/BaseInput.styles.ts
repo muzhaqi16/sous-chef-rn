@@ -26,7 +26,7 @@ export default StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
@@ -56,7 +56,7 @@ export default StyleSheet.create(theme => ({
     },
     color: theme.colors.textPrimary,
     backgroundColor: 'transparent',
-    borderWidth: 0,
+    borderWidth: theme.borderWidth.none,
     paddingHorizontal: {
       xs: theme.spacing.sm,
       md: theme.spacing.md,

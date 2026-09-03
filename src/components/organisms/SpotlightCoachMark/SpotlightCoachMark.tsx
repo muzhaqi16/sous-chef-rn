@@ -472,7 +472,7 @@ const styles = StyleSheet.create(theme => ({
   },
   skipButton: {
     position: 'absolute',
-    top: theme.spacing.xl * 2,
+    top: theme.spacing['3xl'],
     right: theme.spacing.lg,
     zIndex: 10,
     paddingVertical: theme.spacing.sm,

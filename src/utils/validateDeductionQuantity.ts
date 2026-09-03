@@ -1,6 +1,4 @@
 import { t } from '#/i18n';
-// Interpolated keys — the module-level t takes a fallback, not options.
-import { getI18n } from '#/i18n/config';
 import { alertService } from '#/services/alertService';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { formatQuantity } from '#/utils/formatQuantity';
@@ -44,7 +42,7 @@ export function validateDeductionQuantity(
   if (value > cap) {
     alertService.alert(
       t('labels.error'),
-      getI18n().t(
+      t(
         actionVerb === 'waste'
           ? 'deduction.exceedsAvailableWaste'
           : 'deduction.exceedsAvailableConsume',

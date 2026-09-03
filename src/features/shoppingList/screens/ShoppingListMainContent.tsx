@@ -44,16 +44,9 @@ import {
 } from '#features/shoppingList/context/ShoppingListTutorialContext';
 
 // Utils
-import { useApolloClient } from '@apollo/client/react';
-import {
-  ShoppingListCollaboratorFragmentDoc,
-  ShoppingListOwnershipFragmentDoc,
-  type ShoppingListCollaboratorFragment,
-  type ShoppingListOwnershipFragment,
-} from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { useShoppingListPermissions } from '#features/shoppingList/hooks/useShoppingListPermissions';
+import { discardOptimisticShoppingItems } from '#features/shoppingList/utils/optimisticItemCache';
 import { Telemetry } from '#/services/telemetry';
-import { getShoppingListPermissionsWithOwner } from '#/utils/permissions/shoppingListPermissions';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { DataStateView } from '#components/molecules/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
@@ -135,8 +128,6 @@ export const ShoppingListMainContent: React.FC<
       scrollTabBarHidden.set(hidden);
     },
   );
-
-  const apolloClient = useApolloClient();
 
   // ── Interactive tutorial context ──
   const tutorial = useShoppingListTutorial();
@@ -243,7 +234,7 @@ export const ShoppingListMainContent: React.FC<
 
   // Handle refresh
   const handleRefresh = () => {
-    optimisticDataPersistence.clearType('ShoppingListItem');
+    discardOptimisticShoppingItems();
     return executeRefreshWithFinally(() => refetchItems(), setRefreshing);
   };
 
@@ -257,54 +248,7 @@ export const ShoppingListMainContent: React.FC<
     isEmpty: lists.length === 0,
   });
 
-  // Calculate permissions for the current list
-  const permissions = (() => {
-    if (!currentListDetails) {
-      return {
-        canAddItems: true,
-        canRemoveItems: true,
-        canEditItems: true,
-        canMarkPurchased: true,
-      };
-    }
-
-    // Build the permission input from materialized collaborator/ownership
-    // fragments. Use the cache-key form (`{ __typename, id }`) — passing the
-    // masked ref directly silently returns partial/null data under
-    // `dataMasking: true`, which made owners of personal lists fall through
-    // to NO_PERMISSIONS.
-    const collaboratorNodes =
-      currentListDetails.collaboratorsConnection?.edges.map(e =>
-        apolloClient.cache.readFragment<ShoppingListCollaboratorFragment>({
-          fragment: ShoppingListCollaboratorFragmentDoc,
-          fragmentName: 'ShoppingListCollaboratorFragment',
-          from: { __typename: 'ShoppingListCollaborator', id: e.node.id },
-        }),
-      ) ?? [];
-    const ownershipRef = currentListDetails.ownerships?.[0];
-    const ownershipNode = ownershipRef
-      ? apolloClient.cache.readFragment<ShoppingListOwnershipFragment>({
-          fragment: ShoppingListOwnershipFragmentDoc,
-          fragmentName: 'ShoppingListOwnershipFragment',
-          from: { __typename: 'ShoppingListOwnership', id: ownershipRef.id },
-        })
-      : null;
-    const listData = {
-      homeId: currentListDetails.homeId,
-      collaboratorsConnection: {
-        edges: collaboratorNodes.map(node => ({ node })),
-      },
-      ownership: ownershipNode,
-    };
-
-    const homeMembership = currentListDetails.home?.myMembership ?? null;
-
-    return getShoppingListPermissionsWithOwner(
-      listData,
-      user?.id,
-      homeMembership,
-    );
-  })();
+  const permissions = useShoppingListPermissions(currentListDetails, user?.id);
 
   // Header right action - list selector button
   const headerRight = (
@@ -642,6 +586,6 @@ export const ShoppingListMainContent: React.FC<
 
 const styles = StyleSheet.create(theme => ({
   searchBarContainer: {
-    paddingHorizontal: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.base,
   },
 }));

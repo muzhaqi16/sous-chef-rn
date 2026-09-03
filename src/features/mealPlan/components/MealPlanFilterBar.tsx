@@ -7,6 +7,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { MealPlanType } from '#/graphql/generated/schemaTypes';
+import { matchesTerm } from '#hooks/search/useLocalSearch';
 
 export interface MealPlanFilterState {
   search: string;
@@ -33,9 +34,8 @@ export function filterMealPlans<
     endDate: string;
   },
 >(plans: T[], filters: MealPlanFilterState, now: Date): T[] {
-  const term = filters.search.trim().toLowerCase();
   return plans.filter(plan => {
-    if (term && !plan.name.toLowerCase().includes(term)) return false;
+    if (!matchesTerm(plan, filters.search, ['name'])) return false;
     if (filters.planType && plan.planType !== filters.planType) return false;
     if (filters.activeOnly) {
       const start = parseISO(plan.startDate);
@@ -117,7 +117,7 @@ const styles = StyleSheet.create(theme => ({
   },
   search: {
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
@@ -135,7 +135,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.full,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
     variants: {

@@ -52,7 +52,28 @@ const ALLOWED_DROPS: Record<string, string[]> = {
     '@gorhom/bottom-sheet#BottomSheetTextInput',
     '#hooks/useBottomSheetBackdropClaim#*',
   ],
-  '**/__tests__/**/*.{ts,tsx}': ['react-native#TextInput'],
+  '**/__tests__/**/*.{ts,tsx}': [
+    'react-native#TextInput',
+    'react-native#ActivityIndicator',
+    '#/i18n/config#getI18n',
+    'react-native-permissions#*',
+    'react-native-turbo-image#*',
+  ],
+  'src/utils/dateLocale.ts': ['#/i18n/config#getI18n'],
+  'src/hooks/navigation/useAppNavigation.ts': [
+    '@react-navigation/native#useNavigation',
+  ],
+  'src/components/atoms/Loading.tsx': ['react-native#ActivityIndicator'],
+  // This file IS the wrapper: it composes the raw scroller with the input
+  // context, which is the whole reason every other sheet is banned from it.
+  'src/components/atoms/BottomSheetFormScrollView.tsx': [
+    '#components/atoms/BottomSheetKeyboardAwareScrollView#*',
+  ],
+  'src/services/permissions/PermissionService.ts': [
+    'react-native-permissions#*',
+    'react-native-turbo-image#*',
+    '@react-native-vector-icons/ionicons#*',
+  ],
 };
 
 const base = config.rules[RULE];

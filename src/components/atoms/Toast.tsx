@@ -1,5 +1,5 @@
 import React, { useState, ReactNode, useEffect, forwardRef } from 'react';
-import type { ViewProps } from 'react-native';
+import { AccessibilityInfo, Platform, type ViewProps } from 'react-native';
 
 import Animated, {
   useSharedValue,
@@ -18,6 +18,7 @@ import { ToastContext } from '../../hooks/useToast';
 import { _setToastDispatch } from '#/services/toastService';
 import { SPRING, TIMING, TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
+import type { IconName } from '#utils/iconUtils';
 
 export type ToastType = 'default' | 'success' | 'error' | 'warning' | 'info';
 
@@ -40,9 +41,7 @@ export interface ToastOptions {
 }
 export type ToastFn = (options: ToastOptions) => void;
 
-const TOAST_ICONS: Partial<
-  Record<ToastType, React.ComponentProps<typeof Ionicons>['name']>
-> = {
+const TOAST_ICONS: Partial<Record<ToastType, IconName>> = {
   success: 'checkmark-circle',
   error: 'close-circle',
   warning: 'alert-circle-outline',
@@ -143,6 +142,12 @@ const ToastCard = forwardRef<
       {...hostProps}
       testID={`toast-${type}`}
       pointerEvents={interactive ? 'auto' : 'none'}
+      // Android reads a live region on its own. iOS has no equivalent, so the
+      // provider announces there — see the effect that arms auto-dismiss.
+      accessibilityLiveRegion="polite"
+      accessible
+      accessibilityRole="alert"
+      accessibilityLabel={message}
       // Safe-area offset applied as layout, not animation — see the entry
       // effect. `marginTop` (spacing.md) is the gap below it.
       style={[styles.toastContainer, { top: topInset }, animatedStyle]}
@@ -249,6 +254,12 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   // from OFFSCREEN_Y put the first frames under the status bar / Dynamic Island.
   useEffect(() => {
     if (!current) return;
+    // `accessibilityLiveRegion` is Android-only; VoiceOver needs to be told.
+    // Keyed on the generation, which changes on an in-place replace too, so a
+    // superseding state announcement is read rather than swallowed.
+    if (Platform.OS === 'ios' && current.message) {
+      AccessibilityInfo.announceForAccessibility(current.message);
+    }
     currentGeneration.set(generation);
     if (translateY.get() < TOAST.ENTER_FROM_Y) {
       translateY.set(TOAST.ENTER_FROM_Y);
@@ -355,7 +366,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
     zIndex: theme.zIndex.toast,
@@ -365,22 +376,22 @@ const styles = StyleSheet.create(theme => ({
       type: {
         success: {
           backgroundColor: theme.colors.alertBanner.success.bg,
-          borderWidth: 1,
+          borderWidth: theme.borderWidth.hairline,
           borderColor: theme.colors.alertBanner.success.border,
         },
         error: {
           backgroundColor: theme.colors.alertBanner.error.bg,
-          borderWidth: 1,
+          borderWidth: theme.borderWidth.hairline,
           borderColor: theme.colors.alertBanner.error.border,
         },
         warning: {
           backgroundColor: theme.colors.alertBanner.warning.bg,
-          borderWidth: 1,
+          borderWidth: theme.borderWidth.hairline,
           borderColor: theme.colors.alertBanner.warning.border,
         },
         info: {
           backgroundColor: theme.colors.alertBanner.info.bg,
-          borderWidth: 1,
+          borderWidth: theme.borderWidth.hairline,
           borderColor: theme.colors.alertBanner.info.border,
         },
       },

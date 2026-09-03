@@ -138,7 +138,7 @@ const styles = StyleSheet.create(theme => ({
   invitesSection: {
     marginTop: theme.spacing.lg,
     paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
   },
   invitesSectionTitle: {

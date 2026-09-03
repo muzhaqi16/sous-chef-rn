@@ -110,7 +110,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
   },
   withBorder: {
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.divider,
   },
   label: {

@@ -34,15 +34,18 @@ export const DebugInfo: React.FC = () => {
     'API Configuration': {
       'API URL': actualApiUrl,
       'WebSocket URL': actualWsUrl,
-      'API Key': env.API_KEY ? `${env.API_KEY.substring(0, 20)}...` : 'Not set',
+      // Presence only. This screen is reachable by a production account with
+      // dev-tools access, and everything here is copyable to the clipboard, so
+      // no part of a credential appears — a prefix identifies the key too.
+      'API Key': env.API_KEY ? 'Configured' : 'Not set',
       Timeout: `${apiConfig.timeout}ms`,
       'Max Retries': apiConfig.retries.toString(),
     },
     Telemetry: {
       'Metrics Endpoint': env.OTLP_METRICS_ENDPOINT || 'Not set',
       'Logs Endpoint': env.OTLP_LOGS_ENDPOINT || 'Not set',
-      'Metrics Auth': env.OTLP_METRICS_AUTH_USERNAME || 'Not set',
-      'Logs Auth': env.OTLP_LOGS_AUTH_USERNAME || 'Not set',
+      'Metrics Auth': env.OTLP_METRICS_AUTH_USERNAME ? 'Configured' : 'Not set',
+      'Logs Auth': env.OTLP_LOGS_AUTH_USERNAME ? 'Configured' : 'Not set',
     },
     'Device Info': {
       Platform: Platform.OS,
@@ -183,15 +186,15 @@ const styles = StyleSheet.create(theme => ({
   header: {
     padding: theme.spacing.md,
     backgroundColor: theme.colors.backgroundSecondary,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   headerText: {
-    marginBottom: theme.spacing['3'],
+    marginBottom: theme.spacing.base,
   },
   copyAllButton: {
     backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.sm + 2,
+    paddingVertical: theme.spacing.smPlus,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
@@ -201,7 +204,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.onPrimary,
   },
   section: {
-    marginVertical: theme.spacing['3'],
+    marginVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.md,
   },
   sectionHeader: {
@@ -212,24 +215,24 @@ const styles = StyleSheet.create(theme => ({
   },
   copySectionButton: {
     paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.base,
     borderRadius: theme.radii.xs + 2,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.primary,
   },
   infoContainer: {
     backgroundColor: theme.colors.backgroundSecondary,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     overflow: 'hidden',
   },
   infoRow: {
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   infoLabel: {

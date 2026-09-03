@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   ThemedActivityIndicator,
@@ -138,7 +138,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetKeyboardAwareScrollView
+      <BottomSheetFormScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
@@ -276,7 +276,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
           textAlignVertical="top"
           editable={!updating}
         />
-      </BottomSheetKeyboardAwareScrollView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 };
@@ -331,7 +331,7 @@ const styles = StyleSheet.create(theme => ({
     marginLeft: theme.spacing.sm,
   },
   notesInput: {
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',

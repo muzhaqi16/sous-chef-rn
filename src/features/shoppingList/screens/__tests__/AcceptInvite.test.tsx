@@ -35,8 +35,11 @@ jest.mock('#/apollo/links/refreshToken');
 
 const mockGoBack = jest.fn();
 jest.mock('@react-navigation/native', () => ({
+  // The screen goes through useAppNavigation, whose goBack guards on
+  // canGoBack — so the stand-in has to answer that too.
   useNavigation: jest.fn(() => ({
     goBack: mockGoBack,
+    canGoBack: () => true,
   })),
   useRoute: jest.fn(() => ({
     params: { token: 'invite-token' },

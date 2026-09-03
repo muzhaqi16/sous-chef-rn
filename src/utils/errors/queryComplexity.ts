@@ -186,7 +186,7 @@ export function handleQueryComplexityError(
     details?.errorType === QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED &&
     onRetryWithReducedComplexity
   ) {
-    console.log('🔄 Retrying with reduced pagination...');
+    logger.debug('🔄 Retrying with reduced pagination...');
     onRetryWithReducedComplexity();
   }
 

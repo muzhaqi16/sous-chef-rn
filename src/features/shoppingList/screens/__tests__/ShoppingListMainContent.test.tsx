@@ -124,7 +124,7 @@ jest.mock('#/services/telemetry', () => ({
   Telemetry: { trackEvent: jest.fn() },
 }));
 
-jest.mock('#/utils/permissions/shoppingListPermissions', () => ({
+jest.mock('#features/shoppingList/utils/shoppingListPermissions', () => ({
   getShoppingListPermissionsWithOwner: jest.fn(() => ({
     canAddItems: true,
     canRemoveItems: true,

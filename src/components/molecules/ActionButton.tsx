@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View, StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { ThemedIconButton } from '../atoms/themedComponents';
+import { ThemedIconButton } from '../atoms/IconButton';
 
 type ActionButtonProps = {
   onPress: () => void;
@@ -50,7 +50,7 @@ const styles = StyleSheet.create(theme => ({
     width: theme.sizes.button.md,
     height: theme.sizes.button.md,
     borderColor: theme.colors.primary,
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
   },
 }));
 export default ActionButton;

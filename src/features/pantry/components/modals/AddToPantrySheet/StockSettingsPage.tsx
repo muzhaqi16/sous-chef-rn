@@ -4,7 +4,7 @@ import { useTranslation } from '#/i18n';
 
 import { StyleSheet } from 'react-native-unistyles';
 import { detailsPageBaseStyles } from './detailsPageStyles';
-import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import { FormInput } from '#components/molecules/FormInput';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
@@ -53,7 +53,7 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
   const formatMethodLabel = (value: AcquisitionMethod) =>
     t(acquisitionMethodLabelKey(value));
   return (
-    <BottomSheetKeyboardAwareScrollView
+    <BottomSheetFormScrollView
       key="stock"
       style={styles.page}
       contentContainerStyle={[
@@ -127,7 +127,7 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
           formatLabel={formatMethodLabel}
         />
       </DropdownStack>
-    </BottomSheetKeyboardAwareScrollView>
+    </BottomSheetFormScrollView>
   );
 };
 

@@ -9,7 +9,7 @@ import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
-import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
@@ -95,7 +95,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetKeyboardAwareScrollView
+      <BottomSheetFormScrollView
         style={commonStyles.bottomSheetScrollView}
         contentContainerStyle={[
           commonStyles.bottomSheetContent,
@@ -177,7 +177,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
               )}
           </>
         )}
-      </BottomSheetKeyboardAwareScrollView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 };

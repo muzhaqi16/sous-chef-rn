@@ -21,7 +21,7 @@ jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
       .map((w: string) => w.charAt(0) + w.slice(1).toLowerCase())
       .join(' ');
   }),
-  formatCurrency: jest.fn((a: number | null | undefined) => {
+  formatCostOrNull: jest.fn((a: number | null | undefined) => {
     if (a == null || a <= 0) return null;
     return `$${a.toFixed(2)}`;
   }),

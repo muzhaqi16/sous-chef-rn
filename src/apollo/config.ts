@@ -6,6 +6,7 @@
  */
 
 import type { CacheSizes } from '@apollo/client/utilities';
+import { logger } from '#/utils/environment';
 
 // @ts-expect-error -- globalThis symbol indexing (Apollo's documented API)
 globalThis[Symbol.for('apollo.cacheSize')] = {
@@ -27,4 +28,4 @@ globalThis[Symbol.for('apollo.cacheSize')] = {
   'queryManager.getDocumentInfo': 500,
 } satisfies Partial<CacheSizes>;
 
-console.log('🔧 Apollo: Memory management configured for mobile');
+logger.debug('🔧 Apollo: Memory management configured for mobile');

@@ -103,11 +103,16 @@ export const matchPantryItemsToIngredients = (
 
   recipeIngredients.forEach(ingredient => {
     const ingredientNameLower = ingredient.name.toLowerCase();
-    const matchingPantryItems = pantryItems.filter(
-      pantryItem =>
-        ingredientNameLower.includes(pantryItem.name.toLowerCase()) ||
-        pantryItem.name.toLowerCase().includes(ingredientNameLower),
-    );
+    // Containment BOTH ways on purpose: "tomato" should match a pantry
+    // "cherry tomatoes", and "olive oil" an ingredient "oil". Not a user
+    // search, so it does not go through the list matcher.
+    const matchingPantryItems = pantryItems.filter(pantryItem => {
+      const pantryName = pantryItem.name.toLowerCase();
+      return (
+        ingredientNameLower.includes(pantryName) ||
+        pantryName.includes(ingredientNameLower)
+      );
+    });
 
     if (matchingPantryItems.length > 0) {
       matches.set(

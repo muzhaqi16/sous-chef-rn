@@ -131,23 +131,23 @@ const styles = StyleSheet.create(theme => ({
   },
   scrollContent: {
     gap: theme.spacing.sm,
-    paddingHorizontal: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.base,
   },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: theme.spacing['3'] + 2,
+    paddingHorizontal: theme.spacing.basePlus,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
-    gap: theme.spacing.xs + 2,
+    gap: theme.spacing.xsPlus,
     backgroundColor: theme.colors.filterTab.inactiveBg,
     variants: {
       compact: {
         true: {
-          paddingHorizontal: theme.spacing.sm + 2,
-          paddingVertical: theme.spacing.xs + 2,
+          paddingHorizontal: theme.spacing.smPlus,
+          paddingVertical: theme.spacing.xsPlus,
           borderRadius: theme.radii.lg,
           borderCurve: 'continuous',
           gap: theme.spacing.xs,

@@ -3,7 +3,7 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
@@ -205,7 +205,7 @@ export const SearchResultsScreen: React.FC<
         backgroundStyle={styles.bottomSheetBackground}
         handleIndicatorStyle={styles.bottomSheetHandle}
       >
-        <BottomSheetKeyboardAwareScrollView
+        <BottomSheetFormScrollView
           style={styles.bottomSheetContent}
           keyboardShouldPersistTaps="handled"
         >
@@ -229,7 +229,7 @@ export const SearchResultsScreen: React.FC<
               loading={addingItem}
             />
           )}
-        </BottomSheetKeyboardAwareScrollView>
+        </BottomSheetFormScrollView>
       </BottomSheetModal>
     </View>
   );

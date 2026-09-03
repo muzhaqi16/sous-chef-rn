@@ -113,19 +113,19 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   swipeableWrapper: {
-    marginBottom: theme.spacing['2.5'],
+    marginBottom: theme.spacing.smPlus,
     // Match the search bar inset so rows line up with it and the floating
     // tab bar instead of sitting narrower.
-    marginHorizontal: theme.spacing['3'],
+    marginHorizontal: theme.spacing.base,
   },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: theme.sizes.itemCard.compact.height,
-    padding: theme.spacing['3'],
+    padding: theme.spacing.base,
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     // Status variants keep a colored border; the default row relies on the
     // shadow alone, with a transparent border to preserve sizing.
     ...theme.shadows.card,

@@ -155,7 +155,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   textInput: {
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',

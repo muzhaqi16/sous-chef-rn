@@ -10,37 +10,27 @@ import { Icon } from '#/utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { LoadingInline } from '#components/atoms/Loading';
-import { useMutation, useQuery } from '@apollo/client/react';
 import {
-  DeleteAccountDocument,
-  CanDeleteAccountDocument,
-  type DeleteAccountMutation,
-} from '#operations/auth/user.generated';
+  useDeleteAccount,
+  type DeleteAccountResult,
+} from '#features/profile/hooks/useDeleteAccount';
 import { authService } from '#/services/authService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { handleMutationError } from '#/utils/errorHandlers';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 
-/** Module-level wrapper around the deleteAccount mutation. Extracted from the
- *  inline `onPress` arrow inside the component body so the surrounding try/catch
- *  does not bail out the React Compiler. */
+/** Module-level so the await chain does not bail the screen out of the compiler. */
 async function performDeleteAccount(
-  deleteAccountMutation: () => Promise<{
-    data?: DeleteAccountMutation | null;
-    error?: unknown;
-  }>,
+  deleteAccount: () => Promise<DeleteAccountResult>,
   setIsDeleting: (v: boolean) => void,
   rejectionMessage: string,
 ): Promise<void> {
   setIsDeleting(true);
-  let result;
-  try {
-    result = await deleteAccountMutation();
-  } catch (error) {
-    handleMutationError(error, { operation: 'Delete Account' });
+  const result = await deleteAccount();
+  // Transport error — already reported by the hook.
+  if (!result) {
     setIsDeleting(false);
+    return;
   }
-  if (!result) return; // transport error — already surfaced by the handler above
 
   // A ForbiddenError/ValidationError member resolves WITHOUT throwing under
   // errorPolicy:'all' — only the success payload logs the user out.
@@ -63,22 +53,16 @@ export const DeleteAccountScreen: React.FC = () => {
   const [confirmText, setConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Check if account can be deleted
-  const {
-    data: eligibilityData,
-    loading: checkingEligibility,
-    error: eligibilityError,
-    refetch: refetchEligibility,
-  } = useQuery(CanDeleteAccountDocument, {
-    fetchPolicy: 'network-only',
-  });
-
-  const canDelete = eligibilityData?.canDeleteAccount?.canDelete ?? false;
-  const blockers = eligibilityData?.canDeleteAccount?.blockers ?? [];
-
   // Error/success handling lives in `performDeleteAccount` so a resolved error
-  // member can't trigger logout — see the unwrapPayload note there.
-  const [deleteAccountMutation] = useMutation(DeleteAccountDocument);
+  // member cannot trigger logout.
+  const {
+    canDelete,
+    blockers,
+    checkingEligibility,
+    eligibilityError,
+    refetchEligibility,
+    deleteAccount,
+  } = useDeleteAccount();
 
   const handleDeleteAccount = async () => {
     if (confirmText.trim().toUpperCase() !== 'DELETE') {
@@ -102,7 +86,7 @@ export const DeleteAccountScreen: React.FC = () => {
           style: 'destructive',
           onPress: () =>
             performDeleteAccount(
-              deleteAccountMutation,
+              deleteAccount,
               setIsDeleting,
               t('account.deleteGenericError'),
             ),
@@ -362,7 +346,7 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.xl,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.warning,
-    marginTop: theme.spacing['3'],
+    marginTop: theme.spacing.base,
   },
   blockedDescription: {
     fontSize: theme.fonts.size.md,
@@ -375,7 +359,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     padding: theme.spacing.md,
     marginBottom: theme.spacing.md,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   blockerHeader: {
@@ -438,7 +422,7 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.xl,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.error,
-    marginTop: theme.spacing['3'],
+    marginTop: theme.spacing.base,
   },
   section: {
     marginBottom: theme.spacing.lg,
@@ -447,7 +431,7 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing['3'],
+    marginBottom: theme.spacing.base,
   },
   bulletPoint: {
     flexDirection: 'row',
@@ -458,7 +442,7 @@ const styles = StyleSheet.create(theme => ({
   bulletText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
-    marginLeft: theme.spacing['3'],
+    marginLeft: theme.spacing.base,
     flex: 1,
   },
   text: {
@@ -477,7 +461,7 @@ const styles = StyleSheet.create(theme => ({
   confirmationLabel: {
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing['3'],
+    marginBottom: theme.spacing.base,
   },
   deleteButton: {
     backgroundColor: theme.colors.error,
@@ -501,7 +485,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   cancelButtonText: {

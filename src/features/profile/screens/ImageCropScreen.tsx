@@ -438,7 +438,7 @@ const styles = StyleSheet.create(theme => ({
     width: CROP_SIZE,
     height: CROP_SIZE,
     borderColor: theme.colors.primary,
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     borderRadius: CROP_SIZE / 2,
     borderCurve: 'continuous',
     zIndex: 2,

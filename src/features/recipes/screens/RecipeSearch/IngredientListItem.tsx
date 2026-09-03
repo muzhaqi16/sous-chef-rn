@@ -62,7 +62,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   ingredientText: {

@@ -91,7 +91,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     padding: theme.spacing.md,
     boxShadow: [
@@ -109,11 +109,11 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   lastInfoRow: {
-    borderBottomWidth: 0,
+    borderBottomWidth: theme.borderWidth.none,
   },
   infoLabel: {
     flex: 1,
@@ -128,7 +128,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     paddingTop: theme.spacing.md,
     marginTop: theme.spacing.sm,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
   },
   emptyContainer: {

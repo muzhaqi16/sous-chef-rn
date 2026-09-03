@@ -122,9 +122,9 @@ export const MembersList: React.FC<MembersListProps> = ({
 const styles = StyleSheet.create(theme => ({
   membersSection: {
     paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
-    marginTop: theme.spacing['3'],
+    marginTop: theme.spacing.base,
   },
   membersSectionTitle: {
     marginBottom: theme.spacing.sm,
@@ -135,8 +135,8 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   memberChip: {
-    paddingHorizontal: theme.spacing['3'],
-    paddingVertical: theme.spacing.xs + 2,
+    paddingHorizontal: theme.spacing.base,
+    paddingVertical: theme.spacing.xsPlus,
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
     minWidth: theme.spacing['3xl'] - 4,
@@ -145,7 +145,7 @@ const styles = StyleSheet.create(theme => ({
       currentUser: {
         true: {
           backgroundColor: theme.colors.primary,
-          borderWidth: 1,
+          borderWidth: theme.borderWidth.hairline,
           borderColor: theme.colors.primary,
         },
         false: {
@@ -186,11 +186,11 @@ const styles = StyleSheet.create(theme => ({
   },
   inviteChip: {
     backgroundColor: theme.colors.transparent,
-    paddingHorizontal: theme.spacing['3'],
-    paddingVertical: theme.spacing.xs + 2,
+    paddingHorizontal: theme.spacing.base,
+    paddingVertical: theme.spacing.xsPlus,
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderStyle: 'dashed',
     minWidth: theme.spacing['3xl'] - 4,
     alignItems: 'center',

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { act, render, screen } from '@testing-library/react-native';
+import { AccessibilityInfo, Platform } from 'react-native';
 import { usePanGesture } from 'react-native-gesture-handler';
 import { withSpring } from 'react-native-reanimated';
 import { Text } from '#components/atoms/Text';
@@ -377,6 +378,72 @@ describe('ToastProvider', () => {
       expect(screen.getByTestId('toast-success').props.pointerEvents).toBe(
         'auto',
       );
+    });
+  });
+
+  describe('accessibility', () => {
+    it('marks the toast as a polite live region for Android', () => {
+      render(
+        <ToastProvider>
+          <ToastTrigger message="Saved" type="success" />
+        </ToastProvider>,
+      );
+
+      const card = screen.getByTestId('toast-success');
+      expect(card.props.accessibilityLiveRegion).toBe('polite');
+      expect(card.props.accessibilityLabel).toBe('Saved');
+    });
+
+    it('announces on iOS, which has no live region', () => {
+      const announce = jest
+        .spyOn(AccessibilityInfo, 'announceForAccessibility')
+        .mockImplementation(() => {});
+      const platform = Platform.OS;
+      Object.defineProperty(Platform, 'OS', {
+        value: 'ios',
+        configurable: true,
+      });
+
+      try {
+        render(
+          <ToastProvider>
+            <ToastTrigger message="Back online" type="success" />
+          </ToastProvider>,
+        );
+        expect(announce).toHaveBeenCalledWith('Back online');
+      } finally {
+        Object.defineProperty(Platform, 'OS', {
+          value: platform,
+          configurable: true,
+        });
+        announce.mockRestore();
+      }
+    });
+
+    it('does not announce on Android, where the live region already reads', () => {
+      const announce = jest
+        .spyOn(AccessibilityInfo, 'announceForAccessibility')
+        .mockImplementation(() => {});
+      const platform = Platform.OS;
+      Object.defineProperty(Platform, 'OS', {
+        value: 'android',
+        configurable: true,
+      });
+
+      try {
+        render(
+          <ToastProvider>
+            <ToastTrigger message="Saved" type="success" />
+          </ToastProvider>,
+        );
+        expect(announce).not.toHaveBeenCalled();
+      } finally {
+        Object.defineProperty(Platform, 'OS', {
+          value: platform,
+          configurable: true,
+        });
+        announce.mockRestore();
+      }
     });
   });
 });

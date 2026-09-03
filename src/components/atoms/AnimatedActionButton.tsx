@@ -10,7 +10,7 @@ import Animated, {
   withSequence,
   interpolate,
 } from 'react-native-reanimated';
-import { ThemedIconButton } from './themedComponents';
+import { ThemedIconButton } from './IconButton';
 import { standardEasing, TIMING } from '#/constants/animations';
 
 type AnimatedActionButtonProps = {
@@ -104,7 +104,7 @@ const styles = StyleSheet.create(theme => ({
     width: 44,
     height: 44,
     borderColor: theme.colors.primary,
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     overflow: 'hidden', // Clip animated background to border radius
   },
   animatedInner: {

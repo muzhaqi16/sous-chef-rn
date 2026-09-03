@@ -1,12 +1,9 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { View, ActivityIndicator } from 'react-native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
-
-const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.textSecondary,
-}));
+import { MutedActivityIndicator } from '#components/atoms/themedComponents';
 
 interface ConversionPreviewProps {
   previewText: string | null;
@@ -28,7 +25,7 @@ export const ConversionPreview: React.FC<ConversionPreviewProps> = ({
   return (
     <View style={styles.container}>
       {loading ? (
-        <ThemedActivityIndicator size="small" />
+        <MutedActivityIndicator size="small" />
       ) : (
         <Text size="sm" tone="secondary" style={styles.text}>
           {previewText}

@@ -2,11 +2,9 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useFragment, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
-import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { ItemDetail_ShoppingListItemFragmentDoc } from './ItemDetail.generated';
+import { useShoppingListItemDetail } from '#features/shoppingList/hooks/useShoppingListItemDetail';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
@@ -29,7 +27,8 @@ import {
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
 import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
-import { totalFromUnitPrice } from '#/utils/purchasePrice';
+import { totalFromUnitPrice } from '#features/shoppingList/utils/purchasePrice';
+import { formatMonthDayYear } from '#/utils/formatters/date';
 
 type RouteParams = {
   listId: string;
@@ -72,28 +71,7 @@ export const ShoppingListItemDetail: React.FC<
   const [failedHeroUri, setFailedHeroUri] = useState<string | null>(null);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
-  // cache-and-network: the detail selects fields the list never caches
-  // (createdAt, priority, source, addedBy, purchase history, nutrition,
-  // displayUnit), so it must hit the network to fill them. cache-first would
-  // skip the fetch whenever a partial entity already looks "complete" and leave
-  // the screen blank. When the API is unavailable, offlineModeLink still serves
-  // this from cache automatically.
-  const { data } = useQuery(GetShoppingListItemDocument, {
-    variables: { id: itemId },
-    fetchPolicy: 'cache-and-network',
-  });
-
-  // The detail screen owns its own narrow fragment. useFragment subscribes
-  // to the entity record so edits made elsewhere (e.g., AddEditItem) refresh
-  // this detail view automatically.
-  const itemRef = data?.shoppingListItem ?? null;
-  const itemFragmentResult = useFragment({
-    fragment: ItemDetail_ShoppingListItemFragmentDoc,
-    fragmentName: 'ItemDetail_shoppingListItem',
-    from: itemRef,
-  });
-  const item =
-    itemRef && itemFragmentResult.complete ? itemFragmentResult.data : null;
+  const { item, hasLoaded } = useShoppingListItemDetail(itemId);
 
   const handleEdit = () => {
     toEditItem({ listId, itemId });
@@ -102,11 +80,7 @@ export const ShoppingListItemDetail: React.FC<
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return t('labels.never');
     const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    return formatMonthDayYear(date);
   };
 
   // Images and nutrition from catalog item
@@ -132,9 +106,9 @@ export const ShoppingListItemDetail: React.FC<
       >
         <View style={styles.centerMessage}>
           <Text style={styles.centerMessageText}>
-            {data === undefined
-              ? t('shoppingListScreens.loading')
-              : t('errors.itemNotFound')}
+            {hasLoaded
+              ? t('errors.itemNotFound')
+              : t('shoppingListScreens.loading')}
           </Text>
         </View>
       </CollapsingHeroDetail>

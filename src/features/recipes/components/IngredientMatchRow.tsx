@@ -130,7 +130,7 @@ const styles = StyleSheet.create(theme => ({
   row: {
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   rowExcluded: {
@@ -187,7 +187,7 @@ const styles = StyleSheet.create(theme => ({
     minWidth: 60,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',

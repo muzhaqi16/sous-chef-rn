@@ -41,6 +41,7 @@ import {
 import { toastService } from '#/services/toastService';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import type { SearchRecipesResult } from '#/services/recipeApi/types';
+import { filterByTerm } from '#hooks/search/useLocalSearch';
 
 interface AddMealSheetProps {
   visible: boolean;
@@ -338,13 +339,9 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
 
   // Filtering moved up from the row so the list's item count matches what is
   // actually rendered — a virtualized list can't absorb rows that return null.
-  const filteredRecipes = hasQuery
-    ? recipes.filter(savedRecipe =>
-        savedRecipe.recipe.name
-          .toLowerCase()
-          .includes(searchQuery.trim().toLowerCase()),
-      )
-    : recipes;
+  const filteredRecipes = filterByTerm(recipes, searchQuery, [
+    r => r.recipe.name,
+  ]);
 
   const mealTypeOptions: ChipOption<MealType>[] = MEAL_TYPES.map(
     ({ type, labelKey }) => ({ key: type, label: t(labelKey) }),
@@ -563,7 +560,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
     gap: theme.spacing.sm,
   },
@@ -577,7 +574,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   pressed: {
@@ -611,7 +608,7 @@ const styles = StyleSheet.create(theme => ({
   },
   dietTag: {
     backgroundColor: theme.colors.surfaceVariant,
-    paddingHorizontal: theme.spacing.xs + 2,
+    paddingHorizontal: theme.spacing.xsPlus,
     paddingVertical: 1,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',

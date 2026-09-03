@@ -210,7 +210,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.surface,
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     borderColor: theme.colors.primary,
     borderStyle: 'dashed',
     borderRadius: theme.radii.md,

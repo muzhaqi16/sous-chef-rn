@@ -88,7 +88,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary + '1A', // 10% opacity
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    paddingVertical: theme.spacing.sm + 2,
+    paddingVertical: theme.spacing.smPlus,
     paddingHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.md,
   },

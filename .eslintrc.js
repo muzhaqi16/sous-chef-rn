@@ -33,6 +33,27 @@ const RESTRICTED_SYNTAX = [
     message:
       'Avoid inline import() types. Import the type at the top of the file instead.',
   },
+  // A list filtered with a hand-rolled `.toLowerCase().includes(...)` decides
+  // for itself what an empty term, a null field and whitespace mean — nine
+  // lists each answered differently. Scoped to `src/features/**`, where the
+  // sites were; error-message classification (`queueErrorPolicy`) is not a
+  // search and lives in the kernel.
+  {
+    selector:
+      "CallExpression[callee.property.name='filter'] CallExpression[callee.property.name='includes'][callee.object.callee.property.name='toLowerCase']",
+    message:
+      'Use filterByTerm / matchesTerm from #hooks/search/useLocalSearch for a list search, or searchUtils for the fuzzy variant. A hand-rolled filter re-decides what an empty term, a null field and whitespace mean.',
+  },
+  // Promoted from `check-design-tokens` once its list reached zero: 106 files
+  // each picked their own hairline. A literal is a rule the theme cannot
+  // change, and it is the one visual property that must NOT follow the density
+  // setting — which is exactly what `theme.borderWidth` encodes.
+  {
+    selector:
+      "Property[key.name=/^border(Top|Bottom|Left|Right|Start|End)?Width$/][value.type='Literal'][value.raw=/^[0-9]/]",
+    message:
+      'Use a named step of `theme.borderWidth` (none | hairline | thin | medium | thick | heavy) rather than a literal. A literal is a width the theme cannot change, and it is what made 106 files each pick their own hairline.',
+  },
   // --- Untranslated copy reaching a user-facing sink -------------------
   //
   // The i18next rule above covers the JSX surface (text + copy-carrying
@@ -187,6 +208,17 @@ const RESTRICTED_SYNTAX = [
  * `restrictedImports({ allow })` makes an override name what it drops.
  */
 const RESTRICTED_IMPORT_PATHS = [
+  // The raw scroller gives a sheet the keyboard offset but NOT the input
+  // context, so its `FormInput`s resolve to React Native's `TextInput` and the
+  // sheet stays blind to the keyboard — the exact defect
+  // `BottomSheetFormScrollView` exists to close. Eight sheets sat on the raw
+  // one; that set is empty now, so nothing may reach for it again except the
+  // wrapper itself (allowed in its own `overrides` entry).
+  {
+    name: '#components/atoms/BottomSheetKeyboardAwareScrollView',
+    message:
+      'Use BottomSheetFormScrollView from #components/atoms/BottomSheetFormScrollView. The raw scroller supplies the keyboard offset but not the input context, so inputs inside the sheet resolve to RN TextInput and the sheet cannot see the keyboard. See CLAUDE.md § Bottom sheets.',
+  },
   {
     name: 'react-native',
     importNames: [
@@ -198,9 +230,10 @@ const RESTRICTED_IMPORT_PATHS = [
       'TouchableHighlight',
       'TouchableNativeFeedback',
       'TouchableWithoutFeedback',
+      'ActivityIndicator',
     ],
     message:
-      'Use the project re-exports/atoms for app-wide consistency: StyleSheet → "react-native-unistyles"; Text → "#components/atoms/Text" (variant/tone/weight typography with consistent line-heights); Pressable → "#components/atoms/themedComponents" (or AppPressable/PressableScale for press feedback, or react-native-gesture-handler\'s Pressable for gesture composition). TextInput → "#components/atoms/themedComponents" (ThemedTextInput carries the theme\'s field color, placeholder, keyboard appearance and caret; a raw one renders dark text on the dark theme). Touchables are deprecated — use Pressable. For RN Text/Pressable *types*, import `type { TextProps, TextStyle, PressableProps }` (type-only imports are fine); for a TextInput ref import `type { ThemedTextInputRef }` from the same atom, because this rule matches the name whether or not the import is type-only.',
+      'Use the project re-exports/atoms for app-wide consistency: StyleSheet → "react-native-unistyles"; Text → "#components/atoms/Text" (variant/tone/weight typography with consistent line-heights); Pressable → "#components/atoms/themedComponents" (or AppPressable/PressableScale for press feedback, or react-native-gesture-handler\'s Pressable for gesture composition). TextInput → "#components/atoms/themedComponents" (ThemedTextInput carries the theme\'s field color, placeholder, keyboard appearance and caret; a raw one renders dark text on the dark theme). ActivityIndicator → one of the themed spinners in "#components/atoms/themedComponents" (Themed, Muted, Error, Success, White, OnPrimary, OnError); a raw one renders in the platform\'s default colour rather than the theme\'s. Touchables are deprecated — use Pressable. For RN Text/Pressable *types*, import `type { TextProps, TextStyle, PressableProps }` (type-only imports are fine); for a TextInput ref import `type { ThemedTextInputRef }` from the same atom, because this rule matches the name whether or not the import is type-only.',
   },
   {
     name: 'react',
@@ -218,6 +251,33 @@ const RESTRICTED_IMPORT_PATHS = [
     importNames: ['BottomSheetModal', 'BottomSheetTextInput'],
     message:
       "Import BottomSheetModal from '#hooks/useStandardBottomSheet' instead. That re-export is theme-wrapped and composes the global backdrop claim via modalProps.onChange — importing from @gorhom/bottom-sheet directly bypasses both. For type-only usage, import { BottomSheetModalRef } from '#hooks/useStandardBottomSheet'. BottomSheetTextInput → ThemedBottomSheetTextInput from '#components/atoms/themedComponents' (ref type: ThemedBottomSheetTextInputRef).",
+  },
+  {
+    name: 'react-native-permissions',
+    message:
+      "Use `PermissionService` from '#services/permissions/PermissionService'. It normalises the platform statuses to granted/denied/blocked/undetermined, treats LIMITED as granted and UNAVAILABLE as blocked, and owns `openSettings()` for the twice-denied case that a re-prompt cannot resolve.",
+  },
+  {
+    name: 'react-native-turbo-image',
+    message:
+      "Use `CachedImage` from '#components/atoms/CachedImage' — one wrapper owns the caching policy, the recycling key and the placeholder. A second call site pins a second set of options.",
+  },
+  {
+    name: '@react-native-vector-icons/ionicons',
+    message:
+      "Use `Icon` from '#utils/iconUtils' with a `tone`, so the glyph colour follows the theme. For an icon NAME type, import `type { IconName }` from the same module. A colour the tone set cannot express is a missing entry in TONE_TO_COLOR, not a reason to import the glyph package.",
+  },
+  {
+    name: '@react-navigation/native',
+    importNames: ['useNavigation'],
+    message:
+      "Use `useAppNavigation` from '#hooks/navigation/useAppNavigation'. It is the one place that knows screen names, so a rename surfaces as a type error rather than a runtime miss, and its `goBack` guards on `canGoBack`. For an escape hatch it returns the raw prop: `const { navigation } = useAppNavigation()` gives you `dispatch` and `addListener`.",
+  },
+  {
+    name: '#/i18n/config',
+    importNames: ['getI18n'],
+    message:
+      "Translate through `t` from '#/i18n' (aliased `tGlobal` in a .tsx), or `useTranslation()` in a component. The module-scope `t` IS `getI18n().t` with the fallback and options overloads in front of it, so reaching the instance loses the fallback form and bypasses the entry point that pins the namespace. Reaching it for something other than translating — changing the language, reading the current one — belongs in src/i18n or the store, which are exempt.",
   },
   {
     name: '#hooks/useBottomSheetBackdropClaim',
@@ -361,7 +421,10 @@ module.exports = {
       files: ['**/*.graphql'],
       parser: '@graphql-eslint/eslint-plugin',
       parserOptions: {
-        schema: './src/graphql/generated/schema.graphql',
+        // `graphQLConfig`, not `schema`: graphql-eslint@4 removed the flat
+        // `schema` option and errors at PARSE time if it is still used, which
+        // reads as every document failing rather than as a config problem.
+        graphQLConfig: { schema: './src/graphql/generated/schema.graphql' },
       },
       plugins: ['@graphql-eslint'],
       rules: {
@@ -557,25 +620,22 @@ module.exports = {
       // cache-miss guards. Infra (telemetry transports, perf monitors, the
       // Apollo console link, `src/hooks/performance/**`) is intentionally NOT
       // covered — console output is its purpose there.
-      files: [
-        'src/features/**/hooks/**/*.ts',
-        'src/features/**/hooks/**/*.tsx',
-        'src/features/**/screens/**/*.ts',
-        'src/features/**/screens/**/*.tsx',
-        'src/features/**/components/**/*.ts',
-        'src/features/**/components/**/*.tsx',
-        'src/components/**/*.ts',
-        'src/components/**/*.tsx',
-        'src/screens/**/*.ts',
-        'src/screens/**/*.tsx',
-        'src/hooks/**/*.ts',
-        'src/hooks/**/*.tsx',
-      ],
+      // Scoped to all of `src/**` rather than the UI directories alone: the
+      // kernel had four `console.log` calls that no glob reached, one of them
+      // firing on every app start. The exclusions below are the modules whose
+      // OUTPUT is the console — naming them is what keeps this a rule rather
+      // than a suggestion.
+      files: ['src/**/*.ts', 'src/**/*.tsx'],
       excludedFiles: [
         '**/__tests__/**',
         '**/*.test.ts',
         '**/*.test.tsx',
-        // Perf monitors — console output is their purpose (see comment above).
+        // The logger itself, and the transports and monitors whose purpose is
+        // console output.
+        'src/utils/environment.ts',
+        'src/apollo/links/consoleLink.ts',
+        'src/services/telemetry/transports/**',
+        'src/services/performance/FlashListDiagnostics.ts',
         'src/hooks/performance/**',
       ],
       rules: {
@@ -813,7 +873,16 @@ module.exports = {
       files: ['**/__tests__/**/*.{ts,tsx}', '**/*.test.{ts,tsx}'],
       rules: {
         'no-restricted-imports': restrictedImports({
-          allow: { 'react-native': ['TextInput'] },
+          // A test drives the i18next instance directly — changing the
+          // language, asserting a plural category — which is the instance's
+          // job rather than a translation call.
+          allow: {
+            'react-native': ['TextInput', 'ActivityIndicator'],
+            '#/i18n/config': ['getI18n'],
+            // A test for a wrapper asserts against the package it wraps.
+            'react-native-permissions': true,
+            'react-native-turbo-image': true,
+          },
         }),
       },
     },
@@ -855,6 +924,166 @@ module.exports = {
               name: '#components/atoms/PressableScale',
               message:
                 "PressableScale wraps RN's Pressable — inside a Swipeable use RNGH's Pressable from 'react-native-gesture-handler'.",
+            },
+          ],
+        }),
+      },
+    },
+    {
+      // Each of these IS the canonical mechanism, or the one case it cannot
+      // express: the permission service and the icon utility wrap their
+      // packages; CachedImage wraps the image library; RecipeHeroImage needs
+      // the library's own component inside `createAnimatedComponent` for a
+      // shared transition; Toast's glyph colour is a runtime lookup into a
+      // nested theme path, which a static `tone` key cannot name.
+      files: [
+        'src/services/permissions/PermissionService.ts',
+        'src/utils/iconUtils.tsx',
+        'src/components/atoms/CachedImage.tsx',
+        'src/features/recipes/screens/RecipeDetail/components/RecipeHeroImage.tsx',
+        'src/components/atoms/Toast.tsx',
+      ],
+      rules: {
+        'no-restricted-imports': restrictedImports({
+          allow: {
+            'react-native-permissions': true,
+            'react-native-turbo-image': true,
+            '@react-native-vector-icons/ionicons': true,
+          },
+        }),
+      },
+    },
+    {
+      // This file IS the wrapper: it is the one place that composes the raw
+      // scroller with the input context every other sheet needs.
+      files: ['src/components/atoms/BottomSheetFormScrollView.tsx'],
+      rules: {
+        'no-restricted-imports': restrictedImports({
+          allow: {
+            '#components/atoms/BottomSheetKeyboardAwareScrollView': true,
+          },
+        }),
+      },
+    },
+    {
+      // The Loading atom's `color` prop is the documented escape hatch, and a
+      // themed wrapper cannot take a caller's colour. `themedComponents.tsx`
+      // needs no entry — an override above turns the rule off there, since it
+      // is the re-export site for every banned primitive.
+      files: ['src/components/atoms/Loading.tsx'],
+      rules: {
+        'no-restricted-imports': restrictedImports({
+          allow: { 'react-native': ['ActivityIndicator'] },
+        }),
+      },
+    },
+    {
+      // The navigation wrappers ARE the canonical mechanism — they are the one
+      // place allowed to reach the underlying hook.
+      files: [
+        'src/hooks/navigation/useAppNavigation.ts',
+        'src/hooks/navigation/useOnboardingNavigation.ts',
+      ],
+      rules: {
+        'no-restricted-imports': restrictedImports({
+          allow: { '@react-navigation/native': ['useNavigation'] },
+        }),
+      },
+    },
+    {
+      // The four modules that need the i18next INSTANCE rather than a
+      // translation: two read the resolved language, and two subscribe to
+      // `languageChanged`. Neither is something `t` can do, and neither is a
+      // translation call — which is what the ban is about.
+      files: [
+        'src/utils/dateLocale.ts',
+        'src/utils/notifications/localNotificationHelper.ts',
+        'src/store/slices/preferencesSlice.ts',
+        'src/store/index.ts',
+      ],
+      rules: {
+        'no-restricted-imports': restrictedImports({
+          allow: { '#/i18n/config': ['getI18n'] },
+        }),
+      },
+    },
+    {
+      // The files that still hold an inline style. Named rather than the rule
+      // switched off, so each one that is fixed can leave the list and no new
+      // file can join it. Tests and perf fixtures are out of scope: an inline
+      // style in a fixture is describing the input, not shipping a literal.
+      files: [
+        'src/components/atoms/AnimatedCheckbox.tsx',
+        'src/components/atoms/Skeleton/SkeletonBase.tsx',
+        'src/components/charts/BreakdownPieChart.tsx',
+        'src/components/molecules/AnimatedScanLine.tsx',
+        'src/components/molecules/QuantityInputFeedback.tsx',
+        'src/components/molecules/TabView/TabView.tsx',
+        'src/components/organisms/ItemList.tsx',
+        'src/components/templates/BottomSheetAction.tsx',
+        'src/features/catalog/ui/AddItemForm/AddItemForm.tsx',
+        'src/features/catalog/ui/AddItemSheet/AddItemSheet.tsx',
+        'src/features/home/screens/HomeManagement.tsx',
+        'src/features/notifications/components/ExpirationActionSheet.tsx',
+        'src/features/pantry/components/modals/AddToPantrySheet/DetailsPage.tsx',
+        'src/features/pantry/components/modals/AddToPantrySheet/StoragePage.tsx',
+        'src/features/pantry/components/modals/RestockPantryItemModal.tsx',
+        'src/features/recipes/screens/RecipeDetail/index.tsx',
+        'src/features/shoppingList/components/ShoppingListTabs/ShoppingListTabs.tsx',
+        '**/__tests__/**/*.tsx',
+        '**/*.test.tsx',
+        '**/__perf__/**/*.tsx',
+      ],
+      rules: {
+        'react-native/no-inline-styles': 'off',
+      },
+    },
+    {
+      // An atom or a molecule reads no application state. An organism may —
+      // that is the line src/components/atoms/README.md draws, and the reason a
+      // store-reading atom is really an organism filed in the wrong bucket.
+      //
+      // This bans the store rather than all of `#hooks`, because the two are
+      // not the same thing: `useScrollEdgeFades` is UI behaviour an atom may
+      // own, while `useAppStore` is the application's state.
+      //
+      // `excludedFiles` names every file an EARLIER override already speaks
+      // for. An override replaces the whole rule config, so without these this
+      // one would silently re-ban the RN TextInput that themedComponents and
+      // the tests are allowed, and drop the Pressable-wrapper bans SwipeableItem
+      // adds. The last two entries are the files that read the store today;
+      // both are on the reclassification worklist and the exemption goes with
+      // them.
+      files: [
+        'src/components/atoms/**/*.{ts,tsx}',
+        'src/components/molecules/**/*.{ts,tsx}',
+      ],
+      excludedFiles: [
+        '**/__tests__/**/*.{ts,tsx}',
+        '**/*.test.{ts,tsx}',
+        'src/components/atoms/themedComponents.tsx',
+        'src/components/atoms/Text.tsx',
+        'src/components/molecules/SwipeableItem/**/*.{ts,tsx}',
+        'src/components/atoms/ThemedStatusBar.tsx',
+        'src/components/molecules/BottomSheetAutocompleteInput.tsx',
+        // Spoken for by the overrides above, and none of them reads the store.
+        'src/components/atoms/Loading.tsx',
+        'src/components/atoms/CachedImage.tsx',
+        'src/components/atoms/Toast.tsx',
+        'src/components/atoms/BottomSheetFormScrollView.tsx',
+      ],
+      rules: {
+        'no-restricted-imports': restrictedImports({
+          add: [
+            {
+              name: '#store/useAppStore',
+              message:
+                'An atom or molecule takes state as props; it does not read the store. If it genuinely needs application state it is an organism — move it to src/components/organisms/.',
+            },
+            {
+              name: '#/store/useAppStore',
+              message:
+                'An atom or molecule takes state as props; it does not read the store. If it genuinely needs application state it is an organism — move it to src/components/organisms/.',
             },
           ],
         }),
@@ -1069,6 +1298,53 @@ module.exports = {
               'Cross-feature import into home internals (context/, hooks/mutations/, utils/, graphql/, components/) is not allowed. Use a public hook from src/features/home/hooks/, or compose your own GraphQL operation.',
           },
 
+          // ── Composition direction inside the kit ──
+          //
+          // `src/components/atoms/README.md` states the levels: an atom
+          // composes nothing but Text or another atom, a molecule composes
+          // atoms, an organism composes molecules, a template is page
+          // scaffolding. Nothing enforced the DIRECTION, and the buckets became
+          // size labels — 23 of 58 atoms compose other styled components.
+          //
+          // These zones enforce only the direction, which is the unambiguous
+          // half. Whether a given file sits at the right level is a judgement
+          // `check-single-consumer` and the reclassification worklist carry.
+          //
+          // The two `except` entries are the only upward imports in the tree.
+          // They are named rather than the rule relaxed, and they go away when
+          // the buckets are reclassified.
+          {
+            target: './src/components/atoms/**',
+            from: './src/components/molecules',
+            // FormattedItemSubtitle renders a quantity; QuantityDisplay is a
+            // bare View + Text that belongs at the atom level anyway.
+            except: ['./QuantityDisplay.tsx'],
+            message:
+              'An atom composes nothing but RN primitives, Text and other atoms. Importing a molecule makes this a molecule — move it to src/components/molecules/. See src/components/atoms/README.md.',
+          },
+          {
+            target: './src/components/atoms/**',
+            from: ['./src/components/organisms', './src/components/templates'],
+            message:
+              'An atom composes nothing but RN primitives, Text and other atoms. See src/components/atoms/README.md.',
+          },
+          {
+            target: './src/components/molecules/**',
+            from: './src/components/templates',
+            // ModalPicker presents its list inside the ActionTray overlay.
+            // ActionTray is an organism filed under templates; both move
+            // together when the buckets are reclassified.
+            except: ['./ActionTray/ActionTray.tsx', './ActionTray/types.ts'],
+            message:
+              'A molecule composes atoms. Importing a template inverts the composition order — move the consumer up to organisms/, or the dependency down. See src/components/atoms/README.md.',
+          },
+          {
+            target: './src/components/molecules/**',
+            from: './src/components/organisms',
+            message:
+              'A molecule composes atoms. Importing an organism inverts the composition order — move the consumer up to organisms/. See src/components/atoms/README.md.',
+          },
+
           // ── The other direction: the SHARED layer reaching into a feature ──
           //
           // Every zone above targets `./src/features/!(x)/**`, so nothing
@@ -1133,9 +1409,57 @@ module.exports = {
               './src/features/home/context',
               './src/features/home/hooks/mutations',
               './src/features/home/utils',
+              './src/features/shoppingList/context',
+              './src/features/shoppingList/utils',
             ],
             message:
               "Shared code must not import a feature's internals (context/, hooks/mutations/, utils/). A hook owned by one feature belongs in that feature; src/hooks/ and src/components/ hold only what more than one feature uses. Either move the consumer into the feature, or move the thing it needs up to src/hooks/ or src/utils/.",
+          },
+          // A feature's components/ is private in the feature-to-feature zones
+          // above; it was absent here, so a kernel module importing a feature
+          // COMPONENT was caught by nothing. One crossing exists.
+          {
+            target: [
+              './src/components/**',
+              './src/hooks/**',
+              './src/screens/**',
+              './src/apollo/**',
+              './src/utils/**',
+              './src/store/**',
+              './src/services/**',
+              './src/navigation/**',
+            ],
+            from: './src/features/pantry/components',
+            // A type-only import in a pantry-specific validator that is itself
+            // on the worklist to move into the feature; the exception goes with
+            // it.
+            except: ['./modals/PantryActionModal.tsx'],
+            message:
+              "Shared code must not import a feature's components/. A component two features want belongs in src/components/; one feature's belongs in that feature.",
+          },
+          {
+            target: [
+              './src/components/**',
+              './src/hooks/**',
+              './src/screens/**',
+              './src/apollo/**',
+              './src/utils/**',
+              './src/store/**',
+              './src/services/**',
+              './src/navigation/**',
+            ],
+            from: [
+              './src/features/shoppingList/components',
+              './src/features/recipes/components',
+              './src/features/mealPlan/components',
+              './src/features/barcode/components',
+              './src/features/notifications/components',
+              './src/features/profile/components',
+              './src/features/home/components',
+              './src/features/catalog/components',
+            ],
+            message:
+              "Shared code must not import a feature's components/. A component two features want belongs in src/components/; one feature's belongs in that feature. The catalog's PUBLIC UI is src/features/catalog/ui/, not components/.",
           },
           // shoppingList's share of the same rule, split out to carry the four
           // exceptions below. Each is a shared surface that genuinely cannot
@@ -1153,51 +1477,41 @@ module.exports = {
               './src/navigation/**',
             ],
             from: './src/features/shoppingList/hooks/mutations',
-            // AddToShoppingListSheet is mounted by the shared AddItemSheet
-            // framework, not by the shopping-list feature, so it cannot live
-            // inside it; and these two hooks own the shopping-list documents,
-            // so they cannot live outside it. CreateShoppingListScreen is
-            // onboarding — it runs before any feature tab exists.
-            except: ['./useAddShoppingItem.ts', './useCreateShoppingList.ts'],
             message:
               'Shared code must not import shoppingList/hooks/mutations/. Move the consumer into the feature, or the dependency up to src/hooks/.',
           },
+
+          // ── The data layer stays out of what renders ──
+          //
+          // A screen, sheet or list cell gets its data from a hook in its
+          // feature's hooks/ directory. Holding the client or writing the
+          // normalized cache here is what made every data-layer change a screen
+          // change — and it is the seam any future client swap needs, whichever
+          // client that turns out to be.
+          //
+          // `alertRejectedMutation` is the one exception, and it is not really
+          // one: it sits under apollo/ by location, but its job is turning a
+          // refusal's `field` and `code` into localized copy, which is
+          // presentation.
+          //
+          // The companion half — importing a data-access NAME from
+          // `@apollo/client` — is `check-data-layer-boundary.mjs`, whose
+          // baseline is EMPTY and may only stay so. It lives there rather than
+          // in `no-restricted-imports` because an override covering these globs
+          // would REPLACE the rule for the eight kit files that already carry a
+          // narrower one, silently un-banning what those name.
           {
             target: [
-              './src/components/**',
-              './src/hooks/**',
+              './src/features/*/screens/**',
+              './src/features/*/components/**',
+              './src/features/*/ui/**',
               './src/screens/**',
-              './src/apollo/**',
-              './src/utils/**',
-              './src/store/**',
-              './src/services/**',
-              './src/navigation/**',
-            ],
-            from: './src/features/shoppingList/utils',
-            // `priority` serves four files inside the feature and one shared
-            // modal. Promoting it to src/utils/ for the single outside caller
-            // would move it away from the four that own it.
-            except: ['./priority.ts'],
-            message:
-              'Shared code must not import shoppingList/utils/. Move the consumer into the feature, or the dependency up to src/utils/.',
-          },
-          {
-            target: [
               './src/components/**',
-              './src/hooks/**',
-              './src/screens/**',
-              './src/apollo/**',
-              './src/utils/**',
-              './src/store/**',
-              './src/services/**',
-              './src/navigation/**',
             ],
-            from: './src/features/shoppingList/context',
-            // The tutorial context is read by the shared sheet so the hint can
-            // follow the user into it; the provider stays with the feature.
-            except: ['./ShoppingListTutorialContext.tsx'],
+            from: './src/apollo',
+            except: ['./utils/alertRejectedMutation.ts'],
             message:
-              'Shared code must not import shoppingList/context/. Move the consumer into the feature.',
+              "A screen, sheet or list cell must not import the data layer. Move the cache read/write into a hook in the feature's hooks/ directory and return plain values and callbacks. See CLAUDE.md and openspec data-layer-boundary.",
           },
         ],
       },
@@ -1236,7 +1550,11 @@ module.exports = {
     'no-bitwise': 'off', // Allow bitwise operations for hash functions
     'no-void': ['error', { allowAsStatement: true }], // Allow void as statement (e.g. void expr to reference a value)
     'no-catch-shadow': 'off', // IE 8 compatibility not needed
-    'react-native/no-inline-styles': 'off', // Allow inline styles for simple one-offs
+    // An inline style object is re-created every render and, more to the point,
+    // holds a literal where a theme token belongs — which is how a colour ends
+    // up not following the colour scheme. The 17 files that still carry one are
+    // excluded by name in an override below; the list only shrinks.
+    'react-native/no-inline-styles': 'error',
 
     // Reduce noise from common patterns
     '@typescript-eslint/no-shadow': [

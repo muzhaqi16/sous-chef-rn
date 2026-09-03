@@ -56,11 +56,11 @@ const styles = StyleSheet.create(theme => ({
   folderItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    gap: theme.spacing['3'],
+    gap: theme.spacing.base,
   },
   folderItemSelected: {
     backgroundColor: theme.colors.primaryLight,

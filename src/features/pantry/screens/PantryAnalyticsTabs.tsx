@@ -780,7 +780,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: theme.spacing.xs,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   periodLabel: {
@@ -801,7 +801,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: theme.spacing.xs,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
 }));

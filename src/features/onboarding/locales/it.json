@@ -1,0 +1,105 @@
+{
+  "onBoarding": {
+    "welcomeTitle": "Ti diamo il benvenuto! Configuriamo la tua casa",
+    "almostThere": "Ci siamo quasi!",
+    "createHomeSubtitle": "Crea la tua casa e dispensa per iniziare",
+    "addPantryToHome": "Aggiungiamo una dispensa a {{homeName}}",
+    "homeAlreadyConfigured": "La tua casa e dispensa sono già configurate",
+    "pendingInvitesTitle": "Hai inviti casa in sospeso!",
+    "pendingInvitesSubtitle": "Accetta un invito per unirti a una casa esistente o creane una tua",
+    "or": "O",
+    "createOwnHome": "Crea la mia casa",
+    "skipForNow": "Salta per ora",
+    "existingHome": "Casa esistente",
+    "homeAndPantryNote": "Erano già configurate. Puoi continuare al passaggio successivo o crearne altre più tardi nelle impostazioni.",
+    "homeNotFound": "La casa è stata creata ma non è stata trovata. Riprova.",
+    "setupError": "Si è verificato un errore durante la configurazione",
+    "defaultPantryName": "Dispensa cucina",
+    "shoppingListsTitle": "Liste della spesa",
+    "checkingExistingLists": "Verifica delle liste esistenti...",
+    "checkingYourShoppingLists": "Verifica delle tue liste della spesa...",
+    "shoppingListConfigured": "La tua lista della spesa è già configurata",
+    "shoppingListAlreadySetUp": "Era già configurata. Puoi continuare al passaggio successivo o crearne altre più tardi nelle impostazioni.",
+    "createShoppingListTitle": "Crea la tua lista della spesa",
+    "createShoppingListSubtitle": "Puoi aggiungere articoli più tardi",
+    "shoppingListName": "Nome della lista",
+    "shoppingListPlaceholder": "es. Spesa settimanale",
+    "creatingList": "Creazione lista...",
+    "createList": "Crea lista",
+    "defaultShoppingListName": "Spesa settimanale",
+    "createShoppingListError": "Si è verificato un errore durante la creazione della lista.",
+    "stockPantryTitle": "Riempie la dispensa",
+    "stockPantrySubtitle": "Seleziona gli articoli che hai già in casa",
+    "stockPantrySubtitleOptional": "Seleziona gli articoli che hai già in casa (opzionale)",
+    "addItemSingular": "Aggiungi {{count}} articolo",
+    "addItemPlural": "Aggiungi {{count}} articoli",
+    "profilePictureSubtitle": "Aggiungi una foto per personalizzare il tuo profilo",
+    "chooseFromGallery": "Scegli dalla galleria",
+    "chooseFromGalleryDescription": "Seleziona una foto esistente",
+    "takeAPhoto": "Scatta una foto",
+    "takeAPhotoDescription": "Usa la tua fotocamera",
+    "cropAndCenter": "Ritaglia e centra",
+    "cropHint": "Regola la tua foto prima di caricarla",
+    "termsOfService": "Termini di servizio",
+    "legalNotice": "Continuando accetti i nostri",
+    "uploadAndContinue": "Carica e continua",
+    "updateProfilePhotoFailed": "Impossibile aggiornare la foto del profilo. Riprova.",
+    "cameraPermissionTakePhotoMessage": "L'accesso alla fotocamera è necessario per scattare una foto. Abilitalo nelle impostazioni.",
+    "completeTitle": "Tutto pronto!",
+    "completeSubtitle": "La tua casa è pronta all'uso",
+    "congratulations": "Congratulazioni! Hai configurato correttamente:",
+    "summaryHomeAndPantry": "La tua casa e dispensa",
+    "summaryShoppingList": "La tua lista della spesa",
+    "summaryInitialPantryItems": "Articoli iniziali della dispensa",
+    "summaryInvitedFamily": "Membri della famiglia invitati",
+    "completeInfo": "Puoi gestire tutto dalle impostazioni dell'app in qualsiasi momento.",
+    "completeOnboardingError": "Impossibile completare l'introduzione. Riprova.",
+    "userNotFoundError": "Utente non trovato. Prova ad accedere di nuovo.",
+    "settingUpSecurity": "Configurazione della sicurezza...",
+    "checkingBiometricAvailability": "Verifica della disponibilità biometrica...",
+    "secureYourAccount": "Proteggi il tuo account",
+    "homeNamePlaceholder": "es. La mia casa",
+    "defaultPantryNameLabel": "Nome predefinito della dispensa",
+    "pantryNamePlaceholder": "es. Dispensa della cucina",
+    "checkingExistingSetup": "Verifica della configurazione esistente...",
+    "creatingHomeAndPantry": "Creazione di casa e dispensa...",
+    "creatingPantry": "Creazione della dispensa..."
+  },
+  "onboardingSteps": {
+    "CreateHome": {
+      "title": "Crea casa",
+      "subtitle": "Configura la tua casa"
+    },
+    "CreateShoppingList": {
+      "subtitle": "Crea la tua prima lista"
+    },
+    "SelectPantryItems": {
+      "title": "Articoli dispensa",
+      "subtitle": "Seleziona cosa hai"
+    },
+    "ProfilePictureUpload": {
+      "subtitle": "Aggiungi la tua foto"
+    },
+    "InviteMembers": {
+      "subtitle": "Condividi con la famiglia"
+    },
+    "BiometricSetup": {
+      "subtitle": "Configura la biometria"
+    },
+    "OnboardingComplete": {
+      "title": "Completato"
+    }
+  },
+  "onboardingValidation": {
+    "homeRequired": "Il nome della casa è obbligatorio",
+    "homeMin": "Il nome della casa deve contenere almeno {{count}} caratteri",
+    "homeMax": "Il nome della casa deve contenere meno di {{count}} caratteri",
+    "pantryRequired": "Il nome della dispensa è obbligatorio",
+    "pantryMin": "Il nome della dispensa deve contenere almeno {{count}} caratteri",
+    "pantryMax": "Il nome della dispensa deve contenere meno di {{count}} caratteri",
+    "listRequired": "Il nome della lista è obbligatorio",
+    "listMin": "Il nome della lista deve contenere almeno {{count}} caratteri",
+    "listMax": "Il nome della lista deve contenere meno di {{count}} caratteri",
+    "itemsMax": "Puoi selezionare fino a {{count}} articoli"
+  }
+}

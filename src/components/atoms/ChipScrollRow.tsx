@@ -129,7 +129,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
@@ -141,7 +141,7 @@ const styles = StyleSheet.create(theme => ({
           paddingVertical: theme.spacing.xs,
         },
         md: {
-          paddingHorizontal: theme.spacing['5'],
+          paddingHorizontal: theme.spacing.mdPlus,
           paddingVertical: theme.spacing.sm,
         },
       },

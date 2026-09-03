@@ -1,4 +1,4 @@
-import { RootState } from './index';
+import type { RootState } from './index';
 import { initialAppState } from './slices/appSlice';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 import { storage } from '#/storage/mmkv';

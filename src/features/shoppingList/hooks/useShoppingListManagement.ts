@@ -1,4 +1,4 @@
-import { useSearchableList } from '#hooks/useSearchableList';
+import { useState } from 'react';
 import { shoppingListItemSearch } from '#/utils/searchUtils';
 import { useShoppingListItemsQuery } from './useShoppingListItemsQuery';
 import { usePaginatedShoppingItems } from './usePaginatedShoppingItems';
@@ -48,12 +48,10 @@ export function useShoppingListManagement(currentListId: string | undefined) {
   const { addItem, removeItem, toggleItem, recordPurchase } =
     useShoppingListItemMutations(currentListId, refetch);
 
-  // Only `query`/`setQuery` are used here — the filtering below is per tab.
-  const { query: searchQuery, setQuery: setSearchQuery } = useSearchableList(
-    [],
-    shoppingListItemSearch,
-    { debounceMs: 300 },
-  );
+  // Plain state: the filtering below is PER TAB, so a list-filtering hook was
+  // being handed an empty array purely to borrow its query state — and its
+  // debounce never reached the caller, which read the raw query.
+  const [searchQuery, setSearchQuery] = useState('');
 
   const filteredUnpurchasedItems = !searchQuery.trim()
     ? unpurchasedItems

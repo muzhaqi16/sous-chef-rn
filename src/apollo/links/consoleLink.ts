@@ -9,6 +9,19 @@ import {
 // Enable detailed logging only in development
 const isDevelopment = __DEV__;
 
+// A dev console is read over shoulders, pasted into issues and captured by
+// screen recordings, so the credential a sign-in carries is masked here too.
+const SENSITIVE_VARIABLE =
+  /password|token|secret|credential|api[-_]?key|authorization/i;
+
+function maskVariables(variables: Record<string, unknown>) {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(variables)) {
+    out[key] = SENSITIVE_VARIABLE.test(key) ? '[MASKED]' : value;
+  }
+  return out;
+}
+
 // Cold-start detection: first N operations have inflated timing due to JS thread contention
 const COLD_START_THRESHOLD = 5;
 let operationsSeen = 0;
@@ -103,7 +116,7 @@ export const createConsoleLink = (
             operation.variables &&
             Object.keys(operation.variables).length > 0
           ) {
-            console.log('   📤 Variables:', operation.variables);
+            console.log('   📤 Variables:', maskVariables(operation.variables));
           }
 
           // Log errors as JSON strings to prevent React Native console serialization issues

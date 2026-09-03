@@ -123,7 +123,7 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderStyle: 'dashed',
   },

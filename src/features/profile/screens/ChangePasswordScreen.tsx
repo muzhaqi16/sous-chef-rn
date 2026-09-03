@@ -9,20 +9,13 @@ import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
 import { localizedErrorMessage } from '#/services/errorService';
 import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
-import {
-  getRateLimitMessage,
-  isRateLimitError,
-} from '#/utils/errors/rateLimit';
 import { PasswordInput } from '#components/atoms/PasswordInput';
 import { Header } from '#components/molecules/Header';
 import { Button } from '#components/atoms/Button';
-import { useMutation } from '@apollo/client/react';
 import {
-  ChangePasswordDocument,
-  type ChangePasswordMutation,
-  type ChangePasswordMutationVariables,
-} from '#operations/auth/auth.generated';
-import { PasswordActionStatus } from '#/graphql/generated/schemaTypes';
+  useChangePassword,
+  type ChangePasswordOutcome,
+} from '#features/profile/hooks/useChangePassword';
 import { useToast } from '#hooks/useToast';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { changePasswordSchema } from '#utils/validation/auth';
@@ -50,71 +43,46 @@ const asFormField = (
   return undefined;
 };
 
-/** Module-level async function to handle password change mutation.
- *  Extracted to avoid try-catch/throw inside component body (React Compiler bailout). */
-async function performChangePassword(
-  changePassword: useMutation.MutationFunction<
-    ChangePasswordMutation,
-    ChangePasswordMutationVariables
-  >,
-  data: ChangePasswordForm,
+/**
+ * Module-level so the throw does not bail the screen out of the React Compiler.
+ * A failure that names one of our fields is reported ON it: a toast covers the
+ * form, and a dismissed toast cannot say which input it meant.
+ */
+async function reportChangePassword(
+  outcome: ChangePasswordOutcome,
   toast: ReturnType<typeof useToast>,
   goBack: () => void,
   successMessage: string,
   failedFallback: string,
   setFieldError: (field: keyof ChangePasswordForm, message: string) => void,
 ): Promise<void> {
-  const result = await changePassword({
-    variables: {
-      input: {
-        currentPassword: data.currentPassword,
-        newPassword: data.newPassword,
-      },
-    },
-  });
-
-  // changePassword is capped at 5/hour and a wrong current password is NOT
-  // refunded, so the budget goes in one sitting. It arrives as a top-level
-  // error rather than a payload member, and a thrown message would be discarded
-  // downstream — so the wait time is toasted straight from the Apollo error.
-  if (isRateLimitError(result.error)) {
-    toast({ message: getRateLimitMessage(result.error), type: 'error' });
+  if (outcome.status === 'rateLimited') {
+    toast({ message: outcome.message, type: 'error' });
     return;
   }
 
-  const payload = result.data?.changePassword;
-
-  if (
-    payload?.__typename === 'ChangePasswordPayload' &&
-    payload.status === PasswordActionStatus.Completed
-  ) {
-    toast({
-      message: successMessage,
-      type: 'success',
-    });
-
+  if (outcome.status === 'completed') {
+    toast({ message: successMessage, type: 'success' });
     setTimeout(() => {
       goBack();
     }, 1500);
-  } else if (payload?.__typename === 'ChangePasswordPayload') {
-    throw new Error(failedFallback);
-  } else {
-    // Never `payload.message`: the server's prose is unlocalizable English by
-    // construction. A ValidationError names the field it refused, and that
-    // belongs ON the input — a toast covers the form, and once dismissed it
-    // cannot say which input it meant.
-    const message = localizedRefusalMessage(payload, failedFallback);
-    const field =
-      payload?.__typename === 'ValidationError'
-        ? asFormField(payload.field)
-        : undefined;
-
-    if (field) {
-      setFieldError(field, message);
-      return;
-    }
-    throw new Error(message);
+    return;
   }
+
+  // Never `payload.message`: the server's prose is unlocalizable English by
+  // construction. A ValidationError names the field it refused.
+  const payload = outcome.payload;
+  const message = localizedRefusalMessage(payload, failedFallback);
+  const field =
+    payload?.__typename === 'ValidationError'
+      ? asFormField(payload.field)
+      : undefined;
+
+  if (field) {
+    setFieldError(field, message);
+    return;
+  }
+  throw new Error(message);
 }
 
 export const ChangePasswordScreen: React.FC = () => {
@@ -124,7 +92,7 @@ export const ChangePasswordScreen: React.FC = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [changePassword] = useMutation(ChangePasswordDocument);
+  const { changePassword } = useChangePassword();
 
   const form = useForm<ChangePasswordForm>({
     resolver: yupResolver(changePasswordSchema),
@@ -140,10 +108,12 @@ export const ChangePasswordScreen: React.FC = () => {
 
   const onSubmit = (data: ChangePasswordForm) => {
     executeWithLoadingState(
-      () =>
-        performChangePassword(
-          changePassword,
-          data,
+      async () =>
+        reportChangePassword(
+          await changePassword({
+            currentPassword: data.currentPassword,
+            newPassword: data.newPassword,
+          }),
           toast,
           goBack,
           t('changePassword.success'),

@@ -148,7 +148,7 @@ MealPlanItemCard.displayName = 'MealPlanItemCard';
 
 const styles = StyleSheet.create(theme => ({
   rowWrapper: {
-    marginBottom: theme.spacing['2.5'],
+    marginBottom: theme.spacing.smPlus,
   },
   image: {
     width: 48,

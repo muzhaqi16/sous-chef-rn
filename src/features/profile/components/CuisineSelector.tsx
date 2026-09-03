@@ -118,7 +118,7 @@ const styles = StyleSheet.create(theme => ({
     margin: theme.spacing.xs,
     borderRadius: theme.radii.pill,
     borderCurve: 'continuous',
-    borderWidth: 1.5,
+    borderWidth: theme.borderWidth.thin,
     borderStyle: 'dashed',
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,

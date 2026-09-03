@@ -7,7 +7,7 @@
 import { useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { ForkRecipeDocument } from '#features/recipes/graphql/recipe.generated';
-import { upsertMyRecipesEdge } from '#features/recipes/screens/RecipeForm/recipeCacheWriters';
+import { upsertMyRecipesEdge } from '#features/recipes/utils/recipeCacheWriters';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { errorService } from '#/services/errorService';
 

@@ -1,0 +1,157 @@
+'use no memo';
+
+import React from 'react';
+import { render, screen } from '@testing-library/react-native';
+import type { RootState } from '#store/index';
+import type { OnBoardingWrapper as OnBoardingWrapperComponent } from '#features/onboarding/components/OnBoardingWrapper';
+import { BiometricSetupScreen } from '../BiometricSetupScreen';
+
+type OnBoardingWrapperProps = React.ComponentProps<
+  typeof OnBoardingWrapperComponent
+>;
+
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
+
+const mockNavigateToNextStep = jest.fn();
+jest.mock('#features/onboarding/hooks/useOnboardingNavigation', () => ({
+  useOnboardingNavigation: () => ({
+    navigateToNextStep: mockNavigateToNextStep,
+  }),
+}));
+
+const mockClearRegistrationPassword = jest.fn();
+jest.mock('#store/useAppStore', () => {
+  const mockState: Partial<RootState> = {
+    user: { id: 'u1', email: 'test@test.com' } as RootState['user'],
+    setUserNavigationState: jest.fn(),
+    registrationPassword: 'password123',
+    clearRegistrationPassword: mockClearRegistrationPassword,
+  };
+  const fn = Object.assign(
+    jest.fn(
+      <T,>(selector: (state: RootState) => T): T =>
+        selector(mockState as RootState),
+    ),
+    {
+      getState: jest.fn(() => ({})),
+      setState: jest.fn(),
+      subscribe: jest.fn(),
+    },
+  );
+  return { useAppStore: fn, useUser: jest.fn(() => mockState.user) };
+});
+
+let mockBiometricInfo: { isAvailable: boolean; biometryType: string | null } = {
+  isAvailable: true,
+  biometryType: 'Face ID',
+};
+
+jest.mock('#/services/authService', () => ({
+  authService: {
+    getBiometricInfo: jest.fn(() => Promise.resolve(mockBiometricInfo)),
+    storeCredentials: jest.fn(() => Promise.resolve(true)),
+  },
+}));
+
+jest.mock('#hooks/navigation/useAuthPreferences', () => ({
+  useAuthPreferences: () => ({
+    markBiometricDeclined: jest.fn(),
+    markBiometricEnabled: jest.fn(),
+  }),
+}));
+
+jest.mock('#hooks/performance/useScreenTransition');
+
+jest.mock('#/storage/keychain', () => ({
+  loadSessionTokens: jest.fn(() => Promise.resolve(null)),
+  saveSessionTokens: jest.fn(() => Promise.resolve()),
+  clearSessionTokens: jest.fn(() => Promise.resolve()),
+  loadTempRegistrationPassword: jest.fn(() => Promise.resolve(null)),
+  clearTempRegistrationPassword: jest.fn(),
+}));
+
+jest.mock('#/utils/finallyHelpers');
+
+jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
+  OnBoardingWrapper: ({
+    title,
+    subtitle,
+    children,
+    testID,
+  }: OnBoardingWrapperProps) => {
+    const { View, Text } = require('react-native');
+    return (
+      <View testID={testID || 'onboarding-wrapper'}>
+        <Text>{title}</Text>
+        <Text>{subtitle}</Text>
+        {children}
+      </View>
+    );
+  },
+}));
+
+describe('BiometricSetupScreen', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockBiometricInfo = { isAvailable: true, biometryType: 'Face ID' };
+    // Restore mocks after clearAllMocks
+    const storeModule = jest.requireMock('#store/useAppStore') as {
+      useAppStore: jest.Mock;
+      useUser: jest.Mock;
+    };
+    const mockState: Partial<RootState> = {
+      user: { id: 'u1', email: 'test@test.com' } as RootState['user'],
+      setUserNavigationState: jest.fn(),
+      registrationPassword: 'password123',
+      clearRegistrationPassword: mockClearRegistrationPassword,
+    };
+    storeModule.useAppStore.mockImplementation(
+      (selector: (state: RootState) => unknown) =>
+        selector(mockState as RootState),
+    );
+    storeModule.useUser.mockReturnValue(mockState.user);
+  });
+
+  it('renders biometric setup screen when available', async () => {
+    render(<BiometricSetupScreen />);
+
+    // Initially shows checking state, then resolves
+    // After microtask, shows setup screen
+    await screen.findByTestId('biometric-setup-screen');
+    expect(screen.getByText('Enable Face ID Login')).toBeTruthy();
+  });
+
+  it('shows enable button', async () => {
+    render(<BiometricSetupScreen />);
+    await screen.findByTestId('biometric-setup-enable');
+    expect(screen.getByText('Enable Now')).toBeTruthy();
+  });
+
+  it('shows skip button', async () => {
+    render(<BiometricSetupScreen />);
+    await screen.findByTestId('biometric-setup-skip');
+    expect(screen.getByText('Set up later')).toBeTruthy();
+  });
+
+  it('shows benefit items', async () => {
+    render(<BiometricSetupScreen />);
+    await screen.findByText('Quick and secure access');
+    expect(screen.getByText('No password required')).toBeTruthy();
+    expect(screen.getByText('Enhanced security')).toBeTruthy();
+  });
+
+  it('shows footer text', async () => {
+    render(<BiometricSetupScreen />);
+    await screen.findByText('You can always enable this later in Settings');
+  });
+
+  it('auto-skips when biometric not available', async () => {
+    mockBiometricInfo = { isAvailable: false, biometryType: null };
+    render(<BiometricSetupScreen />);
+
+    // Should auto-navigate to next step
+    await new Promise(r => setTimeout(r, 50));
+    expect(mockNavigateToNextStep).toHaveBeenCalledWith('BiometricSetup');
+  });
+});

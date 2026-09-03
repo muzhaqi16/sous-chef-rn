@@ -700,17 +700,17 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'flex-end',
   },
   metricsSection: {
-    marginVertical: theme.spacing['3'],
+    marginVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.md,
   },
   sectionTitle: {
     marginBottom: theme.spacing.xs,
   },
   sectionSubtitle: {
-    marginBottom: theme.spacing['3'],
+    marginBottom: theme.spacing.base,
   },
   table: {
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
@@ -720,8 +720,8 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     backgroundColor: theme.colors.backgroundSecondary,
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing['3'],
-    borderBottomWidth: 1,
+    paddingHorizontal: theme.spacing.base,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   tableHeaderName: {
@@ -746,9 +746,9 @@ const styles = StyleSheet.create(theme => ({
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: theme.spacing['3'],
-    paddingHorizontal: theme.spacing['3'],
-    borderBottomWidth: 1,
+    paddingVertical: theme.spacing.base,
+    paddingHorizontal: theme.spacing.base,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
     variants: {
       alt: {
@@ -773,18 +773,18 @@ const styles = StyleSheet.create(theme => ({
     flex: 0.7,
   },
   memoryHistorySubtitle: {
-    marginBottom: theme.spacing['3'],
+    marginBottom: theme.spacing.base,
     marginTop: theme.spacing.md,
   },
   memoryList: {
-    gap: theme.spacing['3'],
+    gap: theme.spacing.base,
   },
   memoryItem: {
     backgroundColor: theme.colors.backgroundSecondary,
-    padding: theme.spacing['3'],
+    padding: theme.spacing.base,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
-    borderLeftWidth: 3,
+    borderLeftWidth: theme.borderWidth.thick,
     borderLeftColor: theme.colors.primary,
   },
   memoryItemHeader: {
@@ -809,7 +809,7 @@ const styles = StyleSheet.create(theme => ({
     marginHorizontal: theme.spacing.md,
     marginVertical: theme.spacing.xl,
     backgroundColor: theme.colors.error,
-    paddingVertical: theme.spacing.sm + 2,
+    paddingVertical: theme.spacing.smPlus,
     paddingHorizontal: theme.spacing.xl,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
@@ -825,7 +825,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.backgroundSecondary,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     overflow: 'hidden',
   },
@@ -833,9 +833,9 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
 }));

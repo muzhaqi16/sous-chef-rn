@@ -3,7 +3,7 @@
 // ============================================
 
 import { StateCreator } from 'zustand';
-import { RootState } from '../index';
+import type { RootState } from '../index';
 
 export interface UIState {
   // Modal and overlay states

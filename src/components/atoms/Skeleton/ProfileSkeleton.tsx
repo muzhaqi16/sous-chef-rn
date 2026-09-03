@@ -104,13 +104,13 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
   },
   rowWrapper: {
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surfaceVariant,
   },
   rowLast: {
-    borderBottomWidth: 0,
+    borderBottomWidth: theme.borderWidth.none,
   },
 }));

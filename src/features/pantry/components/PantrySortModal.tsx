@@ -131,14 +131,14 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
-    padding: theme.spacing['5'],
+    padding: theme.spacing.mdPlus,
     width: '80%',
     maxWidth: theme.sizes.modal.sm,
     boxShadow: [
       {
         offsetX: 0,
         offsetY: theme.spacing.xs,
-        blurRadius: theme.spacing['3'],
+        blurRadius: theme.spacing.base,
         spreadDistance: 0,
         color: 'rgba(0, 0, 0, 0.15)',
       },
@@ -154,8 +154,8 @@ const styles = StyleSheet.create(theme => ({
   sortOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing['3'] + 2,
-    paddingHorizontal: theme.spacing['3'],
+    paddingVertical: theme.spacing.basePlus,
+    paddingHorizontal: theme.spacing.base,
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
     marginBottom: theme.spacing.sm,

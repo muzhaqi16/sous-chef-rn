@@ -35,8 +35,8 @@ export const styles = StyleSheet.create(theme => {
       alignItems: 'center',
       backgroundColor: theme.colors.charade['950'],
       justifyContent: 'center',
-      marginLeft: -theme.spacing['3'], // Extend under card edge to cover rounded corners
-      paddingLeft: theme.spacing['3'], // Compensate for margin to maintain button positioning
+      marginLeft: -theme.spacing.base, // Extend under card edge to cover rounded corners
+      paddingLeft: theme.spacing.base, // Compensate for margin to maintain button positioning
       borderTopLeftRadius: 0, // Square edge where it meets the card
       borderBottomLeftRadius: 0,
       borderTopRightRadius: SWIPEABLE_RADIUS, // Rounded outer edge
@@ -48,8 +48,8 @@ export const styles = StyleSheet.create(theme => {
       backgroundColor: theme.colors.charade['950'],
       justifyContent: 'center',
       gap: theme.spacing.xs,
-      marginRight: -theme.spacing['3'], // Extend under card edge to cover rounded corners
-      paddingRight: theme.spacing['3'], // Compensate for margin to maintain button positioning
+      marginRight: -theme.spacing.base, // Extend under card edge to cover rounded corners
+      paddingRight: theme.spacing.base, // Compensate for margin to maintain button positioning
       borderTopRightRadius: 0, // Square edge where it meets the card
       borderBottomRightRadius: 0,
       borderTopLeftRadius: SWIPEABLE_RADIUS, // Rounded outer edge
@@ -72,7 +72,7 @@ export const styles = StyleSheet.create(theme => {
       alignItems: 'center',
       marginHorizontal: theme.spacing.xs,
       zIndex: 100, // Ensure button is above other elements for touch priority
-      borderWidth: 1.5,
+      borderWidth: theme.borderWidth.thin,
       borderColor: theme.colors.white, // Subtle white border
       backgroundColor: 'transparent', // No fill - outlined style
     },

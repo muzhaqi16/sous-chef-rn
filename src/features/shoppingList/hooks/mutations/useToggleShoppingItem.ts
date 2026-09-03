@@ -30,7 +30,7 @@ import { isNetworkError } from '#/utils/isNetworkError';
 import { logger } from '#/utils/environment';
 import { isSuccessPayload } from '#/utils/errors/mutationPayload';
 import { handleMutationError } from '#/utils/errorHandlers';
-import { PAGINATION } from '#/constants/shoppingList';
+import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
 import { errorService } from '#/services/errorService';
 
 interface UseToggleShoppingItemOptions {

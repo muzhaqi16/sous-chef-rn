@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { useQuery } from '@apollo/client/react';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { FormModal } from '#components/organisms/FormModal';
@@ -15,7 +14,7 @@ import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useMealTemplateEditor } from '#features/mealPlan/hooks/useMealTemplateEditor';
-import { GetMealTemplateForEditDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
+import { useMealTemplateForEdit } from '#features/mealPlan/hooks/useMealTemplateForEdit';
 import { TemplateCategory, MealType } from '#/graphql/generated/schemaTypes';
 import { generateId } from '#/utils/generateId';
 
@@ -81,11 +80,7 @@ export const MealTemplateBuilderScreen: React.FC<
   // being offline blocks editing an existing template's items, and nothing at
   // all about building a new one.
 
-  const { data } = useQuery(GetMealTemplateForEditDocument, {
-    variables: { id: templateId ?? '' },
-    skip: !templateId,
-  });
-  const loaded = data?.mealTemplate;
+  const { template: loaded } = useMealTemplateForEdit(templateId);
 
   // Metadata form
   const [name, setName] = useState('');
@@ -415,7 +410,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   itemInfo: {
@@ -425,7 +420,7 @@ const styles = StyleSheet.create(theme => ({
   itemForm: {
     marginTop: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
   },
   addMealButton: {

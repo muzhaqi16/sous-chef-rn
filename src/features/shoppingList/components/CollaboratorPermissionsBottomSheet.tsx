@@ -8,13 +8,12 @@ import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { Icon } from '#utils/iconUtils';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
-import { useMutation } from '@apollo/client/react';
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import { type ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import {
-  UpdateCollaboratorRoleDocument,
-  UpdateCollaboratorPermissionsDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+  useCollaboratorPermissions,
+  type CollabPermissions,
+} from '#features/shoppingList/hooks/useCollaboratorPermissions';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
@@ -27,15 +26,6 @@ import { Text } from '#components/atoms/Text';
 interface CollaboratorPermissionsBottomSheetProps {
   shoppingListId: string;
   onSuccess?: () => void;
-}
-
-// The item-level permissions the collaborator fragment carries — these can be
-// toggled individually to override the role's defaults.
-interface CollabPermissions {
-  canAddItems: boolean;
-  canEditItems: boolean;
-  canRemoveItems: boolean;
-  canMarkPurchased: boolean;
 }
 
 const PERMISSION_ROWS: { key: keyof CollabPermissions; labelKey: string }[] = [
@@ -116,10 +106,8 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
     snapPoints: ['75%', '90%'],
   });
 
-  const [updateRole] = useMutation(UpdateCollaboratorRoleDocument);
-  const [updatePermissions] = useMutation(
-    UpdateCollaboratorPermissionsDocument,
-  );
+  const { updateRole, updatePermissions } =
+    useCollaboratorPermissions(shoppingListId);
 
   useImperativeHandle(ref, () => ({
     open: (collab: ShoppingListCollaboratorFragment) => {
@@ -156,15 +144,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
 
     executeWithLoadingState(
       async () => {
-        const result = await updateRole({
-          variables: {
-            input: {
-              shoppingListId,
-              collaboratorId,
-              role,
-            },
-          },
-        });
+        const result = await updateRole(collaboratorId, role);
 
         // A resolved error member doesn't throw under errorPolicy:'all' — keep
         // the sheet open and surface it instead of reporting success.
@@ -199,11 +179,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
 
     let result;
     try {
-      result = await updatePermissions({
-        variables: {
-          input: { shoppingListId, collaboratorId, permissions: next },
-        },
-      });
+      result = await updatePermissions(collaboratorId, next);
     } catch {
       setPermissions(previous);
       return;
@@ -369,7 +345,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   roleCard: {
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
@@ -402,7 +378,7 @@ const styles = StyleSheet.create(theme => ({
     width: 20,
     height: 20,
     borderRadius: theme.radii.full,
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     borderColor: theme.colors.border,
     justifyContent: 'center',
     alignItems: 'center',
@@ -421,7 +397,7 @@ const styles = StyleSheet.create(theme => ({
   permissionsContainer: {
     marginTop: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
   },
   permissionsTitle: {

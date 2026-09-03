@@ -40,7 +40,7 @@ const ThemedTabBar = withUnistyles(TabBar<TabRoute>, theme => ({
     backgroundColor: theme.colors.surface,
     elevation: 0,
     boxShadow: [],
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   activeColor: theme.colors.primary,

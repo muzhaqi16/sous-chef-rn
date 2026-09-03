@@ -11,6 +11,7 @@ import { AnimatedChip } from '#/components/atoms/AnimatedChip';
 import { Icon } from '#utils/iconUtils';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
+import { useLocalSearch } from '#hooks/search/useLocalSearch';
 
 export interface MultiSelectChipSheetItem<T extends string = string> {
   id: T;
@@ -60,11 +61,7 @@ export function MultiSelectChipSheet<T extends string = string>({
     }
   }
 
-  const filteredItems = (() => {
-    if (!searchQuery.trim()) return items;
-    const query = searchQuery.toLowerCase();
-    return items.filter(item => item.label.toLowerCase().includes(query));
-  })();
+  const filteredItems = useLocalSearch(items, searchQuery, ['label']);
 
   const handleToggleItem = (id: T) => {
     if (singleSelect) {
@@ -187,12 +184,12 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.base,
     marginBottom: theme.spacing.md,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.sm,
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,

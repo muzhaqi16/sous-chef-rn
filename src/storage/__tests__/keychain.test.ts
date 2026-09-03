@@ -19,6 +19,8 @@ import {
   saveTempRegistrationPassword,
   loadTempRegistrationPassword,
   clearTempRegistrationPassword,
+  sweepExpiredTempRegistrationPassword,
+  TEMP_REGISTRATION_TTL_MS,
   saveSessionTokens,
   loadSessionTokens,
   clearSessionTokens,
@@ -389,11 +391,23 @@ describe('keychain storage', () => {
       await saveTempRegistrationPassword('user@test.com', 'temp-pass');
       expect(mockSetGenericPassword).toHaveBeenCalledWith(
         'user@test.com',
-        'temp-pass',
+        expect.any(String),
         expect.objectContaining({
           service: 'dev.souschef.app.temp.registration',
         }),
       );
+    });
+
+    // The value carries its own age so an abandoned onboarding expires. The
+    // username slot is already taken by the email for the ownership check.
+    it('stores the password with the time it was saved', async () => {
+      mockSetGenericPassword.mockResolvedValue(true);
+
+      await saveTempRegistrationPassword('user@test.com', 'temp-pass');
+
+      const stored = JSON.parse(mockSetGenericPassword.mock.calls[0][1]);
+      expect(stored.password).toBe('temp-pass');
+      expect(stored.savedAt).toBeCloseTo(Date.now(), -4);
     });
   });
 
@@ -401,11 +415,47 @@ describe('keychain storage', () => {
     it('returns password when email matches', async () => {
       mockGetGenericPassword.mockResolvedValue({
         username: 'user@test.com',
-        password: 'temp-pass',
+        password: JSON.stringify({
+          password: 'temp-pass',
+          savedAt: Date.now(),
+        }),
       });
 
       const result = await loadTempRegistrationPassword('user@test.com');
       expect(result).toBe('temp-pass');
+    });
+
+    it('returns null and clears an entry past its lifetime', async () => {
+      mockGetGenericPassword.mockResolvedValue({
+        username: 'user@test.com',
+        password: JSON.stringify({
+          password: 'temp-pass',
+          savedAt: Date.now() - TEMP_REGISTRATION_TTL_MS - 1000,
+        }),
+      });
+      mockResetGenericPassword.mockResolvedValue(true);
+
+      const result = await loadTempRegistrationPassword('user@test.com');
+
+      expect(result).toBeNull();
+      expect(mockResetGenericPassword).toHaveBeenCalledWith(
+        expect.objectContaining({
+          service: 'dev.souschef.app.temp.registration',
+        }),
+      );
+    });
+
+    it('returns null and clears a value it cannot read', async () => {
+      mockGetGenericPassword.mockResolvedValue({
+        username: 'user@test.com',
+        password: 'not-an-envelope',
+      });
+      mockResetGenericPassword.mockResolvedValue(true);
+
+      const result = await loadTempRegistrationPassword('user@test.com');
+
+      expect(result).toBeNull();
+      expect(mockResetGenericPassword).toHaveBeenCalled();
     });
 
     it('returns null and clears when email does not match', async () => {
@@ -431,6 +481,87 @@ describe('keychain storage', () => {
 
       const result = await loadTempRegistrationPassword('user@test.com');
       expect(result).toBeNull();
+    });
+  });
+
+  describe('sweepExpiredTempRegistrationPassword', () => {
+    it('clears an entry past its lifetime', async () => {
+      mockGetGenericPassword.mockResolvedValue({
+        username: 'user@test.com',
+        password: JSON.stringify({
+          password: 'temp-pass',
+          savedAt: Date.now() - TEMP_REGISTRATION_TTL_MS - 1000,
+        }),
+      });
+      mockResetGenericPassword.mockResolvedValue(true);
+
+      await sweepExpiredTempRegistrationPassword();
+
+      expect(mockResetGenericPassword).toHaveBeenCalledWith(
+        expect.objectContaining({
+          service: 'dev.souschef.app.temp.registration',
+        }),
+      );
+    });
+
+    it('keeps an entry still within its lifetime', async () => {
+      mockGetGenericPassword.mockResolvedValue({
+        username: 'user@test.com',
+        password: JSON.stringify({
+          password: 'temp-pass',
+          savedAt: Date.now(),
+        }),
+      });
+
+      await sweepExpiredTempRegistrationPassword();
+
+      expect(mockResetGenericPassword).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when there is no entry', async () => {
+      mockGetGenericPassword.mockResolvedValue(false);
+
+      await sweepExpiredTempRegistrationPassword();
+
+      expect(mockResetGenericPassword).not.toHaveBeenCalled();
+    });
+  });
+
+  // A slot under BIOMETRY_CURRENT_SET stops being readable the moment a face or
+  // finger is enrolled. Left in place, the login screen keeps offering a prompt
+  // that can never succeed.
+  describe('loadCredentials after a biometric enrolment change', () => {
+    it('clears the slot when the platform reports it invalidated', async () => {
+      mockGetGenericPassword.mockRejectedValue(
+        new Error('KeyPermanentlyInvalidatedException: key no longer valid'),
+      );
+      mockResetGenericPassword.mockResolvedValue(true);
+
+      const result = await loadCredentials('user@test.com');
+
+      expect(result).toBeNull();
+      expect(mockResetGenericPassword).toHaveBeenCalled();
+    });
+
+    it('clears the slot when the entry has been removed by the OS', async () => {
+      mockGetGenericPassword.mockResolvedValue(false);
+      mockResetGenericPassword.mockResolvedValue(true);
+
+      const result = await loadCredentials('user@test.com');
+
+      expect(result).toBeNull();
+      expect(mockResetGenericPassword).toHaveBeenCalled();
+    });
+
+    it('keeps the slot when the person cancels the prompt', async () => {
+      mockGetGenericPassword.mockRejectedValue(
+        new Error('User canceled the operation.'),
+      );
+
+      const result = await loadCredentials('user@test.com');
+
+      expect(result).toBeNull();
+      expect(mockResetGenericPassword).not.toHaveBeenCalled();
     });
   });
 

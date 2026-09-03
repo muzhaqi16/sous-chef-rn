@@ -25,6 +25,7 @@ import { Text } from '#components/atoms/Text';
 import { FolderListItem } from './FolderPicker/FolderListItem';
 import { ManageFolderSheet } from './FolderPicker/ManageFolderSheet';
 import { resolveFolderLongPress } from './folderProtection';
+import { identity, useLocalSearch } from '#hooks/search/useLocalSearch';
 
 // Every row is the same component, so one recycling pool is correct.
 const getItemType = () => 'item';
@@ -125,11 +126,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
 
   const hasFolderActions = Boolean(onRenameFolder || onDeleteFolder);
 
-  const filteredFolders = (() => {
-    if (!searchQuery.trim()) return folders;
-    const query = searchQuery.toLowerCase();
-    return folders.filter(folder => folder.toLowerCase().includes(query));
-  })();
+  const filteredFolders = useLocalSearch(folders, searchQuery, [identity]);
 
   const handleSelectFolder = (folder: string | null) => {
     setSearchQuery('');
@@ -426,12 +423,12 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.base,
     marginBottom: theme.spacing.md,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.sm,
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
@@ -439,11 +436,11 @@ const styles = StyleSheet.create(theme => ({
   folderItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    gap: theme.spacing['3'],
+    gap: theme.spacing.base,
   },
   folderItemSelected: {
     backgroundColor: theme.colors.primaryLight,
@@ -459,7 +456,7 @@ const styles = StyleSheet.create(theme => ({
   newFolderButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.md,
     gap: theme.spacing.sm,
   },
@@ -471,12 +468,12 @@ const styles = StyleSheet.create(theme => ({
   },
   newFolderInput: {
     flex: 1,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.background,
@@ -484,7 +481,7 @@ const styles = StyleSheet.create(theme => ({
   createButton: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
   },
@@ -524,7 +521,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
   },
   bottomSheetContent: {
-    padding: theme.spacing['5'],
+    padding: theme.spacing.mdPlus,
   },
   pressed: {
     opacity: theme.opacity.pressed,

@@ -149,7 +149,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     borderColor: theme.colors.primary,
   },
   title: {
@@ -207,7 +207,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     alignItems: 'center',
     backgroundColor: 'transparent',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   pressed: {

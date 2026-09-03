@@ -91,7 +91,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   sectionDescription: {

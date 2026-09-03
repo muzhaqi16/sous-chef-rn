@@ -202,7 +202,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    gap: theme.spacing.xs + 2,
+    gap: theme.spacing.xsPlus,
   },
   offlinePill: {
     marginRight: theme.spacing.sm,
@@ -222,7 +222,7 @@ const styles = StyleSheet.create(theme => ({
     // Primary so the unread dot tracks the user's App Color; a standalone host
     // View, so the ShadowTree pushes the change without a re-render.
     backgroundColor: theme.colors.primary,
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     borderColor: theme.colors.background,
   },
   avatarContainer: {
@@ -234,7 +234,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.xl - 2,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',

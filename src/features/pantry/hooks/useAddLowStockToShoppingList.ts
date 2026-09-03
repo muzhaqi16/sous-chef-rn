@@ -6,7 +6,6 @@ import { Telemetry } from '#/services/telemetry';
 import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { t } from '#/i18n';
-import { getI18n } from '#/i18n/config';
 
 interface UseAddLowStockToShoppingListOptions {
   homeId: string | undefined;
@@ -75,15 +74,15 @@ export function useAddLowStockToShoppingList({
       // noun depends on `count` in most languages.
       toastService.success(
         skippedCount > 0
-          ? getI18n().t('toasts.addedItemsWithSkipped', {
+          ? t('toasts.addedItemsWithSkipped', {
               count: addedCount,
               skipped: skippedCount,
             })
-          : getI18n().t('toasts.addedItems', { count: addedCount }),
+          : t('toasts.addedItems', { count: addedCount }),
       );
     } else {
       toastService.info(
-        getI18n().t('toasts.allLowStockAlreadyListed', { count: skippedCount }),
+        t('toasts.allLowStockAlreadyListed', { count: skippedCount }),
       );
     }
 

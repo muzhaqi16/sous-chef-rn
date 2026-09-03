@@ -22,9 +22,7 @@ import { useRecipeFolders } from '#features/recipes/hooks/useRecipeFolders';
 import { useRecipeTags } from '#features/recipes/hooks/useRecipeTags';
 import { useFolderActions } from '#features/recipes/hooks/useFolderActions';
 import { PROTECTED_RECIPE_FOLDERS } from '#features/recipes/utils/folders';
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { RemoveRecipeFromFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
-import { performOptimisticUnfavorite } from '#features/recipes/utils/optimisticUnfavorite';
+import { useUnfavoriteRecipe } from '#features/recipes/hooks/useUnfavoriteRecipe';
 import { alertService } from '#/services/alertService';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
@@ -38,7 +36,7 @@ export const SavedRecipes: React.FC = () => {
   useScreenTransition('SavedRecipes');
   const { t } = useTranslation();
   const { toRecipeDetail, goBack } = useAppNavigation();
-  const client = useApolloClient();
+  const { unfavoriteRecipe } = useUnfavoriteRecipe('removeSavedRecipe');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
@@ -70,15 +68,6 @@ export const SavedRecipes: React.FC = () => {
     deleteFolder,
     loading: folderActionLoading,
   } = useFolderActions();
-
-  // Unfavorite (remove from saved) recipe mutation. The cache work (drop the
-  // MySavedRecipes edge + clear Recipe.savedDetails) runs optimistically BEFORE
-  // the mutation fires in handleRemoveRecipe, so the removal sticks even fully
-  // offline (the queue replays the idempotent unfavorite). A rejected result
-  // reverts from a snapshot — so no update callback here.
-  const [unfavoriteRecipeMutation] = useMutation(
-    RemoveRecipeFromFavoritesDocument,
-  );
 
   // Folder, tags AND search all filter here, never inside the cell: a
   // virtualized list cannot absorb rows that return null — the cell, its
@@ -153,20 +142,9 @@ export const SavedRecipes: React.FC = () => {
   };
 
   const handleRemoveRecipe = async (recipeId: string) => {
-    await performOptimisticUnfavorite({
-      client,
-      recipeId,
-      mutate: () =>
-        unfavoriteRecipeMutation({
-          variables: { input: { recipeId } },
-          // Local-first: queue + replay (idempotent) when the API is
-          // unreachable instead of surfacing a blocking error.
-          context: { localFirst: true },
-        }),
-      operation: 'removeSavedRecipe',
-      reportFailure: () =>
-        alertService.alert(t('labels.error'), t('recipes.removeRecipeFailed')),
-    });
+    await unfavoriteRecipe(recipeId, () =>
+      alertService.alert(t('labels.error'), t('recipes.removeRecipeFailed')),
+    );
   };
 
   const handleItemPress = (recipeId: string) => {
@@ -350,6 +328,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
   },
   listContent: {
-    paddingTop: theme.spacing['2.5'],
+    paddingTop: theme.spacing.smPlus,
   },
 }));

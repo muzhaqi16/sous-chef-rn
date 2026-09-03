@@ -90,8 +90,8 @@ const styles = StyleSheet.create(theme => ({
   homeActions: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
-    paddingTop: theme.spacing['3'],
-    borderTopWidth: 1,
+    paddingTop: theme.spacing.base,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
   },
   actionButton: {

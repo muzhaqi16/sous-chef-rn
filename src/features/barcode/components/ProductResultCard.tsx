@@ -156,7 +156,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     marginTop: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.borderLight,
   },
   actionLink: {

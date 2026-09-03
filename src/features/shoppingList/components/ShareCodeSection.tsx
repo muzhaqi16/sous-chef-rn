@@ -4,12 +4,11 @@ import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { useMutation } from '@apollo/client/react';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
-import { ShareShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { useShareShoppingList } from '#features/shoppingList/hooks/useShareShoppingList';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { alertService } from '#/services/alertService';
@@ -39,7 +38,7 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
 }) => {
   const { t } = useTranslation();
   const { requireVerifiedEmail } = useVerifiedEmailGate();
-  const [shareShoppingList] = useMutation(ShareShoppingListDocument);
+  const { setListPublic } = useShareShoppingList();
   const [togglingShareCode, setTogglingShareCode] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -64,16 +63,11 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
 
     executeWithLoadingState(
       async () => {
-        const { data } = await shareShoppingList({
-          variables: { input: { id: listId, isPublic: !isPublic } },
-        });
         unwrapPayload(
-          data?.shareShoppingList,
+          await setListPublic(listId, !isPublic),
           'ShareShoppingListPayload',
           t('shoppingListScreens.failedToUpdateShareSettings'),
         );
-        // No refetch needed: the mutation returns shoppingList { id, shareCode,
-        // isPublic } which Apollo normalizes by ShoppingList:${id}.
       },
       setTogglingShareCode,
       error => {
@@ -187,11 +181,11 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing['3'],
+    marginBottom: theme.spacing.base,
   },
   shareCodeSection: {
     padding: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   shareCodeDescription: {
@@ -204,7 +198,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: theme.spacing['3'],
+    padding: theme.spacing.base,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
@@ -257,11 +251,11 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: theme.spacing.sm,
-    padding: theme.spacing['3'],
+    padding: theme.spacing.base,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderStyle: 'dashed',
   },
@@ -278,7 +272,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.xs,
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.sm,

@@ -1,7 +1,7 @@
 import { string } from 'yup';
 import type { FieldErrors, FieldValues } from 'react-hook-form';
 import { logger } from '#/utils/environment';
-import { getI18n } from '#/i18n/config';
+import { t } from '#/i18n';
 
 /**
  * These rules are built once at module scope, so a message resolved eagerly
@@ -9,7 +9,7 @@ import { getI18n } from '#/i18n/config';
  * function when the rule fails, so the lookup lands after any language change.
  */
 const msg = (key: string, options?: Record<string, unknown>) => (): string =>
-  getI18n().t(`commonValidation.${key}`, options);
+  t(`commonValidation.${key}`, options);
 
 // --- shared helpers ----------------------------------------------------------
 

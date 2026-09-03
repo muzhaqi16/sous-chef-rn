@@ -28,8 +28,6 @@ export type MembershipPermissionKey =
   | 'canInviteOthers'
   | 'canManageHome';
 import { t } from '#/i18n';
-// Interpolated key — the module-level t takes a fallback, not options.
-import { getI18n } from '#/i18n/config';
 import {
   createRemoveFromParentConnectionUpdater,
   safeEvict,
@@ -369,7 +367,7 @@ export function useHomeDetailManagement(homeId: string) {
     return new Promise(resolve => {
       alertService.alert(
         t('labels.leaveHome'),
-        getI18n().t('home.leaveBody', { name: homeName }),
+        t('home.leaveBody', { name: homeName }),
         [
           {
             text: t('labels.cancel'),

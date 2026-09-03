@@ -25,7 +25,7 @@ import { useRecurringShoppingList } from '#features/shoppingList/hooks/mutations
 import { useShoppingListTemplate } from '#features/shoppingList/hooks/mutations/useShoppingListTemplate';
 import { useShoppingListReminder } from '#features/shoppingList/hooks/mutations/useShoppingListReminder';
 import { useShoppingListBudget } from '#features/shoppingList/hooks/mutations/useShoppingListBudget';
-import { useCreateShoppingList } from '#features/shoppingList/hooks/mutations/useCreateShoppingList';
+import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
 import { useDeleteShoppingList } from '#features/shoppingList/hooks/mutations/useDeleteShoppingList';
 import { ListStatus, RecurringPattern } from '#/graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
@@ -49,6 +49,7 @@ import {
   formatCurrency,
   formatNumberForInput,
 } from '#/utils/formatters/number';
+import { formatMonthDayYear } from '#/utils/formatters/date';
 
 function syncListFormState(
   shoppingList:
@@ -191,11 +192,7 @@ export const ListSettings: React.FC<
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return t('labels.never');
-    return new Date(dateString).toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    return formatMonthDayYear(new Date(dateString));
   };
 
   const currency = shoppingList?.currency ?? null;
@@ -1178,11 +1175,11 @@ const styles = StyleSheet.create(theme => ({
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
   },
   actionText: {
     flex: 1,
-    marginLeft: theme.spacing['3'],
+    marginLeft: theme.spacing.base,
   },
   sharedInfo: {
     marginTop: theme.spacing.sm,
@@ -1191,8 +1188,8 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: theme.spacing['3'],
-    borderWidth: 1,
+    paddingVertical: theme.spacing.base,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.error,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
@@ -1204,12 +1201,12 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing['3'],
-    paddingVertical: theme.spacing.sm + 2,
+    paddingHorizontal: theme.spacing.base,
+    paddingVertical: theme.spacing.smPlus,
     backgroundColor: theme.colors.surface,
   },
   pickerButtonDisabled: {
@@ -1225,8 +1222,8 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: theme.spacing['3'],
-    borderWidth: 1,
+    paddingVertical: theme.spacing.base,
+    borderWidth: theme.borderWidth.hairline,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
     borderColor: theme.colors.border,

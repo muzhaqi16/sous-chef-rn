@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '#/i18n';
 import { t as tGlobal } from '#/i18n';
-import { View, Image, Dimensions, Platform } from 'react-native';
-import {
-  ThemedBackButton,
-  ThemedSafeAreaView,
-} from '#components/atoms/themedComponents';
+import { View, Image, Dimensions } from 'react-native';
+import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
+import { ThemedBackButton } from '#components/atoms/BackButton';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { useFocusEffect } from '@react-navigation/native';
@@ -19,7 +17,6 @@ import {
   CameraOptions,
   ImageLibraryOptions,
 } from 'react-native-image-picker';
-import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   validateImageFile,
@@ -32,6 +29,7 @@ import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
+import { PermissionService } from '#services/permissions/PermissionService';
 
 const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
   mediaType: 'photo' as MediaType,
@@ -72,19 +70,17 @@ function readPendingCroppedImage(): ImageFile | null {
 async function requestCameraAndLaunch(
   handleImageResponse: (response: ImagePickerResponse) => void,
 ): Promise<void> {
-  const permission =
-    Platform.OS === 'ios' ? PERMISSIONS.IOS.CAMERA : PERMISSIONS.ANDROID.CAMERA;
-  const result = await request(permission);
-  if (result === RESULTS.GRANTED) {
+  const result = await PermissionService.request('camera');
+  if (result === 'granted') {
     launchCamera(DEFAULT_OPTIONS, handleImageResponse);
-  } else if (result === RESULTS.DENIED) {
+  } else if (result === 'denied') {
     alertService.alert(
       tGlobal('profile.cameraPermissionDeniedTitle'),
       tGlobal(
         'labels.cameraPermissionIsRequiredToTakePhotosPleaseEnableItInYourDeviceSettings',
       ),
     );
-  } else if (result === RESULTS.BLOCKED) {
+  } else if (result === 'blocked') {
     alertService.alert(
       tGlobal('profile.cameraPermissionBlockedTitle'),
       tGlobal('profile.cameraPermissionBlockedMessage'),
@@ -347,14 +343,14 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: theme.spacing.md,
   },
   title: {
-    marginBottom: theme.spacing.xs + 2,
+    marginBottom: theme.spacing.xsPlus,
     flex: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: theme.spacing['3'],
+    marginBottom: theme.spacing.base,
     paddingTop: theme.spacing.sm,
   },
   headerBack: {
@@ -379,7 +375,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderRadius: AVATAR_SIZE / 2,
     borderCurve: 'continuous',
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     borderStyle: 'dashed',
     overflow: 'hidden',
     backgroundColor: theme.colors.surface,
@@ -402,7 +398,7 @@ const styles = StyleSheet.create(theme => ({
     ...theme.shadows.md,
   },
   buttonContainer: {
-    gap: theme.spacing['3'],
+    gap: theme.spacing.base,
   },
   btn: {
     flexDirection: 'row',
@@ -410,9 +406,9 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderRadius: theme.radii.pill,
     borderCurve: 'continuous',
-    paddingVertical: theme.spacing.sm + 2,
+    paddingVertical: theme.spacing.smPlus,
     paddingHorizontal: theme.spacing.lg,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     backgroundColor: theme.colors.primary,
   },
   btnText: {
@@ -424,9 +420,9 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderRadius: theme.radii.pill,
     borderCurve: 'continuous',
-    paddingVertical: theme.spacing.sm + 2,
+    paddingVertical: theme.spacing.smPlus,
     paddingHorizontal: theme.spacing.lg,
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     backgroundColor: 'transparent',
     borderColor: theme.colors.primary,
   },

@@ -271,7 +271,7 @@ const styles = StyleSheet.create(theme => ({
   },
   placeholderContainer: {
     backgroundColor: theme.colors.surface,
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     borderColor: theme.colors.border,
     borderStyle: 'dashed',
     borderRadius: theme.radii.md,
@@ -343,7 +343,7 @@ const styles = StyleSheet.create(theme => ({
   addMoreButton: {
     width: 80,
     height: 80,
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     borderColor: theme.colors.primary,
     borderStyle: 'dashed',
     borderRadius: theme.radii.md,

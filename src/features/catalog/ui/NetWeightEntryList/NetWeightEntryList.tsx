@@ -150,7 +150,7 @@ const styles = StyleSheet.create(theme => ({
   sectionTitle: {
     marginBottom: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.borderLight,
   },
   entryRow: {

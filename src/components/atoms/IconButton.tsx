@@ -95,3 +95,10 @@ const styles = StyleSheet.create(theme => ({
 }));
 
 export default IconButton;
+
+/**
+ * Theme-reactive wrapper. Declared HERE rather than in `themedComponents` so
+ * that module does not import back into an atom that already imports its
+ * `Pressable` — a load-time cycle the import-cycle gate fails on.
+ */
+export const ThemedIconButton = withUnistyles(IconButton);

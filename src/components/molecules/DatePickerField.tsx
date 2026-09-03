@@ -7,6 +7,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Label } from '#components/atoms/Label';
 import { Text } from '#components/atoms/Text';
+import { formatMonthDayYear } from '#/utils/formatters/date';
 
 interface DatePickerFieldProps {
   label?: string;
@@ -60,11 +61,7 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
   };
 
   const formatDate = (date: Date): string => {
-    return date.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+    return formatMonthDayYear(date);
   };
 
   return (
@@ -120,7 +117,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.inputBackground,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     gap: theme.spacing.sm,
   },

@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { RootState } from '../index';
+import type { RootState } from '../index';
 import { TelemetryConfig } from '#/services/telemetry/types';
 import { Environment } from '#/utils/environment';
 

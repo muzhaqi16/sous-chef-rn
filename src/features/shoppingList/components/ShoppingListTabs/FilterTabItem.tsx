@@ -89,11 +89,11 @@ const styles = StyleSheet.create(theme => ({
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing['3'] + 2,
+    paddingHorizontal: theme.spacing.basePlus,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
-    gap: theme.spacing.xs + 2,
+    gap: theme.spacing.xsPlus,
     backgroundColor: theme.colors.filterTab.inactiveBg,
   },
   tabActive: {
@@ -107,7 +107,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.filterTab.activeText,
   },
   countBadge: {
-    paddingHorizontal: theme.spacing.xs + 3,
+    paddingHorizontal: theme.spacing.xsPlus,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',

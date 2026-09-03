@@ -4,12 +4,17 @@ import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetLayout } from '#components/atoms/BottomSheetLayout';
 import { StyleSheet } from 'react-native-unistyles';
-import { format, addDays, differenceInDays, parseISO } from 'date-fns';
+import { addDays, differenceInDays, parseISO } from 'date-fns';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { FormInput } from '#components/molecules/FormInput';
 import { Icon } from '#utils/iconUtils';
 import { type MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { Text } from '#components/atoms/Text';
+import {
+  formatMonthDay,
+  formatMonthDayYear,
+  formatWeekdayMonthDay,
+} from '#/utils/formatters/date';
 
 interface DuplicatePlanSheetProps {
   visible: boolean;
@@ -106,8 +111,8 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
             {t('duplicatePlan.currentPlanLabel')}
           </Text>
           <Text size="md" weight="medium">
-            {format(parseISO(mealPlan.startDate), 'MMM d')} -{' '}
-            {format(parseISO(mealPlan.endDate), 'MMM d, yyyy')}
+            {formatMonthDay(parseISO(mealPlan.startDate))} -{' '}
+            {formatMonthDayYear(parseISO(mealPlan.endDate))}
           </Text>
         </View>
       )}
@@ -135,11 +140,11 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
           </Pressable>
           <View style={styles.dateDisplay}>
             <Text size="md" weight="semibold">
-              {format(newStartDate, 'EEE, MMM d')}
+              {formatWeekdayMonthDay(newStartDate)}
             </Text>
             <Text size="sm" tone="secondary" style={styles.dateSubtext}>
               {t('duplicatePlan.endDateSubtext', {
-                date: format(newEndDate, 'EEE, MMM d'),
+                date: formatWeekdayMonthDay(newEndDate),
               })}
             </Text>
           </View>

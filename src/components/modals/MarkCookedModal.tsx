@@ -175,7 +175,7 @@ const styles = StyleSheet.create(theme => ({
   recipeInfo: {
     marginBottom: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.base,
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',

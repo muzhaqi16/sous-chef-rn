@@ -3,14 +3,13 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
-import { useNavigation } from '@react-navigation/native';
+
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
 import { Button } from '#components/atoms/Button';
 import { Icon } from '#utils/iconUtils';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
-import { useMutation } from '@apollo/client/react';
-import { JoinShoppingListByShareCodeDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { useJoinShoppingListByShareCode } from '#features/shoppingList/hooks/useJoinShoppingListByShareCode';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useJoinLinkAuthGate } from '#hooks/deepLink/useJoinLinkAuthGate';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
@@ -24,8 +23,7 @@ export const JoinByShareCodeScreen: React.FC<
   StaticScreenProps<{ shareCode?: string }>
 > = ({ route }) => {
   const { t } = useTranslation();
-  const { goBack } = useNavigation();
-  const { toShoppingListMain } = useAppNavigation();
+  const { goBack, toShoppingListMain } = useAppNavigation();
   const initialCode = route.params?.shareCode ?? '';
 
   // Joining requires auth — queue the code and redirect to sign-in when logged
@@ -36,7 +34,7 @@ export const JoinByShareCodeScreen: React.FC<
   const [joining, setJoining] = useState(false);
 
   const { requireVerifiedEmail } = useVerifiedEmailGate();
-  const [joinMutation] = useMutation(JoinShoppingListByShareCodeDocument);
+  const { joinByShareCode } = useJoinShoppingListByShareCode();
 
   const handleJoin = () => {
     if (!requireVerifiedEmail()) return;
@@ -49,12 +47,8 @@ export const JoinByShareCodeScreen: React.FC<
 
     executeWithLoadingState(
       async () => {
-        const { data } = await joinMutation({
-          variables: { input: { shareCode: trimmed } },
-        });
-
         const result = unwrapPayload(
-          data?.joinShoppingListByShareCode,
+          await joinByShareCode(trimmed),
           'JoinShoppingListByShareCodePayload',
           t('shoppingListScreens.joinFailed'),
         );

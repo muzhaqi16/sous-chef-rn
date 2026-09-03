@@ -297,7 +297,7 @@ export class ErrorService {
     Telemetry.trackError(errorMessage, {
       component: 'reported',
       operation,
-      serialized_error: JSON.stringify(serialized),
+      serialized_error: serialized,
       ...context,
     });
   }
@@ -410,7 +410,7 @@ export class ErrorService {
           component: category,
           operation,
           code: errorCode,
-          serialized_error: JSON.stringify(serializeError(error)),
+          serialized_error: serializeError(error),
         });
       }
 

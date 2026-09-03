@@ -40,10 +40,16 @@ import {
   hydrateOfflineModeFromStorage,
   NetworkState,
 } from './slices/networkSlice';
-import { zustandStorage, STORAGE_KEY, isRecoveryStorage } from '#/storage/mmkv';
+import {
+  zustandStorage,
+  STORAGE_KEY,
+  isRecoveryStorage,
+  openedWithEmptyStore,
+} from '#/storage/mmkv';
 import {
   loadSessionTokens,
   pickFresherSessionTokens,
+  clearSessionTokens,
   type SessionTokenLoadResult,
 } from '#/storage/keychain';
 import { logger } from '#/utils/environment';
@@ -58,6 +64,15 @@ import type { ErrorService } from '#/services/errorService';
 const hydrateSessionTokensThenFinish = async (
   state: RootState | undefined,
 ): Promise<void> => {
+  // A keychain item outlives the app on iOS. With the encrypted store empty
+  // there is no local state behind those tokens — a reinstall, or cleared app
+  // data — so the session is not resumed and the credentials are dropped.
+  if (openedWithEmptyStore()) {
+    await clearSessionTokens();
+    state?.setHydrated(true);
+    return;
+  }
+
   // `?? { status: 'absent' }` tolerates legacy test mocks resolving null.
   const result: SessionTokenLoadResult = (await loadSessionTokens()) ?? {
     status: 'absent',

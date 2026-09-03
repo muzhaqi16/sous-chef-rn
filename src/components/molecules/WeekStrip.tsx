@@ -12,6 +12,7 @@ import {
 } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
+import { formatDayOfMonth, formatWeekdayShort } from '#/utils/formatters/date';
 
 interface WeekStripProps {
   weekDays: Date[];
@@ -89,7 +90,7 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
                   disabled && styles.dayLabelDisabled,
                 ]}
               >
-                {format(day, 'EEE')}
+                {formatWeekdayShort(day)}
               </Text>
               <Text
                 size="md"
@@ -101,7 +102,7 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
                   disabled && styles.dayNumberDisabled,
                 ]}
               >
-                {format(day, 'd')}
+                {formatDayOfMonth(day)}
               </Text>
               {!!hasMeals && (
                 <View

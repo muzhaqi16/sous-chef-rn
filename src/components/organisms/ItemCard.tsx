@@ -135,7 +135,7 @@ export const ItemCard = ItemCardComponent;
 const styles = StyleSheet.create(theme => ({
   container: {
     opacity: 1, // Prevent transparency inheritance
-    marginHorizontal: theme.spacing['3'],
+    marginHorizontal: theme.spacing.base,
     marginVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',

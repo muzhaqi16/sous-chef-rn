@@ -40,3 +40,18 @@ export function isNotificationPayload(
 ): value is NotificationPayload {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
+
+/** A pending invite as the acceptance modal and its action handler see it. */
+export interface InvitationData {
+  type: 'HOME_INVITE' | 'SHOPPING_LIST_INVITE';
+  id: string;
+  title: string;
+  description: string;
+  inviterName?: string;
+  /** Home name or shopping list name. */
+  entityName: string;
+  token?: string;
+  payload: NotificationPayload;
+  /** Set by the accept flow so the caller can select the home it just joined. */
+  acceptedHomeId?: string;
+}

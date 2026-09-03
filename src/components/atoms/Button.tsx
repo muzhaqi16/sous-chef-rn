@@ -120,18 +120,18 @@ const styles = StyleSheet.create(theme => ({
         primary: { backgroundColor: theme.colors.primary },
         secondary: {
           backgroundColor: theme.colors.surface,
-          borderWidth: 1,
+          borderWidth: theme.borderWidth.hairline,
           borderColor: theme.colors.border,
         },
         danger: { backgroundColor: theme.colors.error },
         ghost: {
           backgroundColor: 'transparent',
-          borderWidth: 1,
+          borderWidth: theme.borderWidth.hairline,
           borderColor: 'transparent',
         },
         outline: {
           backgroundColor: 'transparent',
-          borderWidth: 1,
+          borderWidth: theme.borderWidth.hairline,
           borderColor: theme.colors.primary,
         },
       },

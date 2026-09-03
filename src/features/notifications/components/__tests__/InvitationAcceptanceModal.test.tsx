@@ -7,10 +7,8 @@ import {
   MembershipRole,
 } from '#/graphql/generated/schemaTypes';
 import { screen, userEvent, act, waitFor } from '@testing-library/react-native';
-import {
-  InvitationAcceptanceModal,
-  type InvitationData,
-} from '../InvitationAcceptanceModal';
+import { InvitationAcceptanceModal } from '../InvitationAcceptanceModal';
+import type { InvitationData } from '#features/notifications/types';
 import {
   recordMock,
   renderWithApollo,

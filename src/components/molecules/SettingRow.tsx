@@ -291,9 +291,9 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   rowWrapper: {
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surfaceVariant,
   },
@@ -304,7 +304,7 @@ const styles = StyleSheet.create(theme => ({
   rowLast: {
     borderBottomLeftRadius: theme.radii.lg,
     borderBottomRightRadius: theme.radii.lg,
-    borderBottomWidth: 0,
+    borderBottomWidth: theme.borderWidth.none,
   },
   row: { flexDirection: 'row', alignItems: 'center' },
   rowLabelColumn: {

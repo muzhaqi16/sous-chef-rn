@@ -4,6 +4,7 @@ import { onColor } from './derivePalette';
 import { spacing } from './foundations/spacing';
 import { typography, fonts } from './foundations/typography';
 import { radii } from './foundations/radii';
+import { borderWidth } from './foundations/borderWidth';
 import { shadows } from './foundations/shadows';
 import { sizes } from './foundations/sizes';
 import { zIndex } from './foundations/zIndex';
@@ -13,6 +14,7 @@ const commonTheme = {
   typography,
   fonts,
   radii,
+  borderWidth,
   shadows,
   sizes,
   zIndex,

@@ -9,35 +9,20 @@ import path from 'path';
  * module-scope `t` in `src/i18n/index.ts` IS `getI18n().t` with those overloads
  * in front of it, so the raw accessor buys nothing and loses the fallback form.
  *
- * PR #216 added five fresh call sites, which is what this exists to stop. The
- * files below predate it: they are a shrink-only WORKLIST, not an approval. An
- * entry may be removed once the file is converted; nothing may be added.
+ * The worklist is EMPTY, which makes this an invariant rather than a debt list:
+ * every caller has been converted, so any finding is a regression to fix rather
+ * than a number to watch.
  */
 
 const ROOT = path.join(__dirname, '..', '..');
 const SRC = path.join(ROOT, 'src');
 
 /**
- * Files still calling the raw accessor. Converting one is a `t(...)` swap plus
- * an import change — in a `.tsx` file the import must be aliased `tGlobal`, or
- * the hook used instead, because lint requires the language-aware `t` there.
+ * Empty on purpose. Converting a caller is a `t(...)` swap plus an import
+ * change — in a `.tsx` file the import must be aliased `tGlobal`, or the hook
+ * used instead, because lint requires the language-aware `t` there.
  */
-const LEGACY_CALLERS = [
-  'src/features/home/hooks/useHomeDetailManagement.ts',
-  'src/features/mealPlan/hooks/useGenerateShoppingList.ts',
-  'src/features/pantry/hooks/useAddLowStockToShoppingList.ts',
-  'src/features/pantry/hooks/usePantryItemDetailActions.ts',
-  'src/features/pantry/hooks/usePantryItemTransformation.tsx',
-  'src/hooks/subscriptions/useUserSubscriptions.ts',
-  'src/utils/errorHandlers.ts',
-  'src/utils/errors/rateLimit.ts',
-  'src/utils/validateDeductionQuantity.ts',
-  'src/utils/validation/auth.ts',
-  'src/utils/validation/common.ts',
-  'src/utils/validation/item.ts',
-  'src/utils/validation/onboarding.ts',
-  'src/utils/validation/profile.ts',
-].sort();
+const LEGACY_CALLERS: string[] = [];
 
 function productionFiles(dir: string, out: string[] = []): string[] {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -60,7 +45,7 @@ const callers = productionFiles(SRC)
   .sort();
 
 describe('the deprecated translation accessor', () => {
-  it('has no callers outside the recorded worklist', () => {
+  it('has no callers', () => {
     const added = callers.filter(file => !LEGACY_CALLERS.includes(file));
 
     expect(added).toEqual([]);
@@ -70,5 +55,11 @@ describe('the deprecated translation accessor', () => {
     const converted = LEGACY_CALLERS.filter(file => !callers.includes(file));
 
     expect(converted).toEqual([]);
+  });
+
+  // A scan that finds nothing looks the same whether the tree is clean or the
+  // walk broke, so assert it is still reading the tree it thinks it is.
+  it('is still scanning the source tree', () => {
+    expect(productionFiles(SRC).length).toBeGreaterThan(500);
   });
 });

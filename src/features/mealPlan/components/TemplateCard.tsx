@@ -122,7 +122,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     marginHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   pressed: {

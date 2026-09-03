@@ -14,6 +14,7 @@ import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
+import { identity, useLocalSearch } from '#hooks/search/useLocalSearch';
 
 const TagListSeparator = () => <View style={styles.tagSeparator} />;
 // Every row is the same component, so one recycling pool is correct.
@@ -54,11 +55,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
     }
   }
 
-  const filteredTags = (() => {
-    if (!searchQuery.trim()) return tags;
-    const query = searchQuery.toLowerCase();
-    return tags.filter(tag => tag.toLowerCase().includes(query));
-  })();
+  const filteredTags = useLocalSearch(tags, searchQuery, [identity]);
 
   const handleToggleTag = (tag: string) => {
     const newSelection = selectedTags.includes(tag)
@@ -186,7 +183,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   bottomSheetContent: {
-    padding: theme.spacing['5'],
+    padding: theme.spacing.mdPlus,
   },
   header: {
     alignItems: 'center',
@@ -198,12 +195,12 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.base,
     marginBottom: theme.spacing.md,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.sm,
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
@@ -217,11 +214,11 @@ const styles = StyleSheet.create(theme => ({
   tagItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    gap: theme.spacing['3'],
+    gap: theme.spacing.base,
   },
   tagItemSelected: {
     backgroundColor: theme.colors.primaryLight,

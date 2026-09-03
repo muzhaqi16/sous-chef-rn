@@ -45,8 +45,8 @@ const Chip: React.FC<ChipProps> = ({ label, selected, onPress, style }) => {
 
 const styles = StyleSheet.create(theme => ({
   chip: {
-    paddingVertical: theme.spacing.xs + 2,
-    paddingHorizontal: theme.spacing['3'],
+    paddingVertical: theme.spacing.xsPlus,
+    paddingHorizontal: theme.spacing.base,
     borderRadius: theme.radii['2xl'],
     borderCurve: 'continuous',
     marginRight: theme.spacing.sm,

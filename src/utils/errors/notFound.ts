@@ -1,6 +1,6 @@
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { getTopLevelGraphQLError } from './graphqlErrors';
-import { getI18n } from '#/i18n/config';
+import { t } from '#/i18n';
 
 export function isNotFoundErrorPayload(payload: {
   __typename: string;
@@ -9,21 +9,19 @@ export function isNotFoundErrorPayload(payload: {
 }
 
 export function getNotFoundMessage(resource?: string | null): string {
-  const i18n = getI18n();
-
   if (!resource) {
-    return i18n.t('errors.notFoundGeneric', {
+    return t('errors.notFoundGeneric', {
       defaultValue:
         'The requested item could not be found. It may have been deleted.',
     });
   }
 
   const displayName =
-    i18n.t(`errors.resourceNames.${resource}`, {
+    t(`errors.resourceNames.${resource}`, {
       defaultValue: resource.toLowerCase(),
     }) || resource.toLowerCase();
 
-  return i18n.t('errors.notFoundResource', {
+  return t('errors.notFoundResource', {
     resource: displayName,
     defaultValue:
       'The {{resource}} could not be found. It may have been deleted or moved.',

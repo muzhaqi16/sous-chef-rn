@@ -56,7 +56,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     ],
   },
   bottomBorder: {
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
 
@@ -123,7 +123,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
     paddingVertical: {
       xs: theme.spacing.sm,
@@ -171,12 +171,12 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
 
   input: {
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing['2.5'],
+    paddingVertical: theme.spacing.smPlus,
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.inputBackground,
@@ -226,7 +226,7 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
   buttonSecondary: {
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   buttonDanger: {
@@ -253,7 +253,7 @@ export const commonStyles = StyleSheet.create(theme => ({
 
   settingsSection: {
     padding: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   settingsSectionTitle: {
@@ -275,11 +275,11 @@ export const commonStyles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
   },
   settingsRowInfo: {
     flex: 1,
-    marginRight: theme.spacing['3'],
+    marginRight: theme.spacing.base,
   },
   settingsRowLabel: {
     fontSize: theme.typography.fontSize.md,
@@ -297,7 +297,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     alignItems: 'center',
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   listItemContent: {
@@ -322,7 +322,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.primary,
     ...theme.shadows.card,
   },
@@ -336,7 +336,7 @@ export const commonStyles = StyleSheet.create(theme => ({
   listItemImageContainerCompact: {
     width: theme.sizes.itemCard.compact.image,
     height: theme.sizes.itemCard.compact.image,
-    marginRight: theme.spacing['3'],
+    marginRight: theme.spacing.base,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     overflow: 'hidden',
@@ -344,7 +344,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     // Hairline border + tinted fill, so an empty placeholder tile reads as a
     // deliberate thumbnail rather than a gap.
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.borderLight,
     backgroundColor: theme.colors.surfaceVariant,
     ...theme.shadows.sm,
@@ -401,7 +401,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   modalTitle: {
@@ -482,7 +482,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
     gap: theme.spacing.xs,

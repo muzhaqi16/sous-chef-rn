@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { RootState } from '../index';
+import type { RootState } from '../index';
 
 /**
  * A deep-link intent queued while hydrating or logged out, replayed by

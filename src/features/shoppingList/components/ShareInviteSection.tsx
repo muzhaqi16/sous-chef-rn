@@ -5,13 +5,11 @@ import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { useMutation } from '@apollo/client/react';
 import { Icon } from '#utils/iconUtils';
 import { EmailInput } from '#components/atoms/EmailInput';
 import { ChipScrollRow } from '#components/atoms/ChipScrollRow';
-import { AddCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { useInviteCollaborator } from '#features/shoppingList/hooks/useInviteCollaborator';
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { ROLE_PERMISSIONS, INVITE_ROLES } from '#/constants/collaboratorRoles';
 import { alertService } from '#/services/alertService';
 import { localizedErrorMessage } from '#/services/errorService';
@@ -19,12 +17,6 @@ import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import type { Translate } from '#/i18n/types';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { unwrapPayload } from '#/utils/errors/mutationPayload';
-
-const addCollaboratorToCache = createAddToParentConnectionUpdater(
-  'ShoppingList',
-  'collaboratorsConnection',
-  'ShoppingListCollaborator',
-);
 
 const buildRoleOptions = (t: Translate) =>
   INVITE_ROLES.map(role => ({
@@ -37,11 +29,7 @@ interface ShareInviteSectionProps {
   listId: string;
 }
 
-/**
- * Invite-by-email section of the Share screen: owns the email/role/sending
- * state and the AddCollaborator mutation (inserting the new collaborator into
- * the cached collaboratorsConnection on success).
- */
+/** Invite-by-email section of the Share screen. */
 export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
   listId,
 }) => {
@@ -55,7 +43,7 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
   const [sharing, setSharing] = useState(false);
 
   const { requireVerifiedEmail } = useVerifiedEmailGate();
-  const [shareList] = useMutation(AddCollaboratorDocument);
+  const { inviteCollaborator } = useInviteCollaborator(listId);
 
   const handleShare = () => {
     if (!requireVerifiedEmail()) return;
@@ -70,36 +58,12 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
 
     executeWithLoadingState(
       async () => {
-        const { data } = await shareList({
-          variables: {
-            input: {
-              shoppingListId: listId,
-              email: email.trim(),
-              role: selectedRole,
-            },
-          },
-          update(cache, { data: updateData }) {
-            const invitePayload = updateData?.inviteToShoppingList;
-            if (invitePayload?.__typename === 'InviteToShoppingListPayload') {
-              addCollaboratorToCache(
-                cache,
-                listId,
-                invitePayload.collaborator,
-                {
-                  position: 'end',
-                },
-              );
-            }
-          },
-        });
         unwrapPayload(
-          data?.inviteToShoppingList,
+          await inviteCollaborator(email.trim(), selectedRole),
           'InviteToShoppingListPayload',
           t('errors.sendInviteFailed'),
         );
         setEmail('');
-        // No refetch needed: the update() callback above already inserts the
-        // new collaborator into the cached collaboratorsConnection.
       },
       setSharing,
       error => {
@@ -151,14 +115,14 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
 const styles = StyleSheet.create(theme => ({
   inviteSection: {
     padding: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   sectionTitle: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing['3'],
+    marginBottom: theme.spacing.base,
   },
   inputRow: {
     flexDirection: 'row',
@@ -168,7 +132,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   sendButton: {
-    marginLeft: theme.spacing['3'],
+    marginLeft: theme.spacing.base,
     backgroundColor: theme.colors.primary,
     width: 44,
     height: 44,

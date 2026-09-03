@@ -103,7 +103,7 @@ const indicatorStyles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     gap: theme.spacing.xl,
     paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
     marginBottom: theme.spacing.md,
   },

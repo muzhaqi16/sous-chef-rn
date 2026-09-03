@@ -158,9 +158,20 @@ named exceptions that each say why. Tests are exempt — a cache test has to
 import the fragment it exercises. The rules block NEW reach-across imports;
 migrating working code is not required.
 
-`src/screens/` holds auth and onboarding only. Those are flows rather than
-domains — they have no feature-shaped data layer, and they run before a home
-exists. Every domain, `home` included, is a folder under `src/features/`.
+`src/screens/` holds only `SplashScreen` and `NotFoundScreen` — the two the app
+shows before any feature is reachable. Auth and onboarding are features like
+every other: they had a data layer (ten files holding the Apollo client), 5,200
+lines no gate scanned, and fourteen kit modules that existed solely for them.
+Their stacks in `src/navigation/stacks/` now spread a `screens/registration.ts`
+the feature owns, as barcode and notifications already did.
+
+Their session PRIMITIVES stay in the kernel, which is a different question from
+where their screens live: `src/graphql/operations/auth` is imported by
+`refreshToken.ts` and `authService.ts`, and `useIsLoggedOut` and
+`useEmailVerification` are read by every feature. `auth` and `onboarding` are
+therefore in the name-based gates' `AMBIGUOUS_IDS`, beside `home`, `profile` and
+`notifications` — each names a concept every app of this shape has, so a shared
+module named for one is not evidence of feature coupling.
 
 ---
 

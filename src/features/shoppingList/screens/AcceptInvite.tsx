@@ -7,36 +7,19 @@ import {
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useFragment, useMutation, useQuery } from '@apollo/client/react';
-import {
-  AcceptShoppingListInviteDocument,
-  DeclineShoppingListInviteDocument,
-} from '#features/shoppingList/graphql/collaboration.generated';
-import {
-  AcceptHomeInviteDocument,
-  DeclineHomeInviteDocument,
-} from '#operations/home/home.generated';
-import {
-  AcceptInvite_ShoppingListInviteFragmentDoc,
-  AcceptInvite_HomeInviteFragmentDoc,
-  GetHomeInviteByTokenDocument,
-  GetShoppingListInviteByTokenDocument,
-  type AcceptInvite_ShoppingListInviteFragment,
-  type AcceptInvite_HomeInviteFragment,
-} from './AcceptInvite.generated';
+import { useInviteByToken } from '#features/shoppingList/hooks/useInviteByToken';
 import { errorService, localizedErrorMessage } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
-
-type InvitationType = 'shopping_list' | 'home' | 'unknown';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 
 export const AcceptInvite: React.FC = () => {
   const { t } = useTranslation();
-  const { goBack } = useNavigation();
+  const { goBack } = useAppNavigation();
   const route = useRoute();
   const { token } = (route.params ?? {}) as {
     token?: string;
@@ -45,73 +28,19 @@ export const AcceptInvite: React.FC = () => {
   const [processing, setProcessing] = useState(false);
 
   // This screen is the deep-link acceptance surface: the invite is resolved
-  // straight from the URL token (accept-invitation?token=…) via the *ByToken
-  // queries, since it may not be in the user's cached pending list on a fresh
-  // device. In-app acceptance from a notification is handled separately by
-  // InvitationAcceptanceModal.
-  const { data: tokenHomeInviteData, loading: tokenHomeInviteLoading } =
-    useQuery(GetHomeInviteByTokenDocument, {
-      variables: { token: token ?? '' },
-      skip: !token,
-    });
-  const { data: tokenListInviteData, loading: tokenListInviteLoading } =
-    useQuery(GetShoppingListInviteByTokenDocument, {
-      variables: { token: token ?? '' },
-      skip: !token,
-    });
-
-  // Mutations for shopping list invites
-  const [acceptShoppingListInvite] = useMutation(
-    AcceptShoppingListInviteDocument,
-  );
-  const [declineShoppingListInvite] = useMutation(
-    DeclineShoppingListInviteDocument,
-  );
-
-  // Mutations for home invites
-  const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument);
-  const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument);
-
-  const shoppingListInvite =
-    tokenListInviteData?.shoppingListInviteByToken ?? null;
-  const homeInvite = tokenHomeInviteData?.homeInviteByToken ?? null;
-
-  // Only when there is nothing to show: a warm cache renders the invite while
-  // the accompanying network leg is still open.
-  const loading =
-    (tokenHomeInviteLoading || tokenListInviteLoading) &&
-    !shoppingListInvite &&
-    !homeInvite;
-
-  // Unmask display fields via useFragment (pattern B — resilient fallback).
-  // The queries already select these fields, so the cache has them;
-  // useFragment reads from the normalized cache without needing a spread.
-  const shoppingListFragmentResult = useFragment({
-    fragment: AcceptInvite_ShoppingListInviteFragmentDoc,
-    fragmentName: 'AcceptInvite_shoppingListInvite',
-    from: shoppingListInvite ?? {
-      __typename: 'ShoppingListCollaborator',
-      id: '',
-    },
-  });
-  const shoppingListInviteData: AcceptInvite_ShoppingListInviteFragment | null =
-    shoppingListInvite && shoppingListFragmentResult.complete
-      ? shoppingListFragmentResult.data
-      : null;
-
-  const homeFragmentResult = useFragment({
-    fragment: AcceptInvite_HomeInviteFragmentDoc,
-    fragmentName: 'AcceptInvite_homeInvite',
-    from: homeInvite ?? { __typename: 'HomeInvite', id: '' },
-  });
-  const homeInviteDisplay: AcceptInvite_HomeInviteFragment | null =
-    homeInvite && homeFragmentResult.complete ? homeFragmentResult.data : null;
-
-  const invitationType: InvitationType = shoppingListInvite
-    ? 'shopping_list'
-    : homeInvite
-    ? 'home'
-    : 'unknown';
+  // straight from the URL token (accept-invitation?token=…), since it may not be
+  // in the user's cached pending list on a fresh device. In-app acceptance from
+  // a notification is handled by InvitationAcceptanceModal.
+  const {
+    invitationType,
+    hasInvite,
+    inviteRole,
+    shoppingListInviteDisplay,
+    homeInviteDisplay,
+    loading,
+    accept,
+    decline,
+  } = useInviteByToken(token);
 
   // The invite only ever resolves from the route token, so that token is the
   // credential the accept/decline mutations need.
@@ -131,30 +60,21 @@ export const AcceptInvite: React.FC = () => {
 
     executeWithLoadingState(
       async () => {
-        if (invitationType === 'shopping_list') {
-          await acceptShoppingListInvite({
-            variables: { input: { token: inviteToken } },
-          });
-          alertService.alert(
-            t('labels.success'),
-            t('invitationAcceptance.shoppingListAccepted'),
-            [{ text: t('labels.ok'), onPress: () => goBack() }],
-          );
-        } else if (invitationType === 'home') {
-          await acceptHomeInvite({
-            variables: { input: { token: inviteToken } },
-          });
-          alertService.alert(
-            t('labels.success'),
-            t('invitationAcceptance.homeAccepted'),
-            [{ text: t('labels.ok'), onPress: () => goBack() }],
-          );
-        } else {
+        if (invitationType === 'unknown') {
           alertService.alert(
             t('labels.error'),
             t('invitationAcceptance.unknownType'),
           );
+          return;
         }
+        await accept(inviteToken);
+        alertService.alert(
+          t('labels.success'),
+          invitationType === 'home'
+            ? t('invitationAcceptance.homeAccepted')
+            : t('invitationAcceptance.shoppingListAccepted'),
+          [{ text: t('labels.ok'), onPress: () => goBack() }],
+        );
       },
       setProcessing,
       (error: unknown) => {
@@ -193,16 +113,7 @@ export const AcceptInvite: React.FC = () => {
           onPress: () => {
             executeWithLoadingState(
               async () => {
-                if (invitationType === 'shopping_list') {
-                  await declineShoppingListInvite({
-                    variables: { input: { token: inviteToken! } },
-                  });
-                } else if (invitationType === 'home') {
-                  await declineHomeInvite({
-                    variables: { input: { token: inviteToken! } },
-                  });
-                }
-
+                await decline(inviteToken);
                 goBack();
               },
               setProcessing,
@@ -231,7 +142,7 @@ export const AcceptInvite: React.FC = () => {
     );
   }
 
-  if (!shoppingListInvite && !homeInvite) {
+  if (!hasInvite) {
     return (
       <View style={styles.loadingContainer}>
         <Text size="md" align="center" tone="error" style={styles.inviteText}>
@@ -286,8 +197,8 @@ export const AcceptInvite: React.FC = () => {
               })
             : t('invitationAcceptance.listInviteText', {
                 inviter:
-                  shoppingListInviteData?.invitedBy?.profile?.displayName ||
-                  shoppingListInviteData?.invitedBy?.email ||
+                  shoppingListInviteDisplay?.invitedBy?.profile?.displayName ||
+                  shoppingListInviteDisplay?.invitedBy?.email ||
                   t('labels.someone'),
               })}
         </Text>
@@ -297,7 +208,7 @@ export const AcceptInvite: React.FC = () => {
             {invitationType === 'home'
               ? homeInviteDisplay?.home?.name ||
                 t('invitationAcceptance.resourceHome')
-              : shoppingListInviteData?.shoppingList?.name ||
+              : shoppingListInviteDisplay?.shoppingList?.name ||
                 t('labels.shoppingList')}
           </Text>
           <Text size="sm" tone="secondary" style={styles.inviteType}>
@@ -312,17 +223,14 @@ export const AcceptInvite: React.FC = () => {
             style={styles.inviteRole}
           >
             {t('invitationAcceptance.roleLabel', {
-              role:
-                (invitationType === 'home'
-                  ? homeInvite?.role
-                  : shoppingListInvite?.role) ?? '',
+              role: inviteRole,
             })}
           </Text>
         </View>
 
         {!!(
           invitationType === 'shopping_list' &&
-          shoppingListInviteData?.shoppingList?.description
+          shoppingListInviteDisplay?.shoppingList?.description
         ) && (
           <View style={styles.messageContainer}>
             <Text
@@ -334,7 +242,7 @@ export const AcceptInvite: React.FC = () => {
               {t('invitationAcceptance.descriptionLabel')}
             </Text>
             <Text size="md">
-              {shoppingListInviteData?.shoppingList?.description}
+              {shoppingListInviteDisplay?.shoppingList?.description}
             </Text>
           </View>
         )}
@@ -431,16 +339,16 @@ const styles = StyleSheet.create(theme => ({
   actions: {
     flexDirection: 'row',
     marginTop: theme.spacing.xl,
-    gap: theme.spacing['3'],
+    gap: theme.spacing.base,
   },
   declineButton: {
     flex: 1,
-    paddingVertical: theme.spacing.sm + 2,
+    paddingVertical: theme.spacing.smPlus,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
     alignItems: 'center',
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   declineButtonText: {
@@ -448,7 +356,7 @@ const styles = StyleSheet.create(theme => ({
   },
   acceptButton: {
     flex: 1,
-    paddingVertical: theme.spacing.sm + 2,
+    paddingVertical: theme.spacing.smPlus,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
     alignItems: 'center',

@@ -9,6 +9,7 @@ import { Icon } from '#/utils/iconUtils';
 import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
 import { type ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import type { Translate } from '#/i18n/types';
+import { formatShortDate } from '#/utils/formatters/date';
 
 type StatusVariant = 'active' | 'pending' | 'declined' | 'expired' | 'owner';
 
@@ -118,7 +119,7 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
             {!!member.invitedAt && (
               <Text style={styles.invitedText}>
                 {t('shoppingListScreens.invitedOn', {
-                  date: new Date(member.invitedAt).toLocaleDateString(),
+                  date: formatShortDate(new Date(member.invitedAt)),
                 })}
               </Text>
             )}
@@ -143,7 +144,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: theme.spacing['3'],
+    padding: theme.spacing.base,
     backgroundColor: theme.colors.surface,
     marginBottom: theme.spacing.sm,
     borderRadius: theme.radii.sm,
@@ -164,7 +165,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing['3'],
+    marginRight: theme.spacing.base,
   },
   avatarText: {
     color: theme.colors.onPrimary,
@@ -193,7 +194,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.pill,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     variants: {
       status: {
         active: {

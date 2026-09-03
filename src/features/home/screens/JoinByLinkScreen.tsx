@@ -2,14 +2,14 @@ import React, { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { StackActions, useNavigation } from '@react-navigation/native';
+import { StackActions } from '@react-navigation/native';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { useQuery } from '@apollo/client/react';
 import { Header } from '#components/molecules/Header';
 import { ErrorState } from '#components/atoms/ErrorState';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
-import { ResolveShareLinkDocument } from '#features/home/screens/JoinByLinkScreen.generated';
+import { useResolveShareLink } from '#features/home/hooks/useResolveShareLink';
 import { ShareLinkTargetType } from '#/graphql/generated/schemaTypes';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 
 /**
  * Entry point for a link whose type is unknown up front (`join/:code`):
@@ -21,15 +21,10 @@ export const JoinByLinkScreen: React.FC<
   StaticScreenProps<{ code?: string }>
 > = ({ route }) => {
   const { t } = useTranslation();
-  const navigation = useNavigation();
+  const { navigation } = useAppNavigation();
   const code = route.params?.code ?? '';
 
-  const { data, loading } = useQuery(ResolveShareLinkDocument, {
-    variables: { code },
-    skip: !code,
-    fetchPolicy: 'cache-and-network',
-  });
-  const result = data?.resolveShareLink ?? null;
+  const { link: result, loading } = useResolveShareLink(code);
 
   // Guard against double-dispatch if `result` re-emits (cache→network) before
   // this screen unmounts. A ref (mutated only in the effect, never read during

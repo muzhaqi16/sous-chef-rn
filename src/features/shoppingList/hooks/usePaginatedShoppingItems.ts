@@ -5,7 +5,7 @@ import {
   type GetShoppingListItemsFilteredQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
-import { PAGINATION } from '#/constants/shoppingList';
+import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import {
   useConnectionData,

@@ -18,11 +18,12 @@ import {
   MealPlanSettingsSheet_MealPlanFragmentDoc,
   type MealPlanSettingsSheet_MealPlanFragment,
 } from './MealPlanSettingsSheet.generated';
-import type { MealPlanPermissions } from '#utils/permissions/mealPlanPermissions';
+import type { MealPlanPermissions } from '#features/mealPlan/utils/mealPlanPermissions';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
 import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 import { Text } from '#components/atoms/Text';
+import { formatMonthDay } from '#/utils/formatters/date';
 
 interface MealPlanSettingsSheetProps {
   visible: boolean;
@@ -148,7 +149,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
 
   const dateRange =
     mealPlan.startDate && mealPlan.endDate
-      ? `${format(parseISO(mealPlan.startDate), 'MMM d')} - ${format(
+      ? `${formatMonthDay(parseISO(mealPlan.startDate))} - ${format(
           parseISO(mealPlan.endDate),
           'MMM d, yyyy',
         )}`

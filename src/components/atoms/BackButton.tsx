@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
 import type { StyleProp, ViewStyle } from 'react-native';
+import { withUnistyles } from 'react-native-unistyles';
 import { IconButton } from './IconButton';
 
 export interface BackButtonProps {
@@ -33,3 +34,8 @@ export const BackButton: React.FC<BackButtonProps> = ({
 };
 
 export default BackButton;
+
+/** Tinted with `theme.colors.textPrimary`. Declared beside what it wraps. */
+export const ThemedBackButton = withUnistyles(BackButton, theme => ({
+  color: theme.colors.textPrimary,
+}));

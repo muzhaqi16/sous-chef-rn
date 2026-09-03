@@ -5,7 +5,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { format, parseISO, startOfDay } from 'date-fns';
+import { parseISO, startOfDay } from 'date-fns';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { MealType } from '#/graphql/generated/schemaTypes';
@@ -13,6 +13,10 @@ import { useAddRecipeToMealPlan } from '#features/mealPlan/hooks/useAddRecipeToM
 import { useMealPlanCalendar } from '#features/mealPlan/hooks/useMealPlanCalendar';
 import { WeekStrip } from '#components/molecules/WeekStrip';
 import { Text } from '#components/atoms/Text';
+import {
+  formatFullWeekdayMonthDay,
+  formatMonthDay,
+} from '#/utils/formatters/date';
 
 interface AddToMealPlanSheetProps {
   visible: boolean;
@@ -157,8 +161,8 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
                       ]}
                       numberOfLines={1}
                     >
-                      {format(parseISO(plan.startDate), 'MMM d')} –{' '}
-                      {format(parseISO(plan.endDate), 'MMM d')}
+                      {formatMonthDay(parseISO(plan.startDate))} –{' '}
+                      {formatMonthDay(parseISO(plan.endDate))}
                     </Text>
                   </Pressable>
                 );
@@ -194,7 +198,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
               align="center"
               style={styles.selectedDateLabel}
             >
-              {format(calendar.selectedDate, 'EEEE, MMMM d')}
+              {formatFullWeekdayMonthDay(calendar.selectedDate)}
             </Text>
           </>
         ) : null}
@@ -260,7 +264,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   planChipSelected: {
@@ -293,7 +297,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   // Selected = primary outline + primary label, matching the shared

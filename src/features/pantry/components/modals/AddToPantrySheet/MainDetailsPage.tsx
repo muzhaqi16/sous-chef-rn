@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { detailsPageBaseStyles } from './detailsPageStyles';
-import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import { FormInput } from '#components/molecules/FormInput';
 import { BrandAutocompleteField } from '#features/catalog/ui/autocomplete/BrandAutocompleteField';
@@ -59,7 +59,7 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
   const formatStorageStateLabel = (state: StorageState) =>
     t(`storageState.${state}`);
   return (
-    <BottomSheetKeyboardAwareScrollView
+    <BottomSheetFormScrollView
       key="main"
       style={styles.page}
       contentContainerStyle={[
@@ -125,7 +125,7 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
           formatLabel={formatStorageStateLabel}
         />
       </DropdownStack>
-    </BottomSheetKeyboardAwareScrollView>
+    </BottomSheetFormScrollView>
   );
 };
 

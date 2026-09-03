@@ -331,12 +331,12 @@ export function BottomSheetAutocompleteInput<T>({
 
 const styles = StyleSheet.create(theme => ({
   fieldInput: {
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     fontSize: theme.typography.fontSize.base,
     backgroundColor: theme.colors.surface,
     color: theme.colors.textPrimary,
@@ -363,7 +363,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.sm,
     backgroundColor: theme.colors.inputBackground,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     color: theme.colors.inputText,
   },

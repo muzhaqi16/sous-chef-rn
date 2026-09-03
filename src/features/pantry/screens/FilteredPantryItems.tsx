@@ -24,21 +24,12 @@ import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/Sp
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
 import type { PantryItemFilters } from '#/graphql/generated/schemaTypes';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { AddItemToShoppingListFromFilteredPantryDocument } from './FilteredPantryItems.generated';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { useAddLowStockToShoppingList } from '#features/pantry/hooks/useAddLowStockToShoppingList';
 import { useSelectedShoppingListId } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
-import { generateEntityId } from '#/utils/generateEntityId';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
-import {
-  addOptimisticShoppingListItem,
-  createOptimisticShoppingListItem,
-  reconcileShoppingCreate,
-  buildAddItemsReconcileUpdate,
-  revertOptimisticShoppingListItem,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+import { useAddPantryItemToShoppingList } from '#features/pantry/hooks/useAddPantryItemToShoppingList';
 import {
   useTutorialSequence,
   type TutorialStep,
@@ -55,7 +46,6 @@ import {
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { Text } from '#components/atoms/Text';
 import type { Translate } from '#/i18n/types';
-import { errorService } from '#/services/errorService';
 
 export type FilteredPantryItemsMode = 'lowStock' | 'expiring' | 'expired';
 
@@ -335,7 +325,7 @@ export const FilteredPantryItems: React.FC<
 
   const permissions = usePantryPermissions();
   const selectedShoppingListId = useSelectedShoppingListId();
-  const client = useApolloClient();
+  const { addToList } = useAddPantryItemToShoppingList(selectedShoppingListId);
 
   const {
     state: {
@@ -361,14 +351,6 @@ export const FilteredPantryItems: React.FC<
     skipped,
     isEmpty: !allItems?.length,
   });
-  const [addToShoppingList] = useMutation(
-    AddItemToShoppingListFromFilteredPantryDocument,
-    {
-      // Reads the list id from the mutation's own variables, so it stays
-      // correct across re-renders.
-      update: buildAddItemsReconcileUpdate({}),
-    },
-  );
 
   // Progressively load all pages so the filter sees every item
   useEffect(() => {
@@ -424,60 +406,7 @@ export const FilteredPantryItems: React.FC<
       toastService.info(t('filteredPantry.noListSelected'));
       return;
     }
-    // Mint the id so a queued create replays idempotently, keyed by it.
-    const id = generateEntityId();
-
-    // Written before firing, so it survives a queued create.
-    try {
-      addOptimisticShoppingListItem(
-        client.cache,
-        selectedShoppingListId,
-        createOptimisticShoppingListItem(id, {
-          shoppingListId: selectedShoppingListId,
-          itemName: display.itemName,
-          unitId: display.unitId,
-        }),
-      );
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Add Shopping List Item (optimistic)',
-      });
-    }
-
-    let result;
-    try {
-      result = await addToShoppingList({
-        variables: {
-          input: {
-            shoppingListId: selectedShoppingListId,
-            items: [{ id, item: { itemId } }],
-          },
-        },
-        context: { localFirst: true },
-      });
-    } catch {
-      revertOptimisticShoppingListItem(
-        client.cache,
-        selectedShoppingListId,
-        id,
-      );
-      alertService.alert(
-        t('labels.error'),
-        t('filteredPantry.addToShoppingFailed'),
-      );
-    }
-    // A queued create replays later — treat as success. `errorPolicy: 'all'`
-    // resolves rejections, so the catch above never sees them; the reconciler
-    // classifies the result and discards the item we wrote.
-    if (
-      result &&
-      reconcileShoppingCreate(
-        client.cache,
-        selectedShoppingListId,
-        id,
-        result,
-      ) === 'reverted'
-    ) {
+    if ((await addToList(itemId, display)) === 'reverted') {
       alertService.alert(
         t('labels.error'),
         t('filteredPantry.addToShoppingFailed'),

@@ -413,7 +413,7 @@ const styles = StyleSheet.create(theme => ({
   loadingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: theme.spacing.xl * 2,
+    paddingVertical: theme.spacing['3xl'],
   },
   retryButton: {
     marginTop: theme.spacing.md,
@@ -438,7 +438,7 @@ const styles = StyleSheet.create(theme => ({
   joinCodeSwitch: {
     paddingHorizontal: 0,
     backgroundColor: 'transparent',
-    borderBottomWidth: 0,
+    borderBottomWidth: theme.borderWidth.none,
   },
   leaveHomeSection: {
     gap: theme.spacing.md,

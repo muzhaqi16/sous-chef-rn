@@ -2,13 +2,15 @@ import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useNavigation, CommonActions } from '@react-navigation/native';
+import { CommonActions } from '@react-navigation/native';
 import { Button } from '#components/atoms/Button';
 import { Text } from '#components/atoms/Text';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 
 export const NotFoundScreen = () => {
   const { t } = useTranslation();
-  const { dispatch } = useNavigation();
+  const { navigation } = useAppNavigation();
+  const { dispatch } = navigation;
 
   const handleGoHome = () => {
     dispatch(

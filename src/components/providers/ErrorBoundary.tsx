@@ -249,7 +249,7 @@ const styles = StyleSheet.create(theme => ({
     maxWidth: 300,
   },
   title: {
-    marginBottom: theme.spacing['3'],
+    marginBottom: theme.spacing.base,
   },
   message: {
     marginBottom: theme.spacing.sm,
@@ -260,7 +260,7 @@ const styles = StyleSheet.create(theme => ({
   },
   retryButton: {
     paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
     marginTop: theme.spacing.md,

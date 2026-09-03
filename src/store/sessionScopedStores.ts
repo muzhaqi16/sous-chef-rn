@@ -5,6 +5,7 @@
  * keys are declared as DATA below and deleted without loading their module.
  */
 import { storage } from '#/storage/mmkv';
+import { logger } from '#/utils/environment';
 
 type StoreReset = () => void;
 
@@ -47,7 +48,7 @@ export const resetSessionScopedStores = (): void => {
     try {
       reset();
     } catch (error) {
-      console.warn(`[sessionScopedStores] "${name}" failed to reset`, error);
+      logger.warn(`[sessionScopedStores] "${name}" failed to reset`, error);
     }
   }
 
@@ -57,7 +58,7 @@ export const resetSessionScopedStores = (): void => {
     try {
       storage.remove(key);
     } catch (error) {
-      console.warn(`[sessionScopedStores] "${key}" failed to clear`, error);
+      logger.warn(`[sessionScopedStores] "${key}" failed to clear`, error);
     }
   }
 };

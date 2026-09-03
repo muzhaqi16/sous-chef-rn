@@ -7,7 +7,7 @@ import { authService } from '#/services/authService';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
-import { useNavigation } from '@react-navigation/native';
+
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
@@ -29,6 +29,7 @@ import {
 } from '#/utils/finallyHelpers';
 import { logger } from '#/utils/environment';
 import { Text } from '#components/atoms/Text';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 
 interface SettingDef {
   key: keyof NotificationSettings;
@@ -215,7 +216,8 @@ export const NotificationSettingsScreen: React.FC = () => {
   const { t } = useTranslation();
   const FREQUENCY_OPTIONS = getFrequencyOptions(t);
   const THRESHOLD_OPTIONS = getThresholdOptions(t);
-  const { addListener } = useNavigation();
+  const { navigation } = useAppNavigation();
+  const { addListener } = navigation;
   const [updating, setUpdating] = useState<string | null>(null);
   const [frequencyPickerVisible, setFrequencyPickerVisible] = useState(false);
   const [thresholdPickerVisible, setThresholdPickerVisible] = useState(false);
@@ -626,7 +628,7 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
-    borderLeftWidth: 4,
+    borderLeftWidth: theme.borderWidth.heavy,
     borderLeftColor: theme.colors.info,
   },
   quietTimeText: {

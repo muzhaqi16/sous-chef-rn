@@ -1,9 +1,12 @@
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { ThemedTextInput } from '#components/atoms/themedComponents';
+import {
+  ThemedTextInput,
+  WhiteActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { StorageState } from '#/graphql/generated/schemaTypes';
@@ -429,7 +432,7 @@ export const StorageLocationForm = forwardRef<
               disabled={isSubmitting || !formData.name.trim()}
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color="white" />
+                <WhiteActivityIndicator size="small" />
               ) : (
                 <Text style={commonStyles.buttonTextPrimary}>
                   {initialData ? t('labels.update') : t('labels.create')}
@@ -468,7 +471,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surfaceVariant,
     marginRight: theme.spacing.sm,
@@ -480,7 +483,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
     marginRight: theme.spacing.sm,
@@ -491,7 +494,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     marginRight: theme.spacing.sm,
     alignItems: 'center',
     minWidth: 90,
@@ -503,7 +506,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     marginRight: theme.spacing.sm,
     minWidth: 80,
     backgroundColor: theme.colors.primaryLight,
@@ -544,7 +547,7 @@ const styles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.sm,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
   },
@@ -556,7 +559,7 @@ const styles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.sm,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
+    borderWidth: theme.borderWidth.thick,
     borderColor: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
   },
@@ -568,7 +571,7 @@ const styles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.sm,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
+    borderWidth: theme.borderWidth.thick,
     borderColor: theme.colors.textPrimary,
   },
   formActions: {

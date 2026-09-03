@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useShoppingListSuggestions,
@@ -8,24 +7,12 @@ import {
   ShoppingListSuggestionItem,
 } from '#features/shoppingList/hooks/useShoppingListSuggestions';
 import { toastService } from '#/services/toastService';
-import {
-  AddItemToShoppingListDocument,
-  GetShoppingListSuggestionsDocument,
-  type GetShoppingListSuggestionsQuery,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+import { useAddToShoppingList } from '#features/shoppingList/hooks/useAddToShoppingList';
 import {
   ItemSuggestion,
   SuggestionSurface,
 } from '#/graphql/generated/schemaTypes';
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
-import {
-  addOptimisticShoppingListItem,
-  createOptimisticShoppingListItem,
-  reconcileShoppingCreate,
-  buildAddItemsReconcileUpdate,
-  revertOptimisticShoppingListItem,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
-import { generateEntityId } from '#/utils/generateEntityId';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import {
   useShoppingListTutorial,
@@ -37,7 +24,6 @@ import { useAddItemSheetState } from '#features/catalog/ui/AddItemSheet/useAddIt
 import type { SuggestionsHookResult } from '#features/catalog/ui/AddItemSheet/types';
 import { shoppingListSheetConfig } from '#features/shoppingList/components/AddToShoppingListSheet/shoppingListSheetConfig';
 import { ShoppingListDetailsStep } from './ShoppingListDetailsStep';
-import { errorService } from '#/services/errorService';
 
 interface AddToShoppingListSheetProps {
   visible: boolean;
@@ -58,7 +44,10 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
 }) => {
   const { t } = useTranslation();
   const { toBarcode } = useAppNavigation();
-  const client = useApolloClient();
+  const { addItem, removeSuggestion, adding } = useAddToShoppingList({
+    shoppingListId,
+    suggestionsLimit: SHOPPING_SUGGESTIONS_LIMIT,
+  });
   const showImages = useShowShoppingListImages();
   const tutorial = useShoppingListTutorial();
 
@@ -90,47 +79,6 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     suggestionsResult.refetch,
   );
 
-  const removeFromSuggestionsCache = (itemId: string) => {
-    client.cache.updateQuery<GetShoppingListSuggestionsQuery>(
-      {
-        query: GetShoppingListSuggestionsDocument,
-        variables: { id: shoppingListId!, limit: SHOPPING_SUGGESTIONS_LIMIT },
-      },
-      data => {
-        if (!data?.shoppingList) return data;
-        const list = data.shoppingList;
-        return {
-          ...data,
-          shoppingList: {
-            ...list,
-            recentlyDeleted: list.recentlyDeleted.filter(
-              s => s.itemId !== itemId,
-            ),
-            frequentlyAdded: list.frequentlyAdded.filter(
-              s => s.itemId !== itemId,
-            ),
-            popular: list.popular.filter(s => s.itemId !== itemId),
-          },
-        };
-      },
-    );
-  };
-
-  // Each handler writes the new item into the cache before this mutation fires
-  // and leaves it there, so it appears instantly and stays even when the create
-  // is queued offline (the queue replays it later, keyed by the item's id). An
-  // `optimisticResponse` can't do this — Apollo rolls it back the moment the
-  // offline queue completes the request with a null result.
-  const [addItemMutation, { loading: adding }] = useMutation(
-    AddItemToShoppingListDocument,
-    {
-      update: buildAddItemsReconcileUpdate({
-        listId: shoppingListId,
-        wrap: { message: 'Cache update failed for addItem:' },
-      }),
-    },
-  );
-
   // Keep the sheet "open" across the barcode navigation so the user lands
   // back on it if they cancel. useStandardBottomSheet dismisses the underlying
   // BottomSheetModal when the screen blurs but preserves `visible`, so its
@@ -158,80 +106,30 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     onClose();
   };
 
-  // Handle quick add from search autocomplete (fire-and-forget)
-  const handleQuickAddSearchSuggestion = (item: ItemSuggestion) => {
+  // Quick add from the search autocomplete.
+  const handleQuickAddSearchSuggestion = async (item: ItemSuggestion) => {
     if (!shoppingListId || adding) return;
 
-    // 1. Show toast immediately (don't wait for mutation)
+    // The toast fires ahead of the result: a queued create has none to wait for.
     toastService.success(
       t(shoppingListSheetConfig.quickAdd.toastMessageKey, { name: item.name }),
     );
 
-    // 2. Generate the item's id and write it into the cache before firing, so it
-    // shows immediately and stays if the create is queued offline (the queue
-    // replays it later, keyed by this id).
-    const id = generateEntityId();
-    const optimisticItem = createOptimisticShoppingListItem(id, {
-      shoppingListId,
-      itemName: item.name,
+    const outcome = await addItem({
       itemId: item.id,
+      itemName: item.name,
       unitId: item.defaultUnit?.id,
     });
-    try {
-      addOptimisticShoppingListItem(
-        client.cache,
-        shoppingListId,
-        optimisticItem,
-      );
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Add Shopping List Item (optimistic)',
-      });
+    if (outcome === 'reverted') {
+      toastService.error(t('errors.addItemFailedRetry'));
+      return;
     }
-
-    // 3. Fire mutation without await.
-    addItemMutation({
-      variables: {
-        input: {
-          shoppingListId,
-          items: [
-            {
-              id,
-              item: { itemId: item.id },
-              quantity: null,
-              unit: item.defaultUnit?.id
-                ? { unitId: item.defaultUnit.id }
-                : undefined,
-            },
-          ],
-        },
-      },
-      context: { localFirst: true },
-    })
-      .then(result => {
-        // A queued create (offline / API down) resolves with no data and no
-        // error — keep the item. A real rejection (e.g. validation) must evict
-        // the optimistic item; with errorPolicy:'all' that lands here in `.then`,
-        // not `.catch`, so the reconciler classifies the result rather than
-        // relying on a throw.
-        if (
-          reconcileShoppingCreate(client.cache, shoppingListId, id, result) ===
-          'reverted'
-        ) {
-          toastService.error(t('errors.addItemFailedRetry'));
-          return;
-        }
-        onItemAdded?.();
-        tutorial?.notifyItemAdded();
-      })
-      .catch(() => {
-        revertOptimisticShoppingListItem(client.cache, shoppingListId, id);
-        toastService.error(t('errors.addItemFailedRetry'));
-      });
+    onItemAdded?.();
+    tutorial?.notifyItemAdded();
   };
 
-  // Handle quick add from suggestion (fire-and-forget with exit animations)
-  const handleQuickAddSuggestion = (
+  // Quick add from a suggestion tile, which animates out as it goes.
+  const handleQuickAddSuggestion = async (
     shoppingItem: ShoppingListSuggestionItem,
   ) => {
     if (
@@ -241,85 +139,33 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     )
       return;
 
-    // Use lastUnitId if available (for recently deleted), otherwise defaultUnitId
-    const unitId =
-      shoppingItem.lastUnitId ?? shoppingItem.defaultUnitId ?? undefined;
-
-    // 1. Start exit animation
     state.startExitAnimation(shoppingItem.itemId);
-
-    // 2. Show toast immediately (don't wait for mutation)
     toastService.success(
       t(shoppingListSheetConfig.quickAdd.toastMessageKey, {
         name: shoppingItem.name,
       }),
     );
 
-    // 3. Generate the item's id and write it into the cache before firing, so it
-    // shows immediately and stays if the create is queued offline (the queue
-    // replays it later, keyed by this id).
-    const id = generateEntityId();
-    const optimisticItem = createOptimisticShoppingListItem(id, {
-      shoppingListId,
-      itemName: shoppingItem.name,
+    const outcome = await addItem({
       itemId: shoppingItem.itemId,
-      unitId,
+      itemName: shoppingItem.name,
+      // `lastUnitId` for a recently deleted row, otherwise the item's default.
+      unitId:
+        shoppingItem.lastUnitId ?? shoppingItem.defaultUnitId ?? undefined,
     });
-    try {
-      addOptimisticShoppingListItem(
-        client.cache,
-        shoppingListId,
-        optimisticItem,
-      );
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Add Shopping List Item (optimistic)',
-      });
+    if (outcome === 'reverted') {
+      // Put the tile back and correct the toast that already fired.
+      state.completeExitAnimation(shoppingItem.itemId);
+      toastService.error(t('errors.addItemFailedRetry'));
+      return;
     }
-
-    // 4. Fire mutation without await.
-    addItemMutation({
-      variables: {
-        input: {
-          shoppingListId,
-          items: [
-            {
-              id,
-              item: { itemId: shoppingItem.itemId },
-              quantity: null,
-              unit: unitId ? { unitId } : undefined,
-            },
-          ],
-        },
-      },
-      context: { localFirst: true },
-    })
-      .then(result => {
-        // Rejected (not merely queued offline) → evict the optimistic item and
-        // restore the suggestion. errorPolicy:'all' delivers rejections to
-        // `.then`, so the reconciler classifies rather than relying on `.catch`.
-        if (
-          reconcileShoppingCreate(client.cache, shoppingListId, id, result) ===
-          'reverted'
-        ) {
-          state.completeExitAnimation(shoppingItem.itemId);
-          toastService.error(t('errors.addItemFailedRetry'));
-          return;
-        }
-        onItemAdded?.();
-        tutorial?.notifyItemAdded();
-      })
-      .catch(() => {
-        // On error: remove from exiting, show error toast
-        revertOptimisticShoppingListItem(client.cache, shoppingListId, id);
-        state.completeExitAnimation(shoppingItem.itemId);
-        toastService.error(t('errors.addItemFailedRetry'));
-      });
+    onItemAdded?.();
+    tutorial?.notifyItemAdded();
   };
 
   // Handle exit animation complete
   const handleExitComplete = (itemId: string) => {
-    removeFromSuggestionsCache(itemId);
+    removeSuggestion(itemId);
     state.completeExitAnimation(itemId);
   };
 

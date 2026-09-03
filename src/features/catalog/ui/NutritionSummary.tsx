@@ -205,7 +205,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     padding: theme.spacing.md,
     boxShadow: [
@@ -245,7 +245,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     paddingTop: theme.spacing.md,
     marginTop: theme.spacing.sm,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
   },
   pressableWrapper: {
@@ -268,7 +268,7 @@ const circleStyles = StyleSheet.create(theme => ({
     height: 56,
     borderRadius: theme.radii['4xl'],
     borderCurve: 'continuous',
-    borderWidth: 3,
+    borderWidth: theme.borderWidth.thick,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.background,

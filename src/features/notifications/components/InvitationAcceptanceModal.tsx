@@ -1,50 +1,21 @@
 import React, { useState } from 'react';
-import { View, Modal, ActivityIndicator } from 'react-native';
+import { View, Modal } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
+import {
+  ErrorActivityIndicator,
+  WhiteActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
-import { useApolloClient, useMutation } from '@apollo/client/react';
 import { Icon } from '#utils/iconUtils';
 import { toastService } from '#/services/toastService';
 import { t as tGlobal } from '#/i18n';
-import {
-  AcceptHomeInviteDocument,
-  DeclineHomeInviteDocument,
-} from '#operations/home/home.generated';
-import {
-  InvitationAcceptanceModalAcceptShoppingListInviteDocument,
-  InvitationAcceptanceModalDeclineShoppingListInviteDocument,
-  MyShoppingListInvitesDocument,
-} from './InvitationAcceptanceModal.generated';
-import {
-  createAddToQueryConnectionUpdater,
-  createRemoveFromParentConnectionUpdater,
-  safeEvict,
-} from '#/apollo/utils/cacheUpdaters';
-import { extractNodes } from '#/utils/connectionUtils';
+import { useInvitationActions } from '#features/notifications/hooks/useInvitationActions';
 import { useUser } from '#store/useAppStore';
-import type { NotificationPayload } from '#features/notifications/types';
+import type { InvitationData } from '#features/notifications/types';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
-
-const ErrorActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.error,
-}));
-
-const addToHomes = createAddToQueryConnectionUpdater('homes', 'Home');
-const removePendingHomeInvite = createRemoveFromParentConnectionUpdater(
-  'User',
-  'pendingHomeInvitesConnection',
-  'HomeInvite',
-);
-const removePendingCollaborationInvite =
-  createRemoveFromParentConnectionUpdater(
-    'User',
-    'pendingCollaborationInvitesConnection',
-    'ShoppingListCollaborator',
-  );
 
 const getInvitationErrorMessage = (
   error: unknown,
@@ -55,17 +26,6 @@ const getInvitationErrorMessage = (
     ? tGlobal('errors.invitationExpired')
     : (error as Error)?.message || fallback;
 };
-
-export interface InvitationData {
-  type: 'HOME_INVITE' | 'SHOPPING_LIST_INVITE';
-  id: string;
-  title: string;
-  description: string;
-  inviterName?: string;
-  entityName: string; // Home name or Shopping List name
-  token?: string;
-  payload: NotificationPayload;
-}
 
 interface InvitationAcceptanceModalProps {
   visible: boolean;
@@ -81,101 +41,13 @@ export const InvitationAcceptanceModal: React.FC<
 > = ({ visible, invitation, onClose, onAccept, onReject, onInvalidate }) => {
   const { t } = useTranslation();
   const invitationUnavailableMsg = t('errors.invitationUnavailable');
-  const client = useApolloClient();
   const user = useUser();
   const userId = user?.id ?? null;
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
 
-  const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument, {
-    update: (cache, { data }) => {
-      const payload = data?.acceptHomeInvite;
-      if (payload?.__typename === 'AcceptHomeInvitePayload') {
-        addToHomes(cache, payload.membership.home, { position: 'end' });
-      }
-      // Prefer the payload's inviteId; fall back to the canonical
-      // `invitation.id` (server `sourceId` correlation) so a sourceId-only
-      // notification still evicts its pending record.
-      const inviteId = invitation?.payload?.inviteId || invitation?.id;
-      if (inviteId && userId) {
-        removePendingHomeInvite(cache, userId, inviteId, { evictItem: true });
-      }
-    },
-  });
-  const [acceptShoppingListInvite] = useMutation(
-    InvitationAcceptanceModalAcceptShoppingListInviteDocument,
-    {
-      update: (cache, { data }) => {
-        if (
-          data?.acceptShoppingListInvite?.__typename !==
-          'AcceptShoppingListInvitePayload'
-        ) {
-          return;
-        }
-        // Prefer the payload's inviteId; fall back to the canonical
-        // `invitation.id` (server `sourceId` correlation) so a sourceId-only
-        // notification still evicts its pending record.
-        const inviteId = invitation?.payload?.inviteId || invitation?.id;
-        if (inviteId && userId) {
-          // Don't evict — accepting transitions the pending collaborator record
-          // to active state. Apollo's normalized response already updated the
-          // entity; we just need to drop the reference from the pending list.
-          removePendingCollaborationInvite(cache, userId, inviteId);
-        }
-      },
-    },
-  );
-  const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument, {
-    update: (cache, { data }) => {
-      const payload = data?.declineHomeInvite;
-      if (payload?.__typename !== 'DeclineHomeInvitePayload') return;
-      const id = payload.homeInvite.id;
-      if (id && userId) {
-        removePendingHomeInvite(cache, userId, id, { evictItem: true });
-      } else if (id) {
-        safeEvict(cache, 'HomeInvite', id);
-      }
-    },
-  });
-  const [declineShoppingListInvite] = useMutation(
-    InvitationAcceptanceModalDeclineShoppingListInviteDocument,
-    {
-      update: cache => {
-        // Prefer the payload's inviteId; fall back to the canonical
-        // `invitation.id` (server `sourceId` correlation) so a sourceId-only
-        // notification still evicts its pending record.
-        const inviteId = invitation?.payload?.inviteId || invitation?.id;
-        if (inviteId && userId) {
-          removePendingCollaborationInvite(cache, userId, inviteId, {
-            evictItem: true,
-          });
-        }
-      },
-    },
-  );
-
-  const resolveToken = async (): Promise<string | undefined> => {
-    let token = invitation?.token;
-    if (!token && invitation?.type === 'SHOPPING_LIST_INVITE') {
-      const result = await client.query({
-        query: MyShoppingListInvitesDocument,
-        fetchPolicy: 'network-only',
-      });
-      const invites = extractNodes(
-        result.data?.me?.pendingCollaborationInvitesConnection,
-      );
-      // Match on either the payload's inviteId (legacy notifications) or the
-      // canonical `invitation.id` (which prefers the server's `sourceId`
-      // correlation) — so a notification carrying only a sourceId still
-      // resolves its token instead of silently failing.
-      const invite = invites.find(
-        inv =>
-          inv.id === invitation.payload?.inviteId || inv.id === invitation.id,
-      );
-      token = invite?.token ?? undefined;
-    }
-    return token;
-  };
+  const { resolveToken, acceptHome, acceptList, declineHome, declineList } =
+    useInvitationActions(invitation, userId);
 
   const handleAccept = () => {
     if (!invitation) return;
@@ -193,60 +65,30 @@ export const InvitationAcceptanceModal: React.FC<
           return;
         }
 
-        if (invitation.type === 'HOME_INVITE') {
-          const result = await acceptHomeInvite({
-            variables: { input: { token: token! } },
-          });
+        const outcome =
+          invitation.type === 'HOME_INVITE'
+            ? await acceptHome(token)
+            : await acceptList(token);
 
-          if (result.error) {
-            onClose();
-            toastService.error(
-              getInvitationErrorMessage(
-                result.error,
-                t('invitationAcceptance.acceptFailed'),
-              ),
-            );
-            return;
-          }
+        if (outcome.error) {
+          onClose();
+          toastService.error(
+            getInvitationErrorMessage(
+              outcome.error,
+              t('invitationAcceptance.acceptFailed'),
+            ),
+          );
+          return;
+        }
 
-          if (
-            result.data?.acceptHomeInvite?.__typename ===
-            'AcceptHomeInvitePayload'
-          ) {
-            const newHomeId = result.data.acceptHomeInvite.membership.homeId;
-
-            // Pass the homeId to the handler so it can update the store
-            const invitationWithHomeId = {
-              ...invitation,
-              acceptedHomeId: newHomeId,
-            };
-
-            onAccept?.(invitationWithHomeId);
-            onClose();
-          }
-        } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
-          const result = await acceptShoppingListInvite({
-            variables: { input: { token: token! } },
-          });
-
-          if (result.error) {
-            onClose();
-            toastService.error(
-              getInvitationErrorMessage(
-                result.error,
-                t('invitationAcceptance.acceptFailed'),
-              ),
-            );
-            return;
-          }
-
-          if (
-            result.data?.acceptShoppingListInvite?.__typename ===
-            'AcceptShoppingListInvitePayload'
-          ) {
-            onAccept?.(invitation);
-            onClose();
-          }
+        if (outcome.accepted) {
+          // The homeId travels with the invitation so the handler can select it.
+          onAccept?.(
+            outcome.acceptedHomeId
+              ? { ...invitation, acceptedHomeId: outcome.acceptedHomeId }
+              : invitation,
+          );
+          onClose();
         }
       },
       () => setAccepting(false),
@@ -290,36 +132,20 @@ export const InvitationAcceptanceModal: React.FC<
                   return;
                 }
 
-                if (invitation.type === 'HOME_INVITE') {
-                  const result = await declineHomeInvite({
-                    variables: { input: { token: token! } },
-                  });
+                const outcome =
+                  invitation.type === 'HOME_INVITE'
+                    ? await declineHome(token)
+                    : await declineList(token);
 
-                  if (result.error) {
-                    onClose();
-                    toastService.error(
-                      getInvitationErrorMessage(
-                        result.error,
-                        t('invitationAcceptance.declineFailed'),
-                      ),
-                    );
-                    return;
-                  }
-                } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
-                  const result = await declineShoppingListInvite({
-                    variables: { input: { token: token! } },
-                  });
-
-                  if (result.error) {
-                    onClose();
-                    toastService.error(
-                      getInvitationErrorMessage(
-                        result.error,
-                        t('invitationAcceptance.declineFailed'),
-                      ),
-                    );
-                    return;
-                  }
+                if (outcome.error) {
+                  onClose();
+                  toastService.error(
+                    getInvitationErrorMessage(
+                      outcome.error,
+                      t('invitationAcceptance.declineFailed'),
+                    ),
+                  );
+                  return;
                 }
 
                 toastService.success(
@@ -484,7 +310,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.lg,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   iconContainer: {
@@ -542,7 +368,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     gap: theme.spacing.xs,
     backgroundColor: theme.colors.error + '10',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.error,
   },
   acceptButton: {

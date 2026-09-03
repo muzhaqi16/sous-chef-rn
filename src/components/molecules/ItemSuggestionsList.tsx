@@ -214,7 +214,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     marginBottom: theme.spacing.lg,
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   suggestionItem: {
@@ -224,7 +224,7 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       withBorder: {
         true: {
-          borderBottomWidth: 1,
+          borderBottomWidth: theme.borderWidth.hairline,
           borderBottomColor: theme.colors.border,
         },
       },
@@ -277,7 +277,7 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       withBorder: {
         true: {
-          borderBottomWidth: 1,
+          borderBottomWidth: theme.borderWidth.hairline,
           borderBottomColor: theme.colors.border,
         },
       },

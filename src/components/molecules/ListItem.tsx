@@ -189,7 +189,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     overflow: 'hidden',
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.borderLight,
   },
   contentContainer: {
@@ -207,7 +207,7 @@ const styles = StyleSheet.create(theme => ({
     flexShrink: 0, // Prevent checkbox from being compressed when no image exists
   },
   leftIcon: {
-    marginRight: theme.spacing['3'],
+    marginRight: theme.spacing.base,
   },
   content: {
     flex: 1,

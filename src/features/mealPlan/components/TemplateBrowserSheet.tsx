@@ -210,7 +210,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   searchInput: {

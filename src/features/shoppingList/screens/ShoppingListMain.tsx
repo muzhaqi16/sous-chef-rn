@@ -121,6 +121,6 @@ export const ShoppingListMain: React.FC = () => (
 
 const styles = StyleSheet.create(theme => ({
   searchBarContainer: {
-    paddingHorizontal: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.base,
   },
 }));

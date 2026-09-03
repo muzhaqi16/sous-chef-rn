@@ -27,9 +27,9 @@ import { OnboardingStack } from './stacks/OnboardingStack';
 import { HomeTabs } from './stacks/HomeTabs';
 import { BarcodeStack } from './stacks/BarcodeStack';
 import { NotificationStack } from './stacks/NotificationStack';
-import { VerificationGateScreen } from '#screens/auth/CodeVerificationScreen';
-import { EmailVerificationDeepLinkScreen } from '#screens/auth/EmailVerificationDeepLinkScreen';
-import { ResetPasswordScreen } from '#screens/auth/ResetPasswordScreen';
+import { VerificationGateScreen } from '#features/auth/screens/CodeVerificationScreen';
+import { EmailVerificationDeepLinkScreen } from '#features/auth/screens/EmailVerificationDeepLinkScreen';
+import { ResetPasswordScreen } from '#features/auth/screens/ResetPasswordScreen';
 import { AcceptInvite } from '#features/shoppingList/screens/AcceptInvite';
 import { JoinByShareCodeScreen } from '#features/shoppingList/screens/JoinByShareCodeScreen';
 import { JoinHomeByCodeScreen } from '#features/home/screens/JoinHomeByCodeScreen';
@@ -51,7 +51,7 @@ import {
   topInsetWith,
   noInsetScreenLayout,
 } from '#navigation/layouts/TopInsetLayout';
-import { PostLoginBiometricScreen } from '#screens/auth/PostLoginBiometricScreen';
+import { PostLoginBiometricScreen } from '#features/auth/screens/PostLoginBiometricScreen';
 import { useDeepLinkRouter } from '#hooks/deepLink/useDeepLinkRouter';
 import {
   useIsAuth,

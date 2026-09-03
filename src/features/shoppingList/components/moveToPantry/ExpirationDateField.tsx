@@ -7,6 +7,7 @@ import { type DateTimePickerEvent } from '@react-native-community/datetimepicker
 import { ThemedDateTimePicker } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
+import { formatShortDate } from '#/utils/formatters/date';
 
 interface ExpirationDateFieldProps {
   expirationDate: Date | undefined;
@@ -38,7 +39,7 @@ export const ExpirationDateField: React.FC<ExpirationDateFieldProps> = ({
           <Icon name="calendar-outline" size={20} tone="textSecondary" />
           <Text style={styles.dateText}>
             {expirationDate
-              ? expirationDate.toLocaleDateString()
+              ? formatShortDate(expirationDate)
               : t('labels.selectDate')}
           </Text>
         </AppPressable>
@@ -79,7 +80,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',

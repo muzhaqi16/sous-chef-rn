@@ -115,12 +115,12 @@ export const FormSelect: React.FC<FormSelectProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   selectButton: {
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     backgroundColor: theme.colors.surface,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -146,7 +146,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
-    padding: theme.spacing['5'],
+    padding: theme.spacing.mdPlus,
     maxHeight: '80%',
     width: '90%',
   },
@@ -158,7 +158,7 @@ const styles = StyleSheet.create(theme => ({
     textAlign: 'center',
   },
   option: {
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
@@ -176,7 +176,7 @@ const styles = StyleSheet.create(theme => ({
   },
   closeButton: {
     marginTop: theme.spacing.md,
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.lg,
     backgroundColor: theme.colors.border,
     borderRadius: theme.radii.md,

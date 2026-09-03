@@ -18,7 +18,6 @@ import { isNetworkError } from '#/utils/isNetworkError';
 import { storeApi } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 import { t } from '#/i18n';
-import { getI18n } from '#/i18n/config';
 
 /**
  * Suppressed ONLY for a network error while `isApiUnavailable` holds — a
@@ -83,7 +82,7 @@ export const alertVersionConflict = (
   const entity = itemName ?? t('labels.item');
 
   alertService.alert(
-    getI18n().t('errors.entityUpdatedTitle', { entity }),
+    t('errors.entityUpdatedTitle', { entity }),
     customMessage || getVersionConflictMessage(),
     [
       { text: t('labels.refresh'), onPress: () => onRefresh?.() },

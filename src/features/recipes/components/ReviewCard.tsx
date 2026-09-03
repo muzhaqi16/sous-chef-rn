@@ -148,7 +148,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
 const styles = StyleSheet.create(theme => ({
   container: {
     paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   header: {
@@ -202,7 +202,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,
     borderRadius: theme.radii.full,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   helpfulButtonActive: {
@@ -213,7 +213,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,
     borderRadius: theme.radii.full,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primary + '10',
   },

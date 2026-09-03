@@ -94,14 +94,14 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    padding: theme.spacing['3'],
+    padding: theme.spacing.base,
     // Match the search bar inset so rows line up with it instead of going
     // edge-to-edge — same floating-card treatment as BaseItemCard.
-    marginHorizontal: theme.spacing['3'],
-    marginBottom: theme.spacing['2.5'],
+    marginHorizontal: theme.spacing.base,
+    marginBottom: theme.spacing.smPlus,
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: 'transparent',
     backgroundColor: theme.colors.surface,
     ...theme.shadows.card,

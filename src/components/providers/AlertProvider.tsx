@@ -293,11 +293,11 @@ const styles = StyleSheet.create(theme => ({
   },
   card: {
     position: 'absolute',
-    margin: theme.spacing['5'],
+    margin: theme.spacing.mdPlus,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
-    padding: theme.spacing['5'],
+    padding: theme.spacing.mdPlus,
     boxShadow: [
       {
         offsetX: 0,
@@ -320,14 +320,14 @@ const styles = StyleSheet.create(theme => ({
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: theme.spacing['3'],
+    marginTop: theme.spacing.base,
     gap: theme.spacing.sm,
   },
   buttonContainerVertical: {
     flexDirection: 'column',
   },
   button: {
-    padding: theme.spacing['3'],
+    padding: theme.spacing.base,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     alignItems: 'center',

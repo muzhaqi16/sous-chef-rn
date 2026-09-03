@@ -7,10 +7,8 @@ import {
   type FlashListRef,
 } from '@shopify/flash-list';
 
-import {
-  ThemedActivityIndicator,
-  ThemedBackButton,
-} from '#components/atoms/themedComponents';
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
+import { ThemedBackButton } from '#components/atoms/BackButton';
 import { Text } from '#components/atoms/Text';
 import { Icon, type IconName } from '#utils/iconUtils';
 import { DataStateView } from '#components/molecules/DataStateView';
@@ -171,7 +169,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   backButton: {

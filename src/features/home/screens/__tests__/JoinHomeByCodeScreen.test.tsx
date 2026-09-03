@@ -27,14 +27,11 @@ jest.mock('#hooks/auth/useEmailVerification', () => ({
   }),
 }));
 
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: jest.fn(() => ({ goBack: mockGoBack })),
-}));
-
 const mockToPantryMain = jest.fn();
 const mockToAuth = jest.fn();
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: jest.fn(() => ({
+    goBack: mockGoBack,
     toPantryMain: mockToPantryMain,
     toAuth: mockToAuth,
   })),

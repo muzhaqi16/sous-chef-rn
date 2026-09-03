@@ -110,8 +110,8 @@ const styles = StyleSheet.create(theme => ({
         },
         inset: {
           marginTop: theme.spacing.sm,
-          borderTopWidth: 1,
-          borderBottomWidth: 1,
+          borderTopWidth: theme.borderWidth.hairline,
+          borderBottomWidth: theme.borderWidth.hairline,
           borderColor: theme.colors.border,
         },
       },

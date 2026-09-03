@@ -14,7 +14,11 @@ import { Telemetry } from '#services/telemetry';
 import { HapticService } from '#services/haptic/HapticService';
 import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
-import { hasCredentials, getLastBiometricEmail } from '#storage/keychain';
+import {
+  hasCredentials,
+  getLastBiometricEmail,
+  sweepExpiredTempRegistrationPassword,
+} from '#storage/keychain';
 import { initializeDeviceId } from '#/utils/deviceId';
 import { authService } from '#services/authService';
 import { registerQueueFailureHandler } from '#/apollo/offlineQueue/queueFailureHandler';
@@ -142,6 +146,10 @@ export function useStartupInit(): void {
         }
         hasCredentials(email).then(setHasStoredCredentials);
       });
+
+      // Onboarding that is abandoned before the biometric step leaves a
+      // password in the keychain, which outlives even an app deletion.
+      sweepExpiredTempRegistrationPassword();
 
       const telemetryConfig = getTelemetryConfig();
       // A run that asked for telemetry keeps it even with background services

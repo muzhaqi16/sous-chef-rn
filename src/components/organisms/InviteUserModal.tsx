@@ -313,10 +313,10 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.md,
   },
   input: {
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
-    padding: theme.spacing['3'],
+    padding: theme.spacing.base,
     fontSize: theme.typography.fontSize.md,
     marginBottom: theme.spacing.sm,
     color: theme.colors.textPrimary,
@@ -329,11 +329,11 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   roleOption: {
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    padding: theme.spacing['3'],
-    marginBottom: theme.spacing['3'],
+    padding: theme.spacing.base,
+    marginBottom: theme.spacing.base,
     variants: {
       selected: {
         true: {
@@ -361,7 +361,7 @@ const styles = StyleSheet.create(theme => ({
     width: theme.sizes.icon.md,
     height: theme.sizes.icon.md,
     borderRadius: theme.radii.full,
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     alignItems: 'center',
     justifyContent: 'center',
     variants: {
@@ -395,13 +395,13 @@ const styles = StyleSheet.create(theme => ({
   },
   warningText: {
     fontSize: theme.typography.fontSize.xs,
-    marginTop: theme.spacing.xs + 2,
+    marginTop: theme.spacing.xsPlus,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.warning,
   },
   errorText: {
     fontSize: theme.typography.fontSize.xs,
-    marginBottom: theme.spacing['3'],
+    marginBottom: theme.spacing.base,
     marginTop: theme.spacing.xs,
     color: theme.colors.error,
   },
@@ -412,7 +412,7 @@ const styles = StyleSheet.create(theme => ({
   },
   cancelButton: {
     flex: 1,
-    padding: theme.spacing['3'] + 2,
+    padding: theme.spacing.basePlus,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
     alignItems: 'center',
@@ -423,7 +423,7 @@ const styles = StyleSheet.create(theme => ({
   },
   submitButton: {
     flex: 1,
-    padding: theme.spacing['3'] + 2,
+    padding: theme.spacing.basePlus,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
     alignItems: 'center',

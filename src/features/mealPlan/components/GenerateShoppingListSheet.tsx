@@ -10,8 +10,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { FormInput } from '#components/molecules/FormInput';
-import { useQuery } from '@apollo/client/react';
-import { GetShoppingListsLiteForMealPlanDocument } from './GenerateShoppingListSheet.generated';
+import { useShoppingListsForMealPlan } from '#features/mealPlan/hooks/useShoppingListsForMealPlan';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
@@ -51,15 +50,7 @@ export const GenerateShoppingListSheet: React.FC<
     }
   }
 
-  const { data: listsData } = useQuery(
-    GetShoppingListsLiteForMealPlanDocument,
-    {
-      variables: { first: 20 },
-      skip: !visible,
-    },
-  );
-
-  const shoppingLists = listsData?.shoppingLists?.edges?.map(e => e.node) ?? [];
+  const { shoppingLists } = useShoppingListsForMealPlan(!visible);
 
   const handleGenerate = () => {
     onGenerate({
@@ -296,7 +287,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   modeOptionActive: {
@@ -320,7 +311,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   listItemSelected: {
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.primary,
   },
   listItemContent: {

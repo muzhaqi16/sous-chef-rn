@@ -183,7 +183,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: theme.spacing['3'],
+    marginBottom: theme.spacing.base,
     gap: theme.spacing.md,
   },
   homeInfo: {

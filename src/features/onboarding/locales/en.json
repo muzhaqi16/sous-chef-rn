@@ -1,0 +1,105 @@
+{
+  "onBoarding": {
+    "welcomeTitle": "Welcome! Let's set up your home",
+    "almostThere": "Almost there!",
+    "createHomeSubtitle": "Create your home and pantry to get started",
+    "addPantryToHome": "Let's add a pantry to {{homeName}}",
+    "homeAlreadyConfigured": "Your home and pantry are already configured",
+    "pendingInvitesTitle": "You have pending home invitations!",
+    "pendingInvitesSubtitle": "Accept an invitation to join an existing home or create your own",
+    "or": "OR",
+    "createOwnHome": "Create My Own Home",
+    "skipForNow": "Skip for Now",
+    "existingHome": "Existing Home",
+    "homeAndPantryNote": "These were already set up. You can continue to the next step or create additional ones later in settings.",
+    "homeNotFound": "Home was created but could not be found. Please try again.",
+    "setupError": "An error occurred during setup",
+    "defaultPantryName": "Kitchen Pantry",
+    "shoppingListsTitle": "Shopping Lists",
+    "checkingExistingLists": "Checking your existing lists...",
+    "checkingYourShoppingLists": "Checking your shopping lists...",
+    "shoppingListConfigured": "Your shopping list is already configured",
+    "shoppingListAlreadySetUp": "This was already set up. You can continue to the next step or create additional ones later in settings.",
+    "createShoppingListTitle": "Create your shopping list",
+    "createShoppingListSubtitle": "You can add items to it later",
+    "shoppingListName": "Shopping List Name",
+    "shoppingListPlaceholder": "e.g. Weekly Groceries",
+    "creatingList": "Creating List...",
+    "createList": "Create List",
+    "defaultShoppingListName": "Weekly Groceries",
+    "createShoppingListError": "An error occurred while creating the list.",
+    "stockPantryTitle": "Stock your pantry",
+    "stockPantrySubtitle": "Select items you already have at home",
+    "stockPantrySubtitleOptional": "Select items you already have at home (optional)",
+    "addItemSingular": "Add {{count}} Item",
+    "addItemPlural": "Add {{count}} Items",
+    "profilePictureSubtitle": "Add a photo to personalize your profile",
+    "chooseFromGallery": "Choose from Gallery",
+    "chooseFromGalleryDescription": "Select an existing photo",
+    "takeAPhoto": "Take a Photo",
+    "takeAPhotoDescription": "Use your camera",
+    "cropAndCenter": "Crop & Center",
+    "cropHint": "Adjust your photo before uploading",
+    "termsOfService": "Terms of Service",
+    "legalNotice": "By continuing you agree to our",
+    "uploadAndContinue": "Upload & Continue",
+    "updateProfilePhotoFailed": "Failed to update profile photo. Please try again.",
+    "cameraPermissionTakePhotoMessage": "Camera access is required to take a photo. Please enable it in settings.",
+    "completeTitle": "All set!",
+    "completeSubtitle": "Your home is ready to use",
+    "congratulations": "Congratulations! You've successfully set up:",
+    "summaryHomeAndPantry": "Your home and pantry",
+    "summaryShoppingList": "Your shopping list",
+    "summaryInitialPantryItems": "Initial pantry items",
+    "summaryInvitedFamily": "Invited family members",
+    "completeInfo": "You can manage everything from the app's settings at any time.",
+    "completeOnboardingError": "Failed to complete onboarding. Please try again.",
+    "userNotFoundError": "User not found. Please try logging in again.",
+    "settingUpSecurity": "Setting up security...",
+    "checkingBiometricAvailability": "Checking biometric availability...",
+    "secureYourAccount": "Secure your account",
+    "homeNamePlaceholder": "e.g. My Home",
+    "defaultPantryNameLabel": "Default Pantry Name",
+    "pantryNamePlaceholder": "e.g. Kitchen Pantry",
+    "checkingExistingSetup": "Checking your existing setup...",
+    "creatingHomeAndPantry": "Creating Home & Pantry...",
+    "creatingPantry": "Creating Pantry..."
+  },
+  "onboardingSteps": {
+    "CreateHome": {
+      "title": "Create Home",
+      "subtitle": "Set up your household"
+    },
+    "CreateShoppingList": {
+      "subtitle": "Create your first list"
+    },
+    "SelectPantryItems": {
+      "title": "Pantry Items",
+      "subtitle": "Select what you have"
+    },
+    "ProfilePictureUpload": {
+      "subtitle": "Add your photo"
+    },
+    "InviteMembers": {
+      "subtitle": "Share with family"
+    },
+    "BiometricSetup": {
+      "subtitle": "Set up biometrics"
+    },
+    "OnboardingComplete": {
+      "title": "Complete"
+    }
+  },
+  "onboardingValidation": {
+    "homeRequired": "Home name is required",
+    "homeMin": "Home name must be at least {{count}} characters",
+    "homeMax": "Home name must be less than {{count}} characters",
+    "pantryRequired": "Pantry name is required",
+    "pantryMin": "Pantry name must be at least {{count}} characters",
+    "pantryMax": "Pantry name must be less than {{count}} characters",
+    "listRequired": "Shopping list name is required",
+    "listMin": "Shopping list name must be at least {{count}} characters",
+    "listMax": "Shopping list name must be less than {{count}} characters",
+    "itemsMax": "You can select up to {{count}} items"
+  }
+}

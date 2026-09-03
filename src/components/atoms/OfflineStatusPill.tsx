@@ -1,19 +1,12 @@
 import React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from '#components/atoms/themedComponents';
 import { useOfflineStatus } from '#hooks/app/useOfflineStatus';
 import { toastService } from '#/services/toastService';
 import { TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
-
-// `<Icon tone>` exposes flat top-level colors only, not the nested
-// `alertBanner.warning.text` path, so wrap Ionicons directly — withUnistyles
-// re-resolves the color on theme change instead of going stale until a remount.
-const PillIcon = withUnistyles(Ionicons, theme => ({
-  color: theme.colors.alertBanner.warning.text,
-}));
+import { Icon } from '#utils/iconUtils';
 
 interface OfflineStatusPillProps {
   size?: number;
@@ -47,7 +40,7 @@ export const OfflineStatusPill: React.FC<OfflineStatusPillProps> = ({
       accessibilityLabel={message}
       accessibilityLiveRegion="polite"
     >
-      <PillIcon name={iconName} size={size} />
+      <Icon name={iconName} size={size} tone="alertBannerWarning" />
       {pendingCount > 0 && (
         <View style={styles.badge}>
           <Text
@@ -81,7 +74,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.warning,
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     borderColor: theme.colors.background,
   },
   badgeText: {

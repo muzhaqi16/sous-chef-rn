@@ -1,21 +1,14 @@
 import React, { useRef, useState } from 'react';
-import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
-import { useApolloClient } from '@apollo/client/react';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { Header } from '#components/molecules/Header';
 import { DataStateView } from '#components/molecules/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
-import { useMutation } from '@apollo/client/react';
-import {
-  DeleteRecipeDocument,
-  MyRecipesDocument,
-  type MyRecipesQuery,
-} from '#features/recipes/graphql/recipe.generated';
+import { useDeleteRecipe } from '#features/recipes/hooks/useDeleteRecipe';
 import { MyRecipeCard } from '#features/recipes/components/MyRecipeCard';
 import {
   useRecipeManagement,
@@ -27,6 +20,7 @@ import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
+import { useLocalSearch } from '#hooks/search/useLocalSearch';
 
 const keyExtractor = (item: MyRecipeNode) => item.id;
 // Every row is the same component, so one recycling pool is correct.
@@ -48,15 +42,10 @@ export const MyRecipes: React.FC = () => {
   // absorb rows that return null — the cell, its layout slot and its fragment
   // subscription all survive. `name`/`description` are selected on the query's
   // node for exactly this (see recipe.graphql).
-  const filteredRecipes = (() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return myRecipes;
-    return myRecipes.filter(
-      recipe =>
-        (recipe.name ?? '').toLowerCase().includes(q) ||
-        (recipe.description ?? '').toLowerCase().includes(q),
-    );
-  })();
+  const filteredRecipes = useLocalSearch(myRecipes, searchQuery, [
+    r => r.name,
+    r => r.description,
+  ]);
 
   // Instrumented like PantryContent/SortableList so this list reports
   // `flashlist_initial_load_ms` and blank-cell episodes instead of being
@@ -102,29 +91,7 @@ export const MyRecipes: React.FC = () => {
           },
         };
 
-  const apolloClient = useApolloClient();
-  const [deleteRecipeMutation] = useMutation(DeleteRecipeDocument);
-
-  const removeRecipeEdge = (id: string) => {
-    apolloClient.cache.updateQuery<MyRecipesQuery>(
-      { query: MyRecipesDocument },
-      existing => {
-        if (!existing?.recipes) return existing;
-        const present = existing.recipes.edges.some(
-          edge => edge.node.id === id,
-        );
-        if (!present) return existing;
-        return {
-          ...existing,
-          recipes: {
-            ...existing.recipes,
-            edges: existing.recipes.edges.filter(edge => edge.node.id !== id),
-            totalCount: (existing.recipes.totalCount ?? 0) - 1,
-          },
-        };
-      },
-    );
-  };
+  const { deleteRecipe } = useDeleteRecipe();
 
   const handleItemPress = (id: string) => {
     toRecipeDetail({ recipeId: id });
@@ -135,36 +102,18 @@ export const MyRecipes: React.FC = () => {
   };
 
   const handleDeleteRecipe = async (id: string) => {
-    // Local-first: remove from the list BEFORE firing, so the deletion is
-    // visible immediately and survives an offline queue (a duplicate replay
-    // surfaces as NotFound, which the queue drops).
-    try {
-      removeRecipeEdge(id);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Delete Recipe (optimistic)',
-      });
-    }
-
-    let result;
-    try {
-      result = await deleteRecipeMutation({
-        variables: { input: { id } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, { operation: 'deleteRecipe' });
-      alertService.alert(t('labels.error'), t('recipes.deleteRecipeFailed'));
-    }
-    // A rejection means the recipe still exists server-side — alert (the silent
-    // revert would otherwise just snap the recipe back) and refetch to restore
-    // the authoritative list. A queued result keeps the removal and replays
-    // later. A null result (transport throw) already alerted via onError above.
+    const { result } = await deleteRecipe(id);
+    // A rejection means the recipe still exists server-side — alert (a silent
+    // revert would just snap the row back) and refetch to restore the
+    // authoritative list. A queued result keeps the removal and replays later.
     const wasRejected = alertIfRejected(
       result,
       t('recipes.deleteRecipeFailed'),
     );
     if (!result || wasRejected) {
+      if (!result) {
+        alertService.alert(t('labels.error'), t('recipes.deleteRecipeFailed'));
+      }
       await refetch();
     }
   };
@@ -229,6 +178,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
   },
   listContent: {
-    paddingTop: theme.spacing['2.5'],
+    paddingTop: theme.spacing.smPlus,
   },
 }));

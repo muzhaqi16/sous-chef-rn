@@ -37,6 +37,36 @@ node scripts/check-layer-purity.mjs || exit 1
 node scripts/check-feature-shape.mjs || exit 1
 node scripts/check-dead-modules.mjs || exit 1
 
+# A screen that holds the Apollo client makes every data-layer change a screen
+# change, and the tests that render it change too. The baseline is EMPTY, so any
+# finding is a regression. Its companion — a hook HANDING a screen a library
+# type, which this cannot see because the screen imports nothing — is
+# `check-hook-return-types` in pre-push, where the TS program it needs already
+# gets built.
+node scripts/check-data-layer-boundary.mjs || exit 1
+
+# The kit rule the README states but nothing could see: a shared module used by
+# exactly one feature belongs to that feature. Names and imports cannot detect
+# it — only counting consumers can. Baseline is the worklist.
+node scripts/check-single-consumer.mjs || exit 1
+
+# A form's state belongs to react-hook-form; a feature id in a string outside
+# its feature is a place that has to be remembered when the feature list
+# changes. Both are ratchets, both may only shrink.
+node scripts/check-form-state.mjs || exit 1
+node scripts/check-feature-enumeration.mjs || exit 1
+
+# One canonical mechanism per concern — the navigation hook, the date
+# formatter, the permission service, the storage layer. Each alternative loses
+# what the canonical one already solves; the baseline may only shrink, and a
+# concern that reaches zero becomes a lint ban instead.
+node scripts/check-canonical-mechanisms.mjs || exit 1
+
+# A literal where a token belongs is a value the theme cannot change. Two of
+# its concerns are waiting on a scale that does not exist yet, which is what
+# the numbers here are for.
+node scripts/check-design-tokens.mjs || exit 1
+
 # A suite that passes its own bare `InMemoryCache` into the shared Apollo helper
 # reinstates, for itself alone, the reduced cache every other suite moved off —
 # no type policies, no possibleTypes. It is the quietest regression in the tree:

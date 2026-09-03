@@ -14,6 +14,7 @@ import { formatQuantity } from '#/utils/formatQuantity';
 import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 import { Text } from '#components/atoms/Text';
 import { Badge } from '#components/atoms/Badge';
+import { formatMonthDay } from '#/utils/formatters/date';
 
 interface BatchListItemProps {
   batch: PantryItemBatchFragment;
@@ -56,10 +57,7 @@ const getExpiryText = (
  */
 const formatDate = (dateString: string | null | undefined) => {
   if (!dateString) return null;
-  return new Date(dateString).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  });
+  return formatMonthDay(new Date(dateString));
 };
 
 const BatchListItemComponent: React.FC<BatchListItemProps> = ({
@@ -194,7 +192,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   leftSection: {

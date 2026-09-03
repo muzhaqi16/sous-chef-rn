@@ -1,5 +1,5 @@
 import React, { useState, useLayoutEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   useSharedValue,
@@ -8,17 +8,14 @@ import Animated, {
   FadeIn,
   FadeOut,
 } from 'react-native-reanimated';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
-
-const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.textSecondary,
-}));
 import { commonStyles } from '#/styles/commonStyles';
 import { SPRING, TIMING } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
 import { type UnitType } from '#/graphql/generated/schemaTypes';
 import type { PickableUnit } from './unitPickerTypes';
+import { MutedActivityIndicator } from '#components/atoms/themedComponents';
 
 export interface PickableUnitGroup {
   type: UnitType;
@@ -93,7 +90,7 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
       <View style={commonStyles.bottomSheetSection}>
         <View style={styles.collapsedRow}>
           <Text style={commonStyles.bottomSheetSectionLabel}>{label}</Text>
-          <ThemedActivityIndicator size="small" />
+          <MutedActivityIndicator size="small" />
         </View>
       </View>
     );

@@ -100,9 +100,9 @@ describe('theme foundations', () => {
     });
 
     it('exports intermediate spacing values', () => {
-      expect(spacing['2.5']).toBe(10);
-      expect(spacing['3']).toBe(12);
-      expect(spacing['5']).toBe(20);
+      expect(spacing.smPlus).toBe(10);
+      expect(spacing.base).toBe(12);
+      expect(spacing.mdPlus).toBe(20);
     });
   });
 

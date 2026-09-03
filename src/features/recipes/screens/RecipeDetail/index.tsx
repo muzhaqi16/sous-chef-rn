@@ -1,18 +1,19 @@
 import { PROTECTED_RECIPE_FOLDERS } from '#features/recipes/utils/folders';
 import React, { useState } from 'react';
-import { View, ActivityIndicator, Linking, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
+import { alertService } from '#/services/alertService';
+import { openWebUrl } from '#utils/externalUrl';
+import {
+  Pressable,
+  SuccessActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { DetailTitleRow } from '#components/molecules/DetailTitleRow';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
-
-const SuccessActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.success,
-}));
 
 import { FolderPicker } from '#components/molecules/FolderPicker';
 import { RecipeDetailErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
@@ -135,6 +136,15 @@ const RecipeDetailScreen: React.FC = () => {
 
   const handleTogglePublish = () => {
     if (recipeId) setPublished(recipeId, !displayData?.isPublished);
+  };
+
+  // The source URL comes from the recipe provider or another member, so it is
+  // opened only as a web address — any other scheme reaches a different app.
+  const handleOpenSource = async () => {
+    const opened = await openWebUrl(displayData?.sourceUrl);
+    if (!opened) {
+      alertService.alert(t('labels.error'), t('errors.linkNotOpenable'));
+    }
   };
 
   // State for save/manage recipe sheets
@@ -505,9 +515,7 @@ const RecipeDetailScreen: React.FC = () => {
               styles.attribution,
               displayData.sourceUrl && pressed && { opacity: 0.7 },
             ]}
-            onPress={() =>
-              displayData.sourceUrl && Linking.openURL(displayData.sourceUrl)
-            }
+            onPress={handleOpenSource}
             disabled={!displayData.sourceUrl}
           >
             <Text style={styles.attributionText}>
@@ -702,7 +710,7 @@ const styles = StyleSheet.create(theme => ({
   },
   attribution: {
     paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
     marginTop: theme.spacing.xl,
   },

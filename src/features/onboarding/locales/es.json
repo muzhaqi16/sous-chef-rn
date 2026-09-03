@@ -1,0 +1,105 @@
+{
+  "onBoarding": {
+    "welcomeTitle": "¡Te damos la bienvenida! Vamos a configurar tu hogar",
+    "almostThere": "¡Casi listo!",
+    "createHomeSubtitle": "Crea tu hogar y despensa para empezar",
+    "addPantryToHome": "Vamos a añadir una despensa a {{homeName}}",
+    "homeAlreadyConfigured": "Tu hogar y despensa ya están configurados",
+    "pendingInvitesTitle": "¡Tienes invitaciones de hogar pendientes!",
+    "pendingInvitesSubtitle": "Acepta una invitación para unirte a un hogar existente o crea el tuyo",
+    "or": "O",
+    "createOwnHome": "Crear mi propio hogar",
+    "skipForNow": "Omitir por ahora",
+    "existingHome": "Hogar existente",
+    "homeAndPantryNote": "Ya estaban configurados. Puedes continuar al siguiente paso o crear adicionales más tarde en ajustes.",
+    "homeNotFound": "El hogar se creó pero no se pudo encontrar. Inténtalo de nuevo.",
+    "setupError": "Ocurrió un error durante la configuración",
+    "defaultPantryName": "Despensa de cocina",
+    "shoppingListsTitle": "Listas de la compra",
+    "checkingExistingLists": "Comprobando tus listas existentes...",
+    "checkingYourShoppingLists": "Comprobando tus listas de la compra...",
+    "shoppingListConfigured": "Tu lista de la compra ya está configurada",
+    "shoppingListAlreadySetUp": "Ya estaba configurada. Puedes continuar al siguiente paso o crear más más tarde en ajustes.",
+    "createShoppingListTitle": "Crea tu lista de la compra",
+    "createShoppingListSubtitle": "Puedes añadirle artículos más tarde",
+    "shoppingListName": "Nombre de la lista",
+    "shoppingListPlaceholder": "p. ej. Compra semanal",
+    "creatingList": "Creando lista...",
+    "createList": "Crear lista",
+    "defaultShoppingListName": "Compra semanal",
+    "createShoppingListError": "Ocurrió un error al crear la lista.",
+    "stockPantryTitle": "Abastece tu despensa",
+    "stockPantrySubtitle": "Selecciona los artículos que ya tienes en casa",
+    "stockPantrySubtitleOptional": "Selecciona los artículos que ya tienes en casa (opcional)",
+    "addItemSingular": "Añadir {{count}} artículo",
+    "addItemPlural": "Añadir {{count}} artículos",
+    "profilePictureSubtitle": "Agrega una foto para personalizar tu perfil",
+    "chooseFromGallery": "Elegir de la galería",
+    "chooseFromGalleryDescription": "Selecciona una foto existente",
+    "takeAPhoto": "Tomar una foto",
+    "takeAPhotoDescription": "Usa tu cámara",
+    "cropAndCenter": "Recortar y centrar",
+    "cropHint": "Ajusta tu foto antes de subirla",
+    "termsOfService": "Términos de servicio",
+    "legalNotice": "Al continuar, aceptas nuestros",
+    "uploadAndContinue": "Subir y continuar",
+    "updateProfilePhotoFailed": "No se pudo actualizar la foto de perfil. Inténtalo de nuevo.",
+    "cameraPermissionTakePhotoMessage": "Se requiere acceso a la cámara para tomar una foto. Habilítalo en la configuración.",
+    "completeTitle": "¡Todo listo!",
+    "completeSubtitle": "Tu hogar está listo para usar",
+    "congratulations": "¡Felicidades! Has configurado correctamente:",
+    "summaryHomeAndPantry": "Tu hogar y despensa",
+    "summaryShoppingList": "Tu lista de compras",
+    "summaryInitialPantryItems": "Artículos iniciales de la despensa",
+    "summaryInvitedFamily": "Miembros de la familia invitados",
+    "completeInfo": "Puedes gestionar todo desde la configuración de la app en cualquier momento.",
+    "completeOnboardingError": "No se pudo completar la configuración. Inténtalo de nuevo.",
+    "userNotFoundError": "Usuario no encontrado. Intenta iniciar sesión de nuevo.",
+    "settingUpSecurity": "Configurando la seguridad...",
+    "checkingBiometricAvailability": "Comprobando la disponibilidad biométrica...",
+    "secureYourAccount": "Protege tu cuenta",
+    "homeNamePlaceholder": "p. ej. Mi hogar",
+    "defaultPantryNameLabel": "Nombre de despensa predeterminado",
+    "pantryNamePlaceholder": "p. ej. Despensa de cocina",
+    "checkingExistingSetup": "Comprobando tu configuración existente...",
+    "creatingHomeAndPantry": "Creando hogar y despensa...",
+    "creatingPantry": "Creando despensa..."
+  },
+  "onboardingSteps": {
+    "CreateHome": {
+      "title": "Crear hogar",
+      "subtitle": "Configura tu hogar"
+    },
+    "CreateShoppingList": {
+      "subtitle": "Crea tu primera lista"
+    },
+    "SelectPantryItems": {
+      "title": "Artículos de despensa",
+      "subtitle": "Selecciona lo que tienes"
+    },
+    "ProfilePictureUpload": {
+      "subtitle": "Añade tu foto"
+    },
+    "InviteMembers": {
+      "subtitle": "Comparte con tu familia"
+    },
+    "BiometricSetup": {
+      "subtitle": "Configura la biometría"
+    },
+    "OnboardingComplete": {
+      "title": "Completado"
+    }
+  },
+  "onboardingValidation": {
+    "homeRequired": "El nombre del hogar es obligatorio",
+    "homeMin": "El nombre del hogar debe tener al menos {{count}} caracteres",
+    "homeMax": "El nombre del hogar debe tener menos de {{count}} caracteres",
+    "pantryRequired": "El nombre de la despensa es obligatorio",
+    "pantryMin": "El nombre de la despensa debe tener al menos {{count}} caracteres",
+    "pantryMax": "El nombre de la despensa debe tener menos de {{count}} caracteres",
+    "listRequired": "El nombre de la lista es obligatorio",
+    "listMin": "El nombre de la lista debe tener al menos {{count}} caracteres",
+    "listMax": "El nombre de la lista debe tener menos de {{count}} caracteres",
+    "itemsMax": "Puedes seleccionar hasta {{count}} artículos"
+  }
+}

@@ -114,6 +114,26 @@ MODE=release DEVICE_ID=emulator-5554 npm run android
 The script sets up an `adb reverse tcp:4000 tcp:4000` tunnel before launching,
 so a debug build reaches an API running on your machine.
 
+**`release` and `staging` are built by CI, not locally.** They are produced by
+`build-android.yml`, which writes the signing key and the env file from repository
+secrets. Locally you build `debug`, `staging`/`production` (debug builds against a
+deployed API), or `localRelease`.
+
+**`localRelease` is the release-shaped local build.** Minified, Hermes bytecode,
+`initWith release`, and debug-signed on purpose — which is what lets it build
+with no upload key, and what earns it `ALLOW_LAUNCH_ARG_AUTH`
+(`scripts/check-launch-arg-auth.mjs` enforces both halves). Use it for any
+measurement or profiling run.
+
+**Signing fails closed.** `release` and `staging` need all four of
+`MYAPP_UPLOAD_STORE_FILE`, `MYAPP_UPLOAD_STORE_PASSWORD`, `MYAPP_UPLOAD_KEY_ALIAS`
+and `MYAPP_UPLOAD_KEY_PASSWORD`; without them the Gradle build **fails** instead
+of falling back to the committed `debug.keystore`. Since those variants only ever
+build in CI, the case this guards is a CI one: a secret that is renamed, rotated
+away, or missing from a newly added environment would otherwise produce a
+debug-signed artifact that looks like a release and is updatable by anyone
+holding the public debug key. It fails the workflow instead.
+
 ### Android device helpers
 
 ```bash
@@ -414,18 +434,72 @@ nothing else failing to warn you. iOS `CURRENT_PROJECT_VERSION` and Android
 `versionCode` are deliberately NOT compared: they are per-platform build
 counters on independent sequences, read by `getBuildNumber()`.
 
+### The boundary ratchets
+
+Six checks hold boundaries that names and imports cannot see. Each keeps a
+JSON baseline beside it that may only SHRINK — the baseline is the worklist,
+and a new entry fails at the commit that added it.
+
+| Check | What it holds | Baseline |
+| --- | --- | --- |
+| `check-data-layer-boundary` | A screen, sheet or cell does not run an operation, hold the client, or write the cache. It reads data through a hook in its feature's `hooks/`. `useFragment` and the masking types are NOT flagged — with `dataMasking` on, a cell subscribing to one entity is the documented pattern. `alertRejectedMutation` is not flagged either: it sits under `src/apollo/` but turns a refusal into localized copy. Generated operation types and colocated `.graphql` documents are TRACKED, not failed. The `src/apollo/**` half is also an `import/no-restricted-paths` zone, so the editor reports it; the name-aware `@apollo/client` half stays here, because an override covering these globs would REPLACE the narrower `no-restricted-imports` eight kit files already carry. | 0 (invariant) |
+| `check-import-cycles` | No new LOAD-TIME import cycle. `import type` is skipped (TypeScript erases it) and so is `await import(...)` (it runs after both modules initialize) — writing a type-only import as a value import is what put 40 of the original 48 cycles in the tree. The eight recorded are the auth/link/store core: every link that reads session state imports the store singleton, and the store's reset path imports the links it has to stop. Breaking them means inverting that behind a registration seam like `store/sessionTeardown.ts`. | 8 |
+| `check-hook-return-types` | The other half of the same seam: a feature hook must not HAND a screen a library type. The boundary check cannot see it, because the screen imports nothing. Every exported hook's return type is resolved through the TypeScript checker — the type and each property one level down, which is where a leak shows (`error: ApolloError`). A mutate wrapper declares `MutationOutcome<TData>` instead of the library's result generic. Runs in pre-push, beside typecheck, because it builds its own TS program. | 0 (invariant) |
+| `check-single-consumer` | A module in `components`, `hooks`, `context`, `utils` or `constants` that exactly one feature reaches belongs to that feature. Reach is transitive, and `src/screens/auth` and `src/screens/onBoarding` counted as features until they became ones. | 101 |
+| `check-form-state` | A form-shaped file with 3+ `useState` and no `useForm` is a hand-rolled form. Three is the threshold because two flags beside a real form are ordinary. | 51 |
+| `check-feature-enumeration` | A feature id as a string literal outside its feature is a place that must be remembered when the feature list changes. Comments, import paths and index accesses are stripped; `home`, `profile` and `notifications` are excluded as generic words. | 1 |
+| `check-canonical-mechanisms` | Five concerns with one documented mechanism each — the list primitive, the image component, the modal surface, the date formatter, device storage. The module that IS the canonical mechanism is never a finding. Six more concerns started here and reached zero; each is now a `no-restricted-imports` ban instead, which is where every one of these ends up. | 50 |
+| `check-design-tokens` | A visual property written as a literal rather than a token, and a kit concept (section header, empty state, divider) restyled outside the kit. Two concerns are waiting on scales that do not exist yet — border width, and the missing spacing steps — which is what their numbers are for. | 207 |
+
+Every one takes `--list` (print each finding), `--update` (re-baseline, refused
+when it would write an empty record over a non-empty one) and `--self-test`
+(prove the check can still fail — a scanner that finds nothing looks exactly
+like a clean tree).
+
+When a baseline reaches zero, promote the rule to an `import/no-restricted-paths`
+zone in `.eslintrc.js` and delete the baseline file, the way the kit half of
+`check-layer-purity` was promoted.
+
+### Bans promoted out of the ratchet
+
+Six concerns started as ratchet entries, were refactored to zero, and are now
+hard `no-restricted-imports` bans — the promotion path the ratchet exists to
+feed. Each names the module that IS the canonical mechanism as its only
+exemption:
+
+| Banned import | Use instead | Exempt |
+| --- | --- | --- |
+| `useNavigation` from React Navigation | `useAppNavigation`, whose `navigation` field is the escape hatch for `dispatch` and `addListener` | the two navigation wrappers |
+| `getI18n` from `#/i18n/config` | `t` from `#/i18n` (`tGlobal` in a `.tsx`), or `useTranslation()` | `src/i18n`, and the four modules that need the instance to read or change the language |
+| RN `ActivityIndicator` | a themed spinner from `themedComponents` | `themedComponents`, and `Loading` for its caller-supplied colour |
+| `react-native-permissions` | `PermissionService` | the service |
+| `react-native-turbo-image` | `CachedImage` | `CachedImage`, and `RecipeHeroImage` for its shared-transition wrapper |
+| `@react-native-vector-icons/ionicons` | `Icon` with a `tone`; `type IconName` for a name | `iconUtils`, and `Toast` for a runtime nested-theme lookup |
+
+### Dependency vulnerabilities
+
+`check-dependency-audit` fails a PR on a known vulnerability in a PRODUCTION
+dependency at `high` or above, and `dependency-audit.yml` runs the same check
+weekly, opening or updating one `security`-labelled issue. An advisory that
+cannot be fixed goes in `scripts/accepted-advisories.json` with a reason and a
+revisit date, and is reported on every run.
+
+Dependabot proposes upgrades; it fails nothing, and its
+`open-pull-requests-limit: 0` on the actions ecosystem stops version-update PRs
+only. Detection does not depend on either.
+
 ### Git hooks (installed by husky on `npm install`)
 
 | Hook | Runs |
 | --- | --- |
-| **pre-commit** | `lint-staged` — ESLint + Prettier + related Jest tests on staged files — then the whole-tree checks that cost ~0.2s together: `check-i18n`, `check-codegen-orphans`, `check-version-sync`, `check-startup-origin`, `check-launch-arg-auth` |
+| **pre-commit** | `lint-staged` — ESLint + Prettier + related Jest tests on staged files — then the whole-tree checks that cost ~0.2s together: `check-i18n`, `check-codegen-orphans`, `check-version-sync`, `check-startup-origin`, `check-launch-arg-auth`, plus the structural ratchets `check-layer-purity`, `check-feature-shape`, `check-dead-modules`, `check-data-layer-boundary`, `check-single-consumer`, `check-form-state`, `check-feature-enumeration`, `check-test-cache-fidelity`, `check-comment-budget` |
 | **commit-msg** | commitlint — [Conventional Commits](https://www.conventionalcommits.org/) required |
-| **pre-push** | `typecheck`, `check:compiler-bailouts` and `check:unistyles-variants` **concurrently**, then a codegen drift check |
+| **pre-push** | `typecheck`, `check:compiler-bailouts`, `check:unistyles-variants`, `check:hook-return-types` and `check:import-cycles` **concurrently**, then a codegen drift check |
 
 The split is by cost. The five sub-second checks run per commit so a broken
-locale key or a version drift surfaces at the commit that caused it. The three
+locale key or a version drift surfaces at the commit that caused it. The five
 expensive ones are independent, so pre-push runs them at the same time — ~22s
-instead of the ~45s they cost in sequence — each into its own log so the output
+instead of the ~1m they cost in sequence — each into its own log so the output
 does not interleave.
 
 **A tag-only push skips the code gates entirely.** Git names every ref being

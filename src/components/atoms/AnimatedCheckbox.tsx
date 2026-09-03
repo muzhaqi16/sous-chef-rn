@@ -146,7 +146,7 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   container: {
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     justifyContent: 'center',
     alignItems: 'center',
   },

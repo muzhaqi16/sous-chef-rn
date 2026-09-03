@@ -1,6 +1,6 @@
 import { string, number, array, object, boolean, type InferType } from 'yup';
 import { normalizeSmartPunctuation } from './common';
-import { getI18n } from '#/i18n/config';
+import { t } from '#/i18n';
 
 /**
  * These schemas are built once at module scope, so a message resolved eagerly
@@ -9,7 +9,7 @@ import { getI18n } from '#/i18n/config';
  * lands after any language change.
  */
 const msg = (key: string, options?: Record<string, unknown>) => (): string =>
-  getI18n().t(`itemValidation.${key}`, options);
+  t(`itemValidation.${key}`, options);
 
 // --- item-specific validation rules ------------------------------------------
 

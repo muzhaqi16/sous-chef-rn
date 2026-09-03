@@ -1,48 +1,24 @@
 import React, { useState, useRef } from 'react';
 import { useTranslation } from '#/i18n';
-import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   usePantryItemSuggestions,
   PANTRY_SUGGESTIONS_LIMIT,
   type PantryItemSuggestion,
 } from '#features/pantry/hooks/usePantryItemSuggestions';
+import { useAddToPantry } from '#features/pantry/hooks/mutations/useAddToPantry';
 import { toastService } from '#/services/toastService';
-import {
-  CreatePantryItemDocument,
-  RestockPantryItemDocument,
-  GetPantryDocument,
-  type GetPantryQuery,
-  GetPantryItemSuggestionsDocument,
-  type GetPantryItemSuggestionsQuery,
-} from '#features/pantry/graphql/pantry.generated';
 import {
   SuggestionSurface,
   type ItemSuggestion,
   type StorageLocation,
 } from '#/graphql/generated/schemaTypes';
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
-import { extractNodes } from '#/utils/connectionUtils';
-import { getPantryItemDuplicateFromResult } from '#/utils/errors/pantryItemDuplicate';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import {
-  addPantryItemLocally,
-  addToPantryItemsCache,
-  revertOptimisticPantryItem,
-} from '#/apollo/utils/pantryCacheUpdaters';
-import { findCachedPantryItemDuplicate } from '#features/pantry/utils/pantryCacheReaders';
-import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
-import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
-import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
-import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
 import { AddItemSheet } from '#features/catalog/ui/AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '#features/catalog/ui/AddItemSheet/useAddItemSheetState';
 import type { SuggestionsHookResult } from '#features/catalog/ui/AddItemSheet/types';
 import { pantrySheetConfig } from '#features/pantry/components/modals/AddToPantrySheet/pantrySheetConfig';
 import { AddDetailsSheet } from './AddDetailsSheet';
-import { errorService } from '#/services/errorService';
 
 interface AddToPantrySheetProps {
   visible: boolean;
@@ -61,7 +37,6 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
 }) => {
   const { t } = useTranslation();
   const { toBarcode } = useAppNavigation();
-  const client = useApolloClient();
 
   // Details step state. The shared AddItemSheet owns which step is visible
   // (search vs details); here we only prep the inputs the details form reads.
@@ -73,6 +48,16 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     contextId: pantryId,
     deferFetch: pantrySheetConfig.deferFetch,
   });
+
+  // Every cache write and mutation this sheet performs. What stays here is the
+  // toast, the exit animation and the in-flight set.
+  const {
+    addItem,
+    restockItem,
+    removeSuggestion,
+    readStorageLocations,
+    findCachedDuplicate,
+  } = useAddToPantry({ pantryId, suggestionsLimit: PANTRY_SUGGESTIONS_LIMIT });
 
   // Fetch pantry item suggestions
   const suggestionsResult = usePantryItemSuggestions({
@@ -100,82 +85,8 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     [],
   );
 
-  // Create pantry item mutation — synchronous cache update prevents flickering
-  const [createPantryItem] = useMutation(CreatePantryItemDocument, {
-    update: (cache, { data }, { variables }) => {
-      const payload = data?.createPantryItem;
-      if (payload?.__typename !== 'CreatePantryItemPayload' || !pantryId)
-        return;
-      const pantryItem = payload.pantryItem;
-      // Read outside the try: `?.` is a value block, and one inside a try body
-      // bails the React Compiler out of the whole component.
-      const clientId = variables?.input?.id;
-
-      try {
-        // NOT the counting helper: the eager write above already counted this
-        // row. This re-add reconciles the server's entity into the same edge.
-        addToPantryItemsCache(cache, pantryId, pantryItem);
-        // The re-add dedupes BY ID, so a server-resolved id divergence
-        // would leave the client cuid as a second, permanently unresolvable
-        // edge. Client id read off this mutation's own variables.
-        adoptServerEntityId(cache, 'PantryItem', pantryItem.id, clientId);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Cache update failed for createPantryItem:',
-        });
-      }
-    },
-  });
-
-  // Restock pantry item mutation
-  const [restockPantryItem] = useMutation(RestockPantryItemDocument, {
-    update: (cache, { data }) => {
-      const payload = data?.restockPantryItem;
-      if (payload?.__typename !== 'RestockPantryItemPayload' || !pantryId) {
-        return;
-      }
-      const pantryItem = payload.pantryItemUsage.pantryItem;
-      if (!pantryItem) return;
-      // Force connection cache broadcast — the item already exists,
-      // so addToPantryItemsCache will detect the duplicate and return
-      // the existing connection unchanged, but cache.modify still
-      // triggers query watchers to re-emit.
-      addToPantryItemsCache(cache, pantryId, pantryItem);
-    },
-  });
-
   // Track items currently being added to prevent duplicate rapid-fire mutations
   const pendingItemIds = useRef(new Set<string>());
-
-  // Remove a suggestion from the cache synchronously
-  const removeSuggestionFromCache = (itemId: string) => {
-    if (!pantryId) return;
-    client.cache.updateQuery<GetPantryItemSuggestionsQuery>(
-      {
-        query: GetPantryItemSuggestionsDocument,
-        variables: { pantryId, limit: PANTRY_SUGGESTIONS_LIMIT },
-      },
-      data => {
-        if (!data?.pantry) return data;
-        const pantry = data.pantry;
-        return {
-          ...data,
-          pantry: {
-            ...pantry,
-            lowStock: pantry.lowStock.filter(s => s.itemId !== itemId),
-            expiringSoon: pantry.expiringSoon.filter(s => s.itemId !== itemId),
-            recentlyDeleted: pantry.recentlyDeleted.filter(
-              s => s.itemId !== itemId,
-            ),
-            frequentlyAdded: pantry.frequentlyAdded.filter(
-              s => s.itemId !== itemId,
-            ),
-            popular: pantry.popular.filter(s => s.itemId !== itemId),
-          },
-        };
-      },
-    );
-  };
 
   // Keep the sheet "open" across the barcode / identify navigation so the
   // user lands back on it if they cancel. useStandardBottomSheet dismisses the
@@ -193,211 +104,74 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   // AddItemSheet morphs to the in-place details step itself (see renderDetails);
   // here we only seed the prefilled name and the storage locations it reads.
   const handleAddManually = (searchValue: string) => {
-    // Read storage locations from Apollo cache (one-shot, no watcher)
-    const cached = client.readQuery<GetPantryQuery>({
-      query: GetPantryDocument,
-      variables: { id: pantryId ?? '' },
-    });
-    setStorageLocations(
-      extractNodes(
-        cached?.pantry?.storageLocationsConnection,
-      ) as StorageLocation[],
-    );
+    setStorageLocations(readStorageLocations());
     setPrefilledItemName(searchValue);
   };
 
   /**
    * Restock the row this pantry already stocks instead of creating a second
-   * one. `cachedQuantity` drives a local bump because offline the mutation's
-   * `update` never runs, and a toast claiming a change the list does not show
-   * is worse than no toast. The server's value overwrites it on reply/replay.
+   * one. The toast fires ahead of the result and is corrected on refusal — a
+   * queued restock has no result to wait for.
    */
-  const restockExisting = (
-    existingPantryItemId: string,
+  const runRestock = async (
+    pantryItemId: string,
     name: string,
     cachedQuantity: number | null,
-    onSettled: () => void,
   ) => {
-    const optimistic = optimisticFieldUpdate(
-      client.cache,
-      client.cache.identify({
-        __typename: 'PantryItem',
-        id: existingPantryItemId,
-      }),
-      cachedQuantity === null ? null : { quantity: cachedQuantity },
-      { quantity: (cachedQuantity ?? 0) + 1 },
-      'Restock Pantry Item',
-    );
     toastService.success(t('addToPantry.restocked', { name }));
-    restockPantryItem({
-      variables: {
-        input: {
-          id: existingPantryItemId,
-          quantity: 1,
-          // idempotencyKey dedups the restock ledger row on replay.
-          idempotencyKey: generateEntityId(),
-        },
-      },
-      // Local-first: queued offline, replayed as the canonical mutation
-      // (deduped by its idempotencyKey).
-      context: { localFirst: true },
-    })
-      .then(result => {
-        // A refused mutation RESOLVES under `errorPolicy: 'all'`, so failure
-        // arrives here, not in `catch`. Handling it only there left the +1
-        // permanently in the cache under a success toast — the revert and the
-        // error copy were unreachable. `classifyCreateResult` keeps the row for
-        // a queued create and for IDEMPOTENT_REPLAY, as the sibling paths do.
-        if (classifyCreateResult(result) === 'rejected') {
-          optimistic.revert();
-          toastService.error(t('addToPantry.restockFailed'));
-          return;
-        }
-        onItemAdded?.();
-      })
-      .catch(() => {
-        optimistic.revert();
-        toastService.error(t('addToPantry.restockFailed'));
-      })
-      .finally(onSettled);
+    const outcome = await restockItem(pantryItemId, cachedQuantity);
+    if (outcome.status === 'rejected') {
+      toastService.error(t('addToPantry.restockFailed'));
+      return;
+    }
+    onItemAdded?.();
   };
 
-  // Handle quick add from autocomplete suggestion (fire-and-forget)
-  // On duplicate: auto-restock by 1 silently
-  const handleQuickAddSearchSuggestion = (item: ItemSuggestion) => {
+  // Quick add from an autocomplete search suggestion. On a duplicate the row is
+  // restocked by 1 instead.
+  const handleQuickAddSearchSuggestion = async (item: ItemSuggestion) => {
     if (!pantryId || pendingItemIds.current.has(item.id)) return;
+    pendingItemIds.current.add(item.id);
 
     // Offline-first: the pantry answers "do I already stock this?" itself. The
     // server would refuse the create anyway, and offline it never gets asked —
     // so route to the restock now rather than queueing a doomed create.
-    const cachedDuplicate = findCachedPantryItemDuplicate(
-      client.cache,
-      pantryId,
-      { itemId: item.id },
-    );
+    const cachedDuplicate = findCachedDuplicate(item.id);
     if (cachedDuplicate) {
-      pendingItemIds.current.add(item.id);
-      removeSuggestionFromCache(item.id);
-      restockExisting(
+      removeSuggestion(item.id);
+      await runRestock(
         cachedDuplicate.existingPantryItemId,
         item.name,
         cachedDuplicate.quantity,
-        () => pendingItemIds.current.delete(item.id),
       );
+      pendingItemIds.current.delete(item.id);
       return;
     }
 
-    const id = generateEntityId();
-    // Publishing this id to `Pantry.itemsConnection` below makes the row
-    // tappable, and its detail/edit screens query by it. Hold those off until
-    // the server has the row — see `unconfirmedCreates`.
-    unconfirmedCreates.mark(id);
-    const variables = {
-      input: {
-        id,
-        pantryId,
-        itemId: item.id,
-      },
-    };
-
-    // Mark as pending to prevent duplicate rapid-fire adds
-    pendingItemIds.current.add(item.id);
-
-    // 1. Show toast immediately
     toastService.success(
       t(pantrySheetConfig.quickAdd.toastMessageKey, { name: item.name }),
     );
+    removeSuggestion(item.id);
 
-    // 2. Remove suggestion from cache immediately
-    removeSuggestionFromCache(item.id);
-
-    // 3. Write the item into the cache before firing, so it shows immediately and
-    // stays if the create is queued offline (the queue replays it later, keyed by
-    // this id).
-    try {
-      // Publishes the row AND counts it. They were two calls here and only
-      // the first was made, so the header stayed behind the list — and offline
-      // no response arrives to correct it.
-      addPantryItemLocally(
-        client.cache,
-        pantryId,
-        buildOptimisticPantryItem(
-          id,
-          {
-            pantryId,
-            itemName: item.name,
-            itemId: item.id,
-          },
-          client.cache,
-        ),
-      );
-      // Detail-shape the same row so tapping it renders from cache instead
-      // of querying an id the server does not have yet.
-      writePantryItemDetailStub(client.cache, id, {
-        itemId: item.id,
-        itemName: item.name,
-      });
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Add Pantry Item (optimistic)',
-      });
+    const outcome = await addItem(item.id, item.name);
+    if (outcome.status === 'duplicate') {
+      // Backstop for what the local check could not see — a windowed list, or a
+      // collaborator's add.
+      await runRestock(outcome.existingPantryItemId, item.name, null);
+      pendingItemIds.current.delete(item.id);
+      return;
     }
-
-    // 4. Fire mutation without await (cache update handled by mutation's update callback)
-    createPantryItem({ variables, context: { localFirst: true } })
-      .then(result => {
-        // The duplicate arrives as a typed DuplicatePantryItemError member in
-        // `data` (or the legacy PANTRY_ITEM_ALREADY_EXISTS error); check both,
-        // else a duplicate would fall through and leave the phantom optimistic
-        // item while reporting a false success.
-        const duplicateInfo = getPantryItemDuplicateFromResult(
-          result.data?.createPantryItem,
-          result.error,
-        );
-        if (duplicateInfo) {
-          // Backstop for what the local check could not see — a windowed list,
-          // or a collaborator's add. The server writes nothing on a refusal, so
-          // withdraw the row we published, count included.
-          revertOptimisticPantryItem(client.cache, pantryId, id);
-          // No local bump: a server refusal only reaches us online, so the
-          // restock's own response carries the authoritative quantity.
-          restockExisting(
-            duplicateInfo.existingPantryItemId,
-            item.name,
-            null,
-            () => pendingItemIds.current.delete(item.id),
-          );
-          return;
-        }
-        pendingItemIds.current.delete(item.id);
-        // Every business failure is a member of the result union, and under
-        // `errorPolicy: 'all'` it RESOLVES with no `error` — so reading
-        // `result.error` alone reports a ForbiddenError (no add-items access)
-        // or a ValidationError as success and strands the optimistic row.
-        // `classifyCreateResult` reads the payload's `__typename`, and keeps
-        // the row for a queued create and for IDEMPOTENT_REPLAY.
-        if (classifyCreateResult(result) === 'rejected') {
-          revertOptimisticPantryItem(client.cache, pantryId, id);
-          // The success toast has already fired; correct it.
-          toastService.error(t('errors.addItemFailedRetry'));
-        } else {
-          onItemAdded?.();
-        }
-      })
-      .catch(() => {
-        pendingItemIds.current.delete(item.id);
-        // Real failure → revert the optimistic item.
-        revertOptimisticPantryItem(client.cache, pantryId, id);
-        toastService.error(t('errors.addItemFailedRetry'));
-      })
-      // Released on every outcome; a queued create is tracked by the offline
-      // queue's pending set from here on.
-      .finally(() => unconfirmedCreates.confirm(id));
+    pendingItemIds.current.delete(item.id);
+    if (outcome.status === 'rejected') {
+      // The success toast has already fired; correct it.
+      toastService.error(t('errors.addItemFailedRetry'));
+      return;
+    }
+    onItemAdded?.();
   };
 
-  // Handle quick add from pantry item suggestion (fire-and-forget)
-  // On duplicate: auto-restock by 1 silently
-  const handleQuickAddSuggestion = (pantryItem: PantryItemSuggestion) => {
+  // Quick add from a pantry suggestion tile, which animates out as it goes.
+  const handleQuickAddSuggestion = async (pantryItem: PantryItemSuggestion) => {
     if (
       !pantryId ||
       state.exitingItems.has(pantryItem.itemId) ||
@@ -405,129 +179,42 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     )
       return;
     pendingItemIds.current.add(pantryItem.itemId);
+    state.startExitAnimation(pantryItem.itemId);
 
     // Same local-first check as the search handler above.
-    const cachedDuplicate = findCachedPantryItemDuplicate(
-      client.cache,
-      pantryId,
-      { itemId: pantryItem.itemId },
-    );
+    const cachedDuplicate = findCachedDuplicate(pantryItem.itemId);
     if (cachedDuplicate) {
-      state.startExitAnimation(pantryItem.itemId);
-      restockExisting(
+      await runRestock(
         cachedDuplicate.existingPantryItemId,
         pantryItem.name,
         cachedDuplicate.quantity,
-        () => pendingItemIds.current.delete(pantryItem.itemId),
       );
+      pendingItemIds.current.delete(pantryItem.itemId);
       return;
     }
 
-    const id = generateEntityId();
-    // Publishing this id to `Pantry.itemsConnection` below makes the row
-    // tappable, and its detail/edit screens query by it. Hold those off until
-    // the server has the row — see `unconfirmedCreates`.
-    unconfirmedCreates.mark(id);
-    const variables = {
-      input: {
-        id,
-        pantryId,
-        itemId: pantryItem.itemId,
-      },
-    };
-
-    // 1. Start exit animation
-    state.startExitAnimation(pantryItem.itemId);
-
-    // 2. Show toast immediately
     toastService.success(
       t(pantrySheetConfig.quickAdd.toastMessageKey, { name: pantryItem.name }),
     );
 
-    // 3. Write the item into the cache before firing, so it shows immediately and
-    // stays if the create is queued offline (the queue replays it later, keyed by
-    // this id).
-    try {
-      // Publishes the row AND counts it. They were two calls here and only
-      // the first was made, so the header stayed behind the list — and offline
-      // no response arrives to correct it.
-      addPantryItemLocally(
-        client.cache,
-        pantryId,
-        buildOptimisticPantryItem(
-          id,
-          {
-            pantryId,
-            itemName: pantryItem.name,
-            itemId: pantryItem.itemId,
-          },
-          client.cache,
-        ),
-      );
-      writePantryItemDetailStub(client.cache, id, {
-        itemId: pantryItem.itemId,
-        itemName: pantryItem.name,
-      });
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Add Pantry Item (optimistic)',
-      });
+    const outcome = await addItem(pantryItem.itemId, pantryItem.name);
+    if (outcome.status === 'duplicate') {
+      await runRestock(outcome.existingPantryItemId, pantryItem.name, null);
+      pendingItemIds.current.delete(pantryItem.itemId);
+      return;
     }
-
-    // 4. Fire mutation without await (cache update handled by mutation's update callback)
-    createPantryItem({ variables, context: { localFirst: true } })
-      .then(result => {
-        // The duplicate arrives as a typed DuplicatePantryItemError member in
-        // `data` (or the legacy PANTRY_ITEM_ALREADY_EXISTS error); check both,
-        // else a duplicate would fall through and leave the phantom optimistic
-        // item while reporting a false success.
-        const duplicateInfo = getPantryItemDuplicateFromResult(
-          result.data?.createPantryItem,
-          result.error,
-        );
-        if (duplicateInfo) {
-          // Backstop for what the local check could not see — a windowed list,
-          // or a collaborator's add. The server writes nothing on a refusal, so
-          // withdraw the row we published, count included.
-          revertOptimisticPantryItem(client.cache, pantryId, id);
-          // No local bump: a server refusal only reaches us online, so the
-          // restock's own response carries the authoritative quantity.
-          restockExisting(
-            duplicateInfo.existingPantryItemId,
-            pantryItem.name,
-            null,
-            () => pendingItemIds.current.delete(pantryItem.itemId),
-          );
-          return;
-        }
-        pendingItemIds.current.delete(pantryItem.itemId);
-        // A refusal is a resolved union member carrying no `error` (see the
-        // search-suggestion handler above), so classify the payload rather
-        // than reading `result.error`. Rejected → revert the optimistic item
-        // and restore the suggestion (undo the exit animation).
-        if (classifyCreateResult(result) === 'rejected') {
-          revertOptimisticPantryItem(client.cache, pantryId, id);
-          state.completeExitAnimation(pantryItem.itemId);
-          // The success toast has already fired; correct it.
-          toastService.error(t('errors.addItemFailed'));
-        } else {
-          onItemAdded?.();
-        }
-      })
-      .catch(() => {
-        pendingItemIds.current.delete(pantryItem.itemId);
-        // Real failure → revert the optimistic item.
-        revertOptimisticPantryItem(client.cache, pantryId, id);
-        state.completeExitAnimation(pantryItem.itemId);
-        toastService.error(t('errors.addItemFailed'));
-      })
-      // Released on every outcome; a queued create is tracked by the offline
-      // queue's pending set from here on.
-      .finally(() => unconfirmedCreates.confirm(id));
+    pendingItemIds.current.delete(pantryItem.itemId);
+    if (outcome.status === 'rejected') {
+      // Put the tile back and correct the toast that already fired.
+      state.completeExitAnimation(pantryItem.itemId);
+      toastService.error(t('errors.addItemFailed'));
+      return;
+    }
+    onItemAdded?.();
   };
 
   const handleExitComplete = (itemId: string) => {
-    removeSuggestionFromCache(itemId);
+    removeSuggestion(itemId);
     state.completeExitAnimation(itemId);
   };
 

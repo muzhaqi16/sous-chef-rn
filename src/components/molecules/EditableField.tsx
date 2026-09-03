@@ -160,7 +160,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     minHeight: 44,
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   saveButton: {

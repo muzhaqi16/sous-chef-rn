@@ -1,10 +1,10 @@
 import React from 'react';
-import { ActivityIndicator } from 'react-native';
-import { withUnistyles } from 'react-native-unistyles';
-import { ThemedIcon } from '#components/atoms/themedComponents';
-import type { IconName, IconLibrary, IconTone } from '#utils/iconUtils';
 
-const ThemedActivityIndicator = withUnistyles(ActivityIndicator);
+import {
+  ThemedActivityIndicator,
+  ThemedIcon,
+} from '#components/atoms/themedComponents';
+import type { IconName, IconLibrary, IconTone } from '#utils/iconUtils';
 
 export type ActionVariant =
   | 'default'

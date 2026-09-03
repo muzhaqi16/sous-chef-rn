@@ -611,7 +611,7 @@ export const RecipeMain: React.FC = () => (
 );
 
 const styles = StyleSheet.create(theme => ({
-  searchBarContainer: { paddingHorizontal: theme.spacing['3'] },
+  searchBarContainer: { paddingHorizontal: theme.spacing.base },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -624,7 +624,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
-    marginHorizontal: theme.spacing['3'],
+    marginHorizontal: theme.spacing.base,
     marginVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
@@ -644,7 +644,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
-    marginHorizontal: theme.spacing['3'],
+    marginHorizontal: theme.spacing.base,
     marginTop: theme.spacing.sm,
   },
   filterIconWrapper: {

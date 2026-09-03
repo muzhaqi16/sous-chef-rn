@@ -9,6 +9,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
+import { filterByTerm, identity } from '#hooks/search/useLocalSearch';
 
 export interface TagInputProps {
   tags: string[];
@@ -42,17 +43,15 @@ export const TagInput: React.FC<TagInputProps> = ({
     };
   }, []);
 
-  const filteredSuggestions = (() => {
-    if (!inputValue.trim()) return [];
-    const query = inputValue.toLowerCase();
-    return suggestions
-      .filter(
-        suggestion =>
-          suggestion.toLowerCase().includes(query) &&
-          !tags.includes(suggestion),
-      )
-      .slice(0, 5);
-  })();
+  // An empty input shows nothing here, unlike a list filter: these are
+  // type-ahead suggestions, and every tag is not a suggestion.
+  const filteredSuggestions = (
+    inputValue.trim()
+      ? filterByTerm(suggestions, inputValue, [identity]).filter(
+          suggestion => !tags.includes(suggestion),
+        )
+      : []
+  ).slice(0, 5);
 
   const handleAddTag = (tag: string) => {
     const trimmedTag = tag.trim();
@@ -175,8 +174,8 @@ const styles = StyleSheet.create(theme => ({
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    padding: theme.spacing['3'],
-    borderWidth: 1,
+    padding: theme.spacing.base,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
@@ -188,7 +187,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     backgroundColor: theme.colors.primaryLight,
     paddingVertical: theme.spacing.xs,
-    paddingLeft: theme.spacing['3'],
+    paddingLeft: theme.spacing.base,
     paddingRight: theme.spacing.sm,
     borderRadius: theme.radii.full,
     gap: theme.spacing.xs,
@@ -210,7 +209,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.full,
     marginRight: theme.spacing.sm,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   pressed: {

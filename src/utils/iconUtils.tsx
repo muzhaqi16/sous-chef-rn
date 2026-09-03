@@ -44,6 +44,8 @@ const TONE_TO_COLOR: Record<string, (t: Theme) => string> = {
   favorite: t => t.colors.favorite,
   rating: t => t.colors.rating,
   navigationActive: t => t.colors.navigationActive,
+  // Nested paths need an entry here; a caller cannot express one as a key.
+  alertBannerWarning: t => t.colors.alertBanner.warning.text,
 };
 
 export type IconTone = keyof typeof TONE_TO_COLOR;

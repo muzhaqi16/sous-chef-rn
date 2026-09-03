@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { useNavigation } from '@react-navigation/native';
+
 import type { StaticScreenProps } from '@react-navigation/native';
-import { useMutation, useQuery } from '@apollo/client/react';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { Header } from '#components/molecules/Header';
 import { Button } from '#components/atoms/Button';
@@ -12,10 +11,7 @@ import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
 import { ErrorState } from '#components/atoms/ErrorState';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
-import {
-  GetHomeByJoinCodeDocument,
-  JoinHomeByCodeDocument,
-} from '#operations/home/home.generated';
+import { useJoinHomeByCode } from '#features/home/hooks/useJoinHomeByCode';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useJoinLinkAuthGate } from '#hooks/deepLink/useJoinLinkAuthGate';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
@@ -33,8 +29,7 @@ export const JoinHomeByCodeScreen: React.FC<
   StaticScreenProps<{ joinCode?: string }>
 > = ({ route }) => {
   const { t } = useTranslation();
-  const { goBack } = useNavigation();
-  const { toPantryMain } = useAppNavigation();
+  const { goBack, toPantryMain } = useAppNavigation();
   const initialCode = route.params?.joinCode ?? '';
 
   // Joining requires auth — queue the code and redirect to sign-in when logged
@@ -47,18 +42,12 @@ export const JoinHomeByCodeScreen: React.FC<
   const [inputValue, setInputValue] = useState(initialCode);
   const [joining, setJoining] = useState(false);
 
-  const { data, loading: previewLoading } = useQuery(
-    GetHomeByJoinCodeDocument,
-    {
-      variables: { joinCode: code },
-      skip: !code || isLoggedOut,
-      fetchPolicy: 'cache-and-network',
-    },
-  );
-  const home = data?.homeByJoinCode ?? null;
+  const { home, previewLoading, joinHome } = useJoinHomeByCode({
+    code,
+    skip: isLoggedOut,
+  });
 
   const { requireVerifiedEmail } = useVerifiedEmailGate();
-  const [joinMutation] = useMutation(JoinHomeByCodeDocument);
 
   const handleFind = () => {
     const trimmed = inputValue.trim();
@@ -81,12 +70,8 @@ export const JoinHomeByCodeScreen: React.FC<
 
     executeWithLoadingState(
       async () => {
-        const { data: joinData } = await joinMutation({
-          variables: { input: { joinCode: code } },
-        });
-
         const result = unwrapPayload(
-          joinData?.joinHomeByCode,
+          await joinHome(code),
           'JoinHomeByCodePayload',
           t('joinHome.joinFailed'),
         );

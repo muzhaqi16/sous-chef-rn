@@ -17,7 +17,10 @@ import {
   formatNumberForInput,
   localizeNumericHint,
 } from '#/utils/formatters/number';
-import { totalFromUnitPrice, unitPriceFromTotal } from '#/utils/purchasePrice';
+import {
+  totalFromUnitPrice,
+  unitPriceFromTotal,
+} from '#features/shoppingList/utils/purchasePrice';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 
 interface PurchaseAmountSheetItem {
@@ -263,7 +266,7 @@ const styles = StyleSheet.create(theme => ({
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     borderColor: theme.colors.border,

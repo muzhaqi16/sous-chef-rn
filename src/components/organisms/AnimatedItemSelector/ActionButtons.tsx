@@ -109,7 +109,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.xs,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
   },
   primaryButton: {
     backgroundColor: theme.colors.primary,

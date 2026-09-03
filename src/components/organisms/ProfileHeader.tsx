@@ -2,10 +2,8 @@ import React from 'react';
 import { useTranslation } from '#/i18n';
 import { logger } from '#/utils/environment';
 import { View } from 'react-native';
-import {
-  ThemedBackButton,
-  ThemedIconButton,
-} from '#components/atoms/themedComponents';
+import { ThemedBackButton } from '#components/atoms/BackButton';
+import { ThemedIconButton } from '#components/atoms/IconButton';
 import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   useAnimatedStyle,
@@ -195,7 +193,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: AVATAR_SIZE / 2,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surface,
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     borderColor: theme.colors.primary,
     overflow: 'hidden',
   },
@@ -209,7 +207,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: AVATAR_SIZE / 2,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surface,
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     borderColor: theme.colors.primary,
     overflow: 'hidden',
     justifyContent: 'center',

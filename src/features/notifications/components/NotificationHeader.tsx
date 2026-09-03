@@ -45,7 +45,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   button: {

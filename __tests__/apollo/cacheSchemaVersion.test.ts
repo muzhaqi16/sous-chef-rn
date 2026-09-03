@@ -1,4 +1,5 @@
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync, existsSync } from 'fs';
+import { join } from 'path';
 import { createHash } from 'crypto';
 
 /**
@@ -13,8 +14,11 @@ import { createHash } from 'crypto';
  * silent and delayed — a `merge` or `read` running over a value written in the
  * old shape, on someone else's device, after an update.
  *
- * So this test pins `src/apollo/cache.ts` by hash. Any edit fails it, and the
- * fix is a decision, not a formality:
+ * So this test pins every module that decides that shape, by hash. The list is
+ * DERIVED from the tree: the policies live with their features now, so a
+ * hard-coded list would stop covering the file a change actually lands in.
+ *
+ * Any edit fails this, and the fix is a decision, not a formality:
  *
  *   - Changed a `merge`/`read` so it can misbehave on old data? Bump
  *     `CURRENT_CACHE_VERSION` (e.g. 'shape-1' → 'shape-2'), which purges once
@@ -23,20 +27,47 @@ import { createHash } from 'crypto';
  *     still safe — stranded field keys are a cache miss and a refetch. Just
  *     re-record the hash.
  *
- * Re-record with:
- *   sha256sum src/apollo/cache.ts | cut -c1-16
+ * Re-record by running this test: the failure message prints the new hash.
  */
-// Re-recorded 2026-08-31: added `PantryItem.usageRecords:
-// mergeConnectionByNodeId(['orderBy'])`. Adding a policy leaves an old blob
-// safe to restore — entries under the previous all-arguments key are stranded,
-// and a stranded field key is a cache miss and a refetch. No version bump.
-const REVIEWED_CACHE_POLICY_HASH = 'c86e5005497b1212';
+// Re-recorded 2026-09-02: `cache.ts` reads the policies from
+// `features/registry.cache.ts` instead of the static manifests, which took them
+// off the i18n launch path. No merge or read changed. Earlier the same day:
+// dropped unused type imports from the policy modules
+// after the split; no merge or read changed, so an old blob restores exactly as
+// before. Earlier the same day: the type policies moved out of `cache.ts` into
+// `features/<name>/cache/typePolicies.ts`, byte-identical, and `cache.ts`
+// became the assembler. Nothing a `merge` or `read` does changed, so an old
+// blob restores exactly as before. No version bump.
+const REVIEWED_CACHE_POLICY_HASH = '6025319f9df8d272';
 
-it('cache.ts has not changed without the persisted-shape decision being made', () => {
-  const actual = createHash('sha256')
-    .update(readFileSync('src/apollo/cache.ts'))
-    .digest('hex')
-    .slice(0, 16);
+const FEATURES = join('src', 'features');
+
+/** Every module that decides the persisted shape, in a stable order. */
+const shapeFiles = (): string[] => {
+  const featurePolicies = readdirSync(FEATURES, { withFileTypes: true })
+    .filter(e => e.isDirectory())
+    .map(e => join(FEATURES, e.name, 'cache', 'typePolicies.ts'))
+    .filter(existsSync)
+    .sort();
+  return [
+    join('src', 'apollo', 'cache.ts'),
+    join('src', 'apollo', 'cacheFieldPolicies.ts'),
+    ...featurePolicies,
+  ];
+};
+
+it('the cache policies have not changed without the persisted-shape decision being made', () => {
+  const files = shapeFiles();
+  // Guards against the derivation silently matching nothing: seven features
+  // declare policies today.
+  expect(files.length).toBeGreaterThanOrEqual(9);
+
+  const hash = createHash('sha256');
+  for (const file of files) {
+    hash.update(file);
+    hash.update(readFileSync(file));
+  }
+  const actual = hash.digest('hex').slice(0, 16);
 
   expect(actual).toBe(REVIEWED_CACHE_POLICY_HASH);
 });

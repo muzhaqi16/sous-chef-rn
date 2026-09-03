@@ -123,7 +123,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing['3'],
+    marginRight: theme.spacing.base,
     backgroundColor: theme.colors.surfaceVariant,
     variants: {
       variant: {

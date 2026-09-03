@@ -228,7 +228,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   bottomSheetContent: {
-    padding: theme.spacing['5'],
+    padding: theme.spacing.mdPlus,
   },
   manageFolderHeader: {
     flexDirection: 'row',
@@ -259,19 +259,19 @@ const styles = StyleSheet.create(theme => ({
   },
   renameInput: {
     flex: 1,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.background,
   },
   renameButton: {
     backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
@@ -289,7 +289,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   deleteSection: {
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.divider,
     paddingTop: theme.spacing.md,
   },
@@ -324,7 +324,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     alignItems: 'center',
   },

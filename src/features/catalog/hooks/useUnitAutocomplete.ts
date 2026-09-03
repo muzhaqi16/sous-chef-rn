@@ -6,6 +6,7 @@ import {
 } from '#operations/item/unit.generated';
 import { useAppStore } from '#store/useAppStore';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
+import { filterByTerm } from '#hooks/search/useLocalSearch';
 
 export interface UnitItem {
   id: string;
@@ -83,12 +84,7 @@ export function useUnitAutocomplete() {
   const fallbackItems = cachedUnits as UnitItem[];
 
   const filterFallback = (term: string, items: UnitItem[]): UnitItem[] => {
-    const lower = term.toLowerCase();
-    return items.filter(
-      unit =>
-        unit.symbol.toLowerCase().includes(lower) ||
-        unit.name.toLowerCase().includes(lower),
-    );
+    return filterByTerm(items, term, ['symbol', 'name']) as UnitItem[];
   };
 
   const autocomplete = useAutocompleteSearch<UnitItem>({

@@ -125,3 +125,50 @@ and fails when an accepted finding is **no longer** in the bundle — that last 
 so a stale exemption can't outlive the problem it was written for. Accepted
 findings print on every release build, so what we're shipping stays visible
 rather than quietly normalized.
+
+---
+
+## Open decisions, with dates
+
+Recorded 2026-09-02, from the whole-tree audit. Each entry states what is
+shipping, why it is acceptable for now, and when to look again — an acceptance
+without a date is a permanent one under another name.
+
+### Biometric sign-in stores the account password — revisit 2026-12-01
+
+`saveCredentials` (`src/storage/keychain.ts`) stores email and password behind a
+biometric gate, and `authService.autoLogin` replays a full `Login` with them. A
+refresh token cannot substitute: a deliberate sign-out revokes that lineage,
+which is the state biometric sign-in exists to recover from. So someone who
+defeats the keychain gets a reusable password rather than a revocable
+credential.
+
+Hardened in the meantime: the slot is `BIOMETRY_CURRENT_SET`, so enrolling a new
+face or finger invalidates it and the app clears the slot rather than offering a
+prompt that cannot succeed; the temporary registration password expires after 24
+hours and is swept at startup; a reinstall with an empty encrypted store clears
+session tokens instead of resuming a session.
+
+The fix needs the API: a device-bound, individually revocable credential
+exchangeable for a session. Specified in the change's `API-REQUESTS.md` § 1.
+Until it ships, this is an accepted residual risk.
+
+### No certificate pinning — deliberate, revisit only on evidence
+
+The app validates TLS against the system trust store and pins nothing. Pinning
+would defend against a compromised or coerced CA; it also means a certificate
+rotation that outruns an app release bricks every installed client, and the
+recovery path is a store review. For a team this size that outage risk is larger
+than the threat pinning removes, and the data at stake is a household's pantry
+rather than payments.
+
+Revisit if the app starts handling payment credentials, or if a CA compromise
+affecting this domain is actually observed. Not a standing to-do.
+
+### OTLP tenant quotas — unverified, revisit 2026-10-01
+
+The OTLP passwords ship as accepted findings above, and the cheapest mitigation
+listed there is tenant-side ingestion and cardinality quotas. There is no record
+that those were configured. Until someone confirms them in the Grafana Cloud
+tenant and notes it here, treat the mitigation as **not in place** and the
+acceptance as resting on the remaining reasoning alone.

@@ -62,7 +62,7 @@ import {
   GetRecipeDocument,
   type MyRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
-import { writeOptimisticRecipe } from '#features/recipes/screens/RecipeForm/recipeCacheWriters';
+import { writeOptimisticRecipe } from '#features/recipes/utils/recipeCacheWriters';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
 import { addToPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';

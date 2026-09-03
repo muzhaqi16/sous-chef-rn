@@ -108,7 +108,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.base,
   },
   scrollView: {
     flexShrink: 1,
@@ -119,7 +119,7 @@ const styles = StyleSheet.create(theme => ({
   actionButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: theme.spacing.sm + 2,
+    paddingHorizontal: theme.spacing.smPlus,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',

@@ -174,7 +174,7 @@ const styles = StyleSheet.create(theme => ({
   // conditional, so a trailing margin becomes dead space when neither renders.
   memberCard: {
     gap: theme.spacing.sm,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   // Same reasoning one level down: the email line is conditional too.
@@ -200,7 +200,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.spacing.sm,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     paddingTop: theme.spacing.sm,
     borderTopColor: theme.colors.border,
   },
@@ -228,7 +228,7 @@ const styles = StyleSheet.create(theme => ({
   permissionList: {
     // No `marginTop` — the card's `gap` is the separation now.
     paddingTop: theme.spacing.sm,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
     gap: theme.spacing.xs,
   },

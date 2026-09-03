@@ -115,7 +115,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     padding: theme.spacing.md,
     marginVertical: theme.spacing.xs,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderStyle: 'dashed',
     backgroundColor: theme.colors.surface,
     variants: {

@@ -1,5 +1,5 @@
 import type { NormalizedCacheObject } from '@apollo/client';
-import { storage, isStorageReady } from '#storage/mmkv';
+import { storage, isStorageReady, isRecoveryStorage } from '#storage/mmkv';
 import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
 
@@ -169,6 +169,11 @@ class ApolloCachePersistence {
    * one extract happens per window rather than one per cache operation.
    */
   scheduleExtractAndSave(extractor: () => NormalizedCacheObject): void {
+    // The cache holds server data — names, emails, household membership. On the
+    // unencrypted recovery instance the session may continue, but none of that
+    // may reach disk. Returning BEFORE the debounce also leaves no timer to
+    // fire after the decision was made.
+    if (isRecoveryStorage()) return;
     if (this.paused) {
       this.pendingWhilePaused = true;
       this.pausedExtractor = extractor;
@@ -276,6 +281,7 @@ class ApolloCachePersistence {
    * @param cache - Normalized cache object from cache.extract()
    */
   saveImmediate(cache: NormalizedCacheObject): void {
+    if (isRecoveryStorage()) return;
     // Clear pending debounced save
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);

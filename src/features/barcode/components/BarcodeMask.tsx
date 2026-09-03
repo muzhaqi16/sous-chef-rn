@@ -109,7 +109,7 @@ const BarcodeMask: React.FC<BarcodeMaskProps> = ({
   );
 };
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     ...StyleSheet.absoluteFill,
   },
@@ -123,7 +123,7 @@ const styles = StyleSheet.create(() => ({
     position: 'absolute',
     width: 24,
     height: 24,
-    borderWidth: 3,
+    borderWidth: theme.borderWidth.thick,
     borderColor: 'transparent',
     top: 0,
     left: 0,
@@ -132,7 +132,7 @@ const styles = StyleSheet.create(() => ({
     position: 'absolute',
     width: 24,
     height: 24,
-    borderWidth: 3,
+    borderWidth: theme.borderWidth.thick,
     borderColor: 'transparent',
     top: 0,
     right: 0,
@@ -141,7 +141,7 @@ const styles = StyleSheet.create(() => ({
     position: 'absolute',
     width: 24,
     height: 24,
-    borderWidth: 3,
+    borderWidth: theme.borderWidth.thick,
     borderColor: 'transparent',
     bottom: 0,
     left: 0,
@@ -150,7 +150,7 @@ const styles = StyleSheet.create(() => ({
     position: 'absolute',
     width: 24,
     height: 24,
-    borderWidth: 3,
+    borderWidth: theme.borderWidth.thick,
     borderColor: 'transparent',
     bottom: 0,
     right: 0,

@@ -499,7 +499,7 @@ const styles = StyleSheet.create(theme => ({
     paddingTop: theme.spacing.md,
   },
   buttonContainer: {
-    gap: theme.spacing['3'],
+    gap: theme.spacing.base,
     paddingBottom: theme.spacing.lg,
   },
 }));

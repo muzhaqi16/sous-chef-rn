@@ -2363,6 +2363,7 @@ export type CreateUnitConversionResult = ConflictError | CreateUnitConversionPay
 export type CreateUnitInput = {
   baseUnitId?: InputMaybe<Scalars['ID']['input']>;
   conversionFactor?: InputMaybe<Scalars['Float']['input']>;
+  hasStandardCountFactor?: InputMaybe<Scalars['Boolean']['input']>;
   isCommon?: InputMaybe<Scalars['Boolean']['input']>;
   isMetric?: InputMaybe<Scalars['Boolean']['input']>;
   name: Scalars['String']['input'];
@@ -2370,6 +2371,7 @@ export type CreateUnitInput = {
   sortOrder?: InputMaybe<Scalars['Int']['input']>;
   symbol: Scalars['String']['input'];
   type: UnitType;
+  unitRole?: InputMaybe<UnitRole>;
 };
 
 export type CreateUnitPayload = {
@@ -4716,6 +4718,7 @@ export type Item = {
   name: Scalars['String']['output'];
   needsApproval: Scalars['Boolean']['output'];
   netWeight: Maybe<Scalars['Float']['output']>;
+  netWeightKind: Maybe<NetWeightKind>;
   /**
    * Structured nutrition for this item — one row per item, values in canonical
    * units (kcal for energy, g for macros, mg for sodium/cholesterol/potassium,
@@ -10234,6 +10237,17 @@ export type NetWeightInput = {
   netWeightUnitId?: InputMaybe<Scalars['ID']['input']>;
 };
 
+/**
+ * What an item's netWeight measures. Only PACKAGE seeds a pantry row or bridges
+ * a count to a measure; SERVING and REFERENCE (a 100 g nutrition basis) stay
+ * visible without being mistaken for a bottle. Absent means unknown.
+ */
+export enum NetWeightKind {
+  Package = 'PACKAGE',
+  Reference = 'REFERENCE',
+  Serving = 'SERVING'
+}
+
 /** Reusable sub-input for network and location info */
 export type NetworkLocationInput = {
   ipAddress?: InputMaybe<Scalars['String']['input']>;
@@ -10865,6 +10879,7 @@ export type PackageInfoInput = {
   displayUnitId?: InputMaybe<Scalars['ID']['input']>;
   displayUnitName?: InputMaybe<Scalars['String']['input']>;
   netWeight?: InputMaybe<Scalars['Float']['input']>;
+  netWeightKind?: InputMaybe<NetWeightKind>;
   servingSize?: InputMaybe<Scalars['Float']['input']>;
   servingSizeUnit?: InputMaybe<Scalars['String']['input']>;
   servingsPerPackage?: InputMaybe<Scalars['Int']['input']>;
@@ -15856,6 +15871,12 @@ export type Unit = {
   conversionFactor: Scalars['Float']['output'];
   createdAt: Scalars['DateTime']['output'];
   displayAsFraction: Scalars['Boolean']['output'];
+  /**
+   * True for a COUNT unit whose factor to piece is a universal fact (dozen = 12).
+   * Two COUNT units convert through their factors only when both carry this;
+   * every other count relationship is item- or stack-scoped data.
+   */
+  hasStandardCountFactor: Scalars['Boolean']['output'];
   id: Scalars['ID']['output'];
   isCommon: Scalars['Boolean']['output'];
   isMetric: Scalars['Boolean']['output'];
@@ -17080,6 +17101,7 @@ export type UpdateTemplateItemResult = ConflictError | ForbiddenError | NotFound
 export type UpdateUnitInput = {
   baseUnitId?: InputMaybe<Scalars['ID']['input']>;
   conversionFactor?: InputMaybe<Scalars['Float']['input']>;
+  hasStandardCountFactor?: InputMaybe<Scalars['Boolean']['input']>;
   id: Scalars['ID']['input'];
   isCommon?: InputMaybe<Scalars['Boolean']['input']>;
   isMetric?: InputMaybe<Scalars['Boolean']['input']>;
@@ -17088,6 +17110,7 @@ export type UpdateUnitInput = {
   sortOrder?: InputMaybe<Scalars['Int']['input']>;
   symbol?: InputMaybe<Scalars['String']['input']>;
   type?: InputMaybe<UnitType>;
+  unitRole?: InputMaybe<UnitRole>;
 };
 
 export type UpdateUnitPayload = {

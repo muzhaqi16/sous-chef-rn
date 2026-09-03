@@ -27,15 +27,48 @@ node scripts/check-layer-purity.mjs              # also in pre-commit
 node scripts/check-feature-shape.mjs             # also in pre-commit
 node scripts/check-dead-modules.mjs              # also in pre-commit
 node scripts/check-comment-budget.mjs            # also in pre-commit
+node scripts/check-data-layer-boundary.mjs       # also in pre-commit
+node scripts/check-hook-return-types.mjs         # also in pre-push
+node scripts/check-import-cycles.mjs             # also in pre-push
+node scripts/check-single-consumer.mjs           # also in pre-commit
+node scripts/check-form-state.mjs                # also in pre-commit
+node scripts/check-feature-enumeration.mjs       # also in pre-commit
+node scripts/check-canonical-mechanisms.mjs      # also in pre-commit
+node scripts/check-design-tokens.mjs             # also in pre-commit
+node scripts/check-dependency-audit.mjs          # also in PR checks + weekly
 node scripts/check-bundled-secrets.mjs --self-test
 ```
+
+Each of the eight boundary gates takes `--list` (every finding), `--update`
+(re-baseline) and `--self-test` (prove it can still fail). A NON-EMPTY baseline
+is a debt list that may only shrink; an EMPTY one is an invariant, and any
+finding there is a regression to fix:
+
+| Gate | Holds | Baseline |
+| --- | --- | --- |
+| `check-data-layer-boundary` | a screen, sheet or cell may not run an operation, hold the client, or write the cache | 0 |
+| `check-hook-return-types` | a feature hook's return type may not name the data library — its companion, since the screen imports nothing | 0 |
+| `check-import-cycles` | no new LOAD-TIME import cycle; `import type` and `await import()` edges do not count | 8 |
+| `check-single-consumer` | a module in `components`/`hooks`/`context`/`utils`/`constants` used by exactly one feature belongs to that feature | 101 |
+| `check-form-state` | a form holds its fields in react-hook-form, not `useState` | 51 |
+| `check-feature-enumeration` | a feature id in a string outside its feature is a place the feature list has to be remembered | 1 |
+| `check-canonical-mechanisms` | one mechanism per concern — the list primitive, the image component, the modal surface, the date formatter, device storage | 50 |
+| `check-design-tokens` | a visual property is a token, not a literal; a kit concept is not restyled in a feature | 207 |
+
+When one reaches zero, promote it to a hard `import/no-restricted-paths` zone
+and delete the baseline — the same promotion the kit half of
+`check-layer-purity` already got.
 
 `npm run lint` validates `.graphql` files against
 `src/graphql/generated/schema.graphql` (`fields-on-correct-type` and
 `no-deprecated` are errors), surfacing API drift at lint time instead of as a
-codegen batch failure. Pre-commit runs `lint-staged` plus the five sub-second
-whole-tree checks; pre-push runs `typecheck`, `check:compiler-bailouts` and
-`check:unistyles-variants` concurrently, then a codegen drift check — and skips
+codegen batch failure. The schema reaches the parser as
+`parserOptions.graphQLConfig` — graphql-eslint@4 removed the flat `schema`
+option and errors at PARSE time if it is still there, which reads as every
+document failing rather than as a config problem. Pre-commit runs `lint-staged`
+plus the five sub-second whole-tree checks; pre-push runs `typecheck`,
+`check:compiler-bailouts`, `check:unistyles-variants`, `check:hook-return-types`
+and `check:import-cycles` concurrently, then a codegen drift check — and skips
 all of it for a tag-only push, which carries no new commits.
 Full command reference: `docs/development.md`.
 
@@ -188,6 +221,24 @@ never counted and never removed. `scripts/`, the root config files and
 wrongly.
 
 ## GraphQL & Apollo
+
+### The data layer stays out of what renders
+
+**A screen, sheet or list cell gets its data from a hook in its feature's
+`hooks/`.** It does not import `#/apollo/*`, hold the client, or write the
+cache. Two invariants hold the seam and neither can see what the other does:
+`import/no-restricted-paths` bans the `src/apollo/**` import (with
+`alertRejectedMutation` exempt — it lives there by location but resolves
+localized refusal copy, which is presentation), and
+`node scripts/check-hook-return-types.mjs` reads what a hook HANDS BACK, since
+a leaked `ApolloError` or `NetworkStatus` couples a screen that imports
+nothing. A mutate wrapper returns `MutationOutcome<TData>`
+(`src/utils/errors/mutationOutcome.ts`), never Apollo's own result generic.
+
+A hook returns plain values and callbacks: `loading` as a boolean, an outcome
+the caller branches on, named functions. `useFragment` and the masking types
+stay allowed in a cell — with `dataMasking` on, a cell subscribing to one
+entity is the documented pattern.
 
 ### Fragments & data masking
 
@@ -937,6 +988,12 @@ npm run check:compiler-bailouts && npm run check:unistyles-variants
 npm run check:layer-purity && npm run check:feature-shape
 npm run check:dead-modules
 npm run check:comment-budget
+npm run check:data-layer-boundary && npm run check:hook-return-types
+npm run check:import-cycles
+npm run check:single-consumer
+npm run check:form-state && npm run check:feature-enumeration
+npm run check:canonical-mechanisms && npm run check:design-tokens
+npm run check:dependency-audit
 ```
 
 `check-compiler-bailouts` guards a file COUNT; separately, WHICH function bails

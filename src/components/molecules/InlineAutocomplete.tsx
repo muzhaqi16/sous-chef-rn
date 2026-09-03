@@ -274,7 +274,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingRight: theme.spacing.xl, // Space for loading indicator
     backgroundColor: theme.colors.inputBackground,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     color: theme.colors.inputText,
     variants: {
@@ -303,7 +303,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     marginTop: DROPDOWN_GAP,
     maxHeight: DROPDOWN_MAX_HEIGHT,

@@ -4,7 +4,7 @@ import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { detailsPageBaseStyles } from './detailsPageStyles';
-import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { FormInput } from '#components/molecules/FormInput';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
@@ -81,7 +81,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
 }) => {
   const { t } = useTranslation();
   return (
-    <BottomSheetKeyboardAwareScrollView
+    <BottomSheetFormScrollView
       key="details"
       style={styles.page}
       contentContainerStyle={[
@@ -211,7 +211,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
           </View>
         )}
       </View>
-    </BottomSheetKeyboardAwareScrollView>
+    </BottomSheetFormScrollView>
   );
 };
 

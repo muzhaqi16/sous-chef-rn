@@ -126,11 +126,11 @@ export const CardRightSlot: React.FC<CardRightSlotProps> = props => {
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    marginLeft: theme.spacing['3'],
+    marginLeft: theme.spacing.base,
   },
   metaContainer: {
     alignItems: 'flex-end',
-    marginLeft: theme.spacing['3'],
+    marginLeft: theme.spacing.base,
   },
   secondary: {
     marginTop: theme.spacing.xs,

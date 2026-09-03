@@ -1,12 +1,6 @@
 import type { StaticParamList } from '@react-navigation/native';
-import {
-  createNativeStackNavigator,
-  createNativeStackScreen,
-} from '@react-navigation/native-stack';
-import { LandingAuthScreen } from '#screens/auth/LandingAuthScreen';
-import { LoginScreen } from '#screens/auth/LoginScreen';
-import { SignUpScreen } from '#screens/auth/SignUpScreen';
-import { ForgotPasswordScreen } from '#screens/auth/ForgotPasswordScreen';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { authScreens } from '#features/auth/screens/registration';
 import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 
 export const AuthStack = createNativeStackNavigator({
@@ -19,24 +13,7 @@ export const AuthStack = createNativeStackNavigator({
     fullScreenGestureEnabled: true,
     contentStyle: { backgroundColor: theme.colors.background },
   }),
-  screens: {
-    LandingAuth: createNativeStackScreen({
-      screen: LandingAuthScreen,
-      linking: 'welcome',
-    }),
-    Login: createNativeStackScreen({
-      screen: LoginScreen,
-      linking: 'login',
-    }),
-    SignUp: createNativeStackScreen({
-      screen: SignUpScreen,
-      linking: 'signup',
-    }),
-    ForgotPassword: createNativeStackScreen({
-      screen: ForgotPasswordScreen,
-      linking: 'forgot-password',
-    }),
-  },
+  screens: { ...authScreens },
 });
 
 export type AuthStackParams = StaticParamList<typeof AuthStack>;

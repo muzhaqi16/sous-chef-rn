@@ -166,7 +166,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     paddingVertical: theme.spacing.md,
     gap: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   candidateImage: {
@@ -198,7 +198,7 @@ const styles = StyleSheet.create(theme => ({
     minHeight: 96,
     textAlignVertical: 'top',
     fontSize: theme.fonts.size.md,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',

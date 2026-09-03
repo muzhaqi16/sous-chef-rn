@@ -169,11 +169,11 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: theme.spacing['3'] + 2,
-    paddingVertical: theme.spacing.xs + 1,
+    paddingHorizontal: theme.spacing.basePlus,
+    paddingVertical: theme.spacing.xsPlus,
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
-    gap: theme.spacing.xs + 2,
+    gap: theme.spacing.xsPlus,
     backgroundColor: theme.colors.filterTab.inactiveBg,
     variants: {
       state: {
@@ -183,8 +183,8 @@ const styles = StyleSheet.create(theme => ({
       },
       compact: {
         true: {
-          paddingHorizontal: theme.spacing.sm + 2,
-          paddingVertical: theme.spacing.xs + 2,
+          paddingHorizontal: theme.spacing.smPlus,
+          paddingVertical: theme.spacing.xsPlus,
           borderRadius: theme.radii.lg,
           borderCurve: 'continuous',
           gap: theme.spacing.xs,
@@ -193,7 +193,7 @@ const styles = StyleSheet.create(theme => ({
       // Two-line pills (label + parent) trim the vertical padding so they sit
       // at roughly the same height as single-line pills in the same row.
       stacked: {
-        true: { paddingVertical: theme.spacing.xs + 2 },
+        true: { paddingVertical: theme.spacing.xsPlus },
       },
     },
   },
@@ -241,7 +241,7 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   countBadge: {
-    paddingHorizontal: theme.spacing.xs + 3,
+    paddingHorizontal: theme.spacing.xsPlus,
     paddingVertical: 2,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
@@ -254,7 +254,7 @@ const styles = StyleSheet.create(theme => ({
       },
       compact: {
         true: {
-          paddingHorizontal: theme.spacing.xs + 1,
+          paddingHorizontal: theme.spacing.xsPlus,
           paddingVertical: 1,
           borderRadius: theme.radii.sm,
           borderCurve: 'continuous',

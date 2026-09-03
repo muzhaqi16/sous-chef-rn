@@ -28,7 +28,7 @@ const NotificationSettingsScreen = React.lazy(
 // it PUSHES over the app; the root navigator's `verification` group is a gate
 // with no app behind it, and swapping to it strands the user after verifying.
 const VerifyEmailScreen = React.lazy(() =>
-  import('#screens/auth/CodeVerificationScreen').then(m => ({
+  import('#features/auth/screens/CodeVerificationScreen').then(m => ({
     default: m.VerifyEmailScreen,
   })),
 );

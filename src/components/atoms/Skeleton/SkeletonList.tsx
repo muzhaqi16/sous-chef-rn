@@ -30,7 +30,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   container: {
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     gap: theme.spacing.sm,
     flexGrow: 1,
   },

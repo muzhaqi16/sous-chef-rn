@@ -2605,6 +2605,7 @@ union CreateUnitConversionResult = ConflictError | CreateUnitConversionPayload |
 input CreateUnitInput {
   baseUnitId: ID
   conversionFactor: Float
+  hasStandardCountFactor: Boolean
   isCommon: Boolean
   isMetric: Boolean
   name: String!
@@ -2612,6 +2613,7 @@ input CreateUnitInput {
   sortOrder: Int
   symbol: String!
   type: UnitType!
+  unitRole: UnitRole
 }
 
 type CreateUnitPayload {
@@ -4836,6 +4838,7 @@ type Item {
   name: String!
   needsApproval: Boolean!
   netWeight: Float
+  netWeightKind: NetWeightKind
   """
   Structured nutrition for this item — one row per item, values in canonical
   units (kcal for energy, g for macros, mg for sodium/cholesterol/potassium,
@@ -7621,6 +7624,17 @@ input NetWeightInput {
   netWeightUnitId: ID
 }
 
+"""
+What an item's netWeight measures. Only PACKAGE seeds a pantry row or bridges
+a count to a measure; SERVING and REFERENCE (a 100 g nutrition basis) stay
+visible without being mistaken for a bottle. Absent means unknown.
+"""
+enum NetWeightKind {
+  PACKAGE
+  REFERENCE
+  SERVING
+}
+
 """Reusable sub-input for network and location info"""
 input NetworkLocationInput {
   ipAddress: String
@@ -8250,6 +8264,7 @@ input PackageInfoInput {
   displayUnitId: ID
   displayUnitName: String
   netWeight: Float
+  netWeightKind: NetWeightKind
   servingSize: Float
   servingSizeUnit: String
   servingsPerPackage: Int
@@ -12372,6 +12387,12 @@ type Unit {
   conversionFactor: Float!
   createdAt: DateTime!
   displayAsFraction: Boolean!
+  """
+  True for a COUNT unit whose factor to piece is a universal fact (dozen = 12).
+  Two COUNT units convert through their factors only when both carry this;
+  every other count relationship is item- or stack-scoped data.
+  """
+  hasStandardCountFactor: Boolean!
   id: ID!
   isCommon: Boolean!
   isMetric: Boolean!
@@ -13562,6 +13583,7 @@ union UpdateTemplateItemResult = ConflictError | ForbiddenError | NotFoundError 
 input UpdateUnitInput {
   baseUnitId: ID
   conversionFactor: Float
+  hasStandardCountFactor: Boolean
   id: ID!
   isCommon: Boolean
   isMetric: Boolean
@@ -13570,6 +13592,7 @@ input UpdateUnitInput {
   sortOrder: Int
   symbol: String
   type: UnitType
+  unitRole: UnitRole
 }
 
 type UpdateUnitPayload {

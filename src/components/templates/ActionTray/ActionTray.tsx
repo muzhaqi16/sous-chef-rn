@@ -252,7 +252,7 @@ const styles = UnistylesStyleSheet.create(theme => ({
     marginHorizontal: '2.5%', // Creates 95% width centered
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.borderLight,
     boxShadow: [
       {
@@ -307,7 +307,7 @@ const styles = UnistylesStyleSheet.create(theme => ({
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.borderLight,
     borderBottomLeftRadius: theme.radii.xl,
     borderBottomRightRadius: theme.radii.xl,

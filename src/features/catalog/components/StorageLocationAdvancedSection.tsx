@@ -119,7 +119,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     paddingVertical: theme.spacing.md,
     marginTop: theme.spacing.xs,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
   },
   capacityRow: {

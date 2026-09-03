@@ -9,7 +9,7 @@ import type {
   PantrySortOption,
   PantrySortDirection,
 } from './preferenceTypes';
-import { RootState } from '../index';
+import type { RootState } from '../index';
 import { logger } from '#/utils/environment';
 
 /**

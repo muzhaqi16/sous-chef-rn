@@ -267,7 +267,7 @@ const styles = StyleSheet.create(theme => ({
   actions: {
     gap: theme.spacing.sm,
     paddingTop: theme.spacing.sm,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
   },
   actionButton: {

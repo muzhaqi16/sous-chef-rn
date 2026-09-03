@@ -60,7 +60,7 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    paddingTop: theme.spacing['3'],
+    paddingTop: theme.spacing.base,
   },
   form: {
     padding: theme.spacing.md,

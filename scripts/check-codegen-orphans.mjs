@@ -34,8 +34,7 @@ const SKIP_FILES = new Set([
     'src',
     'features',
     'recipes',
-    'screens',
-    'RecipeForm',
+    'utils',
     'recipeFormFieldsNeutral.generated.ts',
   ),
   // Same generator, derived from `useMealPlanActions.graphql`.
