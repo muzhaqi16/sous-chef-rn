@@ -3,18 +3,19 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useTranslation } from '#/i18n';
 import { AuthFormTemplate } from '#features/auth/components/AuthFormTemplate';
-import { EmailInput } from '#components/atoms/EmailInput';
+import { EmailInput } from '#components/molecules/EmailInput';
 import { Text } from '#components/atoms/Text';
 import { getForgotPasswordValidationSchema } from '#utils/validation/auth';
 import { logValidationErrors } from '#utils/validation/common';
 import { AuthWrapper } from '#features/auth/components/AuthWrapper';
 import { useRequestPasswordReset } from '#features/auth/hooks/useRequestPasswordReset';
 import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
-import { useToast } from '#/hooks/useToast';
 import { useResendBackoff } from '#features/auth/hooks/useResendBackoff';
 import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { isSuccessPayload } from '#/utils/errors/mutationPayload';
+import { toastService } from '#services/toastService';
+import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 import {
   getRateLimitMessage,
   isRateLimitError,
@@ -28,7 +29,6 @@ export function ForgotPasswordScreen() {
   const { t } = useTranslation();
   const { navigateToLogin } = useAuthNavigation();
   const { requestPasswordReset } = useRequestPasswordReset();
-  const toast = useToast();
   const { countdown, canResend, registerAttempt } = useResendBackoff();
 
   // Non-null once the server confirms a send, which is also what switches this
@@ -59,12 +59,12 @@ export function ForgotPasswordScreen() {
       });
     }
     if (!response) {
-      toast({ message: t('errors.codes.genericRetry'), type: 'error' });
+      toastService.error(t('errors.codes.genericRetry'));
       return false;
     }
 
     if (isRateLimitError(response.error)) {
-      toast({ message: getRateLimitMessage(response.error), type: 'error' });
+      toastService.error(getRateLimitMessage(response.error));
       return false;
     }
 
@@ -73,17 +73,13 @@ export function ForgotPasswordScreen() {
     if (isSuccessPayload(payload, 'RequestPasswordResetPayload')) return true;
 
     if (payload) {
-      toast({
-        message: errorService.getUserFriendlyMessage(
-          payload.code,
-          payload.message,
-        ),
-        type: 'error',
-      });
+      toastService.error(
+        localizedRefusalMessage(payload, t('errors.codes.genericRetry')),
+      );
       return false;
     }
 
-    toast({ message: t('errors.codes.genericRetry'), type: 'error' });
+    toastService.error(t('errors.codes.genericRetry'));
     return false;
   };
 
@@ -104,7 +100,7 @@ export function ForgotPasswordScreen() {
     return executeWithLoadingState(async () => {
       const sent = await requestResetLink(sentTo);
       if (sent) {
-        toast({ message: t('auth.resetLinkResent'), type: 'success' });
+        toastService.success(t('auth.resetLinkResent'));
       }
     }, setSubmitting);
   };
@@ -119,7 +115,7 @@ export function ForgotPasswordScreen() {
           subtitle={
             <>
               {t('auth.resetLinkSentPrefix')}
-              <Text weight="bold">{sentTo}</Text>
+              <Text role="bodyStrong">{sentTo}</Text>
               {t('auth.resetLinkSentSuffix')}
             </>
           }

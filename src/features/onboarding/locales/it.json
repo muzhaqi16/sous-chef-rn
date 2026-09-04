@@ -6,7 +6,8 @@
     "addPantryToHome": "Aggiungiamo una dispensa a {{homeName}}",
     "homeAlreadyConfigured": "La tua casa e dispensa sono già configurate",
     "pendingInvitesTitle": "Hai inviti casa in sospeso!",
-    "pendingInvitesSubtitle": "Accetta un invito per unirti a una casa esistente o creane una tua",
+    "pendingInvitesSubtitle": "Apri un invito dalle tue notifiche per unirti a una casa esistente, oppure creane una tua",
+    "inviteOpenFromNotifications": "Apri questo invito dalle tue notifiche, o dall'email che ti abbiamo inviato, per accettarlo.",
     "or": "O",
     "createOwnHome": "Crea la mia casa",
     "skipForNow": "Salta per ora",
@@ -63,7 +64,9 @@
     "pantryNamePlaceholder": "es. Dispensa della cucina",
     "checkingExistingSetup": "Verifica della configurazione esistente...",
     "creatingHomeAndPantry": "Creazione di casa e dispensa...",
-    "creatingPantry": "Creazione della dispensa..."
+    "creatingPantry": "Creazione della dispensa...",
+    "createdDuringOnboarding": "Creato durante la configurazione",
+    "defaultPantryDescription": "Dispensa predefinita"
   },
   "onboardingSteps": {
     "CreateHome": {
@@ -101,5 +104,8 @@
     "listMin": "Il nome della lista deve contenere almeno {{count}} caratteri",
     "listMax": "Il nome della lista deve contenere meno di {{count}} caratteri",
     "itemsMax": "Puoi selezionare fino a {{count}} articoli"
+  },
+  "onboarding": {
+    "progress": "Passaggio {{step}} di {{total}}"
   }
 }

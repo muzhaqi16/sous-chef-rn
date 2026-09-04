@@ -1,15 +1,13 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import Animated, {
-  FadeInDown,
-  useReducedMotion,
-} from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
-import { commonStyles } from '#/styles/commonStyles';
-import { TIMING } from '#constants/animations';
+
 import { Icon, type IconName } from '#/utils/iconUtils';
 import { Text } from '#components/atoms/Text';
+import { motion } from '#/theme/foundations/motion';
+import { Card } from '#components/atoms/Card';
 
 interface HomeStatsProps {
   totalHomes: number;
@@ -23,11 +21,6 @@ export const HomeStats: React.FC<HomeStatsProps> = ({
   totalPantries,
 }) => {
   const { t } = useTranslation();
-
-  // Gentle staggered entrance so the stat row eases in alongside the home
-  // cards below (which already use FadeInDown), instead of snapping in.
-  // Disabled under the OS "reduce motion" setting.
-  const reducedMotion = useReducedMotion();
 
   // Each stat carries a recognizable icon so the cards read as a designed
   // dashboard row rather than three bare numbers. The icon sits in a soft
@@ -60,22 +53,22 @@ export const HomeStats: React.FC<HomeStatsProps> = ({
       {stats.map((stat, index) => (
         <Animated.View
           key={stat.key}
-          entering={
-            reducedMotion
-              ? undefined
-              : FadeInDown.delay(index * 60).duration(TIMING.STANDARD)
-          }
-          style={[commonStyles.shadow, styles.statCard]}
+          style={styles.statCardSlot}
+          entering={FadeInDown.delay(index * 60).duration(
+            motion.timing.STANDARD,
+          )}
         >
-          <View style={styles.iconBadge}>
-            <Icon name={stat.icon} size={18} tone="primary" />
-          </View>
-          <Text size="2xl" weight="bold" tone="accent">
-            {stat.value}
-          </Text>
-          <Text size="xs" tone="secondary" style={styles.statLabel}>
-            {stat.label}
-          </Text>
+          <Card padding="none" style={styles.statCard}>
+            <View style={styles.iconBadge}>
+              <Icon name={stat.icon} size={18} tone="primary" />
+            </View>
+            <Text role="title" tone="accent">
+              {stat.value}
+            </Text>
+            <Text role="caption" tone="secondary" style={styles.statLabel}>
+              {stat.label}
+            </Text>
+          </Card>
         </Animated.View>
       ))}
     </View>
@@ -88,13 +81,15 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     gap: theme.spacing.base,
   },
-  statCard: {
+  // The animated wrapper is what the row lays out, so the third goes HERE. On
+  // the Card it collapsed the wrapper to its icon and spilled the value and
+  // label outside the card.
+  statCardSlot: {
     flex: 1,
-    backgroundColor: theme.colors.surface,
+  },
+  statCard: {
     paddingVertical: theme.spacing.lg,
     paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.lg,
-    borderCurve: 'continuous',
     alignItems: 'center',
   },
   iconBadge: {

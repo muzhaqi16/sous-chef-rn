@@ -7,10 +7,10 @@
 import { StateCreator } from 'zustand';
 import type { RootState } from '../index';
 import {
-  scheduleTokenRefresh,
-  cancelTokenRefresh,
-} from '../../apollo/links/tokenScheduler';
-import { proactiveTokenRefresh } from '../../apollo/links/refreshToken';
+  cancelProactiveRefresh,
+  refreshTokenNow,
+  scheduleProactiveRefresh,
+} from '../tokenRefreshBridge';
 import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
 import { saveSessionTokens, clearSessionTokens } from '#storage/keychain';
 import { logger } from '#/utils/environment';
@@ -44,7 +44,7 @@ export const handleTokenRefreshOnResume = async (
     '[AuthSlice] Token expired/expiring on app resume, refreshing...',
   );
   try {
-    await proactiveTokenRefresh();
+    await refreshTokenNow();
   } catch {
     logger.warn(
       '[AuthSlice] Token refresh on resume failed, reactive refresh will handle',
@@ -207,9 +207,7 @@ export const createAuthSlice: StateCreator<
       // Schedule proactive token refresh (best practice)
       // This will automatically refresh the token 5 minutes before it expires
       // to prevent user-facing 401 errors and provide seamless UX
-      scheduleTokenRefresh(accessToken, async () => {
-        await proactiveTokenRefresh();
-      });
+      scheduleProactiveRefresh(accessToken);
     },
 
     updateUser: updates => {
@@ -238,9 +236,7 @@ export const createAuthSlice: StateCreator<
       // The tokenScheduler has built-in offline protection, so we always schedule
       // This ensures refresh is scheduled even after offline->online transitions
       if (accessToken) {
-        scheduleTokenRefresh(accessToken, async () => {
-          await proactiveTokenRefresh();
-        });
+        scheduleProactiveRefresh(accessToken);
       }
     },
 
@@ -263,7 +259,7 @@ export const createAuthSlice: StateCreator<
     clearAuth: () => {
       // Cancel any scheduled token refresh before clearing auth
       // This prevents refresh attempts with invalid/cleared tokens
-      cancelTokenRefresh();
+      cancelProactiveRefresh();
 
       set(state => {
         state.user = null;

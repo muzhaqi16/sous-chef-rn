@@ -51,6 +51,14 @@ export const extractDateString = (value: unknown): string => {
     : date.toISOString().slice(0, 10);
 };
 
+/**
+ * A calendar day as the MACHINE key `2026-09-03` — a map key, a query variable,
+ * an id. Deliberately not localized: it is compared and stored, never read, so
+ * the locale-aware formatters must stay away from it. Local time, so the key
+ * matches the day the user is looking at.
+ */
+export const toDateKey = (date: Date): string => format(date, 'yyyy-MM-dd');
+
 /** Convert YYYY-MM-DD to a UTC midnight ISO string. Pass-through for malformed input. */
 export const dateStringToISO = (dateStr: string): string => {
   if (!dateStr) return dateStr;

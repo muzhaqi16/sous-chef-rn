@@ -20,9 +20,11 @@
  * source Babel and Jest derive from), then attributed to a feature by path:
  *
  *   src/features/<id>/**        -> that feature
- *   src/screens/auth/**         -> `auth`         (a feature without a manifest)
- *   src/screens/onBoarding/**   -> `onboarding`   (likewise)
  *   anything else               -> no feature
+ *
+ * Auth and onboarding used to need their own mapping while their screens lived
+ * under `src/screens/`. They are features now, and `src/screens/` holds only the
+ * two screens the app shows before any feature is reachable.
  *
  * Reach is TRANSITIVE through other shared modules: a hook used only by an
  * atom that only pantry renders belongs to pantry too. A module with zero
@@ -30,16 +32,15 @@
  * absence of a consumer is a different problem, and `check-dead-modules`
  * already owns it.
  *
- * ## The baseline
+ * ## An invariant, not a ratchet
  *
- * A DEBT LIST that may only shrink, like the kernel half of
- * `check-layer-purity`. Every entry removed is a module that moved into the
- * feature that owns it. When it empties, the rule becomes an invariant and this
- * gate replaces the kernel NAME test, which only ever approximated it.
+ * This was a debt list of 101. It reached zero, so there is no baseline any
+ * more: a finding is a module to move, not a number to record. It is also what
+ * replaced the kernel NAME test in `check-layer-purity`, which only ever
+ * approximated the same thing.
  *
  *   node scripts/check-single-consumer.mjs           # check
  *   node scripts/check-single-consumer.mjs --list    # print every finding
- *   node scripts/check-single-consumer.mjs --update  # re-baseline
  *   node scripts/check-single-consumer.mjs --self-test
  */
 import { readFileSync } from 'node:fs';
@@ -47,12 +48,8 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { createRequire } from 'node:module';
 
 import {
-  baselineFile,
-  diffSets,
   filesUnder,
-  fromRoot,
   parseFlags,
-  refuseEmptyBaselineUpdate,
   REPO_ROOT,
   requireNonEmptyScan,
 } from './lib/tooling.mjs';
@@ -61,10 +58,6 @@ const ALIAS_PAIRS = createRequire(import.meta.url)(
   './lib/aliases.js',
 ).prefixPairs();
 
-const BASELINE = baselineFile(
-  fromRoot('scripts/check-single-consumer.baseline.json'),
-);
-
 /** The layers whose contents are meant to serve more than one feature. */
 const SHARED_GLOBS = [
   'src/components/**/*.{ts,tsx}',
@@ -72,6 +65,9 @@ const SHARED_GLOBS = [
   'src/context/**/*.{ts,tsx}',
   'src/utils/**/*.{ts,tsx}',
   'src/constants/**/*.{ts,tsx}',
+  // Admission to the domain layer is by consumer count too — a module with
+  // one consumer must not hide here.
+  'src/domain/**/*.{ts,tsx}',
 ];
 
 /** Everything that can consume a shared module. */
@@ -103,8 +99,6 @@ const IMPORT_SOURCE =
 export function featureOf(relPath) {
   const feature = relPath.match(/^src\/features\/([^/]+)\//);
   if (feature) return feature[1];
-  if (relPath.startsWith('src/screens/auth/')) return 'auth';
-  if (relPath.startsWith('src/screens/onBoarding/')) return 'onboarding';
   return null;
 }
 
@@ -120,8 +114,6 @@ if (process.argv.includes('--self-test')) {
   const cases = [
     ['src/features/pantry/screens/PantryMain.tsx', 'pantry'],
     ['src/features/shoppingList/hooks/useX.ts', 'shoppingList'],
-    ['src/screens/auth/LoginScreen.tsx', 'auth'],
-    ['src/screens/onBoarding/CreateHomeScreen.tsx', 'onboarding'],
     ['src/components/atoms/Text.tsx', null],
     ['src/app/providers/DataProvider.tsx', null],
     ['src/utils/dateUtils.ts', null],
@@ -138,15 +130,14 @@ if (process.argv.includes('--self-test')) {
   }
   if (failed) process.exit(2);
   console.log(
-    '✓ Self-test passed: files are attributed to their feature, and auth\n' +
-      '  and onboarding count as features while they live outside src/features.',
+    '✓ Self-test passed: a file is attributed to the feature its path names,\n' +
+      '  and a shared module to none.',
   );
   process.exit(0);
 }
 
 const flags = parseFlags({
   list: { type: 'boolean', default: false },
-  update: { type: 'boolean', default: false },
 });
 
 const allFiles = filesUnder(ALL_GLOBS, { exclude: SKIP });
@@ -257,59 +248,24 @@ if (flags.list) {
   process.exit(0);
 }
 
-const recorded = BASELINE.exists() ? BASELINE.read().files ?? [] : [];
-
-if (flags.update) {
-  refuseEmptyBaselineUpdate({
-    count: current.length,
-    baselineCount: recorded.length,
-    check: 'check-single-consumer',
-  });
-  BASELINE.write({
-    files: current,
-    owners: Object.fromEntries(
-      [...findings.entries()].sort(([a], [b]) => a.localeCompare(b)),
-    ),
-    scannedFiles: sharedRel.size,
-  });
-  console.log(
-    `Recorded ${current.length} single-consumer module(s) from ${sharedRel.size} shared files.`,
-  );
-  process.exit(0);
-}
-
-const baseline = BASELINE.require('check-single-consumer');
-const { added, removed } = diffSets(current, baseline.files ?? []);
-
-if (added.length) {
+if (current.length) {
   console.error(
-    `\n✗ check-single-consumer: ${added.length} shared module(s) are used by exactly one feature.\n`,
+    `\n✗ check-single-consumer: ${current.length} shared module(s) are used by exactly one feature.\n`,
   );
-  for (const rel of added) {
+  for (const rel of current) {
     console.error(`    ${findings.get(rel).padEnd(16)} ${rel}`);
   }
   console.error(
-    `\n  A module in src/components, src/hooks, src/context, src/utils or\n` +
-      `  src/constants is there because more than one feature uses it. Move\n` +
-      `  this one into the feature named beside it — see\n` +
+    `\n  A module in src/components, src/hooks, src/context, src/utils,\n` +
+      `  src/constants or src/domain is there because more than one feature\n` +
+      `  uses it. Move this one into the feature named beside it — see\n` +
       `  src/components/atoms/README.md.\n\n` +
       `  If a second feature is about to adopt it, land that first.\n`,
   );
   process.exit(1);
 }
 
-if (removed.length) {
-  console.error(
-    `\n✗ check-single-consumer: ${removed.length} baselined module(s) are shared now.\n`,
-  );
-  for (const rel of removed) console.error(`    ${rel}`);
-  console.error(
-    `\n  Record it: node scripts/check-single-consumer.mjs --update\n`,
-  );
-  process.exit(1);
-}
-
 console.log(
-  `check-single-consumer: ${current.length} shared module(s) used by exactly ` +
-    `one feature, baseline ${baseline.files?.length ?? 0}.`,
+  `check-single-consumer: every one of ${sharedRel.size} shared module(s) is ` +
+    `used by two or more features.`,
 );

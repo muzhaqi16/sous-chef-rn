@@ -34,6 +34,13 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
   lastUsedAt
   netWeight
   remainingNetWeight
+  portionUnitId
+  portionUnit {
+    id
+    name
+    symbol
+  }
+  remainingPortions
   activeBatchCount
   earliestBatchExpiration
   item {

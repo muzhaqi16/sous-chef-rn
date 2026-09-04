@@ -10,10 +10,9 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
-import { Header } from '#components/molecules/Header';
-import { PasswordInput } from '#components/atoms/PasswordInput';
-import { Button } from '#components/atoms/Button';
-import { Loading } from '#components/atoms/Loading';
+import { PasswordInput } from '#components/molecules/PasswordInput';
+import { Button } from '#components/molecules/Button';
+import { Loading } from '#components/molecules/Loading';
 import { useAppStore } from '#store/useAppStore';
 import {
   useResetPassword,
@@ -29,12 +28,12 @@ import {
 } from '#/utils/errors/rateLimit';
 import { logValidationErrors } from '#/utils/validation/common';
 import { getResetPasswordValidationSchema } from '#/utils/validation/auth';
-import { useToast } from '#/hooks/useToast';
 import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import type { ToastFn } from '#/components/atoms/Toast';
 import { Text } from '#components/atoms/Text';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { Screen } from '#components/templates/Screen';
+import { toastService } from '#services/toastService';
 
 /** Module-level async function for password reset submission.
  *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
@@ -42,7 +41,6 @@ async function performPasswordReset(
   token: string,
   newPassword: string,
   resetPassword: ResetPasswordFn,
-  toast: ToastFn,
   navigateToLogin: () => void,
   successMessage: string,
   defaultErrorMessage: string,
@@ -60,10 +58,7 @@ async function performPasswordReset(
     if (payload.status === PasswordActionStatus.Completed) {
       logger.info('Password reset successful');
 
-      toast({
-        message: successMessage,
-        type: 'success',
-      });
+      toastService.success(successMessage);
 
       setTimeout(() => {
         navigateToLogin();
@@ -113,7 +108,6 @@ export const ResetPasswordScreen: React.FC = () => {
   const { goBack } = useAppNavigation();
   const clearAuth = useAppStore(state => state.clearAuth);
   const { navigateToLogin } = useAuthNavigation();
-  const toast = useToast();
 
   const { token } = (route.params ?? {}) as Partial<ResetPasswordRouteParams>;
 
@@ -193,10 +187,7 @@ export const ResetPasswordScreen: React.FC = () => {
 
   const onSubmit = (data: ResetPasswordForm) => {
     if (!token) {
-      toast({
-        message: t('auth.invalidResetToken'),
-        type: 'error',
-      });
+      toastService.error(t('auth.invalidResetToken'));
       return;
     }
 
@@ -206,7 +197,6 @@ export const ResetPasswordScreen: React.FC = () => {
           token,
           data.newPassword,
           resetPassword,
-          toast,
           navigateToLogin,
           t('auth.resetPasswordSuccess'),
           t('errors.resetPasswordFailed'),
@@ -222,15 +212,14 @@ export const ResetPasswordScreen: React.FC = () => {
         // top-level GraphQL error rather than a payload status. Without this
         // the user is told the reset "failed" and retries immediately, which
         // only pushes the window further out — they need the wait time.
-        toast({
-          message: isRateLimitError(error)
+        toastService.error(
+          isRateLimitError(error)
             ? getRateLimitMessage(error)
             : localizedErrorMessage(
                 error,
                 t('auth.resetPasswordFailedFallback'),
               ),
-          type: 'error',
-        });
+        );
       },
     );
   };
@@ -253,21 +242,25 @@ export const ResetPasswordScreen: React.FC = () => {
 
   if (!hasValidTokenFormat || isTokenRejected) {
     return (
-      <View style={styles.container} testID="reset-password-invalid-link">
-        <Header onClose={handleGoBack} />
-
+      <Screen
+        testID="reset-password-invalid-link"
+        header={{
+          close: handleGoBack,
+        }}
+        scroll="none"
+        gutter="none"
+      >
         <View style={styles.content}>
           <View style={styles.iconContainer}>
             <Icon name="close-circle-outline" size={64} tone="error" />
           </View>
-          <Text size="xl" weight="semibold" align="center" style={styles.title}>
+          <Text role="subheading" align="center" style={styles.title}>
             {t('auth.invalidResetLinkTitle')}
           </Text>
           <Text
-            size="md"
+            role="body"
             tone="secondary"
             align="center"
-            lineHeight="relaxed"
             style={styles.subtitle}
           >
             {t('auth.invalidResetLinkSubtitle')}
@@ -281,25 +274,36 @@ export const ResetPasswordScreen: React.FC = () => {
             {t('auth.returnToLogin')}
           </Button>
         </View>
-      </View>
+      </Screen>
     );
   }
 
   if (tokenCheck === 'checking') {
     return (
-      <View style={styles.container} testID="reset-password-checking">
-        <Header onClose={handleGoBack} />
+      <Screen
+        testID="reset-password-checking"
+        header={{
+          close: handleGoBack,
+        }}
+        scroll="none"
+        gutter="none"
+      >
         <View style={styles.content}>
           <Loading />
         </View>
-      </View>
+      </Screen>
     );
   }
 
   return (
-    <View style={styles.container} testID="reset-password-screen">
-      <Header onClose={handleGoBack} />
-
+    <Screen
+      testID="reset-password-screen"
+      header={{
+        close: handleGoBack,
+      }}
+      scroll="none"
+      gutter="none"
+    >
       <ThemedKeyboardAwareScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -309,14 +313,13 @@ export const ResetPasswordScreen: React.FC = () => {
           <Icon name="lock-closed-outline" size={64} tone="primary" />
         </View>
 
-        <Text size="xl" weight="semibold" align="center" style={styles.title}>
+        <Text role="subheading" align="center" style={styles.title}>
           {t('auth.resetPasswordTitle')}
         </Text>
         <Text
-          size="md"
+          role="body"
           tone="secondary"
           align="center"
-          lineHeight="relaxed"
           style={styles.subtitle}
         >
           {t('auth.resetPasswordSubtitle')}
@@ -327,7 +330,7 @@ export const ResetPasswordScreen: React.FC = () => {
             the submit button — in step with what the user has typed. */}
         <View style={styles.form}>
           <View style={styles.field}>
-            <Text size="md" weight="medium" style={styles.label}>
+            <Text role="bodyStrong" style={styles.label}>
               {t('auth.newPassword')}
             </Text>
             <PasswordInput
@@ -348,7 +351,7 @@ export const ResetPasswordScreen: React.FC = () => {
           </View>
 
           <View style={styles.field}>
-            <Text size="md" weight="medium" style={styles.label}>
+            <Text role="bodyStrong" style={styles.label}>
               {t('auth.confirmPassword')}
             </Text>
             <PasswordInput
@@ -377,7 +380,7 @@ export const ResetPasswordScreen: React.FC = () => {
           </Button>
         </View>
       </ThemedKeyboardAwareScrollView>
-    </View>
+    </Screen>
   );
 };
 

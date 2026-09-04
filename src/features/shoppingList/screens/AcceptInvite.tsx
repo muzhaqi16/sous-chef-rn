@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import {
   Pressable,
-  WhiteActivityIndicator,
+  OnPrimaryActivityIndicator,
 } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
-import { Header } from '#components/molecules/Header';
 import { useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useInviteByToken } from '#features/shoppingList/hooks/useInviteByToken';
@@ -16,6 +15,8 @@ import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { commonStyles } from '#/styles/commonStyles';
+import { Screen } from '#components/templates/Screen';
 
 export const AcceptInvite: React.FC = () => {
   const { t } = useTranslation();
@@ -132,7 +133,7 @@ export const AcceptInvite: React.FC = () => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={commonStyles.loadingContainer}>
         <SousChefLoader
           size="small"
           showBrand={false}
@@ -144,8 +145,8 @@ export const AcceptInvite: React.FC = () => {
 
   if (!hasInvite) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text size="md" align="center" tone="error" style={styles.inviteText}>
+      <View style={commonStyles.loadingContainer}>
+        <Text align="center" tone="error" style={styles.inviteText}>
           {invitationType === 'unknown'
             ? t('invitationAcceptance.notFound')
             : t('invitationAcceptance.loadingDetails')}
@@ -157,7 +158,7 @@ export const AcceptInvite: React.FC = () => {
           ]}
           onPress={() => goBack()}
         >
-          <Text size="md" weight="semibold" style={styles.declineButtonText}>
+          <Text role="bodyStrong" style={styles.declineButtonText}>
             {t('labels.goBack')}
           </Text>
         </Pressable>
@@ -166,9 +167,7 @@ export const AcceptInvite: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
-      <Header onClose={() => goBack()} />
-
+    <Screen header={{ close: () => goBack() }} scroll="list" gutter="none">
       <View style={styles.content}>
         <View style={styles.iconContainer}>
           <Icon
@@ -178,16 +177,11 @@ export const AcceptInvite: React.FC = () => {
           />
         </View>
 
-        <Text size="lg" weight="semibold" align="center" style={styles.title}>
+        <Text role="heading" align="center" style={styles.title}>
           {t('invitationAcceptance.invitedHeading')}
         </Text>
 
-        <Text
-          size="md"
-          tone="secondary"
-          align="center"
-          style={styles.inviteText}
-        >
+        <Text tone="secondary" align="center" style={styles.inviteText}>
           {invitationType === 'home'
             ? t('invitationAcceptance.homeInviteText', {
                 inviter:
@@ -204,24 +198,19 @@ export const AcceptInvite: React.FC = () => {
         </Text>
 
         <View style={styles.inviteDetails}>
-          <Text size="lg" weight="semibold">
+          <Text role="heading">
             {invitationType === 'home'
               ? homeInviteDisplay?.home?.name ||
                 t('invitationAcceptance.resourceHome')
               : shoppingListInviteDisplay?.shoppingList?.name ||
                 t('labels.shoppingList')}
           </Text>
-          <Text size="sm" tone="secondary" style={styles.inviteType}>
+          <Text role="caption" tone="secondary" style={styles.inviteType}>
             {invitationType === 'home'
               ? t('invitationAcceptance.resourceHome')
               : t('labels.shoppingList')}
           </Text>
-          <Text
-            size="xs"
-            weight="medium"
-            tone="secondary"
-            style={styles.inviteRole}
-          >
+          <Text role="label" tone="secondary" style={styles.inviteRole}>
             {t('invitationAcceptance.roleLabel', {
               role: inviteRole,
             })}
@@ -233,17 +222,10 @@ export const AcceptInvite: React.FC = () => {
           shoppingListInviteDisplay?.shoppingList?.description
         ) && (
           <View style={styles.messageContainer}>
-            <Text
-              size="sm"
-              weight="semibold"
-              tone="secondary"
-              style={styles.messageLabel}
-            >
+            <Text role="label" tone="secondary" style={styles.messageLabel}>
               {t('invitationAcceptance.descriptionLabel')}
             </Text>
-            <Text size="md">
-              {shoppingListInviteDisplay?.shoppingList?.description}
-            </Text>
+            <Text>{shoppingListInviteDisplay?.shoppingList?.description}</Text>
           </View>
         )}
 
@@ -256,7 +238,7 @@ export const AcceptInvite: React.FC = () => {
             onPress={handleDecline}
             disabled={processing}
           >
-            <Text size="md" weight="semibold" style={styles.declineButtonText}>
+            <Text role="bodyStrong" style={styles.declineButtonText}>
               {t('labels.decline')}
             </Text>
           </Pressable>
@@ -270,16 +252,16 @@ export const AcceptInvite: React.FC = () => {
             disabled={processing}
           >
             {processing ? (
-              <WhiteActivityIndicator size="small" />
+              <OnPrimaryActivityIndicator size="small" />
             ) : (
-              <Text size="md" weight="semibold" style={styles.acceptButtonText}>
+              <Text role="bodyStrong" style={styles.acceptButtonText}>
                 {t('labels.accept')}
               </Text>
             )}
           </Pressable>
         </View>
       </View>
-    </View>
+    </Screen>
   );
 };
 
@@ -288,12 +270,6 @@ export default AcceptInvite;
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: theme.colors.background,
   },
   content: {

@@ -8,7 +8,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 
-import { SettingSwitch } from '#components/settings/SettingSwitch';
+import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import {
@@ -20,7 +20,7 @@ import { useNotificationSync } from '#features/notifications/hooks/useNotificati
 import { EXPIRATION_THRESHOLD_DAYS } from '#features/notifications/utils/expirationLadder';
 import { ExpirationFrequency } from '#/graphql/generated/schemaTypes';
 import { useDataState } from '#hooks/data/useDataState';
-import { DataStateView } from '#components/molecules/DataStateView';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import {
@@ -443,7 +443,7 @@ export const NotificationSettingsScreen: React.FC = () => {
       {/* Quiet Hours Status */}
       {isQuietTime() && (
         <View style={styles.quietTimeAlert}>
-          <Text size="sm" align="center" style={styles.quietTimeText}>
+          <Text role="caption" align="center" style={styles.quietTimeText}>
             {t('notifications.quietHoursActive')}
           </Text>
         </View>
@@ -501,10 +501,10 @@ export const NotificationSettingsScreen: React.FC = () => {
               style={styles.pickerRow}
               onPress={() => setFrequencyPickerVisible(true)}
             >
-              <Text size="sm" weight="medium" style={styles.settingLabel}>
+              <Text role="label" style={styles.settingLabel}>
                 {t('notifications.notificationFrequency')}
               </Text>
-              <Text size="sm" tone="accent" style={styles.pickerValue}>
+              <Text role="caption" tone="accent" style={styles.pickerValue}>
                 {FREQUENCY_OPTIONS.find(
                   o => o.value === settings.expirationNotificationFrequency,
                 )?.label ?? t('labels.select')}
@@ -527,10 +527,10 @@ export const NotificationSettingsScreen: React.FC = () => {
               style={styles.pickerRow}
               onPress={() => setThresholdPickerVisible(true)}
             >
-              <Text size="sm" weight="medium" style={styles.settingLabel}>
+              <Text role="label" style={styles.settingLabel}>
                 {t('notifications.alertThreshold')}
               </Text>
-              <Text size="sm" tone="accent" style={styles.pickerValue}>
+              <Text role="caption" tone="accent" style={styles.pickerValue}>
                 {THRESHOLD_OPTIONS.find(
                   o => o.value === String(settings.expirationDaysThreshold),
                 )?.label ?? t('labels.select')}
@@ -579,13 +579,13 @@ export const NotificationSettingsScreen: React.FC = () => {
         {renderSettings(QUIET_HOURS_SETTINGS, settings, handleSettingChange, t)}
         {!!settings.quietHoursEnabled && (
           <View style={styles.quietHoursInfo}>
-            <Text size="md" weight="medium" style={styles.quietHoursText}>
+            <Text role="bodyStrong" style={styles.quietHoursText}>
               {t('notifications.quietHoursLabel', {
                 start: settings.quietHoursStart || '22:00',
                 end: settings.quietHoursEnd || '08:00',
               })}
             </Text>
-            <Text size="sm" tone="secondary">
+            <Text role="caption" tone="secondary">
               {t('notifications.quietHoursSubtitle')}
             </Text>
           </View>
@@ -616,11 +616,6 @@ export const NotificationSettingsScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   quietTimeAlert: {
     backgroundColor: theme.colors.info + '20',
     padding: theme.spacing.md,

@@ -176,7 +176,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
   } = useSearchState();
   const { showBottomSheet, hideBottomSheet } = useBottomSheetState();
 
-  const { uploadItemImage, uploadItemImages } = useImageUpload();
+  const { uploadItemImages } = useImageUpload();
 
   // Ref to store brand name from form for use in mutation callback
   const pendingBrandNameRef = useRef<string | undefined>(undefined);
@@ -198,11 +198,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
           // Upload pending images (module-level function avoids try-catch in hook)
           let result;
           try {
-            result = await uploadPendingImages(
-              createdItem,
-              uploadItemImage,
-              uploadItemImages,
-            );
+            result = await uploadPendingImages(createdItem, uploadItemImages);
           } catch (error) {
             errorService.reportError(error, {
               operation: 'Error handling pending image upload:',

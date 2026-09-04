@@ -7,25 +7,25 @@ import {
   DynamicFormFields,
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
-import { FormTextArea } from '#components/molecules/FormTextArea';
+import { FormTextArea } from '#components/atoms/FormTextArea';
 import {
   ChipScrollRow,
   type ChipOption,
-} from '#components/atoms/ChipScrollRow';
+} from '#components/molecules/ChipScrollRow';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import {
   StorageState,
   ItemCondition,
   StorageLocation,
 } from '#/graphql/generated/schemaTypes';
-import { Text } from '#components/atoms/Text';
 import { Label } from '#components/atoms/Label';
 import type { PantryItemFormData } from './PantryItemForm';
 import {
   ITEM_CONDITION_OPTIONS,
   conditionLabelKey,
-} from '#/utils/items/itemEnumLabels';
+} from '#features/pantry/utils/itemEnumLabels';
 import type { Translate } from '#/i18n/types';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
 // A function, not a const: at import time these labels would freeze whichever
 // language loaded first. `enumKeyCoverage.test.ts` asserts every StorageState
@@ -95,9 +95,9 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
 
   return (
     <View style={styles.section}>
-      <Text size="lg" weight="semibold" style={styles.sectionTitle}>
+      <SectionHeader style={styles.sectionTitleSpacing}>
         {t('itemForm.storageDetails')}
-      </Text>
+      </SectionHeader>
 
       {/* Storage State - horizontally scrollable pills, matching the
           Storage Locations Type/Temperature selectors. Long options like
@@ -154,7 +154,7 @@ const styles = StyleSheet.create(theme => ({
   section: {
     marginBottom: theme.spacing.lg,
   },
-  sectionTitle: {
+  sectionTitleSpacing: {
     marginBottom: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
     borderBottomWidth: theme.borderWidth.hairline,

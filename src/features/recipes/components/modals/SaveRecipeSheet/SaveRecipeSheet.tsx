@@ -2,18 +2,17 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   ThemedActivityIndicator,
   ThemedBottomSheetTextInput,
 } from '#components/atoms/themedComponents';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { TagInput } from '#components/molecules/TagInput';
+import { TagInput } from '#features/recipes/components/TagInput';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
-import { InlineFolderChooser } from '#components/molecules/InlineFolderChooser';
+import { InlineFolderChooser } from '#features/recipes/components/InlineFolderChooser';
+import { SectionHeader } from '#components/atoms/SectionHeader';
+import { Sheet } from '#components/templates/Sheet';
 
 export interface SaveRecipeSheetProps {
   visible: boolean;
@@ -39,11 +38,6 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
   recipeName,
 }) => {
   const { t } = useTranslation();
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['75%', '95%'],
-  });
 
   // Form state
   const [selectedFolder, setSelectedFolder] = useState<string | null>(
@@ -91,97 +85,87 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
   })();
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text size="lg" weight="semibold">
-              {t('saveRecipe.title')}
+    <Sheet
+      mode="action"
+      visible={visible}
+      onDismiss={onClose}
+      snapPoints={['75%', '95%']}
+      contentContainerStyle={styles.contentContainer}
+      style={styles.scrollView}
+    >
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Text role="heading">{t('saveRecipe.title')}</Text>
+          {!!recipeName && (
+            <Text
+              role="caption"
+              tone="secondary"
+              style={styles.recipeName}
+              numberOfLines={1}
+            >
+              {recipeName}
             </Text>
-            {!!recipeName && (
-              <Text
-                size="sm"
-                tone="secondary"
-                style={styles.recipeName}
-                numberOfLines={1}
-              >
-                {recipeName}
-              </Text>
-            )}
-          </View>
-          <View style={styles.headerButtons}>
-            <Pressable
-              onPress={handleSave}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              disabled={saving}
-              style={({ pressed }) => pressed && styles.pressed}
-            >
-              {saving ? (
-                <ThemedActivityIndicator size="small" />
-              ) : (
-                <Icon name="checkmark" size={24} tone="primary" />
-              )}
-            </Pressable>
-            <Pressable
-              onPress={onClose}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              style={({ pressed }) => pressed && styles.pressed}
-            >
-              <Icon name="close" size={24} tone="textPrimary" />
-            </Pressable>
-          </View>
+          )}
         </View>
+        <View style={styles.headerButtons}>
+          <Pressable
+            onPress={handleSave}
+            accessibilityLabel={t('labels.save')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            disabled={saving}
+            style={({ pressed }) => pressed && styles.pressed}
+          >
+            {saving ? (
+              <ThemedActivityIndicator size="small" />
+            ) : (
+              <Icon name="checkmark" size={24} tone="primary" />
+            )}
+          </Pressable>
+          <Pressable
+            onPress={onClose}
+            accessibilityLabel={t('labels.close')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={({ pressed }) => pressed && styles.pressed}
+          >
+            <Icon name="close" size={24} tone="textPrimary" />
+          </Pressable>
+        </View>
+      </View>
 
-        <InlineFolderChooser
-          folders={displayFolders}
-          selectedFolder={selectedFolder}
-          onSelect={setSelectedFolder}
-          onCreateFolder={handleCreateFolder}
-        />
+      <InlineFolderChooser
+        folders={displayFolders}
+        selectedFolder={selectedFolder}
+        onSelect={setSelectedFolder}
+        onCreateFolder={handleCreateFolder}
+      />
 
-        {/* Tags */}
-        <Text
-          size="sm"
-          weight="semibold"
-          tone="secondary"
-          style={styles.sectionLabel}
-        >
-          {t('saveRecipe.tagsOptional')}
-        </Text>
-        <TagInput
-          tags={tags}
-          onTagsChange={setTags}
-          suggestions={availableTags}
-          placeholder={t('saveRecipe.tagsPlaceholder')}
-          maxTags={5}
-        />
+      {/* Tags */}
+      <SectionHeader variant="overline" style={styles.sectionLabel}>
+        {t('saveRecipe.tagsOptional')}
+      </SectionHeader>
+      <TagInput
+        tags={tags}
+        onTagsChange={setTags}
+        suggestions={availableTags}
+        placeholder={t('saveRecipe.tagsPlaceholder')}
+        maxTags={5}
+      />
 
-        {/* Notes */}
-        <Text
-          size="sm"
-          weight="semibold"
-          tone="secondary"
-          style={styles.sectionLabel}
-        >
-          {t('saveRecipe.notesOptional')}
-        </Text>
-        <ThemedBottomSheetTextInput
-          style={styles.notesInput}
-          placeholder={t('labels.addAnyNotesAboutThisRecipe')}
-          defaultValue={notes}
-          onChangeText={setNotes}
-          multiline
-          numberOfLines={3}
-          textAlignVertical="top"
-        />
-      </BottomSheetScrollView>
-    </BottomSheetModal>
+      {/* Notes */}
+      <SectionHeader variant="overline" style={styles.sectionLabel}>
+        {t('saveRecipe.notesOptional')}
+      </SectionHeader>
+      <ThemedBottomSheetTextInput
+        style={styles.notesInput}
+        placeholder={t('labels.addAnyNotesAboutThisRecipe')}
+        defaultValue={notes}
+        onChangeText={setNotes}
+        multiline
+        numberOfLines={3}
+        textAlignVertical="top"
+      />
+    </Sheet>
   );
 };
 
@@ -222,7 +206,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    fontSize: theme.fonts.size.base,
+    ...theme.type.body,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
     minHeight: 60,

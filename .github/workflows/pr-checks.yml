@@ -302,6 +302,30 @@ jobs:
       - name: Design tokens
         run: node scripts/check-design-tokens.mjs
 
+      - name: Typography roles (self-test)
+        run: node scripts/check-typography-roles.mjs --self-test
+
+      - name: Typography roles
+        run: node scripts/check-typography-roles.mjs
+
+      - name: Component tier (self-test)
+        run: node scripts/check-component-tier.mjs --self-test
+
+      - name: Component tier
+        run: node scripts/check-component-tier.mjs
+
+      - name: Screen scaffold (self-test)
+        run: node scripts/check-screen-scaffold.mjs --self-test
+
+      - name: Screen scaffold
+        run: node scripts/check-screen-scaffold.mjs
+
+      - name: Accessible names (self-test)
+        run: node scripts/check-a11y-names.mjs --self-test
+
+      - name: Accessible names
+        run: node scripts/check-a11y-names.mjs
+
       - name: Comment budget (self-test)
         run: node scripts/check-comment-budget.mjs --self-test
 

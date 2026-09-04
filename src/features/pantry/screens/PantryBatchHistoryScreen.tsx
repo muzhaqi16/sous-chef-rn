@@ -62,7 +62,7 @@ export const PantryBatchHistoryScreen: React.FC<
       renderItem={renderItem}
       getItemType={getItemType}
       summary={
-        <Text size="sm" tone="secondary">
+        <Text role="caption" tone="secondary">
           {activeCount === null
             ? t('pantryItemDetail.batch.historyTotal', { count: totalCount })
             : t('pantryItemDetail.batch.historySummary', {

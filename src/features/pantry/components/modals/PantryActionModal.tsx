@@ -3,10 +3,10 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
-import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
+import { FormattedItemSubtitle } from '#components/molecules/FormattedItemSubtitle';
+import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
-import { UnitPicker } from '#components/molecules/UnitPicker';
+import { UnitPicker } from '#features/pantry/components/UnitPicker';
 import {
   useOperationUnits,
   type SelectedUnitInfo,
@@ -124,6 +124,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     trackingUnitId: pantryItem?.unit?.id,
     trackingUnitType: pantryItem?.unit?.type,
     netWeightUnitId: pantryItem?.netWeightUnit?.id,
+    portionUnitId: pantryItem?.portionUnitId,
     operation,
   });
 

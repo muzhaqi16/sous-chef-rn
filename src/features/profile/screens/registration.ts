@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackScreen } from '@react-navigation/native-stack';
 import { settingsScreenOptions } from '#navigation/detailScreenOptions';
 import { ProfileScreen } from './ProfileScreen';
+import { devtoolsScreens } from '#features/devtools/screens/registration';
 
 // Infrequently visited, so loaded on demand to keep them out of cold start.
 const ProfilePhotoUploadScreen = React.lazy(
@@ -14,8 +15,6 @@ const AppSettingsScreen = React.lazy(() => import('./AppSettingsScreen'));
 const PersonalInformationScreen = React.lazy(
   () => import('./PersonalInformationScreen'),
 );
-const PerformanceDashboard = React.lazy(() => import('./PerformanceDashboard'));
-const DebugInfo = React.lazy(() => import('./DebugInfo'));
 const ChangePasswordScreen = React.lazy(() => import('./ChangePasswordScreen'));
 const AppearanceScreen = React.lazy(() => import('./AppearanceScreen'));
 // Owned by the notifications feature but only ever reached from Profile's
@@ -84,16 +83,7 @@ export const profileScreens = {
     options: settingsScreenOptions,
     linking: null,
   }),
-  PerformanceDashboard: createNativeStackScreen({
-    screen: PerformanceDashboard,
-    options: settingsScreenOptions,
-    linking: null,
-  }),
-  DebugInfo: createNativeStackScreen({
-    screen: DebugInfo,
-    options: settingsScreenOptions,
-    linking: null,
-  }),
+  ...devtoolsScreens,
   ChangePassword: createNativeStackScreen({
     screen: ChangePasswordScreen,
     options: settingsScreenOptions,

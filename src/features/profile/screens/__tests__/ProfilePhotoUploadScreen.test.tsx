@@ -84,7 +84,7 @@ jest.mock('#components/atoms/BackButton', () => ({
   },
 }));
 
-jest.mock('#components/molecules/ImagePicker', () => ({
+jest.mock('#features/catalog/components/ImagePicker', () => ({
   ImageFile: {},
 }));
 

@@ -46,10 +46,10 @@ jest.mock('#/services/performance/MemoryMonitor', () => ({
 jest.mock('#storage/keychain', () => ({
   getLastBiometricEmail: jest.fn().mockResolvedValue(null),
   hasCredentials: jest.fn().mockResolvedValue(false),
-  sweepExpiredTempRegistrationPassword: jest.fn().mockResolvedValue(undefined),
+  clearTempRegistrationPassword: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('#/utils/deviceId', () => ({
+jest.mock('#/storage/deviceId', () => ({
   initializeDeviceId: jest.fn(),
 }));
 

@@ -4,7 +4,7 @@ import {
   canDelete,
   canView,
   type HomeLinkedResource,
-} from '#/utils/permissions/homeLinkedPermissions';
+} from '#features/mealPlan/utils/homeLinkedPermissions';
 
 export interface MealPlanPermissions {
   canEdit: boolean;

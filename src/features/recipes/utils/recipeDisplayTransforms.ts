@@ -1,9 +1,9 @@
 import { t as tGlobal } from '#/i18n';
-import { transformRecipeForDisplay } from '#/utils/recipeTransform';
+import { transformRecipeForDisplay } from '#domain/recipeTransform';
 import type {
   SearchRecipesResult,
   RecipeSearchResult,
-} from '#/services/recipeApi/types';
+} from '#/services/spoonacular/types';
 import type { SearchRecipesQuery } from '#features/recipes/graphql/recipe.generated';
 
 // ── Display item type ──

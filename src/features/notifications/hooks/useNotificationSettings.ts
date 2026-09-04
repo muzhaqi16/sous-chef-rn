@@ -17,7 +17,7 @@ import {
   updateEntityFieldsLocalFirst,
 } from '#/apollo/utils/localFirstFields';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { computeIsQuietTime } from '#/utils/notifications/quietHours';
+import { computeIsQuietTime } from '#features/notifications/utils/quietHours';
 import { logger } from '#/utils/environment';
 
 export interface NotificationSettings {

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { FC } from 'react';
-import { CodeInput } from '#components/atoms/CodeInput';
+import { CodeInput } from '#features/auth/components/CodeInput';
 
 type AdapterProps = {
   label: string; // will be ignored

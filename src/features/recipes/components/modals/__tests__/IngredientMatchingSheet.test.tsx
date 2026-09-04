@@ -25,7 +25,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
   BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-jest.mock('#components/atoms/BottomSheetHeader', () => ({
+jest.mock('#components/molecules/BottomSheetHeader', () => ({
   BottomSheetHeader: ({
     title,
     onCancel,

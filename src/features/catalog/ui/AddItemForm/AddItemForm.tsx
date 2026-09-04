@@ -3,14 +3,14 @@ import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Button } from '#components/atoms/Button';
+import { Button } from '#components/molecules/Button';
 import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import {
   createItemSchema,
   suggestItemEditSchema,
   CreateItemFormData,
-} from '#utils/validation/item';
+} from '#features/catalog/utils/itemValidation';
 import {
   StorageState,
   ItemType,
@@ -20,7 +20,7 @@ import {
 import {
   MultiImagePicker,
   type SelectedImage,
-} from '#/components/molecules/MultiImagePicker';
+} from '#features/catalog/components/MultiImagePicker';
 import {
   UnitEntryList,
   type UnitEntry,
@@ -30,10 +30,10 @@ import {
   NetWeightEntryList,
   type NetWeightEntry,
 } from '#features/catalog/ui/NetWeightEntryList/NetWeightEntryList';
-import { DynamicFormFields } from '#/components/molecules/DynamicFormFields';
+import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
 import { type AddItemFormData } from '#/utils/items/createItemMapping';
-import { PageIndicator } from '#/components/molecules/PageIndicator/PageIndicator';
-import { CollapsibleSection } from '#/components/molecules/CollapsibleSection';
+import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
+import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
 import { Text } from '#components/atoms/Text';
 import { logValidationErrors } from '#utils/validation/common';
 import { BarcodeInfo } from './BarcodeInfo';
@@ -353,15 +353,10 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   return (
     <>
       <View style={styles.header}>
-        <Text size="2xl" weight="bold" style={styles.title}>
+        <Text role="title" style={styles.title}>
           {title || t(modeConfig.title)}
         </Text>
-        <Text
-          size="sm"
-          tone="secondary"
-          lineHeight="tight"
-          testID="add-item-form-subtitle"
-        >
+        <Text role="caption" tone="secondary" testID="add-item-form-subtitle">
           {t(modeConfig.subtitle(!!barcode))}
         </Text>
       </View>
@@ -380,7 +375,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
 
       {/* Explicit zIndex + collapsable so inline dropdowns near the bottom of
           the form paint above the sibling submit-button container. */}
-      <View style={[styles.form, { zIndex: 1 }]} collapsable={false}>
+      <View style={styles.form} collapsable={false}>
         {activeTab.primary.length > 0 && (
           <DynamicFormFields
             fields={activeTab.primary}
@@ -406,7 +401,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
               allowPrimarySelection={!requiresEditNote(mode)}
             />
             {!!editing && (
-              <Text size="sm" tone="secondary" style={styles.notice}>
+              <Text role="caption" tone="secondary" style={styles.notice}>
                 {t('suggestItemEdit.photoNotice')}
               </Text>
             )}
@@ -488,6 +483,7 @@ const styles = StyleSheet.create(theme => ({
   },
   form: {
     marginBottom: theme.spacing.lg,
+    zIndex: theme.zIndex.raised,
   },
   section: {
     marginBottom: theme.spacing.xl,

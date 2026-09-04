@@ -8,7 +8,12 @@ query GetMealPlans(
   $filters: MealPlanFilters
   $orderBy: MealPlanOrderBy
 ) {
-  mealPlans(first: $first, after: $after, filters: $filters, orderBy: $orderBy) {
+  mealPlans(
+    first: $first
+    after: $after
+    filters: $filters
+    orderBy: $orderBy
+  ) {
     edges {
       node {
         id
@@ -225,7 +230,9 @@ mutation DuplicateMealPlan($input: DuplicateMealPlanInput!) {
   }
 }
 
-mutation GenerateShoppingListFromMealPlan($input: GenerateShoppingListFromMealPlanInput!) {
+mutation GenerateShoppingListFromMealPlan(
+  $input: GenerateShoppingListFromMealPlanInput!
+) {
   generateShoppingListFromMealPlan(input: $input) {
     __typename
     ... on GenerateShoppingListFromMealPlanPayload {
@@ -246,7 +253,11 @@ mutation GenerateShoppingListFromMealPlan($input: GenerateShoppingListFromMealPl
           user {
             id
             email
-            profile { id displayName avatar }
+            profile {
+              id
+              displayName
+              avatar
+            }
           }
         }
       }

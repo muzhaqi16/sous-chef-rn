@@ -11,7 +11,18 @@ import { EmailVerificationDeepLinkScreen } from '../EmailVerificationDeepLinkScr
 
 const mockGoBack = jest.fn();
 const mockUpdateUser = jest.fn();
-const mockToast = jest.fn();
+const mockToastSuccess = jest.fn();
+const mockToastError = jest.fn();
+const mockToastInfo = jest.fn();
+const mockToastWarning = jest.fn();
+jest.mock('#services/toastService', () => ({
+  toastService: {
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+    error: (...args: unknown[]) => mockToastError(...args),
+    info: (...args: unknown[]) => mockToastInfo(...args),
+    warning: (...args: unknown[]) => mockToastWarning(...args),
+  },
+}));
 const mockNavigateToLogin = jest.fn();
 const mockReplaceWithLogin = jest.fn();
 
@@ -59,10 +70,6 @@ jest.mock('#store/useAppStore', () => {
   };
 });
 
-jest.mock('#/hooks/useToast', () => ({
-  useToast: () => mockToast,
-}));
-
 // Environment is auto-mocked via jest.setup.js; logger methods are no-op jest.fn().
 
 jest.mock('#/utils/finallyHelpers');
@@ -71,7 +78,7 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',
 }));
 
-jest.mock('#components/molecules/Header', () => {
+jest.mock('#components/organisms/Header', () => {
   const { View, Pressable, Text } = require('react-native');
   return {
     Header: ({ onClose }: { onClose?: () => void }) => (

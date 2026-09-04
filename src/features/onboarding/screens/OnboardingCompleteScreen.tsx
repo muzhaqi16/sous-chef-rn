@@ -3,7 +3,7 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
-import { Button } from '#components/atoms/Button';
+import { Button } from '#components/molecules/Button';
 import { useUpdateUser, useUser } from '#store/useAppStore';
 import { useCompleteOnboarding } from '#features/onboarding/hooks/useCompleteOnboarding';
 import { handleMutationError } from '#/utils/errorHandlers';
@@ -64,38 +64,32 @@ export const OnboardingCompleteScreen = () => {
     >
       <View style={styles.container}>
         <View style={styles.successIcon}>
-          <Icon name="checkmark" size={44} tone="white" />
+          <Icon name="checkmark" size={44} tone="onPrimary" />
         </View>
 
-        <Text
-          size="lg"
-          weight="semibold"
-          align="center"
-          style={styles.congratsText}
-        >
+        <Text role="heading" align="center" style={styles.congratsText}>
           {t('onBoarding.congratulations')}
         </Text>
 
         <View style={styles.summaryList}>
-          <Text size="md" tone="secondary" style={styles.summaryItem}>
+          <Text tone="secondary" style={styles.summaryItem}>
             {`• ${t('onBoarding.summaryHomeAndPantry')}`}
           </Text>
-          <Text size="md" tone="secondary" style={styles.summaryItem}>
+          <Text tone="secondary" style={styles.summaryItem}>
             {`• ${t('onBoarding.summaryShoppingList')}`}
           </Text>
-          <Text size="md" tone="secondary" style={styles.summaryItem}>
+          <Text tone="secondary" style={styles.summaryItem}>
             {`• ${t('onBoarding.summaryInitialPantryItems')}`}
           </Text>
-          <Text size="md" tone="secondary" style={styles.summaryItem}>
+          <Text tone="secondary" style={styles.summaryItem}>
             {`• ${t('onBoarding.summaryInvitedFamily')}`}
           </Text>
         </View>
 
         <Text
-          size="sm"
+          role="caption"
           tone="secondary"
           align="center"
-          lineHeight="normal"
           style={styles.infoText}
         >
           {t('onBoarding.completeInfo')}
@@ -103,7 +97,7 @@ export const OnboardingCompleteScreen = () => {
 
         {!!error && (
           <View style={styles.errorContainer}>
-            <Text size="sm" tone="error" align="center">
+            <Text role="caption" tone="error" align="center">
               {error}
             </Text>
           </View>

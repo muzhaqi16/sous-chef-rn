@@ -5,11 +5,11 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { FormInput } from '#/components/molecules/FormInput';
+import { FormInput } from '#components/atoms/FormInput';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
-import { Button } from '#components/atoms/Button';
-import { Text } from '#components/atoms/Text';
+import { Button } from '#components/molecules/Button';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
 export interface UnitEntry {
   id: string;
@@ -122,9 +122,9 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text size="lg" weight="semibold" style={styles.sectionTitle}>
+      <SectionHeader style={styles.sectionTitleSpacing}>
         {t('unitEntryList.title')}
-      </Text>
+      </SectionHeader>
       <DropdownStack>
         {entries.map((entry, index) => (
           <View key={entry.id}>
@@ -161,6 +161,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                 </View>
                 <AppPressable
                   onPress={() => handleRemoveEntry(index)}
+                  accessibilityLabel={t('labels.remove')}
                   disabled={disabled}
                   style={styles.deleteButton}
                 >
@@ -203,7 +204,7 @@ const styles = StyleSheet.create(theme => ({
   container: {
     marginBottom: theme.spacing.md,
   },
-  sectionTitle: {
+  sectionTitleSpacing: {
     marginBottom: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
     borderBottomWidth: theme.borderWidth.hairline,

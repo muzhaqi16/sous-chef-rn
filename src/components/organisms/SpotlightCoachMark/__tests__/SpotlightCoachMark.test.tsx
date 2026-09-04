@@ -8,7 +8,7 @@ import { usePanGesture } from 'react-native-gesture-handler';
 import { scheduleOnRN } from 'react-native-worklets';
 import { SpotlightCoachMark } from '../SpotlightCoachMark';
 
-jest.mock('#hooks/settings/useShowTutorials', () => ({
+jest.mock('#store/useAppStore', () => ({
   useShowTutorials: () => true,
 }));
 

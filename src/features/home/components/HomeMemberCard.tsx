@@ -79,17 +79,17 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
     <View style={[commonStyles.card, commonStyles.shadow, styles.memberCard]}>
       <View style={styles.memberInfo}>
         <View style={styles.memberHeader}>
-          <Text size="md" weight="semibold" style={styles.memberName}>
+          <Text role="bodyStrong" style={styles.memberName}>
             {displayName}
           </Text>
           <View style={styles.roleBadge}>
-            <Text size="xs" weight="semibold" tone="accent">
+            <Text role="label" tone="accent">
               {formatRole(member.role)}
             </Text>
           </View>
         </View>
         {!!member.user?.email && !isCurrentUser && (
-          <Text size="sm" tone="secondary">
+          <Text role="caption" tone="secondary">
             {member.user.email}
           </Text>
         )}
@@ -99,8 +99,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
           <AppPressable style={styles.actionButton} onPress={onChangeRole}>
             <Icon name="swap-horizontal" size={18} />
             <Text
-              size="sm"
-              weight="medium"
+              role="label"
               numberOfLines={1}
               style={styles.actionButtonText}
             >
@@ -113,7 +112,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
               onPress={onTransferOwnership}
             >
               <Icon name="ribbon-outline" size={18} tone="primary" />
-              <Text size="sm" weight="medium" tone="accent" numberOfLines={1}>
+              <Text role="label" tone="accent" numberOfLines={1}>
                 {t('homeDetail.makeOwner')}
               </Text>
             </AppPressable>
@@ -128,8 +127,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
                 size={18}
               />
               <Text
-                size="sm"
-                weight="medium"
+                role="label"
                 numberOfLines={1}
                 style={styles.actionButtonText}
               >
@@ -139,7 +137,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
           )}
           <AppPressable style={styles.actionButton} onPress={onRemove}>
             <Icon name="person-remove" size={18} />
-            <Text size="sm" weight="medium" tone="error" numberOfLines={1}>
+            <Text role="label" tone="error" numberOfLines={1}>
               {t('labels.remove')}
             </Text>
           </AppPressable>
@@ -151,10 +149,11 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
         <View style={styles.permissionList}>
           {PERMISSION_ROWS.map(({ key, labelKey }) => (
             <View key={key} style={styles.permissionRow}>
-              <Text size="sm" style={styles.permissionLabel}>
+              <Text role="caption" style={styles.permissionLabel}>
                 {t(labelKey)}
               </Text>
               <BaseSwitch
+                accessibilityLabel={t(labelKey)}
                 value={!!member[key]}
                 onValueChange={value => onUpdatePermission(key, value)}
               />

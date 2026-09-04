@@ -3,17 +3,16 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
-import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 import type { DisplayNotification as NotificationType } from '#features/notifications/utils/toDisplayNotification';
 import {
   getNotificationDisplayMessage,
   getNotificationIcon,
 } from '#features/notifications/utils/notificationHelpers';
 import { safeParseDate } from '#utils/dateUtils';
-import { getDateFnsLocale } from '#utils/dateLocale';
 
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
+import { formatRelativeToNow } from '#/utils/formatters/date';
 
 interface NotificationItemProps {
   notification: NotificationType;
@@ -38,12 +37,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 
   const formattedTimestamp = (() => {
     const date = safeParseDate(notification.sentAt);
-    return date
-      ? formatDistanceToNow(date, {
-          addSuffix: true,
-          locale: getDateFnsLocale(),
-        })
-      : t('notifications.recently');
+    return date ? formatRelativeToNow(date) : t('notifications.recently');
   })();
 
   const displayMessage = getNotificationDisplayMessage(notification, t);
@@ -67,24 +61,22 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
       </View>
       <View style={styles.contentContainer}>
         <Text
-          size="md"
-          weight={notification.isRead ? 'medium' : 'bold'}
+          role={notification.isRead ? 'bodyStrong' : 'bodyStrong'}
           style={styles.title}
         >
           {notification.title}
         </Text>
         {!!displayMessage && (
           <Text
-            size="sm"
+            role="caption"
             tone="secondary"
-            lineHeight="tight"
             style={styles.message}
             numberOfLines={2}
           >
             {displayMessage}
           </Text>
         )}
-        <Text size="xs" tone="tertiary">
+        <Text role="caption" tone="tertiary">
           {formattedTimestamp}
         </Text>
       </View>

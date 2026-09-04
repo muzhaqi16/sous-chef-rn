@@ -3,7 +3,7 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { CommonActions } from '@react-navigation/native';
-import { Button } from '#components/atoms/Button';
+import { Button } from '#components/molecules/Button';
 import { Text } from '#components/atoms/Text';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 
@@ -23,7 +23,7 @@ export const NotFoundScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text size="md" align="center" style={styles.text}>
+      <Text align="center" style={styles.text}>
         {t('notFound.message')}
       </Text>
       <View style={styles.buttonContainer}>

@@ -131,10 +131,13 @@ describe('themes', () => {
       expect(darkTheme.typography).toEqual(lightTheme.typography);
       expect(darkTheme.fonts).toEqual(lightTheme.fonts);
       expect(darkTheme.radii).toEqual(lightTheme.radii);
-      expect(darkTheme.shadows).toEqual(lightTheme.shadows);
       expect(darkTheme.sizes).toEqual(lightTheme.sizes);
       expect(darkTheme.zIndex).toEqual(lightTheme.zIndex);
       expect(darkTheme.opacity).toEqual(lightTheme.opacity);
+      // Shadows are per-theme — the geometry is shared, the ink is not.
+      expect(Object.keys(darkTheme.shadows)).toEqual(
+        Object.keys(lightTheme.shadows),
+      );
     });
 
     it('has dark mode background color', () => {

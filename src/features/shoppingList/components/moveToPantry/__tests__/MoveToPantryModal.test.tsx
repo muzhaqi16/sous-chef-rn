@@ -8,6 +8,7 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { MoveToPantryPurchaseInfoDocument } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal.generated';
+import { MoveToPantryModal_ShoppingListItemFragmentDoc } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal.generated';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -40,7 +41,7 @@ jest.mock('#components/atoms/BottomSheetFormScrollView', () => {
   };
 });
 
-jest.mock('#components/molecules/Header', () => {
+jest.mock('#components/organisms/Header', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
@@ -108,7 +109,7 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
   };
 });
 
-jest.mock('#components/molecules/FormInput', () => {
+jest.mock('#components/atoms/FormInput', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
@@ -166,18 +167,23 @@ const ITEM_ID = 'sli-1';
 function makeCache(overrides: Record<string, unknown> = {}) {
   return seedCache([
     {
-      __typename: 'ShoppingListItem',
-      id: ITEM_ID,
-      itemName: 'Milk',
-      quantity: 2,
-      unitName: 'gal',
-      unit: {
-        __typename: 'Unit',
-        id: 'u1',
-        symbol: 'gal',
-        name: 'Gallons',
+      // The production selection the consumer reads, so a thin fixture fails
+      // here instead of defining its own idea of complete.
+      fragment: MoveToPantryModal_ShoppingListItemFragmentDoc,
+      data: {
+        __typename: 'ShoppingListItem',
+        id: ITEM_ID,
+        itemName: 'Milk',
+        quantity: 2,
+        unitName: 'gal',
+        unit: {
+          __typename: 'Unit',
+          id: 'u1',
+          symbol: 'gal',
+          name: 'Gallons',
+        },
+        ...overrides,
       },
-      ...overrides,
     },
   ]);
 }
@@ -415,6 +421,7 @@ describe('MoveToPantryModal', () => {
       );
 
       fireEvent.press(screen.getByTestId('header-action-checkmark'));
+      await waitFor(() => expect(onConfirm).toHaveBeenCalled());
       const sent = onConfirm.mock.calls[0][0];
       expect(sent.actualQuantity).toBe(5);
       // Unrounded on purpose (`unitPriceFromTotal`): the server rounds the
@@ -436,6 +443,7 @@ describe('MoveToPantryModal', () => {
       ).toBe('1.77');
 
       fireEvent.press(screen.getByTestId('header-action-checkmark'));
+      await waitFor(() => expect(onConfirm).toHaveBeenCalled());
       expect(onConfirm).toHaveBeenCalledWith(
         expect.objectContaining({ actualQuantity: 3, actualPrice: 0.59 }),
       );
@@ -472,6 +480,7 @@ describe('MoveToPantryModal', () => {
         expect(screen.getByText('Purchased: 5 lb')).toBeTruthy(),
       );
       fireEvent.press(screen.getByTestId('header-action-checkmark'));
+      await waitFor(() => expect(onConfirm).toHaveBeenCalled());
       expect(onConfirm.mock.calls[0][0].actualUnitId).toBe('u-purchase');
     });
 
@@ -514,6 +523,7 @@ describe('MoveToPantryModal', () => {
         expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
       );
       fireEvent.press(screen.getByTestId('header-action-checkmark'));
+      await waitFor(() => expect(onConfirm).toHaveBeenCalled());
 
       // The line's unit, not `u-purchase`.
       expect(onConfirm.mock.calls[0][0].actualUnitId).toBe('u1');

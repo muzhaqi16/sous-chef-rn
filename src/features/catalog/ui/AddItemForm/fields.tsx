@@ -2,19 +2,19 @@ import React from 'react';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import type { CreateItemFormData } from '#utils/validation/item';
+import type { CreateItemFormData } from '#features/catalog/utils/itemValidation';
 import {
   StorageState,
   ItemType,
   BaseDimension,
 } from '#/graphql/generated/schemaTypes';
-import { FormInput } from '#/components/molecules/FormInput';
+import { FormInput } from '#components/atoms/FormInput';
 import { Icon } from '#/utils/iconUtils';
-import { FormTextArea } from '#/components/molecules/FormTextArea';
-import { FormNumberInput } from '#/components/molecules/FormNumberInput';
-import { FormSelect } from '#/components/molecules/FormSelect';
-import { FormCheckbox } from '#/components/molecules/FormCheckbox';
-import { type FieldDef } from '#/components/molecules/DynamicFormFields';
+import { FormTextArea } from '#components/atoms/FormTextArea';
+import { FormNumberInput } from '#features/catalog/components/FormNumberInput';
+import { FormSelect } from '#components/molecules/FormSelect';
+import { FormCheckbox } from '#components/molecules/FormCheckbox';
+import { type FieldDef } from '#components/molecules/DynamicFormFields';
 // Type-only, so this does not create a runtime cycle with AddItemForm (which
 // imports the field builders below).
 import type { AddItemFormMode } from './AddItemForm';

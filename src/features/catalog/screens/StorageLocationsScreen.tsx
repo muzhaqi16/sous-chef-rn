@@ -16,11 +16,12 @@ import { StorageType } from '#/graphql/generated/schemaTypes';
 import type { GetStorageLocationsQuery } from '#features/catalog/graphql/storageLocation.generated';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { commonStyles } from '#/styles/commonStyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
-import { EmptyState } from '#components/atoms/EmptyState';
+import { EmptyState } from '#components/molecules/EmptyState';
 
 const VIEW_MODES: ('flat' | 'tree')[] = ['flat', 'tree'];
 
@@ -94,7 +95,7 @@ export const StorageLocationsScreen: React.FC<
   ): React.ReactElement | null => {
     if (!node?.id) return null;
     return (
-      <View key={node.id} style={{ marginLeft: depth * 16 }}>
+      <View key={node.id} style={styles.treeNode(depth)}>
         <StorageLocationCard
           location={node}
           isDefault={node.isDefault ?? false}
@@ -326,6 +327,7 @@ export const StorageLocationsScreen: React.FC<
         headerActions={[
           {
             icon: 'add',
+            accessibilityLabel: t('labels.addLocation'),
             onPress: () => {
               setEditingLocation(null);
               setSheetVisible(true);
@@ -348,3 +350,11 @@ export const StorageLocationsScreen: React.FC<
     </>
   );
 };
+
+// A dynamic style so the nesting indent tracks the density setting; a raw 16 at
+// the call site would not.
+const styles = StyleSheet.create(theme => ({
+  treeNode: (depth: number) => ({
+    marginLeft: theme.spacing.md * depth,
+  }),
+}));

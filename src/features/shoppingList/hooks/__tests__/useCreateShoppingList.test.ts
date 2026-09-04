@@ -9,7 +9,7 @@ import {
   addOptimisticShoppingList,
   buildOptimisticShoppingList,
   revertOptimisticShoppingList,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+} from '#features/shoppingList/cache/list';
 import { useUser } from '#store/useAppStore';
 import {
   GraphQLDomainError,
@@ -21,7 +21,7 @@ jest.mock('#store/useAppStore', () => ({
   useUser: jest.fn(),
 }));
 
-jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
+jest.mock('#features/shoppingList/cache/list', () => {
   const { classifyCreateResult } = jest.requireActual(
     '#/apollo/utils/classifyCreateResult',
   );

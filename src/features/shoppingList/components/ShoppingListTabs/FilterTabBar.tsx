@@ -4,7 +4,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { NavigationState, Route } from 'react-native-tab-view';
-import type { FilterTabActionButton } from '#components/molecules/FilterTabs/types';
+import type { FilterTabActionButton } from '#components/organisms/FilterTabs/types';
 import { FilterTabItem } from './FilterTabItem';
 import { Text } from '#components/atoms/Text';
 
@@ -80,7 +80,7 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
               ]}
             >
               {btn.label ? (
-                <Text size="sm" weight="semibold" tone="accent">
+                <Text role="label" tone="accent">
                   {btn.label}
                 </Text>
               ) : btn.icon ? (

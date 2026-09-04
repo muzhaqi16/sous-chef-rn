@@ -152,6 +152,7 @@ const ListItemTitle: React.FC<{
   styles.useVariants({ purchased });
   return (
     <Text
+      role="bodyStrong"
       style={styles.title}
       numberOfLines={numberOfLines}
       ellipsizeMode="tail"
@@ -167,7 +168,12 @@ const ListItemSubtitle: React.FC<{
 }> = ({ purchased, children }) => {
   styles.useVariants({ purchased });
   return (
-    <Text style={styles.subtitle} numberOfLines={1} ellipsizeMode="tail">
+    <Text
+      role="caption"
+      style={styles.subtitle}
+      numberOfLines={1}
+      ellipsizeMode="tail"
+    >
       {children}
     </Text>
   );
@@ -213,8 +219,6 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   title: {
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
     variants: {
       purchased: {
@@ -227,7 +231,6 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   subtitle: {
-    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
     variants: {
@@ -248,8 +251,5 @@ const styles = StyleSheet.create(theme => ({
         },
       },
     },
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

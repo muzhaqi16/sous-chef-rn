@@ -6,7 +6,8 @@
     "addPantryToHome": "Let's add a pantry to {{homeName}}",
     "homeAlreadyConfigured": "Your home and pantry are already configured",
     "pendingInvitesTitle": "You have pending home invitations!",
-    "pendingInvitesSubtitle": "Accept an invitation to join an existing home or create your own",
+    "pendingInvitesSubtitle": "Open an invitation from your notifications to join an existing home, or create your own",
+    "inviteOpenFromNotifications": "Open this invitation from your notifications, or the email we sent you, to accept it.",
     "or": "OR",
     "createOwnHome": "Create My Own Home",
     "skipForNow": "Skip for Now",
@@ -63,7 +64,9 @@
     "pantryNamePlaceholder": "e.g. Kitchen Pantry",
     "checkingExistingSetup": "Checking your existing setup...",
     "creatingHomeAndPantry": "Creating Home & Pantry...",
-    "creatingPantry": "Creating Pantry..."
+    "creatingPantry": "Creating Pantry...",
+    "createdDuringOnboarding": "Created during onboarding",
+    "defaultPantryDescription": "Default pantry"
   },
   "onboardingSteps": {
     "CreateHome": {
@@ -101,5 +104,8 @@
     "listMin": "Shopping list name must be at least {{count}} characters",
     "listMax": "Shopping list name must be less than {{count}} characters",
     "itemsMax": "You can select up to {{count}} items"
+  },
+  "onboarding": {
+    "progress": "Step {{step}} of {{total}}"
   }
 }

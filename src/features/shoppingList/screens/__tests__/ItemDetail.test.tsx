@@ -29,7 +29,7 @@ jest.mock('#utils/imageUtils', () => ({
   ...jest.requireActual('#utils/imageUtils'),
   resolveImageUrl: jest.fn(() => null),
 }));
-jest.mock('#utils/nutritionUtils', () => ({
+jest.mock('#domain/nutrition', () => ({
   parseNutritions: jest.fn(() => []),
   hasNutritionData: jest.fn(() => false),
 }));
@@ -57,7 +57,7 @@ jest.mock('#features/catalog/ui/NutritionSummary', () => ({
 jest.mock('#features/catalog/ui/ItemPhotoCarousel', () => ({
   ItemPhotoCarousel: () => null,
 }));
-jest.mock('#components/atoms/FormattedItemSubtitle', () => ({
+jest.mock('#components/molecules/FormattedItemSubtitle', () => ({
   FormattedItemSubtitle: () => {
     const { Text } = require('react-native');
     return <Text>2 loaves</Text>;

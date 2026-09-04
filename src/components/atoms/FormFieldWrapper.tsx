@@ -30,13 +30,13 @@ export const FormFieldWrapper: React.FC<FormFieldWrapperProps> = ({
       accessibilityLabel={accessibilityLabel || label}
       accessibilityRole="none"
     >
-      <Text size="base" weight="semibold" style={styles.label}>
+      <Text role="bodyStrong" style={styles.label}>
         {label}
         {!!required && <Text tone="error"> *</Text>}
       </Text>
       {children}
       {error ? (
-        <Text size="sm" tone="error" style={styles.errorText}>
+        <Text role="caption" tone="error" style={styles.errorText}>
           {error}
         </Text>
       ) : null}

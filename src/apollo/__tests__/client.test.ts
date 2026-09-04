@@ -40,6 +40,7 @@ jest.mock('../offline/ApolloCachePersistence', () => ({
     clear: mockClear,
     markDirty: mockMarkDirty,
   },
+  cancelCachePersistence: () => mockCancel(),
 }));
 
 jest.mock('../links/tokenScheduler', () => ({
@@ -131,7 +132,9 @@ describe('Apollo client', () => {
 
   describe('cancelCachePersistence', () => {
     it('cancels pending persistence', () => {
-      const { cancelCachePersistence } = require('../client');
+      const {
+        cancelCachePersistence,
+      } = require('../offline/ApolloCachePersistence');
       cancelCachePersistence();
       expect(mockCancel).toHaveBeenCalled();
     });

@@ -19,7 +19,7 @@ import {
   useTabBarState,
 } from '#/context/TabBarActionsContext';
 import { useCollapsibleScroll } from '#hooks/animations/useCollapsibleScroll';
-import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
+import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import {
   useTutorialSequence,
   type TutorialStep,
@@ -37,16 +37,15 @@ import { PantryContent } from '#features/pantry/components/PantryContent';
 import type { PantryContentRef } from '#features/pantry/components/pantryDisplay/types';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
-import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
-import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
+import { PantryErrorBoundary } from '#components/providers/ScreenErrorBoundary';
+import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { PantryScreenSkeleton } from '#features/pantry/components/skeletons/PantryScreenSkeleton';
-import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
-import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
-import { TabMainScreen } from '#components/templates/TabMainScreen';
+import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import type { Translate } from '#/i18n/types';
+import { Screen } from '#components/templates/Screen';
 
 function buildPantryTutorialSteps(t: Translate): TutorialStep[] {
   return [
@@ -365,7 +364,7 @@ function PantryMainContent({
   };
 
   return (
-    <TabMainScreen testID="pantry-screen">
+    <Screen testID="pantry-screen" scroll="list" gutter="none">
       <PantryContent
         ref={pantryContentRef}
         userName={screen.userName}
@@ -449,7 +448,7 @@ function PantryMainContent({
           }}
         />
       ) : null}
-    </TabMainScreen>
+    </Screen>
   );
 }
 
@@ -476,11 +475,16 @@ const PantryMainFallback: React.FC = () => {
     },
   ];
   return (
-    <TabMainScreen testID="pantry-screen">
-      <TabScreenHeader
-        label={t('pantryScreen.greetingFallback')}
-        title={t('pantryScreen.tabPantry')}
-      />
+    <Screen
+      testID="pantry-screen"
+      header={{
+        variant: 'tab',
+        label: t('pantryScreen.greetingFallback'),
+        title: t('pantryScreen.tabPantry'),
+      }}
+      scroll="list"
+      gutter="none"
+    >
       <View style={styles.searchContainer}>
         <SearchBar
           value=""
@@ -496,7 +500,7 @@ const PantryMainFallback: React.FC = () => {
         onTabChange={noop}
       />
       <PantryScreenSkeleton />
-    </TabMainScreen>
+    </Screen>
   );
 };
 

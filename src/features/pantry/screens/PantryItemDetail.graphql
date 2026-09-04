@@ -21,6 +21,13 @@ fragment PantryItemDetail_pantryItem on PantryItem {
   lastUsedAt
   netWeight
   remainingNetWeight
+  portionUnitId
+  portionUnit {
+    id
+    name
+    symbol
+  }
+  remainingPortions
   activeBatchCount
   earliestBatchExpiration
   item {
@@ -31,7 +38,10 @@ fragment PantryItemDetail_pantryItem on PantryItem {
     # PRIVATE/no-store for its membership data.
     canEdit
     imageUrl
-    images { url kind }
+    images {
+      url
+      kind
+    }
     photos {
       id
       ...ItemPhotoCarousel_itemPhoto
@@ -53,13 +63,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
     name
     symbol
     type
-    isMetric
-    baseUnitId
-    conversionFactor
-    isCommon
     displayAsFraction
-    minPrecision
-    autoConvertThreshold
   }
   netWeightUnit {
     id
@@ -154,7 +158,9 @@ fragment PantryItemDetail_pantryItem on PantryItem {
 
 # Local copy of AddItemToShoppingList per the Feature API Boundary Convention.
 # The shoppingList feature's graphql/ folder is internal.
-mutation AddItemToShoppingListFromPantryItem($input: AddItemsToShoppingListInput!) {
+mutation AddItemToShoppingListFromPantryItem(
+  $input: AddItemsToShoppingListInput!
+) {
   addItemsToShoppingList(input: $input) {
     __typename
     ... on AddItemsToShoppingListPayload {

@@ -11,12 +11,13 @@ import Animated, {
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
-import { FormNumberInput } from '#components/molecules/FormNumberInput';
+import { FormNumberInput } from '#features/catalog/components/FormNumberInput';
 import { FormSelect } from '#components/molecules/FormSelect';
 import { Icon } from '#utils/iconUtils';
-import { SPRING, TIMING } from '#/constants/animations';
+
 import { Text } from '#components/atoms/Text';
 import { buildCapacityUnitOptions } from '#features/catalog/components/storageLocationFormConfig';
+import { motion } from '#/theme/foundations/motion';
 
 interface StorageLocationAdvancedSectionProps {
   isClimateControlled: boolean;
@@ -51,7 +52,9 @@ export const StorageLocationAdvancedSection: React.FC<
   const chevronRotation = useSharedValue(0);
 
   useLayoutEffect(() => {
-    chevronRotation.set(withSpring(advancedExpanded ? 180 : 0, SPRING.EXPAND));
+    chevronRotation.set(
+      withSpring(advancedExpanded ? 180 : 0, motion.spring.EXPAND),
+    );
   }, [advancedExpanded, chevronRotation]);
 
   const animatedChevronStyle = useAnimatedStyle(() => ({
@@ -64,7 +67,7 @@ export const StorageLocationAdvancedSection: React.FC<
         style={styles.advancedHeader}
         onPress={() => setAdvancedExpanded(!advancedExpanded)}
       >
-        <Text size="sm" weight="semibold" tone="secondary">
+        <Text role="label" tone="secondary">
           {t('storageLocationForm.advancedSettings')}
         </Text>
         <Animated.View style={animatedChevronStyle}>
@@ -73,8 +76,8 @@ export const StorageLocationAdvancedSection: React.FC<
       </AppPressable>
       {advancedExpanded ? (
         <Animated.View
-          entering={FadeIn.duration(TIMING.STANDARD)}
-          exiting={FadeOut.duration(TIMING.FAST)}
+          entering={FadeIn.duration(motion.timing.STANDARD)}
+          exiting={FadeOut.duration(motion.timing.FAST)}
         >
           <FormCheckbox
             label={t('storageLocationForm.climateControlled')}

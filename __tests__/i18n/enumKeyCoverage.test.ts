@@ -90,7 +90,7 @@ const CASES: EnumNamespace[] = [
     namespace: 'cuisines',
     keyFragment: verbatim,
   },
-  // src/features/recipes/screens/RecipeForm/components/RecipeCategoryFields.tsx
+  // src/features/recipes/components/recipeForm/RecipeCategoryFields.tsx
   {
     enumName: 'Difficulty',
     members: Difficulty,
@@ -103,7 +103,7 @@ const CASES: EnumNamespace[] = [
     namespace: 'recipes.recipeStatus',
     keyFragment: verbatim,
   },
-  // src/features/recipes/screens/RecipeForm/components/RecipeTagsSection.tsx —
+  // src/features/recipes/components/recipeForm/RecipeTagsSection.tsx —
   // options come from `Object.values(...)` of each enum.
   {
     enumName: 'Diet',

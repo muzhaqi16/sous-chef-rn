@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { QuantitySection } from '../QuantitySection';
 import type { PantryItemFormData } from '../PantryItemForm';
 
-jest.mock('#components/molecules/FormInput', () => {
+jest.mock('#components/atoms/FormInput', () => {
   const { View, Text } = require('react-native');
   return {
     FormInput: ({ label, value }: { label: string; value?: string }) => (
@@ -56,7 +56,7 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
   };
 });
 
-jest.mock('#components/molecules/FieldRow', () => {
+jest.mock('#components/atoms/FieldRow', () => {
   const { View } = require('react-native');
   return {
     FieldRow: ({ children }: { children?: React.ReactNode }) => (

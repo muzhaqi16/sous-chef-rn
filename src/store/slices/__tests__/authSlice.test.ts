@@ -1,14 +1,20 @@
 import { createTestStore } from '#/test-utils/createTestStore';
 import type { AuthUserInput } from '#store/slices/authSlice';
+import { registerTokenRefreshBridge } from '#store/tokenRefreshBridge';
 
 // Mock external dependencies that authSlice imports
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
-const {
-  scheduleTokenRefresh,
-  cancelTokenRefresh,
-} = require('../../../apollo/links/tokenScheduler');
+// The slice reaches the scheduler through the bridge Apollo registers at client
+// init; here the test registers it, which is also what proves the wiring.
+const schedule = jest.fn();
+const cancel = jest.fn();
+registerTokenRefreshBridge({
+  schedule,
+  cancel,
+  refreshNow: jest.fn(() => Promise.resolve()),
+});
 
 const testUser = {
   id: 'user-1',
@@ -88,10 +94,7 @@ describe('authSlice', () => {
     it('schedules token refresh', () => {
       const store = createTestStore();
       store.getState().setAuth(testUser, 'access-tk', 'r');
-      expect(scheduleTokenRefresh).toHaveBeenCalledWith(
-        'access-tk',
-        expect.any(Function),
-      );
+      expect(schedule).toHaveBeenCalledWith('access-tk');
     });
 
     it('clears isAutoLoggingIn', () => {
@@ -140,10 +143,7 @@ describe('authSlice', () => {
     it('schedules refresh for new access token', () => {
       const store = createTestStore();
       store.getState().setTokens({ accessToken: 'new' });
-      expect(scheduleTokenRefresh).toHaveBeenCalledWith(
-        'new',
-        expect.any(Function),
-      );
+      expect(schedule).toHaveBeenCalledWith('new');
     });
   });
 
@@ -178,7 +178,7 @@ describe('authSlice', () => {
     it('cancels token refresh', () => {
       const store = createTestStore();
       store.getState().clearAuth();
-      expect(cancelTokenRefresh).toHaveBeenCalled();
+      expect(cancel).toHaveBeenCalled();
     });
   });
 
@@ -256,7 +256,7 @@ describe('authSlice', () => {
       jest.clearAllMocks();
       const store = createTestStore();
       store.getState().setTokens({ refreshToken: 'new-refresh' });
-      expect(scheduleTokenRefresh).not.toHaveBeenCalled();
+      expect(schedule).not.toHaveBeenCalled();
     });
   });
 

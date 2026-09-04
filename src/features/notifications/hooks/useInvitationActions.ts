@@ -1,4 +1,4 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useMutation } from '@apollo/client/react';
 import {
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
@@ -6,7 +6,6 @@ import {
 import {
   InvitationAcceptanceModalAcceptShoppingListInviteDocument,
   InvitationAcceptanceModalDeclineShoppingListInviteDocument,
-  MyShoppingListInvitesDocument,
 } from '#features/notifications/components/InvitationAcceptanceModal.generated';
 import type { InvitationData } from '#features/notifications/types';
 import {
@@ -14,7 +13,6 @@ import {
   createRemoveFromParentConnectionUpdater,
   safeEvict,
 } from '#/apollo/utils/cacheUpdaters';
-import { extractNodes } from '#/utils/connectionUtils';
 
 const addToHomes = createAddToQueryConnectionUpdater('homes', 'Home');
 const removePendingHomeInvite = createRemoveFromParentConnectionUpdater(
@@ -47,7 +45,6 @@ export function useInvitationActions(
   invitation: InvitationData | null,
   userId: string | null,
 ) {
-  const client = useApolloClient();
   const inviteId = invitation?.payload?.inviteId || invitation?.id;
 
   const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument, {
@@ -109,27 +106,13 @@ export function useInvitationActions(
   );
 
   /**
-   * The invite's token, looked up from the pending list when the notification
-   * did not carry one. Matched on either the payload's `inviteId` or the
-   * canonical `invitation.id`, so a sourceId-only notification still resolves.
+   * The invite's bearer token, which rides in the notification that delivered
+   * it. No lookup behind this: the API discloses the raw token once, to the
+   * inviter, and stores only a digest, so no list can hand one back. Absent
+   * means the caller reports the invite as unavailable.
    */
-  const resolveToken = async (): Promise<string | undefined> => {
-    const token = invitation?.token;
-    if (token || invitation?.type !== 'SHOPPING_LIST_INVITE') return token;
-
-    const result = await client.query({
-      query: MyShoppingListInvitesDocument,
-      fetchPolicy: 'network-only',
-    });
-    const invites = extractNodes(
-      result.data?.me?.pendingCollaborationInvitesConnection,
-    );
-    const invite = invites.find(
-      inv =>
-        inv.id === invitation.payload?.inviteId || inv.id === invitation.id,
-    );
-    return invite?.token ?? undefined;
-  };
+  const resolveToken = async (): Promise<string | undefined> =>
+    invitation?.token;
 
   const acceptHome = async (token: string): Promise<InvitationWriteResult> => {
     const result = await acceptHomeInvite({ variables: { input: { token } } });

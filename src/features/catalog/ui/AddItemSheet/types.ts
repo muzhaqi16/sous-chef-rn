@@ -1,6 +1,6 @@
 import type { RefObject } from 'react';
 import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
-import type { BottomSheetSearchBarRef } from '#components/molecules/BottomSheetSearchBar';
+import type { SearchBarRef } from '#components/molecules/SearchBar';
 import { type ItemSuggestion } from '#/graphql/generated/schemaTypes';
 
 export interface BaseSuggestionItem {
@@ -92,7 +92,7 @@ export interface AddItemSheetProps<
   shouldFetch?: boolean;
   initialSearchQuery?: string;
   bottomSheetRef?: RefObject<BottomSheetModalRef>;
-  searchBarRef?: RefObject<BottomSheetSearchBarRef>;
+  searchBarRef?: RefObject<SearchBarRef>;
   /** Defaults to true. */
   showImages?: boolean;
   /** Rendered above the action buttons. */

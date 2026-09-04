@@ -54,7 +54,7 @@ jest.mock('#/services/alertService', () => ({
 
 jest.mock('#/utils/finallyHelpers');
 
-jest.mock('#components/molecules/Header', () => ({
+jest.mock('#components/organisms/Header', () => ({
   Header: () => null,
 }));
 

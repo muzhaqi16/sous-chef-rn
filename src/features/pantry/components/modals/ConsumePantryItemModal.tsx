@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { FractionInput } from '#components/molecules/FractionInput';
-import { FormInput } from '#components/molecules/FormInput';
-import { CollapsibleChipPicker } from '#components/molecules/CollapsibleChipPicker';
-import { QuantityInputFeedback } from '#components/molecules/QuantityInputFeedback';
+import { FormInput } from '#components/atoms/FormInput';
+import { CollapsibleChipPicker } from '#features/pantry/components/CollapsibleChipPicker';
+import { QuantityInputFeedback } from '#features/pantry/components/QuantityInputFeedback';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import { validateDeductionQuantity } from '#/utils/validateDeductionQuantity';
+import { validateDeductionQuantity } from '#features/pantry/utils/validateDeductionQuantity';
 import { useQuantityFeedback } from '#features/pantry/hooks/useQuantityFeedback';
 import { UsagePurpose } from '#/graphql/generated/schemaTypes';
 import { commonStyles } from '#/styles/commonStyles';
@@ -162,9 +162,7 @@ const ConsumeActionFields: React.FC<{
           isConvertedUnit={shared.isConvertedUnit}
           previewText={conversion.previewText}
           previewLoading={conversion.previewLoading}
-          conversionConfidence={
-            shared.selectedUnitInfo?.conversionConfidence ?? null
-          }
+          conversionConfidence={conversion.confidence}
           commonFractions={shared.commonFractions}
           onFractionSelect={value =>
             setQuantityInput(formatNumberForInput(value))

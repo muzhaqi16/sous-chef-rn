@@ -41,8 +41,8 @@ jest.mock('#store/useAppStore', () => ({
   useSelectedHomeId: jest.fn(() => 'home-1'),
 }));
 
-jest.mock('#components/organisms/FormModal', () => ({
-  FormModal: ({
+jest.mock('#components/templates/FormScreen', () => ({
+  FormScreen: ({
     children,
     testID,
   }: {
@@ -54,14 +54,14 @@ jest.mock('#components/organisms/FormModal', () => ({
   },
 }));
 
-jest.mock('#components/molecules/FormInput', () => ({
+jest.mock('#components/atoms/FormInput', () => ({
   FormInput: ({ testID }: { testID?: string }) => {
     const { View } = require('react-native');
     return <View testID={testID} />;
   },
 }));
 
-jest.mock('#components/molecules/FormTextArea', () => ({
+jest.mock('#components/atoms/FormTextArea', () => ({
   FormTextArea: ({ testID }: { testID?: string }) => {
     const { View } = require('react-native');
     return <View testID={testID} />;

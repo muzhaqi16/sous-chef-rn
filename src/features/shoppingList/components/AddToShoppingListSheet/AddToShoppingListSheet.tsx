@@ -18,7 +18,7 @@ import {
   useShoppingListTutorial,
   ShoppingListTutorialStep,
 } from '#features/shoppingList/context/ShoppingListTutorialContext';
-import { SheetTutorialHint } from '#components/molecules/SheetTutorialHint';
+import { SheetTutorialHint } from '#features/shoppingList/components/SheetTutorialHint';
 import { AddItemSheet } from '#features/catalog/ui/AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '#features/catalog/ui/AddItemSheet/useAddItemSheetState';
 import type { SuggestionsHookResult } from '#features/catalog/ui/AddItemSheet/types';

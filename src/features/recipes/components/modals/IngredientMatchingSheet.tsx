@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import {
   Pressable,
-  WhiteActivityIndicator,
+  OnPrimaryActivityIndicator,
 } from '#components/atoms/themedComponents';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
@@ -12,7 +12,7 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
-import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
+import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { IngredientMatchRow } from '#features/recipes/components/IngredientMatchRow';
 import {
   IngredientMatchingProvider,
@@ -123,7 +123,7 @@ export const IngredientMatchingSheet: React.FC<
             count={matchSummary.missing}
             tone="error"
           />
-          <Text size="xs" tone="secondary" style={styles.includedText}>
+          <Text role="caption" tone="secondary" style={styles.includedText}>
             {t('ingredientMatching.includedCount', {
               n: matchSummary.included,
               m: matchSummary.total,
@@ -154,7 +154,7 @@ export const IngredientMatchingSheet: React.FC<
               pressed && styles.buttonPressed,
             ]}
           >
-            <Text size="base" weight="medium" tone="secondary">
+            <Text role="bodyStrong" tone="secondary">
               {t('ingredientMatching.skipReview')}
             </Text>
           </Pressable>
@@ -169,9 +169,9 @@ export const IngredientMatchingSheet: React.FC<
             ]}
           >
             {confirmLoading ? (
-              <WhiteActivityIndicator size="small" />
+              <OnPrimaryActivityIndicator size="small" />
             ) : (
-              <Text size="base" weight="semibold" style={styles.confirmText}>
+              <Text role="bodyStrong" style={styles.confirmText}>
                 {t('ingredientMatching.confirmAndDeductCount', {
                   count: matchSummary.included,
                 })}
@@ -194,7 +194,7 @@ const SummaryPill: React.FC<{
   styles.useVariants({ tone });
   return (
     <View style={styles.pill}>
-      <Text size="xs" weight="semibold" style={styles.pillText}>
+      <Text role="label" style={styles.pillText}>
         {count} {label}
       </Text>
     </View>

@@ -13,7 +13,7 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
-jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
+jest.mock('#features/shoppingList/cache/connections', () => ({
   clearAllPurchasedItemsFromCache: jest.fn(),
   clearAllUnpurchasedItemsFromCache: jest.fn(),
 }));
@@ -21,7 +21,7 @@ jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
 const {
   clearAllPurchasedItemsFromCache: mockClearAllPurchased,
   clearAllUnpurchasedItemsFromCache: mockClearAllUnpurchased,
-} = require('#/apollo/utils/shoppingListCacheUpdaters');
+} = require('#features/shoppingList/cache/connections');
 
 beforeEach(() => {
   jest.clearAllMocks();

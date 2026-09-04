@@ -1,5 +1,5 @@
 import React, { createContext, useContext, type ReactNode } from 'react';
-import type { SwipeableRef } from '#components/molecules/SwipeableItem/types';
+import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 import { createActionsContext } from '#hooks/utils/createActionsContext';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 

@@ -57,6 +57,7 @@ const selectHasUnverifiedEmail = (state: RootState) =>
 const selectTheme = (state: RootState) => state.theme;
 const selectShowNavigationLabels = (state: RootState) =>
   state.showNavigationLabels;
+const selectShowTutorials = (state: RootState) => state.showTutorials;
 
 // Grouped selectors return fresh object literals — always via useShallow.
 const selectAuthTokens = (state: RootState) => ({
@@ -166,6 +167,7 @@ export const useHasUnverifiedEmail = () =>
 export const useTheme = () => useAppStore(selectTheme);
 export const useShowNavigationLabels = () =>
   useAppStore(selectShowNavigationLabels);
+export const useShowTutorials = () => useAppStore(selectShowTutorials);
 
 export const useAuthTokens = () => useAppStore(useShallow(selectAuthTokens));
 export const useAuthActions = () => useAppStore(useShallow(selectAuthActions));

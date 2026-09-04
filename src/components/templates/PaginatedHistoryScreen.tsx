@@ -8,15 +8,16 @@ import {
 } from '@shopify/flash-list';
 
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
-import { ThemedBackButton } from '#components/atoms/BackButton';
+import { BackButton } from '#components/atoms/BackButton';
 import { Text } from '#components/atoms/Text';
-import { Icon, type IconName } from '#utils/iconUtils';
-import { DataStateView } from '#components/molecules/DataStateView';
+import type { IconName } from '#utils/iconUtils';
+import { DataStateView } from '#components/organisms/DataStateView';
 import type { DataState } from '#hooks/data/useDataState';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { EmptyState } from '#components/molecules/EmptyState';
 
 export interface PaginatedHistoryScreenProps<T> {
   title: string;
@@ -75,6 +76,7 @@ export function PaginatedHistoryScreen<T>({
   const perfCallbacks = useFlashListPerformance(flashListRef, {
     componentName,
     hasRealContent: items.length > 0,
+    rowCount: items.length,
   });
   useDataReferenceTracker(
     items,
@@ -85,13 +87,11 @@ export function PaginatedHistoryScreen<T>({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <ThemedBackButton onPress={goBack} style={styles.backButton} />
+        <BackButton onPress={goBack} style={styles.backButton} />
         <View style={styles.headerContent}>
-          <Text size="lg" weight="semibold">
-            {title}
-          </Text>
+          <Text role="heading">{title}</Text>
           {!!subtitle && (
-            <Text size="sm" tone="secondary" style={styles.headerSubtitle}>
+            <Text role="caption" tone="secondary" style={styles.headerSubtitle}>
               {subtitle}
             </Text>
           )}
@@ -132,22 +132,11 @@ export function PaginatedHistoryScreen<T>({
             state === 'error' || state === 'offline' ? (
               <DataStateView state={state} onRetry={onRetry} />
             ) : (
-              <View style={styles.emptyContainer}>
-                <Icon name={emptyIcon} size={64} tone="iconDisabled" />
-                <Text size="lg" weight="semibold" style={styles.emptyText}>
-                  {emptyTitle}
-                </Text>
-                {!!emptyDescription && (
-                  <Text
-                    size="sm"
-                    tone="secondary"
-                    align="center"
-                    style={styles.emptyDescription}
-                  >
-                    {emptyDescription}
-                  </Text>
-                )}
-              </View>
+              <EmptyState
+                icon={emptyIcon}
+                title={emptyTitle}
+                description={emptyDescription}
+              />
             )
           }
           contentContainerStyle={styles.content}
@@ -202,16 +191,5 @@ const styles = StyleSheet.create(theme => ({
   },
   footerLoader: {
     marginVertical: theme.spacing.lg,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xl,
-  },
-  emptyText: {
-    marginTop: theme.spacing.md,
-  },
-  emptyDescription: {
-    marginTop: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.xl,
   },
 }));

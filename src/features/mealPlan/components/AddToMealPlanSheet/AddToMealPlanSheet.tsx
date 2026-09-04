@@ -7,16 +7,17 @@ import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { parseISO, startOfDay } from 'date-fns';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
+import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import { useAddRecipeToMealPlan } from '#features/mealPlan/hooks/useAddRecipeToMealPlan';
 import { useMealPlanCalendar } from '#features/mealPlan/hooks/useMealPlanCalendar';
-import { WeekStrip } from '#components/molecules/WeekStrip';
+import { WeekStrip } from '#features/mealPlan/components/WeekStrip';
 import { Text } from '#components/atoms/Text';
 import {
   formatFullWeekdayMonthDay,
   formatMonthDay,
 } from '#/utils/formatters/date';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
 interface AddToMealPlanSheetProps {
   visible: boolean;
@@ -86,7 +87,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
       date: calendar.selectedDate,
     });
     if (success) {
-      ref.current?.dismiss();
+      onClose();
     }
   };
 
@@ -106,7 +107,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
 
         {!hasPlan && (
           <Text
-            size="sm"
+            role="caption"
             tone="warning"
             align="center"
             style={styles.warningText}
@@ -117,14 +118,9 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
 
         {hasPlan && mealPlans.length > 1 ? (
           <>
-            <Text
-              size="sm"
-              weight="medium"
-              tone="secondary"
-              style={styles.sectionLabel}
-            >
+            <SectionHeader variant="overline" style={styles.sectionLabel}>
               {t('labels.mealPlan')}
-            </Text>
+            </SectionHeader>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -143,8 +139,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
                     ]}
                   >
                     <Text
-                      size="sm"
-                      weight="medium"
+                      role="label"
                       style={[
                         styles.planChipText,
                         isSelected && styles.planChipTextSelected,
@@ -154,7 +149,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
                       {plan.name}
                     </Text>
                     <Text
-                      size="xs"
+                      role="caption"
                       style={[
                         styles.planChipDate,
                         isSelected && styles.planChipDateSelected,
@@ -173,14 +168,9 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
 
         {hasPlan ? (
           <>
-            <Text
-              size="sm"
-              weight="medium"
-              tone="secondary"
-              style={styles.sectionLabel}
-            >
+            <SectionHeader variant="overline" style={styles.sectionLabel}>
               {t('addToMealPlan.dateLabel')}
-            </Text>
+            </SectionHeader>
             <WeekStrip
               weekDays={calendar.weekDays}
               selectedDate={calendar.selectedDate}
@@ -193,8 +183,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
               maxDate={maxDate}
             />
             <Text
-              size="md"
-              weight="semibold"
+              role="bodyStrong"
               align="center"
               style={styles.selectedDateLabel}
             >
@@ -203,14 +192,9 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
           </>
         ) : null}
 
-        <Text
-          size="sm"
-          weight="medium"
-          tone="secondary"
-          style={styles.sectionLabel}
-        >
+        <SectionHeader variant="overline" style={styles.sectionLabel}>
           {t('labels.mealType')}
-        </Text>
+        </SectionHeader>
 
         <View style={styles.mealTypeRow}>
           {MEAL_TYPE_KEYS.map(({ type, labelKey }) => (
@@ -223,7 +207,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
               ]}
             >
               <Text
-                size="sm"
+                role="caption"
                 style={[
                   styles.mealTypeText,
                   selectedMealType === type && styles.mealTypeTextSelected,
@@ -311,6 +295,5 @@ const styles = StyleSheet.create(theme => ({
   },
   mealTypeTextSelected: {
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
   },
 }));

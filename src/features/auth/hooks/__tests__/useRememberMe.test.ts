@@ -5,12 +5,18 @@ import { useRememberMe } from '../useRememberMe';
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
-// Mock useToast
-const mockToast = jest.fn();
-jest.mock('#/hooks/useToast', () => ({
-  useToast: () => mockToast,
+const mockToastSuccess = jest.fn();
+const mockToastError = jest.fn();
+const mockToastInfo = jest.fn();
+const mockToastWarning = jest.fn();
+jest.mock('#services/toastService', () => ({
+  toastService: {
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+    error: (...args: unknown[]) => mockToastError(...args),
+    info: (...args: unknown[]) => mockToastInfo(...args),
+    warning: (...args: unknown[]) => mockToastWarning(...args),
+  },
 }));
-
 // Mock useAuthPreferences
 const mockMarkCredentialPromptDeclined = jest.fn();
 jest.mock('#/hooks/navigation/useAuthPreferences', () => ({
@@ -45,14 +51,12 @@ describe('useRememberMe', () => {
     act(() => {
       result.current.showRememberMePrompt({
         email: 'test@test.com',
-        password: 'pw',
       });
     });
 
     expect(result.current.showRememberMeModal).toBe(true);
     expect(result.current.pendingCredentials).toEqual({
       email: 'test@test.com',
-      password: 'pw',
     });
   });
 
@@ -64,7 +68,6 @@ describe('useRememberMe', () => {
     act(() => {
       result.current.showRememberMePrompt({
         email: 'test@test.com',
-        password: 'pw',
       });
     });
 
@@ -74,7 +77,6 @@ describe('useRememberMe', () => {
 
     expect(mockOnAccept).toHaveBeenCalledWith({
       email: 'test@test.com',
-      password: 'pw',
     });
     expect(result.current.showRememberMeModal).toBe(false);
     expect(result.current.pendingCredentials).toBeNull();
@@ -102,7 +104,6 @@ describe('useRememberMe', () => {
     act(() => {
       result.current.showRememberMePrompt({
         email: 'test@test.com',
-        password: 'pw',
       });
     });
 
@@ -110,10 +111,9 @@ describe('useRememberMe', () => {
       await result.current.handleRememberMeAccept();
     });
 
-    expect(mockToast).toHaveBeenCalledWith({
-      message: 'Failed to save login information',
-      type: 'error',
-    });
+    expect(mockToastError).toHaveBeenCalledWith(
+      'Failed to save login information',
+    );
     // Modal should still be hidden after error
     expect(result.current.showRememberMeModal).toBe(false);
   });
@@ -126,7 +126,6 @@ describe('useRememberMe', () => {
     act(() => {
       result.current.showRememberMePrompt({
         email: 'test@test.com',
-        password: 'pw',
       });
     });
 
@@ -175,13 +174,11 @@ describe('useRememberMe', () => {
     act(() => {
       result.current.setPendingCredentials({
         email: 'direct@test.com',
-        password: 'directpw',
       });
     });
 
     expect(result.current.pendingCredentials).toEqual({
       email: 'direct@test.com',
-      password: 'directpw',
     });
   });
 
@@ -191,7 +188,7 @@ describe('useRememberMe', () => {
     );
 
     act(() => {
-      result.current.setPendingCredentials({ email: 'x@y.com', password: 'p' });
+      result.current.setPendingCredentials({ email: 'x@y.com' });
     });
     expect(result.current.pendingCredentials).not.toBeNull();
 

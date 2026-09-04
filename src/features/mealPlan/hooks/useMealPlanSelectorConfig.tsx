@@ -62,10 +62,8 @@ export function useMealPlanSelectorConfig(
         onPress={onPress}
       >
         <View style={styles.itemContent}>
-          <Text size="md" weight="semibold">
-            {item.name}
-          </Text>
-          <Text size="sm" tone="secondary" style={styles.itemSubtext}>
+          <Text role="bodyStrong">{item.name}</Text>
+          <Text role="caption" tone="secondary" style={styles.itemSubtext}>
             {formatPlanDateRange(item.startDate, item.endDate)} ·{' '}
             {formatPlanType(item.planType)}
             {` · ${item.home?.name ?? personalLabel}`}

@@ -19,10 +19,13 @@ import { join, relative } from 'path';
  * `useBottomSheetBackHandler` and the props types out.
  */
 
-/** The shell itself, and the two surfaces task 8.1 folds into it. */
+/**
+ * The shell, and the tray that still renders its own modal. `BottomSheetLayout`
+ * and `BottomSheetAction` folded INTO `Sheet` — its `view`, `form` and `action`
+ * modes are what they were.
+ */
 const SHELL = [
-  'src/components/atoms/BottomSheetLayout.tsx',
-  'src/components/templates/BottomSheetAction.tsx',
+  'src/components/templates/Sheet.tsx',
   'src/components/templates/ActionTray/ActionTray.tsx',
 ];
 
@@ -31,43 +34,27 @@ const SHELL = [
  * the list may only SHRINK, and a sheet that leaves it must not come back.
  */
 const PENDING_ADOPTION = [
-  'src/components/modals/CookingPreferencesSheet/CookingPreferencesSheet.tsx',
-  'src/components/modals/MacroTargetsSheet/MacroTargetsSheet.tsx',
-  'src/components/modals/MarkCookedModal.tsx',
-  'src/components/modals/NumberInputSheet/NumberInputSheet.tsx',
-  'src/components/modals/TextEditBottomSheet/TextEditBottomSheet.tsx',
-  'src/components/molecules/BottomSheetAutocompleteInput.tsx',
-  'src/components/molecules/FolderPicker/ManageFolderSheet.tsx',
-  'src/components/molecules/FolderPicker.tsx',
-  'src/components/molecules/MultiSelectChipSheet/MultiSelectChipSheet.tsx',
-  'src/components/molecules/SettingRow.tsx',
-  'src/components/molecules/TagPicker.tsx',
-  'src/components/organisms/StringArrayManager/StringArrayManager.tsx',
+  'src/features/profile/components/CookingPreferencesSheet/CookingPreferencesSheet.tsx',
+  'src/features/profile/components/MacroTargetsSheet/MacroTargetsSheet.tsx',
+  'src/features/catalog/components/BottomSheetAutocompleteInput.tsx',
+  'src/features/recipes/components/FolderPicker/ManageFolderSheet.tsx',
+  'src/features/recipes/components/FolderPicker.tsx',
+  'src/components/organisms/MultiSelectChipSheet/MultiSelectChipSheet.tsx',
   'src/features/barcode/screens/SearchResultsScreen.tsx',
   'src/features/catalog/ui/AddItemSheet/AddItemSheet.tsx',
-  'src/features/catalog/ui/AddStorageLocationSheet/AddStorageLocationSheet.tsx',
-  'src/features/catalog/ui/StorageLocationSheet/StorageLocationSheet.tsx',
   'src/features/mealPlan/components/AddMealSheet.tsx',
   'src/features/mealPlan/components/AddToMealPlanSheet/AddToMealPlanSheet.tsx',
-  'src/features/mealPlan/components/MealPlanSettingsSheet.tsx',
-  'src/features/mealPlan/components/SaveAsTemplateSheet.tsx',
   'src/features/mealPlan/components/TemplateBrowserSheet.tsx',
   'src/features/mealPlan/components/TemplatePreviewSheet.tsx',
   'src/features/notifications/components/ExpirationActionSheet.tsx',
-  'src/features/pantry/components/modals/AdjustQuantityModal.tsx',
-  'src/features/pantry/components/modals/CorrectWeightModal.tsx',
   'src/features/pantry/components/modals/PantryActionModal.tsx',
-  'src/features/recipes/components/WriteReviewSheet.tsx',
   'src/features/recipes/components/modals/IngredientMatchingSheet.tsx',
-  'src/features/recipes/components/modals/ManageRecipeSheet/ManageRecipeSheet.tsx',
-  'src/features/recipes/components/modals/SaveRecipeSheet/SaveRecipeSheet.tsx',
-  'src/features/recipes/screens/RecipeForm/components/RecipeIngredientEditor.tsx',
-  'src/features/recipes/screens/RecipeForm/components/RecipeStepEditor.tsx',
-  'src/features/recipes/screens/RecipeSearch/IngredientSelectorSheet.tsx',
+  'src/features/recipes/components/recipeForm/RecipeIngredientEditor.tsx',
+  'src/features/recipes/components/recipeForm/RecipeStepEditor.tsx',
+  'src/features/recipes/components/recipeSearch/IngredientSelectorSheet.tsx',
   'src/features/shoppingList/components/CollaboratorPermissionsBottomSheet.tsx',
   'src/features/shoppingList/components/PurchaseAmountSheet/PurchaseAmountSheet.tsx',
   'src/features/shoppingList/components/QuantityEditSheet/QuantityEditSheet.tsx',
-  'src/features/shoppingList/components/moveToPantry/MoveToPantryModal.tsx',
 ];
 
 const SRC = join(process.cwd(), 'src');
@@ -91,7 +78,10 @@ const collect = (dir: string, found: string[] = []): string[] => {
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) {
       if (entry !== '__tests__') collect(full, found);
-    } else if (/\.tsx?$/.test(entry) && !/\.(test|generated)\.tsx?$/.test(entry)) {
+    } else if (
+      /\.tsx?$/.test(entry) &&
+      !/\.(test|generated)\.tsx?$/.test(entry)
+    ) {
       found.push(full);
     }
   }
@@ -105,7 +95,10 @@ const renderers = collect(SRC)
 
 describe('bottom sheet shell', () => {
   it('finds the renderers at all, so the checks below are not vacuous', () => {
-    expect(renderers.length).toBeGreaterThanOrEqual(30);
+    // The floor falls as sheets adopt the shell — that is the point. It exists
+    // so a scan broken into finding NOTHING cannot pass; the companion test
+    // below, which requires every SHELL file to be found, is the sharper guard.
+    expect(renderers.length).toBeGreaterThanOrEqual(10);
   });
 
   it('every renderer is the shell or is on the adoption list', () => {

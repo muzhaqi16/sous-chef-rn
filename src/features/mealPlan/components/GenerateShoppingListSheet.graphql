@@ -2,7 +2,11 @@
 # The shoppingList feature's graphql/ folder is internal to that feature.
 # Locally-named copy per the Feature API Boundary Convention; the name must
 # be unique across the document set (see useRecipeDetail.graphql).
-query GetShoppingListsLiteForMealPlan($homeId: ID, $first: Int, $after: String) {
+query GetShoppingListsLiteForMealPlan(
+  $homeId: ID
+  $first: Int
+  $after: String
+) {
   shoppingLists(filters: { homeId: $homeId }, first: $first, after: $after) {
     edges {
       cursor
@@ -23,7 +27,11 @@ query GetShoppingListsLiteForMealPlan($homeId: ID, $first: Int, $after: String) 
           user {
             id
             email
-            profile { id displayName avatar }
+            profile {
+              id
+              displayName
+              avatar
+            }
           }
         }
       }

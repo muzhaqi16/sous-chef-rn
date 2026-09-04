@@ -23,7 +23,7 @@ jest.mock('#features/catalog/ui/autocomplete/CategoryAutocompleteField', () => (
 jest.mock('#features/catalog/ui/autocomplete/StorageLocationAutocompleteField', () => ({
   StorageLocationAutocompleteField: () => null,
 }));
-jest.mock('../../../src/components/molecules/FormInput', () => ({
+jest.mock('../../../src/components/atoms/FormInput', () => ({
   FormInput: (props: { label: string }) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;

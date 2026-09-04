@@ -7,7 +7,7 @@ import type {
   StorageState,
 } from '#/graphql/generated/schemaTypes';
 import type { ImageFile } from '#hooks/useImageUpload';
-import { storage } from '#/storage/mmkv';
+import { useStore } from '#store';
 
 /**
  * Shape of the dynamic AddItemForm submission fields this mapper reads. The
@@ -94,20 +94,19 @@ export function mapFormToCreateItemInput(
 }
 
 /**
- * Stash images selected in the form into MMKV so the post-create upload step
- * can pick them up after the mutation returns with an item id.
+ * Hold the images the form selected until the create mutation returns an id to
+ * attach them to.
  */
 export function stashPendingFormImages(
   formData: Record<string, unknown>,
 ): void {
   const selectedImages = formData.selectedImages;
   if (Array.isArray(selectedImages) && selectedImages.length > 0) {
-    storage.set('temp_pending_item_images', JSON.stringify(selectedImages));
+    useStore.getState().setPendingItemImages(selectedImages);
   } else if (formData.selectedImage) {
-    storage.set(
-      'temp_pending_item_image',
-      JSON.stringify(formData.selectedImage),
-    );
+    useStore
+      .getState()
+      .setPendingItemImages([formData.selectedImage as ImageFile]);
   }
 }
 
@@ -119,11 +118,6 @@ export async function uploadPendingImages<
   T extends { id: string; imageUrl?: string | null },
 >(
   createdItem: T,
-  uploadItemImage: (
-    image: ImageFile,
-    itemId: string,
-    options?: { perspective?: string },
-  ) => Promise<string | null>,
   uploadItemImages: (
     images: Array<ImageFile & { perspective?: string }>,
     itemId: string,
@@ -131,29 +125,18 @@ export async function uploadPendingImages<
 ): Promise<T> {
   let finalItem = createdItem;
 
-  const pendingImagesJson = storage.getString('temp_pending_item_images');
-  if (pendingImagesJson && createdItem.id) {
+  const pending = useStore.getState().pendingItemImages;
+  if (pending && pending.length > 0 && createdItem.id) {
     // Stashed from the multi-image picker, so each entry carries the angle the
     // user assigned it. Forwarding it is what orders the item's gallery.
     //
-    // Goes through the batch helper rather than looping `uploadItemImage`: the
-    // presign endpoint caps at 20/minute, and a hand-rolled loop pops one alert
-    // per photo and keeps spending the hourly budget after the cap trips.
-    const images: Array<ImageFile & { perspective?: string }> =
-      JSON.parse(pendingImagesJson);
-    const uploaded = await uploadItemImages(images, createdItem.id);
+    // One batch call rather than a loop: the presign endpoint caps at 20/minute,
+    // and a per-photo loop pops one alert each and keeps spending the hourly
+    // budget after the cap trips.
+    const uploaded = await uploadItemImages(pending, createdItem.id);
     const firstImageUrl = uploaded[0]?.imageUrl ?? null;
     if (firstImageUrl) {
       finalItem = { ...createdItem, imageUrl: firstImageUrl };
-    }
-  }
-
-  const pendingImageUpload = storage.getString('temp_pending_item_image');
-  if (pendingImageUpload && createdItem.id) {
-    const imageFile = JSON.parse(pendingImageUpload);
-    const imageUrl = await uploadItemImage(imageFile, createdItem.id);
-    if (imageUrl) {
-      finalItem = { ...createdItem, imageUrl };
     }
   }
 
@@ -161,6 +144,5 @@ export async function uploadPendingImages<
 }
 
 export function cleanupPendingImageStorage(): void {
-  storage.remove('temp_pending_item_images');
-  storage.remove('temp_pending_item_image');
+  useStore.getState().setPendingItemImages(null);
 }

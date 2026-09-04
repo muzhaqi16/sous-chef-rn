@@ -61,7 +61,7 @@ jest.mock('#/services/toastService', () => ({
   toastService: { success: jest.fn(), error: jest.fn(), info: jest.fn() },
 }));
 
-jest.mock('#components/molecules/Header', () => ({
+jest.mock('#components/organisms/Header', () => ({
   Header: () => null,
 }));
 

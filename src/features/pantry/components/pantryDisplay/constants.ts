@@ -1,7 +1,7 @@
 import { Dimensions } from 'react-native';
 import { t } from '#/i18n';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
-import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
+import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 
 // The ONLY bound on how many cells FlashList mounts, and mounted-cell count
 // sets the sustained frame time (Yoga layout + draw over ~43 views per row).

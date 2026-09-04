@@ -27,8 +27,14 @@ const SKIP_FILES = new Set([
     'hooks',
     'pantryItemDetailNeutral.generated.ts',
   ),
-  // Same generator, derived from `shoppingListCacheUpdaters.graphql`.
-  fromRoot('src', 'apollo', 'utils', 'shoppingListDetailNeutral.generated.ts'),
+  // Same generator, derived from `list.graphql`.
+  fromRoot(
+    'src',
+    'features',
+    'shoppingList',
+    'cache',
+    'shoppingListDetailNeutral.generated.ts',
+  ),
   // Same generator, derived from `recipeCacheWriters.graphql`.
   fromRoot(
     'src',

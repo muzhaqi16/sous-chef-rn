@@ -11,10 +11,7 @@ import { OnboardingNavigation } from '#features/onboarding/components/Onboarding
 import { useOnboardingContextSafe } from '#features/onboarding/context/OnboardingContext';
 import type { NavigationAction } from '#features/onboarding/components/OnboardingNavigation/types';
 import { AppPressable } from '#components/atoms/AppPressable';
-
-const ThemedBackButton = withUnistyles(BackButton, theme => ({
-  color: theme.colors.primary,
-}));
+import { ProgressBar } from '#components/atoms/ProgressBar';
 
 const ThemedOnboardingNavigation = withUnistyles(OnboardingNavigation);
 
@@ -70,7 +67,8 @@ export const OnBoardingWrapper = ({
     <ThemedSafeAreaView style={styles.safeArea} testID={testID}>
       <View style={styles.headerContainer}>
         {onBack ? (
-          <ThemedBackButton
+          <BackButton
+            tone="primary"
             onPress={onBack}
             style={styles.iconButton}
             testID={testID ? `${testID}-back-button` : undefined}
@@ -79,7 +77,9 @@ export const OnBoardingWrapper = ({
           <View style={styles.iconButton} />
         )}
         {!!displayTitle && (
-          <Text style={styles.headerTitle}>{displayTitle}</Text>
+          <Text role="bodyStrong" style={styles.headerTitle}>
+            {displayTitle}
+          </Text>
         )}
         <View style={styles.iconButton} />
       </View>
@@ -102,7 +102,9 @@ export const OnBoardingWrapper = ({
         keyboardShouldPersistTaps="handled"
       >
         {!!displaySubtitle && (
-          <Text style={styles.subtitle}>{displaySubtitle}</Text>
+          <Text role="bodyStrong" style={styles.subtitle}>
+            {displaySubtitle}
+          </Text>
         )}
         <View style={styles.content}>{children}</View>
       </ThemedKeyboardAwareScrollView>
@@ -139,15 +141,20 @@ export const OnBoardingWrapper = ({
               style={styles.skipButton}
               testID={testID ? `${testID}-skip-button` : undefined}
             >
-              <Text style={styles.skipText}>{t('labels.skip')}</Text>
+              <Text role="bodyStrong" style={styles.skipText}>
+                {t('labels.skip')}
+              </Text>
             </AppPressable>
           )}
           {step != null && totalSteps != null && (
-            <View style={styles.progressBarBackground}>
-              <View
-                style={[styles.progressBarFill, { width: `${progress}%` }]}
-              />
-            </View>
+            <ProgressBar
+              value={progress / 100}
+              style={styles.progressBar}
+              accessibilityLabel={t('onboarding.progress', {
+                step,
+                total: totalSteps,
+              })}
+            />
           )}
         </View>
       )}
@@ -169,8 +176,6 @@ const styles = StyleSheet.create(theme => ({
   },
   headerTitle: {
     flex: 1,
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
   },
@@ -192,21 +197,10 @@ const styles = StyleSheet.create(theme => ({
   },
   skipText: {
     color: theme.colors.textSecondary,
-    fontWeight: theme.fonts.weight.medium,
   },
-  progressBarBackground: {
+  progressBar: {
     flex: 1,
-    height: theme.spacing.xs,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.xs,
-    borderCurve: 'continuous',
     marginHorizontal: theme.spacing.md,
-  },
-  progressBarFill: {
-    height: theme.spacing.xs,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radii.xs,
-    borderCurve: 'continuous',
   },
   scrollContainer: {
     // flexGrow without flex so short screens still fill the viewport while
@@ -222,8 +216,6 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
   },
   subtitle: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xl,
     textAlign: 'center',
@@ -231,8 +223,5 @@ const styles = StyleSheet.create(theme => ({
   content: {
     flexGrow: 1,
     justifyContent: 'space-around',
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

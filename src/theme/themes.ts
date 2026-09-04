@@ -1,21 +1,32 @@
-import { colors, darkExpiration, darkFilterTab } from './foundations/colors';
+import {
+  colors,
+  darkExpiration,
+  darkFilterTab,
+  chartCategorical,
+  darkChartCategorical,
+} from './foundations/colors';
 import { brand } from './foundations/brand';
 import { onColor } from './derivePalette';
-import { spacing } from './foundations/spacing';
+import { spacing, layout } from './foundations/spacing';
 import { typography, fonts } from './foundations/typography';
 import { radii } from './foundations/radii';
 import { borderWidth } from './foundations/borderWidth';
-import { shadows } from './foundations/shadows';
+import { shadows, darkShadows } from './foundations/shadows';
 import { sizes } from './foundations/sizes';
 import { zIndex } from './foundations/zIndex';
+import { motion } from './foundations/motion';
+import { type, MAX_FONT_SCALE } from './foundations/type';
 
 const commonTheme = {
   spacing,
+  layout,
+  motion,
+  type,
+  maxFontScaleMultiplier: MAX_FONT_SCALE,
   typography,
   fonts,
   radii,
   borderWidth,
-  shadows,
   sizes,
   zIndex,
   opacity: {
@@ -27,6 +38,7 @@ const commonTheme = {
 
 export const lightTheme = {
   ...commonTheme,
+  shadows,
   colors: {
     ...colors,
     // Primary — sourced from the brand palette (`appConfig.branding.primaryColor`,
@@ -40,6 +52,9 @@ export const lightTheme = {
     onSuccess: onColor(colors.success, colors.neutral[0], colors.neutral[900]),
     onWarning: onColor(colors.warning, colors.neutral[0], colors.neutral[900]),
     onInfo: onColor(colors.info, colors.neutral[0], colors.neutral[900]),
+    // Over a photo, a camera preview or a dark scrim — a ground the theme
+    // does not paint, so this stays light in both appearances.
+    onScrim: colors.neutral[0],
 
     // Secondary
     secondary: colors.charade[400],
@@ -117,6 +132,7 @@ export const lightTheme = {
     // Pantry redesign colors
     expiration: colors.expiration,
     filterTab: colors.filterTab,
+    chartCategorical,
     avatar: colors.avatar,
     sectionHeader: colors.sectionHeader,
     alertBanner: colors.alertBanner,
@@ -148,6 +164,7 @@ export const lightTheme = {
 
 export const darkTheme = {
   ...commonTheme,
+  shadows: darkShadows,
   colors: {
     ...colors,
     // Primary — brand[500] for consistency with light mode.
@@ -161,6 +178,9 @@ export const darkTheme = {
     onSuccess: onColor(colors.success, colors.neutral[0], colors.neutral[900]),
     onWarning: onColor(colors.warning, colors.neutral[0], colors.neutral[900]),
     onInfo: onColor(colors.info, colors.neutral[0], colors.neutral[900]),
+    // Over a photo, a camera preview or a dark scrim — a ground the theme
+    // does not paint, so this stays light in both appearances.
+    onScrim: colors.neutral[0],
 
     // Secondary
     secondary: colors.charade[400],
@@ -260,6 +280,7 @@ export const darkTheme = {
     // Solid backgrounds prevent swipeable container background bleed-through.
     expiration: darkExpiration,
     filterTab: darkFilterTab,
+    chartCategorical: darkChartCategorical,
     avatar: colors.avatar,
     sectionHeader: colors.sectionHeader,
     // Alert banner — solid dark backgrounds instead of light-mode pastels

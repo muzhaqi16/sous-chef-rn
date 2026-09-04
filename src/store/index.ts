@@ -23,6 +23,7 @@ import {
 import { FontScalePreference } from './slices/preferenceTypes';
 import { createAppSlice, AppState } from './slices/appSlice';
 import { createUISlice, UIState } from './slices/uiSlice';
+import { createTutorialSlice, TutorialState } from './slices/tutorialSlice';
 import {
   createResetManager,
   ResetOptions,
@@ -129,10 +130,11 @@ export const handleStoreRehydration = (
   }
 
   // Before `isHydrated`, so the first paint is in the user's language. Lazy —
-  // `i18n/config` has load-time side effects.
-  if (state?.language && state.language !== 'en') {
-    import('#/i18n/config').then(({ getI18n }) => {
-      void getI18n().changeLanguage(state.language);
+  // `#/i18n` pulls in `i18n/config`, which has load-time side effects.
+  const language = state?.language;
+  if (language && language !== 'en') {
+    import('#/i18n').then(({ changeLanguage }) => {
+      void changeLanguage(language);
     });
   }
 
@@ -196,6 +198,7 @@ export type RootState = AuthState &
   AppState &
   NavigationState &
   UIState &
+  TutorialState &
   TelemetryState &
   NetworkState &
   ResetManagerState &
@@ -235,6 +238,7 @@ const PERSISTED_KEYS = classifyKeys(
   'highContrast',
   'hapticFeedbackEnabled',
   'showNavigationLabels',
+  'showTutorials',
   'pantrySortOption',
   'pantrySortDirection',
   'userPreferences',
@@ -258,6 +262,10 @@ const PERSISTED_KEYS = classifyKeys(
   'lastCategoriesFetchedAt',
   'lastBrandsFetchedAt',
   'lastStoresFetchedAt',
+
+  // Tutorials: which hints each account has seen, and its login count.
+  'featureHintsShown',
+  'loginCounts',
 
   // Telemetry: the one real user choice (the feature flags are env-derived)
   'userConsent',
@@ -323,6 +331,7 @@ export const useStore = create<RootState>()(
             ...createAppSlice(set, get, store),
             ...createNavigationSlice(set, get, store),
             ...createUISlice(set, get, store),
+            ...createTutorialSlice(set, get, store),
             ...createTelemetrySlice(set, get, store),
             ...createNetworkSlice(set, get, store),
             ...resetManager,
@@ -332,7 +341,7 @@ export const useStore = create<RootState>()(
       ),
       {
         name: STORAGE_KEY,
-        version: 14,
+        version: 15,
         storage: createJSONStorage(() => zustandStorage),
         migrate: (persistedState: unknown, version: number) => {
           // v8 → v9: lift nested profile fields to top level — the greeting
@@ -373,6 +382,19 @@ export const useStore = create<RootState>()(
                   delete state[key];
                 }
               }
+            }
+          }
+
+          // v14 → v15: drop the warmed unit vocabulary — the API merged 46
+          // alias `Unit` rows away, so a warmed row can name an id the server
+          // cannot resolve. The STAMP goes with the list: unit autocomplete is
+          // the only one running `localFirst`, and an empty list left with a
+          // fresh stamp stays empty for the whole TTL instead of re-warming.
+          if (version < 15) {
+            const state = persistedState as Record<string, unknown> | null;
+            if (state) {
+              delete state.cachedUnits;
+              delete state.lastUnitsFetchedAt;
             }
           }
 

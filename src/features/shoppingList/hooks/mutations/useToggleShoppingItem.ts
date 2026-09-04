@@ -23,8 +23,8 @@ import {
 import {
   moveShoppingListItemToPurchased,
   moveShoppingListItemToUnpurchased,
-  writePurchaseInfo,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+} from '#features/shoppingList/cache/connections';
+import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { logger } from '#/utils/environment';

@@ -2,10 +2,10 @@ import { InMemoryCache } from '@apollo/client';
 ('use no memo');
 
 // Break the circular dependency chain these modules sit in.
-jest.mock('../../links/tokenScheduler');
-jest.mock('../../links/refreshToken');
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
-jest.mock('../cacheUpdaters', () => ({
+jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
@@ -14,11 +14,11 @@ import {
   addToPantryItemsCache,
   adjustPantryItemCount,
   removeFromPantryItemsCache,
-} from '../pantryCacheUpdaters';
+} from '../items';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
-} from '../cacheUpdaters';
+} from '#/apollo/utils/cacheUpdaters';
 
 /**
  * These updaters were declared twice — once in `hooks/home/pantry/utils.ts` and

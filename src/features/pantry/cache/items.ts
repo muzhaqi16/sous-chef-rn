@@ -7,7 +7,7 @@ import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
   safeEvict,
-} from './cacheUpdaters';
+} from '#/apollo/utils/cacheUpdaters';
 
 export const addToPantryItemsCache = createAddToParentConnectionUpdater<{
   id: string;

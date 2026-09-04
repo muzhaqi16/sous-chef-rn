@@ -4,14 +4,17 @@ import type { PressableStateCallbackType } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, { LinearTransition } from 'react-native-reanimated';
-import { TIMING } from '#constants/animations';
+
 import type { NavigationButtonProps } from './types';
 import { Text } from '#components/atoms/Text';
+import { motion } from '#/theme/foundations/motion';
 
 const AnimatedText = Animated.createAnimatedComponent(Text);
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const LayoutTransitionDefault = LinearTransition.duration(TIMING.MODERATE);
+const LayoutTransitionDefault = LinearTransition.duration(
+  motion.timing.MODERATE,
+);
 
 export const NavigationButton: React.FC<NavigationButtonProps> = ({
   action,
@@ -71,7 +74,7 @@ const styles = StyleSheet.create(theme => ({
   },
   label: {
     letterSpacing: 0.5,
-    color: theme.colors.white,
+    color: theme.colors.onPrimary,
   },
   pressed: {
     opacity: theme.opacity.pressed,

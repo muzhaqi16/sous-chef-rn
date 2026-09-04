@@ -136,8 +136,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     },
   },
   headerTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.heading,
     color: theme.colors.textPrimary,
   },
   headerAction: {
@@ -147,14 +146,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     width: 24,
   },
 
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.divider,
-  },
-  dividerVertical: {
-    width: 1,
-    backgroundColor: theme.colors.divider,
-  },
   absoluteFill: {
     position: 'absolute',
     top: 0,
@@ -177,7 +168,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.smPlus,
-    fontSize: theme.fonts.size.md,
+    ...theme.type.body,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.inputBackground,
   },
@@ -191,13 +182,12 @@ export const commonStyles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   label: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.label,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
   errorText: {
-    fontSize: theme.fonts.size.xs,
+    ...theme.type.caption,
     color: theme.colors.error,
     marginTop: theme.spacing.xs,
   },
@@ -233,8 +223,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.error,
   },
   buttonText: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.bodyStrong,
   },
   buttonTextPrimary: {
     color: theme.colors.onPrimary,
@@ -257,8 +246,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     borderBottomColor: theme.colors.border,
   },
   settingsSectionTitle: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.bodyStrong,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
   },
@@ -266,8 +254,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
   },
   settingsLabel: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.fonts.weight.medium,
+    ...theme.type.label,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
@@ -282,12 +269,11 @@ export const commonStyles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.base,
   },
   settingsRowLabel: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.medium,
+    ...theme.type.bodyStrong,
     color: theme.colors.textPrimary,
   },
   settingsRowDescription: {
-    fontSize: theme.typography.fontSize.sm,
+    ...theme.type.caption,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
@@ -304,12 +290,11 @@ export const commonStyles = StyleSheet.create(theme => ({
     flex: 1,
   },
   listItemTitle: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
+    ...theme.type.bodyStrong,
     color: theme.colors.textPrimary,
   },
   listItemSubtitle: {
-    fontSize: theme.fonts.size.sm,
+    ...theme.type.caption,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
@@ -358,28 +343,6 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
   shadow: theme.shadows.card,
 
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: theme.spacing.xl,
-  },
-  emptyStateIcon: {
-    marginBottom: theme.spacing.md,
-  },
-  emptyStateTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-    textAlign: 'center',
-  },
-  emptyStateText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: theme.spacing.lg,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -388,7 +351,7 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
   loadingText: {
     marginTop: theme.spacing.md,
-    fontSize: theme.fonts.size.md,
+    ...theme.type.body,
     color: theme.colors.textSecondary,
   },
 
@@ -405,8 +368,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     borderBottomColor: theme.colors.border,
   },
   modalTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.heading,
     color: theme.colors.textPrimary,
     flex: 1,
     textAlign: 'center',
@@ -434,8 +396,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
   },
   bottomSheetItemName: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.heading,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
@@ -444,15 +405,14 @@ export const commonStyles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   bottomSheetItemLabel: {
-    fontSize: theme.fonts.size.base,
+    ...theme.type.body,
     color: theme.colors.textSecondary,
   },
   bottomSheetSection: {
     marginBottom: theme.spacing.md,
   },
   bottomSheetSectionLabel: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.label,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
@@ -463,7 +423,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
   },
   bottomSheetHelperText: {
-    fontSize: theme.fonts.size.sm,
+    ...theme.type.caption,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
@@ -492,12 +452,12 @@ export const commonStyles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surfaceVariant,
   },
   bottomSheetOptionText: {
-    fontSize: theme.fonts.size.sm,
+    ...theme.type.caption,
     color: theme.colors.textSecondary,
   },
   bottomSheetOptionTextSelected: {
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.bodyStrong,
   },
 
   badge: {
@@ -507,8 +467,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   badgeText: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.label,
     color: theme.colors.onPrimary,
   },
   chip: {
@@ -519,8 +478,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.sm,
   },
   chipText: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
+    ...theme.type.label,
     color: theme.colors.chipText,
   },
   chipSelected: {
@@ -530,28 +488,23 @@ export const commonStyles = StyleSheet.create(theme => ({
     color: theme.colors.chipSelectedText,
   },
   body: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.regular,
+    ...theme.type.body,
     color: theme.colors.textPrimary,
   },
   bodySecondary: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.regular,
+    ...theme.type.body,
     color: theme.colors.textSecondary,
   },
   title: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.heading,
     color: theme.colors.textPrimary,
   },
   subtitle: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
+    ...theme.type.bodyStrong,
     color: theme.colors.textSecondary,
   },
   caption: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.regular,
+    ...theme.type.caption,
     color: theme.colors.textSecondary,
   },
   link: {

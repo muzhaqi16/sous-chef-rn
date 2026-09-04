@@ -25,11 +25,16 @@ export function filesUnder(patterns, { exclude = [], cwd = REPO_ROOT } = {}) {
   const list = Array.isArray(patterns) ? patterns : [patterns];
   const skip = p => exclude.some(re => re.test(p));
 
+  // `globSync`'s own `exclude` is called on DIRECTORIES, for pruning — it never
+  // sees a matched file. So a pattern naming a file (`\.test\.tsx$`, one
+  // module by path) prunes nothing there, and the same list is applied again to
+  // the results. Passing it to the glob as well keeps the directory pruning.
   return [
     ...new Set(
       list.flatMap(pattern => globSync(pattern, { cwd, exclude: skip })),
     ),
   ]
+    .filter(f => !skip(f))
     .map(f => join(cwd, f))
     .sort();
 }
@@ -74,9 +79,10 @@ export function refuseEmptyBaselineUpdate({ count, baselineCount, check }) {
 }
 
 /**
- * Load/write plumbing for a recorded baseline. Only the plumbing is shared:
- * what a baseline MEANS differs per check — a set, a numeric cap, a per-key
- * counter map — and each keeps its own comparison.
+ * Baseline plumbing. Only the plumbing is shared — what a baseline MEANS differs
+ * per check, and each keeps its own comparison.
+ *
+ * No file means the rule is an INVARIANT: deleting it IS the promotion.
  */
 export function baselineFile(path) {
   return {
@@ -84,18 +90,27 @@ export function baselineFile(path) {
     exists: () => existsSync(path),
     read: () =>
       existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : undefined,
-    /** Exit 2 with one message when the record a ratchet needs is absent. */
-    require(check) {
+    /**
+     * The recorded baseline, or an empty one when there is no file — see the
+     * note above: absent means the rule is an invariant, not that it is
+     * unconfigured.
+     */
+    require() {
+      return existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : {};
+    },
+    write(data) {
       if (!existsSync(path)) {
         console.error(
-          `\n✗ ${check}: no baseline at ${path}.\n\n` +
-            `  Run with --update to record one.\n`,
+          `\n✗ No baseline at ${path}, so this rule is an INVARIANT.\n\n` +
+            `  Writing one would hand it back the exemptions it was promoted\n` +
+            `  out of. Fix the finding instead. If the rule genuinely has to\n` +
+            `  become a ratchet again, restore the file in its own commit and\n` +
+            `  say why.\n`,
         );
         process.exit(2);
       }
-      return JSON.parse(readFileSync(path, 'utf8'));
+      writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`);
     },
-    write: data => writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`),
   };
 }
 

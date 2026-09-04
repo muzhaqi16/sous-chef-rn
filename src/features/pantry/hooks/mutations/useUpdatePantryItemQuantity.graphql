@@ -9,12 +9,6 @@ fragment useUpdatePantryItemQuantity_pantryItem on PantryItem {
     name
     symbol
     type
-    isMetric
-    baseUnitId
-    conversionFactor
-    isCommon
     displayAsFraction
-    minPrecision
-    autoConvertThreshold
   }
 }

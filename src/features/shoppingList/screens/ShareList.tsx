@@ -5,26 +5,27 @@ import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
 
-import { Header } from '#components/molecules/Header';
-import { LoadingInline } from '#components/atoms/Loading';
+import { Loading } from '#components/molecules/Loading';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useRemoveCollaborator } from '#features/shoppingList/hooks/useRemoveCollaborator';
-import { isShoppingListOwner } from '#utils/ownershipHelpers';
+import { isShoppingListOwner } from '#features/shoppingList/utils/ownershipHelpers';
 import { useLeaveShoppingList } from '#features/shoppingList/hooks/useLeaveShoppingList';
 import { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';
 import CollaboratorPermissionsBottomSheet, {
   CollaboratorPermissionsBottomSheetRef,
 } from '#features/shoppingList/components/CollaboratorPermissionsBottomSheet';
 import { useUser } from '#store/useAppStore';
-import { Button } from '#components/atoms/Button';
-import { OfflineGate } from '#components/atoms/OfflineGate';
+import { Button } from '#components/molecules/Button';
+import { OfflineGate } from '#features/shoppingList/components/OfflineGate';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { CollaboratorMemberCard } from '#features/shoppingList/components/CollaboratorMemberCard';
 import { ShareCodeSection } from '#features/shoppingList/components/ShareCodeSection';
 import { ShareInviteSection } from '#features/shoppingList/components/ShareInviteSection';
+import { SectionHeader } from '#components/atoms/SectionHeader';
+import { Screen } from '#components/templates/Screen';
 
 export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   route,
@@ -149,17 +150,19 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   // shoppingList truthy across refetches, so this avoids the full-screen flash
   // every time a mutation triggers a refetch.
   if (loading && !shoppingList) {
-    return <LoadingInline />;
+    return <Loading />;
   }
 
   return (
-    <View style={styles.container}>
-      <Header
-        title={t('shoppingListScreens.shareTitle')}
-        onBack={() => goBack()}
-        centerTitle
-      />
-
+    <Screen
+      header={{
+        title: t('shoppingListScreens.shareTitle'),
+        back: () => goBack(),
+        centerTitle: true,
+      }}
+      scroll="list"
+      gutter="none"
+    >
       <OfflineGate
         message={t('shoppingListScreens.sharingOfflineMessage')}
         description={t('shoppingListScreens.sharingOfflineDescription')}
@@ -211,9 +214,9 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 
           {activeCollaborators.length > 0 && (
             <View style={styles.membersSection}>
-              <Text style={styles.sectionTitle}>
+              <SectionHeader style={styles.sectionTitleSpacing}>
                 {t('shoppingListScreens.currentMembers')}
-              </Text>
+              </SectionHeader>
               {activeCollaborators.map(member => (
                 <CollaboratorMemberCard
                   key={member.id}
@@ -236,8 +239,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           {/* Leave List section - only show for non-owners who are collaborators on non-home-linked lists */}
           {!!currentUserCollaborator && !isOwner && !isHomeLinked && (
             <View style={styles.leaveSection}>
-              <Text style={styles.sectionTitle}>{t('labels.dangerZone')}</Text>
-              <Text style={styles.leaveDescription}>
+              <SectionHeader style={styles.sectionTitleSpacing}>
+                {t('labels.dangerZone')}
+              </SectionHeader>
+              <Text role="caption" style={styles.leaveDescription}>
                 {t('shoppingListScreens.leaveDescription')}
               </Text>
               <Button
@@ -257,7 +262,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           onSuccess={refetch}
         />
       </OfflineGate>
-    </View>
+    </Screen>
   );
 };
 const styles = StyleSheet.create(theme => ({
@@ -276,12 +281,6 @@ const styles = StyleSheet.create(theme => ({
   homeLinkedButtonWrapper: {
     paddingHorizontal: theme.spacing.md,
   },
-  sectionTitle: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.base,
-  },
   membersSection: {
     padding: theme.spacing.md,
   },
@@ -293,8 +292,9 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.md,
   },
   leaveDescription: {
-    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    lineHeight: theme.typography.fontSize.sm * 1.5,
+  },
+  sectionTitleSpacing: {
+    marginBottom: theme.spacing.base,
   },
 }));

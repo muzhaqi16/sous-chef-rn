@@ -14,7 +14,7 @@ import { HttpTransport } from './transports/HttpTransport';
 import { scrubLogExtra, scrubString } from './scrub';
 import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
-import { getDeviceIdSync } from '#/utils/deviceId';
+import { getDeviceIdSync } from '#/storage/deviceId';
 import { generateId } from '#/utils/generateId';
 import { getVersion, isEmulatorSync } from 'react-native-device-info';
 import { env as buildEnv } from '#/config/env';

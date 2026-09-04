@@ -42,7 +42,7 @@ export const PantryUsageHistoryScreen: React.FC<
       renderItem={renderItem}
       getItemType={getItemType}
       summary={
-        <Text size="sm" tone="secondary">
+        <Text role="caption" tone="secondary">
           {t('pantryItemDetail.usage.totalEntries', { count: totalCount })}
         </Text>
       }

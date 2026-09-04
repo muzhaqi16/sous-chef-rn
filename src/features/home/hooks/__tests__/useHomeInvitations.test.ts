@@ -80,7 +80,6 @@ function buildInviteMock(
           homeInvite: {
             __typename: 'HomeInvite',
             id: homeInviteId,
-            token: 'tok-1',
             role: input.role,
             home: { __typename: 'Home', id: input.homeId, name: 'Home' },
             inviter: {

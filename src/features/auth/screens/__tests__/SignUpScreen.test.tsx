@@ -132,15 +132,15 @@ jest.mock('#features/auth/components/AuthFormTemplate', () => {
   };
 });
 
-jest.mock('#components/atoms/EmailInput', () => ({
+jest.mock('#components/molecules/EmailInput', () => ({
   EmailInput: 'EmailInput',
 }));
 
-jest.mock('#components/atoms/PasswordInput', () => ({
+jest.mock('#components/molecules/PasswordInput', () => ({
   PasswordInput: 'PasswordInput',
 }));
 
-jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
+jest.mock('#components/molecules/BaseInput/BaseInput', () => ({
   BaseInput: 'BaseInput',
 }));
 

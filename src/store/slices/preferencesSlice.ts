@@ -1,6 +1,6 @@
 import { StateCreator } from 'zustand';
 import { UnistylesRuntime } from 'react-native-unistyles';
-import { getI18n } from '#/i18n/config';
+import { changeLanguage } from '#/i18n';
 import { applyAppearanceToRuntime } from '#/theme/applyAppearance';
 import { ThemePreference, PREFERENCE_DEFAULTS } from './preferenceTypes';
 import type {
@@ -62,6 +62,11 @@ export interface PreferencesState {
   showNavigationLabels: boolean;
   setShowNavigationLabels: (enabled: boolean) => void;
 
+  // Tutorials — the server owns the setting; this mirrors it so the first paint
+  // does not wait on `GetUserSettings`.
+  showTutorials: boolean;
+  setShowTutorials: (enabled: boolean) => void;
+
   // Pantry Sort Preferences
   pantrySortOption: PantrySortOption;
   pantrySortDirection: PantrySortDirection;
@@ -94,6 +99,7 @@ const initialPreferencesState = {
   rememberMe: undefined,
   hapticFeedbackEnabled: true, // Enabled by default
   showNavigationLabels: true, // Enabled by default
+  showTutorials: true,
   pantrySortOption: PREFERENCE_DEFAULTS.pantrySortOption,
   pantrySortDirection: PREFERENCE_DEFAULTS.pantrySortDirection, // Newest first
   primaryColorOverride: null,
@@ -118,12 +124,14 @@ export const createPreferencesSlice: StateCreator<
     set({ theme });
   },
   setLanguage: language => {
-    void getI18n().changeLanguage(language);
+    void changeLanguage(language);
     set({ language });
   },
   setRememberMe: remember => set({ rememberMe: remember }),
   setHapticFeedbackEnabled: enabled => set({ hapticFeedbackEnabled: enabled }),
   setShowNavigationLabels: enabled => set({ showNavigationLabels: enabled }),
+
+  setShowTutorials: enabled => set({ showTutorials: enabled }),
   setPantrySortOption: option => set({ pantrySortOption: option }),
   setPantrySortDirection: direction => set({ pantrySortDirection: direction }),
 

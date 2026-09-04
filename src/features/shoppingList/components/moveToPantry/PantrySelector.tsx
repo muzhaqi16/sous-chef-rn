@@ -5,6 +5,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
 interface PantrySelectorProps {
   pantries: Array<{ id: string; name: string; isDefault: boolean }>;
@@ -27,10 +28,10 @@ export const PantrySelector: React.FC<PantrySelectorProps> = ({
 
   return (
     <View style={styles.section}>
-      <Text size="md" weight="medium" style={styles.sectionLabel}>
+      <SectionHeader variant="title" style={styles.sectionLabel}>
         {t('labels.selectPantry')}
         <Text tone="error">{t('moveToPantry.requiredAsterisk')}</Text>
-      </Text>
+      </SectionHeader>
       <View style={styles.pantryList}>
         {pantries.map(pantry => (
           <AppPressable
@@ -44,9 +45,12 @@ export const PantrySelector: React.FC<PantrySelectorProps> = ({
             <Icon
               name="cube-outline"
               size={20}
-              tone={selectedPantryId === pantry.id ? 'white' : 'textSecondary'}
+              tone={
+                selectedPantryId === pantry.id ? 'onPrimary' : 'textSecondary'
+              }
             />
             <Text
+              role="bodyStrong"
               style={[
                 styles.pantryOptionText,
                 selectedPantryId === pantry.id && styles.pantryOptionTextActive,
@@ -63,6 +67,7 @@ export const PantrySelector: React.FC<PantrySelectorProps> = ({
                 ]}
               >
                 <Text
+                  role="label"
                   style={[
                     styles.defaultBadgeText,
                     selectedPantryId === pantry.id &&
@@ -108,8 +113,6 @@ const styles = StyleSheet.create(theme => ({
   },
   pantryOptionText: {
     flex: 1,
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   pantryOptionTextActive: {
@@ -126,14 +129,9 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.overlays.light,
   },
   defaultBadgeText: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
   },
   defaultBadgeTextActive: {
-    color: theme.colors.white,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
+    color: theme.colors.onScrim,
   },
 }));

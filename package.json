@@ -54,6 +54,10 @@
     "check:feature-enumeration": "node scripts/check-feature-enumeration.mjs",
     "check:canonical-mechanisms": "node scripts/check-canonical-mechanisms.mjs",
     "check:design-tokens": "node scripts/check-design-tokens.mjs",
+    "check:typography-roles": "node scripts/check-typography-roles.mjs",
+    "check:component-tier": "node scripts/check-component-tier.mjs",
+    "check:screen-scaffold": "node scripts/check-screen-scaffold.mjs",
+    "check:a11y-names": "node scripts/check-a11y-names.mjs",
     "check:comment-budget": "node scripts/check-comment-budget.mjs",
     "check:dependency-audit": "node scripts/check-dependency-audit.mjs",
     "check:test-cache-fidelity": "node scripts/check-test-cache-fidelity.mjs",
@@ -225,7 +229,7 @@
   },
   "lint-staged": {
     "src/**/!(*.generated).{ts,tsx}": [
-      "eslint --fix",
+      "node --max-old-space-size=6144 node_modules/eslint/bin/eslint.js --fix --cache",
       "prettier --write",
       "jest --bail --findRelatedTests --passWithNoTests"
     ],

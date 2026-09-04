@@ -3,7 +3,7 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import { InfoRow } from '#components/molecules/InfoRow';
+import { InfoRow } from '#components/atoms/InfoRow';
 
 const ThemedConditionInfoRow = withUnistyles(InfoRow);
 import { Icon } from '#/utils/iconUtils';
@@ -108,12 +108,13 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           labelStyle={styles.labelText}
           containerStyle={styles.rowContainer}
         >
-          <Text size="base" weight="medium" style={styles.valueText}>
+          <Text role="bodyStrong" style={styles.valueText}>
             {netWeightText}
           </Text>
           {!!item.lastUsedAt && !!onCorrectWeight && (
             <AppPressable
               onPress={onCorrectWeight}
+              accessibilityLabel={t('correctWeight.title')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={styles.correctWeightButton}
             >
@@ -164,10 +165,15 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           label={t('pantryItemDetail.fields.shelfLife')}
           value={
             shelfLifeOpenedDays != null && shelfLifeDays != null
-              ? `${shelfLifeDays}d (${shelfLifeOpenedDays}d once opened)`
+              ? t('pantryItemDetail.shelfLifeBoth', {
+                  days: shelfLifeDays,
+                  openedDays: shelfLifeOpenedDays,
+                })
               : shelfLifeDays != null
-              ? `${shelfLifeDays} days`
-              : `${shelfLifeOpenedDays}d once opened`
+              ? t('labels.durationDays', { count: shelfLifeDays })
+              : t('pantryItemDetail.shelfLifeOpened', {
+                  days: shelfLifeOpenedDays,
+                })
           }
           icon="timer-outline"
           showColon={false}
@@ -338,30 +344,23 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         <View style={styles.notesSection}>
           <View style={styles.notesHeader}>
             <Icon name="document-text-outline" size={16} tone="textSecondary" />
-            <Text
-              size="sm"
-              weight="medium"
-              tone="secondary"
-              style={styles.notesLabel}
-            >
+            <Text role="label" tone="secondary" style={styles.notesLabel}>
               {t('pantryItemDetail.notes')}
             </Text>
           </View>
-          <Text size="base" style={styles.notesText}>
-            {item.storageNotes}
-          </Text>
+          <Text style={styles.notesText}>{item.storageNotes}</Text>
         </View>
       )}
       {/* Tags Section */}
       {!!item.tags && item.tags.length > 0 && (
         <View style={styles.tagsSection}>
-          <Text size="sm" tone="secondary" style={styles.tagsLabel}>
+          <Text role="caption" tone="secondary" style={styles.tagsLabel}>
             {t('pantryItemDetail.tags')}
           </Text>
           <View style={styles.tagsContainer}>
             {item.tags.map(tag => (
               <View key={tag} style={styles.tagChip}>
-                <Text size="sm" weight="medium" tone="accent">
+                <Text role="label" tone="accent">
                   {tag}
                 </Text>
               </View>
@@ -393,16 +392,11 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   valueText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   correctWeightButton: {
     marginLeft: theme.spacing.sm,
     padding: theme.spacing.xs,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
   valueError: {
     color: theme.colors.error,

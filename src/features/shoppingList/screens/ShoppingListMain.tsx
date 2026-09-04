@@ -3,13 +3,11 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
-import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabBar } from '#features/shoppingList/components/ShoppingListTabs/FilterTabBar';
-import { ShoppingListErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
+import { ShoppingListErrorBoundary } from '#components/providers/ScreenErrorBoundary';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { ShoppingListSkeleton } from '#features/shoppingList/components/skeletons/ShoppingListSkeleton';
-import { TabMainScreen } from '#components/templates/TabMainScreen';
 
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useStore } from '#store';
@@ -18,7 +16,8 @@ import { ShoppingListModalsProvider } from '#features/shoppingList/context/Shopp
 import { ShoppingListTutorialProvider } from '#features/shoppingList/context/ShoppingListTutorialContext';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 
-import { ShoppingListMainContent } from './ShoppingListMainContent';
+import { ShoppingListMainContent } from '#features/shoppingList/components/ShoppingListMainContent';
+import { Screen } from '#components/templates/Screen';
 
 /**
  * Inner component that runs all heavy hooks.
@@ -85,11 +84,16 @@ const ShoppingListMainFallback: React.FC = () => {
     { key: 'purchased', title: t('shoppingListScreen.tabPurchased') },
   ];
   return (
-    <TabMainScreen testID="shopping-list-screen">
-      <TabScreenHeader
-        label={t('shoppingListScreen.label')}
-        title={t('labels.shoppingList')}
-      />
+    <Screen
+      testID="shopping-list-screen"
+      header={{
+        variant: 'tab',
+        label: t('shoppingListScreen.label'),
+        title: t('labels.shoppingList'),
+      }}
+      scroll="list"
+      gutter="none"
+    >
       <View style={styles.searchBarContainer}>
         <SearchBar
           value=""
@@ -105,7 +109,7 @@ const ShoppingListMainFallback: React.FC = () => {
         counts={{ shopping: 0, purchased: 0 }}
       />
       <ShoppingListSkeleton />
-    </TabMainScreen>
+    </Screen>
   );
 };
 

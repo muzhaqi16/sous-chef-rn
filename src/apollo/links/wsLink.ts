@@ -7,7 +7,7 @@ import { isApiUnavailable } from '#store/slices/networkSlice';
 import { Telemetry } from '#/services/telemetry';
 import { Environment, logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
-import { getDeviceId } from '#/utils/deviceId';
+import { getDeviceId } from '#/storage/deviceId';
 import { CLIENT_NAME, CLIENT_VERSION } from '../clientIdentity';
 import { announceClientUpgradeRequired } from '../clientUpgradeNotice';
 import {

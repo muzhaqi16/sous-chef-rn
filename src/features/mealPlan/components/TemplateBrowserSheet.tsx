@@ -20,13 +20,13 @@ import {
 import {
   ChipScrollRow,
   type ChipOption,
-} from '#components/atoms/ChipScrollRow';
+} from '#components/molecules/ChipScrollRow';
 import { useMealTemplates } from '#features/mealPlan/hooks/useMealTemplates';
 import { TemplateCategory } from '#/graphql/generated/schemaTypes';
 import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
-import { DataStateView } from '#components/molecules/DataStateView';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 
 const CATEGORY_KEYS: { key: TemplateCategory | undefined; labelKey: string }[] =
@@ -123,10 +123,12 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
       <View style={[styles.container, contentContainerStyle]}>
         {/* Header */}
         <View style={styles.header}>
-          <Text size="lg" weight="semibold">
-            {t('templateBrowser.title')}
-          </Text>
-          <Pressable onPress={onClose} hitSlop={8}>
+          <Text role="heading">{t('templateBrowser.title')}</Text>
+          <Pressable
+            onPress={onClose}
+            hitSlop={8}
+            accessibilityLabel={t('labels.close')}
+          >
             <Icon name="close" size={24} tone="textSecondary" />
           </Pressable>
         </View>
@@ -154,7 +156,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
 
         {/* Template list */}
         {dataState === 'loading' ? (
-          <View style={styles.loadingContainer}>
+          <View style={styles.centeredSpinner}>
             <PrimaryActivityIndicator size="large" />
           </View>
         ) : dataState === 'error' || dataState === 'offline' ? (
@@ -162,9 +164,9 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
           // `offline` renders a genuine failure as "No templates found".
           <DataStateView state={dataState} onRetry={refetch} />
         ) : dataState === 'empty' ? (
-          <View style={styles.emptyContainer}>
+          <View style={styles.emptyInset}>
             <Icon name="document-text-outline" size={48} tone="textTertiary" />
-            <Text size="base" tone="secondary" align="center">
+            <Text tone="secondary" align="center">
               {t('templateBrowser.noTemplates')}
             </Text>
           </View>
@@ -215,7 +217,7 @@ const styles = StyleSheet.create(theme => ({
   },
   searchInput: {
     flex: 1,
-    fontSize: theme.fonts.size.base,
+    ...theme.type.body,
     color: theme.colors.textPrimary,
     padding: 0,
   },
@@ -229,12 +231,12 @@ const styles = StyleSheet.create(theme => ({
   list: {
     flex: 1,
   },
-  loadingContainer: {
+  centeredSpinner: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  emptyContainer: {
+  emptyInset: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',

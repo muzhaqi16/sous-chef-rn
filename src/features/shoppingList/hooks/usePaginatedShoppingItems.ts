@@ -12,7 +12,7 @@ import {
   type ConnectionData,
 } from '#hooks/utils/useConnectionData';
 import { errorService } from '#/services/errorService';
-import { isAbortError } from '#/utils/errors/abort';
+import { isAbortError } from '#features/shoppingList/utils/abort';
 import type { HookReturn } from '#hooks/types';
 
 /**

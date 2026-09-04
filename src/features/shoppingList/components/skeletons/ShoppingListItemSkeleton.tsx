@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { SkeletonCircle } from '#components/atoms/Skeleton/SkeletonCircle';
 import { SkeletonLine } from '#components/atoms/Skeleton/SkeletonLine';
 import { SkeletonRectangle } from '#components/atoms/Skeleton/SkeletonRectangle';
-import { ListItem } from '#/components/molecules/ListItem';
+import { ListItem } from '#components/molecules/ListItem';
 
 interface ShoppingListItemSkeletonProps {
   animated?: boolean;

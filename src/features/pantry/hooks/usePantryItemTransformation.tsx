@@ -179,8 +179,12 @@ export const formatNetWeightDisplay = (
   if (!netWeight) return null;
   const unitStr = netWeightUnit?.symbol || netWeightUnit?.name || '';
 
-  // Same g→kg, ml→L upscaling as formatQuantityDisplay
-  if (netWeight >= 1000 && (unitStr === 'g' || unitStr === 'ml')) {
+  // Same g→kg, mL→L upscaling as formatQuantityDisplay — and the same
+  // case-insensitive match, the canonical symbol being `mL`.
+  if (
+    netWeight >= 1000 &&
+    (unitStr === 'g' || unitStr.toLowerCase() === 'ml')
+  ) {
     return `${(netWeight / 1000).toFixed(1)} ${unitStr === 'g' ? 'kg' : 'L'}`;
   }
 
@@ -188,21 +192,6 @@ export const formatNetWeightDisplay = (
     ? netWeight.toString()
     : netWeight.toFixed(netWeight < 10 ? 2 : 1).replace(/\.?0+$/, '');
   return `${formatted} ${unitStr}`.trim();
-};
-
-// Helper to format remaining net weight for display (e.g., "25 oz remaining")
-export const formatRemainingNetWeight = (
-  remainingNetWeight?: number | null,
-  netWeightUnit?: { symbol?: string | null; name?: string | null } | null,
-): string | null => {
-  if (remainingNetWeight == null) return null;
-  const unitStr = netWeightUnit?.symbol || netWeightUnit?.name || '';
-  const formatted = Number.isInteger(remainingNetWeight)
-    ? remainingNetWeight.toString()
-    : remainingNetWeight
-        .toFixed(remainingNetWeight < 10 ? 2 : 1)
-        .replace(/\.?0+$/, '');
-  return `${formatted} ${unitStr} remaining`.trim();
 };
 
 // Helper to format live quantity breakdown (e.g., "1 full case + 9 loose cans")

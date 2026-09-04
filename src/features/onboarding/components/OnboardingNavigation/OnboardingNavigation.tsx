@@ -6,12 +6,14 @@ import Animated, {
   withTiming,
   LinearTransition,
 } from 'react-native-reanimated';
-import { TIMING } from '#constants/animations';
+
 import { NavigationButton } from './NavigationButton';
 import type { OnboardingNavigationProps } from './types';
+import { useTranslation } from '#/i18n';
+import { motion } from '#/theme/foundations/motion';
 
 const ButtonHeight = 60;
-const LAYOUT_TRANSITION = LinearTransition.duration(TIMING.MODERATE);
+const LAYOUT_TRANSITION = LinearTransition.duration(motion.timing.MODERATE);
 
 export const OnboardingNavigation: React.FC<OnboardingNavigationProps> = ({
   showBackButton,
@@ -22,11 +24,12 @@ export const OnboardingNavigation: React.FC<OnboardingNavigationProps> = ({
   skipAction,
   isLastStep = false,
 }) => {
+  const { t } = useTranslation();
   // GPU-composited opacity animation (no width/marginLeft layout recalc)
   const backButtonStyle = useAnimatedStyle(() => {
     return {
       opacity: withTiming(showBackButton ? 1 : 0, {
-        duration: TIMING.STANDARD,
+        duration: motion.timing.STANDARD,
       }),
     };
   });
@@ -72,7 +75,7 @@ export const OnboardingNavigation: React.FC<OnboardingNavigationProps> = ({
             <NavigationButton
               action={{
                 ...continueAction,
-                label: isLastStep ? 'Finish' : continueAction.label,
+                label: isLastStep ? t('labels.finish') : continueAction.label,
               }}
               style={styles.continueButton}
               textStyle={styles.continueText}
@@ -100,8 +103,7 @@ const styles = StyleSheet.create(theme => ({
   },
   skipText: {
     color: theme.colors.textSecondary,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.medium,
+    ...theme.type.bodyStrong,
   },
   navigationContainer: {
     flexDirection: 'row',
@@ -127,6 +129,6 @@ const styles = StyleSheet.create(theme => ({
   },
   continueText: {
     color: theme.colors.background,
-    fontWeight: theme.fonts.weight.bold,
+    ...theme.type.bodyStrong,
   },
 }));

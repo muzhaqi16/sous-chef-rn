@@ -7,11 +7,11 @@ import { ActionButtons } from './ActionButtons';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAddScannedItem } from '#features/barcode/hooks/useAddScannedItem';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import { promptPantryDuplicate } from '#/utils/errors/pantryItemDuplicate';
+import { promptPantryDuplicate } from '#domain/pantryItemDuplicate';
 import { useAppStore } from '#store/useAppStore';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import type { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
-import type { BarcodeSource } from '#/types/navigation';
+import type { BarcodeSource } from '#features/barcode/types';
 import { ScrollView } from 'react-native';
 
 export interface SearchResultsProps {

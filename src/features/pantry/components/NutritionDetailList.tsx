@@ -11,8 +11,10 @@ import {
   formatNutritionValue,
   formatServingSize,
   hasNutritionData,
-} from '#utils/nutritionUtils';
+} from '#domain/nutrition';
 import { Text } from '#components/atoms/Text';
+import { SectionHeader } from '#components/atoms/SectionHeader';
+import { EmptyState } from '#components/molecules/EmptyState';
 
 interface NutritionDetailListProps {
   /** Raw nutritions JSON from API or parsed NutritionsData */
@@ -46,11 +48,7 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
   if (!hasNutritionData(nutritions)) {
     return (
       <View style={[styles.container, style]}>
-        <View style={styles.emptyState}>
-          <Text size="sm" tone="secondary" style={styles.emptyText}>
-            {t('nutrition.noData')}
-          </Text>
-        </View>
+        <EmptyState size="compact" title={t('nutrition.noData')} />
       </View>
     );
   }
@@ -68,12 +66,10 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
       {/* Serving size header */}
       {!!displayServingSize && (
         <View style={styles.servingHeader}>
-          <Text size="sm" weight="medium" tone="secondary">
+          <Text role="label" tone="secondary">
             {t('nutrition.servingSize')}
           </Text>
-          <Text size="sm" weight="semibold">
-            {displayServingSize}
-          </Text>
+          <Text role="label">{displayServingSize}</Text>
         </View>
       )}
 
@@ -84,9 +80,9 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
 
         return (
           <View key={category} style={styles.section}>
-            <Text size="sm" weight="semibold" style={styles.sectionTitle}>
+            <SectionHeader variant="overline" style={styles.sectionTitle}>
               {getCategoryLabel(category)}
-            </Text>
+            </SectionHeader>
 
             {categoryEntries.map((entry, index) => (
               <View
@@ -96,10 +92,14 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
                   index === categoryEntries.length - 1 && styles.lastRow,
                 ]}
               >
-                <Text size="sm" tone="secondary" style={styles.nutrientName}>
+                <Text
+                  role="caption"
+                  tone="secondary"
+                  style={styles.nutrientName}
+                >
                   {entry.name}
                 </Text>
-                <Text size="sm" weight="medium">
+                <Text role="label">
                   {formatNutritionValue(entry.amount, entry.unit)}
                 </Text>
               </View>
@@ -154,12 +154,5 @@ const styles = StyleSheet.create(theme => ({
   },
   nutrientName: {
     flex: 1,
-  },
-  emptyState: {
-    padding: theme.spacing.xl,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontStyle: 'italic',
   },
 }));

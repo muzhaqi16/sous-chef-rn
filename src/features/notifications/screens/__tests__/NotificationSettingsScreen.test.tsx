@@ -78,7 +78,7 @@ jest.mock('#features/notifications/hooks/useNotificationSync', () => ({
   })),
 }));
 
-jest.mock('#components/settings/SettingSwitch', () => ({
+jest.mock('#components/molecules/SettingSwitch', () => ({
   SettingSwitch: ({ title }: { title: string }) => title,
 }));
 

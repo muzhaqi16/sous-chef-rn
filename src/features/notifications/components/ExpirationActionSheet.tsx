@@ -104,7 +104,7 @@ function OptionRow({
         size={24}
         tone={option.destructive ? 'error' : 'primary'}
       />
-      <Text size="md" weight="medium" style={styles.optionLabel}>
+      <Text role="bodyStrong" style={styles.optionLabel}>
         {t(option.labelKey)}
       </Text>
     </AppPressable>
@@ -136,7 +136,7 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
       ref={ref}
       {...modalProps}
       index={0}
-      handleIndicatorStyle={{ backgroundColor: 'gray' }}
+      handleIndicatorStyle={styles.handleIndicator}
     >
       <BottomSheetScrollView
         style={styles.scrollView}
@@ -149,7 +149,7 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
         <Title style={styles.title}>
           {t('expirationAction.title', { itemName })}
         </Title>
-        <Text size="sm" tone="secondary" style={styles.subtitle}>
+        <Text role="caption" tone="secondary" style={styles.subtitle}>
           {subtitle}
         </Text>
         <View style={styles.optionsList}>
@@ -172,6 +172,10 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  // Matches what `useStandardBottomSheet` gives every other sheet.
+  handleIndicator: {
+    backgroundColor: theme.colors.textSecondary,
+  },
   scrollView: {
     flex: 1,
   },

@@ -3,13 +3,12 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
-import { Header } from '#components/molecules/Header';
 import { SearchBar } from '#components/molecules/SearchBar';
-import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
-import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
-import { FolderPicker } from '#components/molecules/FolderPicker';
-import { TagPicker } from '#components/molecules/TagPicker';
-import { DataStateView } from '#components/molecules/DataStateView';
+import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
+import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
+import { FolderPicker } from '#features/recipes/components/FolderPicker';
+import { TagPicker } from '#features/recipes/components/TagPicker';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 import { SavedRecipeCard } from '#features/recipes/components/SavedRecipeCard';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -27,6 +26,7 @@ import { alertService } from '#/services/alertService';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
+import { Screen } from '#components/templates/Screen';
 
 const keyExtractor = (item: SavedRecipeNode) => item.id;
 // Every row is the same component, so one recycling pool is correct.
@@ -123,6 +123,7 @@ export const SavedRecipes: React.FC = () => {
   const perfCallbacks = useFlashListPerformance(flashListRef, {
     componentName: 'SavedRecipes',
     hasRealContent: filteredRecipes.length > 0,
+    rowCount: filteredRecipes.length,
   });
   useDataReferenceTracker(
     filteredRecipes,
@@ -241,8 +242,11 @@ export const SavedRecipes: React.FC = () => {
   );
 
   return (
-    <View style={styles.container}>
-      <Header title={t('recipes.savedRecipesTitle')} onBack={goBack} />
+    <Screen
+      header={{ title: t('recipes.savedRecipesTitle'), back: goBack }}
+      scroll="list"
+      gutter="none"
+    >
       <View style={styles.searchBarContainer}>
         <SearchBar
           value={searchQuery}
@@ -315,7 +319,7 @@ export const SavedRecipes: React.FC = () => {
         onSelect={setSelectedTags}
         onCancel={() => setShowTagPicker(false)}
       />
-    </View>
+    </Screen>
   );
 };
 

@@ -2,28 +2,23 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { View } from 'react-native';
-import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
-import { alertService } from '#/services/alertService';
-import { handleMutationError } from '#/utils/errorHandlers';
 import { localizedErrorMessage } from '#/services/errorService';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { t as tGlobal, useTranslation } from '#/i18n';
 import { formatRole } from '#utils/formatters/roleFormatters';
 import { InviteCard_InviteFragmentDoc } from './CreateHomeScreen.generated';
 import type { FragmentType } from '@apollo/client/masking';
-import {
-  InviteActionsProvider,
-  useInviteActions,
-} from './InviteActionsContext';
 
-import { FormContent, type FormValues } from './FormContent';
-import { LoadingView } from './LoadingView';
+import {
+  FormContent,
+  type FormValues,
+} from '#features/onboarding/components/createHome/FormContent';
+import { LoadingView } from '#features/onboarding/components/createHome/LoadingView';
 import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
-import { SubmitButton } from './SubmitButton';
-import { ErrorMessage } from './ErrorMessage';
-import { Button } from '#components/atoms/Button';
+import { SubmitButton } from '#features/onboarding/components/createHome/SubmitButton';
+import { ErrorMessage } from '#features/onboarding/components/createHome/ErrorMessage';
+import { Button } from '#components/molecules/Button';
 
 import { useFragment } from '@apollo/client/react';
 import { HomeType } from '#/graphql/generated/schemaTypes';
@@ -49,11 +44,11 @@ import { getCreateHomeSchema } from '#features/onboarding/utils/validation';
 import { logValidationErrors } from '#/utils/validation/common';
 import { createPantryForHome, showPantryCreationError } from './helpers';
 import { extractNodes } from '#/utils/connectionUtils';
-import { OnboardingErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
+import { OnboardingErrorBoundary } from '#components/providers/ScreenErrorBoundary';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { unwrapPayload } from '#/utils/errors/mutationPayload';
-import { errorService } from '#/services/errorService';
+import { Card } from '#components/atoms/Card';
 
 /** Module scope so the try/catch does not bail the component out of the compiler. */
 async function performCreateHome(
@@ -76,7 +71,7 @@ async function performCreateHome(
   if (deps.needsHome) {
     const response = await deps.createHome({
       name: data.homeName.trim(),
-      description: 'Created during onboarding',
+      description: tGlobal('onBoarding.createdDuringOnboarding'),
       type: HomeType.Household,
       isPublic: false,
       // Asking for a join code while the email is unverified makes the server
@@ -140,8 +135,6 @@ const InviteCard: React.FC<{
   inviteRef: FragmentType<typeof InviteCard_InviteFragmentDoc>;
 }> = ({ inviteRef }) => {
   const { t } = useTranslation();
-  const { handleAcceptInvite, handleDeclineInvite, accepting } =
-    useInviteActions();
 
   // Fragment colocation makes this card re-render only on ITS invite's changes.
   const { data: invite, complete } = useFragment({
@@ -159,61 +152,31 @@ const InviteCard: React.FC<{
   const inviteHomeName = invite.home?.name || t('labels.unknownHome');
 
   return (
-    <View style={styles.inviteCard}>
-      <Text
-        size="xl"
-        weight="bold"
-        lineHeight="relaxed"
-        style={styles.inviteHomeName}
-      >
+    <Card padding="none" style={styles.inviteCard}>
+      <Text role="subheading" style={styles.inviteHomeName}>
         {inviteHomeName}
       </Text>
       <View style={styles.inviteDetailsContainer}>
-        <Text size="sm" lineHeight="tight">
-          <Text weight="medium" tone="secondary">
+        <Text role="caption">
+          <Text role="bodyStrong" tone="secondary">
             {t('labels.from')}:{' '}
           </Text>
-          <Text weight="semibold">{inviterName}</Text>
+          <Text role="bodyStrong">{inviterName}</Text>
         </Text>
 
-        <Text size="sm" lineHeight="tight">
-          <Text weight="medium" tone="secondary">
+        <Text role="caption">
+          <Text role="bodyStrong" tone="secondary">
             {t('labels.role')}:{' '}
           </Text>
-          <Text weight="bold" tone="accent">
+          <Text role="bodyStrong" tone="accent">
             {formatRole(invite.role)}
           </Text>
         </Text>
       </View>
-      <View style={styles.inviteActions}>
-        <AppPressable
-          style={styles.inviteDeclineButton}
-          onPress={() => handleDeclineInvite(invite.token, inviteHomeName)}
-          disabled={accepting}
-        >
-          <Text size="sm" weight="semibold">
-            {t('labels.decline')}
-          </Text>
-        </AppPressable>
-        <AppPressable
-          style={styles.inviteAcceptButton}
-          onPress={() => handleAcceptInvite(invite.token)}
-          disabled={accepting}
-        >
-          {accepting ? (
-            <WhiteActivityIndicator size="small" />
-          ) : (
-            <Text
-              size="sm"
-              weight="semibold"
-              style={styles.inviteAcceptButtonText}
-            >
-              {t('labels.accept')}
-            </Text>
-          )}
-        </AppPressable>
-      </View>
-    </View>
+      <Text role="caption" tone="secondary">
+        {t('onBoarding.inviteOpenFromNotifications')}
+      </Text>
+    </Card>
   );
 };
 
@@ -252,23 +215,8 @@ const CreateHomeScreenComponent = () => {
     needsPantry,
     homesLoading,
     invitesLoading,
-    accepting,
     createHome,
-    acceptHomeInvite,
-    declineHomeInvite,
-  } = useCreateHomeFlow({
-    userId: user?.id,
-    onInviteAccepted: homeId => {
-      setSelectedHomeId(homeId);
-      navigateToNextStep('CreateHome');
-    },
-    onInviteError: error => {
-      handleMutationError(error, { operation: 'Accept Home Invite' });
-    },
-    onDeclineError: error => {
-      handleMutationError(error, { operation: 'Decline Home Invite' });
-    },
-  });
+  } = useCreateHomeFlow({ userId: user?.id });
   const { createPantry } = useCreatePantry();
   const hasUnverifiedEmail = useHasUnverifiedEmail();
   const hasPendingInvites = pendingInvites.length > 0;
@@ -329,41 +277,6 @@ const CreateHomeScreenComponent = () => {
     );
   };
 
-  const handleAcceptInvite = async (token: string) => {
-    // Error handled by onError in mutation config
-    try {
-      await acceptHomeInvite(token);
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Failed to accept home invite',
-      });
-    }
-  };
-
-  const handleDeclineInvite = (token: string, homeNameParam: string) => {
-    alertService.alert(
-      t('confirmations.declineInvitationTitle'),
-      t('confirmations.declineHomeInvitation', { homeName: homeNameParam }),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.decline'),
-          style: 'destructive',
-          onPress: async () => {
-            // Error handled by onError in mutation config
-            try {
-              await declineHomeInvite(token);
-            } catch (error) {
-              errorService.reportError(error, {
-                operation: 'Failed to decline home invite',
-              });
-            }
-          },
-        },
-      ],
-    );
-  };
-
   if (checkingExisting || homesLoading || invitesLoading) {
     return <LoadingView onSkip={() => skipToStep('CreateShoppingList')} />;
   }
@@ -393,28 +306,17 @@ const CreateHomeScreenComponent = () => {
         onSkip={() => skipToStep('CreateShoppingList')}
       >
         <View style={styles.invitesContainer}>
-          <Text size="md" weight="semibold" style={styles.invitesSectionTitle}>
+          <Text role="bodyStrong" style={styles.invitesSectionTitle}>
             {t('labels.pendingInvitations')}
           </Text>
-          <InviteActionsProvider
-            handleAcceptInvite={handleAcceptInvite}
-            handleDeclineInvite={handleDeclineInvite}
-            accepting={accepting}
-          >
-            {pendingInvites.map(invite => (
-              <InviteCard key={invite.id} inviteRef={invite} />
-            ))}
-          </InviteActionsProvider>
+          {pendingInvites.map(invite => (
+            <InviteCard key={invite.id} inviteRef={invite} />
+          ))}
         </View>
 
         <View style={styles.orDivider}>
           <View style={styles.dividerLine} />
-          <Text
-            size="sm"
-            tone="secondary"
-            weight="medium"
-            style={styles.dividerText}
-          >
+          <Text role="label" tone="secondary" style={styles.dividerText}>
             {t('onBoarding.or')}
           </Text>
           <View style={styles.dividerLine} />
@@ -446,25 +348,24 @@ const CreateHomeScreenComponent = () => {
       >
         <View style={styles.existingResourcesContainer}>
           <View style={styles.resourceCard}>
-            <Text size="xs" tone="secondary" style={styles.resourceLabel}>
+            <Text role="caption" tone="secondary" style={styles.resourceLabel}>
               {t('labels.home')}
             </Text>
-            <Text size="lg" weight="semibold">
-              {existingHome.name}
-            </Text>
+            <Text role="heading">{existingHome.name}</Text>
 
             <View style={styles.pantrySection}>
-              <Text size="xs" tone="secondary" style={styles.resourceLabel}>
+              <Text
+                role="caption"
+                tone="secondary"
+                style={styles.resourceLabel}
+              >
                 {t('labels.pantry')}
               </Text>
-              <Text size="lg" weight="semibold">
-                {existingPantry.name}
-              </Text>
+              <Text role="heading">{existingPantry.name}</Text>
               {!!existingPantry.isDefault && (
                 <View style={styles.defaultBadge}>
                   <Text
-                    size="xs"
-                    weight="semibold"
+                    role="label"
                     tone="accent"
                     style={styles.defaultBadgeText}
                   >
@@ -476,10 +377,9 @@ const CreateHomeScreenComponent = () => {
           </View>
 
           <Text
-            size="sm"
+            role="caption"
             tone="secondary"
             align="center"
-            lineHeight="normal"
             style={styles.infoText}
           >
             {t('onBoarding.homeAndPantryNote')}
@@ -507,12 +407,10 @@ const CreateHomeScreenComponent = () => {
       {!!existingHome && (
         <View style={styles.existingResourcesContainer}>
           <View style={styles.resourceCard}>
-            <Text size="xs" tone="secondary" style={styles.resourceLabel}>
+            <Text role="caption" tone="secondary" style={styles.resourceLabel}>
               {t('onBoarding.existingHome')}
             </Text>
-            <Text size="lg" weight="semibold">
-              {existingHome.name}
-            </Text>
+            <Text role="heading">{existingHome.name}</Text>
           </View>
         </View>
       )}
@@ -589,22 +487,10 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
   },
   inviteCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.lg,
-    borderCurve: 'continuous',
     padding: theme.spacing.lg,
     marginBottom: theme.spacing.md,
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 2,
-        blurRadius: 4,
-        spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.1)',
-      },
-    ],
   },
   inviteHomeName: {
     marginBottom: theme.spacing.md,

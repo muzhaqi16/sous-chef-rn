@@ -22,10 +22,18 @@
 // STORE keys on purpose, and the keychain is not in its inventory.
 
 const mockMutate = jest.fn();
+const mockQuery = jest.fn();
 jest.mock('#/apollo/client', () => ({
-  client: { mutate: (...args: unknown[]) => mockMutate(...args) },
+  client: {
+    mutate: (...args: unknown[]) => mockMutate(...args),
+    query: (...args: unknown[]) => mockQuery(...args),
+  },
   cancelCachePersistence: jest.fn(),
   flushCachePersistence: jest.fn(),
+}));
+
+jest.mock('#/storage/deviceId', () => ({
+  getDeviceId: () => 'device-1',
 }));
 
 const mockResetStore = jest.fn().mockResolvedValue(undefined);
@@ -68,7 +76,6 @@ jest.mock('#/storage/keychain', () => ({
     .fn()
     .mockResolvedValue({ isAvailable: true, biometryType: 'Fingerprint' }),
   getLastBiometricEmail: jest.fn().mockResolvedValue('chef@example.com'),
-  saveTempRegistrationPassword: jest.fn(),
   clearTempRegistrationPassword: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -90,6 +97,10 @@ describe('logout and biometric credentials', () => {
   beforeEach(() => {
     mockClearCredentials.mockClear();
     mockMutate.mockResolvedValue({ data: {} });
+    // The lookup that finds THIS device's credential so it can be revoked.
+    mockQuery.mockResolvedValue({
+      data: { deviceCredentials: [{ id: 'dc-1', deviceId: 'device-1' }] },
+    });
   });
 
   it('clears the stored credentials on an ordinary sign-out', async () => {
@@ -122,8 +133,22 @@ describe('logout and biometric credentials', () => {
     expect(mockClearCredentials).toHaveBeenCalledWith('chef@example.com');
   });
 
+  // The asymmetry, and getting it backwards is the failure mode: revoking on
+  // the sign-out that KEEPS the slot would leave a credential the exchange
+  // refuses, which is the opposite of what keeping it is for.
+  it('revokes server-side only when it also drops the local slot', async () => {
+    await authService.logout();
+    const revokedOnDrop = mockMutate.mock.calls.length;
+
+    mockMutate.mockClear();
+    await authService.logout({ keepBiometricCredentials: true });
+
+    expect(revokedOnDrop).toBeGreaterThan(0);
+    expect(mockMutate).not.toHaveBeenCalled();
+  });
+
   it('reports a keychain delete that did not succeed', async () => {
-    // A failed delete leaves the previous user's password on the device. It
+    // A failed delete leaves the previous user's credential on the device. It
     // must not be indistinguishable from success — the boolean was discarded.
     mockClearCredentials.mockRejectedValueOnce(new Error('keychain locked'));
 

@@ -6,6 +6,7 @@ import {
   renderWithApollo,
   seedCache,
 } from '../../helpers/apolloMockProvider';
+import { CorrectWeightModal_PantryItemFragmentDoc } from '#features/pantry/components/modals/CorrectWeightModal.generated';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
@@ -19,7 +20,7 @@ jest.mock('../../../src/hooks/useStandardBottomSheet', () => ({
   }),
   BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
-jest.mock('../../../src/components/atoms/BottomSheetHeader', () => ({
+jest.mock('../../../src/components/molecules/BottomSheetHeader', () => ({
   BottomSheetHeader: (props: { title?: string }) => {
     const { Text } = require('react-native');
     return <Text>{props.title}</Text>;
@@ -35,7 +36,7 @@ jest.mock(
     }) => children,
   }),
 );
-jest.mock('../../../src/components/molecules/FormInput', () => ({
+jest.mock('../../../src/components/atoms/FormInput', () => ({
   FormInput: (props: { label?: string }) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;
@@ -47,7 +48,7 @@ jest.mock(
     UnitAutocompleteField: () => null,
   }),
 );
-jest.mock('../../../src/components/atoms/FormattedItemSubtitle', () => ({
+jest.mock('../../../src/components/molecules/FormattedItemSubtitle', () => ({
   FormattedItemSubtitle: () => null,
 }));
 jest.mock(
@@ -64,24 +65,29 @@ const PANTRY_ITEM_ID = 'pi1';
 function makeCache() {
   return seedCache([
     {
-      __typename: 'PantryItem',
-      id: PANTRY_ITEM_ID,
-      itemName: 'Flour',
-      quantity: 1,
-      netWeight: 500,
-      remainingNetWeight: 450,
-      netWeightUnit: {
-        __typename: 'Unit',
-        id: 'u1',
-        name: 'grams',
-        symbol: 'g',
-      },
-      unit: {
-        __typename: 'Unit',
-        id: 'u2',
-        symbol: 'bag',
-        displayAsFraction: false,
-      },
+      // The production selection the consumer reads, so a thin fixture fails
+      // here instead of defining its own idea of complete.
+      fragment: CorrectWeightModal_PantryItemFragmentDoc,
+      data: {
+        __typename: 'PantryItem',
+        id: PANTRY_ITEM_ID,
+        itemName: 'Flour',
+        quantity: 1,
+        netWeight: 500,
+        remainingNetWeight: 450,
+        netWeightUnit: {
+          __typename: 'Unit',
+          id: 'u1',
+          name: 'grams',
+          symbol: 'g',
+        },
+        unit: {
+          __typename: 'Unit',
+          id: 'u2',
+          symbol: 'bag',
+          displayAsFraction: false,
+        },
+          },
     },
   ]);
 }

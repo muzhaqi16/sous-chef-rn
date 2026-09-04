@@ -60,7 +60,7 @@ const FilterTabItemComponent: React.FC<FilterTabItemProps> = ({
         style={[styles.tab, isActive && styles.tabActive]}
       >
         <Text
-          weight="semibold"
+          role="bodyStrong"
           style={[styles.tabLabel, isActive && styles.tabLabelActive]}
         >
           {title}
@@ -70,7 +70,7 @@ const FilterTabItemComponent: React.FC<FilterTabItemProps> = ({
             style={[styles.countBadge, isActive && styles.countBadgeActive]}
           >
             <Text
-              weight="bold"
+              role="bodyStrong"
               style={[styles.countText, isActive && styles.countTextActive]}
             >
               {count}
@@ -100,7 +100,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.filterTab.activeBg,
   },
   tabLabel: {
-    fontSize: theme.typography.fontSize.sm - 1,
     color: theme.colors.filterTab.inactiveText,
   },
   tabLabelActive: {
@@ -117,7 +116,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.filterTab.activeCountBg,
   },
   countText: {
-    fontSize: theme.typography.fontSize.xs - 1,
     color: theme.colors.filterTab.countText,
   },
   countTextActive: {

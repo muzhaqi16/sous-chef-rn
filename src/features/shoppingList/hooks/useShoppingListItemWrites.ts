@@ -21,7 +21,7 @@ import {
   reconcileShoppingCreate,
   buildAddItemsReconcileUpdate,
   type OptimisticShoppingListItemFields,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+} from '#features/shoppingList/cache/items';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';

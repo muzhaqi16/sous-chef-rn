@@ -2,14 +2,14 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { RecipeCategoryFields } from '#features/recipes/screens/RecipeForm/components/RecipeCategoryFields';
-import type { RecipeFormState } from '#features/recipes/screens/RecipeForm/useRecipeForm';
+import { RecipeCategoryFields } from '#features/recipes/components/recipeForm/RecipeCategoryFields';
+import type { RecipeFormState } from '#features/recipes/screens/RecipeForm/formState';
 import { Difficulty, RecipeStatus } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
-jest.mock('../../../../../src/components/molecules/FormInput', () => ({
+jest.mock('../../../../../src/components/atoms/FormInput', () => ({
   FormInput: (props: { label?: string }) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;

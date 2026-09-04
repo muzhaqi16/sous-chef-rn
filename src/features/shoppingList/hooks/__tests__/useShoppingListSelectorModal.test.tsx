@@ -123,8 +123,8 @@ jest.mock('#features/shoppingList/components/ShoppingListAvatar', () => ({
   ShoppingListAvatar: 'ShoppingListAvatar',
 }));
 
-// Keep the real module surface — useDeleteShoppingList reaches the shared
-// shoppingListCacheUpdaters, which needs the full factory set at import time.
+// Keep the real module surface — useDeleteShoppingList reaches the shopping
+// list's cache updaters, which need the full factory set at import time.
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),

@@ -20,11 +20,18 @@ jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
   }),
 }));
 
-const mockToast = jest.fn();
-jest.mock('#/hooks/useToast', () => ({
-  useToast: () => mockToast,
+const mockToastSuccess = jest.fn();
+const mockToastError = jest.fn();
+const mockToastInfo = jest.fn();
+const mockToastWarning = jest.fn();
+jest.mock('#services/toastService', () => ({
+  toastService: {
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+    error: (...args: unknown[]) => mockToastError(...args),
+    info: (...args: unknown[]) => mockToastInfo(...args),
+    warning: (...args: unknown[]) => mockToastWarning(...args),
+  },
 }));
-
 jest.mock('#/services/errorService');
 
 // A real (permissive) schema, not `{}` — yupResolver has to be able to run it,
@@ -107,7 +114,7 @@ jest.mock('#features/auth/components/AuthFormTemplate', () => {
   };
 });
 
-jest.mock('#components/atoms/EmailInput', () => ({
+jest.mock('#components/molecules/EmailInput', () => ({
   EmailInput: 'EmailInput',
 }));
 
@@ -196,14 +203,16 @@ describe('ForgotPasswordScreen', () => {
 
     await submit(user);
 
-    // A union refusal resolves 200 with no transport error — the old
-    // presence-only check reported it as a successful send.
+    // A union refusal resolves 200 with no transport error, so a
+    // presence-only check reports it as a successful send. The toast carries
+    // the LOCALIZED resolution of the payload, never its `message` — that
+    // sentence is unlocalizable English by construction.
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        message: 'Email is invalid.',
-        type: 'error',
-      });
+      expect(mockToastError).toHaveBeenCalledWith(
+        'Something went wrong. Please try again.',
+      );
     });
+    expect(mockToastError).not.toHaveBeenCalledWith('Email is invalid.');
     expect(screen.getByText('Forgot password')).toBeTruthy();
     expect(screen.queryByText('Check your email')).toBeNull();
     expect(mockNavigateToLogin).not.toHaveBeenCalled();

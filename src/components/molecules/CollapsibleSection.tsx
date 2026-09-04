@@ -27,7 +27,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   return (
     <>
       <AppPressable style={styles.header} onPress={onToggle}>
-        <Text size="base" weight="semibold">
+        <Text role="bodyStrong">
           {title}
           {count != null ? ` (${count})` : ''}
         </Text>

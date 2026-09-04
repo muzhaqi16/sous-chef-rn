@@ -4,6 +4,7 @@ import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { GoalStatus, type GoalProgress } from '#/graphql/generated/schemaTypes';
+import { ProgressBar } from '#components/atoms/ProgressBar';
 
 interface NutritionGoalProgressProps {
   overallScore: number;
@@ -17,6 +18,12 @@ const STATUS_LABEL_KEYS: Record<GoalStatus, string> = {
   [GoalStatus.OnTarget]: 'nutritionGoal.statusOnTarget',
   [GoalStatus.UnderTarget]: 'nutritionGoal.statusUnder',
   [GoalStatus.OverTarget]: 'nutritionGoal.statusOver',
+};
+
+const STATUS_TONE: Record<GoalStatus, 'success' | 'warning' | 'error'> = {
+  [GoalStatus.OnTarget]: 'success',
+  [GoalStatus.UnderTarget]: 'warning',
+  [GoalStatus.OverTarget]: 'error',
 };
 
 function MacroProgressBar({
@@ -35,21 +42,21 @@ function MacroProgressBar({
   return (
     <View style={barStyles.container}>
       <View style={barStyles.labelRow}>
-        <Text size="sm" weight="medium">
-          {label}
-        </Text>
-        <Text size="xs" weight="semibold" style={barStyles.statusLabel}>
+        <Text role="label">{label}</Text>
+        <Text role="label" style={barStyles.statusLabel}>
           {t(STATUS_LABEL_KEYS[progress.status])}
         </Text>
       </View>
-      <View style={barStyles.barBackground}>
-        <View style={[barStyles.barFill, { width: `${percentage}%` }]} />
-      </View>
+      <ProgressBar
+        value={percentage / 100}
+        tone={STATUS_TONE[progress.status]}
+        accessibilityLabel={label}
+      />
       <View style={barStyles.valueRow}>
-        <Text size="xs" tone="secondary">
+        <Text role="caption" tone="secondary">
           {Math.round(progress.current)} / {Math.round(progress.target)}
         </Text>
-        <Text size="xs" tone="tertiary">
+        <Text role="caption" tone="tertiary">
           {Math.round(progress.percentage)}%
         </Text>
       </View>
@@ -68,10 +75,8 @@ export const NutritionGoalProgress: React.FC<NutritionGoalProgressProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.scoreRow}>
-        <Text size="md" weight="semibold">
-          {t('nutritionGoal.overallScore')}
-        </Text>
-        <Text size="lg" weight="bold" tone="accent">
+        <Text role="bodyStrong">{t('nutritionGoal.overallScore')}</Text>
+        <Text role="heading" tone="accent">
           {t('nutritionGoal.scoreFormat', {
             score: Math.round(overallScore),
           })}
@@ -124,14 +129,14 @@ const barStyles = StyleSheet.create(theme => ({
   },
   barBackground: {
     height: 6,
-    borderRadius: 3,
+    borderRadius: theme.radii.pill,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.border,
     overflow: 'hidden',
   },
   barFill: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: theme.radii.pill,
     borderCurve: 'continuous',
     variants: {
       status: {

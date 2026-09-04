@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
+import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import type {
   SwipeAction,
   SwipeableRef,
-} from '#components/molecules/SwipeableItem/types';
+} from '#components/organisms/SwipeableItem/types';
 import { ListItem } from '../molecules/ListItem';
 import { StyleSheet } from 'react-native-unistyles';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';

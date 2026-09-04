@@ -18,6 +18,13 @@ fragment PantryActionModal_pantryItem on PantryItem {
   activeBatchCount
   netWeight
   remainingNetWeight
+  portionUnitId
+  portionUnit {
+    id
+    name
+    symbol
+  }
+  remainingPortions
   lastUsedAt
   unit {
     id

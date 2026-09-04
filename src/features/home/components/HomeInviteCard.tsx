@@ -5,10 +5,11 @@ import { type FragmentType } from '@apollo/client/masking';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { formatInviteStatus } from '#/utils/formatters/inviteFormatters';
+import { formatInviteStatus } from '#features/home/utils/inviteFormatters';
 import { Text } from '#components/atoms/Text';
 import { InviteStatus } from '#/graphql/generated/schemaTypes';
 import { HomeInviteCard_InviteFragmentDoc } from './HomeInviteCard.generated';
+import { useTranslation } from '#/i18n';
 
 type StatusKey = 'pending' | 'accepted' | 'declined' | 'expired';
 
@@ -55,7 +56,7 @@ const InviteStatusBadge: React.FC<{
   styles.useVariants({ status });
   return (
     <View style={styles.inviteStatusBadge}>
-      <Text size="xs" weight="semibold" style={styles.inviteStatusText}>
+      <Text role="label" style={styles.inviteStatusText}>
         {children}
       </Text>
     </View>
@@ -72,6 +73,7 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
   canRevoke,
   onRevoke,
 }) => {
+  const { t } = useTranslation();
   const { data: invite, complete } = useFragment({
     fragment: HomeInviteCard_InviteFragmentDoc,
     fragmentName: 'HomeInviteCard_invite',
@@ -87,17 +89,21 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
   return (
     <InviteSurface status={statusKey}>
       <View style={styles.inviteInfo}>
-        <Text size="md" weight="medium" style={styles.inviteName}>
+        <Text role="bodyStrong" style={styles.inviteName}>
           {displayName}
         </Text>
-        <Text size="sm" tone="secondary">
+        <Text role="caption" tone="secondary">
           {invite.email}
         </Text>
       </View>
       <View style={styles.inviteActions}>
         <InviteStatusBadge status={statusKey}>{statusText}</InviteStatusBadge>
         {!!canRevoke && invite.status === InviteStatus.Pending && (
-          <AppPressable style={styles.revokeButton} onPress={onRevoke}>
+          <AppPressable
+            style={styles.revokeButton}
+            onPress={onRevoke}
+            accessibilityLabel={t('a11y.revokeInvite')}
+          >
             <Icon name="close" size={20} />
           </AppPressable>
         )}

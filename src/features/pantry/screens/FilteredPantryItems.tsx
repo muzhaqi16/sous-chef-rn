@@ -14,13 +14,12 @@ import { StyleSheet } from 'react-native-unistyles';
 import { differenceInCalendarDays } from 'date-fns';
 
 import { Icon } from '#utils/iconUtils';
-import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
-import { Header } from '#components/molecules/Header';
-import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
+import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
+import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
-import { DataStateView } from '#components/molecules/DataStateView';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState, type DataState } from '#hooks/data/useDataState';
-import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
+import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
 import type { PantryItemFilters } from '#/graphql/generated/schemaTypes';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -42,10 +41,12 @@ import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTrac
 import {
   FilteredItemsActionsProvider,
   useFilteredItemsActions,
-} from './FilteredItemsActionsContext';
+} from '#features/pantry/context/FilteredItemsActionsContext';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { Text } from '#components/atoms/Text';
 import type { Translate } from '#/i18n/types';
+import { EmptyState } from '#components/molecules/EmptyState';
+import { Screen } from '#components/templates/Screen';
 
 export type FilteredPantryItemsMode = 'lowStock' | 'expiring' | 'expired';
 
@@ -202,6 +203,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
   showCart,
   onCartMeasure,
 }) => {
+  const { t } = useTranslation();
   const { navigateTo, handleAddToList } = useFilteredItemsActions();
   const cartRef = useRef<View>(null);
 
@@ -215,6 +217,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
           })
         }
         style={styles.actionButton}
+        accessibilityLabel={t('labels.addToShoppingList')}
       >
         <Icon name="cart-outline" size={20} tone="primary" />
       </Pressable>
@@ -224,9 +227,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
     <SwipeableItem onPress={() => navigateTo({ itemId: item.id })}>
       <View style={[commonStyles.card, commonStyles.rowSpaceBetween]}>
         <View style={styles.itemInfo}>
-          <Text size="base" weight="medium">
-            {item.itemName}
-          </Text>
+          <Text role="bodyStrong">{item.itemName}</Text>
           <Text style={[commonStyles.caption, styles.itemDetails]}>
             {subtitleFn(item)}
           </Text>
@@ -289,14 +290,7 @@ const FilteredEmpty: React.FC<FilteredEmptyProps> = ({
     return <DataStateView state={state} onRetry={onRetry} />;
   }
 
-  return (
-    <View style={[commonStyles.center, styles.emptyState]}>
-      <Icon name={icon} size={64} tone="success" />
-      <Text align="center" style={[commonStyles.body, styles.emptyText]}>
-        {message}
-      </Text>
-    </View>
-  );
+  return <EmptyState icon={icon} title={message} iconColor={undefined} />;
 };
 
 export const FilteredPantryItems: React.FC<
@@ -374,6 +368,7 @@ export const FilteredPantryItems: React.FC<
   const perfCallbacks = useFlashListPerformance(flashListRef, {
     componentName: 'FilteredPantryItems',
     hasRealContent: filteredItems.length > 0,
+    rowCount: filteredItems.length,
   });
   useDataReferenceTracker(
     filteredItems,
@@ -425,6 +420,7 @@ export const FilteredPantryItems: React.FC<
     ? [
         {
           icon: 'cart-outline',
+          accessibilityLabel: t('labels.addToShoppingList'),
           onPress: addLowStockToShoppingList,
           loading: addAllLoading,
           testID: 'add-all-low-stock',
@@ -434,14 +430,16 @@ export const FilteredPantryItems: React.FC<
     : undefined;
 
   return (
-    <View style={commonStyles.container}>
-      <Header
-        title={config.title}
-        onBack={goBack}
-        centerTitle
-        rightActions={headerRightActions}
-      />
-
+    <Screen
+      header={{
+        title: config.title,
+        back: goBack,
+        centerTitle: true,
+        actions: headerRightActions,
+      }}
+      scroll="list"
+      gutter="none"
+    >
       <FilteredItemsActionsProvider actions={actions}>
         <FlashList
           ref={flashListRef}
@@ -498,7 +496,7 @@ export const FilteredPantryItems: React.FC<
           onTargetPress={tutorial.advance}
         />
       ) : null}
-    </View>
+    </Screen>
   );
 };
 
@@ -508,16 +506,6 @@ const styles = StyleSheet.create(theme => ({
   },
   scrollContent: {
     padding: theme.spacing.md,
-  },
-  emptyState: {
-    padding: theme.spacing['2xl'],
-  },
-  emptyText: {
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
-  },
-  loadingContainer: {
-    padding: theme.spacing['2xl'],
   },
   skeletonContainer: {
     gap: theme.spacing.sm,

@@ -3,13 +3,11 @@ import { View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Text } from '#components/atoms/Text';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
-import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Icon } from '#/utils/iconUtils';
-import { Header } from '#components/molecules/Header';
-import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
-import { LoadingInline } from '#components/atoms/Loading';
+import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
+import { Loading } from '#components/molecules/Loading';
 import {
   useDeleteAccount,
   type DeleteAccountResult,
@@ -17,6 +15,8 @@ import {
 import { authService } from '#/services/authService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { SectionHeader } from '#components/atoms/SectionHeader';
+import { Screen } from '#components/templates/Screen';
 
 /** Module-level so the await chain does not bail the screen out of the compiler. */
 async function performDeleteAccount(
@@ -38,11 +38,9 @@ async function performDeleteAccount(
     setIsDeleting(false);
     return;
   }
-  // The account is gone, so its keychain slot goes with it. Every other
-  // sign-out path deliberately leaves biometric credentials in place — see
-  // `LogoutOptions` in authService.
-  // Nothing to pass: a sign-out clears the account's biometric credentials by
-  // default now, and a deleted account most certainly keeps none.
+  // The account is gone, so its keychain slot goes with it and the credential
+  // is revoked server-side. That is the DEFAULT; the deliberate sign-out is the
+  // one that opts out of it — see `LogoutOptions` in authService.
   authService.logout();
 }
 
@@ -96,21 +94,25 @@ export const DeleteAccountScreen: React.FC = () => {
   };
 
   const renderLoadingState = () => (
-    <LoadingInline message={t('account.deleteCheckingStatus')} />
+    <Loading message={t('account.deleteCheckingStatus')} />
   );
 
   const renderErrorState = () => (
     <View style={styles.centerContainer}>
       <Icon name="alert-circle-outline" size={48} tone="error" />
-      <Text style={styles.errorTitle}>{t('account.deleteUnableToCheck')}</Text>
-      <Text style={styles.errorText}>
+      <Text role="heading" style={styles.errorTitle}>
+        {t('account.deleteUnableToCheck')}
+      </Text>
+      <Text role="body" style={styles.errorText}>
         {eligibilityError?.message || t('account.deleteGenericError')}
       </Text>
       <AppPressable
         style={styles.retryButton}
         onPress={() => refetchEligibility()}
       >
-        <Text style={styles.retryButtonText}>{t('labels.retry')}</Text>
+        <Text role="bodyStrong" style={styles.retryButtonText}>
+          {t('labels.retry')}
+        </Text>
       </AppPressable>
     </View>
   );
@@ -122,12 +124,12 @@ export const DeleteAccountScreen: React.FC = () => {
     >
       <View style={styles.blockedWarningContainer}>
         <Icon name="alert-circle-outline" size={48} tone="warning" />
-        <Text style={styles.blockedWarningTitle}>
+        <Text role="subheading" style={styles.blockedWarningTitle}>
           {t('account.deleteBlockedTitle')}
         </Text>
       </View>
 
-      <Text style={styles.blockedDescription}>
+      <Text role="body" style={styles.blockedDescription}>
         {t('account.deleteBlockedSubtitle')}
       </Text>
 
@@ -135,16 +137,18 @@ export const DeleteAccountScreen: React.FC = () => {
         <View key={blocker.resourceId || index} style={styles.blockerCard}>
           <View style={styles.blockerHeader}>
             <Icon name="home-outline" size={20} tone="primary" />
-            <Text style={styles.blockerResourceName}>
+            <Text role="bodyStrong" style={styles.blockerResourceName}>
               {blocker.resourceName}
             </Text>
           </View>
-          <Text style={styles.blockerMessage}>{blocker.message}</Text>
+          <Text role="caption" style={styles.blockerMessage}>
+            {blocker.message}
+          </Text>
           <View style={styles.resolutionSection}>
-            <Text style={styles.resolutionTitle}>
+            <Text role="label" style={styles.resolutionTitle}>
               {t('account.deleteResolveTitle')}
             </Text>
-            <Text style={styles.resolutionOption}>
+            <Text role="caption" style={styles.resolutionOption}>
               {t('account.deleteResolveTransfer')}
             </Text>
             <Text style={styles.resolutionOption}>
@@ -158,7 +162,9 @@ export const DeleteAccountScreen: React.FC = () => {
       ))}
 
       <AppPressable style={styles.goBackButton} onPress={goBack}>
-        <Text style={styles.goBackButtonText}>{t('labels.goBack')}</Text>
+        <Text role="bodyStrong" style={styles.goBackButtonText}>
+          {t('labels.goBack')}
+        </Text>
       </AppPressable>
     </ScrollView>
   );
@@ -174,18 +180,18 @@ export const DeleteAccountScreen: React.FC = () => {
       >
         <View style={styles.warningContainer}>
           <Icon name="warning-outline" size={48} tone="error" />
-          <Text style={styles.warningTitle}>
+          <Text role="subheading" style={styles.warningTitle}>
             {t('account.deleteWarningTitle')}
           </Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
+          <SectionHeader style={styles.sectionTitleSpacing}>
             {t('account.deleteWhatWillBeDeleted')}
-          </Text>
+          </SectionHeader>
           <View style={styles.bulletPoint}>
             <Icon name="close-circle-outline" size={20} tone="error" />
-            <Text style={styles.bulletText}>
+            <Text role="caption" style={styles.bulletText}>
               {t('account.deleteWipeProfile')}
             </Text>
           </View>
@@ -210,10 +216,10 @@ export const DeleteAccountScreen: React.FC = () => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
+          <SectionHeader style={styles.sectionTitleSpacing}>
             {t('account.deleteBeforeYouProceed')}
-          </Text>
-          <Text style={styles.text}>
+          </SectionHeader>
+          <Text role="caption" style={styles.text}>
             • {t('account.deleteProceedIrreversible')}
           </Text>
           <Text style={styles.text}>• {t('account.deleteProceedLogout')}</Text>
@@ -223,7 +229,7 @@ export const DeleteAccountScreen: React.FC = () => {
         </View>
 
         <View style={styles.confirmationSection}>
-          <Text style={styles.confirmationLabel}>
+          <Text role="body" style={styles.confirmationLabel}>
             {t('account.deleteTypeConfirm')}
           </Text>
           <BaseInput
@@ -245,7 +251,7 @@ export const DeleteAccountScreen: React.FC = () => {
           onPress={handleDeleteAccount}
           disabled={confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting}
         >
-          <Text style={styles.deleteButtonText}>
+          <Text role="bodyStrong" style={styles.deleteButtonText}>
             {isDeleting
               ? t('account.deleteInProgress')
               : t('account.deleteForever')}
@@ -257,7 +263,9 @@ export const DeleteAccountScreen: React.FC = () => {
           onPress={goBack}
           disabled={isDeleting}
         >
-          <Text style={styles.cancelButtonText}>{t('labels.cancel')}</Text>
+          <Text role="bodyStrong" style={styles.cancelButtonText}>
+            {t('labels.cancel')}
+          </Text>
         </AppPressable>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -280,11 +288,17 @@ export const DeleteAccountScreen: React.FC = () => {
   };
 
   return (
-    <ThemedSafeAreaView style={styles.container} edges={['left', 'right']}>
-      <Header title={t('account.deleteTitle')} onBack={goBack} centerTitle />
-
+    <Screen
+      header={{
+        title: t('account.deleteTitle'),
+        back: goBack,
+        centerTitle: true,
+      }}
+      scroll="list"
+      gutter="none"
+    >
       {renderContent()}
-    </ThemedSafeAreaView>
+    </Screen>
   );
 };
 
@@ -309,14 +323,11 @@ const styles = StyleSheet.create(theme => ({
   // Error state styles
   errorTitle: {
     marginTop: theme.spacing.md,
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
   },
   errorText: {
     marginTop: theme.spacing.sm,
-    fontSize: theme.fonts.size.md,
     color: theme.colors.textSecondary,
     textAlign: 'center',
   },
@@ -330,8 +341,6 @@ const styles = StyleSheet.create(theme => ({
   },
   retryButtonText: {
     color: theme.colors.onPrimary,
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
   },
   // Blocked state styles
   blockedWarningContainer: {
@@ -343,13 +352,10 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   blockedWarningTitle: {
-    fontSize: theme.fonts.size.xl,
-    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.warning,
     marginTop: theme.spacing.base,
   },
   blockedDescription: {
-    fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.lg,
   },
@@ -368,13 +374,10 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.sm,
   },
   blockerResourceName: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginLeft: theme.spacing.sm,
   },
   blockerMessage: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.md,
   },
@@ -385,13 +388,10 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
   },
   resolutionTitle: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
   resolutionOption: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginLeft: theme.spacing.sm,
     marginBottom: theme.spacing.xs,
@@ -406,8 +406,6 @@ const styles = StyleSheet.create(theme => ({
   },
   goBackButtonText: {
     color: theme.colors.onPrimary,
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
   },
   // Delete form styles (existing)
   warningContainer: {
@@ -419,19 +417,11 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   warningTitle: {
-    fontSize: theme.fonts.size.xl,
-    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.error,
     marginTop: theme.spacing.base,
   },
   section: {
     marginBottom: theme.spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.base,
   },
   bulletPoint: {
     flexDirection: 'row',
@@ -440,26 +430,19 @@ const styles = StyleSheet.create(theme => ({
     paddingLeft: theme.spacing.sm,
   },
   bulletText: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
     marginLeft: theme.spacing.base,
     flex: 1,
   },
   text: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
-    lineHeight: theme.fonts.size.sm * 1.5,
-  },
-  bold: {
-    fontWeight: theme.fonts.weight.bold,
   },
   confirmationSection: {
     marginTop: theme.spacing.xl,
     marginBottom: theme.spacing.lg,
   },
   confirmationLabel: {
-    fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.base,
   },
@@ -477,8 +460,6 @@ const styles = StyleSheet.create(theme => ({
   },
   deleteButtonText: {
     color: theme.colors.onError,
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
   },
   cancelButton: {
     padding: theme.spacing.md,
@@ -490,11 +471,9 @@ const styles = StyleSheet.create(theme => ({
   },
   cancelButtonText: {
     color: theme.colors.textPrimary,
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
+  sectionTitleSpacing: {
+    marginBottom: theme.spacing.base,
   },
 }));
 

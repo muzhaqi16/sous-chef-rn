@@ -6,10 +6,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
-import { TIMING } from '#constants/animations';
+
 import { Icon } from '#/utils/iconUtils';
 import type { StepDotProps } from './types';
 import { Pressable } from '#components/atoms/themedComponents';
+import { motion } from '#/theme/foundations/motion';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -51,11 +52,13 @@ export const StepDot: React.FC<StepDotProps> = ({
     );
 
     // Scale animation for active step
-    const scale = withTiming(isActive ? 1.1 : 1, { duration: TIMING.STANDARD });
+    const scale = withTiming(isActive ? 1.1 : 1, {
+      duration: motion.timing.STANDARD,
+    });
 
     // Opacity for completed steps
     const opacity = withTiming(isCompleted ? 1 : isPending ? 0.6 : 1, {
-      duration: TIMING.STANDARD,
+      duration: motion.timing.STANDARD,
     });
 
     return {
@@ -66,11 +69,11 @@ export const StepDot: React.FC<StepDotProps> = ({
       // Animated properties
       backgroundColor: withTiming(
         isCompleted ? animatedTheme.get().colors.success : backgroundColor,
-        { duration: TIMING.SLOW },
+        { duration: motion.timing.SLOW },
       ),
       borderColor: withTiming(
         isCompleted ? animatedTheme.get().colors.success : borderColor,
-        { duration: TIMING.SLOW },
+        { duration: motion.timing.SLOW },
       ),
       transform: [{ scale }],
       opacity,
@@ -80,10 +83,10 @@ export const StepDot: React.FC<StepDotProps> = ({
   const iconAnimatedStyle = useAnimatedStyle(() => {
     const isCompleted = activeIndex.get() > index;
     const opacity = withTiming(isCompleted ? 1 : 0, {
-      duration: TIMING.STANDARD,
+      duration: motion.timing.STANDARD,
     });
     const scale = withTiming(isCompleted ? 1 : 0, {
-      duration: TIMING.STANDARD,
+      duration: motion.timing.STANDARD,
     });
 
     return {
@@ -106,7 +109,7 @@ export const StepDot: React.FC<StepDotProps> = ({
       disabled={!allowNavigation}
     >
       <Animated.View style={[styles.iconContainer, iconAnimatedStyle]}>
-        <Icon name="checkmark" size={stepSize * 0.5} tone="white" />
+        <Icon name="checkmark" size={stepSize * 0.5} tone="onPrimary" />
       </Animated.View>
     </AnimatedPressable>
   );

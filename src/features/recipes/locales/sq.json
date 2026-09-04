@@ -152,6 +152,8 @@
     "markCookedFailed": "Shënimi i recetës si e gatuar dështoi",
     "cookExternalError": "Recetat e jashtme nuk mund të shënohen si të gatuara. Ruaj recetën fillimisht.",
     "markedCookedDeducted": "Receta u shënua si e gatuar! Përbërësit u zbritën nga qilari.",
+    "markedCookedSkipped_one": "Receta u shënua si e gatuar. {{count}} përbërës nuk u zbrit.",
+    "markedCookedSkipped_other": "Receta u shënua si e gatuar. {{count}} përbërës nuk u zbritën.",
     "markedCooked": "Receta u shënua si e gatuar!",
     "renameFolderFailedRetry": "Riemërtimi i dosjes dështoi. Provo përsëri.",
     "folderRenamed": "U riemërtua \"{{oldName}}\" në \"{{newName}}\"",
@@ -273,7 +275,11 @@
     "ingredientCount_one": "{{count}} përbërës",
     "ingredientCount_other": "{{count}} përbërës",
     "ingredientRatio": "{{used}}/{{total}} përbërës",
-    "matchRatio": "{{used}}/{{total}} përputhje"
+    "matchRatio": "{{used}}/{{total}} përputhje",
+    "createdFromRecipe": "Krijuar nga një recetë",
+    "ratingBreakdownRow": "{{count}} vlerësime me {{stars}} yje",
+    "favoriteA11y": "Shto te të preferuarat",
+    "unfavoriteA11y": "Hiq nga të preferuarat"
   },
   "recipeFilters": {
     "title": "Filtrat",

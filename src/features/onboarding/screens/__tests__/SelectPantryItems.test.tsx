@@ -100,7 +100,7 @@ jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
     );
   },
 }));
-jest.mock('#components/atoms/Button', () => ({
+jest.mock('#components/molecules/Button', () => ({
   Button: ({
     title,
     children,
@@ -120,7 +120,7 @@ jest.mock('#components/atoms/Button', () => ({
     );
   },
 }));
-jest.mock('#components/atoms/AnimatedChip', () => ({
+jest.mock('#components/molecules/AnimatedChip', () => ({
   AnimatedChip: ({
     label,
     selected,

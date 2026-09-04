@@ -12,7 +12,7 @@ jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#/components/molecules/FormInput', () => ({
+jest.mock('#components/atoms/FormInput', () => ({
   FormInput: ({
     label,
     value,
@@ -79,7 +79,7 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
   },
 }));
 
-jest.mock('#components/atoms/Button', () => ({
+jest.mock('#components/molecules/Button', () => ({
   Button: ({
     children,
     onPress,

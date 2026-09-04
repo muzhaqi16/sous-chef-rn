@@ -92,7 +92,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
         testID={testID}
       />
       {!hasError && !!value && !!isFocused && (
-        <Text size="xs" tone="secondary" style={styles.hintText}>
+        <Text role="caption" tone="secondary" style={styles.hintText}>
           {formatsHint}
         </Text>
       )}
@@ -108,7 +108,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.base,
-    fontSize: theme.typography.fontSize.base,
+    ...theme.type.body,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
     variants: {

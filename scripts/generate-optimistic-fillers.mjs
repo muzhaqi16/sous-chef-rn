@@ -118,21 +118,23 @@ const TARGETS = [
   {
     graphql: fromRoot(
       'src',
-      'apollo',
-      'utils',
-      'shoppingListCacheUpdaters.graphql',
+      'features',
+      'shoppingList',
+      'cache',
+      'list.graphql',
     ),
     out: fromRoot(
       'src',
-      'apollo',
-      'utils',
+      'features',
+      'shoppingList',
+      'cache',
       'shoppingListDetailNeutral.generated.ts',
     ),
-    typesFrom: './shoppingListCacheUpdaters.generated',
+    typesFrom: './list.generated',
     fragments: {
-      shoppingListCacheUpdaters_listDetail: [
+      list_listDetail: [
         'NEUTRAL_SHOPPING_LIST_DETAIL',
-        'ShoppingListCacheUpdaters_ListDetailFragment',
+        'List_ListDetailFragment',
       ],
     },
   },

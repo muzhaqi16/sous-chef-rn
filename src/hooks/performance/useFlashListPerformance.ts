@@ -43,6 +43,13 @@ interface UseFlashListPerformanceOptions {
    */
   hasRealContent: boolean;
   /**
+   * How many rows the list is being handed. A settled EMPTY list has no cell to
+   * wait for, and FlashList commits its layout once for data that goes empty to
+   * empty — a commit that lands while `hasRealContent` is still false and is
+   * discarded. Without the count, such a list never reports a content layout.
+   */
+  rowCount: number;
+  /**
    * Fires on the first layout commit landing while `hasRealContent` is true —
    * the frame that actually shows content, not the sentinel layout. For a parent
    * gating its own overlay; the owner reads `hasContentLayout` instead.
@@ -133,7 +140,11 @@ export function useFlashListPerformance<T>(
     setHadRealContent(options.hasRealContent);
     if (!options.hasRealContent) setContentCycle(cycle => cycle + 1);
   }
-  const hasContentLayout = laidOutCycle === contentCycle;
+  // The empty clause is not an optimization: it is the only path for a list
+  // FlashList commits exactly once, before content is ready.
+  const hasContentLayout =
+    laidOutCycle === contentCycle ||
+    (options.hasRealContent && options.rowCount === 0);
 
   // Guards against the callback firing twice within one cycle before a
   // re-render is observed: un-guarded setState in `onCommitLayoutEffect` can
@@ -244,7 +255,7 @@ export function useFlashListPerformance<T>(
 
     if (__DEV__ && diagnostics) {
       diagnostics.recordOnLoad(info.elapsedTimeInMs);
-      console.log(
+      console.debug(
         `📊 [FlashList:${options.componentName}] ${
           options.componentName
         } initial load: ${info.elapsedTimeInMs.toFixed(0)}ms`,
@@ -316,7 +327,7 @@ export function useFlashListPerformance<T>(
             if (pending.blankDetected) {
               streakCountRef.current += 1;
               if (!wasBlankRef.current || pending.mountedCount === 0) {
-                console.log(
+                console.debug(
                   `📊 [FlashList:${options.componentName}] Blank: mounted=${
                     pending.mountedCount
                   }/${pending.expectedCount} visible=[${pending.visibleStart},${
@@ -327,7 +338,7 @@ export function useFlashListPerformance<T>(
               wasBlankRef.current = true;
             } else {
               if (wasBlankRef.current && streakCountRef.current > 1) {
-                console.log(
+                console.debug(
                   `📊 [FlashList:${options.componentName}] Blank streak ended after ${streakCountRef.current} frames`,
                 );
               }
@@ -336,7 +347,7 @@ export function useFlashListPerformance<T>(
 
               const risk = diagnostics.assessBlankRisk();
               if (risk.level === 'medium') {
-                console.log(
+                console.debug(
                   `⚠️ [FlashList:${
                     options.componentName
                   }] Blank risk MEDIUM: ${risk.factors.join(
@@ -346,7 +357,7 @@ export function useFlashListPerformance<T>(
                   )}, velocity=${risk.scrollVelocity.toFixed(0)} items/s)`,
                 );
               } else if (risk.level === 'high') {
-                console.log(
+                console.debug(
                   `🚨 [FlashList:${
                     options.componentName
                   }] Blank risk HIGH: ${risk.factors.join(

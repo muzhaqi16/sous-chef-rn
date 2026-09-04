@@ -39,7 +39,10 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   item {
     id
     imageUrl
-    images { url kind }
+    images {
+      url
+      kind
+    }
   }
 }
 

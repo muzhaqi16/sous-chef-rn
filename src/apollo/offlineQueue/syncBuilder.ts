@@ -1,5 +1,5 @@
 import type { DocumentNode } from 'graphql';
-import type { ApolloCache } from '@apollo/client';
+import { gql, type ApolloCache } from '@apollo/client';
 import type { QueuedMutation } from './types';
 
 /**
@@ -67,3 +67,39 @@ export const getClientId = (
   input: QueuedInput,
 ): string | undefined =>
   input.id ?? input.itemId ?? (mutation.variables.id as string | undefined);
+
+const QUEUE_UNIT_FRAGMENT = gql`
+  fragment QueueUnitData on Unit {
+    id
+    symbol
+  }
+`;
+
+/** What a builder puts in a `UnitSpecInput` slot. */
+export interface UnitSpec {
+  unitId?: string;
+  unitName?: string;
+  unitSymbol?: string;
+}
+
+/**
+ * A unit reference the server can still resolve after the vocabulary repair.
+ * A queued `unitId` may name a merged-away row, and an id is not re-resolvable
+ * — a symbol is. So the cached symbol rides ALONGSIDE the id, which
+ * `UnitSpecInput` allows. Best-effort: no cached unit yields the id alone.
+ */
+export const readUnitSpec = (
+  cache: ApolloCache,
+  spec: UnitSpec,
+): UnitSpec | undefined => {
+  const hasReference = spec.unitId ?? spec.unitName ?? spec.unitSymbol;
+  if (!hasReference) return undefined;
+  if (!spec.unitId || spec.unitSymbol) return spec;
+
+  const unit = cache.readFragment<{ id: string; symbol: string }>({
+    id: cache.identify({ __typename: 'Unit', id: spec.unitId }),
+    fragment: QUEUE_UNIT_FRAGMENT,
+  });
+
+  return unit?.symbol ? { ...spec, unitSymbol: unit.symbol } : spec;
+};

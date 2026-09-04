@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react-native';
 import { NutritionDetailList } from '#features/pantry/components/NutritionDetailList';
 
 // Mock the nutritionUtils
-jest.mock('#utils/nutritionUtils', () => ({
+jest.mock('#domain/nutrition', () => ({
   parseNutritions: jest.fn((raw: unknown) => raw),
   getNutrientEntries: jest.fn(() => [
     {
@@ -92,7 +92,7 @@ const mockData = {
 describe('NutritionDetailList', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    const { hasNutritionData } = require('#utils/nutritionUtils');
+    const { hasNutritionData } = require('#domain/nutrition');
     (hasNutritionData as jest.Mock).mockReturnValue(true);
   });
 
@@ -130,7 +130,7 @@ describe('NutritionDetailList', () => {
   });
 
   it('renders empty state when no nutrition data', () => {
-    const { hasNutritionData } = require('#utils/nutritionUtils');
+    const { hasNutritionData } = require('#domain/nutrition');
     (hasNutritionData as jest.Mock).mockReturnValue(false);
 
     render(<NutritionDetailList nutritions={null} />);

@@ -4,18 +4,16 @@ import { useTranslation } from '#/i18n';
 import { t as tGlobal } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { format, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
-import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
-import { TabMainScreen } from '#components/templates/TabMainScreen';
-import { OfflineStatusPill } from '#components/atoms/OfflineStatusPill';
-import { useIsOfflineBannerVisible } from '#hooks/app/useIsOfflineBannerVisible';
-import { WeekStrip } from '#components/molecules/WeekStrip';
+import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
+import { useIsOfflineBannerVisible } from '#features/mealPlan/hooks/useIsOfflineBannerVisible';
+import { WeekStrip } from '#features/mealPlan/components/WeekStrip';
 import { MonthCalendar } from '#features/mealPlan/components/MonthCalendar';
 import { DayMealList } from '#features/mealPlan/components/DayMealList';
 import { CalendarToggleBar } from '#features/mealPlan/components/CalendarToggleBar';
 import { MealPlanEmptyState } from '#features/mealPlan/components/MealPlanEmptyState';
-import { DataStateView } from '#components/molecules/DataStateView';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 import { AddMealSheet } from '#features/mealPlan/components/AddMealSheet';
 import { SaveAsTemplateSheet } from '#features/mealPlan/components/SaveAsTemplateSheet';
@@ -24,7 +22,7 @@ import { TemplatePreviewSheet } from '#features/mealPlan/components/TemplatePrev
 import { GenerateShoppingListSheet } from '#features/mealPlan/components/GenerateShoppingListSheet';
 import { MealPlanSettingsSheet } from '#features/mealPlan/components/MealPlanSettingsSheet';
 import { DuplicatePlanSheet } from '#features/mealPlan/components/DuplicatePlanSheet';
-import { MarkCookedModal } from '#components/modals/MarkCookedModal';
+import { MarkCookedModal } from '#components/organisms/MarkCookedModal';
 import { NutritionSummaryCard } from '#features/mealPlan/components/NutritionSummaryCard';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
@@ -60,6 +58,9 @@ import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mea
 import { toastService } from '#/services/toastService';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { toDateKey } from '#/utils/dateUtils';
+import { Screen } from '#components/templates/Screen';
+import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 
 /**
  * Gates the heavy work behind DeferredScreen: the skeleton paints instantly and
@@ -70,13 +71,18 @@ import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 export const MealPlanMain: React.FC = () => (
   <DeferredScreen
     fallback={
-      <TabMainScreen testID="meal-plan-screen">
-        <TabScreenHeader
-          label={tGlobal('mealPlanMain.label')}
-          title={tGlobal('labels.mealPlan')}
-        />
+      <Screen
+        testID="meal-plan-screen"
+        header={{
+          variant: 'tab',
+          label: tGlobal('mealPlanMain.label'),
+          title: tGlobal('labels.mealPlan'),
+        }}
+        scroll="list"
+        gutter="none"
+      >
         <MealPlanSkeleton />
-      </TabMainScreen>
+      </Screen>
     }
     component={MealPlanMainInner}
   />
@@ -235,7 +241,7 @@ const MealPlanMainInner: React.FC = () => {
   const daysWithMeals = (() => {
     const days = new Set<string>();
     items.forEach(item => {
-      days.add(format(new Date(item.date), 'yyyy-MM-dd'));
+      days.add(toDateKey(new Date(item.date)));
     });
     return days;
   })();
@@ -449,13 +455,18 @@ const MealPlanMainInner: React.FC = () => {
   // skeleton never covers content that is already on screen.
   if (plansInitialLoading) {
     return (
-      <TabMainScreen testID="meal-plan-screen">
-        <TabScreenHeader
-          label={t('mealPlanMain.label')}
-          title={t('labels.mealPlan')}
-        />
+      <Screen
+        testID="meal-plan-screen"
+        header={{
+          variant: 'tab',
+          label: t('mealPlanMain.label'),
+          title: t('labels.mealPlan'),
+        }}
+        scroll="list"
+        gutter="none"
+      >
         <MealPlanSkeleton />
-      </TabMainScreen>
+      </Screen>
     );
   }
 
@@ -464,11 +475,16 @@ const MealPlanMainInner: React.FC = () => {
   // the person may already have the very plan they would be recreating.
   if (mealPlans.length === 0) {
     return (
-      <TabMainScreen testID="meal-plan-screen">
-        <TabScreenHeader
-          label={t('mealPlanMain.label')}
-          title={t('labels.mealPlan')}
-        />
+      <Screen
+        testID="meal-plan-screen"
+        header={{
+          variant: 'tab',
+          label: t('mealPlanMain.label'),
+          title: t('labels.mealPlan'),
+        }}
+        scroll="list"
+        gutter="none"
+      >
         {plansState === 'error' || plansState === 'offline' ? (
           <DataStateView state={plansState} onRetry={handleRefresh} />
         ) : (
@@ -502,12 +518,12 @@ const MealPlanMainInner: React.FC = () => {
             toMealTemplateBuilder({ templateId: id });
           }}
         />
-      </TabMainScreen>
+      </Screen>
     );
   }
 
   return (
-    <TabMainScreen testID="meal-plan-screen">
+    <Screen testID="meal-plan-screen" scroll="list" gutter="none">
       <View style={styles.headerRow}>
         <View style={styles.headerContent}>
           <TabScreenHeader
@@ -733,7 +749,7 @@ const MealPlanMainInner: React.FC = () => {
         onOpen={handleOverlayOpen}
         onClose={handleOverlayClose}
       />
-    </TabMainScreen>
+    </Screen>
   );
 };
 

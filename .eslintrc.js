@@ -33,6 +33,30 @@ const RESTRICTED_SYNTAX = [
     message:
       'Avoid inline import() types. Import the type at the top of the file instead.',
   },
+  // The font-scale ceiling is the product of the OS text size and the app's own
+  // 0.9–1.3 preference, so it is computed once in the `Text` atom from that
+  // preference. Seven elements each set their own cap (1.2, 1.3, 1.5), which
+  // capped the OS half only and left the product unbounded.
+  // A sheet is driven by a `visible` BOOLEAN, not by presenting it. gorhom's
+  // `dismiss()` on a never-presented modal wedges it closed forever, and the
+  // guarded, focus-aware path that avoids it lives in `useStandardBottomSheet`.
+  {
+    selector:
+      "CallExpression[callee.property.name=/^(present|dismiss)$/][arguments.length=0]:not([callee.object.name='Keyboard'])",
+    message:
+      'Drive a sheet with the `visible` prop through `Sheet` / `useStandardBottomSheet`, not `present()` / `dismiss()`. Calling `dismiss()` on a modal that was never presented wedges it closed for the rest of the session — the hook guards that, a raw ref does not.',
+  },
+  {
+    selector: "JSXAttribute[name.name='maxFontSizeMultiplier']",
+    message:
+      'The font-scale ceiling is global — `MAX_FONT_SCALE` in #/theme/foundations/type, applied in the `Text` atom as `theme.maxFontScaleMultiplier`. A per-element cap bounds the OS scale only, leaving its product with the app preference unbounded.',
+  },
+  {
+    selector:
+      "JSXAttribute[name.name='allowFontScaling'][value.expression.value=false]",
+    message:
+      'Never disable font scaling — every role must respond to the OS text-size setting. If the layout cannot take the largest size, give the text room or fewer glyphs; the combined ceiling already bounds how far it grows.',
+  },
   // A list filtered with a hand-rolled `.toLowerCase().includes(...)` decides
   // for itself what an empty term, a null field and whitespace mean — nine
   // lists each answered differently. Scoped to `src/features/**`, where the
@@ -207,7 +231,18 @@ const RESTRICTED_SYNTAX = [
  * override retyping a shorter list silently un-bans the rest. Going through
  * `restrictedImports({ allow })` makes an override name what it drops.
  */
+const MMKV_MESSAGE =
+  'Device storage belongs to the kernel persisters and the reset manager. A key written elsewhere is one `SESSION_SCOPED_STATE` does not know about, so a sign-out leaves it behind — put the value in a store slice, or register a feature store with `registerSessionScopedStore`.';
+
 const RESTRICTED_IMPORT_PATHS = [
+  {
+    name: '#storage/mmkv',
+    message: MMKV_MESSAGE,
+  },
+  {
+    name: '#/storage/mmkv',
+    message: MMKV_MESSAGE,
+  },
   // The raw scroller gives a sheet the keyboard offset but NOT the input
   // context, so its `FormInput`s resolve to React Native's `TextInput` and the
   // sheet stays blind to the keyboard — the exact defect
@@ -233,7 +268,7 @@ const RESTRICTED_IMPORT_PATHS = [
       'ActivityIndicator',
     ],
     message:
-      'Use the project re-exports/atoms for app-wide consistency: StyleSheet → "react-native-unistyles"; Text → "#components/atoms/Text" (variant/tone/weight typography with consistent line-heights); Pressable → "#components/atoms/themedComponents" (or AppPressable/PressableScale for press feedback, or react-native-gesture-handler\'s Pressable for gesture composition). TextInput → "#components/atoms/themedComponents" (ThemedTextInput carries the theme\'s field color, placeholder, keyboard appearance and caret; a raw one renders dark text on the dark theme). ActivityIndicator → one of the themed spinners in "#components/atoms/themedComponents" (Themed, Muted, Error, Success, White, OnPrimary, OnError); a raw one renders in the platform\'s default colour rather than the theme\'s. Touchables are deprecated — use Pressable. For RN Text/Pressable *types*, import `type { TextProps, TextStyle, PressableProps }` (type-only imports are fine); for a TextInput ref import `type { ThemedTextInputRef }` from the same atom, because this rule matches the name whether or not the import is type-only.',
+      'Use the project re-exports/atoms for app-wide consistency: StyleSheet → "react-native-unistyles"; Text → "#components/atoms/Text" (role/tone typography, where a role carries size, weight and leading together); Pressable → "#components/atoms/themedComponents" (or AppPressable/PressableScale for press feedback, or react-native-gesture-handler\'s Pressable for gesture composition). TextInput → "#components/atoms/themedComponents" (ThemedTextInput carries the theme\'s field color, placeholder, keyboard appearance and caret; a raw one renders dark text on the dark theme). ActivityIndicator → one of the themed spinners in "#components/atoms/themedComponents" (Themed, Muted, Error, Success, OnPrimary, OnError); a raw one renders in the platform\'s default colour rather than the theme\'s. Touchables are deprecated — use Pressable. For RN Text/Pressable *types*, import `type { TextProps, TextStyle, PressableProps }` (type-only imports are fine); for a TextInput ref import `type { ThemedTextInputRef }` from the same atom, because this rule matches the name whether or not the import is type-only.',
   },
   {
     name: 'react',
@@ -636,7 +671,6 @@ module.exports = {
         'src/apollo/links/consoleLink.ts',
         'src/services/telemetry/transports/**',
         'src/services/performance/FlashListDiagnostics.ts',
-        'src/hooks/performance/**',
       ],
       rules: {
         'no-console': ['error', { allow: ['warn', 'info', 'debug'] }],
@@ -882,6 +916,9 @@ module.exports = {
             // A test for a wrapper asserts against the package it wraps.
             'react-native-permissions': true,
             'react-native-turbo-image': true,
+            // A test asserting on what device storage HOLDS has to read it.
+            '#storage/mmkv': true,
+            '#/storage/mmkv': true,
           },
         }),
       },
@@ -905,7 +942,7 @@ module.exports = {
       // replaces the base no-restricted-imports for this leaf dir, so it
       // re-declares the relevant base bans (RN touchables/StyleSheet/Text,
       // useMemo/useCallback) and layers the RN-Pressable-wrapper bans on top.
-      files: ['src/components/molecules/SwipeableItem/**/*.{ts,tsx}'],
+      files: ['src/components/organisms/SwipeableItem/**/*.{ts,tsx}'],
       rules: {
         'no-restricted-imports': restrictedImports({
           add: [
@@ -940,8 +977,8 @@ module.exports = {
         'src/services/permissions/PermissionService.ts',
         'src/utils/iconUtils.tsx',
         'src/components/atoms/CachedImage.tsx',
-        'src/features/recipes/screens/RecipeDetail/components/RecipeHeroImage.tsx',
-        'src/components/atoms/Toast.tsx',
+        'src/features/recipes/components/recipeDetail/RecipeHeroImage.tsx',
+        'src/components/molecules/Toast.tsx',
       ],
       rules: {
         'no-restricted-imports': restrictedImports({
@@ -970,7 +1007,7 @@ module.exports = {
       // themed wrapper cannot take a caller's colour. `themedComponents.tsx`
       // needs no entry — an override above turns the rule off there, since it
       // is the re-export site for every banned primitive.
-      files: ['src/components/atoms/Loading.tsx'],
+      files: ['src/components/molecules/Loading.tsx'],
       rules: {
         'no-restricted-imports': restrictedImports({
           allow: { 'react-native': ['ActivityIndicator'] },
@@ -982,7 +1019,7 @@ module.exports = {
       // place allowed to reach the underlying hook.
       files: [
         'src/hooks/navigation/useAppNavigation.ts',
-        'src/hooks/navigation/useOnboardingNavigation.ts',
+        'src/features/onboarding/hooks/useOnboardingNavigation.ts',
       ],
       rules: {
         'no-restricted-imports': restrictedImports({
@@ -991,49 +1028,11 @@ module.exports = {
       },
     },
     {
-      // The four modules that need the i18next INSTANCE rather than a
-      // translation: two read the resolved language, and two subscribe to
-      // `languageChanged`. Neither is something `t` can do, and neither is a
-      // translation call — which is what the ban is about.
-      files: [
-        'src/utils/dateLocale.ts',
-        'src/utils/notifications/localNotificationHelper.ts',
-        'src/store/slices/preferencesSlice.ts',
-        'src/store/index.ts',
-      ],
-      rules: {
-        'no-restricted-imports': restrictedImports({
-          allow: { '#/i18n/config': ['getI18n'] },
-        }),
-      },
-    },
-    {
-      // The files that still hold an inline style. Named rather than the rule
-      // switched off, so each one that is fixed can leave the list and no new
-      // file can join it. Tests and perf fixtures are out of scope: an inline
-      // style in a fixture is describing the input, not shipping a literal.
-      files: [
-        'src/components/atoms/AnimatedCheckbox.tsx',
-        'src/components/atoms/Skeleton/SkeletonBase.tsx',
-        'src/components/charts/BreakdownPieChart.tsx',
-        'src/components/molecules/AnimatedScanLine.tsx',
-        'src/components/molecules/QuantityInputFeedback.tsx',
-        'src/components/molecules/TabView/TabView.tsx',
-        'src/components/organisms/ItemList.tsx',
-        'src/components/templates/BottomSheetAction.tsx',
-        'src/features/catalog/ui/AddItemForm/AddItemForm.tsx',
-        'src/features/catalog/ui/AddItemSheet/AddItemSheet.tsx',
-        'src/features/home/screens/HomeManagement.tsx',
-        'src/features/notifications/components/ExpirationActionSheet.tsx',
-        'src/features/pantry/components/modals/AddToPantrySheet/DetailsPage.tsx',
-        'src/features/pantry/components/modals/AddToPantrySheet/StoragePage.tsx',
-        'src/features/pantry/components/modals/RestockPantryItemModal.tsx',
-        'src/features/recipes/screens/RecipeDetail/index.tsx',
-        'src/features/shoppingList/components/ShoppingListTabs/ShoppingListTabs.tsx',
-        '**/__tests__/**/*.tsx',
-        '**/*.test.tsx',
-        '**/__perf__/**/*.tsx',
-      ],
+      // Production `src/` holds NO inline style — the named list emptied, so the
+      // rule is an invariant there now. Tests and perf fixtures stay out of
+      // scope: an inline style in a fixture describes the input rather than
+      // shipping a literal.
+      files: ['**/__tests__/**/*.tsx', '**/*.test.tsx', '**/__perf__/**/*.tsx'],
       rules: {
         'react-native/no-inline-styles': 'off',
       },
@@ -1063,13 +1062,13 @@ module.exports = {
         '**/*.test.{ts,tsx}',
         'src/components/atoms/themedComponents.tsx',
         'src/components/atoms/Text.tsx',
-        'src/components/molecules/SwipeableItem/**/*.{ts,tsx}',
+        'src/components/organisms/SwipeableItem/**/*.{ts,tsx}',
         'src/components/atoms/ThemedStatusBar.tsx',
         'src/components/molecules/BottomSheetAutocompleteInput.tsx',
         // Spoken for by the overrides above, and none of them reads the store.
-        'src/components/atoms/Loading.tsx',
+        'src/components/molecules/Loading.tsx',
         'src/components/atoms/CachedImage.tsx',
-        'src/components/atoms/Toast.tsx',
+        'src/components/molecules/Toast.tsx',
         'src/components/atoms/BottomSheetFormScrollView.tsx',
       ],
       rules: {
@@ -1088,6 +1087,40 @@ module.exports = {
           ],
         }),
       },
+    },
+    {
+      // The kernel persisters, the reset manager and the feature caches that
+      // register with it ARE device storage's writers — the base ban points
+      // every other file at them.
+      files: [
+        'src/apollo/**/*.{ts,tsx}',
+        'src/storage/**/*.{ts,tsx}',
+        'src/store/**/*.{ts,tsx}',
+        'src/features/*/store/**/*.{ts,tsx}',
+        'src/storage/__mocks__/**/*.{ts,tsx}',
+      ],
+      excludedFiles: ['**/__tests__/**', '**/*.test.{ts,tsx}'],
+      rules: {
+        'no-restricted-imports': restrictedImports({
+          allow: { '#storage/mmkv': true, '#/storage/mmkv': true },
+        }),
+      },
+    },
+    {
+      // The sheet machinery itself: these ARE the guarded path the ban points
+      // callers at, so they are the only place `present()` / `dismiss()` runs.
+      files: [
+        'src/hooks/useStandardBottomSheet.tsx',
+        'src/hooks/useBottomSheetBackHandler.ts',
+        'src/hooks/useBottomSheetBackdropClaim.ts',
+        'src/components/templates/ActionTray/ActionTray.tsx',
+        // Hands off between two STACKED sheets: the picker dismisses itself in a
+        // microtask so the manage sheet presents after that dismiss has flushed.
+        // A `visible` boolean cannot express the ordering, and the file already
+        // carries the `hasPresented` guard the gorhom 5.2.14 bug needs.
+        'src/features/recipes/components/FolderPicker.tsx',
+      ],
+      rules: { 'no-restricted-syntax': 'off' },
     },
   ],
   rules: {

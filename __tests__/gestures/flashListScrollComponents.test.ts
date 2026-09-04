@@ -110,20 +110,29 @@ const SCROLLABLES = [
 
 /** Files the scan above reads as a nest, with the reason each one is not. */
 const BOUNDED_ANOTHER_WAY: Record<string, string> = {
-  'src/components/atoms/BottomSheetLayout.tsx':
-    'the two are ALTERNATIVES, not a nest — this component picks BottomSheetView for its `view` variant and a scroll view for its `form` variant',
-  'src/components/molecules/FolderPicker.tsx':
+  'src/features/recipes/components/FolderPicker.tsx':
     'the list carries an explicit maxHeight, so it is bounded without the container — the variant CLAUDE.md records as getting away with it',
-  'src/components/molecules/TagPicker.tsx':
-    'the list carries an explicit maxHeight, so it is bounded without the container',
+};
+
+/**
+ * A scrollable BETWEEN a `<BottomSheetView>` and its close — not merely after
+ * it. A shell offering both containers as mutually exclusive branches renders
+ * one or the other, and reading "after the open tag" flags that as nesting.
+ */
+const nestsScrollable = (source: string): boolean => {
+  const opensView = source.indexOf('<BottomSheetView');
+  if (opensView === -1) return false;
+  const closesView = source.indexOf('</BottomSheetView>', opensView);
+  const end = closesView === -1 ? source.length : closesView;
+  return SCROLLABLES.some(tag => {
+    const at = source.indexOf(tag, opensView);
+    return at !== -1 && at < end;
+  });
 };
 
 const bottomSheetViewWrappers = collectTsxFiles(SRC)
   .filter(file => {
-    const source = stripComments(readFileSync(file, 'utf8'));
-    const opensView = source.indexOf('<BottomSheetView');
-    if (opensView === -1) return false;
-    return SCROLLABLES.some(tag => source.indexOf(tag, opensView) !== -1);
+    return nestsScrollable(stripComments(readFileSync(file, 'utf8')));
   })
   .map(file => relative(process.cwd(), file))
   .filter(file => !(file in BOUNDED_ANOTHER_WAY))
@@ -146,12 +155,7 @@ describe('scrollables inside BottomSheetView', () => {
     // An entry whose file stopped matching is a stale exemption that will
     // silently cover the next file to take its path.
     const matched = collectTsxFiles(SRC)
-      .filter(file => {
-        const source = stripComments(readFileSync(file, 'utf8'));
-        const opensView = source.indexOf('<BottomSheetView');
-        if (opensView === -1) return false;
-        return SCROLLABLES.some(tag => source.indexOf(tag, opensView) !== -1);
-      })
+      .filter(file => nestsScrollable(stripComments(readFileSync(file, 'utf8'))))
       .map(file => relative(process.cwd(), file));
 
     const stale = Object.keys(BOUNDED_ANOTHER_WAY).filter(

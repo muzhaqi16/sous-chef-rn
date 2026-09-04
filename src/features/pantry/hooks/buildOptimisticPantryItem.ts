@@ -98,6 +98,11 @@ export function buildOptimisticPantryItem(
     lastUsedAt: null,
     netWeight: null,
     remainingNetWeight: null,
+    // A stack seeds its portion profile from the catalog server-side; offline
+    // there is nothing to seed from, so it has none until the create replays.
+    portionUnitId: null,
+    portionUnit: null,
+    remainingPortions: null,
     activeBatchCount: 0,
     earliestBatchExpiration: null,
     item: {

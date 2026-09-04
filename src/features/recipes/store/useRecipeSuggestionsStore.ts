@@ -4,7 +4,7 @@ import { registerSessionScopedStore } from '#store/sessionScopedStores';
 import { immer } from 'zustand/middleware/immer';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '#/storage/mmkv';
-import type { RecipeInformation } from '#/services/recipeApi/types';
+import type { RecipeInformation } from '#/services/spoonacular/types';
 
 interface CachedSuggestion {
   recipes: RecipeInformation[];

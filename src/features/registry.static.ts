@@ -10,6 +10,7 @@ import { notificationsStaticFeature } from './notifications/manifest.static';
 import { barcodeStaticFeature } from './barcode/manifest.static';
 import { authStaticFeature } from './auth/manifest.static';
 import { onboardingStaticFeature } from './onboarding/manifest.static';
+import { devtoolsStaticFeature } from './devtools/manifest.static';
 
 /**
  * Every feature, as the APP SHELL sees it — i18n init, the cache, the offline
@@ -28,4 +29,5 @@ export const STATIC_FEATURE_REGISTRY: StaticFeatureManifest[] = [
   barcodeStaticFeature,
   authStaticFeature,
   onboardingStaticFeature,
+  devtoolsStaticFeature,
 ];

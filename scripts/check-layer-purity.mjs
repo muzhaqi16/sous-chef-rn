@@ -119,7 +119,13 @@ const KERNEL_GLOBS = [
  * exemption `src/app/` gets. Naming `PantryStack.tsx` anything else would make
  * it worse, not more portable.
  */
-const KERNEL_EXEMPT = [/^src\/navigation\/stacks\//];
+const KERNEL_EXEMPT = [
+  /^src\/navigation\/stacks\//,
+  // `src/domain` IS the home for a shared domain module, so a domain name
+  // there is the point rather than the finding. `check-single-consumer` holds
+  // the other half: nothing with a single consumer may sit there.
+  /^src\/domain\//,
+];
 
 const SKIP = [
   /(^|\/)__tests__(\/|$)/,
@@ -456,7 +462,7 @@ if (kernelDiff.added.length) {
 
 console.log(
   `check-layer-purity: ${current.length} coupled kit file(s), ` +
-    `baseline ${baseline.files.length}` +
+    `baseline ${(baseline.files ?? []).length}` +
     (removed.length ? ` (${removed.length} cleared — run --update)` : '') +
     `.\ncheck-layer-purity: ${currentKernel.length} domain-named kernel file(s), ` +
     `baseline ${(baseline.kernelFiles ?? []).length}` +

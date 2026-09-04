@@ -3,13 +3,13 @@ import {
   type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import { extractNodes } from '#/utils/connectionUtils';
-import { PAGE_SIZE } from '#/constants/pagination';
+import { PAGE_SIZE } from '#features/pantry/constants/pagination';
 import { pantryItemSearch } from '#/utils/searchUtils';
 import {
   useHybridSearch,
   type UseHybridSearchConfig,
   type UseHybridSearchReturn,
-} from '#hooks/search/useHybridSearch';
+} from '#features/pantry/hooks/useHybridSearch';
 import type { PantryListItemNode } from '#features/pantry/hooks/usePantryQuery';
 
 // Connection nodes carry direct fields (id, itemName, expiresAt, …) plus an

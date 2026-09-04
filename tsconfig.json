@@ -15,6 +15,8 @@
       "#constants/*": ["./src/constants/*"],
       "#config": ["./src/config"],
       "#context": ["./src/context"],
+      "#domain": ["./src/domain"],
+      "#domain/*": ["./src/domain/*"],
       "#context/*": ["./src/context/*"],
       "#features": ["./src/features"],
       "#features/*": ["./src/features/*"],

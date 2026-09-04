@@ -4,8 +4,11 @@ import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
-import { AnimatedChip } from '#/components/atoms/AnimatedChip';
-import { POPULAR_CUISINES, getAllCuisineOptions } from '#/constants/cuisines';
+import { AnimatedChip } from '#components/molecules/AnimatedChip';
+import {
+  POPULAR_CUISINES,
+  getAllCuisineOptions,
+} from '#features/profile/constants/cuisines';
 import { Cuisine } from '#/graphql/generated/schemaTypes';
 import { Icon } from '#/utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
@@ -69,12 +72,7 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
             onPress={() => setShowAllCuisines(true)}
           >
             <Icon name="add-circle-outline" size={18} tone="primary" />
-            <Text
-              size="base"
-              weight="semibold"
-              tone="accent"
-              style={styles.showMoreText}
-            >
+            <Text role="bodyStrong" tone="accent" style={styles.showMoreText}>
               {t('cuisineSelector.showAll')}
             </Text>
           </AppPressable>

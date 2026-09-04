@@ -6,7 +6,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
-import { TIMING } from '#constants/animations';
+
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import {
@@ -18,20 +18,22 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#/utils/iconUtils';
-import { StringArrayManager } from '#/components/organisms/StringArrayManager/StringArrayManager';
-import { NumberInputSheet } from '#/components/modals/NumberInputSheet/NumberInputSheet';
-import { InfoRow } from '#/components/molecules/InfoRow';
+import { StringArrayManager } from '#features/profile/components/StringArrayManager/StringArrayManager';
+import { NumberInputSheet } from '#features/profile/components/NumberInputSheet/NumberInputSheet';
+import { InfoRow } from '#components/atoms/InfoRow';
 
 const ThemedInfoRow = withUnistyles(InfoRow, theme => ({
   iconColor: theme.colors.primary,
 }));
 import { CuisineSelector } from '#features/profile/components/CuisineSelector';
 import { DietaryRestrictionSelector } from '#features/profile/components/DietaryRestrictionSelector';
-import { CookingPreferencesSheet } from '#/components/modals/CookingPreferencesSheet/CookingPreferencesSheet';
-import { MacroTargetsSheet } from '#/components/modals/MacroTargetsSheet/MacroTargetsSheet';
+import { CookingPreferencesSheet } from '#features/profile/components/CookingPreferencesSheet/CookingPreferencesSheet';
+import { MacroTargetsSheet } from '#features/profile/components/MacroTargetsSheet/MacroTargetsSheet';
 import { Text } from '#components/atoms/Text';
 import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 import { errorService } from '#/services/errorService';
+import { motion } from '#/theme/foundations/motion';
+import { EmptyState } from '#components/molecules/EmptyState';
 
 export const DietaryProfileScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -236,14 +238,10 @@ export const DietaryProfileScreen: React.FC = () => {
   if (!profile) {
     return (
       <ProfileScreenWrapper title={t('dietary.title')} scrollEnabled={false}>
-        <View style={commonStyles.emptyState}>
-          <Text style={commonStyles.emptyStateTitle}>
-            {t('dietary.noProfileTitle')}
-          </Text>
-          <Text style={commonStyles.emptyStateText}>
-            {t('dietary.noProfileSubtitle')}
-          </Text>
-        </View>
+        <EmptyState
+          title={t('dietary.noProfileTitle')}
+          description={t('dietary.noProfileSubtitle')}
+        />
       </ProfileScreenWrapper>
     );
   }
@@ -252,7 +250,7 @@ export const DietaryProfileScreen: React.FC = () => {
     <ProfileScreenWrapper title={t('dietary.title')}>
       {/* Dietary Restrictions Section */}
       <Animated.View
-        entering={FadeIn.duration(TIMING.SLOW)}
+        entering={FadeIn.duration(motion.timing.SLOW)}
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
@@ -268,7 +266,7 @@ export const DietaryProfileScreen: React.FC = () => {
       </Animated.View>
       {/* Food Preferences Section */}
       <Animated.View
-        entering={FadeIn.duration(TIMING.SLOW).delay(100)}
+        entering={FadeIn.duration(motion.timing.SLOW).delay(100)}
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
@@ -307,7 +305,7 @@ export const DietaryProfileScreen: React.FC = () => {
       </Animated.View>
       {/* Nutrition Goals Section */}
       <Animated.View
-        entering={FadeIn.duration(TIMING.SLOW).delay(200)}
+        entering={FadeIn.duration(motion.timing.SLOW).delay(200)}
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
@@ -316,6 +314,9 @@ export const DietaryProfileScreen: React.FC = () => {
           <Pressable
             style={({ pressed }) => pressed && styles.pressed}
             onPress={handleOpenMeals}
+            accessibilityLabel={t('a11y.editNamed', {
+              name: t('dietary.mealsPerDay'),
+            })}
           >
             <ThemedInfoRow
               label={t('dietary.mealsPerDay')}
@@ -326,6 +327,9 @@ export const DietaryProfileScreen: React.FC = () => {
           <Pressable
             style={({ pressed }) => pressed && styles.pressed}
             onPress={handleOpenSnacks}
+            accessibilityLabel={t('a11y.editNamed', {
+              name: t('dietary.snacksPerDay'),
+            })}
           >
             <ThemedInfoRow
               label={t('dietary.snacksPerDay')}
@@ -338,7 +342,7 @@ export const DietaryProfileScreen: React.FC = () => {
       </Animated.View>
       {/* Cooking Preferences Section */}
       <Animated.View
-        entering={FadeIn.duration(TIMING.SLOW).delay(300)}
+        entering={FadeIn.duration(motion.timing.SLOW).delay(300)}
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
@@ -349,6 +353,9 @@ export const DietaryProfileScreen: React.FC = () => {
             </Text>
             <AppPressable
               onPress={handleOpenCookingPrefs}
+              accessibilityLabel={t('a11y.editNamed', {
+                name: t('labels.cookingPreferences'),
+              })}
               style={styles.editButton}
             >
               <Icon name="create-outline" size={20} tone="primary" />
@@ -392,7 +399,7 @@ export const DietaryProfileScreen: React.FC = () => {
         profile.fatTarget
       ) && (
         <Animated.View
-          entering={FadeIn.duration(TIMING.SLOW).delay(400)}
+          entering={FadeIn.duration(motion.timing.SLOW).delay(400)}
           layout={LinearTransition}
           style={styles.sectionContainer}
         >
@@ -403,6 +410,9 @@ export const DietaryProfileScreen: React.FC = () => {
               </Text>
               <AppPressable
                 onPress={handleOpenMacros}
+                accessibilityLabel={t('a11y.editNamed', {
+                  name: t('macroTargets.title'),
+                })}
                 style={styles.editButton}
               >
                 <Icon name="create-outline" size={20} tone="primary" />

@@ -194,6 +194,8 @@ const baseline = BASELINE.require('check-compiler-bailouts');
  * count unchanged, so the baseline records WHICH function bails.
  */
 const isolated = baseline.isolatedLeaves ?? {};
+// No baseline file means the rule is an invariant: nothing may bail out.
+const maxFilesWithBailouts = baseline.maxFilesWithBailouts ?? 0;
 const regressed = Object.entries(isolated).filter(([file, expected]) => {
   const found = failures.find(f => f.file === file);
   if (!found) return false; // the file stopped bailing entirely — fine
@@ -219,10 +221,10 @@ if (regressed.length > 0) {
   process.exit(1);
 }
 
-if (count > baseline.maxFilesWithBailouts) {
-  const known = new Set(baseline.files);
+if (count > maxFilesWithBailouts) {
+  const known = new Set(baseline.files ?? []);
   console.error(
-    `\n✗ ${count} files bail out, baseline allows ${baseline.maxFilesWithBailouts}.\n` +
+    `\n✗ ${count} files bail out, baseline allows ${maxFilesWithBailouts}.\n` +
       `New since the baseline:`,
   );
   for (const f of failures.filter(x => !known.has(x.file))) {
@@ -279,9 +281,9 @@ if (removedOptOuts.length > 0) {
   for (const k of removedOptOuts) console.log(`  ${k}`);
 }
 
-if (count < baseline.maxFilesWithBailouts) {
+if (count < maxFilesWithBailouts) {
   console.log(
-    `\n✓ ${baseline.maxFilesWithBailouts - count} fewer than baseline. ` +
+    `\n✓ ${maxFilesWithBailouts - count} fewer than baseline. ` +
       `Run with --update to ratchet it down.`,
   );
 } else {

@@ -16,9 +16,20 @@ export const spacing = {
   xl: 32,
   '2xl': 48,
   '3xl': 64,
+  '4xl': 96,
 };
 
 // Helper function for consistent spacing
 export const space = (...values: (keyof typeof spacing)[]) => {
   return values.map(v => spacing[v]);
+};
+
+/**
+ * Semantic layout steps, named for the job rather than the size. The gutter was
+ * split evenly between two values because nothing named it.
+ */
+export const layout = {
+  pageGutter: 16,
+  sectionGap: 24,
+  rowInset: 12,
 };

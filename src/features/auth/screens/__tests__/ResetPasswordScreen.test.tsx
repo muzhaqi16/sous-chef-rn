@@ -22,7 +22,18 @@ import { ResetPasswordScreen } from '../ResetPasswordScreen';
 const mockGoBack = jest.fn();
 const mockNavigateToLogin = jest.fn();
 const mockClearAuth = jest.fn();
-const mockToast = jest.fn();
+const mockToastSuccess = jest.fn();
+const mockToastError = jest.fn();
+const mockToastInfo = jest.fn();
+const mockToastWarning = jest.fn();
+jest.mock('#services/toastService', () => ({
+  toastService: {
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+    error: (...args: unknown[]) => mockToastError(...args),
+    info: (...args: unknown[]) => mockToastInfo(...args),
+    warning: (...args: unknown[]) => mockToastWarning(...args),
+  },
+}));
 
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
@@ -53,17 +64,13 @@ jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
   }),
 }));
 
-jest.mock('#/hooks/useToast', () => ({
-  useToast: () => mockToast,
-}));
-
 jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',
 }));
 
-jest.mock('#components/molecules/Header', () => {
+jest.mock('#components/organisms/Header', () => {
   const { View, Pressable, Text } = require('react-native');
   return {
     Header: ({ onClose }: { onClose?: () => void }) => (
@@ -78,7 +85,7 @@ jest.mock('#components/molecules/Header', () => {
   };
 });
 
-jest.mock('#components/atoms/PasswordInput', () => {
+jest.mock('#components/molecules/PasswordInput', () => {
   const { TextInput } = require('react-native');
   return {
     PasswordInput: ({
@@ -103,7 +110,7 @@ jest.mock('#components/atoms/PasswordInput', () => {
   };
 });
 
-jest.mock('#components/atoms/Button', () => {
+jest.mock('#components/molecules/Button', () => {
   const { Pressable, Text } = require('react-native');
   return {
     Button: ({
@@ -416,9 +423,7 @@ describe('ResetPasswordScreen', () => {
 
     // The server's own prose is English by construction and must never render.
     expect(screen.queryByText(SERVER_PROSE)).toBeNull();
-    expect(mockToast).not.toHaveBeenCalledWith(
-      expect.objectContaining({ message: SERVER_PROSE }),
-    );
+    expect(mockToastError).not.toHaveBeenCalledWith(SERVER_PROSE);
   });
 });
 

@@ -9,16 +9,14 @@ import {
 
 jest.mock('#/storage/mmkv');
 
-const { __mockStore: mockStore } = jest.requireMock<{
-  __mockStore: Map<string, boolean | string | number | ArrayBuffer>;
-}>('#/storage/mmkv');
+import { useStore } from '#store';
 
-jest.mock('#hooks/settings/useShowTutorials', () => ({
-  useShowTutorials: () => true,
-}));
+/** The hint record the store keeps, in the shape these assertions read. */
+const hints = () => useStore.getState().featureHintsShown;
 
 jest.mock('#store/useAppStore', () => ({
   useUserId: () => 'user-1',
+  useShowTutorials: () => true,
 }));
 
 jest.mock('#hooks/ui/useTutorialResetSignal', () => ({
@@ -26,7 +24,7 @@ jest.mock('#hooks/ui/useTutorialResetSignal', () => ({
 }));
 
 beforeEach(() => {
-  mockStore.clear();
+  useStore.getState().clearAllFeatureHints();
 });
 
 describe('ShoppingListTutorialProvider — screen-scoped completion', () => {
@@ -44,12 +42,12 @@ describe('ShoppingListTutorialProvider — screen-scoped completion', () => {
     });
 
     expect(
-      mockStore.get('feature_hint_shown_user-1_shopping_interactive_tutorial'),
+      hints()['feature_hint_shown_user-1_shopping_interactive_tutorial'],
     ).toBe(true);
     // Finishing/skipping the Shopping List tutorial must not disable
     // tutorials on other screens (e.g. Pantry, Recipes) — that's controlled
     // only by the user's "Show Tutorials" setting.
-    expect(mockStore.get('user_show_tutorials')).toBeUndefined();
+    expect(useStore.getState().showTutorials).toBe(true);
   });
 });
 

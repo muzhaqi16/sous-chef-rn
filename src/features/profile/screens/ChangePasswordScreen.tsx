@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View } from 'react-native';
 import { Text } from '#components/atoms/Text';
-import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
@@ -9,18 +8,18 @@ import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
 import { localizedErrorMessage } from '#/services/errorService';
 import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
-import { PasswordInput } from '#components/atoms/PasswordInput';
-import { Header } from '#components/molecules/Header';
-import { Button } from '#components/atoms/Button';
+import { PasswordInput } from '#components/molecules/PasswordInput';
+import { Button } from '#components/molecules/Button';
 import {
   useChangePassword,
   type ChangePasswordOutcome,
 } from '#features/profile/hooks/useChangePassword';
-import { useToast } from '#hooks/useToast';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { changePasswordSchema } from '#utils/validation/auth';
 import { logValidationErrors } from '#utils/validation/common';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { Screen } from '#components/templates/Screen';
+import { toastService } from '#services/toastService';
 
 interface ChangePasswordForm {
   currentPassword: string;
@@ -50,19 +49,18 @@ const asFormField = (
  */
 async function reportChangePassword(
   outcome: ChangePasswordOutcome,
-  toast: ReturnType<typeof useToast>,
   goBack: () => void,
   successMessage: string,
   failedFallback: string,
   setFieldError: (field: keyof ChangePasswordForm, message: string) => void,
 ): Promise<void> {
   if (outcome.status === 'rateLimited') {
-    toast({ message: outcome.message, type: 'error' });
+    toastService.error(outcome.localizedMessage);
     return;
   }
 
   if (outcome.status === 'completed') {
-    toast({ message: successMessage, type: 'success' });
+    toastService.success(successMessage);
     setTimeout(() => {
       goBack();
     }, 1500);
@@ -88,7 +86,6 @@ async function reportChangePassword(
 export const ChangePasswordScreen: React.FC = () => {
   const { t } = useTranslation();
   const { goBack } = useAppNavigation();
-  const toast = useToast();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -114,7 +111,6 @@ export const ChangePasswordScreen: React.FC = () => {
             currentPassword: data.currentPassword,
             newPassword: data.newPassword,
           }),
-          toast,
           goBack,
           t('changePassword.success'),
           t('changePassword.failed'),
@@ -126,10 +122,7 @@ export const ChangePasswordScreen: React.FC = () => {
           error,
           t('changePassword.failedFallback'),
         );
-        toast({
-          message: errorMessage,
-          type: 'error',
-        });
+        toastService.error(errorMessage);
       },
     );
   };
@@ -137,84 +130,84 @@ export const ChangePasswordScreen: React.FC = () => {
   const isFormValid = form.formState.isValid;
 
   return (
-    <ThemedSafeAreaView style={styles.container} edges={['left', 'right']}>
-      <Header title={t('labels.changePassword')} onBack={goBack} centerTitle />
+    <Screen
+      header={{
+        title: t('labels.changePassword'),
+        back: goBack,
+        centerTitle: true,
+      }}
+      scroll="form"
+      gutter="none"
+    >
+      <View style={styles.contentContainer}>
+        <View style={styles.iconContainer}>
+          <Icon name="lock-closed-outline" size={64} tone="primary" />
+        </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.content}
-      >
-        <ScrollView
-          contentContainerStyle={styles.contentContainer}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.iconContainer}>
-            <Icon name="lock-closed-outline" size={64} tone="primary" />
+        <Text role="body" style={styles.subtitle}>
+          {t('changePassword.subtitle')}
+        </Text>
+
+        <View style={styles.form}>
+          <View style={styles.field}>
+            <Text role="bodyStrong" style={styles.label}>
+              {t('changePassword.currentPassword')}
+            </Text>
+            <PasswordInput
+              value={watchedValues.currentPassword}
+              onChangeText={text =>
+                form.setValue('currentPassword', text, {
+                  shouldValidate: true,
+                })
+              }
+              placeholder={t('changePassword.currentPasswordPlaceholder')}
+              errorMessage={form.formState.errors.currentPassword?.message}
+              editable={!isSubmitting}
+            />
           </View>
 
-          <Text style={styles.subtitle}>{t('changePassword.subtitle')}</Text>
-
-          <View style={styles.form}>
-            <View style={styles.field}>
-              <Text style={styles.label}>
-                {t('changePassword.currentPassword')}
-              </Text>
-              <PasswordInput
-                value={watchedValues.currentPassword}
-                onChangeText={text =>
-                  form.setValue('currentPassword', text, {
-                    shouldValidate: true,
-                  })
-                }
-                placeholder={t('changePassword.currentPasswordPlaceholder')}
-                errorMessage={form.formState.errors.currentPassword?.message}
-                editable={!isSubmitting}
-              />
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>{t('auth.newPassword')}</Text>
-              <PasswordInput
-                value={watchedValues.newPassword}
-                onChangeText={text =>
-                  form.setValue('newPassword', text, { shouldValidate: true })
-                }
-                placeholder={t('auth.newPasswordPlaceholder')}
-                errorMessage={form.formState.errors.newPassword?.message}
-                editable={!isSubmitting}
-              />
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>
-                {t('changePassword.confirmPassword')}
-              </Text>
-              <PasswordInput
-                value={watchedValues.confirmPassword}
-                onChangeText={text =>
-                  form.setValue('confirmPassword', text, {
-                    shouldValidate: true,
-                  })
-                }
-                placeholder={t('auth.confirmPasswordPlaceholder')}
-                errorMessage={form.formState.errors.confirmPassword?.message}
-                editable={!isSubmitting}
-              />
-            </View>
-
-            <Button
-              variant="primary"
-              onPress={form.handleSubmit(onSubmit, logValidationErrors)}
-              disabled={!isFormValid}
-              loading={isSubmitting}
-              style={styles.buttonSpacing}
-            >
-              {t('labels.changePassword')}
-            </Button>
+          <View style={styles.field}>
+            <Text style={styles.label}>{t('auth.newPassword')}</Text>
+            <PasswordInput
+              value={watchedValues.newPassword}
+              onChangeText={text =>
+                form.setValue('newPassword', text, { shouldValidate: true })
+              }
+              placeholder={t('auth.newPasswordPlaceholder')}
+              errorMessage={form.formState.errors.newPassword?.message}
+              editable={!isSubmitting}
+            />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </ThemedSafeAreaView>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>
+              {t('changePassword.confirmPassword')}
+            </Text>
+            <PasswordInput
+              value={watchedValues.confirmPassword}
+              onChangeText={text =>
+                form.setValue('confirmPassword', text, {
+                  shouldValidate: true,
+                })
+              }
+              placeholder={t('auth.confirmPasswordPlaceholder')}
+              errorMessage={form.formState.errors.confirmPassword?.message}
+              editable={!isSubmitting}
+            />
+          </View>
+
+          <Button
+            variant="primary"
+            onPress={form.handleSubmit(onSubmit, logValidationErrors)}
+            disabled={!isFormValid}
+            loading={isSubmitting}
+            style={styles.buttonSpacing}
+          >
+            {t('labels.changePassword')}
+          </Button>
+        </View>
+      </View>
+    </Screen>
   );
 };
 
@@ -234,10 +227,8 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.xl,
   },
   subtitle: {
-    fontSize: theme.fonts.size.md,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-    lineHeight: theme.fonts.size.md * 1.5,
     marginBottom: theme.spacing.xl,
   },
   form: {
@@ -248,8 +239,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   label: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },

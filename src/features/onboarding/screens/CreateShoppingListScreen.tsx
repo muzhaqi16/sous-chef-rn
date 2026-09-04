@@ -3,12 +3,12 @@ import { View } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { t as tGlobal, useTranslation } from '#/i18n';
 
 import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
 import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
-import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
-import { Button } from '#components/atoms/Button';
+import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
+import { Button } from '#components/molecules/Button';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
 import { useAppStore, useUser, useSelectedHomeId } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#features/onboarding/hooks/useOnboardingNavigation';
@@ -38,7 +38,7 @@ async function performCreateShoppingList(
 ): Promise<void> {
   const shoppingList = await createShoppingList({
     name: data.shoppingListName.trim(),
-    description: 'Created during onboarding',
+    description: tGlobal('onBoarding.createdDuringOnboarding'),
     isDefault: true,
     tags: ['onboarding', 'groceries'],
     homeId: selectedHomeId || undefined,
@@ -147,7 +147,7 @@ export const CreateShoppingListScreen = () => {
         totalSteps={7}
         onSkip={() => skipToStep('SelectPantryItems')}
       >
-        <View style={styles.loadingContainer}>
+        <View style={styles.centeredSpinner}>
           <SousChefLoader
             size="small"
             showBrand={false}
@@ -171,17 +171,14 @@ export const CreateShoppingListScreen = () => {
       >
         <View style={styles.existingResourcesContainer}>
           <View style={styles.resourceCard}>
-            <Text size="xs" tone="secondary" style={styles.resourceLabel}>
+            <Text role="caption" tone="secondary" style={styles.resourceLabel}>
               {t('labels.shoppingList')}
             </Text>
-            <Text size="lg" weight="semibold">
-              {existingList.name}
-            </Text>
+            <Text role="heading">{existingList.name}</Text>
             {!!existingList.isDefault && (
               <View style={styles.defaultBadge}>
                 <Text
-                  size="xs"
-                  weight="semibold"
+                  role="label"
                   tone="accent"
                   style={styles.defaultBadgeText}
                 >
@@ -192,10 +189,9 @@ export const CreateShoppingListScreen = () => {
           </View>
 
           <Text
-            size="sm"
+            role="caption"
             tone="secondary"
             align="center"
-            lineHeight="normal"
             style={styles.infoText}
           >
             {t('onBoarding.shoppingListAlreadySetUp')}
@@ -256,7 +252,7 @@ const styles = StyleSheet.create(theme => ({
   errorText: {
     marginTop: theme.spacing.base,
   },
-  loadingContainer: {
+  centeredSpinner: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: theme.spacing['2xl'],

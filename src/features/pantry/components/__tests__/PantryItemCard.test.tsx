@@ -27,7 +27,7 @@ jest.mock('#/constants/animations', () => ({
   },
 }));
 
-jest.mock('#components/molecules/BaseItemCard/BaseItemCard', () => {
+jest.mock('#features/pantry/components/BaseItemCard/BaseItemCard', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
@@ -54,7 +54,7 @@ jest.mock('#components/molecules/BaseItemCard/BaseItemCard', () => {
   };
 });
 
-jest.mock('#components/molecules/BaseItemCard/CardLeftSlot', () => {
+jest.mock('#features/pantry/components/BaseItemCard/CardLeftSlot', () => {
   const RN = require('react-native');
   return {
     CardLeftSlot: ({
@@ -71,7 +71,7 @@ jest.mock('#components/molecules/BaseItemCard/CardLeftSlot', () => {
   };
 });
 
-jest.mock('#components/molecules/BaseItemCard/CardContent', () => {
+jest.mock('#features/pantry/components/BaseItemCard/CardContent', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
@@ -91,7 +91,7 @@ jest.mock('#components/molecules/BaseItemCard/CardContent', () => {
   };
 });
 
-jest.mock('#components/molecules/BaseItemCard/CardRightSlot', () => {
+jest.mock('#features/pantry/components/BaseItemCard/CardRightSlot', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
@@ -143,6 +143,8 @@ interface BuildItemOverrides {
     remainingWeightUnit: { id: string; name: string; symbol: string } | null;
   } | null;
   activeBatchCount?: number;
+  remainingPortions?: number | null;
+  portionUnit?: { id: string; name: string; symbol: string } | null;
 }
 
 function buildItem(
@@ -153,6 +155,11 @@ function buildItem(
     id: overrides.id ?? 'pantry-1',
     itemName: overrides.itemName ?? 'Milk',
     quantity: overrides.quantity ?? 2,
+    portionUnitId: overrides.portionUnit?.id ?? null,
+    portionUnit: overrides.portionUnit
+      ? { __typename: 'Unit', ...overrides.portionUnit }
+      : null,
+    remainingPortions: overrides.remainingPortions ?? null,
     expiresAt: overrides.expiresAt ?? null,
     storageState: StorageState.Refrigerated,
     lastUsedAt: null,

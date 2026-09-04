@@ -837,3 +837,31 @@ left the read incomplete — the exact case its own comment says it fixed.
 Ask the cache instead of walking the value: a strict `readFragment` of the
 selection returns `null` when the cache cannot satisfy it, which is Apollo's own
 notion of completeness and therefore the one the later read will use.
+
+### Reanimated applies reduce motion itself
+
+**Claim:** `withTiming`, `withSpring`, `withRepeat` and the entering/exiting
+builders already honour the OS "reduce motion" setting with no config and no
+call-site branch. A branch is needed only for motion a zero duration cannot
+stop — a loop's resting state, an ambient illustration, a shimmer.
+
+**Verified 2026-09-03 against `react-native-reanimated@4.6.0`.**
+`getReduceMotionFromConfig` in `animation/utilCommon.js` reads
+`!config || config === ReduceMotion.System ? isReduceMotionOnUI.value : …`, so
+an animation that passes no `reduceMotion` resolves to the device setting;
+`timing.js`, `spring/spring.js` and `repeat.js` each pass their config through
+`getReduceMotionForAnimation`, and `BaseAnimationBuilder` initialises
+`reduceMotionV = ReduceMotion.System`.
+
+This is why `src/theme/foundations/motion.ts` holds one set of tokens rather
+than a reduced twin of each: reducing them in the app would duplicate what the
+library does a layer below, and the duplicate is what goes stale.
+
+Re-check:
+
+```
+node scripts/probe-reanimated-reduce-motion.mjs
+```
+
+`src/hooks/animations/useMotionEnabled.ts` is the single `useReducedMotion`
+read, for the loop cases.

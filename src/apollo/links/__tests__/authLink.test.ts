@@ -18,7 +18,7 @@ jest.mock('#store', () => ({
 jest.mock('#/config/env', () => ({
   env: { API_KEY: 'test-api-key' },
 }));
-jest.mock('#/utils/deviceId', () => ({
+jest.mock('#/storage/deviceId', () => ({
   getDeviceIdSync: jest.fn(() => 'test-device-id'),
 }));
 jest.mock('../../logoutCleanup', () => ({

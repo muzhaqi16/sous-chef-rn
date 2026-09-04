@@ -27,7 +27,11 @@
  * cannot do is miss a new hand-rolled form, and that is the property worth
  * having.
  *
- * The baseline is a DEBT LIST that may only shrink.
+ * The baseline is a DEBT LIST that may only shrink — except when the SCAN
+ * widens, which is not the same thing: more files seen is coverage, and hiding
+ * them would be the regression. It widened twice, both times because a move
+ * made a form invisible: a component whose name is not form-shaped, and a
+ * hook holding the state a screen used to.
  *
  *   node scripts/check-form-state.mjs           # check
  *   node scripts/check-form-state.mjs --list    # print every finding
@@ -55,10 +59,19 @@ const BASELINE = baselineFile(
 /** Where a form lives: a screen, or a file named for one. */
 const FORM_GLOBS = [
   'src/features/*/screens/**/*.tsx',
-  'src/features/*/components/**/*Form*.tsx',
-  'src/features/*/components/**/*Sheet*.tsx',
-  'src/features/*/components/**/*Modal*.tsx',
-  'src/features/*/components/**/*Editor*.tsx',
+  // A `.ts` beside the screen too. `RecipeForm/useRecipeForm.ts` held twenty-one
+  // fields and a hand-rolled `validate()` and no glob reached it: it is not a
+  // `.tsx`, and it is under `screens/`, not `hooks/`.
+  'src/features/*/screens/**/*.ts',
+  // Every feature component, not the form-SHAPED names only. A form's fields
+  // are named for the field, so `RecipeTagsSection` and `EditableField` read as
+  // ordinary components — and moving one out of `screens/` used to take it out
+  // of this scan entirely, which is how the widening was found.
+  'src/features/*/components/**/*.tsx',
+  // A hook too: extracting a form's state out of the screen moves the finding,
+  // it does not answer it.
+  'src/features/*/hooks/**/*.ts',
+  'src/features/*/hooks/**/*.tsx',
   'src/features/*/ui/**/*Form*.tsx',
   'src/features/*/ui/**/*Sheet*.tsx',
   'src/screens/**/*.tsx',

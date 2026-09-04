@@ -5,11 +5,11 @@ import { screen, act, fireEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryContent } from '../PantryContent';
 import { PantryItem, StorageState } from '#/graphql/generated/schemaTypes';
-import type { EmptyStateProps } from '#components/atoms/EmptyState';
+import type { EmptyStateProps } from '#components/molecules/EmptyState';
 import type {
   FilterTabConfig,
   FilterTabsProps,
-} from '#components/molecules/FilterTabs/types';
+} from '#components/organisms/FilterTabs/types';
 import {
   PantryItemCard_PantryItemFragmentDoc,
   type PantryItemCard_PantryItemFragment,
@@ -98,6 +98,9 @@ function createMockPantryItem(
     netWeight: null,
     netWeightUnit: null,
     remainingNetWeight: null,
+    portionUnitId: null,
+    portionUnit: null,
+    remainingPortions: null,
     packageBreakdown: null,
     quantityBreakdown: null,
     costPerUnit: null,
@@ -181,7 +184,7 @@ jest.mock('#features/pantry/components/skeletons/PantryScreenSkeleton', () => ({
   },
 }));
 
-jest.mock('#components/atoms/EmptyState', () => ({
+jest.mock('#components/molecules/EmptyState', () => ({
   EmptyState: ({
     title,
     description,
@@ -203,7 +206,7 @@ jest.mock('#components/atoms/EmptyState', () => ({
   },
 }));
 
-jest.mock('#components/organisms/PaginationFooter', () => ({
+jest.mock('#components/atoms/PaginationFooter', () => ({
   PaginationFooter: () => null,
 }));
 
@@ -268,7 +271,7 @@ jest.mock('#components/molecules/SearchBar', () => ({
   },
 }));
 
-jest.mock('#components/molecules/FilterTabs/FilterTabs', () => ({
+jest.mock('#components/organisms/FilterTabs/FilterTabs', () => ({
   FilterTabs: ({
     tabs,
     onTabChange,

@@ -7,7 +7,7 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#components/atoms/Button', () => ({
+jest.mock('#components/molecules/Button', () => ({
   Button: ({
     children,
     onPress,
@@ -32,7 +32,7 @@ jest.mock('#components/atoms/Button', () => ({
   },
 }));
 
-jest.mock('#/components/molecules/FormInput', () => ({
+jest.mock('#components/atoms/FormInput', () => ({
   FormInput: ({
     label,
     placeholder,
@@ -59,7 +59,7 @@ jest.mock('#/components/molecules/FormInput', () => ({
   },
 }));
 
-jest.mock('#/components/molecules/FormTextArea', () => ({
+jest.mock('#components/atoms/FormTextArea', () => ({
   FormTextArea: ({
     label,
     placeholder,
@@ -77,7 +77,7 @@ jest.mock('#/components/molecules/FormTextArea', () => ({
   },
 }));
 
-jest.mock('#/components/molecules/FormNumberInput', () => ({
+jest.mock('#features/catalog/components/FormNumberInput', () => ({
   FormNumberInput: ({
     label,
     placeholder,
@@ -95,7 +95,7 @@ jest.mock('#/components/molecules/FormNumberInput', () => ({
   },
 }));
 
-jest.mock('#/components/molecules/FormSelect', () => ({
+jest.mock('#components/molecules/FormSelect', () => ({
   FormSelect: ({ label }: { label: string }) => {
     const { Text, View } = require('react-native');
     return (
@@ -106,7 +106,7 @@ jest.mock('#/components/molecules/FormSelect', () => ({
   },
 }));
 
-jest.mock('#/components/molecules/FormCheckbox', () => ({
+jest.mock('#components/molecules/FormCheckbox', () => ({
   FormCheckbox: ({ label }: { label: string }) => {
     const { Text, View } = require('react-native');
     return (
@@ -117,7 +117,7 @@ jest.mock('#/components/molecules/FormCheckbox', () => ({
   },
 }));
 
-jest.mock('#/components/molecules/MultiImagePicker', () => ({
+jest.mock('#features/catalog/components/MultiImagePicker', () => ({
   MultiImagePicker: () => {
     const { View } = require('react-native');
     return <View testID="multi-image-picker" />;
@@ -138,7 +138,7 @@ jest.mock('#features/catalog/ui/NetWeightEntryList/NetWeightEntryList', () => ({
   },
 }));
 
-jest.mock('#/components/molecules/DynamicFormFields', () => ({
+jest.mock('#components/molecules/DynamicFormFields', () => ({
   DynamicFormFields: ({ fields }: { fields: { label: string }[] }) => {
     const { Text, View } = require('react-native');
     return (
@@ -153,7 +153,7 @@ jest.mock('#/components/molecules/DynamicFormFields', () => ({
 
 // Both schemas must be present: the form picks between them by mode, so omitting
 // one leaves yupResolver holding `undefined` the moment that mode renders.
-jest.mock('#utils/validation/item', () => ({
+jest.mock('#features/catalog/utils/itemValidation', () => ({
   createItemSchema: {
     validate: jest.fn(),
   },

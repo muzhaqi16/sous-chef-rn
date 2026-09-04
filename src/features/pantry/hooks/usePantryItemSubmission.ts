@@ -17,7 +17,7 @@ import {
   addToPantryItemsCache,
   addPantryItemLocally,
   revertOptimisticPantryItem,
-} from '#/apollo/utils/pantryCacheUpdaters';
+} from '#features/pantry/cache/items';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { findCachedPantryItemDuplicate } from '#features/pantry/utils/pantryCacheReaders';
 import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
@@ -30,7 +30,7 @@ import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   getPantryItemDuplicateFromResult,
   promptPantryDuplicate,
-} from '#/utils/errors/pantryItemDuplicate';
+} from '#domain/pantryItemDuplicate';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { errorService } from '#/services/errorService';
 

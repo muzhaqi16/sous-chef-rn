@@ -3,7 +3,6 @@ import {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  Easing,
   cancelAnimation,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -13,8 +12,9 @@ import type {
   UseSlideAnimationOptions,
   UseSlideAnimationReturn,
 } from './types';
+import { motion } from '#/theme/foundations/motion';
 
-const defaultEasing = Easing.bezier(0.25, 0.1, 0.25, 1);
+const defaultEasing = motion.easing.standard;
 
 /**
  * Slide animation for FlashList rows. The exit slide completes BEFORE the state

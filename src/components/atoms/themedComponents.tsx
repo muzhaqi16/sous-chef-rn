@@ -176,14 +176,6 @@ export const SuccessActivityIndicator = withUnistyles(
   }),
 );
 
-/** Spinner colored white — for use on dark / colored backgrounds. */
-export const WhiteActivityIndicator = withUnistyles(
-  ActivityIndicator,
-  theme => ({
-    color: theme.colors.white,
-  }),
-);
-
 // RNGH's ScrollView injects its scroll gesture as
 // `cloneElement(refreshControl, { block })`, and only a `createNativeWrapper`
 // control routes `block` into `useNativeGesture` — RN's own drops it silently.

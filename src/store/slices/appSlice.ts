@@ -4,7 +4,7 @@ import type {
   CategorySuggestion,
   ItemSuggestion,
 } from '#/graphql/generated/schemaTypes';
-import { dedupeById } from '#/utils/arrayUtils';
+import { dedupeById } from '#features/catalog/utils/arrayUtils';
 
 interface Unit {
   id: string;
@@ -51,11 +51,10 @@ export interface AppState {
   navigationState: NavigationState;
   showBiometricSetup: boolean; // Controls biometric setup modal
 
-  // Post-login biometric credentials (temporary storage for biometric setup)
-  postLoginCredentials: { email: string; password: string } | null;
-
-  // Registration password (temporary storage during onboarding for biometric setup)
-  registrationPassword: string | null;
+  // Who the post-login biometric offer is for. The password is deliberately
+  // absent: enrolment authorises off the live session, so nothing downstream
+  // needs it and holding it would be the only copy in app memory.
+  postLoginCredentials: { email: string } | null;
 
   cachedUnits: Unit[];
   lastUnitsFetchedAt: number | null;
@@ -77,13 +76,7 @@ export interface AppState {
   // Navigation state actions
   setNavigationState: (state: NavigationState) => void;
   setShowBiometricSetup: (flag: boolean) => void;
-  setPostLoginCredentials: (
-    credentials: { email: string; password: string } | null,
-  ) => void;
-
-  // Registration password actions
-  setRegistrationPassword: (password: string | null) => void;
-  clearRegistrationPassword: () => void;
+  setPostLoginCredentials: (credentials: { email: string } | null) => void;
 
   setCachedUnits: (units: Unit[]) => void;
   setLastUnitsFetchedAt: (timestamp: number) => void;
@@ -106,7 +99,6 @@ export const initialAppState = {
   navigationState: 'loading' as NavigationState,
   showBiometricSetup: false,
   postLoginCredentials: null,
-  registrationPassword: null,
 
   cachedUnits: [],
   lastUnitsFetchedAt: null,
@@ -140,14 +132,6 @@ export const createAppSlice: StateCreator<
   },
   setPostLoginCredentials: credentials => {
     set({ postLoginCredentials: credentials });
-  },
-
-  // Registration password actions
-  setRegistrationPassword: password => {
-    set({ registrationPassword: password });
-  },
-  clearRegistrationPassword: () => {
-    set({ registrationPassword: null });
   },
 
   setCachedUnits: units => set({ cachedUnits: units }),

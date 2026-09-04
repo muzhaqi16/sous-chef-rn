@@ -55,7 +55,9 @@
       "totalEntries_one": "{{count}} entry",
       "totalEntries_other": "{{count}} entries",
       "emptyTitle": "No usage yet"
-    }
+    },
+    "shelfLifeBoth": "{{days}}d ({{openedDays}}d once opened)",
+    "shelfLifeOpened": "{{days}}d once opened"
   },
   "pantrySettings": {
     "createTitle": "Create New Pantry",
@@ -356,7 +358,9 @@
     "invalidWaste": "Please enter a valid waste amount",
     "stillCalculating": "Still calculating available quantity...",
     "exceedsAvailableConsume": "Cannot consume more than available quantity ({{amount}} {{unit}})",
-    "exceedsAvailableWaste": "Cannot waste more than available quantity ({{amount}} {{unit}})"
+    "exceedsAvailableWaste": "Cannot waste more than available quantity ({{amount}} {{unit}})",
+    "remainingAfter": "Remaining: {{amount}} {{unit}}",
+    "exceedsAvailable": "Exceeds available ({{amount}} {{unit}})"
   },
   "duplicateItem": {
     "title": "Item Already in Pantry",
@@ -413,5 +417,10 @@
   "batchSection": {
     "viewAll_one": "View all {{count}} batch",
     "viewAll_other": "View all {{count}} batches"
+  },
+  "pantryItemCard": {
+    "remainingAmount": "{{amount}} remaining",
+    "portionsLeft_one": "{{count}} {{unit}} left",
+    "portionsLeft_other": "{{count}} {{unit}} left"
   }
 }

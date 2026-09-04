@@ -1,19 +1,12 @@
 import { useMutation, useQuery } from '@apollo/client/react';
-import { ApolloCache, type Reference } from '@apollo/client';
-import type { ModifierDetails } from '@apollo/client/cache';
 import {
   GetHomesDocument,
   GetMyPendingInvitesDocument,
   CreateHomeDocument,
-  AcceptHomeInviteDocument,
-  DeclineHomeInviteDocument,
-  type AcceptHomeInviteMutation,
   type CreateHomeMutation,
-  type DeclineHomeInviteMutation,
 } from '#operations/home/home.generated';
 import { addToHomesCache } from '#features/home/hooks/homeCacheUpdaters';
 import { extractNodes } from '#/utils/connectionUtils';
-import { logger } from '#/utils/environment';
 import type { CreateHomeInput } from '#/graphql/generated/schemaTypes';
 import type { MutationOutcome } from '#/utils/errors/mutationOutcome';
 
@@ -29,63 +22,17 @@ interface PantrySummary {
   isDefault?: boolean;
 }
 
-/** Module scope: a throw inside a try in a component body bails the compiler. */
-function buildAcceptHomeInviteUpdater(userId: string | undefined) {
-  return function acceptHomeInviteUpdater(
-    cache: ApolloCache,
-    { data }: { data?: AcceptHomeInviteMutation | null },
-  ) {
-    const acceptPayload = data?.acceptHomeInvite;
-    if (
-      acceptPayload?.__typename !== 'AcceptHomeInvitePayload' ||
-      !acceptPayload.membership?.homeId ||
-      !userId
-    )
-      return;
-    try {
-      const homeId = acceptPayload.membership.homeId;
-      const userCacheId = cache.identify({ __typename: 'User', id: userId });
-      if (!userCacheId) return;
-
-      cache.modify({
-        id: userCacheId,
-        fields: {
-          homes(
-            existingHomes: readonly Reference[] = [],
-            { readField, toReference }: ModifierDetails,
-          ) {
-            const homeRef = toReference({ __typename: 'Home', id: homeId });
-            const exists = existingHomes.some(
-              ref => readField('id', ref) === homeId,
-            );
-            if (exists) return existingHomes;
-            return homeRef ? [...existingHomes, homeRef] : existingHomes;
-          },
-        },
-      });
-    } catch (error) {
-      logger.warn('Cache update failed for acceptHomeInvite:', error);
-    }
-  };
-}
-
 interface CreateHomeFlowArgs {
   userId: string | undefined;
-  onInviteAccepted: (homeId: string) => void;
-  onInviteError: (error: Error) => void;
-  onDeclineError: (error: Error) => void;
 }
 
 /**
- * Everything the onboarding home step reads and writes: the account's homes and
- * pending invites, and the create / accept / decline writes.
+ * Everything the onboarding home step reads and writes: the account's homes,
+ * its pending invites, and the create write. Redeeming an invite is NOT here —
+ * that needs the invite's bearer token, which the API discloses once to the
+ * inviter, so it arrives by deep link or notification, never from this list.
  */
-export function useCreateHomeFlow({
-  userId,
-  onInviteAccepted,
-  onInviteError,
-  onDeclineError,
-}: CreateHomeFlowArgs) {
+export function useCreateHomeFlow({ userId }: CreateHomeFlowArgs) {
   const {
     data: homesData,
     loading: homesLoading,
@@ -111,24 +58,6 @@ export function useCreateHomeFlow({
     },
   });
 
-  const [acceptHomeInvite, { loading: accepting }] = useMutation(
-    AcceptHomeInviteDocument,
-    {
-      update: buildAcceptHomeInviteUpdater(userId),
-      onCompleted: data => {
-        if (data.acceptHomeInvite?.__typename === 'AcceptHomeInvitePayload') {
-          onInviteAccepted(data.acceptHomeInvite.membership.homeId);
-        }
-      },
-      onError: onInviteError,
-    },
-  );
-
-  // Declining changes only the invite status, so no cache update is needed.
-  const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument, {
-    onError: onDeclineError,
-  });
-
   const homes = extractNodes(homesData?.homes) as HomeSummary[];
   const pendingInvites = extractNodes(
     pendingInvitesData?.me?.pendingHomeInvitesConnection,
@@ -149,19 +78,10 @@ export function useCreateHomeFlow({
     needsPantry: !existingPantry,
     homesLoading,
     invitesLoading,
-    accepting,
     createHome: (
       input: CreateHomeInput,
     ): Promise<MutationOutcome<CreateHomeMutation>> =>
       createHome({ variables: { input } }),
-    acceptHomeInvite: (
-      token: string,
-    ): Promise<MutationOutcome<AcceptHomeInviteMutation>> =>
-      acceptHomeInvite({ variables: { input: { token } } }),
-    declineHomeInvite: (
-      token: string,
-    ): Promise<MutationOutcome<DeclineHomeInviteMutation>> =>
-      declineHomeInvite({ variables: { input: { token } } }),
   };
 }
 

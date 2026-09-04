@@ -25,7 +25,7 @@ import {
 } from './PantryActionsContext';
 import { usePantrySorting } from './hooks/usePantrySorting';
 import { PantryAlertBar } from '#features/pantry/components/PantryAlertBar';
-import { PaginationFooter } from '#components/organisms/PaginationFooter';
+import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
 import { usePantryImagePreload } from '#features/pantry/hooks/usePantryImagePreload';
 import { useOverlayBackdropPresence } from '#components/providers/OverlayBackdropProvider';
@@ -275,6 +275,7 @@ export const PantryContent = React.forwardRef<
       componentName: 'PantryContent',
       reportInterval: 10000,
       hasRealContent: !initialSkeletons,
+      rowCount: listData.length,
     });
     // FlashList re-renders EVERY mounted cell when this prop's identity changes,
     // so it must never change: the live handler (which flips to `undefined` as
@@ -296,8 +297,8 @@ export const PantryContent = React.forwardRef<
     // The blank-window cover: FlashList holds every cell invisible until its
     // first layout commits while the header chrome paints immediately, so the
     // cover mounts inside ListHeaderComponent from the FIRST commit and
-    // releases on `hasContentLayout`. No `useMinimumVisible` — the exit fade is
-    // the anti-flash smoothing, and the latch can't fire before rows exist.
+    // releases on `hasContentLayout`, which `rowCount` resolves for an empty
+    // tab. No `useMinimumVisible` — the exit fade is the anti-flash smoothing.
     const overlayVisible = initialSkeletons || !perfCallbacks.hasContentLayout;
 
     useDataReferenceTracker(

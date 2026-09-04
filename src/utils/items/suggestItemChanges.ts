@@ -1,11 +1,12 @@
-import type {
-  BaseDimension,
-  ItemClassificationInput,
-  ItemType,
-  PackageInfoInput,
-  ProductDetailsInput,
-  StorageState,
-  SuggestibleItemChangesInput,
+import {
+  NetWeightKind,
+  type BaseDimension,
+  type ItemClassificationInput,
+  type ItemType,
+  type PackageInfoInput,
+  type ProductDetailsInput,
+  type StorageState,
+  type SuggestibleItemChangesInput,
 } from '#/graphql/generated/schemaTypes';
 import type { UseItemForEdit_ItemFragment } from '#features/catalog/hooks/useItemForEdit.generated';
 import type { AddItemFormData } from './createItemMapping';
@@ -41,6 +42,7 @@ export interface EditableItemSnapshot {
   shelfLifeDays?: number;
   shelfLifeOpenedDays?: number;
   netWeight?: number;
+  netWeightKind?: NetWeightKind;
   displayUnitId?: string;
   displayUnitName?: string;
   baseDimension?: BaseDimension;
@@ -96,6 +98,7 @@ export function itemToEditableSnapshot(
     shelfLifeDays: nullableToUndefined(item.shelfLifeDays),
     shelfLifeOpenedDays: nullableToUndefined(item.shelfLifeOpenedDays),
     netWeight: nullableToUndefined(item.netWeight),
+    netWeightKind: nullableToUndefined(item.netWeightKind),
     displayUnitId: item.displayUnit?.id,
     displayUnitName: item.displayUnit?.name,
     baseDimension: nullableToUndefined(item.baseDimension),
@@ -256,8 +259,16 @@ export function buildInitialDataFromSnapshot(
     shelfLifeOpenedDays: snapshot.shelfLifeOpenedDays,
     baseDimension: snapshot.baseDimension,
     tags: snapshot.tags,
+    // Only a PACKAGE weight is a package size. A SERVING or a REFERENCE
+    // (100g nutrition basis) means something else entirely, so seeding it into
+    // a package-size field would present it as one — and an edit would submit
+    // it as one. Absent kind is treated as PACKAGE, which is what the field
+    // meant before the API said otherwise.
     netWeights:
-      snapshot.netWeight != null && snapshot.displayUnitName
+      snapshot.netWeight != null &&
+      snapshot.displayUnitName &&
+      (snapshot.netWeightKind ?? NetWeightKind.Package) ===
+        NetWeightKind.Package
         ? [
             {
               value: snapshot.netWeight,

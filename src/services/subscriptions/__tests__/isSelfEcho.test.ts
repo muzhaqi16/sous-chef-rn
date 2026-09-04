@@ -3,9 +3,9 @@
  * account signed in twice stops updating in real time.
  */
 import { isSelfEcho } from '../isSelfEcho';
-import { getDeviceIdSync } from '#/utils/deviceId';
+import { getDeviceIdSync } from '#/storage/deviceId';
 
-jest.mock('#/utils/deviceId', () => ({
+jest.mock('#/storage/deviceId', () => ({
   getDeviceIdSync: jest.fn(() => 'device_this'),
 }));
 

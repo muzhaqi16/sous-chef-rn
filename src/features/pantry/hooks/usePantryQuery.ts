@@ -19,7 +19,7 @@ import {
   useIsHomeSelectionReady,
   useSetIsPantryQueryComplete,
 } from '#store/useAppStore';
-import { PAGE_SIZE } from '#/constants/pagination';
+import { PAGE_SIZE } from '#features/pantry/constants/pagination';
 
 /**
  * Direct fields the screen-level hooks need, plus an opaque

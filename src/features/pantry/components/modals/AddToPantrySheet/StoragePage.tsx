@@ -5,7 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { detailsPageBaseStyles } from './detailsPageStyles';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { DropdownStack } from '#components/atoms/DropdownStack';
-import { FormInput } from '#components/molecules/FormInput';
+import { FormInput } from '#components/atoms/FormInput';
 import { StorageLocationAutocompleteField } from '#features/catalog/ui/autocomplete/StorageLocationAutocompleteField';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import {
@@ -15,7 +15,7 @@ import {
 import {
   ITEM_CONDITION_OPTIONS,
   conditionLabelKey,
-} from '#/utils/items/itemEnumLabels';
+} from '#features/pantry/utils/itemEnumLabels';
 
 export interface StoragePageProps {
   storageLocation: string;
@@ -58,7 +58,7 @@ export const StoragePage: React.FC<StoragePageProps> = ({
       style={styles.page}
       contentContainerStyle={[
         styles.pageContent,
-        { overflow: 'visible', paddingBottom: insets.bottom + 20 },
+        { paddingBottom: insets.bottom + 20 },
       ]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
@@ -110,6 +110,14 @@ export const StoragePage: React.FC<StoragePageProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
-  ...detailsPageBaseStyles(theme),
-}));
+const styles = StyleSheet.create(theme => {
+  const base = detailsPageBaseStyles(theme);
+  return {
+    ...base,
+    pageContent: {
+      ...base.pageContent,
+      // An inline dropdown paints outside the scroll content's box.
+      overflow: 'visible',
+    },
+  };
+});

@@ -13,7 +13,7 @@ import {
   buildOptimisticShoppingList,
   reconcileShoppingListCreate,
   revertOptimisticShoppingList,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+} from '#features/shoppingList/cache/list';
 import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
 import { generateEntityId } from '#/utils/generateEntityId';

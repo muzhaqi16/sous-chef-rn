@@ -4,10 +4,7 @@ import type { SharedValue } from 'react-native-reanimated';
 import { OnboardingSteps } from '../OnboardingSteps/OnboardingSteps';
 import { StepDot } from '../OnboardingSteps/StepDot';
 
-jest.mock('#/constants/animations', () => ({
-  SPRING: { DEFAULT: {} },
-  TIMING: { STANDARD: 300, SLOW: 400 },
-}));
+jest.mock('#/constants/animations', () => ({}));
 
 jest.mock('#/utils/iconUtils', () => {
   const R = require('react');

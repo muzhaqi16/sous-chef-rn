@@ -5,7 +5,7 @@ import {
   GetCommonUnitsDocument,
 } from '#operations/item/unit.generated';
 import { useAppStore } from '#store/useAppStore';
-import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
+import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
 
 export interface UnitItem {

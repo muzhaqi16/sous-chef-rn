@@ -41,7 +41,6 @@ export const PostLoginBiometricScreen = () => {
   const bio = useBiometricSetup({
     mode: 'postLogin',
     userEmail: postLoginCredentials?.email ?? '',
-    presetPassword: postLoginCredentials?.password,
     onComplete: handleComplete,
   });
 
@@ -69,11 +68,6 @@ export const PostLoginBiometricScreen = () => {
             description={bio.description}
             benefits={bio.benefits}
             footer={bio.footer}
-            needsPassword={bio.needsPassword}
-            password={bio.password}
-            onPasswordChange={bio.setPassword}
-            passwordLabel={bio.passwordLabel}
-            passwordPlaceholder={bio.passwordPlaceholder}
             isEnabling={bio.isEnabling}
             enableLabel={bio.enableLabel}
             skipLabel={bio.skipLabel}

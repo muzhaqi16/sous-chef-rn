@@ -50,13 +50,7 @@ function unit(symbol = 'L', name = 'liters'): UnitData {
     name,
     symbol,
     type: UnitType.Volume,
-    isMetric: true,
-    baseUnitId: 'u1',
-    conversionFactor: 1,
-    isCommon: true,
     displayAsFraction: false,
-    minPrecision: 2,
-    autoConvertThreshold: null,
   };
 }
 
@@ -87,6 +81,9 @@ export function pantryItemData(
       lastUsedAt: null,
       netWeight: null,
       remainingNetWeight: null,
+      portionUnitId: null,
+      portionUnit: null,
+      remainingPortions: null,
       activeBatchCount: 0,
       earliestBatchExpiration: null,
       item: {

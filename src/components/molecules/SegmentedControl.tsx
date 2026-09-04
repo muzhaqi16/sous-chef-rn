@@ -13,7 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { HapticService } from '#services/haptic/HapticService';
 import { Label } from '#components/atoms/Label';
-import { SPRING } from '#/constants/animations';
+import { motion } from '#/theme/foundations/motion';
 
 const identity = <T extends string>(v: T): string => v;
 
@@ -61,7 +61,7 @@ const SegmentedTab = <T extends string>({
         progress,
         [0, 0.5],
         [
-          animatedTheme.get().colors.white,
+          animatedTheme.get().colors.onPrimary,
           animatedTheme.get().colors.textPrimary,
         ],
       ),
@@ -118,7 +118,7 @@ export const SegmentedControl = <T extends string>({
     prevIndexSV.set(selectedIndex);
     if (tabWidth > 0) {
       offset.set((fromIndex - selectedIndex) * tabWidth);
-      offset.set(withSpring(0, SPRING.GENTLE));
+      offset.set(withSpring(0, motion.spring.GENTLE));
     }
   }, [selectedIndex, tabWidth, offset, prevIndexSV]);
 
@@ -209,8 +209,7 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   segmentText: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
+    ...theme.type.label,
     textAlign: 'center',
   },
   pressed: {

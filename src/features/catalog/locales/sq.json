@@ -100,7 +100,9 @@
     "emptyTitle": "Ende asnjë sugjerim",
     "emptyPantrySubtext": "Shto artikuj në qilar për të marrë sugjerime të personalizuara",
     "emptyShoppingListSubtext": "Shto artikuj në listë dhe do të shfaqen këtu për t’i shtuar shpejt sërish",
-    "addToPantry": "Shto në qilar"
+    "addToPantry": "Shto në qilar",
+    "addManuallyWithTerm": "Shto «{{term}}» manualisht",
+    "noMatchesAddManually": "Asnjë përputhje. Shto «{{term}}» manualisht"
   },
   "storageLocationSheet": {
     "editTitle": "Modifiko vendndodhjen e ruajtjes",
@@ -335,7 +337,8 @@
     "quantityUnit": "Sasia dhe njësia",
     "quantityStock": "Sasia dhe stoku",
     "quantityRequired": "Sasia *",
-    "quantityCurrent": "Sasia aktuale"
+    "quantityCurrent": "Sasia aktuale",
+    "placeholderBrand": "p.sh., Kellogg’s"
   },
   "folderPicker": {
     "selectFolder": "Zgjidh dosjen",
@@ -400,7 +403,8 @@
     "typeMoreToAddBrand": "Vazhdo të shkruash për të shtuar «{{term}}» si markë të personalizuar",
     "typeMoreToAddStore": "Vazhdo të shkruash për të shtuar «{{term}}» si dyqan të personalizuar",
     "typeAtLeastTwo": "Shkruaj të paktën 2 karaktere për të kërkuar",
-    "tryDifferentTerm": "Provo një term tjetër kërkimi"
+    "tryDifferentTerm": "Provo një term tjetër kërkimi",
+    "typeMoreToAddCategory": "Vazhdo të shkruash për të përdorur «{{term}}» si kategori të personalizuar"
   },
   "unitEntryList": {
     "title": "Njësitë",

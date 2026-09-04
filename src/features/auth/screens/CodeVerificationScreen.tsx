@@ -8,7 +8,6 @@ import { AuthWrapper } from '#features/auth/components/AuthWrapper';
 import { AuthFormTemplate } from '#features/auth/components/AuthFormTemplate';
 import { CodeInputAdapter } from '#features/auth/components/CodeInputAdapter';
 import { useUpdateUser, useUser } from '#store/useAppStore';
-import { useToast } from '#/hooks/useToast';
 import { useVerifyEmail } from '#features/auth/hooks/useVerifyEmail';
 import { errorService } from '#/services/errorService';
 import { alertService } from '#/services/alertService';
@@ -23,6 +22,7 @@ import { logValidationErrors } from '#/utils/validation/common';
 import { getEmailVerificationValidationSchema } from '#/utils/validation/auth';
 import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { toastService } from '#services/toastService';
 
 type CodeVerificationValues = {
   code: string;
@@ -48,7 +48,6 @@ interface CodeVerificationScreenProps {
  */
 interface VerificationResponseDeps {
   onVerified: () => void;
-  toast: (options: { message: string; type: 'error' }) => void;
   /** Puts a refusal under the code field, where the user can act on it. */
   reportCodeError: (message: string) => void;
   t: (key: string) => string;
@@ -56,7 +55,7 @@ interface VerificationResponseDeps {
 
 function interpretVerifyEmailResponse(
   response: { data?: unknown; error?: unknown },
-  { onVerified, toast, reportCodeError, t }: VerificationResponseDeps,
+  { onVerified, reportCodeError, t }: VerificationResponseDeps,
 ): void {
   const payload = (response.data as { verifyEmail?: unknown } | undefined)
     ?.verifyEmail as
@@ -71,13 +70,12 @@ function interpretVerifyEmailResponse(
   // correct, so they stay in a toast.
   const topLevelError = getTopLevelGraphQLError(response.error);
   if (topLevelError) {
-    toast({
-      message: errorService.getUserFriendlyMessage(
+    toastService.error(
+      errorService.getUserFriendlyMessage(
         topLevelError.code,
-        topLevelError.message,
+        t('errors.codes.genericRetry'),
       ),
-      type: 'error',
-    });
+    );
   } else if (payload) {
     // The payload's `message` is never displayed — unlocalizable English by
     // construction. A ValidationError takes this screen's own sentence, not the
@@ -94,7 +92,7 @@ function interpretVerifyEmailResponse(
 
 function interpretResendResponse(
   response: { error?: unknown },
-  { onVerified, toast, t }: VerificationResponseDeps,
+  { onVerified, t }: VerificationResponseDeps,
 ): void {
   const error = response.error;
   if (!error || !(typeof error === 'object' && 'errors' in error)) {
@@ -115,7 +113,7 @@ function interpretResendResponse(
   errorService.reportError(error, {
     operation: 'CodeVerification.resendEmail.graphqlError',
   });
-  toast({ message: t('auth.resendVerificationFailed'), type: 'error' });
+  toastService.error(t('auth.resendVerificationFailed'));
 }
 
 export function CodeVerificationScreen({
@@ -125,7 +123,6 @@ export function CodeVerificationScreen({
   const { t } = useTranslation();
   const user = useUser();
   const updateUser = useUpdateUser();
-  const toast = useToast();
   const { skipVerification } = useEmailVerificationActions();
   const { goBack } = useAppNavigation();
   const { navigateToLogin } = useAuthNavigation();
@@ -172,7 +169,7 @@ export function CodeVerificationScreen({
     if (context === 'signup') {
       // `verifyEmail` returns the user but no tokens, so the sign-up path is left
       // with no session and signing in is the next step.
-      toast({ message: t('auth.emailVerifiedToast'), type: 'success' });
+      toastService.success(t('auth.emailVerifiedToast'));
       navigateToLogin();
       return;
     }
@@ -183,7 +180,7 @@ export function CodeVerificationScreen({
     if (context === 'inApp') {
       // Pushed over the app, so it owns its dismissal — leaving it to the root
       // navigator remounts MainApp at its INITIAL route and lands on Home.
-      toast({ message: t('auth.emailVerifiedToast'), type: 'success' });
+      toastService.success(t('auth.emailVerifiedToast'));
       goBack();
     }
   };
@@ -205,10 +202,9 @@ export function CodeVerificationScreen({
       // `length === 6`, so a stray space silently becomes a token lookup that
       // returns "invalid". Defence in depth; CodeInput already strips non-digits.
       const code = data.code.replace(/\D/g, '');
-      const response = await verifyEmail(code);
+      const response = await verifyEmail(code, targetEmail);
       interpretVerifyEmailResponse(response, {
         onVerified,
-        toast,
         reportCodeError,
         t,
       });
@@ -216,10 +212,7 @@ export function CodeVerificationScreen({
       errorService.reportError(error, {
         operation: 'CodeVerification.verifyEmail',
       });
-      toast({
-        message: t('errors.codes.genericRetry'),
-        type: 'error',
-      });
+      toastService.error(t('errors.codes.genericRetry'));
     }
   };
 
@@ -268,7 +261,6 @@ export function CodeVerificationScreen({
       const response = await resendVerificationEmail(targetEmail);
       interpretResendResponse(response, {
         onVerified,
-        toast,
         reportCodeError,
         t,
       });
@@ -276,10 +268,7 @@ export function CodeVerificationScreen({
       errorService.reportError(error, {
         operation: 'CodeVerification.resendEmail',
       });
-      toast({
-        message: t('errors.codes.genericRetry'),
-        type: 'error',
-      });
+      toastService.error(t('errors.codes.genericRetry'));
     }
   };
 
@@ -308,7 +297,7 @@ export function CodeVerificationScreen({
         subtitle={
           <>
             {t('auth.enterCodeSubtitlePrefix')}{' '}
-            <Text weight="bold">{targetEmail || t('auth.yourEmail')}</Text>
+            <Text role="bodyStrong">{targetEmail || t('auth.yourEmail')}</Text>
             {t('auth.enterCodeSubtitleSuffix')}
           </>
         }

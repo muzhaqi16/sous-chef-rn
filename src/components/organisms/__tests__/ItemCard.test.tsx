@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import type { SwipeableItemProps } from '#components/molecules/SwipeableItem/types';
+import type { SwipeableItemProps } from '#components/organisms/SwipeableItem/types';
 import { ItemCard } from '../ItemCard';
 
 type MockListItemProps = {
@@ -9,7 +9,7 @@ type MockListItemProps = {
   badge?: { text: string };
 };
 
-jest.mock('#components/molecules/SwipeableItem/SwipeableItem', () => {
+jest.mock('#components/organisms/SwipeableItem/SwipeableItem', () => {
   const { View } = require('react-native');
   return {
     SwipeableItem: ({

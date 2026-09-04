@@ -55,7 +55,9 @@
       "totalEntries_one": "{{count}} regjistrim",
       "totalEntries_other": "{{count}} regjistrime",
       "emptyTitle": "Ende pa përdorim"
-    }
+    },
+    "shelfLifeBoth": "{{days}} d ({{openedDays}} d pas hapjes)",
+    "shelfLifeOpened": "{{days}} d pas hapjes"
   },
   "pantrySettings": {
     "createTitle": "Krijo qilar të ri",
@@ -356,7 +358,9 @@
     "invalidWaste": "Shkruaj një sasi të vlefshme mbeturinash",
     "stillCalculating": "Po llogaritet ende sasia e disponueshme...",
     "exceedsAvailableConsume": "Nuk mund të konsumosh më shumë se sasia e disponueshme ({{amount}} {{unit}})",
-    "exceedsAvailableWaste": "Nuk mund të hedhësh më shumë se sasia e disponueshme ({{amount}} {{unit}})"
+    "exceedsAvailableWaste": "Nuk mund të hedhësh më shumë se sasia e disponueshme ({{amount}} {{unit}})",
+    "remainingAfter": "Mbetet: {{amount}} {{unit}}",
+    "exceedsAvailable": "Tejkalon sasinë e disponueshme ({{amount}} {{unit}})"
   },
   "duplicateItem": {
     "title": "Artikulli është tashmë në qilar",
@@ -413,5 +417,10 @@
   "batchSection": {
     "viewAll_one": "Shih {{count}} lot",
     "viewAll_other": "Shih të gjitha {{count}} lotet"
+  },
+  "pantryItemCard": {
+    "remainingAmount": "Mbeten {{amount}}",
+    "portionsLeft_one": "Mbetet {{count}} {{unit}}",
+    "portionsLeft_other": "Mbeten {{count}} {{unit}}"
   }
 }

@@ -86,10 +86,10 @@ jest.mock('#components/molecules/DynamicFormFields', () => ({
     );
   },
 }));
-jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
+jest.mock('#components/molecules/BaseInput/BaseInput', () => ({
   BaseInput: () => null,
 }));
-jest.mock('#components/atoms/Button', () => ({
+jest.mock('#components/molecules/Button', () => ({
   Button: ({
     title,
     onPress,

@@ -4,11 +4,11 @@ import { errorService } from '#/services/errorService';
 import { useDefaultHome } from '#features/home/hooks/useDefaultHome';
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
 import type { PantryListItemNode } from '#features/pantry/hooks/usePantryQuery';
-import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
+import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
 import type {
   RecipeSearchResult,
   RecipeInformation,
-} from '#/services/recipeApi/types';
+} from '#/services/spoonacular/types';
 import { useQuery } from '@apollo/client/react';
 import { useFocusEffect } from '@react-navigation/native';
 import { GetHomeDocument } from '#operations/home/home.generated';

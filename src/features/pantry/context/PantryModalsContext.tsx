@@ -1,11 +1,5 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import React, { useState, type ReactNode } from 'react';
+import { createActionsContext } from '#hooks/utils/createActionsContext';
 import { type StorageType } from '#/graphql/generated/schemaTypes';
 import { usePantryItemActions } from '#features/pantry/hooks/usePantryItemActions';
 import { ConsumePantryItemModal } from '#features/pantry/components/modals/ConsumePantryItemModal';
@@ -19,7 +13,7 @@ import { AddStorageLocationSheet } from '#features/catalog/ui/AddStorageLocation
  * consumed solely by the modals rendered inside the provider, so opening one does
  * not re-render the pantry tree.
  */
-interface PantryModalsContextValue {
+interface PantryModalsActions {
   handleConsumeItem: (itemId: string) => void;
   handleWasteItem: (itemId: string) => void;
   handleRestockItem: (itemId: string) => void;
@@ -29,17 +23,10 @@ interface PantryModalsContextValue {
   setAddLocationSheetVisible: (visible: boolean) => void;
 }
 
-const PantryModalsContext = createContext<PantryModalsContextValue | null>(
-  null,
-);
+const { Provider: PantryModalsActionsProvider, useActions: usePantryModals } =
+  createActionsContext<PantryModalsActions>('PantryModalsContext');
 
-export function usePantryModals() {
-  const context = useContext(PantryModalsContext);
-  if (!context) {
-    throw new Error('usePantryModals must be used within PantryModalsProvider');
-  }
-  return context;
-}
+export { usePantryModals };
 
 interface PantryModalsProviderProps {
   children: ReactNode;
@@ -102,27 +89,12 @@ export function PantryModalsProvider({
     navigateTo,
   });
 
-  // Latest actions live in a ref so the context value stays stable.
-  const latestActions = {
+  const actions: PantryModalsActions = {
     handleConsumeItem,
     handleWasteItem,
     handleRestockItem,
     handleEditItem,
     handleDeleteItem,
-  };
-  const actionsRef = useRef(latestActions);
-  useEffect(() => {
-    actionsRef.current = latestActions;
-  });
-
-  // Delegates capture only actionsRef (not reactive), so the compiler
-  // auto-memoizes them with empty deps and the context value stays stable.
-  const value: PantryModalsContextValue = {
-    handleConsumeItem: (id: string) => actionsRef.current.handleConsumeItem(id),
-    handleWasteItem: (id: string) => actionsRef.current.handleWasteItem(id),
-    handleRestockItem: (id: string) => actionsRef.current.handleRestockItem(id),
-    handleEditItem: (id: string) => actionsRef.current.handleEditItem(id),
-    handleDeleteItem: (id: string) => actionsRef.current.handleDeleteItem(id),
     setAddSheetVisible,
     setAddLocationSheetVisible,
   };
@@ -142,7 +114,7 @@ export function PantryModalsProvider({
   };
 
   return (
-    <PantryModalsContext.Provider value={value}>
+    <PantryModalsActionsProvider actions={actions}>
       {children}
 
       {!!consumeModal.visible && (
@@ -190,6 +162,6 @@ export function PantryModalsProvider({
           creating={creatingLocation}
         />
       )}
-    </PantryModalsContext.Provider>
+    </PantryModalsActionsProvider>
   );
 }

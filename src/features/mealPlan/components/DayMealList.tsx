@@ -86,12 +86,7 @@ export const DayMealList: React.FC<DayMealListProps> = ({
               style={styles.addMealButton}
             >
               <Icon name="add-circle-outline" size={20} tone="primary" />
-              <Text
-                size="md"
-                weight="medium"
-                tone="accent"
-                style={styles.addMealText}
-              >
+              <Text role="bodyStrong" tone="accent" style={styles.addMealText}>
                 {t('labels.addAMeal')}
               </Text>
             </AppPressable>

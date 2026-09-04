@@ -14,7 +14,7 @@
  * through that one branch. This file is the demonstration the replacement owes.
  */
 import { gql } from '@apollo/client';
-import { writePurchaseInfo } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
 import {
   createApolloTestWrapper,
   recordMock,
@@ -43,11 +43,7 @@ const guard = require('../setup/apolloCacheWriteGuard') as {
 
 /** Exactly how Apollo raises it: `invariant.error(116, fieldName, record)`. */
 const raise = (field: string, record: Record<string, unknown>) =>
-  console.error(
-    "Missing field '%s' while writing result %o",
-    field,
-    record,
-  );
+  console.error("Missing field '%s' while writing result %o", field, record);
 
 const purchaseRecord = {
   __typename: 'ShoppingListItemPurchaseInfo',
@@ -101,9 +97,7 @@ describe('the missing-field guard exempts nothing', () => {
     for (const field of fields) raise(field, purchaseRecord);
 
     expect(drain().map(e => e.message)).toEqual(
-      fields.map(field =>
-        expect.stringContaining(`Missing field '${field}'`),
-      ),
+      fields.map(field => expect.stringContaining(`Missing field '${field}'`)),
     );
   });
 
@@ -112,21 +106,27 @@ describe('the missing-field guard exempts nothing', () => {
     // entry is argued for: an exemption that cannot read its own key must
     // report rather than excuse. Kept because that is the property a future
     // entry inherits, and it is not one anybody re-derives when adding one.
-    expect(guard.isExpectedMissingField([
-      "Missing field '%s' while writing result %o",
-      undefined,
-      purchaseRecord,
-    ])).toBe(false);
-    expect(guard.isExpectedMissingField([
-      "Missing field '%s' while writing result %o",
-      'purchaseDate',
-      null,
-    ])).toBe(false);
-    expect(guard.isExpectedMissingField([
-      "Missing field '%s' while writing result %o",
-      'purchaseDate',
-      'ShoppingListItemPurchaseInfo',
-    ])).toBe(false);
+    expect(
+      guard.isExpectedMissingField([
+        "Missing field '%s' while writing result %o",
+        undefined,
+        purchaseRecord,
+      ]),
+    ).toBe(false);
+    expect(
+      guard.isExpectedMissingField([
+        "Missing field '%s' while writing result %o",
+        'purchaseDate',
+        null,
+      ]),
+    ).toBe(false);
+    expect(
+      guard.isExpectedMissingField([
+        "Missing field '%s' while writing result %o",
+        'purchaseDate',
+        'ShoppingListItemPurchaseInfo',
+      ]),
+    ).toBe(false);
   });
 });
 
@@ -175,9 +175,9 @@ describe('a partial mock excuses its own omissions and nothing else', () => {
     // this fixture leaves out — and only those.
     expect(registered?.has('Unit.name')).toBe(true);
     expect(registered?.has('Unit.id')).toBe(false);
-    expect([...(registered ?? [])].every(pair => pair.startsWith('Unit.'))).toBe(
-      true,
-    );
+    expect(
+      [...(registered ?? [])].every(pair => pair.startsWith('Unit.')),
+    ).toBe(true);
   });
 });
 

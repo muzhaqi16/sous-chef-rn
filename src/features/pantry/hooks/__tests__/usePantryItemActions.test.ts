@@ -15,6 +15,11 @@ import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import { usePantryItemActions } from '../usePantryItemActions';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  _UsePantryItemActionsIdFragmentDoc,
+  _UsePantryItemActionsQuantityFragmentDoc,
+  _UsePantryItemActionsTrackingUnitFragmentDoc,
+} from '../usePantryItemActions.generated';
 
 jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
@@ -36,12 +41,21 @@ jest.mock('#/services/errorService');
 
 const seedPantryItems = (ids: string[] = ['item-1', 'item-2'], quantity = 5) =>
   seedCache(
-    ids.map(id => ({
-      __typename: 'PantryItem' as const,
-      id,
-      quantity,
-      unit: { __typename: 'Unit' as const, id: 'unit-1', symbol: 'ea' },
-    })),
+    // One entry per fragment the hook reads back, so the fixture is held to
+    // each of the three selections rather than to its own keys.
+    ids.flatMap(id => {
+      const data = {
+        __typename: 'PantryItem' as const,
+        id,
+        quantity,
+        unit: { __typename: 'Unit' as const, id: 'unit-1', symbol: 'ea' },
+      };
+      return [
+        { fragment: _UsePantryItemActionsIdFragmentDoc, data },
+        { fragment: _UsePantryItemActionsQuantityFragmentDoc, data },
+        { fragment: _UsePantryItemActionsTrackingUnitFragmentDoc, data },
+      ];
+    }),
   );
 
 const createOptions = () => ({
@@ -523,9 +537,11 @@ describe('usePantryItemActions', () => {
         );
       });
 
+      // The refusal's own message is unlocalizable English, so the copy is
+      // ours — the server's sentence never reaches the screen.
       expect(alertService.alert).toHaveBeenCalledWith(
         'Invalid Unit',
-        "Cannot consume in 'jar'",
+        'That unit cannot be used here.',
       );
       // Modal should not close on payload error
       expect(result.current.consumeModal.visible).toBe(true);
@@ -559,7 +575,7 @@ describe('usePantryItemActions', () => {
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Invalid Unit',
-        "Cannot waste in 'jar'",
+        'That unit cannot be used here.',
       );
       expect(result.current.wasteModal.visible).toBe(true);
     });
@@ -648,7 +664,7 @@ describe('usePantryItemActions', () => {
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Invalid Unit',
-        "Cannot restock in 'slice'",
+        'That unit cannot be used here.',
       );
       expect(result.current.restockModal.visible).toBe(true);
     });
@@ -675,7 +691,7 @@ describe('usePantryItemActions', () => {
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Invalid Unit',
-        'Invalid unit',
+        'That unit cannot be used here.',
       );
     });
 

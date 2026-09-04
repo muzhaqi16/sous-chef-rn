@@ -20,13 +20,10 @@ jest.mock('#features/onboarding/hooks/useOnboardingNavigation', () => ({
   }),
 }));
 
-const mockClearRegistrationPassword = jest.fn();
 jest.mock('#store/useAppStore', () => {
   const mockState: Partial<RootState> = {
     user: { id: 'u1', email: 'test@test.com' } as RootState['user'],
     setUserNavigationState: jest.fn(),
-    registrationPassword: 'password123',
-    clearRegistrationPassword: mockClearRegistrationPassword,
   };
   const fn = Object.assign(
     jest.fn(
@@ -67,8 +64,6 @@ jest.mock('#/storage/keychain', () => ({
   loadSessionTokens: jest.fn(() => Promise.resolve(null)),
   saveSessionTokens: jest.fn(() => Promise.resolve()),
   clearSessionTokens: jest.fn(() => Promise.resolve()),
-  loadTempRegistrationPassword: jest.fn(() => Promise.resolve(null)),
-  clearTempRegistrationPassword: jest.fn(),
 }));
 
 jest.mock('#/utils/finallyHelpers');
@@ -103,8 +98,6 @@ describe('BiometricSetupScreen', () => {
     const mockState: Partial<RootState> = {
       user: { id: 'u1', email: 'test@test.com' } as RootState['user'],
       setUserNavigationState: jest.fn(),
-      registrationPassword: 'password123',
-      clearRegistrationPassword: mockClearRegistrationPassword,
     };
     storeModule.useAppStore.mockImplementation(
       (selector: (state: RootState) => unknown) =>

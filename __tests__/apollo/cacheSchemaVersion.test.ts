@@ -29,7 +29,16 @@ import { createHash } from 'crypto';
  *
  * Re-record by running this test: the failure message prints the new hash.
  */
-// Re-recorded 2026-09-02: `cache.ts` reads the policies from
+// Bumped to 'shape-2' on 2026-09-04: the API merged 46 alias `Unit` rows into
+// their canonical row and rebased every `conversionFactor` onto millilitres. A
+// persisted blob parses exactly as before and is wrong — it holds unit ids the
+// server cannot resolve. Nothing in the policy modules changed, so the hash
+// below stands; the purge is what the version bump buys.
+//
+// Re-recorded 2026-09-02: the pre-commit hooks reformatted the policy modules
+// on commit (lint-staged runs Prettier), which changes the bytes and nothing
+// else — an old blob restores exactly as before. Also that day: `cache.ts`
+// reads the policies from
 // `features/registry.cache.ts` instead of the static manifests, which took them
 // off the i18n launch path. No merge or read changed. Earlier the same day:
 // dropped unused type imports from the policy modules
@@ -38,7 +47,7 @@ import { createHash } from 'crypto';
 // `features/<name>/cache/typePolicies.ts`, byte-identical, and `cache.ts`
 // became the assembler. Nothing a `merge` or `read` does changed, so an old
 // blob restores exactly as before. No version bump.
-const REVIEWED_CACHE_POLICY_HASH = '6025319f9df8d272';
+const REVIEWED_CACHE_POLICY_HASH = '81703e8112c3cbc5';
 
 const FEATURES = join('src', 'features');
 
@@ -55,6 +64,23 @@ const shapeFiles = (): string[] => {
     ...featurePolicies,
   ];
 };
+
+/**
+ * The bump itself, pinned separately: a policy change and a server-side
+ * redefinition are different reasons to purge, and only the first moves the
+ * hash above. Without this, a bump made for the second reason is invisible.
+ */
+const REVIEWED_CACHE_VERSION = 'shape-2';
+
+it('the persisted cache version matches the decision recorded here', () => {
+  const source = readFileSync(
+    join('src', 'apollo', 'offline', 'ApolloCachePersistence.ts'),
+    'utf8',
+  );
+  const declared = /const CURRENT_CACHE_VERSION = '([^']+)'/.exec(source)?.[1];
+
+  expect(declared).toBe(REVIEWED_CACHE_VERSION);
+});
 
 it('the cache policies have not changed without the persisted-shape decision being made', () => {
   const files = shapeFiles();

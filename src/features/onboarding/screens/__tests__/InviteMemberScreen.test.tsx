@@ -4,7 +4,7 @@ import React from 'react';
 import { fireEvent, screen, userEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
-import type { EmailInput as EmailInputComponent } from '#components/atoms/EmailInput';
+import type { EmailInput as EmailInputComponent } from '#components/molecules/EmailInput';
 import { InviteMemberScreen } from '../InviteMemberScreen';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -61,10 +61,20 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
-jest.mock('#components/atoms/EmailInput', () => ({
-  EmailInput: (props: React.ComponentProps<typeof EmailInputComponent>) => {
-    const { TextInput } = require('react-native');
-    return <TextInput placeholder="Enter email address" {...props} />;
+// The stub renders `errorMessage` the way the real `BaseInput` does, so a test
+// can see WHERE a refusal landed.
+jest.mock('#components/molecules/EmailInput', () => ({
+  EmailInput: ({
+    errorMessage,
+    ...props
+  }: React.ComponentProps<typeof EmailInputComponent>) => {
+    const { TextInput, Text, View } = require('react-native');
+    return (
+      <View>
+        <TextInput placeholder="Enter email address" {...props} />
+        {!!errorMessage && <Text>{errorMessage}</Text>}
+      </View>
+    );
   },
 }));
 jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
@@ -87,7 +97,7 @@ jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
     );
   },
 }));
-jest.mock('#components/atoms/Button', () => ({
+jest.mock('#components/molecules/Button', () => ({
   Button: ({
     title,
     onPress,
@@ -166,19 +176,21 @@ describe('InviteMemberScreen', () => {
     expect(screen.getByText(/Inviting 1 person/)).toBeTruthy();
   });
 
-  it('shows alert for invalid email', async () => {
+  // Each refusal renders UNDER the input. An alert covers the field it is about,
+  // and a dismissed alert cannot say which address it meant.
+  it('reports an unreadable address on the field', async () => {
     const user = userEvent.setup();
     renderWithApollo(<InviteMemberScreen />);
     const input = screen.getByPlaceholderText('Enter email address');
     fireEvent.changeText(input, 'not-an-email');
     await user.press(screen.getByText('Add'));
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Invalid Email',
-      'Please enter a valid email address',
-    );
+    expect(
+      await screen.findByText('Please enter a valid email address'),
+    ).toBeTruthy();
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 
-  it('shows alert for duplicate email', async () => {
+  it('reports an address already on the list on the field', async () => {
     const user = userEvent.setup();
     renderWithApollo(<InviteMemberScreen />);
     const input = screen.getByPlaceholderText('Enter email address');
@@ -186,22 +198,20 @@ describe('InviteMemberScreen', () => {
     await user.press(screen.getByText('Add'));
     fireEvent.changeText(input, 'friend@test.com');
     await user.press(screen.getByText('Add'));
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Duplicate Email',
-      'This email has already been added',
-    );
+    expect(
+      await screen.findByText('This email has already been added'),
+    ).toBeTruthy();
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 
-  it('shows alert when inviting yourself', async () => {
+  it('reports the signed-in account on the field', async () => {
     const user = userEvent.setup();
     renderWithApollo(<InviteMemberScreen />);
     const input = screen.getByPlaceholderText('Enter email address');
     fireEvent.changeText(input, 'me@test.com');
     await user.press(screen.getByText('Add'));
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Invalid Email',
-      "You can't invite yourself",
-    );
+    expect(await screen.findByText("You can't invite yourself")).toBeTruthy();
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 
   it('removes an invite when remove button pressed', async () => {
@@ -296,12 +306,13 @@ describe('InviteMemberScreen', () => {
     expect(input.props.value).toBe('');
   });
 
-  it('adds invite on submit editing (keyboard return)', () => {
+  it('adds invite on submit editing (keyboard return)', async () => {
     renderWithApollo(<InviteMemberScreen />);
     const input = screen.getByPlaceholderText('Enter email address');
     fireEvent.changeText(input, 'friend@test.com');
     fireEvent(input, 'submitEditing');
-    expect(screen.getByText('friend@test.com')).toBeTruthy();
+    // `handleSubmit` validates asynchronously, so the row lands a tick later.
+    expect(await screen.findByText('friend@test.com')).toBeTruthy();
   });
 
   it('does not show tap to change hint when only one resource', async () => {

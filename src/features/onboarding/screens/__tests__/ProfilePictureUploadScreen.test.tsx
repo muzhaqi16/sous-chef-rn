@@ -3,7 +3,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import type { OnBoardingWrapper as OnBoardingWrapperComponent } from '#features/onboarding/components/OnBoardingWrapper';
-import type { Button as ButtonComponent } from '#components/atoms/Button';
+import type { Button as ButtonComponent } from '#components/molecules/Button';
 import { ProfilePictureUploadScreen } from '../ProfilePictureUploadScreen';
 
 type OnBoardingWrapperProps = React.ComponentProps<
@@ -66,7 +66,7 @@ jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
     );
   },
 }));
-jest.mock('#components/atoms/Button', () => ({
+jest.mock('#components/molecules/Button', () => ({
   Button: ({ title, onPress, disabled }: ButtonProps) => {
     const { Pressable, Text } = require('react-native');
     return (
@@ -79,7 +79,7 @@ jest.mock('#components/atoms/Button', () => ({
 jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: () => null,
 }));
-jest.mock('#components/molecules/ImagePicker', () => ({}));
+jest.mock('#features/catalog/components/ImagePicker', () => ({}));
 
 describe('ProfilePictureUploadScreen', () => {
   beforeEach(() => jest.clearAllMocks());

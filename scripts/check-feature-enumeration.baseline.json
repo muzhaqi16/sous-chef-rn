@@ -1,7 +1,0 @@
-{
-  "files": ["src/types/navigation.ts"],
-  "named": {
-    "src/types/navigation.ts": ["pantry", "shoppingList"]
-  },
-  "scannedFiles": 499
-}

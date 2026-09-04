@@ -17,20 +17,20 @@ import {
 import { type BatchAddShoppingListItemInput } from '#/graphql/generated/schemaTypes';
 import { useAppStore, useSelectedShoppingListId } from '#store/useAppStore';
 import { extractNodes } from '#/utils/connectionUtils';
-import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { toastService } from '#/services/toastService';
-import type { RecipeInformation } from '#/services/recipeApi/types';
+import type { RecipeInformation } from '#/services/spoonacular/types';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
   revertOptimisticShoppingListItem,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+} from '#features/shoppingList/cache/items';
 import { logger } from '#/utils/environment';
-import { stripPriceFromName } from '#/utils/stripPriceFromName';
+import { stripPriceFromName } from '#features/recipes/utils/stripPriceFromName';
 import { errorService } from '#/services/errorService';
 import type {
   AddItemsToShoppingListInput,
@@ -638,7 +638,7 @@ export function useRecipeShoppingList({
           variables: {
             input: {
               name: name.trim(),
-              description: 'Created from recipe',
+              description: t('recipes.createdFromRecipe'),
               isDefault: false,
               tags: ['recipe-created'],
             },

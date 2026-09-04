@@ -8,7 +8,7 @@ import type {
   RecipeSearchResult,
   SearchRecipesResult,
   RecipeInformation,
-} from '#/services/recipeApi/types';
+} from '#/services/spoonacular/types';
 
 interface CachedRecipeSearch {
   results: (RecipeSearchResult | SearchRecipesResult | RecipeInformation)[];

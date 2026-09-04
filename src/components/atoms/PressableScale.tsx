@@ -11,8 +11,9 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { Pressable } from '#components/atoms/themedComponents';
-import { SPRING } from '#constants/animations';
+
 import { HapticService } from '#services/haptic/HapticService';
+import { motion } from '#/theme/foundations/motion';
 
 // Module scope — `createAnimatedComponent` must never be called per render.
 // Built on RN's `Pressable` (the themedComponents re-export, auto-bound to the
@@ -54,12 +55,12 @@ export const PressableScale: React.FC<PressableScaleProps> = ({
   }));
 
   const handlePressIn = (event: GestureResponderEvent) => {
-    scale.set(withSpring(activeScale, SPRING.PRESS));
+    scale.set(withSpring(activeScale, motion.spring.PRESS));
     onPressIn?.(event);
   };
 
   const handlePressOut = (event: GestureResponderEvent) => {
-    scale.set(withSpring(1, SPRING.PRESS));
+    scale.set(withSpring(1, motion.spring.PRESS));
     onPressOut?.(event);
   };
 

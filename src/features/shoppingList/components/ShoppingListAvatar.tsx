@@ -1,9 +1,9 @@
 import React from 'react';
-import { Avatar } from '#components/atoms/Avatar';
+import { Avatar } from '#features/shoppingList/components/Avatar';
 import {
   getShoppingListDisplayAvatarInfo,
   type ShoppingListWithHome,
-} from '#utils/ownershipHelpers';
+} from '#features/shoppingList/utils/ownershipHelpers';
 
 interface ShoppingListAvatarProps {
   /** Shares the resolver's own input type so the two can't drift apart. */

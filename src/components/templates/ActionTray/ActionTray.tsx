@@ -28,6 +28,7 @@ import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import { useSheetBackdropOpacity } from '#hooks/useSheetBackdropOpacity';
 import { ActionTrayScrollContext } from './ActionTrayScrollContext';
 import type { ActionTrayProps, ActionTrayRef } from './types';
+import { useTranslation } from '#/i18n';
 
 // Detached sheets float this far above the screen bottom. The pinned footer takes
 // NO `bottomInset` of its own — the detached container already lifts the whole
@@ -53,6 +54,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     },
     ref,
   ) => {
+    const { t } = useTranslation();
     const bottomSheetRef = useRef<BottomSheetModal>(null);
     const scrollRef = useRef<BottomSheetScrollViewMethods>(null);
     const [mounted, setMounted] = useState(false);
@@ -160,14 +162,18 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       hasHeader ? (
         <View style={styles.header}>
           {title ? (
-            <Text size="lg" weight="semibold" tone="primary">
+            <Text role="heading" tone="primary">
               {title}
             </Text>
           ) : null}
           <View style={styles.fill} />
           {!!headerRight && headerRight}
           {showCloseButton ? (
-            <AppPressable onPress={handleDismiss} style={styles.closeButton}>
+            <AppPressable
+              onPress={handleDismiss}
+              style={styles.closeButton}
+              accessibilityLabel={t('labels.close')}
+            >
               <Icon name="close" size={16} tone="textSecondary" />
             </AppPressable>
           ) : null}
@@ -254,15 +260,7 @@ const styles = UnistylesStyleSheet.create(theme => ({
     borderCurve: 'continuous',
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.borderLight,
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: -2,
-        blurRadius: 8,
-        spreadDistance: 0,
-        color: `${theme.colors.textPrimary}1A`,
-      },
-    ],
+    ...theme.shadows.trayTop,
   },
   background: {
     backgroundColor: theme.colors.surface,

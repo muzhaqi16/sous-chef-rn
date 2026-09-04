@@ -22,8 +22,8 @@ export const UrgentNotificationsBanner: React.FC<
 
   return (
     <View style={styles.urgentBanner}>
-      <Icon name="warning-outline" size={20} tone="white" />
-      <Text size="sm" weight="bold" style={styles.urgentText}>
+      <Icon name="warning-outline" size={20} tone="onError" />
+      <Text role="label" style={styles.urgentText}>
         {t('notifications.urgentUnread', { count: unreadUrgentCount })}
       </Text>
     </View>

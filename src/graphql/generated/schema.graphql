@@ -1121,6 +1121,13 @@ Always include a __typename so the variant can be discriminated.
 """
 union BulkDeletePurchasesResult = BulkDeletePurchasesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
+type BulkDeviceFailure {
+  """The error code the single-device operation would have answered with."""
+  code: String!
+  deviceId: ID!
+  message: String!
+}
+
 """
 Input for bulk device updates.
 Only status fields that make sense for bulk operations.
@@ -1160,6 +1167,8 @@ input BulkUpdateDevicesInput {
 type BulkUpdateDevicesPayload {
   """Devices that were successfully updated by the batch."""
   devices: [Device!]!
+  """Each id that was not updated, with why."""
+  failures: [BulkDeviceFailure!]!
   summary: BulkSummary!
 }
 
@@ -1427,6 +1436,8 @@ enum ChangeType {
   DELETED
   EXPIRATION_UPDATED
   LOCATION_UPDATED
+  """The stack's portion definition or density override was edited"""
+  MEASUREMENT_PROFILE
   QUANTITY_UPDATED
   WEIGHT_CORRECTED
 }
@@ -2212,6 +2223,7 @@ input CreatePantryItemInput {
   item: InlineItemInput
   itemId: ID
   lastUsedAt: DateTime
+  measurementProfile: MeasurementProfileInput
   netWeight: NetWeightInput
   pantryId: ID!
   purchase: PurchaseInfoInput
@@ -2678,6 +2690,35 @@ type Currency {
   name: String!
   symbol: String!
   updatedAt: DateTime!
+}
+
+"""
+How the currency on a pantry money figure was decided — observed from the
+purchase or the shopping list it came off, or assumed from the actor's
+preference, the system default, or the migration that introduced the column.
+"""
+enum CurrencyProvenance {
+  BACKFILL
+  DEFAULT
+  LIST
+  PURCHASE
+  USER
+}
+
+"""
+What one currency's purchases came to. A total is only meaningful alongside
+the currency it is in, so spend is reported per currency and never summed
+across them.
+"""
+type CurrencySpend {
+  """The currency, or null for purchases that record none."""
+  currency: Currency
+  """Purchases in this currency that carry a price."""
+  pricedPurchaseCount: Int!
+  """Purchases in this currency, priced or not."""
+  purchaseCount: Int!
+  """Sum of the prices that were recorded."""
+  totalSpent: Float!
 }
 
 enum DataSource {
@@ -3373,6 +3414,58 @@ type DeviceConnection implements Connection {
   totalCount: Int
 }
 
+"""
+A device-bound re-authentication credential: one entry in the account's
+signed-in-devices list.
+
+Metadata only. The secret itself is returned exactly once, by
+`issueDeviceCredential`, and there is no field here or anywhere else that
+reads it back.
+"""
+type DeviceCredential {
+  createdAt: DateTime!
+  """The client-minted device identifier this credential is bound to."""
+  deviceId: String!
+  """
+  Name of the registered device, when one is registered under this device id.
+  """
+  deviceName: String
+  """
+  When the credential stops working. Extended by each successful exchange.
+  """
+  expiresAt: DateTime!
+  id: ID!
+  """When the credential was last exchanged for a session; null if never."""
+  lastUsedAt: DateTime
+}
+
+"""
+The one moment the secret is visible. Store it immediately; nothing can return
+it again.
+"""
+type DeviceCredentialPayload {
+  """
+  The secret to store behind biometric authentication. Returned once, never readable again.
+  """
+  credential: String!
+  deviceCredential: DeviceCredential!
+}
+
+"""
+A session established by exchanging a device credential - NEVER cache.
+
+Deliberately not AuthPayload with an extra field: the credential expiry has no
+meaning on a password sign-in, and a nullable field there would read as a
+promise that path does not keep.
+"""
+type DeviceCredentialSessionPayload {
+  accessToken: String!
+  """The credential's new expiry, extended by this exchange."""
+  credentialExpiresAt: DateTime!
+  refreshToken: String!
+  user: User!
+}
+
 """Composite sub-input for all device details"""
 input DeviceDetailsInput {
   """
@@ -3761,6 +3854,14 @@ enum ErrorCode {
   AUTH_ACCOUNT_SUSPENDED
   AUTH_CREDENTIALS_INVALID
   """
+  A device-bound re-authentication credential was refused and is permanently useless: unknown, revoked, expired, superseded by a newer credential for the same device, or presented with a device id it was not issued for. Uniform across all of those on purpose — which one applied is not disclosed. Clients clear the stored credential and fall back to the password screen. NOT emitted for a rate limit, which is recoverable and leaves the credential good.
+  """
+  AUTH_DEVICE_CREDENTIAL_INVALID
+  """
+  Credentials are valid but the email address on the account is unverified — a registration, or a re-registration of a deleted address, awaiting proof of the mailbox. Not a sign-out: the client prompts for the emailed code.
+  """
+  AUTH_EMAIL_NOT_VERIFIED
+  """
   Refresh token rejected by rotation and unrecoverable: unverifiable, unknown, revoked, or replayed long enough after use to be treated as compromise. The session is over. Emitted by the refresh mutation; the REST /refresh route reports the same code top-level.
   """
   AUTH_REFRESH_TOKEN_INVALID
@@ -3787,6 +3888,20 @@ enum ErrorCode {
   VALIDATION_FAILED
   VERSION_CONFLICT
 }
+
+input ExchangeDeviceCredentialInput {
+  """The secret returned once by issueDeviceCredential."""
+  credential: String!
+  """The device id the credential was issued for."""
+  deviceId: String!
+}
+
+"""
+Result of ExchangeDeviceCredential. Select on DeviceCredentialSessionPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union ExchangeDeviceCredentialResult = AuthenticationError | ConflictError | DeviceCredentialSessionPayload | ForbiddenError | NotFoundError | ValidationError
 
 enum ExpirationAction {
   CONSUMED
@@ -4339,7 +4454,6 @@ type HomeInvite {
   role: MembershipRole!
   sentAt: DateTime!
   status: InviteStatus!
-  token: String!
   updatedAt: DateTime!
   version: Int!
 }
@@ -4681,6 +4795,11 @@ input InviteToHomeInput {
 type InviteToHomePayload {
   home: Home
   homeInvite: HomeInvite!
+  """
+  The invite's bearer token. Returned only here, to the inviter, at creation;
+  HomeInvite never carries it, so no list or nested read can disclose it.
+  """
+  token: String!
 }
 
 """
@@ -4708,6 +4827,7 @@ input InviteToShoppingListInput {
 type InviteToShoppingListPayload {
   collaborator: ShoppingListCollaborator!
   shoppingList: ShoppingList
+  token: String
 }
 
 """
@@ -4716,6 +4836,21 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union InviteToShoppingListResult = ConflictError | ForbiddenError | InviteToShoppingListPayload | NotFoundError | ValidationError
+
+input IssueDeviceCredentialInput {
+  """
+  The client-minted device identifier, the same value registerDevice uses. The
+  credential is bound to it and is refused if presented with any other.
+  """
+  deviceId: String!
+}
+
+"""
+Result of IssueDeviceCredential. Select on DeviceCredentialPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union IssueDeviceCredentialResult = ConflictError | DeviceCredentialPayload | ForbiddenError | NotFoundError | ValidationError
 
 """
 Item/Product catalog type
@@ -6057,6 +6192,10 @@ type MarkRecipeAsCookedPayload {
   converged: Boolean!
   cookingLog: CookingLog!
   recipe: Recipe
+  """
+  Ingredients not deducted because no conversion reached the stack's unit.
+  """
+  skippedIngredients: [SkippedRecipeIngredient!]!
 }
 
 """
@@ -6501,6 +6640,19 @@ type MealTypeNutrition {
   totalCarbs: Float!
   totalFat: Float!
   totalProtein: Float!
+}
+
+"""
+How THIS stack is measured, beyond its net weight: one tracking unit holds
+portionsPerTrackingUnit of portionUnit (1 bulb = 10 cloves), and
+densityOverride corrects the catalog density for this stack (g/mL). Seeded
+from the catalog at creation when omitted; owned by the stack afterwards.
+portionUnitId and portionsPerTrackingUnit travel together.
+"""
+input MeasurementProfileInput {
+  densityOverride: Float
+  portionUnitId: ID
+  portionsPerTrackingUnit: Float
 }
 
 """Reusable sub-input for media assets (images)"""
@@ -6956,12 +7108,10 @@ type Mutation {
   """Create a new meal template"""
   createMealTemplate(input: CreateMealTemplateInput!): CreateMealTemplateResult!
   """
-  Create a new membership directly (owner/admin only).
-  
-  Admits the named user as an ACTIVE member immediately — no invitation, and
-  no acceptance from the person being added. That makes it the most direct
-  way to pull someone into the caller's scope, so it requires a verified
-  email like the invite and join-link routes do.
+  Add a member to a home directly, as a system operator. A home admin cannot:
+  the person being added has not consented, so the invite and join-code
+  routes — which end with them accepting — are the ways into a home. Requires
+  a verified email like those routes do.
   """
   createMembership(input: CreateMembershipInput!): CreateMembershipResult!
   """Create a new notification."""
@@ -7063,7 +7213,12 @@ type Mutation {
   deleteMultipleNotifications(input: DeleteMultipleNotificationsInput!): DeleteMultipleNotificationsResult!
   """Delete a notification."""
   deleteNotification(input: DeleteNotificationInput!): DeleteNotificationResult!
-  """Delete a pantry (owner only)."""
+  """
+  Delete a pantry (owner only). Authorized in the resolver and the service
+  rather than by a resource directive: the directive resolves the pantry
+  through the live-row loader, which would refuse the idempotent replay of an
+  already-deleted pantry before it could converge.
+  """
   deletePantry(input: DeletePantryInput!): DeletePantryResult!
   """Delete a pantry item (soft delete)."""
   deletePantryItem(input: DeletePantryItemInput!): DeletePantryItemResult!
@@ -7115,6 +7270,16 @@ type Mutation {
   """
   enableHomeJoinLink(input: EnableHomeJoinLinkInput!): EnableHomeJoinLinkResult!
   """
+  Exchange a device credential for a session.
+  
+  Unauthenticated by design: this is what a client calls when it holds no
+  tokens. A refusal that makes the credential permanently useless reports
+  AUTH_DEVICE_CREDENTIAL_INVALID and is the signal to clear the stored
+  credential and ask for the password; a rate-limit refusal is not, and the
+  credential is still good.
+  """
+  exchangeDeviceCredential(input: ExchangeDeviceCredentialInput!): ExchangeDeviceCredentialResult!
+  """
   Create an editable copy of a recipe the caller does not own — an external
   import or another user's. The fork is owned by the caller and carries a
   reference back to its origin.
@@ -7128,6 +7293,15 @@ type Mutation {
   inviteToHome(input: InviteToHomeInput!): InviteToHomeResult!
   """Invite a user to collaborate on a shopping list."""
   inviteToShoppingList(input: InviteToShoppingListInput!): InviteToShoppingListResult!
+  """
+  Issue a device-bound credential for the current session's account, so the
+  client can re-establish a session on this device after a deliberate sign-out
+  without retaining the account password.
+  
+  The secret is returned once. Issuing for a device that already holds a
+  credential supersedes the old one, which stops working immediately.
+  """
+  issueDeviceCredential(input: IssueDeviceCredentialInput!): IssueDeviceCredentialResult!
   """Join a home using its join code."""
   joinHomeByCode(input: JoinHomeByCodeInput!): JoinHomeByCodeResult!
   """Join a shared shopping list using its share code."""
@@ -7330,6 +7504,11 @@ type Mutation {
   restockPantryItem(input: RestockPantryItemInput!): RestockPantryItemResult!
   """Restore a soft-deleted item"""
   restoreItem(input: RestoreItemInput!): RestoreItemResult!
+  """
+  Revoke one device credential. The device's current session is unaffected -
+  this ends the ability to sign back in on it, not the session running on it.
+  """
+  revokeDeviceCredential(input: RevokeDeviceCredentialInput!): RevokeDeviceCredentialResult!
   """Send a test notification of a specific type to the current user."""
   sendTestNotification(input: SendTestNotificationInput!): SendTestNotificationResult!
   """Share a shopping list publicly with an optional share code."""
@@ -8336,6 +8515,12 @@ type PantryDeficit {
   ingredient: RecipeIngredient!
   needed: Float!
   needsToBuy: Boolean!
+  """
+  Stacks of this ingredient whose amount could not be expressed in the
+  ingredient's unit (a head of garlic with no clove anchor, say). They are
+  excluded from the available total rather than counted as one each.
+  """
+  unconvertibleItems: [PantryItem!]!
   unit: Unit!
 }
 
@@ -8414,6 +8599,12 @@ type PantryItem {
   changeHistory(after: String, before: String, first: Int, last: Int): PantryItemChangeConnection!
   condition: ItemCondition!
   """
+  The currency totalCost and costPerUnit are denominated in. Null when they
+  are, and null with them when the costed batches disagree about currency —
+  a sum across currencies is not a value, so none is reported.
+  """
+  costCurrency: Currency
+  """
   Value of the REMAINING stock, per unit of quantity — derived from the
   item's active batches alongside quantity itself.
   
@@ -8427,6 +8618,8 @@ type PantryItem {
   """
   costPerUnit: Float
   createdAt: DateTime!
+  """Density for this stack in g/mL; the catalog's applies when null."""
+  densityOverride: Float
   earliestBatchExpiration: DateTime
   expirationAlert: Boolean!
   expiresAt: DateTime
@@ -8457,6 +8650,14 @@ type PantryItem {
   pantry: Pantry!
   pantryId: ID!
   photos: [PantryItemPhoto!]!
+  portionUnit: Unit
+  """
+  The stack's own portion definition: one tracking unit holds
+  portionsPerTrackingUnit of portionUnit (1 bulb = 10 cloves). Seeded from
+  the catalog's package hierarchy at creation, then owned by the stack.
+  """
+  portionUnitId: ID
+  portionsPerTrackingUnit: Float
   purchase: Purchase
   """
   The purchase behind this stack's FIRST acquisition. It does not move when
@@ -8477,6 +8678,11 @@ type PantryItem {
   quantity: Float!
   quantityBreakdown: QuantityBreakdown
   remainingNetWeight: Float
+  """
+  Portions left, from the remaining net weight when the stack tracks one and
+  from the quantity otherwise. Null when the stack defines no portion.
+  """
+  remainingPortions: Float
   restockQuantity: Float
   sourceShoppingListItemId: ID
   storageLocation: StorageLocation
@@ -8515,6 +8721,14 @@ type PantryItemBatch {
   """
   costPerUnit: Float
   createdAt: DateTime!
+  """
+  What this batch's cost figures are in; null on a batch that carries no cost.
+  """
+  currency: Currency
+  """
+  How that currency was decided — observed from a purchase or list, or assumed.
+  """
+  currencyProvenance: CurrencyProvenance
   depletedAt: DateTime
   expiresAt: DateTime
   expiresAtIsManual: Boolean!
@@ -8775,6 +8989,14 @@ type PantryItemUsage {
   cookingLog: CookingLog
   cookingLogId: ID
   costPerUnit: Float
+  """
+  What this row's cost figures are in; null on a row that carries no cost.
+  """
+  currency: Currency
+  """
+  How that currency was decided — observed from a purchase or list, or assumed.
+  """
+  currencyProvenance: CurrencyProvenance
   id: ID!
   isComposted: Boolean
   isRecycled: Boolean
@@ -8848,7 +9070,14 @@ type PantryStats {
   storageLocationCounts: [StorageLocationCount!]!
   storageStateCounts: StorageStateCounts
   totalItems: Int!
-  totalValue: Float!
+  """
+  Value of the stock whose cost is known, summed over the pantry's items.
+  Null when those values are in more than one currency — a sum across
+  currencies is not a value. Zero for a pantry with nothing costed.
+  """
+  totalValue: Float
+  """The currency totalValue is in; null when it is."""
+  valueCurrency: Currency
 }
 
 """Subtype discriminator for pantry domain events."""
@@ -9111,11 +9340,17 @@ type Purchase {
   store: Store
   storeId: ID
   storeName: String
-  totalPrice: Float!
+  """Null with unitPrice."""
+  totalPrice: Float
   transactionId: String
   unit: Unit!
   unitId: ID!
-  unitPrice: Float!
+  """
+  Null when the price was never observed — a line moved to the pantry or
+  marked purchased without one. The purchase still counts; its amount is
+  unknown rather than zero.
+  """
+  unitPrice: Float
   unitSymbol: String!
   updatedAt: DateTime!
   user: User!
@@ -9192,9 +9427,23 @@ input PurchaseOrderBy {
 }
 
 type PurchaseStats {
+  """
+  Mean spend per PRICED purchase, in the same currency. A purchase that
+  records no price is unknown rather than zero, so it is not counted in
+  the denominator.
+  """
   averagePurchaseAmount: Float!
+  """Every currency the account has purchased in, most-priced first."""
+  byCurrency: [CurrencySpend!]!
+  """The currency the two figures above are denominated in."""
+  currency: Currency
   mostFrequentStore: String
   recentPurchases: [Purchase!]!
+  """
+  Total spend in the currency named below — the account's primary, being
+  the one it has priced the most purchases in. Never a sum across
+  currencies: see byCurrency.
+  """
   totalAmountSpent: Float!
   totalPurchases: Int!
 }
@@ -9313,10 +9562,22 @@ type Query {
   compatibleUnitsForItem(currentUnitId: ID, itemId: ID!): [CompatibleUnit!]!
   """
   Get ranked consumption-eligible units for a catalog item.
-  Returns units in priority order: default consume unit → curated → auto measurement → tracking unit → portions.
+  Returns units in priority order: the stack's own portion unit → default
+  consume unit → curated → auto measurement → tracking unit → portions.
   Requires an itemId (catalog item) plus the pantry item's tracking unit context.
   """
-  consumptionUnitsForItem(itemId: ID!, netWeightUnitId: ID, trackingUnitId: ID!): [RankedUnit!]!
+  consumptionUnitsForItem(
+    itemId: ID!
+    netWeightUnitId: ID
+    """
+    The stack's own portion unit (PantryItem.portionUnitId), when it defines
+    one. Pass it and "clove" is offered first for a stack that says a bulb
+    holds ten; omit it and the list is what the catalog alone supports, which
+    is narrower than what createPantryItemUsage accepts for that stack.
+    """
+    portionUnitId: ID
+    trackingUnitId: ID!
+  ): [RankedUnit!]!
   """
   Convert quantity between units with item context
   Supports both same-type (cup→tbsp) and cross-type (cup→gram) conversions
@@ -9338,6 +9599,12 @@ type Query {
   device(id: ID!): Device
   """Get a single device by device identifier string"""
   deviceByDeviceId(deviceId: String!): Device
+  """
+  The account's device credentials - the signed-in-devices list. Live entries
+  only; a revoked or expired credential is not shown, because it is not
+  something a person can act on.
+  """
+  deviceCredentials: [DeviceCredential!]!
   """
   Consolidated device query with comprehensive filtering.
   Replaces: userDevices, myDevices, activeDevices, trustedDevices, verifiedDevices,
@@ -9605,6 +9872,10 @@ type RapidAttempt {
 """
 Recipe type for meal instructions and ingredients
 Cache: 30 minutes - published recipes are static content
+
+PRIVATE cache scope: a recipe may be a draft or private to its author, and a
+type-level hint cannot see which — so no response carrying one is ever stored
+in a shared cache.
 """
 type Recipe {
   averageRating: Float
@@ -10478,6 +10749,7 @@ input RestockPantryItemInput {
   expiresAt: DateTime
   id: ID!
   idempotencyKey: ID
+  measurementProfile: MeasurementProfileInput
   notes: String
   quantity: Float!
   restockedAt: DateTime
@@ -10530,6 +10802,25 @@ type ReviewHelpful {
   """
   user: User
 }
+
+input RevokeDeviceCredentialInput {
+  id: ID!
+}
+
+"""
+Outcome of revoking a device credential. Carries the revoked entry so a client
+can render or evict it by id.
+"""
+type RevokeDeviceCredentialPayload {
+  deviceCredential: DeviceCredential!
+}
+
+"""
+Result of RevokeDeviceCredential. Select on RevokeDeviceCredentialPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union RevokeDeviceCredentialResult = ConflictError | ForbiddenError | NotFoundError | RevokeDeviceCredentialPayload | ValidationError
 
 """Sub-input for risk assessment data"""
 input RiskAssessmentInput {
@@ -10846,7 +11137,6 @@ type ShoppingListCollaborator {
   shoppingListId: ID!
   status: CollaboratorStatus!
   statusChangedAt: DateTime
-  token: String
 }
 
 """
@@ -11259,6 +11549,17 @@ type SkippedLowStockItem {
   itemName: String!
   pantryItemId: ID!
   reason: String!
+}
+
+"""
+A recipe ingredient the cook deduction could not express in a stack's unit.
+The stack was left untouched; nothing was deducted 1:1.
+"""
+type SkippedRecipeIngredient {
+  fromUnitId: ID!
+  itemName: String!
+  reason: String!
+  toUnitId: ID!
 }
 
 enum SortOrder {
@@ -11731,6 +12032,15 @@ input StoreSkuOpsInput {
   storeSkus: [StoreSkuInput!]
 }
 
+"""One currency's share of the caller's spend at a store."""
+type StoreSpend {
+  currency: Currency!
+  """Purchases paid in this currency, priced or not."""
+  purchaseCount: Int!
+  """Sum of the priced purchases, rounded to the currency's minor unit."""
+  totalSpend: Float!
+}
+
 """
 Store statistics for the CALLING user.
 
@@ -11746,12 +12056,20 @@ cross-tenant by definition, and scoping one to the caller changes its meaning
 rather than correcting it.
 """
 type StoreStats {
-  """Mean value of the CALLER's own purchases at this store."""
-  averagePurchaseAmount: Float!
+  """
+  Mean value of the CALLER's priced purchases at this store. Null when those
+  purchases were paid in more than one currency — one figure across
+  currencies is not an amount — or when none carries a price.
+  """
+  averagePurchaseAmount: Float
   priceAccuracy: Float
   qualityRating: Float
   """The CALLER's most recent purchases at this store."""
   recentActivity: [Purchase!]!
+  """
+  The CALLER's spend at this store, one entry per currency it was paid in.
+  """
+  spendByCurrency: [StoreSpend!]!
   """The CALLER's most-purchased items at this store."""
   topItems: [StoreTopItem!]!
   """Count of the CALLER's purchases at this store."""
@@ -11767,7 +12085,10 @@ enum StoreSubtype {
 type StoreTopItem {
   count: Int!
   itemName: String!
-  revenue: Float!
+  """
+  Spend on this item. Null when the caller's purchases here span more than one currency.
+  """
+  revenue: Float
 }
 
 type Subscription {
@@ -12232,6 +12553,10 @@ enum TopLevelErrorCode {
   Login rejection. Existence-blind by construction — the message is the same whether the email is unknown or the password is wrong.
   """
   AUTH_CREDENTIALS_INVALID
+  """
+  A device-bound re-authentication credential was refused and is permanently useless: unknown, revoked, expired, superseded by a newer credential for the same device, or presented with a device id it was not issued for. Uniform across all of those on purpose — which one applied is not disclosed. Clients clear the stored credential and fall back to the password screen. NOT emitted for a rate limit, which is recoverable and leaves the credential good.
+  """
+  AUTH_DEVICE_CREDENTIAL_INVALID
   """
   Credentials are valid and the session is live; the account's email address is unverified. A 403, not a 401 — clients must not sign the user out.
   """
@@ -13086,6 +13411,7 @@ input UpdatePantryItemInput {
   itemName: String
   lastUsedAt: DateTime
   lowStockAlert: Boolean
+  measurementProfile: MeasurementProfileInput
   netWeight: NetWeightInput
   quantity: Float
   storage: StorageDetailsInput
@@ -14110,7 +14436,6 @@ input ValidatePasswordResetTokenInput {
 type ValidatePasswordResetTokenPayload {
   message: String!
   status: PasswordActionStatus!
-  userId: ID
 }
 
 """
@@ -14147,7 +14472,13 @@ type VariationImage {
 }
 
 input VerifyEmailInput {
+  """The emailed 6-digit code, or the token from the emailed link."""
   code: String!
+  """
+  Required with a 6-digit code: the code is matched only against this
+  account's pending verification. Not needed with the link token.
+  """
+  email: String
 }
 
 type VerifyEmailPayload {

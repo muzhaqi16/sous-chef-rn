@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { EmptyState } from '#components/atoms/EmptyState';
+import { EmptyState } from '#components/molecules/EmptyState';
 
 interface MealPlanEmptyStateProps {
   onCreatePlan: () => void;

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';
 import { DetailSection } from '#components/molecules/DetailSection';
-import { DetailTitleRow } from '#components/molecules/DetailTitleRow';
+import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
+import { CachedImage } from '#components/atoms/CachedImage';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
-import Animated from 'react-native-reanimated';
-import { DataStateView } from '#components/molecules/DataStateView';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 import { useTranslation } from '#/i18n';
 import { usePantryItemDetailData } from '#features/pantry/hooks/usePantryItemDetailData';
@@ -31,12 +31,12 @@ import {
 import { getUnitDisplayText } from '#utils/formatQuantity';
 import { PantryDetailInfo } from '#features/pantry/components/PantryDetailInfo';
 import { PantryUsageHistory } from '#features/pantry/components/PantryUsageHistory';
-import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
+import { parseNutritions, hasNutritionData } from '#domain/nutrition';
 import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { GalleryHero } from '#features/catalog/ui/GalleryHero';
 import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
-import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
+import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { Icon } from '#/utils/iconUtils';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { BatchSection } from '#features/pantry/components/BatchSection';
@@ -46,6 +46,7 @@ import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { useRecipeSuggestionsForItem } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
+import { commonStyles } from '#/styles/commonStyles';
 
 /**
  * Extracted so `styles.useVariants` is called once per instance.
@@ -57,7 +58,11 @@ const ExpiryColumnText: React.FC<{
 }> = ({ text, isUrgent, isExpired }) => {
   const status = isExpired ? 'expired' : isUrgent ? 'urgent' : 'normal';
   styles.useVariants({ expiryStatus: status });
-  return <Text style={styles.infoColumnValue}>{text}</Text>;
+  return (
+    <Text role="label" style={styles.infoColumnValue}>
+      {text}
+    </Text>
+  );
 };
 
 export const PantryItemDetail: React.FC<
@@ -177,7 +182,7 @@ export const PantryItemDetail: React.FC<
   if (!item || deletedOnServer) {
     return (
       <CollapsingHeroDetail onBack={goBack} testID="pantry-item-detail">
-        <View style={styles.loadingContainer}>
+        <View style={commonStyles.loadingContainer}>
           <DataStateView state={itemState} onRetry={handleRefresh} />
         </View>
       </CollapsingHeroDetail>
@@ -198,6 +203,7 @@ export const PantryItemDetail: React.FC<
       ? [
           {
             icon: 'close-circle-outline',
+            accessibilityLabel: t('labels.discard'),
             onPress: actions.handleDiscardExpired,
             variant: 'error',
             testID: 'pantry-item-discard-button',
@@ -211,6 +217,7 @@ export const PantryItemDetail: React.FC<
           {
             icon:
               actions.addToListStatus === 'success' ? 'cart' : 'cart-outline',
+            accessibilityLabel: t('labels.addToShoppingList'),
             onPress: actions.handleAddToShoppingList,
             variant:
               actions.addToListStatus === 'success' ? 'success' : 'primary',
@@ -224,16 +231,19 @@ export const PantryItemDetail: React.FC<
       ? ([
           {
             icon: 'swap-vertical-outline',
+            accessibilityLabel: t('adjustQuantity.title'),
             onPress: () => actions.setAdjustModalVisible(true),
             testID: 'pantry-item-adjust-button',
           },
           {
             icon: 'create-outline',
+            accessibilityLabel: t('labels.edit'),
             onPress: handleEdit,
             testID: 'pantry-item-edit-button',
           },
           {
             icon: 'trash-outline',
+            accessibilityLabel: t('labels.delete'),
             onPress: actions.handleDelete,
             variant: 'error',
             testID: 'pantry-item-delete-button',
@@ -269,7 +279,7 @@ export const PantryItemDetail: React.FC<
           title={item.itemName}
           numberOfLines={2}
           trailing={
-            <Text style={styles.quantityBadge}>
+            <Text role="heading" style={styles.quantityBadge}>
               {item.quantity} {getUnitDisplayText(item.unit)}
             </Text>
           }
@@ -278,7 +288,7 @@ export const PantryItemDetail: React.FC<
         {!!(categoryName || storageStateDisplay) && (
           <View style={styles.categoryBadge}>
             <Icon name="restaurant-outline" size={16} tone="primary" />
-            <Text style={styles.categoryText}>
+            <Text role="label" style={styles.categoryText}>
               {categoryName || t('labels.item')}
               {storageStateDisplay
                 ? t('pantryItemDetail.inLocation', {
@@ -292,7 +302,7 @@ export const PantryItemDetail: React.FC<
         <DetailSection>
           <View style={styles.infoColumns}>
             <View style={styles.infoColumn}>
-              <Text style={styles.infoColumnLabel}>
+              <Text role="caption" style={styles.infoColumnLabel}>
                 {t('pantryItemDetail.inThePantry')}
               </Text>
               <Text style={styles.infoColumnValue}>
@@ -401,20 +411,23 @@ export const PantryItemDetail: React.FC<
                   style={styles.recipeCard}
                   onPress={() => handleRecipePress(recipe.id)}
                 >
-                  <Animated.Image
-                    source={{ uri: recipe.image }}
+                  <CachedImage
+                    uri={recipe.image}
                     style={styles.recipeImage}
-                    resizeMode="cover"
                     sharedTransitionTag={`recipe-image-${recipe.id}`}
                   />
-                  <Text style={styles.recipeTitle} numberOfLines={2}>
+                  <Text
+                    role="label"
+                    style={styles.recipeTitle}
+                    numberOfLines={2}
+                  >
                     {recipe.title}
                   </Text>
                 </AppPressable>
               ))}
             </ScrollView>
           ) : (
-            <Text style={styles.noRecipes}>
+            <Text role="caption" style={styles.noRecipes}>
               {t('pantryItemDetail.noRecipeSuggestions')}
             </Text>
           )}
@@ -451,14 +464,7 @@ export const PantryItemDetail: React.FC<
 };
 
 const styles = StyleSheet.create(theme => ({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   quantityBadge: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
   },
   categoryBadge: {
@@ -469,9 +475,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.xs,
   },
   categoryText: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
   },
   infoColumns: {
     flexDirection: 'row',
@@ -482,15 +486,12 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   infoColumnLabel: {
-    fontSize: theme.fonts.size.xs,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   infoColumnValue: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
     variants: {
@@ -519,18 +520,12 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
   },
   recipeTitle: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
     marginTop: theme.spacing.xs,
-    fontWeight: theme.fonts.weight.medium,
   },
   noRecipes: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.md,
     fontStyle: 'italic',
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

@@ -1,11 +1,10 @@
-import type { ToastOptions } from '#/components/atoms/Toast';
+import type { ToastOptions } from '#components/molecules/Toast';
 import { HapticService } from '#services/haptic/HapticService';
 import { logger } from '#/utils/environment';
 
 /**
- * Imperative toast API for use outside the React tree; inside components prefer
- * `useToast()`. ToastProvider mounts it via `_setToastDispatch` — a toast fired
- * before that is dropped with a dev warning.
+ * The toast API, in and out of the React tree alike. `ToastProvider` mounts it
+ * via `_setToastDispatch`; a toast fired before that is dropped with a warning.
  */
 type Dispatch = (opts: ToastOptions) => void;
 

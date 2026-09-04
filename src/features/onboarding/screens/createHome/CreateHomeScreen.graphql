@@ -1,6 +1,5 @@
 fragment InviteCard_invite on HomeInvite {
   id
-  token
   role
   home {
     id
@@ -9,6 +8,10 @@ fragment InviteCard_invite on HomeInvite {
   inviter {
     id
     email
-    profile { id displayName avatar }
+    profile {
+      id
+      displayName
+      avatar
+    }
   }
 }

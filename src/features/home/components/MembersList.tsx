@@ -7,7 +7,7 @@ import { formatRole } from '#/utils/formatters/roleFormatters';
 import {
   formatInviteStatus,
   getInviteDisplayName,
-} from '#/utils/formatters/inviteFormatters';
+} from '#features/home/utils/inviteFormatters';
 import {
   getMemberDisplayName,
   type Member,
@@ -44,8 +44,10 @@ const InviteChip: React.FC<{ invite: ListInvite }> = ({ invite }) => {
   styles.useVariants({ status: statusKey });
   return (
     <View style={styles.inviteChip}>
-      <Text style={styles.inviteChipText}>{displayName}</Text>
-      <Text style={styles.inviteStatus}>
+      <Text role="bodyStrong" style={styles.inviteChipText}>
+        {displayName}
+      </Text>
+      <Text role="bodyStrong" style={styles.inviteStatus}>
         {formatInviteStatus(invite.status)}
       </Text>
     </View>
@@ -60,8 +62,12 @@ const MemberChip: React.FC<{
   styles.useVariants({ currentUser: isCurrentUser });
   return (
     <View style={styles.memberChip}>
-      <Text style={styles.memberChipText}>{displayName}</Text>
-      <Text style={styles.memberRole}>{formatRole(role)}</Text>
+      <Text role="bodyStrong" style={styles.memberChipText}>
+        {displayName}
+      </Text>
+      <Text role="caption" style={styles.memberRole}>
+        {formatRole(role)}
+      </Text>
     </View>
   );
 };
@@ -89,12 +95,7 @@ export const MembersList: React.FC<MembersListProps> = ({
 
   return (
     <View style={styles.membersSection}>
-      <Text
-        size="sm"
-        weight="semibold"
-        tone="secondary"
-        style={styles.membersSectionTitle}
-      >
+      <Text role="label" tone="secondary" style={styles.membersSectionTitle}>
         {t('homeManagement.cardMembersSectionTitle')}
       </Text>
       <View style={styles.membersList}>
@@ -139,7 +140,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xsPlus,
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
-    minWidth: theme.spacing['3xl'] - 4,
+    minWidth: theme.spacing['3xl'],
     alignItems: 'center',
     variants: {
       currentUser: {
@@ -155,17 +156,10 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   memberChipText: {
-    fontSize: theme.typography.fontSize.sm - 1,
-    // Text defaults to variant="body", whose lineHeight of 24 survives a
-    // fontSize-only override — that inherited leading, not padding, is what
-    // made these chips 66dp tall with the role pushed away from the name.
-    lineHeight: (theme.typography.fontSize.sm - 1) * 1.25,
-    fontWeight: theme.fonts.weight.semibold,
     variants: {
       currentUser: {
         true: {
           color: theme.colors.onPrimary,
-          fontWeight: theme.fonts.weight.bold,
         },
         false: {
           color: theme.colors.primary,
@@ -174,8 +168,6 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   memberRole: {
-    fontSize: theme.typography.fontSize.xs - 2,
-    lineHeight: (theme.typography.fontSize.xs - 2) * 1.2,
     textAlign: 'center',
     variants: {
       currentUser: {
@@ -192,7 +184,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     borderWidth: theme.borderWidth.hairline,
     borderStyle: 'dashed',
-    minWidth: theme.spacing['3xl'] - 4,
+    minWidth: theme.spacing['3xl'],
     alignItems: 'center',
     variants: {
       status: {
@@ -204,10 +196,6 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   inviteChipText: {
-    fontSize: theme.typography.fontSize.sm - 1,
-    // Same explicit leading as memberChipText above.
-    lineHeight: (theme.typography.fontSize.sm - 1) * 1.25,
-    fontWeight: theme.fonts.weight.semibold,
     variants: {
       status: {
         pending: { color: theme.colors.status.pending },
@@ -218,10 +206,7 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   inviteStatus: {
-    fontSize: theme.typography.fontSize.xs - 2,
-    lineHeight: (theme.typography.fontSize.xs - 2) * 1.2,
     textAlign: 'center',
-    fontWeight: theme.fonts.weight.medium,
     variants: {
       status: {
         pending: { color: theme.colors.status.pending },

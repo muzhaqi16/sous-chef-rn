@@ -47,16 +47,16 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
             library={iconLibrary}
           />
         ) : (
-          <Text size="base">{icon}</Text>
+          <Text>{icon}</Text>
         )}
       </View>
 
       <View style={styles.content}>
-        <Text size="sm" weight="semibold" style={styles.title}>
+        <Text role="label" style={styles.title}>
           {title}
         </Text>
         {!!subtitle && (
-          <Text size="xs" style={styles.subtitle}>
+          <Text role="caption" style={styles.subtitle}>
             {subtitle}
           </Text>
         )}

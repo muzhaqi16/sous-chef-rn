@@ -12,7 +12,7 @@ jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#components/atoms/PasswordInput', () => ({
+jest.mock('#components/molecules/PasswordInput', () => ({
   PasswordInput: () => null,
 }));
 
@@ -34,7 +34,7 @@ jest.mock('#/services/authService', () => ({
     getBiometricInfo: jest.fn(() =>
       Promise.resolve({ isAvailable: true, biometryType: 'Face ID' }),
     ),
-    storeCredentials: jest.fn(() => Promise.resolve(true)),
+    enrolDeviceCredential: jest.fn(() => Promise.resolve(true)),
     checkStoredCredentials: jest.fn(() => Promise.resolve(false)),
     loadStoredCredentials: jest.fn(),
   },
@@ -42,7 +42,7 @@ jest.mock('#/services/authService', () => ({
 
 const { authService: mockAuthService } = jest.requireMock(
   '#/services/authService',
-) as { authService: { storeCredentials: jest.Mock } };
+) as { authService: { enrolDeviceCredential: jest.Mock } };
 
 jest.mock('#/utils/finallyHelpers', () => ({
   executeWithLoadingState: async (
@@ -123,15 +123,16 @@ describe('PostLoginBiometricScreen', () => {
     expect(mockSetNavigationState).toHaveBeenCalledWith('main_app');
   });
 
-  it('stores credentials and enters the app when Enable Now succeeds', async () => {
+  // Enrolment issues a device-bound credential and stores THAT. The password
+  // reaches nothing: it is not an argument, so it cannot be retained.
+  it('enrols a device credential and enters the app when Enable Now succeeds', async () => {
     const user = userEvent.setup();
     render(<PostLoginBiometricScreen />);
     await user.press(await screen.findByText('Enable Now'));
 
     await waitFor(() => {
-      expect(mockAuthService.storeCredentials).toHaveBeenCalledWith(
+      expect(mockAuthService.enrolDeviceCredential).toHaveBeenCalledWith(
         'test@example.com',
-        'password123',
       );
       expect(mockRecordResponse).toHaveBeenCalledWith(true, undefined);
       expect(mockMarkEnabled).toHaveBeenCalled();

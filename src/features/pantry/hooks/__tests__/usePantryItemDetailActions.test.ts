@@ -6,7 +6,7 @@ import {
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import { removeFromPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
+import { removeFromPantryItemsCache } from '#features/pantry/cache/items';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { alertService } from '#/services/alertService';
@@ -31,18 +31,21 @@ jest.mock('#/services/alertService', () => ({
 
 jest.mock('#/services/errorService');
 
-jest.mock('#/apollo/utils/pantryCacheUpdaters', () => ({
+jest.mock('#features/pantry/cache/items', () => ({
   removeFromPantryItemsCache: jest.fn(),
   adjustPantryItemCount: jest.fn(),
 }));
 
-jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
+jest.mock('#features/shoppingList/cache/connections', () => ({
+  addNewItemToShoppingListCache: jest.fn(),
+}));
+
+jest.mock('#features/shoppingList/cache/items', () => {
   const { classifyCreateResult } = jest.requireActual(
     '#/apollo/utils/classifyCreateResult',
   );
   const revertOptimisticShoppingListItem = jest.fn();
   return {
-    addNewItemToShoppingListCache: jest.fn(),
     adoptServerShoppingListItemId: jest.fn(),
     revertOptimisticShoppingListItem,
     addOptimisticShoppingListItem: jest.fn(),

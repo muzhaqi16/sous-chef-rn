@@ -12,8 +12,9 @@ import {
   formatNutritionValue,
   formatCalories,
   hasNutritionData,
-} from '#utils/nutritionUtils';
+} from '#domain/nutrition';
 import { Text } from '#components/atoms/Text';
+import { Card } from '#components/atoms/Card';
 
 interface NutritionSummaryProps {
   /** Raw nutritions JSON from API or parsed NutritionsData */
@@ -49,17 +50,17 @@ const MacroCircle: React.FC<MacroCircleProps> = ({
   return (
     <View style={circleStyles.container}>
       <View style={circleStyles.circle}>
-        <Text size="md" weight="bold" style={circleStyles.value}>
+        <Text role="bodyStrong" style={circleStyles.value}>
           {value}
         </Text>
         {unit ? (
-          <Text size="xs" weight="medium" style={circleStyles.unit}>
+          <Text role="label" style={circleStyles.unit}>
             {unit}
           </Text>
         ) : null}
       </View>
       <Text
-        size="xs"
+        role="caption"
         tone="secondary"
         align="center"
         style={circleStyles.label}
@@ -86,7 +87,7 @@ const HighlightBadge: React.FC<HighlightBadgeProps> = ({ highlight }) => {
 
   return (
     <View style={badgeStyles.badge}>
-      <Text size="xs" weight="medium" style={badgeStyles.label}>
+      <Text role="label" style={badgeStyles.label}>
         {t(highlight.labelKey)}
       </Text>
     </View>
@@ -118,11 +119,11 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
   }
 
   const content = (
-    <View style={[styles.container, style]}>
+    <Card padding="none" style={[styles.container, style]}>
       {/* Serving size label */}
       {!!macros.servingSize && (
         <Text
-          size="xs"
+          role="caption"
           tone="secondary"
           align="center"
           style={styles.servingSize}
@@ -175,13 +176,13 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
       {/* Navigation chevron */}
       {!!onPress && (
         <View style={styles.actionRow}>
-          <Text size="sm" weight="medium" tone="accent">
+          <Text role="label" tone="accent">
             {t('labels.viewDetails')}
           </Text>
           <Icon name="chevron-forward" size={20} />
         </View>
       )}
-    </View>
+    </Card>
   );
 
   if (onPress) {
@@ -202,21 +203,9 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.lg,
-    borderCurve: 'continuous',
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     padding: theme.spacing.md,
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 2,
-        blurRadius: 4,
-        spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.08)',
-      },
-    ],
     variants: {
       compact: {
         true: { padding: theme.spacing.sm },

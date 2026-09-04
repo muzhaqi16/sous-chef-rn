@@ -89,7 +89,7 @@ jest.mock('#components/templates/ProfileScreenWrapper', () => {
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#components/settings/SettingSwitch', () => {
+jest.mock('#components/molecules/SettingSwitch', () => {
   const { View, Text, Pressable } = require('react-native');
   return {
     SettingSwitch: ({

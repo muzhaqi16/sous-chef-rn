@@ -15,8 +15,6 @@ import {
   DeclineHomeInviteDocument,
 } from '#operations/home/home.generated';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
-import { alertService } from '#/services/alertService';
-import type { AlertButton } from '#/services/alertService';
 import type { RootState } from '#store/index';
 import { CreateHomeScreen } from '../CreateHomeScreen';
 
@@ -146,7 +144,7 @@ function stageHomes(homes: StagedHome[]) {
   mockStagedHomes = homes;
 }
 
-jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
+jest.mock('#components/providers/ScreenErrorBoundary', () => ({
   OnboardingErrorBoundary: ({ children }: { children: React.ReactNode }) =>
     children,
 }));
@@ -156,7 +154,7 @@ jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#/utils/finallyHelpers');
 
 // Mock form components
-jest.mock('../FormContent', () => ({
+jest.mock('#features/onboarding/components/createHome/FormContent', () => ({
   FormContent: () => {
     const { View, Text } = require('react-native');
     return (
@@ -167,7 +165,7 @@ jest.mock('../FormContent', () => ({
   },
 }));
 
-jest.mock('../LoadingView', () => ({
+jest.mock('#features/onboarding/components/createHome/LoadingView', () => ({
   LoadingView: ({ onSkip }: { onSkip: () => void }) => {
     const { View, Text, Pressable } = require('react-native');
     return (
@@ -204,7 +202,7 @@ jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
   },
 }));
 
-jest.mock('../SubmitButton', () => ({
+jest.mock('#features/onboarding/components/createHome/SubmitButton', () => ({
   SubmitButton: ({
     onPress,
     isCreating,
@@ -221,14 +219,14 @@ jest.mock('../SubmitButton', () => ({
   },
 }));
 
-jest.mock('../ErrorMessage', () => ({
+jest.mock('#features/onboarding/components/createHome/ErrorMessage', () => ({
   ErrorMessage: ({ message }: { message: string }) => {
     const { Text } = require('react-native');
     return <Text testID="error-message">{message}</Text>;
   },
 }));
 
-jest.mock('#components/atoms/Button', () => ({
+jest.mock('#components/molecules/Button', () => ({
   Button: ({ title, onPress }: { title: string; onPress: () => void }) => {
     const { Pressable, Text } = require('react-native');
     return (
@@ -269,7 +267,6 @@ jest.mock('#/services/alertService', () => ({
 // --- Mock state used by tests to control query responses ---
 type PendingInviteShape = {
   id: string;
-  token: string;
   role: string;
   home: { name: string } | null;
   inviter: { email?: string; profile?: { displayName?: string } | null } | null;
@@ -367,7 +364,6 @@ function buildGetMyPendingInvitesMock(): MockedResponse {
               node: {
                 __typename: 'HomeInvite',
                 id: invite.id,
-                token: invite.token,
                 role: invite.role,
                 home: invite.home
                   ? {
@@ -635,7 +631,6 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        token: 'invite-1',
         role: 'MEMBER',
         home: { name: 'Johns Home' },
         inviter: {
@@ -816,7 +811,6 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        token: 'invite-1',
         role: 'MEMBER',
         home: { name: 'Johns Home' },
         inviter: {
@@ -836,7 +830,6 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        token: 'invite-1',
         role: 'MEMBER',
         home: { name: 'Johns Home' },
         inviter: {
@@ -854,7 +847,6 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        token: 'invite-1',
         role: 'MEMBER',
         home: { name: 'Johns Home' },
         inviter: { email: 'john@test.com', profile: null },
@@ -869,7 +861,6 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        token: 'invite-1',
         role: 'MEMBER',
         home: { name: 'Johns Home' },
         inviter: null,
@@ -884,7 +875,6 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        token: 'invite-1',
         role: 'MEMBER',
         home: null,
         inviter: { email: 'john@test.com', profile: null },
@@ -895,47 +885,27 @@ describe('CreateHomeScreen', () => {
     expect(await findByText('Unknown Home')).toBeTruthy();
   });
 
-  it('calls acceptHomeInvite when Accept button is pressed', async () => {
-    const user = userEvent.setup();
+  it('offers no accept or decline, and says where the invite can be opened', async () => {
+    // Redeeming needs the invite's bearer token, which the API discloses once
+    // to the inviter and stores only as a digest — so this list cannot supply
+    // one, and a button here could only ever fail.
     mockPendingInvites = [
       {
         id: 'invite-1',
-        token: 'invite-1',
         role: 'MEMBER',
         home: { name: 'Johns Home' },
         inviter: { email: 'john@test.com', profile: null },
       },
     ];
 
-    const { findByText } = renderScreen();
-    await user.press(await findByText('Accept'));
-    await waitFor(() => {
-      expect(recordedMutations).toContainEqual({
-        name: 'AcceptHomeInvite',
-        variables: { input: { token: 'invite-1' } },
-      });
-    });
-  });
+    const { queryByText, findByText } = renderScreen();
+    await findByText('Johns Home');
 
-  it('calls alertService.alert when Decline button is pressed', async () => {
-    const user = userEvent.setup();
-    mockPendingInvites = [
-      {
-        id: 'invite-1',
-        token: 'invite-1',
-        role: 'MEMBER',
-        home: { name: 'Johns Home' },
-        inviter: { email: 'john@test.com', profile: null },
-      },
-    ];
-
-    const { findByText } = renderScreen();
-    await user.press(await findByText('Decline'));
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Decline Invitation',
-      expect.stringContaining('Johns Home'),
-      expect.any(Array),
-    );
+    expect(queryByText('Accept')).toBeNull();
+    expect(queryByText('Decline')).toBeNull();
+    expect(
+      await findByText(/Open this invitation from your notifications/i),
+    ).toBeTruthy();
   });
 
   it('submits form and calls createHome on submit', async () => {
@@ -979,7 +949,6 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        token: 'invite-1',
         role: 'MEMBER',
         home: { name: 'Johns Home' },
         inviter: { email: 'john@test.com', profile: null },
@@ -1028,7 +997,6 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        token: 'invite-1',
         role: 'MEMBER',
         home: { name: 'Johns Home' },
         inviter: { email: 'john@test.com', profile: null },
@@ -1040,35 +1008,6 @@ describe('CreateHomeScreen', () => {
     // After pressing, should show create form instead of invites
     expect(await findByText("Welcome! Let's set up your home")).toBeTruthy();
     expect(queryByText('You have pending home invitations!')).toBeNull();
-  });
-
-  it('calls declineHomeInvite when decline confirmation is accepted', async () => {
-    const user = userEvent.setup();
-    mockPendingInvites = [
-      {
-        id: 'invite-1',
-        token: 'invite-1',
-        role: 'MEMBER',
-        home: { name: 'Johns Home' },
-        inviter: { email: 'john@test.com', profile: null },
-      },
-    ];
-
-    const { findByText } = renderScreen();
-    await user.press(await findByText('Decline'));
-
-    // Get the alertService.alert call and execute the "Decline" button's onPress
-    const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
-    const buttons = alertCall[2] as AlertButton[];
-    const declineButton = buttons.find(b => b.text === 'Decline');
-    declineButton?.onPress?.();
-
-    await waitFor(() => {
-      expect(recordedMutations).toContainEqual({
-        name: 'DeclineHomeInvite',
-        variables: { input: { token: 'invite-1' } },
-      });
-    });
   });
 
   it('requests a join code when the email is verified', async () => {
@@ -1350,7 +1289,6 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        token: 'invite-1',
         role: 'ADMIN',
         home: { name: 'Johns Home' },
         inviter: { email: 'john@test.com', profile: null },
@@ -1365,7 +1303,6 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        token: 'invite-1',
         role: 'MEMBER',
         home: { name: 'Johns Home' },
         inviter: { email: 'john@test.com', profile: null },
@@ -1472,7 +1409,6 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        token: 'invite-1',
         role: 'MEMBER',
         home: { name: 'Home A' },
         inviter: {
@@ -1482,7 +1418,6 @@ describe('CreateHomeScreen', () => {
       },
       {
         id: 'invite-2',
-        token: 'invite-2',
         role: 'ADMIN',
         home: { name: 'Home B' },
         inviter: { email: 'b@test.com', profile: { displayName: 'Bob' } },

@@ -12,6 +12,7 @@ import {
 import {
   classifyError as classifyErrorFn,
   calculateRetryDelay as calculateRetryDelayFn,
+  ReplayRejectedError,
 } from '../queueErrorPolicy';
 import { makeCache } from '#/apollo/cache';
 import { Telemetry } from '#/services/telemetry';
@@ -28,15 +29,18 @@ jest.mock('#store', () => ({
 }));
 
 // Mock the Apollo client
-jest.mock('../../client', () => ({
-  client: {
-    mutate: jest.fn(),
-    cache: {
-      readFragment: jest.fn(),
-      identify: jest.fn((obj: StoreObject) => `${obj.__typename}:${obj.id}`),
-      extract: jest.fn(() => ({})),
-    },
+const mockClient = {
+  mutate: jest.fn(),
+  cache: {
+    readFragment: jest.fn(),
+    identify: jest.fn((obj: StoreObject) => `${obj.__typename}:${obj.id}`),
+    extract: jest.fn(() => ({})),
   },
+};
+jest.mock('#/apollo/clientRegistry', () => ({
+  getApolloClient: () => mockClient,
+  registerApolloClient: jest.fn(),
+  clearApolloClient: jest.fn(),
 }));
 
 // Mock queueStore
@@ -81,6 +85,13 @@ jest.mock('#/utils/generateId', () => ({
 jest.mock('../../links/refreshToken', () => ({
   proactiveTokenRefresh: jest.fn(),
 }));
+
+jest.mock('../refreshUnitVocabulary', () => ({
+  refreshUnitVocabulary: jest.fn(),
+}));
+const { refreshUnitVocabulary } = jest.requireMock(
+  '../refreshUnitVocabulary',
+) as { refreshUnitVocabulary: jest.Mock };
 
 // Mock persisted optimistic-field storage — replay success/convergence must
 // clear entries so restoration can't re-apply stale values.
@@ -692,7 +703,6 @@ describe('QueueManager', () => {
     let processMutation: (
       mutation: QueuedMutation,
     ) => Promise<ProcessingResult>;
-    const { client } = require('../../client');
 
     beforeEach(() => {
       processMutation = manager['processMutation'].bind(manager);
@@ -705,7 +715,7 @@ describe('QueueManager', () => {
 
     it('marks mutation as processing, then success on completion', async () => {
       const mutation = makeMutation({ id: 'proc-1' });
-      client.mutate.mockResolvedValue({
+      mockClient.mutate.mockResolvedValue({
         data: { syncPantryItem: { item: {}, converged: false } },
       });
 
@@ -729,7 +739,7 @@ describe('QueueManager', () => {
         retryCount: 3,
         maxRetries: 3,
       });
-      client.mutate.mockRejectedValue(new Error('Server error'));
+      mockClient.mutate.mockRejectedValue(new Error('Server error'));
 
       jest.useRealTimers();
       const result = await processMutation(mutation);
@@ -744,10 +754,10 @@ describe('QueueManager', () => {
           id: 'proc-clear',
           variables: { input: { id: 'cuid-item-1' } },
         });
-        client.mutate.mockResolvedValue({
+        mockClient.mutate.mockResolvedValue({
           data: { syncPantryItem: { item: {}, converged: false } },
         });
-        client.cache.extract.mockReturnValue(
+        mockClient.cache.extract.mockReturnValue(
           normalizedFixture([{ __typename: 'PantryItem', id: 'cuid-item-1' }]),
         );
 
@@ -772,10 +782,10 @@ describe('QueueManager', () => {
             },
           },
         });
-        client.mutate.mockResolvedValue({
+        mockClient.mutate.mockResolvedValue({
           data: { addItemsToShoppingList: { results: [] } },
         });
-        client.cache.extract.mockReturnValue(
+        mockClient.cache.extract.mockReturnValue(
           normalizedFixture([
             { __typename: 'ShoppingListItem', id: 'cuid-a' },
             { __typename: 'ShoppingListItem', id: 'cuid-b' },
@@ -795,7 +805,7 @@ describe('QueueManager', () => {
           'cuid-b',
         );
         // One snapshot for the whole batch, not one per entity id.
-        expect(client.cache.extract).toHaveBeenCalledTimes(1);
+        expect(mockClient.cache.extract).toHaveBeenCalledTimes(1);
       });
 
       it('clears on idempotent convergence too', async () => {
@@ -804,7 +814,7 @@ describe('QueueManager', () => {
           operationName: 'CreateShoppingList',
           variables: { input: { id: 'cuid-list-1' } },
         });
-        client.mutate.mockResolvedValue({
+        mockClient.mutate.mockResolvedValue({
           data: {
             createShoppingList: {
               __typename: 'ConflictError',
@@ -813,7 +823,7 @@ describe('QueueManager', () => {
             },
           },
         });
-        client.cache.extract.mockReturnValue(
+        mockClient.cache.extract.mockReturnValue(
           normalizedFixture([
             { __typename: 'ShoppingList', id: 'cuid-list-1' },
           ]),
@@ -837,7 +847,7 @@ describe('QueueManager', () => {
           maxRetries: 3,
           variables: { input: { id: 'cuid-item-1' } },
         });
-        client.mutate.mockRejectedValue(new Error('Server error'));
+        mockClient.mutate.mockRejectedValue(new Error('Server error'));
 
         jest.useRealTimers();
         await processMutation(mutation);
@@ -851,10 +861,10 @@ describe('QueueManager', () => {
           id: 'proc-clear-uncached',
           variables: { input: { id: 'cuid-gone' } },
         });
-        client.mutate.mockResolvedValue({
+        mockClient.mutate.mockResolvedValue({
           data: { syncPantryItem: { item: {}, converged: false } },
         });
-        client.cache.extract.mockReturnValue({});
+        mockClient.cache.extract.mockReturnValue({});
 
         jest.useRealTimers();
         const result = await processMutation(mutation);
@@ -875,7 +885,7 @@ describe('QueueManager', () => {
           operationName: 'CreateShoppingList',
           variables: { input: { id: 'list-1' } },
         });
-        client.mutate.mockResolvedValue({
+        mockClient.mutate.mockResolvedValue({
           data: {
             createShoppingList: {
               __typename: 'ConflictError',
@@ -905,7 +915,7 @@ describe('QueueManager', () => {
           operationName: 'UpdateShoppingList',
           variables: { input: { id: 'list-1' } },
         });
-        client.mutate.mockResolvedValue({
+        mockClient.mutate.mockResolvedValue({
           data: {
             updateShoppingList: {
               __typename: 'ValidationError',
@@ -943,7 +953,7 @@ describe('QueueManager', () => {
           operationName: 'UpdateShoppingList',
           variables: { input: { id: 'list-1' } },
         });
-        client.mutate.mockResolvedValue({
+        mockClient.mutate.mockResolvedValue({
           data: {
             updateShoppingList: {
               __typename: 'ConflictError',
@@ -977,14 +987,13 @@ describe('QueueManager', () => {
       entityType: string | null;
       entityId: string | null;
     };
-    const { client } = require('../../client');
 
     beforeEach(() => {
       extractEntityInfo = manager['extractEntityInfo'].bind(manager);
     });
 
     it('derives the typename from the cached entity, regardless of operation name', () => {
-      client.cache.extract.mockReturnValue(
+      mockClient.cache.extract.mockReturnValue(
         normalizedFixture([
           { __typename: 'ShoppingList', id: 'list-1' },
           { __typename: 'ShoppingListItem', id: 'item-1' },
@@ -1013,7 +1022,7 @@ describe('QueueManager', () => {
     });
 
     it('returns null entityType when the entity is not cached (already evicted)', () => {
-      client.cache.extract.mockReturnValue({});
+      mockClient.cache.extract.mockReturnValue({});
       expect(
         extractEntityInfo(
           makeMutation({
@@ -1033,7 +1042,7 @@ describe('QueueManager', () => {
           }),
         ),
       ).toEqual({ entityType: null, entityId: null });
-      expect(client.cache.extract).not.toHaveBeenCalled();
+      expect(mockClient.cache.extract).not.toHaveBeenCalled();
     });
   });
 
@@ -1073,7 +1082,6 @@ describe('QueueManager', () => {
   // -------------------------------------------------------------------------
   describe('executeMutation', () => {
     let executeSyncMutation: (mutation: QueuedMutation) => Promise<unknown>;
-    const { client: mockClient } = require('../../client');
 
     beforeEach(() => {
       executeSyncMutation = manager['executeMutation'].bind(manager);
@@ -1191,8 +1199,6 @@ describe('QueueManager', () => {
   // processQueue - full integration with mutations
   // -------------------------------------------------------------------------
   describe('processQueue full flow', () => {
-    const { client: mockClient } = require('../../client');
-
     it('processes pending mutations and cleans up', async () => {
       mockedGetState.mockReturnValue({
         user: { id: 'user-1' },
@@ -1316,7 +1322,6 @@ describe('QueueManager', () => {
     });
 
     it('refreshes the token and retries through the bounded counter', async () => {
-      const { client: mockClient } = require('../../client');
       (proactiveTokenRefresh as jest.Mock).mockResolvedValue('new-token');
       mockClient.mutate.mockResolvedValue({
         data: { syncPantryItem: { item: {}, converged: false } },
@@ -1333,7 +1338,6 @@ describe('QueueManager', () => {
     });
 
     it('marks AUTH_ERROR without retrying when the refresh fails', async () => {
-      const { client: mockClient } = require('../../client');
       (proactiveTokenRefresh as jest.Mock).mockResolvedValue(null);
 
       jest.useRealTimers();
@@ -1372,6 +1376,102 @@ describe('QueueManager', () => {
     });
   });
 
+  describe('a retired unit reference', () => {
+    let handleMutationError: (
+      mutation: QueuedMutation,
+      error: unknown,
+    ) => Promise<ProcessingResult>;
+
+    // What the API answers once a queued write names a `Unit` row its
+    // vocabulary repair merged away.
+    const staleUnitError = new ReplayRejectedError(
+      'NotFoundError',
+      'Unit not found',
+      'NOT_FOUND',
+      'Unit',
+    );
+
+    beforeEach(() => {
+      handleMutationError = manager['handleMutationError'].bind(manager);
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-1' },
+        accessToken: 'token',
+        isOnline: true,
+        apiReachable: true,
+        setNeedsTokenRefresh: jest.fn(),
+      });
+    });
+
+    it('refreshes the vocabulary and re-sends rather than reverting', async () => {
+      mockClient.mutate.mockResolvedValue({
+        data: { syncPantryItem: { item: {}, converged: false } },
+      });
+
+      jest.useRealTimers();
+      const mutation = makeMutation({ id: 'stale-unit-1' });
+      const result = await handleMutationError(mutation, staleUnitError);
+      jest.useFakeTimers();
+
+      expect(refreshUnitVocabulary).toHaveBeenCalledTimes(1);
+      expect(queueStore.incrementRetry).toHaveBeenCalledWith('stale-unit-1');
+      expect(result.success).toBe(true);
+      expect(queueStore.markMutationFailed).not.toHaveBeenCalled();
+    });
+
+    it('refreshes once per drain, not once per entry', async () => {
+      // A backlog of pantry writes all naming the same retired unit must draw
+      // one re-fetch between them, not one each.
+      mockClient.mutate.mockResolvedValue({
+        data: { syncPantryItem: { item: {}, converged: false } },
+      });
+
+      jest.useRealTimers();
+      for (const id of ['stale-a', 'stale-b', 'stale-c']) {
+        await handleMutationError(makeMutation({ id }), staleUnitError);
+      }
+      jest.useFakeTimers();
+
+      expect(refreshUnitVocabulary).toHaveBeenCalledTimes(1);
+    });
+
+    it('reverts and informs when the re-sent write is refused again', async () => {
+      // The second refusal is a real one: the write names a unit that is
+      // genuinely unusable, not one that had merely gone stale.
+      mockClient.mutate.mockResolvedValue({
+        data: { syncPantryItem: { item: {}, converged: false } },
+      });
+
+      jest.useRealTimers();
+      const mutation = makeMutation({ id: 'stale-twice-1' });
+      await handleMutationError(mutation, staleUnitError);
+      const second = await handleMutationError(mutation, staleUnitError);
+      jest.useFakeTimers();
+
+      expect(refreshUnitVocabulary).toHaveBeenCalledTimes(1);
+      expect(second.success).toBe(false);
+      expect(queueStore.markMutationFailed).toHaveBeenCalledWith(
+        'stale-twice-1',
+        expect.objectContaining({ type: 'stale-reference' }),
+      );
+    });
+
+    it('does not stay PENDING like a transient defer', async () => {
+      // `stale-reference` is not `server`: deferring it would replay the same
+      // dead id on every drain until the 90-day age-out.
+      mockClient.mutate.mockResolvedValue({
+        data: { syncPantryItem: { item: {}, converged: false } },
+      });
+
+      jest.useRealTimers();
+      const mutation = makeMutation({ id: 'stale-defer-1' });
+      await handleMutationError(mutation, staleUnitError);
+      const second = await handleMutationError(mutation, staleUnitError);
+      jest.useFakeTimers();
+
+      expect(second.deferred).toBeUndefined();
+    });
+  });
+
   // -------------------------------------------------------------------------
   // setFailureHandler / invokeFailureHandler / extractEntityInfo
   // -------------------------------------------------------------------------
@@ -1390,8 +1490,7 @@ describe('QueueManager', () => {
       extractEntityInfo = manager['extractEntityInfo'].bind(manager);
       // The failure handler derives the entity typename from the normalized
       // cache — seed the entities these tests fail mutations against.
-      const { client } = require('../../client');
-      client.cache.extract.mockReturnValue(
+      mockClient.cache.extract.mockReturnValue(
         normalizedFixture([
           { __typename: 'PantryItem', id: 'item-1' },
           { __typename: 'PantryItem', id: 'item-x' },

@@ -19,10 +19,14 @@ export function useVerifyEmail() {
   );
 
   return {
+    // `email` is REQUIRED alongside a 6-digit code — the code is matched only
+    // against that account's pending verification. The emailed link's token
+    // carries its own identity and needs none.
     verifyEmail: (
       code: string,
+      email?: string | null,
     ): Promise<MutationOutcome<VerifyEmailMutation>> =>
-      verifyEmail({ variables: { input: { code } } }),
+      verifyEmail({ variables: { input: { code, email } } }),
     resendVerificationEmail: (
       email: string,
     ): Promise<MutationOutcome<ResendVerificationEmailMutation>> =>

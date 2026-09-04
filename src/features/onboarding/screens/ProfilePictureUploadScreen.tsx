@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { logger } from '#/utils/environment';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
-import { View, Image, Dimensions, ScrollView, Linking } from 'react-native';
+import { View, Dimensions, ScrollView, Linking } from 'react-native';
 import { Text } from '#components/atoms/Text';
 import { getWebAppUrl } from '#utils/environment';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
-import { Button } from '#components/atoms/Button';
+import { Button } from '#components/molecules/Button';
 import { Link } from '#components/atoms/Link';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
@@ -28,8 +28,7 @@ import {
 import { imageErrorMessage, useImageUpload } from '#hooks/useImageUpload';
 import { useOnboardingNavigation } from '#features/onboarding/hooks/useOnboardingNavigation';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { ImageFile } from '#components/molecules/ImagePicker';
-import { storage } from '#/storage/mmkv';
+import type { ImageFile } from '#/types/media';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { useFocusEffect } from '@react-navigation/native';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -37,6 +36,8 @@ import { useProfileData } from '#features/profile/hooks/useProfileData';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { PermissionService } from '#services/permissions/PermissionService';
+import { useStore } from '#store';
+import { LocalImage } from '#components/atoms/LocalImage';
 
 /** Module-level helper to seed existing avatar URL from profile */
 function syncExistingAvatar(
@@ -45,26 +46,6 @@ function syncExistingAvatar(
 ) {
   if (avatar) {
     setExistingAvatarUrl(avatar);
-  }
-}
-
-/** Module-level function for reading any cropped image left behind by ImageCropScreen.
- *  Extracted to avoid try/catch inside useFocusEffect (React Compiler bailout). */
-function readPendingCroppedImage(): ImageFile | null {
-  try {
-    const storedCroppedImage = storage.getString('temp_cropped_image');
-    if (!storedCroppedImage) return null;
-    const croppedImageFile = JSON.parse(storedCroppedImage) as ImageFile;
-    storage.remove('temp_cropped_image');
-    return croppedImageFile;
-  } catch (error) {
-    errorService.reportError(error, { operation: 'readCroppedImage' });
-    try {
-      storage.remove('temp_cropped_image');
-    } catch {
-      // ignore
-    }
-    return null;
   }
 }
 
@@ -104,20 +85,13 @@ export const ProfilePictureUploadScreen = () => {
   const hasExistingAvatar = !!existingAvatarUrl && !hasLocalImage;
   const hasAnyImage = hasExistingAvatar || hasLocalImage;
 
-  // Check for cropped image from MMKV when screen comes into focus
+  // Collect whatever the crop screen left, once.
   useFocusEffect(() => {
-    const pending = readPendingCroppedImage();
+    const pending = useStore.getState().takePendingCroppedImage();
     if (pending) {
       setCroppedImage(pending);
     }
   });
-
-  // Clean up MMKV on unmount
-  useEffect(() => {
-    return () => {
-      storage.remove('temp_cropped_image');
-    };
-  }, []);
 
   // Seed existing avatar from profile on initial load
   useEffect(() => {
@@ -242,15 +216,16 @@ export const ProfilePictureUploadScreen = () => {
         <View style={styles.avatarPreview}>
           {hasLocalImage ? (
             <>
-              <Image
-                alt="Profile preview"
-                source={{ uri: croppedImage?.uri || selectedImage?.uri }}
+              <LocalImage
+                accessibilityLabel={t('a11y.profilePreview')}
+                uri={(croppedImage?.uri || selectedImage?.uri) ?? ''}
                 style={styles.avatarImage}
               />
               <AppPressable
                 onPress={handleRemoveImage}
                 style={styles.avatarRemove}
                 disabled={isUploading}
+                accessibilityLabel={t('a11y.removePhoto')}
               >
                 <Icon tone="error" name="close-circle" size={24} />
               </AppPressable>
@@ -265,6 +240,7 @@ export const ProfilePictureUploadScreen = () => {
               <AppPressable
                 onPress={handleRemoveImage}
                 style={styles.avatarRemove}
+                accessibilityLabel={t('a11y.removePhoto')}
               >
                 <Icon tone="error" name="close-circle" size={24} />
               </AppPressable>
@@ -287,11 +263,13 @@ export const ProfilePictureUploadScreen = () => {
               style={styles.cropButton}
               disabled={isUploading}
             >
-              <Text style={styles.cropButtonText}>
+              <Text role="bodyStrong" style={styles.cropButtonText}>
                 {t('onBoarding.cropAndCenter')}
               </Text>
             </AppPressable>
-            <Text style={styles.cropHint}>{t('onBoarding.cropHint')}</Text>
+            <Text role="caption" style={styles.cropHint}>
+              {t('onBoarding.cropHint')}
+            </Text>
           </View>
         )}
 
@@ -307,11 +285,11 @@ export const ProfilePictureUploadScreen = () => {
               </View>
 
               <View style={styles.uploadOptionContent}>
-                <Text style={styles.uploadOptionLabel}>
+                <Text role="bodyStrong" style={styles.uploadOptionLabel}>
                   {t('onBoarding.chooseFromGallery')}
                 </Text>
 
-                <Text style={styles.uploadOptionDescription}>
+                <Text role="caption" style={styles.uploadOptionDescription}>
                   {t('onBoarding.chooseFromGalleryDescription')}
                 </Text>
               </View>
@@ -344,7 +322,7 @@ export const ProfilePictureUploadScreen = () => {
         )}
 
         <View style={styles.formFooter}>
-          <Text style={styles.formFooterText}>
+          <Text role="caption" style={styles.formFooterText}>
             {t('onBoarding.legalNotice')}
           </Text>
 
@@ -458,12 +436,9 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   cropButtonText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.onPrimary,
   },
   cropHint: {
-    fontSize: theme.typography.fontSize.xs,
     fontStyle: 'italic',
     color: theme.colors.textSecondary,
   },
@@ -494,30 +469,21 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   uploadOptionLabel: {
-    fontSize: theme.typography.fontSize.base,
-    lineHeight: theme.typography.lineHeight.normal,
-    fontWeight: theme.fonts.weight.semibold,
     marginBottom: theme.spacing.xs,
     color: theme.colors.textPrimary,
   },
   uploadOptionDescription: {
-    fontSize: theme.typography.fontSize.sm - 1,
-    lineHeight: theme.typography.lineHeight.tight,
     letterSpacing: 0.16,
     color: theme.colors.textSecondary,
   },
   formFooter: {
     marginTop: 'auto',
     marginBottom: theme.spacing['2xl'],
-    fontSize: theme.typography.fontSize.base,
-    lineHeight: theme.typography.lineHeight.normal,
-    fontWeight: theme.fonts.weight.regular,
+    ...theme.type.body,
     textAlign: 'center',
     alignItems: 'center',
   },
   formFooterText: {
-    fontSize: theme.typography.fontSize.sm - 1,
-    lineHeight: theme.typography.lineHeight.tight,
     textAlign: 'center',
     color: theme.colors.textSecondary,
   },
@@ -529,14 +495,6 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.xs,
   },
   formFooterLinkText: {
-    fontSize: theme.typography.fontSize.sm - 1,
-    lineHeight: theme.typography.lineHeight.tight,
-  },
-  nextText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.bold,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
+    ...theme.type.caption,
   },
 }));

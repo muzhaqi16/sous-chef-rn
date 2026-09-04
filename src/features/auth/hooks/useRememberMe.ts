@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
-import { useToast } from '#/hooks/useToast';
 import { useAuthPreferences } from '#/hooks/navigation/useAuthPreferences';
 import { t } from '#/i18n';
+import { toastService } from '#services/toastService';
 
+/** Who the prompt is about. Enrolment authorises off the live session, so the
+ * password never travels with it. */
 export interface RememberMeCredentials {
   email: string;
-  password: string;
 }
 
 export interface RememberMeEvents {
@@ -27,7 +28,6 @@ export const useRememberMe = ({ onAccept, onDecline }: RememberMeEvents) => {
     useState<RememberMeCredentials | null>(null);
 
   // Dependencies
-  const toast = useToast();
   const { markCredentialPromptDeclined } = useAuthPreferences();
 
   const handleRememberMeAccept = async () => {
@@ -39,10 +39,7 @@ export const useRememberMe = ({ onAccept, onDecline }: RememberMeEvents) => {
         errorService.reportError(error, {
           operation: 'processCredentialAcceptance',
         });
-        toast({
-          message: t('errors.saveLoginFailed'),
-          type: 'error',
-        });
+        toastService.error(t('errors.saveLoginFailed'));
       }
     }
     setShowRememberMeModal(false);

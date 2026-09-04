@@ -3,7 +3,6 @@ import { logger } from '#/utils/environment';
 import { useTranslation } from '#/i18n';
 import { View, Image, Dimensions } from 'react-native';
 import { alertService } from '#/services/alertService';
-import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import {
   usePanGesture,
   usePinchGesture,
@@ -21,14 +20,15 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
-import { Header } from '#components/molecules/Header';
 import { MAX_PROFILE_SIZE } from '#utils/imageValidation';
 import ImageEditor from '@react-native-community/image-editor';
-import { ImageFile } from '#components/molecules/ImagePicker';
-import { storage } from '#/storage/mmkv';
+import type { ImageFile } from '#/types/media';
 import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
+import { useStore } from '#store';
+import { LocalImage } from '#components/atoms/LocalImage';
+import { Screen } from '#components/templates/Screen';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CROP_SIZE = Math.min(screenWidth * 0.8, 300);
@@ -297,8 +297,7 @@ export const ImageCropScreen: React.FC<
           type: imageFile.type || 'image/jpeg',
         };
 
-        // Store to MMKV
-        storage.set('temp_cropped_image', JSON.stringify(croppedImage));
+        useStore.getState().setPendingCroppedImage(croppedImage);
         logger.debug('Stored cropped image in MMKV:', {
           uri: croppedUri,
           fileName: croppedImage.fileName,
@@ -329,23 +328,27 @@ export const ImageCropScreen: React.FC<
   };
 
   return (
-    <ThemedSafeAreaView style={styles.container} edges={['left', 'right']}>
-      <Header
-        title={t('profile.cropPhoto')}
-        onBack={goBack}
-        centerTitle
-        rightActions={[
+    <Screen
+      header={{
+        title: t('profile.cropPhoto'),
+        back: goBack,
+        centerTitle: true,
+        actions: [
           {
             icon: 'refresh',
+            accessibilityLabel: t('a11y.resetCrop'),
             onPress: resetTransforms,
             disabled: isCropping,
             size: 20,
           },
-        ]}
-      />
+        ],
+      }}
+      scroll="none"
+      gutter="none"
+    >
       <View style={styles.content}>
         <Text
-          size="sm"
+          role="caption"
           align="center"
           tone="secondary"
           style={styles.instructions}
@@ -373,20 +376,18 @@ export const ImageCropScreen: React.FC<
                     },
                   ]}
                 >
-                  <Image
-                    source={{ uri: imageFile.uri }}
+                  <LocalImage
+                    uri={imageFile.uri}
                     style={[styles.image, imageSize]}
-                    resizeMode="cover"
                   />
                 </Animated.View>
               </GestureDetector>
             ) : (
-              <View style={styles.loadingContainer}>
-                <Image
-                  source={{ uri: imageFile.uri }}
+              <View style={styles.cropSpinner}>
+                <LocalImage
+                  uri={imageFile.uri}
                   style={styles.imageFallback}
                   onLoad={handleImageLoad}
-                  resizeMode="cover"
                 />
                 <View style={styles.loadingIconContainer}>
                   <Icon tone="textSecondary" name="image-outline" size={40} />
@@ -402,13 +403,13 @@ export const ImageCropScreen: React.FC<
             style={styles.cropButton}
             disabled={isCropping || !imageLoaded}
           >
-            <Text size="md" weight="semibold" style={styles.cropButtonText}>
+            <Text role="bodyStrong" style={styles.cropButtonText}>
               {isCropping ? t('profile.cropping') : t('profile.cropPhoto')}
             </Text>
           </AppPressable>
         </View>
       </View>
-    </ThemedSafeAreaView>
+    </Screen>
   );
 };
 
@@ -441,7 +442,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: theme.borderWidth.medium,
     borderRadius: CROP_SIZE / 2,
     borderCurve: 'continuous',
-    zIndex: 2,
+    zIndex: theme.zIndex.elevated,
     backgroundColor: 'transparent',
     pointerEvents: 'none',
   },
@@ -465,7 +466,7 @@ const styles = StyleSheet.create(theme => ({
     height: CROP_SIZE,
     opacity: 0.01, // Nearly invisible but still triggers onLoad
   },
-  loadingContainer: {
+  cropSpinner: {
     width: CROP_SIZE,
     height: CROP_SIZE,
     alignItems: 'center',

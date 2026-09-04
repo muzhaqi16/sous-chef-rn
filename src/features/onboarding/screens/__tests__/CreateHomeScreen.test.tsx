@@ -64,7 +64,7 @@ jest.mock('../createHome/helpers', () => ({
   showPantryCreationError: jest.fn(),
 }));
 
-jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
+jest.mock('#components/providers/ScreenErrorBoundary', () => ({
   OnboardingErrorBoundary: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
   ),
@@ -91,7 +91,7 @@ jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
     );
   },
 }));
-jest.mock('../createHome/FormContent', () => ({
+jest.mock('#features/onboarding/components/createHome/FormContent', () => ({
   FormContent: () => {
     const { View, Text } = require('react-native');
     return (
@@ -101,7 +101,7 @@ jest.mock('../createHome/FormContent', () => ({
     );
   },
 }));
-jest.mock('../createHome/LoadingView', () => ({
+jest.mock('#features/onboarding/components/createHome/LoadingView', () => ({
   LoadingView: () => {
     const { View, Text } = require('react-native');
     return (
@@ -111,19 +111,19 @@ jest.mock('../createHome/LoadingView', () => ({
     );
   },
 }));
-jest.mock('../createHome/SubmitButton', () => ({
+jest.mock('#features/onboarding/components/createHome/SubmitButton', () => ({
   SubmitButton: ({ isCreating }: { isCreating: boolean }) => {
     const { Text } = require('react-native');
     return <Text>{isCreating ? 'Creating...' : 'Create'}</Text>;
   },
 }));
-jest.mock('../createHome/ErrorMessage', () => ({
+jest.mock('#features/onboarding/components/createHome/ErrorMessage', () => ({
   ErrorMessage: ({ message }: { message: string }) => {
     const { Text } = require('react-native');
     return <Text>{message}</Text>;
   },
 }));
-jest.mock('#components/atoms/Button', () => ({
+jest.mock('#components/molecules/Button', () => ({
   Button: ({ title, onPress }: { title?: string; onPress: () => void }) => {
     const { Pressable, Text } = require('react-native');
     return (

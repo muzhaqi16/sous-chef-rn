@@ -7,11 +7,10 @@ import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { NotificationActionHandler } from '#features/notifications/components/NotificationActionHandler';
 import { getNotificationDisplayMessage } from '#features/notifications/utils/notificationHelpers';
-import { getDateFnsLocale } from '#utils/dateLocale';
 
-import { format } from 'date-fns/format';
 import type { StaticScreenProps } from '@react-navigation/native';
 import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
+import { formatDateTimeLong } from '#/utils/formatters/date';
 
 export const NotificationDetailScreen: React.FC<
   StaticScreenProps<{
@@ -24,12 +23,7 @@ export const NotificationDetailScreen: React.FC<
   if (!notification) {
     return (
       <View style={styles.container}>
-        <Text
-          variant="body"
-          tone="error"
-          align="center"
-          style={styles.errorText}
-        >
+        <Text role="body" tone="error" align="center" style={styles.errorText}>
           {t('notifications.notFound')}
         </Text>
       </View>
@@ -48,18 +42,16 @@ export const NotificationDetailScreen: React.FC<
             <View style={styles.iconContainer}>
               <Icon name="notifications" size={32} tone="primary" />
             </View>
-            <Text variant="subtitle" weight="bold" style={styles.title}>
+            <Text role="title" style={styles.title}>
               {notification.title || t('notifications.titleFallback')}
             </Text>
-            <Text variant="caption">
-              {format(new Date(notification.sentAt), 'PPpp', {
-                locale: getDateFnsLocale(),
-              })}
+            <Text role="caption" tone="secondary">
+              {formatDateTimeLong(new Date(notification.sentAt))}
             </Text>
           </View>
 
           <View style={styles.content}>
-            <Text variant="body" lineHeight="relaxed" style={styles.message}>
+            <Text role="body" style={styles.message}>
               {getNotificationDisplayMessage(notification, t) ||
                 payload.message ||
                 t('notifications.noMessageAvailable')}
@@ -67,14 +59,10 @@ export const NotificationDetailScreen: React.FC<
 
             {!!payload.details && (
               <View style={styles.detailsContainer}>
-                <Text
-                  variant="caption"
-                  weight="bold"
-                  style={styles.detailsTitle}
-                >
+                <Text role="label" tone="secondary" style={styles.detailsTitle}>
                   {t('labels.details')}
                 </Text>
-                <Text variant="caption" tone="primary">
+                <Text role="caption" tone="primary">
                   {payload.details}
                 </Text>
               </View>
@@ -89,11 +77,7 @@ export const NotificationDetailScreen: React.FC<
                     : handleNotificationAction(notification)
                 }
               >
-                <Text
-                  variant="body"
-                  weight="bold"
-                  style={styles.actionButtonText}
-                >
+                <Text role="bodyStrong" style={styles.actionButtonText}>
                   {notification.actionType === 'ACCEPT_HOME_INVITE'
                     ? t('notifications.acceptHomeInvitation')
                     : notification.actionType === 'VIEW_EXPIRING_ITEMS'

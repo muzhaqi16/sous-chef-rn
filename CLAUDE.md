@@ -35,11 +35,14 @@ node scripts/check-form-state.mjs                # also in pre-commit
 node scripts/check-feature-enumeration.mjs       # also in pre-commit
 node scripts/check-canonical-mechanisms.mjs      # also in pre-commit
 node scripts/check-design-tokens.mjs             # also in pre-commit
+node scripts/check-typography-roles.mjs          # also in pre-commit
+node scripts/check-component-tier.mjs            # also in pre-commit
+node scripts/check-screen-scaffold.mjs           # also in pre-commit
 node scripts/check-dependency-audit.mjs          # also in PR checks + weekly
 node scripts/check-bundled-secrets.mjs --self-test
 ```
 
-Each of the eight boundary gates takes `--list` (every finding), `--update`
+Each of the eleven boundary gates takes `--list` (every finding), `--update`
 (re-baseline) and `--self-test` (prove it can still fail). A NON-EMPTY baseline
 is a debt list that may only shrink; an EMPTY one is an invariant, and any
 finding there is a regression to fix:
@@ -48,12 +51,15 @@ finding there is a regression to fix:
 | --- | --- | --- |
 | `check-data-layer-boundary` | a screen, sheet or cell may not run an operation, hold the client, or write the cache | 0 |
 | `check-hook-return-types` | a feature hook's return type may not name the data library — its companion, since the screen imports nothing | 0 |
-| `check-import-cycles` | no new LOAD-TIME import cycle; `import type` and `await import()` edges do not count | 8 |
-| `check-single-consumer` | a module in `components`/`hooks`/`context`/`utils`/`constants` used by exactly one feature belongs to that feature | 101 |
-| `check-form-state` | a form holds its fields in react-hook-form, not `useState` | 51 |
-| `check-feature-enumeration` | a feature id in a string outside its feature is a place the feature list has to be remembered | 1 |
-| `check-canonical-mechanisms` | one mechanism per concern — the list primitive, the image component, the modal surface, the date formatter, device storage | 50 |
-| `check-design-tokens` | a visual property is a token, not a literal; a kit concept is not restyled in a feature | 207 |
+| `check-import-cycles` | no new LOAD-TIME import cycle; `import type` and `await import()` edges do not count | 0 |
+| `check-single-consumer` | a module in `components`/`hooks`/`context`/`utils`/`constants` used by exactly one feature belongs to that feature | hard rule |
+| `check-form-state` | a form holds its fields in react-hook-form, not `useState` | 75 |
+| `check-feature-enumeration` | a feature id in a string outside its feature is a place the feature list has to be remembered | 0 |
+| `check-canonical-mechanisms` | one mechanism per concern — the list primitive, the image component, the modal surface, the date formatter, device storage. The full concern table, gates included, is § One mechanism per concern | 0 |
+| `check-design-tokens` | a visual property is a token, not a literal; a kit concept is not restyled in a feature | 0 |
+| `check-typography-roles` | text is set by a named role, not by size and weight | 21 |
+| `check-component-tier` | a kit component sits in the tier its composition puts it in | 0 |
+| `check-screen-scaffold` | a screen's chrome comes from `Screen`, and nobody applies the top inset twice | 4 chrome / 0 double-inset |
 
 When one reaches zero, promote it to a hard `import/no-restricted-paths` zone
 and delete the baseline — the same promotion the kit half of
@@ -76,12 +82,22 @@ Full command reference: `docs/development.md`.
 
 Directory map and module walkthrough: `docs/architecture.md`. The short form:
 
-- `src/features/<name>/` — feature modules (screens, hooks, graphql, context,
-  utils) + `manifest.ts`, assembled by `src/features/registry.ts`.
-  `src/screens/` is auth/onboarding flows only.
-- `src/components/` — shared UI in four buckets: `atoms/`, `molecules/`,
-  `organisms/`, `templates/` (plus `charts/`, `modals/`, `navigation/`,
-  `providers/`, `settings/`). There is no `base/`. Feature-private UI stays in
+- `src/features/<name>/` — the TWELVE feature modules (screens, hooks, graphql,
+  context, utils) + `manifest.ts`. Auth and onboarding are features like any
+  other; `src/screens/` holds only the two screens that belong to no feature
+  (`SplashScreen`, `NotFoundScreen`).
+- **Two registries, and the split is load-bearing.** `registry.ts` is the
+  screen-bearing one navigation iterates; `registry.static.ts` is every feature
+  as the APP SHELL sees it — i18n init, the cache, the offline queue — and it
+  exists because those run on the LAUNCH path and importing the screen-bearing
+  registry there pulls the whole component graph in with them. A feature that
+  needs shell wiring adds a `manifest.static.ts`, not an import.
+- `src/components/` — shared UI in four TIERS: `atoms/`, `molecules/`,
+  `organisms/`, `templates/`, plus `providers/` and `performance/`. There is no
+  `base/`, `charts/`, `modals/`, `navigation/` or `settings/`. A component's
+  tier is computed from what it RENDERS, not chosen —
+  `node scripts/check-component-tier.mjs` holds it, and
+  `src/components/atoms/README.md` states the rule. Feature-private UI stays in
   `src/features/<name>/components/` (e.g. the pantry form lives in
   `src/features/pantry/components/form/`).
 - `src/hooks/` and `src/components/` hold ONLY what more than one feature
@@ -92,11 +108,10 @@ Directory map and module walkthrough: `docs/architecture.md`. The short form:
   which makes it an invariant rather than a debt — it went 76 → 0, so any entry
   is a regression to fix. Schema-type imports are counted, not failed. The same
   script also scans the **kernel** (`src/apollo/`, `src/store/`, `src/utils/`, …)
-  for modules NAMED after a feature, under a separate NON-empty baseline that may
-  only shrink — a worklist, not an invariant. Only the name test runs there: the
-  kernel's feature imports are load-bearing (offline queue, i18n bundling, the
-  subscription layer) and are governed by the `.eslintrc.js` zone instead.
-  Per-feature nav stacks are exempt by design.
+  for modules NAMED after a feature; that concern is at zero too. Only the name
+  test runs there: the kernel's feature imports are load-bearing (offline queue,
+  i18n bundling, the subscription layer) and are governed by the `.eslintrc.js`
+  zone instead. Per-feature nav stacks are exempt by design.
 - `src/features/catalog/` — the grocery `Item`, its pickers, and storage
   locations. The one feature with a PUBLIC component directory (`ui/`): its
   pickers are domain UI that two features consume, so they belong in neither a
@@ -105,6 +120,17 @@ Directory map and module walkthrough: `docs/architecture.md`. The short form:
 - `src/app/` — the composition root: the modules that exist to know the feature
   list (the provider mounting every feature's subscriptions, the offline tab
   preloader). Not kit, not reusable, and exempt from the rule above by design.
+- `src/domain/` — domain logic SEVERAL features share: `dietary`, `nutrition`,
+  `recipeTransform`, `pantryItemDuplicate`. The kit must stay domain-free and a
+  feature's internals are closed to its siblings, so a module named after a
+  domain concept and imported by three features had nowhere to live; it sat in
+  `utils/` and `constants/` reading as kernel. Same reasoning as `catalog/ui/`,
+  one level up. Admission is by CONSUMER COUNT: two or more features, or it
+  belongs in the one that uses it.
+- `src/components/templates/` — the page-level scaffolding every screen is
+  built from: `Screen` (chrome, scroll mode, gutter, state), `Sheet` (the bottom
+  sheet shell) and `FormScreen`. A screen does not assemble its own header, and
+  `node scripts/check-screen-scaffold.mjs` holds that.
 - `src/apollo/` client, links, offline queue, cache persistence ·
   `src/store/` Zustand slices + reset manager · `src/i18n/` config + locales ·
   `src/services/`, `src/navigation/`, `src/theme/`, `src/utils/`.
@@ -434,6 +460,55 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
 
 ## UI layer
 
+### One mechanism per concern
+
+Each row is a concern the app solved ONCE. An alternative is not a style
+difference — it loses what the canonical path already handles (a theme that
+follows the colour scheme, a locale that follows the language, a scroll
+container that arbitrates gestures, a key the session reset can find). The
+"Held by" column is what fails when you reach past it; a rule with no gate is
+one nobody has been able to express yet, not one that is optional.
+
+| Concern | Mechanism | Held by |
+| --- | --- | --- |
+| A list that can grow | `FlashList`, with an explicit `renderScrollComponent` | `check-canonical-mechanisms` · `flashListScrollComponents.test.ts` |
+| A remote image | `CachedImage` (`LocalImage` for a file or bundled asset) | `check-canonical-mechanisms` |
+| A modal surface | `BottomSheetModal` via `useStandardBottomSheet`, or `alertService` | `check-canonical-mechanisms` · `no-restricted-syntax` bans `present()`/`dismiss()` |
+| Rendering a date | the shared formatters in `src/utils` (`formatters/date`, `dateUtils`) | `check-canonical-mechanisms` |
+| Device storage | a persisted slice of the Zustand store | `check-canonical-mechanisms` · `no-restricted-imports` on `#storage/mmkv` |
+| A screen's chrome | `Screen` (`#components/templates/Screen`) | `check-screen-scaffold` |
+| A sheet's shell | `Sheet` (`#components/templates/Sheet`) | `bottomSheetShell.test.ts` |
+| A loading indicator | `Loading` / `LoadingBranded` (`#components/molecules/Loading`) | — |
+| A toast | `toastService` — in and out of the React tree alike | `no-restricted-syntax` on its arguments |
+| Navigating | `useAppNavigation` | `no-restricted-imports` on `useNavigation` |
+| Setting text | a typography ROLE (`<Text role="body">`) | `check-typography-roles` |
+| A colour, radius, z-index or spacing step | a `theme.*` token | `check-design-tokens` |
+| Elevation | a step of `theme.shadows` | `check-design-tokens` |
+| A duration, spring or curve | `theme.motion` | — |
+| A form's fields | react-hook-form + a yup schema beside the form | `check-form-state` |
+| Reduce motion | nothing — Reanimated applies it itself | `probe-reanimated-reduce-motion.mjs` |
+| Memoization | nothing — the React Compiler does it | `check-compiler-bailouts` |
+| A shared actions bag | `createActionsContext` | — |
+
+When a gate's baseline reaches zero, promote it to an
+`import/no-restricted-paths` or `no-restricted-imports` zone and delete the
+baseline — the same promotion the kit half of `check-layer-purity` already got.
+
+### Screen scaffold and sheet shell
+
+- **A screen's chrome is `Screen`** (`src/components/templates/Screen.tsx`):
+  `header` (`standard | tab | collapsing | none`, plus title, actions, back,
+  close, offline pill), `scroll` (`none | scroll | form | list`), `gutter`,
+  `refresh` and `state`. It NEVER applies the top inset — the navigator does,
+  and a screen adding its own is the `double-inset` half of
+  `node scripts/check-screen-scaffold.mjs`. A bare `<SafeAreaView>` (no `edges`)
+  insets all four sides and is the usual way that happens.
+- **A sheet's shell is `Sheet`** (`src/components/templates/Sheet.tsx`):
+  `view | form | action`. `form` supplies both the keyboard offset and the
+  input context, so inputs inside resolve to gorhom's `BottomSheetTextInput`.
+- **A full-screen form is `FormScreen`, not a sheet.** It is a screen with a
+  form's chrome; the name is the only thing it shares with a modal.
+
 ### Unistyles
 
 - **`StyleSheet.create(theme => …)` for RN primitives** — theme changes push
@@ -473,6 +548,70 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
   `node scripts/probe-unistyles-compiler-order.mjs`; mechanism and the measured
   three-way table:
   `docs/verified-library-behaviour.md#unistyles-usevariants-rewrite-needs-a-scope-re-crawl-before-the-compiler`.
+
+### Typography roles
+
+- **Text is set by a ROLE, never by size and weight.** The nine roles live in
+  `src/theme/foundations/type.ts` (`display`, `title`, `subheading`, `heading`,
+  `body`, `bodyStrong`, `caption`, `label`, `error`) and each carries size,
+  weight, leading and tracking together — and only those: **colour is `tone`'s
+  job**, so `role="error"` pairs with `tone="error"`. `<Text role="caption">`,
+  never `<Text size="sm">`. An element that cannot take the prop (a
+  `TextInput`, a shared style module) spreads `...theme.type.<role>`.
+  `role` shadows RN's ARIA-style `role`; `accessibilityRole` is the spelling
+  this tree uses.
+- `size`, `weight` and `lineHeight` remain on `Text` as **kit-only escape
+  hatches** — a breakpoint-mapped label, a 13px inset header. Outside
+  `src/components/**` they are a second definition of a role that exists.
+- **The font-scale ceiling is global.** The OS text size multiplies on top of
+  the app's own 0.9–1.3 preference, which is already baked into the theme's
+  numbers, so `theme.maxFontScaleMultiplier` is the remainder of `MAX_FONT_SCALE`
+  and the `Text` atom applies it. `maxFontSizeMultiplier` and
+  `allowFontScaling={false}` are `no-restricted-syntax` errors.
+- `node scripts/check-typography-roles.mjs` holds both halves. `off-role-text`
+  is at ZERO — every `<Text>` outside the kit names a role, so any finding is a
+  regression. `stylesheet-type` is a shrinking baseline of 21: the blocks whose
+  type no role expresses (a responsive size map, a 10px badge, a Skia draw
+  call).
+
+### Elevation & on-fill colour
+
+- **Elevation is `theme.shadows`, and the ramp is PER THEME** — the geometry is
+  shared, the ink is not: a 4%-black shadow is invisible on charcoal, so
+  `darkShadows` keeps the offsets and deepens the opacity. `src/theme/foundations/shadows.ts`
+  is the only place a `boxShadow` geometry is written; a call site spreads a step
+  (`...theme.shadows.md`). The exceptions are shadows whose COLOUR is the point —
+  the FAB's brand glow, the scanner's scan-line glow, `commonStyles.shadow`'s
+  primary tint — which no neutral step can express.
+- **Text or an icon on a fill reads that fill's `on*` token**, never a
+  hardcoded white: the fill is user-overridable and the foreground follows its
+  luminance. `onScrim` is the role for a ground the theme does NOT paint — over
+  a photo, a camera preview, a dark overlay — and stays light in both
+  appearances. There is no `colors.white`.
+  `__tests__/ui/onFillTextUsesItsToken.test.ts` catches a raw literal, an `on*`
+  token over a fill it does not name, and a locally overridden shared fill.
+- `src/theme/__tests__/foundations.test.ts` asserts light and dark declare the
+  same colour, shadow and motion keys — a token defined in one theme only is
+  invisible until someone switches appearance, and then the style silently
+  drops.
+
+### Motion
+
+- **Durations, springs and curves are `theme.motion`** — the foundation is
+  `src/theme/foundations/motion.ts`, read as `theme.motion.timing.FAST` in a
+  stylesheet and as `motion.timing.FAST` from the module elsewhere. The scale
+  stops at 300 ms; a longer number is a LOOP's own period (a 1500 ms shimmer, a
+  1200 ms bob) and stays a literal at its call site rather than becoming a token
+  one animation uses.
+- **Never branch an animation on reduce motion.** `withTiming`, `withSpring`,
+  `withRepeat` and the entering/exiting builders already collapse under the OS
+  setting with no config. `useMotionEnabled()`
+  (`src/hooks/animations/useMotionEnabled.ts`) is the ONE `useReducedMotion`
+  read, and only for what a zero duration cannot stop — a loop's resting state,
+  an ambient illustration. Verified 2026-09-03 vs
+  `react-native-reanimated@4.6.0` — re-check:
+  `node scripts/probe-reanimated-reduce-motion.mjs`; mechanism:
+  `docs/verified-library-behaviour.md#reanimated-applies-reduce-motion-itself`.
 
 ### Pressable & gestures
 
@@ -596,6 +735,10 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   is an absolute flap inside `ListHeaderComponent` for exactly this reason
   (`PantryListSkeletonOverlay.tsx`). `onLoad` cannot stand in for the latch:
   it fires once per mount and a sentinel-only skeleton layout consumes it.
+  **A settled EMPTY list releases on `rowCount: 0`, not on a commit**: FlashList
+  commits once for data that goes empty to empty, that commit lands while the
+  skeletons are still up, and the placeholder guard discards it — so the list
+  with no rows to reveal was the one that waited forever.
   Verified 2026-08-26 vs `@shopify/flash-list@2.3.2`, on-device evidence:
   `docs/verified-library-behaviour.md#flashlist-v2-first-layout-opacity-gate`.
 - **Never use `InteractionManager`** — in the installed RN 0.86.3 it is a
@@ -993,6 +1136,8 @@ npm run check:import-cycles
 npm run check:single-consumer
 npm run check:form-state && npm run check:feature-enumeration
 npm run check:canonical-mechanisms && npm run check:design-tokens
+npm run check:typography-roles
+npm run check:component-tier && npm run check:screen-scaffold
 npm run check:dependency-audit
 ```
 

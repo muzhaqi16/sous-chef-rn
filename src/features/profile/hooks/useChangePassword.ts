@@ -15,7 +15,7 @@ type ChangePasswordResult = ChangePasswordMutation['changePassword'];
 export type ChangePasswordOutcome =
   | { status: 'completed' }
   /** Already localized: the wait time comes from the transport error itself. */
-  | { status: 'rateLimited'; message: string }
+  | { status: 'rateLimited'; localizedMessage: string }
   | { status: 'refused'; payload: ChangePasswordResult | undefined };
 
 /**
@@ -36,7 +36,7 @@ export function useChangePassword() {
     if (isRateLimitError(result.error)) {
       return {
         status: 'rateLimited',
-        message: getRateLimitMessage(result.error),
+        localizedMessage: getRateLimitMessage(result.error),
       };
     }
 

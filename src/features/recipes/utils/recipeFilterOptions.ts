@@ -3,7 +3,7 @@
 // to the translated chip label via i18n. Shared by RecipeFilterSheet (selection
 // UI) and ActiveFilterChipsRow (active-filter display).
 
-import { isLifestyleDiet } from '#/constants/dietary';
+import { isLifestyleDiet } from '#domain/dietary';
 import { SPOONACULAR_TO_DIET_ENUM } from './recipeFilterMaps';
 
 export interface RecipeFilterOption {

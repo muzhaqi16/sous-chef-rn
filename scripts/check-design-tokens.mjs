@@ -96,17 +96,47 @@ export const CONCERNS = [
   {
     id: 'kit-concept-restyled',
     token: 'the kit component for the concept',
-    why: 'A section header, an empty state or a divider styled here is one that will not follow when the shared one changes.',
-    detect:
-      /\b(sectionTitle|sectionHeader|sectionLabel|emptyContainer|emptyText|loadingContainer|divider|separator)\s*:\s*\{/,
-    owns: [/^src\/components\//, /^src\/theme\//],
+    why: 'A section header, an empty state or a divider RESTYLED here is one that will not follow when the shared one changes.',
+    // The name alone is not the finding: `SectionHeader` and `EmptyState` both
+    // take a `style` for placement, so a block holding only margins is the
+    // documented way to use them. What cannot follow the kit is a block that
+    // re-declares the TYPE or COLOUR — a second definition of the treatment.
+    detect: restyledKitConcept,
+    owns: [/^src\/components\//, /^src\/theme\//, /^src\/styles\//],
   },
 ];
+
+const CONCEPT_KEYS =
+  /\b(sectionTitle|sectionHeader|sectionLabel|emptyContainer|emptyText|loadingContainer|divider|separator)\s*:\s*\{/g;
+
+/** Type and colour — the properties the kit component owns. */
+const TREATMENT =
+  /\b(fontSize|fontWeight|fontFamily|fontStyle|color|textTransform|letterSpacing|lineHeight)\s*:/;
+
+/** True when a concept-named style block re-declares the treatment itself. */
+export function restyledKitConcept(source) {
+  for (const match of source.matchAll(CONCEPT_KEYS)) {
+    let depth = 1;
+    let i = match.index + match[0].length;
+    while (depth > 0 && i < source.length) {
+      if (source[i] === '{') depth += 1;
+      else if (source[i] === '}') depth -= 1;
+      i += 1;
+    }
+    if (TREATMENT.test(source.slice(match.index + match[0].length, i - 1))) {
+      return true;
+    }
+  }
+  return false;
+}
 
 const violations = (rel, source) =>
   CONCERNS.filter(
     concern =>
-      !concern.owns.some(re => re.test(rel)) && concern.detect.test(source),
+      !concern.owns.some(re => re.test(rel)) &&
+      (typeof concern.detect === 'function'
+        ? concern.detect(source)
+        : concern.detect.test(source)),
   ).map(concern => concern.id);
 
 if (process.argv.includes('--self-test')) {
@@ -140,6 +170,23 @@ if (process.argv.includes('--self-test')) {
     [
       'src/components/molecules/F.tsx',
       'const s = { divider: { height: 1 } };',
+      [],
+    ],
+    // Placement is what `SectionHeader style={...}` is FOR; only a second
+    // declaration of the treatment cannot follow the kit.
+    [
+      'src/features/x/H.tsx',
+      'const s = { sectionTitle: { marginBottom: theme.spacing.sm } };',
+      [],
+    ],
+    [
+      'src/features/x/I.tsx',
+      'const s = { sectionHeader: { fontSize: theme.fonts.size.lg } };',
+      ['kit-concept-restyled'],
+    ],
+    [
+      'src/styles/commonStyles.ts',
+      'const s = { divider: { color: theme.colors.divider } };',
       [],
     ],
     // A token read is the point, not a finding.

@@ -18,12 +18,12 @@ import {
   adjustPantryItemCount,
   removeFromPantryItemsCache,
   evictPantryItemDetailStub,
-} from '#/apollo/utils/pantryCacheUpdaters';
+} from '#features/pantry/cache/items';
+import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
 import {
   removeItemFromShoppingListForMoveToPantry,
   restoreItemToShoppingListAfterMoveToPantry,
-  writePurchaseInfo,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+} from '#features/shoppingList/cache/moveToPantry';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { t as tGlobal } from '#/i18n';

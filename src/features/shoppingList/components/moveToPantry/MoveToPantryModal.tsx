@@ -1,17 +1,13 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { alertService } from '#/services/alertService';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { FractionInput } from '#components/molecules/FractionInput';
-import { FormInput } from '#components/molecules/FormInput';
-import { Header } from '#components/molecules/Header';
+import { FormInput } from '#components/atoms/FormInput';
+import { Header } from '#components/organisms/Header';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { Text } from '#components/atoms/Text';
@@ -31,6 +27,15 @@ import {
   totalFromUnitPrice,
   unitPriceFromTotal,
 } from '#features/shoppingList/utils/purchasePrice';
+import { Sheet } from '#components/templates/Sheet';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { logValidationErrors } from '#/utils/validation/common';
+import {
+  moveToPantryDefaults,
+  moveToPantrySchema,
+  type MoveToPantryFormValues,
+} from './moveToPantryFormConfig';
 
 interface MoveToPantryModalProps {
   visible: boolean;
@@ -70,27 +75,24 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     purchasedUnit,
   } = useMoveToPantryItem({ shoppingListItemId, skip: !visible });
 
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible: visible && !!shoppingListItem,
-    onDismiss: onClose,
-    snapPoints: ['75%', '95%'],
+  const { control, handleSubmit, setValue } = useForm<MoveToPantryFormValues>({
+    resolver: yupResolver(moveToPantrySchema),
+    defaultValues: moveToPantryDefaults(StorageState.Ambient),
+    mode: 'onTouched',
   });
 
-  // Form state
-  const [quantityInput, setQuantityInput] = useState('');
-  const [unitValue, setUnitValue] = useState('');
-  const [unitId, setUnitId] = useState<string | null>(null);
-  const [pantryId, setPantryId] = useState<string | null>(null);
-  const [storageState, setStorageState] = useState<StorageState>(
-    StorageState.Ambient,
-  );
-  const [expirationDate, setExpirationDate] = useState<Date | undefined>(
-    undefined,
-  );
+  // `useWatch` rather than `watch`: the latter returns a function the React
+  // Compiler cannot memoize safely, which is a lint error here.
+  const quantityInput = useWatch({ control, name: 'quantityInput' });
+  const actualPriceInput = useWatch({ control, name: 'actualPriceInput' });
+  const unitValue = useWatch({ control, name: 'unitValue' });
+  const unitId = useWatch({ control, name: 'unitId' });
+  const pantryId = useWatch({ control, name: 'pantryId' });
+  const expirationDate = useWatch({ control, name: 'expirationDate' });
+
+  // Interaction state, not fields: the picker's visibility and which of the two
+  // amounts the shopper has typed over.
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [removeFromList, setRemoveFromList] = useState(true);
-  const [actualPriceInput, setActualPriceInput] = useState('');
-  const [notes, setNotes] = useState('');
   // The per-unit price the total was seeded from, and whether the shopper has
   // since typed over either field. Between them they decide which of the two
   // amounts survives an edit — see `handleQuantityChange`.
@@ -137,16 +139,17 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     setPrevShoppingListItemId(shoppingListItem?.id);
     setPrevSelectedPantryId(selectedPantryId);
     if (visible && shoppingListItem) {
-      setQuantityInput(formatNumberForInput(seedQuantity) || '1');
-      setUnitValue(resolvedUnit.symbol);
-      setUnitId(resolvedUnit.id);
+      setValue('quantityInput', formatNumberForInput(seedQuantity) || '1');
+      setValue('unitValue', resolvedUnit.symbol);
+      setValue('unitId', resolvedUnit.id);
       unitIdThisPass = resolvedUnit.id;
-      setPantryId(selectedPantryId);
-      setStorageState(StorageState.Ambient);
-      setExpirationDate(undefined);
+      setValue('pantryId', selectedPantryId);
+      setValue('storageState', StorageState.Ambient);
+      setValue('expirationDate', undefined);
       setShowDatePicker(false);
-      setRemoveFromList(true);
-      setActualPriceInput(
+      setValue('removeFromList', true);
+      setValue(
+        'actualPriceInput',
         formatNumberForInput(
           totalFromUnitPrice(purchasedUnitPrice, seedQuantity ?? 1),
         ),
@@ -154,7 +157,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       setSeededUnitPrice(purchasedUnitPrice);
       setAmountsTouched(false);
       setPriceTouched(false);
-      setNotes('');
+      setValue('notes', '');
     }
   }
 
@@ -169,12 +172,13 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     // A line with no unit of its own takes the purchase's, which arrives with
     // the amounts rather than with the fragment.
     if (!unitIdThisPass && purchasedUnit) {
-      setUnitValue(purchasedUnit.unitSymbol);
-      setUnitId(purchasedUnit.unitId);
+      setValue('unitValue', purchasedUnit.unitSymbol);
+      setValue('unitId', purchasedUnit.unitId);
     }
     if (!amountsTouched && purchasedQuantity != null) {
-      setQuantityInput(formatNumberForInput(purchasedQuantity) || '1');
-      setActualPriceInput(
+      setValue('quantityInput', formatNumberForInput(purchasedQuantity) || '1');
+      setValue(
+        'actualPriceInput',
         formatNumberForInput(
           totalFromUnitPrice(purchasedUnitPrice, purchasedQuantity),
         ),
@@ -187,12 +191,13 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   // stocking 3 of 5 bought at $0.59 records $1.77, not the whole $2.95. Once
   // the shopper types a total of their own, that total wins instead.
   const handleQuantityChange = (value: string) => {
-    setQuantityInput(value);
+    setValue('quantityInput', value);
     setAmountsTouched(true);
     if (priceTouched || seededUnitPrice == null) return;
     const parsed = parseFractionalInput(value);
     const usable = parsed !== null && !isNaN(parsed) && parsed > 0;
-    setActualPriceInput(
+    setValue(
+      'actualPriceInput',
       usable
         ? formatNumberForInput(totalFromUnitPrice(seededUnitPrice, parsed))
         : '',
@@ -200,7 +205,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   };
 
   const handlePriceChange = (value: string) => {
-    setActualPriceInput(value);
+    setValue('actualPriceInput', value);
     setAmountsTouched(true);
     setPriceTouched(true);
   };
@@ -224,34 +229,28 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       ? unitPriceFromTotal(enteredTotal, enteredQuantity)
       : null;
 
-  const handleConfirm = () => {
+  // Reaching here means the schema passed, so every field rule has already
+  // reported itself ON its own field.
+  const onValid = (values: MoveToPantryFormValues) => {
     if (!shoppingListItem) return;
+    const {
+      pantryId: confirmedPantryId,
+      quantityInput: confirmedQuantity,
+      unitId: confirmedUnitId,
+      storageState,
+      expirationDate: confirmedExpiry,
+      removeFromList,
+      actualPriceInput: confirmedPrice,
+      notes,
+    } = values;
 
-    if (!pantryId) {
-      alertService.alert(
-        t('labels.error'),
-        t('moveToPantry.selectPantryError'),
-      );
-      return;
-    }
-
-    const quantityValue = parseFractionalInput(quantityInput);
-
-    if (quantityValue === null || isNaN(quantityValue) || quantityValue <= 0) {
-      alertService.alert(t('labels.error'), t('errors.invalidQuantity'));
-      return;
-    }
-
-    // Validate unit is selected
-    if (!unitId && !unitValue.trim()) {
-      alertService.alert(t('labels.error'), t('moveToPantry.selectUnitError'));
-      return;
-    }
+    const quantityValue = parseFractionalInput(confirmedQuantity);
+    if (quantityValue === null) return;
 
     // The field asks for the TOTAL paid, as Mark Purchased does; `actualPrice`
     // is per unit. Unrounded on purpose — the server rounds the product back.
-    const totalPaid = actualPriceInput
-      ? parseDecimalInput(actualPriceInput)
+    const totalPaid = confirmedPrice
+      ? parseDecimalInput(confirmedPrice)
       : undefined;
     const actualPrice =
       totalPaid === undefined || isNaN(totalPaid)
@@ -259,11 +258,11 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
         : unitPriceFromTotal(totalPaid, quantityValue) ?? undefined;
 
     onConfirm({
-      pantryId,
+      pantryId: confirmedPantryId ?? '',
       actualQuantity: quantityValue,
-      actualUnitId: unitId || undefined,
+      actualUnitId: confirmedUnitId || undefined,
       storageState,
-      expiresAt: expirationDate?.toISOString(),
+      expiresAt: confirmedExpiry?.toISOString(),
       removeFromList,
       actualPrice,
       notes: notes || undefined,
@@ -274,174 +273,202 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   const handleDateChange = (_event: DateTimePickerEvent, date?: Date) => {
     setShowDatePicker(false);
     if (date) {
-      setExpirationDate(date);
+      setValue('expirationDate', date);
     }
   };
 
   const clearExpirationDate = () => {
-    setExpirationDate(undefined);
+    setValue('expirationDate', undefined);
   };
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetFormScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <Header
-          title={t('moveToPantry.title')}
-          centerTitle
-          leftActions={[
-            {
-              icon: 'close',
-              onPress: onClose,
-            },
-          ]}
-          rightActions={[
-            {
-              icon: 'checkmark',
-              onPress: handleConfirm,
-              disabled: confirmDisabled,
-            },
-          ]}
-        />
+    <Sheet
+      mode="form"
+      visible={visible ? !!shoppingListItem : false}
+      onDismiss={onClose}
+      snapPoints={['75%', '95%']}
+      contentContainerStyle={styles.contentContainer}
+      style={styles.scrollView}
+    >
+      {/* Header */}
+      <Header
+        title={t('moveToPantry.title')}
+        centerTitle
+        leftActions={[
+          {
+            icon: 'close',
+            accessibilityLabel: t('labels.close'),
+            onPress: onClose,
+          },
+        ]}
+        rightActions={[
+          {
+            icon: 'checkmark',
+            accessibilityLabel: t('moveToPantry.title'),
+            onPress: handleSubmit(onValid, logValidationErrors),
+            disabled: confirmDisabled,
+          },
+        ]}
+      />
 
-        {!!shoppingListItem && (
-          <>
-            {/* Item Info */}
-            <View style={styles.itemInfo}>
-              <Text size="lg" weight="semibold" style={styles.itemName}>
-                {shoppingListItem.itemName}
-              </Text>
-              <Text size="base" tone="secondary">
-                {purchasedQuantity != null
-                  ? t('moveToPantry.purchasedAmount', {
-                      amount: formatNumberForInput(purchasedQuantity),
-                      unit: lineUnitLabel,
-                    })
-                  : t('moveToPantry.requestedAmount', {
-                      amount: formatNumberForInput(
-                        shoppingListItem.quantity || 1,
-                      ),
-                      unit: lineUnitLabel,
-                    })}
-              </Text>
+      {!!shoppingListItem && (
+        <>
+          {/* Item Info */}
+          <View style={styles.itemInfo}>
+            <Text role="heading" style={styles.itemName}>
+              {shoppingListItem.itemName}
+            </Text>
+            <Text tone="secondary">
+              {purchasedQuantity != null
+                ? t('moveToPantry.purchasedAmount', {
+                    amount: formatNumberForInput(purchasedQuantity),
+                    unit: lineUnitLabel,
+                  })
+                : t('moveToPantry.requestedAmount', {
+                    amount: formatNumberForInput(
+                      shoppingListItem.quantity || 1,
+                    ),
+                    unit: lineUnitLabel,
+                  })}
+            </Text>
+          </View>
+
+          {/* Pantry Selector */}
+          <PantrySelector
+            pantries={pantries}
+            selectedPantryId={pantryId}
+            onSelect={id => setValue('pantryId', id, { shouldValidate: true })}
+          />
+
+          {/* Quantity and Unit Input */}
+          <DropdownStack>
+            <View style={styles.section}>
+              <View style={styles.quantityUnitRow}>
+                <View style={styles.quantityField}>
+                  <FractionInput
+                    label={t('labels.quantity')}
+                    value={quantityInput}
+                    onChangeText={handleQuantityChange}
+                    placeholder={t('labels.eG1114')}
+                    keyboardType="numeric"
+                    required
+                  />
+                </View>
+                <View style={styles.unitField}>
+                  <UnitAutocompleteField
+                    variant="inline"
+                    label={t('storageLocationForm.unit')}
+                    value={unitValue}
+                    onChangeText={value =>
+                      setValue('unitValue', value, { shouldValidate: true })
+                    }
+                    placeholder={t('moveToPantry.unitPlaceholder')}
+                    required
+                    onUnitSelected={id => {
+                      setValue('unitId', id);
+                    }}
+                  />
+                </View>
+              </View>
             </View>
 
-            {/* Pantry Selector */}
-            <PantrySelector
-              pantries={pantries}
-              selectedPantryId={pantryId}
-              onSelect={setPantryId}
+            {/* Storage State */}
+            <Controller
+              control={control}
+              name="storageState"
+              render={({ field }) => (
+                <StorageStateControl
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
             />
 
-            {/* Quantity and Unit Input */}
-            <DropdownStack>
-              <View style={styles.section}>
-                <View style={styles.quantityUnitRow}>
-                  <View style={styles.quantityField}>
-                    <FractionInput
-                      label={t('labels.quantity')}
-                      value={quantityInput}
-                      onChangeText={handleQuantityChange}
-                      placeholder={t('labels.eG1114')}
-                      keyboardType="numeric"
-                      required
-                    />
-                  </View>
-                  <View style={styles.unitField}>
-                    <UnitAutocompleteField
-                      variant="inline"
-                      label={t('storageLocationForm.unit')}
-                      value={unitValue}
-                      onChangeText={setUnitValue}
-                      placeholder={t('moveToPantry.unitPlaceholder')}
-                      required
-                      onUnitSelected={id => {
-                        setUnitId(id);
-                      }}
-                    />
-                  </View>
-                </View>
-              </View>
+            {/* Expiration Date */}
+            <ExpirationDateField
+              expirationDate={expirationDate}
+              showPicker={showDatePicker}
+              onOpenPicker={() => setShowDatePicker(true)}
+              onChange={handleDateChange}
+              onClear={clearExpirationDate}
+            />
 
-              {/* Storage State */}
-              <StorageStateControl
-                value={storageState}
-                onChange={setStorageState}
+            {/* Total paid (Optional) */}
+            <View style={styles.section}>
+              <FormInput
+                label={t('purchaseAmountSheet.totalPrice')}
+                value={actualPriceInput}
+                onChangeText={handlePriceChange}
+                placeholder={localizeNumericHint('0.00')}
+                keyboardType="decimal-pad"
               />
+              {perUnitPrice != null ? (
+                <Text
+                  role="caption"
+                  tone="secondary"
+                  style={styles.perUnitHint}
+                >
+                  {t(
+                    lineUnitLabel
+                      ? 'purchaseAmountSheet.perUnitOfHint'
+                      : 'purchaseAmountSheet.perUnitHint',
+                    {
+                      price: formatCurrency(perUnitPrice, DEFAULT_CURRENCY),
+                      unit: lineUnitLabel,
+                    },
+                  )}
+                </Text>
+              ) : null}
+            </View>
 
-              {/* Expiration Date */}
-              <ExpirationDateField
-                expirationDate={expirationDate}
-                showPicker={showDatePicker}
-                onOpenPicker={() => setShowDatePicker(true)}
-                onChange={handleDateChange}
-                onClear={clearExpirationDate}
+            {/* Notes (Optional) */}
+            <View style={styles.section}>
+              <Controller
+                control={control}
+                name="notes"
+                render={({ field }) => (
+                  <FormInput
+                    label={t('labels.notesOptional')}
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    placeholder={t('moveToPantry.notesPlaceholder')}
+                    multiline
+                    numberOfLines={2}
+                  />
+                )}
               />
+            </View>
 
-              {/* Total paid (Optional) */}
-              <View style={styles.section}>
-                <FormInput
-                  label={t('purchaseAmountSheet.totalPrice')}
-                  value={actualPriceInput}
-                  onChangeText={handlePriceChange}
-                  placeholder={localizeNumericHint('0.00')}
-                  keyboardType="decimal-pad"
-                />
-                {perUnitPrice != null ? (
-                  <Text size="xs" tone="secondary" style={styles.perUnitHint}>
-                    {t(
-                      lineUnitLabel
-                        ? 'purchaseAmountSheet.perUnitOfHint'
-                        : 'purchaseAmountSheet.perUnitHint',
-                      {
-                        price: formatCurrency(perUnitPrice, DEFAULT_CURRENCY),
-                        unit: lineUnitLabel,
-                      },
-                    )}
-                  </Text>
-                ) : null}
+            {/* Remove from List Toggle */}
+            <View style={styles.toggleSection}>
+              <View style={styles.toggleInfo}>
+                <Text role="bodyStrong">
+                  {t('moveToPantry.removeFromShopping')}
+                </Text>
+                <Text
+                  role="caption"
+                  tone="secondary"
+                  style={styles.toggleDescription}
+                >
+                  {t('moveToPantry.removeFromShoppingDesc')}
+                </Text>
               </View>
-
-              {/* Notes (Optional) */}
-              <View style={styles.section}>
-                <FormInput
-                  label={t('labels.notesOptional')}
-                  value={notes}
-                  onChangeText={setNotes}
-                  placeholder={t('moveToPantry.notesPlaceholder')}
-                  multiline
-                  numberOfLines={2}
-                />
-              </View>
-
-              {/* Remove from List Toggle */}
-              <View style={styles.toggleSection}>
-                <View style={styles.toggleInfo}>
-                  <Text size="base" weight="medium">
-                    {t('moveToPantry.removeFromShopping')}
-                  </Text>
-                  <Text
-                    size="sm"
-                    tone="secondary"
-                    style={styles.toggleDescription}
-                  >
-                    {t('moveToPantry.removeFromShoppingDesc')}
-                  </Text>
-                </View>
-                <BaseSwitch
-                  value={removeFromList}
-                  onValueChange={setRemoveFromList}
-                />
-              </View>
-            </DropdownStack>
-          </>
-        )}
-      </BottomSheetFormScrollView>
-    </BottomSheetModal>
+              <Controller
+                control={control}
+                name="removeFromList"
+                render={({ field }) => (
+                  <BaseSwitch
+                    accessibilityLabel={t('moveToPantry.removeFromShopping')}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  />
+                )}
+              />
+            </View>
+          </DropdownStack>
+        </>
+      )}
+    </Sheet>
   );
 };
 

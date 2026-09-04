@@ -19,7 +19,18 @@ const storeModule: typeof UseAppStoreModule = require('#store/useAppStore');
 // --- Mocks ---
 
 const mockUpdateUser = jest.fn();
-const mockToast = jest.fn();
+const mockToastSuccess = jest.fn();
+const mockToastError = jest.fn();
+const mockToastInfo = jest.fn();
+const mockToastWarning = jest.fn();
+jest.mock('#services/toastService', () => ({
+  toastService: {
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+    error: (...args: unknown[]) => mockToastError(...args),
+    info: (...args: unknown[]) => mockToastInfo(...args),
+    warning: (...args: unknown[]) => mockToastWarning(...args),
+  },
+}));
 
 // Minimal prop shapes consumed by the mocked templates below.
 type MockAuthFormTemplateProps = {
@@ -58,10 +69,6 @@ jest.mock('#store/useAppStore', () => {
     useUpdateUser: () => getState().updateUser,
   };
 });
-
-jest.mock('#/hooks/useToast', () => ({
-  useToast: () => mockToast,
-}));
 
 jest.mock('#/services/errorService');
 
@@ -202,10 +209,17 @@ function buildResendMock(
   };
 }
 
-// Verify mock kept available for potential extension; use a generic accept-all mock
-function buildVerifyMock(): MockedResponse {
+function buildVerifyMock(
+  recordedVariables?: Record<string, unknown>[],
+): MockedResponse {
   return {
-    request: { query: VerifyEmailDocument, variables: () => true },
+    request: {
+      query: VerifyEmailDocument,
+      variables: variables => {
+        recordedVariables?.push(variables);
+        return true;
+      },
+    },
     result: {
       data: {
         verifyEmail: {

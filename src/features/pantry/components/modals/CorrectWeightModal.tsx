@@ -1,24 +1,28 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { Controller, useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { useTranslation } from '#/i18n';
 import { useFragment } from '@apollo/client/react';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { alertService } from '#/services/alertService';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { FormInput } from '#components/molecules/FormInput';
+import { FormInput } from '#components/atoms/FormInput';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
-import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
-import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
+import { FormattedItemSubtitle } from '#components/molecules/FormattedItemSubtitle';
+import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { commonStyles } from '#/styles/commonStyles';
 import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 import { CorrectWeightModal_PantryItemFragmentDoc } from './CorrectWeightModal.generated';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
   formatNumberForInput,
   localizeNumericHint,
 } from '#/utils/formatters/number';
+import { Sheet } from '#components/templates/Sheet';
+import {
+  correctWeightSchema,
+  correctWeightDefaults,
+  parseWeight,
+  type CorrectWeightFormValues,
+} from './correctWeightFormConfig';
 
 interface CorrectWeightModalProps {
   visible: boolean;
@@ -45,15 +49,11 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
   });
   const pantryItem = pantryItemId && complete ? data : null;
 
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible: visible && !!pantryItem,
-    onDismiss: onClose,
-    snapPoints: ['65%', '85%'],
-  });
-  const [weightInput, setWeightInput] = useState('');
-  const [unitDisplay, setUnitDisplay] = useState('');
-  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
-  const [reason, setReason] = useState('');
+  const { control, handleSubmit, setValue, reset, getValues } =
+    useForm<CorrectWeightFormValues>({
+      resolver: yupResolver(correctWeightSchema),
+      defaultValues: correctWeightDefaults(),
+    });
 
   // Reset state when sheet opens (render-time conditional state update).
   // Key on pantryItemId so cache updates to the same item don't clobber input.
@@ -63,14 +63,15 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
     setPrevVisible(visible);
     setPrevPantryItemId(pantryItem?.id);
     if (visible && pantryItem) {
-      setWeightInput(formatNumberForInput(pantryItem.netWeight));
-      setUnitDisplay(
-        pantryItem.netWeightUnit?.symbol ||
+      reset({
+        weightInput: formatNumberForInput(pantryItem.netWeight),
+        unitDisplay:
+          pantryItem.netWeightUnit?.symbol ||
           pantryItem.netWeightUnit?.name ||
           '',
-      );
-      setSelectedUnitId(pantryItem.netWeightUnit?.id || null);
-      setReason('');
+        selectedUnitId: pantryItem.netWeightUnit?.id || null,
+        reason: '',
+      });
     }
   }
 
@@ -78,33 +79,23 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
     unitId: string | null,
     unitName: string | null,
   ) => {
-    setSelectedUnitId(unitId);
-    if (unitName) setUnitDisplay(unitName);
+    setValue('selectedUnitId', unitId, { shouldDirty: true });
+    if (unitName) setValue('unitDisplay', unitName, { shouldDirty: true });
   };
 
-  const handleConfirm = () => {
+  // Reaching here means the schema passed; a refusal renders under its field.
+  const handleConfirm = handleSubmit(values => {
     if (!pantryItem) return;
-
-    const netWeight = parseDecimalInput(weightInput);
-    if (isNaN(netWeight) || netWeight <= 0) {
-      alertService.alert(t('labels.error'), t('correctWeight.invalidWeight'));
-      return;
-    }
-
-    if (!reason.trim()) {
-      alertService.alert(t('labels.error'), t('correctWeight.reasonRequired'));
-      return;
-    }
-
+    const { selectedUnitId } = getValues();
     onConfirm(
-      netWeight,
-      reason.trim(),
+      parseWeight(values),
+      values.reason.trim(),
       selectedUnitId && selectedUnitId !== pantryItem.netWeightUnit?.id
         ? selectedUnitId
         : undefined,
     );
     onClose();
-  };
+  });
 
   const currentWeightText = formatNetWeightDisplay(
     pantryItem?.netWeight,
@@ -116,92 +107,109 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
   );
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetFormScrollView
-        style={commonStyles.bottomSheetScrollView}
-        contentContainerStyle={[
-          commonStyles.bottomSheetContent,
-          contentContainerStyle,
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        <BottomSheetHeader
-          title={t('correctWeight.title')}
-          onCancel={onClose}
-          onConfirm={handleConfirm}
-          confirmLabel={t('correctWeight.correct')}
-        />
+    <Sheet
+      mode="form"
+      visible={visible ? !!pantryItem : false}
+      onDismiss={onClose}
+      snapPoints={['65%', '85%']}
+      contentContainerStyle={commonStyles.bottomSheetContent}
+    >
+      <BottomSheetHeader
+        title={t('correctWeight.title')}
+        onCancel={onClose}
+        onConfirm={handleConfirm}
+        confirmLabel={t('correctWeight.correct')}
+      />
 
-        {!!pantryItem && (
-          <>
-            <View style={commonStyles.bottomSheetItemInfo}>
-              <Text style={commonStyles.bottomSheetItemName}>
-                {pantryItem.itemName}
-              </Text>
-              {!!currentWeightText && (
-                <View style={commonStyles.bottomSheetItemRow}>
-                  <Text style={commonStyles.bottomSheetItemLabel}>
-                    {t('correctWeight.netWeightPrefix')}
-                    {currentWeightText}
-                  </Text>
-                </View>
-              )}
-              {!!remainingWeightText && (
-                <View style={commonStyles.bottomSheetItemRow}>
-                  <Text style={commonStyles.bottomSheetItemLabel}>
-                    {t('labels.remaining')}
-                    {remainingWeightText}
-                  </Text>
-                </View>
-              )}
+      {!!pantryItem && (
+        <>
+          <View style={commonStyles.bottomSheetItemInfo}>
+            <Text style={commonStyles.bottomSheetItemName}>
+              {pantryItem.itemName}
+            </Text>
+            {!!currentWeightText && (
               <View style={commonStyles.bottomSheetItemRow}>
                 <Text style={commonStyles.bottomSheetItemLabel}>
-                  {t('correctWeight.quantityLabel')}
+                  {t('correctWeight.netWeightPrefix')}
+                  {currentWeightText}
                 </Text>
-                <FormattedItemSubtitle
-                  quantity={pantryItem.quantity}
-                  displayAsFraction={pantryItem.unit?.displayAsFraction}
-                  unitSymbol={pantryItem.unit?.symbol}
-                />
               </View>
-            </View>
-
-            <View style={commonStyles.bottomSheetSection}>
-              <FormInput
-                label={t('correctWeight.newNetWeight')}
-                required
-                value={weightInput}
-                onChangeText={setWeightInput}
-                placeholder={localizeNumericHint(t('labels.eG145'))}
-                keyboardType="decimal-pad"
-                useBottomSheetInput
+            )}
+            {!!remainingWeightText && (
+              <View style={commonStyles.bottomSheetItemRow}>
+                <Text style={commonStyles.bottomSheetItemLabel}>
+                  {t('labels.remaining')}
+                  {remainingWeightText}
+                </Text>
+              </View>
+            )}
+            <View style={commonStyles.bottomSheetItemRow}>
+              <Text style={commonStyles.bottomSheetItemLabel}>
+                {t('correctWeight.quantityLabel')}
+              </Text>
+              <FormattedItemSubtitle
+                quantity={pantryItem.quantity}
+                displayAsFraction={pantryItem.unit?.displayAsFraction}
+                unitSymbol={pantryItem.unit?.symbol}
               />
             </View>
+          </View>
 
-            <View style={commonStyles.bottomSheetSection}>
-              <UnitAutocompleteField
-                variant="modal"
-                label={t('storageLocationForm.unit')}
-                value={unitDisplay}
-                onChangeText={setUnitDisplay}
-                onUnitSelected={handleUnitSelected}
-                placeholder={t('labels.ozGMl')}
-              />
-            </View>
+          <View style={commonStyles.bottomSheetSection}>
+            <Controller
+              control={control}
+              name="weightInput"
+              render={({ field, fieldState }) => (
+                <FormInput
+                  label={t('correctWeight.newNetWeight')}
+                  required
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  error={fieldState.error?.message}
+                  placeholder={localizeNumericHint(t('labels.eG145'))}
+                  keyboardType="decimal-pad"
+                  useBottomSheetInput
+                />
+              )}
+            />
+          </View>
 
-            <View style={commonStyles.bottomSheetSection}>
-              <FormInput
-                label={t('labels.reason')}
-                required
-                value={reason}
-                onChangeText={setReason}
-                placeholder={t('correctWeight.reasonPlaceholder')}
-                useBottomSheetInput
-              />
-            </View>
-          </>
-        )}
-      </BottomSheetFormScrollView>
-    </BottomSheetModal>
+          <View style={commonStyles.bottomSheetSection}>
+            <Controller
+              control={control}
+              name="unitDisplay"
+              render={({ field }) => (
+                <UnitAutocompleteField
+                  variant="modal"
+                  label={t('storageLocationForm.unit')}
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  onUnitSelected={handleUnitSelected}
+                  placeholder={t('labels.ozGMl')}
+                />
+              )}
+            />
+          </View>
+
+          <View style={commonStyles.bottomSheetSection}>
+            <Controller
+              control={control}
+              name="reason"
+              render={({ field, fieldState }) => (
+                <FormInput
+                  label={t('labels.reason')}
+                  required
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  error={fieldState.error?.message}
+                  placeholder={t('correctWeight.reasonPlaceholder')}
+                  useBottomSheetInput
+                />
+              )}
+            />
+          </View>
+        </>
+      )}
+    </Sheet>
   );
 };

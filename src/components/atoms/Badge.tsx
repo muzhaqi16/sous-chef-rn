@@ -27,7 +27,7 @@ export const Badge: React.FC<BadgeProps> = ({
       accessibilityLabel={typeof children === 'string' ? children : undefined}
       style={[styles.badge, style]}
     >
-      <Text maxFontSizeMultiplier={1.5} style={styles.text}>
+      <Text role="bodyStrong" style={styles.text}>
         {children}
       </Text>
     </View>
@@ -61,8 +61,6 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   text: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.fonts.weight.semibold,
     variants: {
       variant: {
         default: { color: theme.colors.textPrimary },

@@ -5,12 +5,12 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { SheetFormHeader } from '#components/molecules/SheetFormHeader';
+import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { useReportItem } from '#features/catalog/hooks/useReportItem';
-import { MIN_EDIT_REASON_LENGTH } from '#utils/validation/item';
+import { MIN_EDIT_REASON_LENGTH } from '#features/catalog/utils/itemValidation';
 
 export interface ReportItemTarget {
   id: string;
@@ -58,16 +58,16 @@ export const ReportItemForm: React.FC<ReportItemFormProps> = ({
 
   return (
     <View style={styles.container}>
-      <SheetFormHeader
+      <BottomSheetHeader
         title={t('reportItem.title')}
         cancelLabel={t('labels.back')}
         cancelTestID="report-item-cancel-button"
-        saveLabel={t('reportItem.submit')}
+        confirmLabel={t('reportItem.submit')}
         onCancel={onClose}
-        onSave={handleSubmit}
+        onConfirm={handleSubmit}
         saving={loading}
-        disabled={!target || reasonTooShort}
-        submitTestID="report-item-submit-button"
+        confirmDisabled={!target || reasonTooShort}
+        confirmTestID="report-item-submit-button"
       />
       <BottomSheetFormScrollView
         contentContainerStyle={styles.content}
@@ -75,7 +75,7 @@ export const ReportItemForm: React.FC<ReportItemFormProps> = ({
       >
         {!target ? (
           <View>
-            <Text size="sm" tone="secondary" style={styles.prompt}>
+            <Text role="caption" tone="secondary" style={styles.prompt}>
               {t('reportItem.pickPrompt')}
             </Text>
             {candidates.map(item => (
@@ -96,11 +96,11 @@ export const ReportItemForm: React.FC<ReportItemFormProps> = ({
                   </View>
                 )}
                 <View style={styles.candidateInfo}>
-                  <Text size="base" weight="medium" numberOfLines={1}>
+                  <Text role="bodyStrong" numberOfLines={1}>
                     {item.name}
                   </Text>
                   {!!item.brandName && (
-                    <Text size="sm" tone="secondary" numberOfLines={1}>
+                    <Text role="caption" tone="secondary" numberOfLines={1}>
                       {item.brandName}
                     </Text>
                   )}
@@ -111,16 +111,16 @@ export const ReportItemForm: React.FC<ReportItemFormProps> = ({
           </View>
         ) : (
           <View>
-            <Text size="base" weight="semibold" numberOfLines={1}>
+            <Text role="bodyStrong" numberOfLines={1}>
               {target.name}
             </Text>
             {!!target.brandName && (
-              <Text size="sm" tone="secondary" numberOfLines={1}>
+              <Text role="caption" tone="secondary" numberOfLines={1}>
                 {target.brandName}
               </Text>
             )}
 
-            <Text size="sm" weight="medium" style={styles.reasonLabel}>
+            <Text role="label" style={styles.reasonLabel}>
               {t('reportItem.reasonLabel')}
             </Text>
             <ThemedBottomSheetTextInput
@@ -137,7 +137,7 @@ export const ReportItemForm: React.FC<ReportItemFormProps> = ({
             {/* Says why submit is disabled. Withheld until they start typing, so
                 it reads as guidance rather than an error on an untouched field. */}
             {!!trimmedReason && !!reasonTooShort && (
-              <Text size="sm" tone="secondary" style={styles.reasonHint}>
+              <Text role="caption" tone="secondary" style={styles.reasonHint}>
                 {t('reportItem.reasonTooShort', {
                   count: MIN_EDIT_REASON_LENGTH,
                 })}
@@ -197,7 +197,7 @@ const styles = StyleSheet.create(theme => ({
   reasonInput: {
     minHeight: 96,
     textAlignVertical: 'top',
-    fontSize: theme.fonts.size.md,
+    ...theme.type.body,
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,

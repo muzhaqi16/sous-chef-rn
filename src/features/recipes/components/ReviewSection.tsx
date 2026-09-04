@@ -10,6 +10,7 @@ import { ReviewCard } from './ReviewCard';
 import { WriteReviewSheet } from './WriteReviewSheet';
 import { type RecipeReviewFragment } from '#features/recipes/graphql/recipeFragments.generated';
 import { Text } from '#components/atoms/Text';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
 interface ReviewSectionProps {
   reviews: RecipeReviewFragment[];
@@ -89,9 +90,9 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text size="lg" weight="semibold" style={styles.sectionTitle}>
+      <SectionHeader variant="title" style={styles.sectionTitle}>
         {t('recipes.reviews')}
-      </Text>
+      </SectionHeader>
       {/* Rating Breakdown */}
       <RatingBreakdown
         averageRating={averageRating}
@@ -105,12 +106,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
       {/* User's own review or Write button */}
       {hasReviewed && userReview ? (
         <View style={styles.ownReviewSection}>
-          <Text
-            size="sm"
-            weight="semibold"
-            tone="accent"
-            style={styles.ownReviewLabel}
-          >
+          <Text role="label" tone="accent" style={styles.ownReviewLabel}>
             {t('recipes.yourReview')}
           </Text>
           <ReviewCard
@@ -128,7 +124,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
           style={styles.writeButton}
         >
           <Icon name="create-outline" size={18} tone="primary" />
-          <Text size="sm" weight="semibold" tone="accent">
+          <Text role="label" tone="accent">
             {t('recipes.writeReview')}
           </Text>
         </AppPressable>
@@ -151,10 +147,10 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
       )}
       {totalReviews === 0 && !hasReviewed && (
         <Text
-          size="sm"
+          role="caption"
           tone="secondary"
           align="center"
-          style={styles.emptyText}
+          style={styles.emptyMessage}
         >
           {t('recipes.noReviews')}
         </Text>
@@ -200,7 +196,7 @@ const styles = StyleSheet.create(theme => ({
   reviewsList: {
     marginTop: theme.spacing.sm,
   },
-  emptyText: {
+  emptyMessage: {
     marginTop: theme.spacing.md,
     fontStyle: 'italic',
   },

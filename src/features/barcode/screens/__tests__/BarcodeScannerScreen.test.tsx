@@ -3,8 +3,8 @@
 import React from 'react';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import { BarcodeScannerScreen } from '../BarcodeScannerScreen';
-import type { BarcodeSource } from '#/types/navigation';
-import { TIMING } from '#/constants/animations';
+import type { BarcodeSource } from '#features/barcode/types';
+import { motion } from '#/theme/foundations/motion';
 
 // Mock token scheduler / refreshToken
 jest.mock('#/apollo/links/tokenScheduler');
@@ -59,7 +59,7 @@ jest.mock('../../hooks/useBarcodeOutput', () => ({
 
 jest.mock('#features/barcode/components/BarcodeMask', () => 'BarcodeMask');
 
-jest.mock('#components/atoms/Button', () => ({
+jest.mock('#components/molecules/Button', () => ({
   Button: ({
     children,
     onPress,
@@ -133,7 +133,7 @@ describe('BarcodeScannerScreen', () => {
     const utils = render(<BarcodeScannerScreen route={route} />);
     await act(async () => {
       focusCallbacks.splice(0).forEach(cb => cb());
-      jest.advanceTimersByTime(TIMING.SLOW + TIMING.STANDARD);
+      jest.advanceTimersByTime(motion.timing.SLOW + motion.timing.STANDARD);
     });
     jest.useRealTimers();
     return utils;

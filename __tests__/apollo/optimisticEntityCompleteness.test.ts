@@ -65,15 +65,17 @@ import {
 import { writeOptimisticRecipe } from '#features/recipes/utils/recipeCacheWriters';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
-import { addToPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
+import { addToPantryItemsCache } from '#features/pantry/cache/items';
 import { AddedShoppingListItemFieldsFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import {
   addOptimisticShoppingListItem,
-  addNewItemToShoppingListCache,
   createOptimisticShoppingListItem,
+} from '#features/shoppingList/cache/items';
+import {
   addOptimisticShoppingList,
   buildOptimisticShoppingList,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+} from '#features/shoppingList/cache/list';
 
 const mockedSchema = addMocksToSchema({
   schema: makeExecutableSchema({
@@ -397,6 +399,22 @@ describe('optimistic entity completeness', () => {
         expect(diff.complete).toBe(true);
       });
 
+      it('writes the measurement profile a stack has not been given yet', () => {
+        // A stack seeds its portion profile from the catalog server-side, so an
+        // offline create has none. The fields must still be WRITTEN as null:
+        // absent is not null to `cache.diff`, and one missing field makes the
+        // whole detail read incomplete, which blanks the screen offline.
+        const optimistic = buildOptimisticPantryItem(
+          'client-cuid-profile',
+          { pantryId: 'pantry-1', itemName: 'Offline Garlic', quantity: 1 },
+          makeCache(),
+        );
+
+        expect(optimistic).toHaveProperty('portionUnitId', null);
+        expect(optimistic).toHaveProperty('portionUnit', null);
+        expect(optimistic).toHaveProperty('remainingPortions', null);
+      });
+
       it('keeps GetPantryItemBatches complete after an optimistic add', async () => {
         const cache = await seedPantryCache();
         addToPantryItemsCache(
@@ -474,12 +492,31 @@ describe('optimistic entity completeness', () => {
               name
               canEdit
               imageUrl
-              images { url kind }
-              photos { id url perspective isPrimary status variants { url kind } }
+              images {
+                url
+                kind
+              }
+              photos {
+                id
+                url
+                perspective
+                isPrimary
+                status
+                variants {
+                  url
+                  kind
+                }
+              }
               shelfLifeDays
               shelfLifeOpenedDays
               nutritions
-              categories { isPrimary category { id name } }
+              categories {
+                isPrimary
+                category {
+                  id
+                  name
+                }
+              }
             }
           `,
           data: realItem,
@@ -572,8 +609,7 @@ describe('optimistic entity completeness', () => {
       const created = await runAgainstSchema<
         Unmasked<GetShoppingListItemsFilteredQuery>
       >(GetShoppingListItemsFilteredDocument, LIST_VARS);
-      const sample =
-        created.shoppingList!.itemsConnection!.edges![0]!.node!;
+      const sample = created.shoppingList!.itemsConnection!.edges![0]!.node!;
 
       cache.writeFragment({
         id: 'ShoppingListItem:from-recipe',
@@ -804,7 +840,10 @@ describe('optimistic entity completeness', () => {
     // way.
     it('the subscription writes every field the feed reads off a node', () => {
       const fieldsOf = (fragmentName: string, file: string): string[] => {
-        const source = fs.readFileSync(path.join(__dirname, '..', '..', file), 'utf8');
+        const source = fs.readFileSync(
+          path.join(__dirname, '..', '..', file),
+          'utf8',
+        );
         const body = source
           .slice(source.indexOf(`fragment ${fragmentName} on Notification {`))
           .split('}')[0];
@@ -826,9 +865,9 @@ describe('optimistic entity completeness', () => {
       );
 
       expect(feedFields.length).toBeGreaterThan(5);
-      expect(
-        feedFields.filter(field => !eventFields.includes(field)),
-      ).toEqual([]);
+      expect(feedFields.filter(field => !eventFields.includes(field))).toEqual(
+        [],
+      );
     });
   });
 });

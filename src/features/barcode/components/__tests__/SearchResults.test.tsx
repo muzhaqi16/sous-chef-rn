@@ -20,8 +20,8 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   safeEvict: jest.fn(),
 }));
 
-jest.mock('#/apollo/utils/pantryCacheUpdaters', () => {
-  const actual = jest.requireActual('#/apollo/utils/pantryCacheUpdaters');
+jest.mock('#features/pantry/cache/items', () => {
+  const actual = jest.requireActual('#features/pantry/cache/items');
   // Spied, not stubbed: the counting these do is what the assertions rest on,
   // and it is proven against a real cache in `pantryItemLocalWrites.test.ts`.
   return {
@@ -31,13 +31,16 @@ jest.mock('#/apollo/utils/pantryCacheUpdaters', () => {
   };
 });
 
-jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
+jest.mock('#features/shoppingList/cache/connections', () => ({
+  addNewItemToShoppingListCache: jest.fn(),
+}));
+
+jest.mock('#features/shoppingList/cache/items', () => {
   const { classifyCreateResult } = jest.requireActual(
     '#/apollo/utils/classifyCreateResult',
   );
   const revertOptimisticShoppingListItem = jest.fn();
   return {
-    addNewItemToShoppingListCache: jest.fn(),
     adoptServerShoppingListItemId: jest.fn(),
     revertOptimisticShoppingListItem,
     addOptimisticShoppingListItem: jest.fn(),
@@ -59,7 +62,7 @@ jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
   };
 });
 
-jest.mock('#/utils/errors/pantryItemDuplicate', () => {
+jest.mock('#domain/pantryItemDuplicate', () => {
   const isDup = jest.fn().mockReturnValue(false);
   const getInfo = jest.fn().mockReturnValue(null);
   const getInfoFromPayload = jest.fn().mockReturnValue(null);
@@ -240,7 +243,7 @@ describe('SearchResults', () => {
     // touches when the create is queued offline. Publishing and withdrawing
     // both go through the counting helpers so the two cannot drift.
     const { addPantryItemLocally, revertOptimisticPantryItem } =
-      jest.requireMock('#/apollo/utils/pantryCacheUpdaters');
+      jest.requireMock('#features/pantry/cache/items');
 
     it('moves with the optimistic row, before the server answers', async () => {
       const rec = recordMock(BarcodeCreatePantryItemDocument, {

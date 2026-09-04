@@ -14,17 +14,17 @@ import {
 
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { ModalPicker } from '#components/molecules/ModalPicker';
-import { EditableField } from '#components/molecules/EditableField';
-import { NavigationRow } from '#components/molecules/NavigationRow';
+import { EditableField } from '#features/home/components/EditableField';
+import { NavigationRow } from '#features/home/components/NavigationRow';
 
 const ThemedNavigationRow = withUnistyles(NavigationRow, theme => ({
   iconColor: theme.colors.primary,
 }));
 import { HomeMembersSection } from '#features/home/components/HomeMembersSection';
-import { SettingSwitch } from '#components/settings/SettingSwitch';
+import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { useUser } from '#store/useAppStore';
 import { Icon } from '#utils/iconUtils';
-import { Button } from '#components/atoms/Button';
+import { Button } from '#components/molecules/Button';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import {
   executeRefreshWithFinally,
@@ -33,7 +33,7 @@ import {
 import { logger } from '#/utils/environment';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
-import { getInviteDisplayName } from '#/utils/formatters/inviteFormatters';
+import { getInviteDisplayName } from '#features/home/utils/inviteFormatters';
 import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
 import { buildJoinHomeUrl, shareUrl } from '#/utils/deepLinkUrls';
 
@@ -198,7 +198,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
         sections={[
           {
             content: (
-              <View style={styles.loadingContainer}>
+              <View style={styles.centeredSpinner}>
                 <SousChefLoader
                   size="small"
                   showBrand={false}
@@ -270,10 +270,14 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
           {canManage && !!home.allowJoinCode && !!home.joinCode ? (
             <View style={styles.joinCodeRow}>
               <View style={styles.joinCodeContent}>
-                <Text size="sm" tone="secondary" style={styles.joinCodeLabel}>
+                <Text
+                  role="caption"
+                  tone="secondary"
+                  style={styles.joinCodeLabel}
+                >
                   {t('homeDetail.labelJoinCode')}
                 </Text>
-                <Text size="lg" weight="semibold" style={styles.joinCodeValue}>
+                <Text role="heading" style={styles.joinCodeValue}>
                   {home.joinCode}
                 </Text>
               </View>
@@ -363,7 +367,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
             content: (
               <View style={styles.leaveHomeSection}>
                 <Text
-                  size="sm"
+                  role="caption"
                   tone="secondary"
                   style={styles.leaveHomeDescription}
                 >
@@ -410,11 +414,6 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: theme.spacing['3xl'],
-  },
   retryButton: {
     marginTop: theme.spacing.md,
   },
@@ -443,10 +442,10 @@ const styles = StyleSheet.create(theme => ({
   leaveHomeSection: {
     gap: theme.spacing.md,
   },
-  leaveHomeDescription: {
-    lineHeight: theme.fonts.size.sm * 1.5,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
+  leaveHomeDescription: {},
+  centeredSpinner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing['3xl'],
   },
 }));

@@ -5,8 +5,15 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
-import { Button } from '#components/atoms/Button';
-import { EmailInput } from '#components/atoms/EmailInput';
+import { Button } from '#components/molecules/Button';
+import { EmailInput } from '#components/molecules/EmailInput';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import {
+  inviteEmailSchema,
+  normalizeInviteEmail,
+  type InviteEmailFormValues,
+} from './inviteMemberFormConfig';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
@@ -22,6 +29,7 @@ import { useUser } from '#store/useAppStore';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
+import { EmptyState } from '#components/molecules/EmptyState';
 
 type InviteEntry = {
   id: string;
@@ -46,8 +54,22 @@ export const InviteMemberScreen = () => {
   const hasNeither = !hasHome && !hasShoppingList;
 
   const [invites, setInvites] = useState<InviteEntry[]>([]);
-  const [currentEmail, setCurrentEmail] = useState('');
   const [isInviting, setIsInviting] = useState(false);
+
+  // The schema is rebuilt per render because two of its three rules read the
+  // CURRENT list and the signed-in account.
+  const { control, handleSubmit, reset } = useForm<InviteEmailFormValues>({
+    resolver: yupResolver(
+      inviteEmailSchema({
+        existing: invites.map(invite => invite.email),
+        ownEmail: user?.email,
+      }),
+    ),
+    defaultValues: { email: '' },
+  });
+  // `useWatch`, never `watch()` — the React Compiler cannot memoize the
+  // function `watch` returns, and the lint rule here is what says so.
+  const email = useWatch({ control, name: 'email' });
 
   const { requireVerifiedEmail } = useVerifiedEmailGate();
   const { inviteToHome } = useInviteToHome(error => {
@@ -58,47 +80,16 @@ export const InviteMemberScreen = () => {
     handleMutationError(error, { operation: 'Add Collaborator' });
   });
 
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const addInvite = () => {
-    const trimmedEmail = currentEmail.trim().toLowerCase();
-
-    if (!validateEmail(trimmedEmail)) {
-      alertService.alert(
-        t('inviteMembers.invalidEmailTitle'),
-        t('commonValidation.emailInvalid'),
-      );
-      return;
-    }
-
-    if (invites.some(invite => invite.email === trimmedEmail)) {
-      alertService.alert(
-        t('inviteMembers.duplicateEmailTitle'),
-        t('inviteMembers.duplicateEmailMessage'),
-      );
-      return;
-    }
-
-    if (trimmedEmail === user?.email?.toLowerCase()) {
-      alertService.alert(
-        t('inviteMembers.invalidEmailTitle'),
-        t('inviteMembers.cantInviteSelf'),
-      );
-      return;
-    }
-
-    setInvites([
-      ...invites,
-      {
-        id: Date.now().toString(),
-        email: trimmedEmail,
-      },
+  // Reaching here means the address is well-formed, new, and not the person's
+  // own; each refusal renders under the input instead of in an alert the reader
+  // has to dismiss before they can correct it.
+  const addInvite = handleSubmit(values => {
+    setInvites(current => [
+      ...current,
+      { id: Date.now().toString(), email: normalizeInviteEmail(values.email) },
     ]);
-    setCurrentEmail('');
-  };
+    reset({ email: '' });
+  });
 
   const removeInvite = (id: string) => {
     setInvites(invites.filter(invite => invite.id !== id));
@@ -178,14 +169,10 @@ export const InviteMemberScreen = () => {
         onSkip={() => navigateToNextStep('InviteMembers')}
       >
         <View style={styles.container}>
-          <View style={styles.emptyState}>
-            <Text size="md" tone="secondary" style={styles.emptyStateText}>
-              {t('inviteMembers.nothingToShare')}
-            </Text>
-            <Text size="sm" tone="secondary">
-              {t('inviteMembers.nothingToShareDesc')}
-            </Text>
-          </View>
+          <EmptyState
+            title={t('inviteMembers.nothingToShare')}
+            description={t('inviteMembers.nothingToShareDesc')}
+          />
         </View>
 
         <Button
@@ -207,33 +194,37 @@ export const InviteMemberScreen = () => {
     >
       <View style={styles.container}>
         <View style={styles.inputContainer}>
-          <EmailInput
-            containerStyle={styles.emailInputContainer}
-            value={currentEmail}
-            onChangeText={setCurrentEmail}
-            onSubmitEditing={addInvite}
+          <Controller
+            control={control}
+            name="email"
+            render={({ field, fieldState }) => (
+              <EmailInput
+                containerStyle={styles.emailInputContainer}
+                value={field.value}
+                onChangeText={field.onChange}
+                errorMessage={fieldState.error?.message}
+                onSubmitEditing={addInvite}
+              />
+            )}
           />
           <Button
             title={t('labels.add')}
             onPress={addInvite}
-            disabled={!currentEmail.trim()}
+            disabled={!email.trim()}
             size="medium"
           />
         </View>
 
         <View style={styles.invitesList}>
           {invites.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text size="md" tone="secondary" style={styles.emptyStateText}>
-                {t('inviteMembers.noInvitesYet')}
-              </Text>
-              <Text size="sm" tone="secondary">
-                {t('inviteMembers.noInvitesYetDesc')}
-              </Text>
-            </View>
+            <EmptyState
+              size="compact"
+              title={t('inviteMembers.noInvitesYet')}
+              description={t('inviteMembers.noInvitesYetDesc')}
+            />
           ) : (
             <>
-              <Text size="sm" tone="secondary" style={styles.listHeader}>
+              <Text role="caption" tone="secondary" style={styles.listHeader}>
                 {t(
                   invites.length === 1
                     ? 'inviteMembers.invitingPersonSingular'
@@ -243,14 +234,12 @@ export const InviteMemberScreen = () => {
               </Text>
               {invites.map(invite => (
                 <View key={invite.id} style={styles.inviteItem}>
-                  <Text size="md" style={styles.inviteEmail}>
-                    {invite.email}
-                  </Text>
+                  <Text style={styles.inviteEmail}>{invite.email}</Text>
                   <AppPressable
                     onPress={() => removeInvite(invite.id)}
                     style={styles.removeButton}
                   >
-                    <Text size="xl" tone="tertiary">
+                    <Text role="subheading" tone="tertiary">
                       ✕
                     </Text>
                   </AppPressable>
@@ -262,8 +251,8 @@ export const InviteMemberScreen = () => {
 
         <View style={styles.infoBox}>
           <Text
+            role="caption"
             tone="secondary"
-            lineHeight="tight"
             align="center"
             style={styles.infoText}
           >
@@ -310,13 +299,6 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     marginBottom: theme.spacing.md,
   },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing['2xl'],
-  },
-  emptyStateText: {
-    marginBottom: theme.spacing.sm,
-  },
   listHeader: {
     marginBottom: theme.spacing.base,
   },
@@ -347,9 +329,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.base,
     marginBottom: theme.spacing.md,
   },
-  infoText: {
-    fontSize: theme.typography.fontSize.sm - 1,
-  },
+  infoText: {},
   pressed: {
     opacity: theme.opacity.pressed,
   },

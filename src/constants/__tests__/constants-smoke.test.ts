@@ -4,9 +4,7 @@
  */
 
 import {
-  SPRING,
   SHEET,
-  TIMING,
   SLIDE_PRESETS,
   staggeredEntryAnimation,
   screenEntryAnimation,
@@ -23,19 +21,24 @@ import {
   EDGE_THRESHOLD,
   MAX_SCROLL_SPEED,
 } from '../drag';
-import { SKILL_LEVELS, DIETARY_LIMITS } from '../dietary';
-import { HIT_SLOP, HIT_SLOP_SM, HIT_SLOP_LG } from '../touch';
+import { SKILL_LEVELS, DIETARY_LIMITS } from '#domain/dietary';
+import {
+  HIT_SLOP,
+  HIT_SLOP_SM,
+  HIT_SLOP_LG,
+} from '#features/shoppingList/constants/touch';
 import { getTabBarBottomPadding } from '../layout';
+import { motion } from '#/theme/foundations/motion';
 
 describe('animations constants', () => {
-  it('exports SPRING presets with expected keys', () => {
-    expect(SPRING.DEFAULT).toBeDefined();
-    expect(SPRING.SNAPPY).toBeDefined();
-    expect(SPRING.PRESS).toBeDefined();
-    expect(SPRING.GENTLE).toBeDefined();
-    expect(SPRING.HEAVY).toBeDefined();
-    expect(SPRING.EXPAND).toBeDefined();
-    expect(SPRING.DEFAULT.damping).toBe(15);
+  it('exports spring presets with expected keys', () => {
+    expect(motion.spring.DEFAULT).toBeDefined();
+    expect(motion.spring.SNAPPY).toBeDefined();
+    expect(motion.spring.PRESS).toBeDefined();
+    expect(motion.spring.GENTLE).toBeDefined();
+    expect(motion.spring.HEAVY).toBeDefined();
+    expect(motion.spring.EXPAND).toBeDefined();
+    expect(motion.spring.DEFAULT.damping).toBe(15);
   });
 
   it('exports SHEET constants', () => {
@@ -43,12 +46,12 @@ describe('animations constants', () => {
     expect(SHEET.BACKDROP_OPACITY).toBe(0.5);
   });
 
-  it('exports TIMING presets', () => {
-    expect(TIMING.INSTANT).toBe(100);
-    expect(TIMING.FAST).toBe(150);
-    expect(TIMING.STANDARD).toBe(200);
-    expect(TIMING.MODERATE).toBe(250);
-    expect(TIMING.SLOW).toBe(300);
+  it('exports timing presets', () => {
+    expect(motion.timing.INSTANT).toBe(100);
+    expect(motion.timing.FAST).toBe(150);
+    expect(motion.timing.STANDARD).toBe(200);
+    expect(motion.timing.MODERATE).toBe(250);
+    expect(motion.timing.SLOW).toBe(300);
   });
 
   it('exports SLIDE_PRESETS', () => {

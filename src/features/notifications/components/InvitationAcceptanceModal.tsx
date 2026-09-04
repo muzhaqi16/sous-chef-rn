@@ -5,7 +5,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   ErrorActivityIndicator,
-  WhiteActivityIndicator,
+  OnPrimaryActivityIndicator,
 } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
@@ -195,7 +195,7 @@ export const InvitationAcceptanceModal: React.FC<
                 tone="primary"
               />
             </View>
-            <Text size="lg" weight="semibold" style={styles.title}>
+            <Text role="heading" style={styles.title}>
               {invitation.title}
             </Text>
             <AppPressable
@@ -209,14 +209,16 @@ export const InvitationAcceptanceModal: React.FC<
 
           {/* Content */}
           <View style={styles.content}>
-            <Text size="md" style={styles.description}>
-              {invitation.description}
-            </Text>
+            <Text style={styles.description}>{invitation.description}</Text>
 
             {!!invitation.inviterName && (
               <View style={styles.inviterContainer}>
                 <Icon name="person" size={16} tone="textSecondary" />
-                <Text size="sm" tone="secondary" style={styles.inviterText}>
+                <Text
+                  role="caption"
+                  tone="secondary"
+                  style={styles.inviterText}
+                >
                   {t('labels.invitedBy', { name: invitation.inviterName })}
                 </Text>
               </View>
@@ -228,12 +230,7 @@ export const InvitationAcceptanceModal: React.FC<
                 size={16}
                 tone="textSecondary"
               />
-              <Text
-                size="sm"
-                tone="secondary"
-                weight="medium"
-                style={styles.entityText}
-              >
+              <Text role="label" tone="secondary" style={styles.entityText}>
                 {invitation.entityName}
               </Text>
             </View>
@@ -251,7 +248,7 @@ export const InvitationAcceptanceModal: React.FC<
               ) : (
                 <>
                   <Icon name="close" size={20} tone="error" />
-                  <Text size="md" weight="semibold" tone="error">
+                  <Text role="bodyStrong" tone="error">
                     {t('labels.reject')}
                   </Text>
                 </>
@@ -264,11 +261,11 @@ export const InvitationAcceptanceModal: React.FC<
               disabled={accepting || rejecting}
             >
               {accepting ? (
-                <WhiteActivityIndicator />
+                <OnPrimaryActivityIndicator />
               ) : (
                 <>
-                  <Icon name="checkmark" size={20} tone="white" />
-                  <Text size="md" weight="semibold" style={styles.acceptText}>
+                  <Icon name="checkmark" size={20} tone="onPrimary" />
+                  <Text role="bodyStrong" style={styles.acceptText}>
                     {t('labels.accept')}
                   </Text>
                 </>
@@ -284,7 +281,7 @@ export const InvitationAcceptanceModal: React.FC<
 const styles = StyleSheet.create(theme => ({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.colors.overlays.medium,
     justifyContent: 'center',
     alignItems: 'center',
     padding: theme.spacing.lg,
@@ -296,15 +293,7 @@ const styles = StyleSheet.create(theme => ({
     width: '100%',
     maxWidth: 400,
     overflow: 'hidden',
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 4,
-        blurRadius: 8,
-        spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.25)',
-      },
-    ],
+    ...theme.shadows.md,
   },
   header: {
     flexDirection: 'row',

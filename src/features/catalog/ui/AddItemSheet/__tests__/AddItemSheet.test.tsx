@@ -24,12 +24,12 @@ jest.mock('#hooks/useBottomSheetBackHandler', () => ({
   useBottomSheetBackHandler: jest.fn(),
 }));
 
-// Mock BottomSheetSearchBar
-jest.mock('#components/molecules/BottomSheetSearchBar', () => {
+// Mock SearchBar
+jest.mock('#components/molecules/SearchBar', () => {
   const R = require('react');
   const RN = require('react-native');
   return {
-    BottomSheetSearchBar: R.forwardRef(
+    SearchBar: R.forwardRef(
       (
         props: { placeholder?: string; onChangeText?: (text: string) => void },
         ref: React.Ref<unknown>,
@@ -53,7 +53,7 @@ jest.mock('#components/molecules/BottomSheetSearchBar', () => {
 
 // Mock ItemSuggestionsList. The report footer is exposed as a pressable so the
 // morph to the report step can be driven without the real list's data shape.
-jest.mock('#components/molecules/ItemSuggestionsList', () => {
+jest.mock('#features/catalog/ui/ItemSuggestionsList', () => {
   const R = require('react');
   const RN = require('react-native');
   return {
@@ -70,7 +70,7 @@ jest.mock('#components/molecules/ItemSuggestionsList', () => {
 });
 
 // Mock ActionCard
-jest.mock('#components/molecules/ActionCard', () => {
+jest.mock('#features/catalog/components/ActionCard', () => {
   const R = require('react');
   const RN = require('react-native');
   return {
@@ -91,7 +91,7 @@ jest.mock('#components/molecules/ActionCard', () => {
 });
 
 // Mock SuggestionListItem
-jest.mock('#components/molecules/SuggestionListItem', () => {
+jest.mock('#features/catalog/components/SuggestionListItem', () => {
   const R = require('react');
   const RN = require('react-native');
   return {

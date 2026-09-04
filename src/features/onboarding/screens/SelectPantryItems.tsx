@@ -14,12 +14,12 @@ import {
   AcquisitionMethod,
 } from '#/graphql/generated/schemaTypes';
 import { useSelectedPantryId } from '#store/useAppStore';
-import { Button } from '#components/atoms/Button';
-import { AnimatedChip } from '#components/atoms/AnimatedChip';
+import { Button } from '#components/molecules/Button';
+import { AnimatedChip } from '#components/molecules/AnimatedChip';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { getPantryItemDuplicateFromResult } from '#/utils/errors/pantryItemDuplicate';
+import { getPantryItemDuplicateFromResult } from '#domain/pantryItemDuplicate';
 import { logger } from '#/utils/environment';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
@@ -191,7 +191,7 @@ export const SelectPantryItems = () => {
         showsVerticalScrollIndicator={false}
       >
         <Text
-          size="sm"
+          role="caption"
           tone="secondary"
           align="center"
           style={styles.helperText}

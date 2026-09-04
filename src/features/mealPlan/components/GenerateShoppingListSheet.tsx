@@ -5,11 +5,11 @@ import {
   Pressable,
   PrimaryActivityIndicator,
 } from '#components/atoms/themedComponents';
-import { BottomSheetLayout } from '#components/atoms/BottomSheetLayout';
+import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
-import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
-import { FormInput } from '#components/molecules/FormInput';
+import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
+import { FormInput } from '#components/atoms/FormInput';
 import { useShoppingListsForMealPlan } from '#features/mealPlan/hooks/useShoppingListsForMealPlan';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
@@ -64,7 +64,7 @@ export const GenerateShoppingListSheet: React.FC<
   const canGenerate = mode === 'new' || (mode === 'existing' && selectedListId);
 
   return (
-    <BottomSheetLayout
+    <Sheet
       visible={visible}
       onDismiss={onClose}
       snapPoints={['65%']}
@@ -89,7 +89,7 @@ export const GenerateShoppingListSheet: React.FC<
       {!!homeName && (
         <View style={styles.infoNote}>
           <Icon name="information-circle-outline" size={18} tone="primary" />
-          <Text size="sm" tone="accent" style={styles.infoNoteText}>
+          <Text role="caption" tone="accent" style={styles.infoNoteText}>
             {t('generateShoppingList.sharedWithHome', { name: homeName })}
           </Text>
         </View>
@@ -98,19 +98,25 @@ export const GenerateShoppingListSheet: React.FC<
       {/* Check pantry toggle */}
       <View style={styles.toggleRow}>
         <View style={styles.toggleInfo}>
-          <Text size="md" weight="medium">
-            {t('generateShoppingList.checkPantry')}
-          </Text>
-          <Text size="sm" tone="secondary" style={styles.toggleDescription}>
+          <Text role="bodyStrong">{t('generateShoppingList.checkPantry')}</Text>
+          <Text
+            role="caption"
+            tone="secondary"
+            style={styles.toggleDescription}
+          >
             {t('generateShoppingList.checkPantryDesc')}
           </Text>
         </View>
-        <BaseSwitch value={checkPantry} onValueChange={setCheckPantry} />
+        <BaseSwitch
+          accessibilityLabel={t('generateShoppingList.checkPantry')}
+          value={checkPantry}
+          onValueChange={setCheckPantry}
+        />
       </View>
 
       {/* Mode selector */}
       <View style={styles.section}>
-        <Text size="sm" weight="medium" tone="secondary">
+        <Text role="label" tone="secondary">
           {t('generateShoppingList.destination')}
         </Text>
         <View style={styles.modeRow}>
@@ -124,11 +130,10 @@ export const GenerateShoppingListSheet: React.FC<
             <Icon
               name="add-circle-outline"
               size={20}
-              tone={mode === 'new' ? 'white' : 'textSecondary'}
+              tone={mode === 'new' ? 'onPrimary' : 'textSecondary'}
             />
             <Text
-              size="sm"
-              weight="medium"
+              role="label"
               style={[styles.modeText, mode === 'new' && styles.modeTextActive]}
             >
               {t('generateShoppingList.newList')}
@@ -144,11 +149,10 @@ export const GenerateShoppingListSheet: React.FC<
             <Icon
               name="list-outline"
               size={20}
-              tone={mode === 'existing' ? 'white' : 'textSecondary'}
+              tone={mode === 'existing' ? 'onPrimary' : 'textSecondary'}
             />
             <Text
-              size="sm"
-              weight="medium"
+              role="label"
               style={[
                 styles.modeText,
                 mode === 'existing' && styles.modeTextActive,
@@ -173,15 +177,15 @@ export const GenerateShoppingListSheet: React.FC<
       {/* Existing list picker */}
       {mode === 'existing' && (
         <View style={styles.section}>
-          <Text size="sm" weight="medium" tone="secondary">
+          <Text role="label" tone="secondary">
             {t('generateShoppingList.selectListLabel')}
           </Text>
           {shoppingLists.length === 0 ? (
             <Text
-              size="sm"
+              role="caption"
               tone="tertiary"
               align="center"
-              style={styles.emptyText}
+              style={styles.emptyMessage}
             >
               {t('generateShoppingList.noLists')}
             </Text>
@@ -205,10 +209,8 @@ export const GenerateShoppingListSheet: React.FC<
                   tone={selectedListId === list.id ? 'primary' : 'textTertiary'}
                 />
                 <View style={styles.listItemContent}>
-                  <Text size="md" weight="medium">
-                    {list.name}
-                  </Text>
-                  <Text size="sm" tone="secondary">
+                  <Text role="bodyStrong">{list.name}</Text>
+                  <Text role="caption" tone="secondary">
                     {t('generateShoppingList.itemsCount', {
                       count: list.totalItems,
                     })}
@@ -221,14 +223,14 @@ export const GenerateShoppingListSheet: React.FC<
       )}
 
       {!!loading && (
-        <View style={styles.loadingContainer}>
+        <View style={styles.spinnerRow}>
           <PrimaryActivityIndicator size="small" />
-          <Text size="sm" tone="secondary">
+          <Text role="caption" tone="secondary">
             {t('generateShoppingList.generatingMessage')}
           </Text>
         </View>
       )}
-    </BottomSheetLayout>
+    </Sheet>
   );
 };
 
@@ -317,10 +319,10 @@ const styles = StyleSheet.create(theme => ({
   listItemContent: {
     flex: 1,
   },
-  emptyText: {
+  emptyMessage: {
     paddingVertical: theme.spacing.md,
   },
-  loadingContainer: {
+  spinnerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

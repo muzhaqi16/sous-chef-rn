@@ -84,6 +84,9 @@ function pantryItemNode(item: PantryItemFixture) {
     lastUsedAt: null,
     netWeight: null,
     remainingNetWeight: null,
+    portionUnitId: null,
+    portionUnit: null,
+    remainingPortions: null,
     activeBatchCount: 0,
     earliestBatchExpiration: null,
     item: {

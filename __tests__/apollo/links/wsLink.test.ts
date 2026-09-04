@@ -38,7 +38,7 @@ jest.mock('#/utils/errorSerialization', () => ({
   })),
 }));
 
-jest.mock('#/utils/deviceId', () => ({
+jest.mock('#/storage/deviceId', () => ({
   getDeviceId: jest.fn(() => 'test-device-id'),
   getDeviceIdSync: jest.fn(() => 'test-device-id'),
 }));

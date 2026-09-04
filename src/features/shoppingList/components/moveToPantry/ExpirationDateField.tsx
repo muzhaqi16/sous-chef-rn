@@ -8,6 +8,7 @@ import { ThemedDateTimePicker } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { formatShortDate } from '#/utils/formatters/date';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
 interface ExpirationDateFieldProps {
   expirationDate: Date | undefined;
@@ -31,20 +32,26 @@ export const ExpirationDateField: React.FC<ExpirationDateFieldProps> = ({
 
   return (
     <View style={styles.section}>
-      <Text size="md" weight="medium" style={styles.sectionLabel}>
+      <SectionHeader variant="title" style={styles.sectionLabel}>
         {t('labels.expirationDate')}
-      </Text>
+      </SectionHeader>
       <View style={styles.dateRow}>
         <AppPressable style={styles.dateInput} onPress={onOpenPicker}>
           <Icon name="calendar-outline" size={20} tone="textSecondary" />
-          <Text style={styles.dateText}>
+          <Text role="body" style={styles.dateText}>
             {expirationDate
               ? formatShortDate(expirationDate)
               : t('labels.selectDate')}
           </Text>
         </AppPressable>
         {!!expirationDate && (
-          <AppPressable style={styles.clearDateButton} onPress={onClear}>
+          <AppPressable
+            style={styles.clearDateButton}
+            onPress={onClear}
+            accessibilityLabel={t('a11y.clearField', {
+              label: t('labels.expirationDate'),
+            })}
+          >
             <Icon name="close" size={20} tone="textSecondary" />
           </AppPressable>
         )}
@@ -86,14 +93,10 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
   },
   dateText: {
-    fontSize: theme.fonts.size.base,
     color: theme.colors.textPrimary,
     marginLeft: theme.spacing.md,
   },
   clearDateButton: {
     padding: theme.spacing.sm,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

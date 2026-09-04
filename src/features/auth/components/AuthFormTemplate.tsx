@@ -1,24 +1,21 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useGenericKeyboardHandler } from 'react-native-keyboard-controller';
 import { scheduleOnRN } from 'react-native-worklets';
 import Animated, { LinearTransition } from 'react-native-reanimated';
-import { TIMING } from '#constants/animations';
+
 import type { FieldValues, Control, FieldErrors } from 'react-hook-form';
 import {
   DynamicFormFields,
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
-import { Button } from '#components/atoms/Button';
+import { Button } from '#components/molecules/Button';
 import { BackButton } from '#components/atoms/BackButton';
 import { Link } from '#components/atoms/Link';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
-
-const ThemedBackButton = withUnistyles(BackButton, theme => ({
-  color: theme.colors.textOnSurfaceVariant,
-}));
+import { motion } from '#/theme/foundations/motion';
 
 interface Props<T extends FieldValues> {
   title: string;
@@ -86,7 +83,7 @@ export function AuthFormTemplate<T extends FieldValues>({
   // slack survives and pushes the fields under it. Collapsing the slack keeps the
   // whole form, header included, above the keyboard.
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const [transitionMs, setTransitionMs] = useState(TIMING.MODERATE);
+  const [transitionMs, setTransitionMs] = useState(motion.timing.MODERATE);
 
   // `onStart` carries the DESTINATION of a movement about to begin, so the layout
   // transition runs alongside the keyboard in both directions — `useKeyboardState`
@@ -104,7 +101,7 @@ export function AuthFormTemplate<T extends FieldValues>({
         // library itself substitutes there.
         scheduleOnRN(
           setTransitionMs,
-          e.duration > 0 ? e.duration : TIMING.MODERATE,
+          e.duration > 0 ? e.duration : motion.timing.MODERATE,
         );
       },
       onEnd: e => {
@@ -129,23 +126,19 @@ export function AuthFormTemplate<T extends FieldValues>({
       <View>
         <View style={styles.titleRow} testID="auth-title-row">
           {!!onBackPress && (
-            <ThemedBackButton
+            <BackButton
+              tone="textOnSurfaceVariant"
               onPress={onBackPress}
               style={styles.headerAction}
             />
           )}
 
-          <Text size="2xl" weight="bold" tone="primary" align="center">
+          <Text role="title" tone="primary" align="center">
             {title}
           </Text>
         </View>
         {subtitle ? (
-          <Text
-            size="md"
-            tone="secondary"
-            align="center"
-            style={styles.subtitle}
-          >
+          <Text tone="secondary" align="center" style={styles.subtitle}>
             {subtitle}
           </Text>
         ) : null}
@@ -240,7 +233,7 @@ const styles = StyleSheet.create(theme => ({
     top: 0,
     bottom: 0,
     start: 0,
-    zIndex: 1,
+    zIndex: theme.zIndex.raised,
     width: theme.sizes.button.md,
     borderRadius: theme.radii.full,
     alignItems: 'center',

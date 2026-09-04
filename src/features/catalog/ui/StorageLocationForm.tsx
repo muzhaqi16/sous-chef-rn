@@ -5,12 +5,12 @@ import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import {
   ThemedTextInput,
-  WhiteActivityIndicator,
+  OnPrimaryActivityIndicator,
 } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { StorageState } from '#/graphql/generated/schemaTypes';
-import { FormTextArea } from '#components/molecules/FormTextArea';
+import { FormTextArea } from '#components/atoms/FormTextArea';
 import { StorageLocationIcon } from '#features/catalog/ui/StorageLocationIcon';
 import { Text } from '#components/atoms/Text';
 import {
@@ -201,10 +201,7 @@ export const StorageLocationForm = forwardRef<
                 >
                   <StorageLocationIcon type={type.value} size={28} />
                   <Text
-                    size="xs"
-                    weight={
-                      formData.type === type.value ? 'semibold' : 'medium'
-                    }
+                    role={formData.type === type.value ? 'label' : 'label'}
                     style={
                       formData.type === type.value
                         ? styles.typeLabelSelected
@@ -242,8 +239,7 @@ export const StorageLocationForm = forwardRef<
                   }
                 >
                   <Text
-                    size="sm"
-                    weight={!formData.parentLocationId ? 'semibold' : 'medium'}
+                    role={!formData.parentLocationId ? 'label' : 'label'}
                     style={
                       !formData.parentLocationId
                         ? styles.parentLabelSelected
@@ -269,11 +265,10 @@ export const StorageLocationForm = forwardRef<
                     }
                   >
                     <Text
-                      size="sm"
-                      weight={
+                      role={
                         formData.parentLocationId === location.id
-                          ? 'semibold'
-                          : 'medium'
+                          ? 'label'
+                          : 'label'
                       }
                       style={
                         formData.parentLocationId === location.id
@@ -287,7 +282,7 @@ export const StorageLocationForm = forwardRef<
                 ))}
               </ScrollView>
             </View>
-            <Text size="xs" tone="secondary" style={styles.hint}>
+            <Text role="caption" tone="secondary" style={styles.hint}>
               {t('storageLocationForm.parentHint')}
             </Text>
           </View>
@@ -327,11 +322,8 @@ export const StorageLocationForm = forwardRef<
                   }
                 >
                   <Text
-                    size="sm"
-                    weight={
-                      formData.temperature === option.value
-                        ? 'semibold'
-                        : 'medium'
+                    role={
+                      formData.temperature === option.value ? 'label' : 'label'
                     }
                     style={
                       formData.temperature === option.value
@@ -366,7 +358,7 @@ export const StorageLocationForm = forwardRef<
                 }
                 onPress={() => setFormData({ ...formData, color: null })}
               >
-                <Text size="sm" tone="secondary" weight="medium">
+                <Text role="label" tone="secondary">
                   -
                 </Text>
               </AppPressable>
@@ -432,7 +424,7 @@ export const StorageLocationForm = forwardRef<
               disabled={isSubmitting || !formData.name.trim()}
             >
               {isSubmitting ? (
-                <WhiteActivityIndicator size="small" />
+                <OnPrimaryActivityIndicator size="small" />
               ) : (
                 <Text style={commonStyles.buttonTextPrimary}>
                   {initialData ? t('labels.update') : t('labels.create')}
@@ -533,7 +525,7 @@ const styles = StyleSheet.create(theme => ({
   colorSwatch: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: theme.radii.full,
     borderCurve: 'continuous',
     marginRight: theme.spacing.sm,
     justifyContent: 'center',
@@ -542,7 +534,7 @@ const styles = StyleSheet.create(theme => ({
   colorSwatchNone: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: theme.radii.full,
     borderCurve: 'continuous',
     marginRight: theme.spacing.sm,
     justifyContent: 'center',
@@ -554,7 +546,7 @@ const styles = StyleSheet.create(theme => ({
   colorSwatchNoneSelected: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: theme.radii.full,
     borderCurve: 'continuous',
     marginRight: theme.spacing.sm,
     justifyContent: 'center',
@@ -566,7 +558,7 @@ const styles = StyleSheet.create(theme => ({
   colorSwatchSelected: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: theme.radii.full,
     borderCurve: 'continuous',
     marginRight: theme.spacing.sm,
     justifyContent: 'center',

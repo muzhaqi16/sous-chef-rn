@@ -6,12 +6,12 @@ import { logger } from '#/utils/environment';
 const CACHE_STORAGE_KEY = 'apollo-cache-v1';
 const CACHE_VERSION_KEY = 'apollo-cache-version';
 /**
- * The SHAPE of a persisted blob, not the app that wrote it — keying on app
- * version would purge the cache on every update. Bump by hand when a `cache.ts`
- * change makes persisted data unsafe; `cacheSchemaVersion.test.ts` fails on any
- * edit to that file until the decision has been made.
+ * The SHAPE of a persisted blob, not the app that wrote it. Bump by hand for a
+ * `cache.ts` change that makes old data unsafe, OR a server change that
+ * redefines what persisted data means — retired ids and rewritten values parse
+ * cleanly and are still wrong. `cacheSchemaVersion.test.ts` pins it.
  */
-const CURRENT_CACHE_VERSION = 'shape-1';
+const CURRENT_CACHE_VERSION = 'shape-2';
 
 /**
  * Keys from a retired split-blob scheme. Kept so `load()` can migrate an install
@@ -422,3 +422,12 @@ class ApolloCachePersistence {
  * Singleton instance for global access
  */
 export const apolloCachePersistence = new ApolloCachePersistence();
+
+/**
+ * Cancel a pending debounced write. Called on sign-out, so the last few seconds
+ * of the previous account's cache never reach disk.
+ */
+export function cancelCachePersistence(): void {
+  apolloCachePersistence.cancel();
+  logger.info('🛑 Apollo: Cache persistence timer cancelled');
+}

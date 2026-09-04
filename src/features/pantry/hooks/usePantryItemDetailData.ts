@@ -13,7 +13,7 @@ import {
 } from '#features/pantry/screens/PantryItemDetail.generated';
 import { summarizeBatchPricing } from '#features/pantry/utils/summarizeBatchPricing';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
-import { isResourceNotFoundError } from '#/utils/errors/notFound';
+import { isResourceNotFoundError } from '#features/pantry/utils/notFound';
 
 /** The detail screen's item, its batches, and what the server says about both. */
 export function usePantryItemDetailData(itemId: string) {

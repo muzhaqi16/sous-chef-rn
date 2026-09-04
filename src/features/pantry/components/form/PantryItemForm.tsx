@@ -26,8 +26,8 @@ import {
   DynamicFormFields,
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
-import { FormInput } from '#components/molecules/FormInput';
-import { Header } from '#components/molecules/Header';
+import { FormInput } from '#components/atoms/FormInput';
+import { Header } from '#components/organisms/Header';
 import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
 import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
 import { ItemInformationSection } from './ItemInformationSection';
@@ -331,7 +331,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   if (!existingPantryItem) {
     return (
       <View style={[commonStyles.container, commonStyles.center]}>
-        <Text style={styles.errorText}>{t('errors.itemNotFound')}</Text>
+        <Text role="heading" style={styles.errorText}>
+          {t('errors.itemNotFound')}
+        </Text>
       </View>
     );
   }
@@ -393,6 +395,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           rightActions={[
             {
               icon: 'checkmark',
+              accessibilityLabel: t('labels.save'),
               onPress: handleSubmit(handleSave, logValidationErrors),
               variant: 'primary',
               testID: 'edit-pantry-item-submit-button',
@@ -493,7 +496,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
   },
   errorText: {
-    fontSize: theme.fonts.size.lg,
     color: theme.colors.error,
   },
   // Generous bottom padding so the last field clears the keyboard.

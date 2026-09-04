@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render, userEvent } from '@testing-library/react-native';
-import { WeekStrip } from '../../../src/components/molecules/WeekStrip';
+import { WeekStrip } from '#features/mealPlan/components/WeekStrip';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
@@ -53,10 +53,7 @@ describe('WeekStrip', () => {
 
   it('renders meal dots when daysWithMeals provided', () => {
     const { toJSON } = render(
-      <WeekStrip
-        {...defaultProps}
-        daysWithMeals={new Set(['2025-03-10'])}
-      />,
+      <WeekStrip {...defaultProps} daysWithMeals={new Set(['2025-03-10'])} />,
     );
     expect(toJSON()).toBeTruthy();
   });

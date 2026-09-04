@@ -5,7 +5,6 @@ import { useFragment } from '@apollo/client/react';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
@@ -13,6 +12,7 @@ import {
   RecipeReviewFragmentDoc,
   type RecipeReviewFragment,
 } from '#features/recipes/graphql/recipeFragments.generated';
+import { formatRelativeToNow } from '#/utils/formatters/date';
 
 interface ReviewCardProps {
   review: RecipeReviewFragment;
@@ -67,17 +67,15 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
         )}
         <View style={styles.headerText}>
           <View style={styles.nameRow}>
-            <Text size="sm" weight="semibold" numberOfLines={1}>
+            <Text role="label" numberOfLines={1}>
               {displayName}
             </Text>
             {!!review.verified && (
               <Icon name="checkmark-circle" size={14} tone="success" />
             )}
           </View>
-          <Text size="xs" tone="secondary" style={styles.date}>
-            {formatDistanceToNow(new Date(review.createdAt), {
-              addSuffix: true,
-            })}
+          <Text role="caption" tone="secondary" style={styles.date}>
+            {formatRelativeToNow(new Date(review.createdAt))}
           </Text>
         </View>
         {/* Own review actions */}
@@ -119,7 +117,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
       </View>
       {/* Comment */}
       {!!review.comment && (
-        <Text size="sm" lineHeight="tight" style={styles.comment}>
+        <Text role="caption" style={styles.comment}>
           {review.comment}
         </Text>
       )}
@@ -135,7 +133,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
           size={14}
           tone={hasVotedHelpful ? 'primary' : 'textSecondary'}
         />
-        <Text size="xs" tone={hasVotedHelpful ? 'accent' : 'secondary'}>
+        <Text role="caption" tone={hasVotedHelpful ? 'accent' : 'secondary'}>
           {review.helpful > 0
             ? t('recipes.helpfulWithCount', { count: review.helpful })
             : t('recipes.helpful')}
@@ -159,13 +157,13 @@ const styles = StyleSheet.create(theme => ({
   avatar: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: theme.radii.full,
     borderCurve: 'continuous',
   },
   avatarPlaceholder: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: theme.radii.full,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.border,
     alignItems: 'center',

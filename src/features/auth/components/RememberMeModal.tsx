@@ -26,14 +26,13 @@ export const RememberMeModal: React.FC<{
         <View style={styles.modalContent} testID="remember-me-modal">
           <Icon name="lock-closed-outline" size={48} tone="primary" />
 
-          <Text size="xl" weight="semibold" style={styles.modalTitle}>
+          <Text role="subheading" style={styles.modalTitle}>
             {t('rememberMe.title')}
           </Text>
           <Text
-            size="sm"
+            role="caption"
             tone="secondary"
             align="center"
-            lineHeight="normal"
             style={styles.modalSubtitle}
           >
             {t('rememberMe.body', { email })}
@@ -45,9 +44,7 @@ export const RememberMeModal: React.FC<{
               onPress={onDecline}
               testID="remember-me-decline"
             >
-              <Text size="md" weight="semibold">
-                {t('rememberMe.notNow')}
-              </Text>
+              <Text role="bodyStrong">{t('rememberMe.notNow')}</Text>
             </AppPressable>
 
             <AppPressable
@@ -55,11 +52,7 @@ export const RememberMeModal: React.FC<{
               onPress={onAccept}
               testID="remember-me-accept"
             >
-              <Text
-                size="md"
-                weight="semibold"
-                style={styles.modalButtonPrimaryText}
-              >
+              <Text role="bodyStrong" style={styles.modalButtonPrimaryText}>
                 {t('rememberMe.remember')}
               </Text>
             </AppPressable>

@@ -404,12 +404,13 @@ describe('useUpdatePantryItem — local-first cache behavior', () => {
       expect(readItemName(cache)).toBe('Milk');
     });
     const { alertService } = require('#/services/alertService');
-    // One string covers both `unit` refusals — "batches exist" and "no
-    // conversion path" — because the server distinguishes them only in the
-    // message, which is not shown. Naming both remedies is the honest cost.
+    // One string covers all three `unit` refusals — "batches exist", "no
+    // conversion path", and the vocabulary refusing to mint a measured unit
+    // from free text — because the server distinguishes them only in the
+    // message, which is not shown. Naming every remedy is the honest cost.
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
-      "This item's unit can't be changed right now. Deplete its batches first, or choose a unit it converts to.",
+      "This item's unit can't be used right now. Deplete its batches first, or pick a unit it converts to \u2014 a made-up unit can't be measured against one.",
     );
   });
 });

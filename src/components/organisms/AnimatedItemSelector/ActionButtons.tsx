@@ -7,7 +7,7 @@ import Animated, {
   FadeInUp,
   LinearTransition,
 } from 'react-native-reanimated';
-import { TIMING } from '#constants/animations';
+import { motion } from '#/theme/foundations/motion';
 import { Icon } from '#utils/iconUtils';
 import type { ActionButtonConfig } from './types';
 import { Text } from '#components/atoms/Text';
@@ -24,7 +24,7 @@ const ActionButton: React.FC<{
 
   return (
     <Animated.View
-      entering={FadeInUp.delay(index * 15).duration(TIMING.FAST)}
+      entering={FadeInUp.delay(index * 15).duration(motion.timing.FAST)}
       layout={LinearTransition}
       style={styles.buttonWrapper}
     >
@@ -45,8 +45,7 @@ const ActionButton: React.FC<{
           library={action.iconLibrary}
         />
         <Text
-          size="sm"
-          weight="semibold"
+          role="label"
           align="center"
           numberOfLines={1}
           style={[
@@ -69,7 +68,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ actions }) => {
 
   return (
     <Animated.View
-      entering={FadeIn.duration(TIMING.INSTANT)}
+      entering={FadeIn.duration(motion.timing.INSTANT)}
       layout={LinearTransition}
       style={styles.container}
     >

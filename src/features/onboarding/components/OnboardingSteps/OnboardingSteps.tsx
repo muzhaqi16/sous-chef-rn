@@ -5,9 +5,10 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { SPRING } from '#/constants/animations';
+
 import { StepDot } from './StepDot';
 import type { OnboardingStepsProps } from './types';
+import { motion } from '#/theme/foundations/motion';
 
 export const OnboardingSteps: React.FC<OnboardingStepsProps> = ({
   steps,
@@ -38,7 +39,12 @@ export const OnboardingSteps: React.FC<OnboardingStepsProps> = ({
 
     return {
       transform: [
-        { translateX: withSpring(activeWidth - fullWidth, SPRING.DEFAULT) },
+        {
+          translateX: withSpring(
+            activeWidth - fullWidth,
+            motion.spring.DEFAULT,
+          ),
+        },
       ],
     };
   });

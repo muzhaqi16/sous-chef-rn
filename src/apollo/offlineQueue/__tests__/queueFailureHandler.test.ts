@@ -5,7 +5,7 @@ import {
 import { queueManager } from '../queueManager';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { restoreItemToShoppingListAfterMoveToPantry } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { restoreItemToShoppingListAfterMoveToPantry } from '#features/shoppingList/cache/moveToPantry';
 import { toastService } from '#/services/toastService';
 import { queueStore } from '../queueStore';
 import type { FailedMutationInfo } from '../types';
@@ -20,7 +20,7 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
-jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
+jest.mock('#features/shoppingList/cache/moveToPantry', () => ({
   restoreItemToShoppingListAfterMoveToPantry: jest.fn(),
 }));
 jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({

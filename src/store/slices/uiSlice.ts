@@ -4,6 +4,7 @@
 
 import { StateCreator } from 'zustand';
 import type { RootState } from '../index';
+import type { ImageFile } from '#/types/media';
 
 export interface UIState {
   // Modal and overlay states
@@ -41,6 +42,15 @@ export interface UIState {
   // Tutorial reset signal (session-only counter; bumped by resetAllFeatureHints)
   tutorialResetGeneration: number;
 
+  // The crop screen's output, read once by whichever screen sent the user
+  // there. Session-only: a cropped image nobody collected is not worth keeping
+  // past a sign-out, and a persisted one would surface for the next account.
+  pendingCroppedImage: ImageFile | null;
+
+  // Images the item form selected, held until the create mutation returns an
+  // id to attach them to. Session-only for the same reason as the crop hand-off.
+  pendingItemImages: Array<ImageFile & { perspective?: string }> | null;
+
   // Actions
   setLoading: (loading: boolean) => void;
   setError: (error: boolean) => void;
@@ -67,6 +77,12 @@ export interface UIState {
   setGlobalSearchQuery: (query: string) => void;
   setActiveFilters: (filters: Record<string, unknown>) => void;
   setPendingPantryScrollToTop: (pending: boolean) => void;
+  setPendingCroppedImage: (image: ImageFile | null) => void;
+  /** Reads and clears in one step, so two screens cannot both collect it. */
+  takePendingCroppedImage: () => ImageFile | null;
+  setPendingItemImages: (
+    images: Array<ImageFile & { perspective?: string }> | null,
+  ) => void;
   bumpTutorialResetGeneration: () => void;
   showToast: (
     message: string,
@@ -96,6 +112,8 @@ const initialUIState = {
   toastType: null,
   pendingPantryScrollToTop: false,
   tutorialResetGeneration: 0,
+  pendingCroppedImage: null,
+  pendingItemImages: null,
 };
 
 export const createUISlice: StateCreator<
@@ -103,7 +121,7 @@ export const createUISlice: StateCreator<
   [['zustand/immer', never]],
   [],
   UIState
-> = set => ({
+> = (set, get) => ({
   ...initialUIState,
 
   setLoading: loading => {
@@ -193,6 +211,28 @@ export const createUISlice: StateCreator<
     set(state => {
       state.pendingPantryScrollToTop = pending;
     });
+  },
+
+  setPendingCroppedImage: image => {
+    set(state => {
+      state.pendingCroppedImage = image;
+    });
+  },
+
+  setPendingItemImages: images => {
+    set(state => {
+      state.pendingItemImages = images;
+    });
+  },
+
+  takePendingCroppedImage: () => {
+    const image = get().pendingCroppedImage;
+    if (image) {
+      set(state => {
+        state.pendingCroppedImage = null;
+      });
+    }
+    return image;
   },
 
   bumpTutorialResetGeneration: () => {

@@ -1,4 +1,5 @@
-import { client, cancelCachePersistence } from './client';
+import { getApolloClient } from '#/apollo/clientRegistry';
+import { cancelCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import { InMemoryCache } from '@apollo/client';
 import { useStore } from '#store';
 import { storage } from '#/storage/mmkv';
@@ -138,7 +139,7 @@ export class LogoutCleanup {
   private static stopInFlightQueries(): void {
     try {
       // Stop all queries by stopping the network layer temporarily
-      client.stop();
+      getApolloClient()?.stop();
 
       // Disposing the socket also turns auto-reconnect off, so nothing dials
       // again on the credentials this is in the middle of clearing.
@@ -160,6 +161,8 @@ export class LogoutCleanup {
    */
   private static async clearApolloCache(): Promise<void> {
     try {
+      const client = getApolloClient();
+      if (!client) return;
       await client.clearStore();
 
       // Run garbage collection with result cache reset

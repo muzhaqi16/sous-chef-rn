@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
+import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 
 import type { StaticScreenProps } from '@react-navigation/native';
-import { Header } from '#components/molecules/Header';
-import { Button } from '#components/atoms/Button';
+import { Button } from '#components/molecules/Button';
 import { Icon } from '#utils/iconUtils';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { useJoinShoppingListByShareCode } from '#features/shoppingList/hooks/useJoinShoppingListByShareCode';
@@ -18,6 +17,7 @@ import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { Text } from '#components/atoms/Text';
+import { Screen } from '#components/templates/Screen';
 
 export const JoinByShareCodeScreen: React.FC<
   StaticScreenProps<{ shareCode?: string }>
@@ -71,41 +71,41 @@ export const JoinByShareCodeScreen: React.FC<
 
   if (isLoggedOut) {
     return (
-      <View style={styles.container}>
-        <Header
-          title={t('shoppingListScreens.joinTitle')}
-          onBack={() => goBack()}
-          centerTitle
-        />
+      <Screen
+        header={{
+          title: t('shoppingListScreens.joinTitle'),
+          back: () => goBack(),
+          centerTitle: true,
+        }}
+        scroll="none"
+        gutter="none"
+      >
         <View style={styles.loader}>
           <SousChefLoader size="small" showBrand={false} />
         </View>
-      </View>
+      </Screen>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Header
-        title={t('shoppingListScreens.joinTitle')}
-        onBack={() => goBack()}
-        centerTitle
-      />
-
+    <Screen
+      header={{
+        title: t('shoppingListScreens.joinTitle'),
+        back: () => goBack(),
+        centerTitle: true,
+      }}
+      scroll="none"
+      gutter="none"
+    >
       <View style={styles.content}>
         <View style={styles.iconContainer}>
           <Icon name="link-outline" size={48} tone="primary" />
         </View>
 
-        <Text size="lg" weight="semibold" align="center" style={styles.title}>
+        <Text role="heading" align="center" style={styles.title}>
           {t('shoppingListScreens.joinEnterCodeTitle')}
         </Text>
-        <Text
-          size="md"
-          tone="secondary"
-          align="center"
-          style={styles.description}
-        >
+        <Text tone="secondary" align="center" style={styles.description}>
           {t('shoppingListScreens.joinEnterCodeDescription')}
         </Text>
 
@@ -128,7 +128,7 @@ export const JoinByShareCodeScreen: React.FC<
           style={styles.joinButton}
         />
       </View>
-    </View>
+    </Screen>
   );
 };
 
@@ -165,7 +165,7 @@ const styles = StyleSheet.create(theme => ({
   inputText: {
     textAlign: 'center',
     letterSpacing: 2,
-    fontSize: theme.typography.fontSize.lg,
+    ...theme.type.heading,
   },
   joinButton: {
     width: '100%',

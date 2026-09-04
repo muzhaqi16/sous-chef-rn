@@ -80,6 +80,10 @@ export class ErrorService {
     // expires, so the copy points at support rather than inviting a retry.
     AUTH_ACCOUNT_SUSPENDED: 'accountSuspended',
     AUTH_EMAIL_NOT_VERIFIED: 'emailNotVerified',
+    // Permanently useless, and uniform across every reason on purpose —
+    // which one applied is not disclosed. The client clears the stored
+    // credential and falls back to the password screen.
+    AUTH_DEVICE_CREDENTIAL_INVALID: 'deviceCredentialInvalid',
 
     // Authorization Errors. FORBIDDEN is the only code here.
     FORBIDDEN: 'forbidden',

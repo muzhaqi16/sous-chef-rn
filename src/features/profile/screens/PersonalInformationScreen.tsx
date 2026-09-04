@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { SettingsSection } from '#components/organisms/SettingsSection';
-import type { SettingItem } from '#components/molecules/SettingRow';
+import type { SettingItem } from '#components/organisms/SettingRow';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useProfileData } from '#features/profile/hooks/useProfileData';
 import { useUser } from '#store/useAppStore';

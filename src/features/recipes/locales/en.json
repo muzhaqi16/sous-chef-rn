@@ -152,6 +152,8 @@
     "markCookedFailed": "Failed to mark recipe as cooked",
     "cookExternalError": "Cannot mark external recipes as cooked. Please save the recipe first.",
     "markedCookedDeducted": "Recipe marked as cooked! Ingredients deducted from pantry.",
+    "markedCookedSkipped_one": "Recipe marked as cooked. {{count}} ingredient could not be deducted.",
+    "markedCookedSkipped_other": "Recipe marked as cooked. {{count}} ingredients could not be deducted.",
     "markedCooked": "Recipe marked as cooked!",
     "renameFolderFailedRetry": "Failed to rename folder. Please try again.",
     "folderRenamed": "Renamed \"{{oldName}}\" to \"{{newName}}\"",
@@ -273,7 +275,11 @@
     "ingredientCount_one": "{{count}} ingredient",
     "ingredientCount_other": "{{count}} ingredients",
     "ingredientRatio": "{{used}}/{{total}} ingredients",
-    "matchRatio": "{{used}}/{{total}} match"
+    "matchRatio": "{{used}}/{{total}} match",
+    "createdFromRecipe": "Created from recipe",
+    "ratingBreakdownRow": "{{count}} reviews rated {{stars}} stars",
+    "favoriteA11y": "Add to favourites",
+    "unfavoriteA11y": "Remove from favourites"
   },
   "recipeFilters": {
     "title": "Filters",

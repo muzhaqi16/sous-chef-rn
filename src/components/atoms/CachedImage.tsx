@@ -2,6 +2,7 @@
 // while loading, a placeholder icon with no URI, a fallback icon on error.
 import React from 'react';
 import { View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import TurboImage from 'react-native-turbo-image';
 import type {
   TurboImageProps,
@@ -25,9 +26,20 @@ export interface CachedImageProps
   displaySize?: number;
   /** Runs alongside the internal error overlay so a parent can react (e.g. collapse a hero). */
   onError?: () => void;
+  /** Opts this image into a shared-element transition. Present means the
+   *  Reanimated wrapper is rendered, so a recycled list cell never pays for it. */
+  sharedTransitionTag?: string;
+  /** What the picture shows. Omit ONLY with `accessible={false}`: an unnamed
+   *  image is announced as "image" and nothing else. */
+  accessibilityLabel?: string;
 }
 
 type LoadState = 'idle' | 'loading' | 'success' | 'error';
+
+// Reanimated reads `sharedTransitionTag` off its own wrapper, so the tag needs
+// the animated component. It costs a class instance and ref plumbing per image,
+// which the list path does not pay: the plain TurboImage stays the default.
+const AnimatedTurboImage = Animated.createAnimatedComponent(TurboImage);
 
 // Module-level so it survives unmount: scrolling back to an already-decoded
 // image skips the shimmer entirely.
@@ -46,6 +58,7 @@ export const CachedImage = ({
   containerStyle,
   displaySize,
   onError,
+  sharedTransitionTag,
   ...rest
 }: CachedImageProps) => {
   // useRecyclingState resets synchronously on `uri` change (cell recycle); a URI
@@ -104,9 +117,11 @@ export const CachedImage = ({
       ? { borderRadius: innerRadius, overflow: 'hidden' }
       : undefined;
 
+  const ImageComponent = sharedTransitionTag ? AnimatedTurboImage : TurboImage;
+
   return (
     <View style={[style as StyleProp<ViewStyle>, containerStyle]}>
-      <TurboImage
+      <ImageComponent
         fadeDuration={isPreloaded ? 0 : IMAGE_FADE_MS}
         style={[styles.image, innerRadius > 0 && { borderRadius: innerRadius }]}
         source={source}
@@ -115,6 +130,7 @@ export const CachedImage = ({
         resize={displaySize ? displaySize * 2 : undefined}
         onSuccess={handleSuccess}
         onFailure={handleFailure}
+        sharedTransitionTag={sharedTransitionTag}
         {...rest}
       />
       {/* Both overlays are absolutely positioned, so mounting them only in their

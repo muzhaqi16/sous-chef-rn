@@ -55,7 +55,7 @@ const FilterChip: React.FC<{
   styles.useVariants({ active });
   return (
     <Pressable style={styles.chip} onPress={onPress}>
-      <Text size="sm" weight="medium" tone={active ? 'inverse' : 'secondary'}>
+      <Text role="label" tone={active ? 'inverse' : 'secondary'}>
         {label}
       </Text>
     </Pressable>
@@ -124,7 +124,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     color: theme.colors.textPrimary,
-    fontSize: theme.fonts.size.md,
+    ...theme.type.body,
   },
   chipRow: {
     flexDirection: 'row',

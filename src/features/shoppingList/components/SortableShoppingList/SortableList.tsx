@@ -84,6 +84,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
     // The list has no placeholder mode, so having rows is its only honest
     // content signal: an empty list emits no `app_fully_drawn_ms` at all.
     hasRealContent: items.length > 0,
+    rowCount: items.length,
     onFirstContentLayout,
   });
   useDataReferenceTracker(

@@ -134,24 +134,30 @@ Recorded 2026-09-02, from the whole-tree audit. Each entry states what is
 shipping, why it is acceptable for now, and when to look again — an acceptance
 without a date is a permanent one under another name.
 
-### Biometric sign-in stores the account password — revisit 2026-12-01
+### Biometric sign-in holds a device credential — RESOLVED 2026-09-04
 
-`saveCredentials` (`src/storage/keychain.ts`) stores email and password behind a
-biometric gate, and `authService.autoLogin` replays a full `Login` with them. A
-refresh token cannot substitute: a deliberate sign-out revokes that lineage,
-which is the state biometric sign-in exists to recover from. So someone who
-defeats the keychain gets a reusable password rather than a revocable
-credential.
+The biometric slot held the account PASSWORD, and `authService.autoLogin`
+replayed a full `Login` with it. A refresh token could not substitute: a
+deliberate sign-out revokes that lineage, which is the state biometric sign-in
+exists to recover from. So a defeated keychain yielded a reusable password.
 
-Hardened in the meantime: the slot is `BIOMETRY_CURRENT_SET`, so enrolling a new
-face or finger invalidates it and the app clears the slot rather than offering a
-prompt that cannot succeed; the temporary registration password expires after 24
-hours and is swept at startup; a reinstall with an empty encrypted store clears
-session tokens instead of resuming a session.
+It now holds a credential issued by `issueDeviceCredential`, bound to this
+device's id and individually revocable by the server. `autoLogin` exchanges it
+rather than replaying a password, and the password is never passed to enrolment
+at all — so there is nothing left to retain. A revoked or expired credential
+answers `AUTH_DEVICE_CREDENTIAL_INVALID`, which clears the slot; a rate-limit
+refusal does not, because the credential is still good.
 
-The fix needs the API: a device-bound, individually revocable credential
-exchangeable for a session. Specified in the change's `API-REQUESTS.md` § 1.
-Until it ships, this is an accepted residual risk.
+The keychain policy is unchanged and still carries the weight it did: the slot
+is `BIOMETRY_CURRENT_SET`, so enrolling a new face or finger invalidates it and
+the app clears it rather than offering a prompt that cannot succeed; the
+temporary registration password expires after 24 hours and is swept at startup;
+a reinstall with an empty encrypted store clears session tokens instead of
+resuming a session.
+
+A slot enrolled before this shipped holds a password. It is never presented:
+the stored value carries a `dc1:` marker, and one without it is dropped so the
+person re-enrols, at the cost of one password entry.
 
 ### No certificate pinning — deliberate, revisit only on evidence
 

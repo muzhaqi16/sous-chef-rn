@@ -8,7 +8,7 @@ import {
   createAddToQueryConnectionUpdater,
   createAddToParentArrayUpdater,
 } from '#/apollo/utils/cacheUpdaters';
-import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { useIsApiUnavailable } from '#features/mealPlan/hooks/useIsApiUnavailable';
 import { t } from '#/i18n';
 import { errorService } from '#/services/errorService';
 import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';

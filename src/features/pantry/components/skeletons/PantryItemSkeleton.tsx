@@ -70,15 +70,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.borderLight,
     backgroundColor: theme.colors.surface,
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 1,
-        blurRadius: 3,
-        spreadDistance: 0,
-        color: `${theme.colors.backgroundSecondary}0A`,
-      },
-    ],
+    ...theme.shadows.sm,
   },
   image: {
     marginRight: theme.spacing.base,

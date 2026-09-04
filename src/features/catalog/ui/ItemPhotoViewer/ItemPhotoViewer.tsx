@@ -174,7 +174,7 @@ export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
           <View style={styles.captionStack} pointerEvents="none">
             {!!photos[index] && <PhotoCaption photoRef={photos[index]} />}
             {total > 1 && (
-              <Text size="sm" style={styles.counter}>
+              <Text role="caption" style={styles.counter}>
                 {t('itemPhotos.counter', { current: index + 1, total })}
               </Text>
             )}
@@ -414,7 +414,7 @@ const SetPrimaryAction: React.FC<{ photoRef: ItemPhotoRef }> = ({
     return (
       <View style={styles.primaryBadge}>
         <Icon name="star" size={14} tone="rating" />
-        <Text size="sm" weight="medium" style={styles.captionText}>
+        <Text role="label" style={styles.captionText}>
           {t('itemPhotos.mainPhoto')}
         </Text>
       </View>
@@ -435,7 +435,7 @@ const SetPrimaryAction: React.FC<{ photoRef: ItemPhotoRef }> = ({
       accessibilityLabel={t('itemPhotos.setAsMain')}
     >
       <Icon name="star-outline" size={14} color="#fff" />
-      <Text size="sm" weight="medium" style={styles.captionText}>
+      <Text role="label" style={styles.captionText}>
         {t('itemPhotos.setAsMain')}
       </Text>
     </Pressable>
@@ -464,14 +464,14 @@ const PhotoCaption: React.FC<{ photoRef: ItemPhotoRef }> = ({ photoRef }) => {
   return (
     <View style={styles.captionRow}>
       {!!label && (
-        <Text size="md" weight="medium" style={styles.captionText}>
+        <Text role="bodyStrong" style={styles.captionText}>
           {label}
         </Text>
       )}
       {photo.status === ItemImageStatus.Pending && (
         <View style={styles.pendingBadge}>
           <Icon name="time-outline" size={12} color="#fff" />
-          <Text size="xs" weight="medium" style={styles.captionText}>
+          <Text role="label" style={styles.captionText}>
             {t('itemPhotos.pendingReview')}
           </Text>
         </View>
@@ -499,7 +499,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderRadius: theme.radii.full,
     borderCurve: 'continuous',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.colors.overlays.medium,
   },
   caption: {
     position: 'absolute',
@@ -540,10 +540,10 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   captionText: {
-    color: theme.colors.white,
+    color: theme.colors.onScrim,
   },
   counter: {
-    color: theme.colors.white,
+    color: theme.colors.onScrim,
     opacity: 0.7,
   },
   pendingBadge: {

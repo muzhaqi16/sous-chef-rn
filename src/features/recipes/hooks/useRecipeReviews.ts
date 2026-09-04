@@ -25,7 +25,7 @@ import {
   changeReviewRating,
   getReviewRating,
   removeReviewFromRecipe,
-} from '#/apollo/utils/recipeReviewCacheUpdaters';
+} from '#features/recipes/cache/reviews';
 
 interface UseRecipeReviewsOptions {
   recipeId: string;

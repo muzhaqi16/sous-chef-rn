@@ -411,18 +411,18 @@ npm test
 
 `npm run lint:fix` and `npm run format` auto-fix what they can.
 
-Two checks are not part of those, and nothing runs them for you:
+The ratchets below run in `pre-commit`, `pre-push` or PR checks. One does not,
+and nothing runs it for you:
 
 ```bash
-node scripts/check-compiler-bailouts.mjs   # no new React Compiler bailouts,
-                                           # and no extracted leaf re-absorbed
 node scripts/check-bundled-secrets.mjs --self-test
 ```
 
-`check-compiler-bailouts` guards a file COUNT and, separately, WHICH function
-bails in the files where a variant call was deliberately extracted into a
-leaf — moving it back into the composite keeps the count unchanged and would
-otherwise pass.
+`check-compiler-bailouts` (pre-push) guards a file COUNT; separately, WHICH
+function bails in the files where a variant call was deliberately extracted into
+a leaf — moving it back into the composite keeps the count unchanged and would
+otherwise pass; and separately again, the `'use no memo'` opt-out list, which is
+EMPTY, so needing the directive means the Babel plugin order has regressed.
 
 **Why `check:version-sync` is a pre-push hook and not a habit:** it compares
 `package.json`, `versionName`, and **each** `MARKETING_VERSION` in the
@@ -436,29 +436,40 @@ counters on independent sequences, read by `getBuildNumber()`.
 
 ### The boundary ratchets
 
-Six checks hold boundaries that names and imports cannot see. Each keeps a
-JSON baseline beside it that may only SHRINK — the baseline is the worklist,
-and a new entry fails at the commit that added it.
+Sixteen checks hold boundaries that names and imports cannot see. Each keeps a
+JSON baseline beside it, and the baseline is a claim about the rule: a NON-EMPTY
+one is a worklist that may only shrink; an ABSENT one means the rule is an
+INVARIANT and the tooling refuses to write it a baseline, because doing so would
+hand back the exemptions it was promoted out of.
 
-| Check | What it holds | Baseline |
+| Check | What it holds | Findings |
 | --- | --- | --- |
-| `check-data-layer-boundary` | A screen, sheet or cell does not run an operation, hold the client, or write the cache. It reads data through a hook in its feature's `hooks/`. `useFragment` and the masking types are NOT flagged — with `dataMasking` on, a cell subscribing to one entity is the documented pattern. `alertRejectedMutation` is not flagged either: it sits under `src/apollo/` but turns a refusal into localized copy. Generated operation types and colocated `.graphql` documents are TRACKED, not failed. The `src/apollo/**` half is also an `import/no-restricted-paths` zone, so the editor reports it; the name-aware `@apollo/client` half stays here, because an override covering these globs would REPLACE the narrower `no-restricted-imports` eight kit files already carry. | 0 (invariant) |
-| `check-import-cycles` | No new LOAD-TIME import cycle. `import type` is skipped (TypeScript erases it) and so is `await import(...)` (it runs after both modules initialize) — writing a type-only import as a value import is what put 40 of the original 48 cycles in the tree. The eight recorded are the auth/link/store core: every link that reads session state imports the store singleton, and the store's reset path imports the links it has to stop. Breaking them means inverting that behind a registration seam like `store/sessionTeardown.ts`. | 8 |
-| `check-hook-return-types` | The other half of the same seam: a feature hook must not HAND a screen a library type. The boundary check cannot see it, because the screen imports nothing. Every exported hook's return type is resolved through the TypeScript checker — the type and each property one level down, which is where a leak shows (`error: ApolloError`). A mutate wrapper declares `MutationOutcome<TData>` instead of the library's result generic. Runs in pre-push, beside typecheck, because it builds its own TS program. | 0 (invariant) |
-| `check-single-consumer` | A module in `components`, `hooks`, `context`, `utils` or `constants` that exactly one feature reaches belongs to that feature. Reach is transitive, and `src/screens/auth` and `src/screens/onBoarding` counted as features until they became ones. | 101 |
-| `check-form-state` | A form-shaped file with 3+ `useState` and no `useForm` is a hand-rolled form. Three is the threshold because two flags beside a real form are ordinary. | 51 |
-| `check-feature-enumeration` | A feature id as a string literal outside its feature is a place that must be remembered when the feature list changes. Comments, import paths and index accesses are stripped; `home`, `profile` and `notifications` are excluded as generic words. | 1 |
-| `check-canonical-mechanisms` | Five concerns with one documented mechanism each — the list primitive, the image component, the modal surface, the date formatter, device storage. The module that IS the canonical mechanism is never a finding. Six more concerns started here and reached zero; each is now a `no-restricted-imports` ban instead, which is where every one of these ends up. | 50 |
-| `check-design-tokens` | A visual property written as a literal rather than a token, and a kit concept (section header, empty state, divider) restyled outside the kit. Two concerns are waiting on scales that do not exist yet — border width, and the missing spacing steps — which is what their numbers are for. | 207 |
+| `check-data-layer-boundary` | A screen, sheet or cell does not run an operation, hold the client, or write the cache. It reads data through a hook in its feature's `hooks/`. `useFragment` and the masking types are NOT flagged — with `dataMasking` on, a cell subscribing to one entity is the documented pattern. `alertRejectedMutation` is not flagged either: it sits under `src/apollo/` but turns a refusal into localized copy. Generated operation types (40) and colocated `.graphql` documents (31) are TRACKED, not failed. | 0 · invariant |
+| `check-import-cycles` | No LOAD-TIME import cycle. `import type` is skipped (TypeScript erases it) and so is `await import(...)` (it runs after both modules initialize) — writing a type-only import as a value import is what put 40 of the original 48 cycles in the tree. The last eight were the auth/link/store core; inverting them behind `store/sessionTeardown.ts` closed them. | 0 · invariant |
+| `check-hook-return-types` | The other half of the same seam: a feature hook must not HAND a screen a library type. The boundary check cannot see it, because the screen imports nothing. All 215 exported hooks' return types are resolved through the TypeScript checker — the type and each property one level down, which is where a leak shows (`error: ApolloError`). Runs in pre-push, beside typecheck, because it builds its own TS program. | 0 · invariant |
+| `check-single-consumer` | A module in `components`, `hooks`, `context`, `utils` or `constants` that exactly one feature reaches belongs to that feature. Reach is transitive. It has no baseline at all now — a hard rule over 245 shared modules. | 0 · hard rule |
+| `check-form-state` | A form-shaped file with 3+ `useState` and no `useForm` is a hand-rolled form. Three is the threshold because two flags beside a real form are ordinary. The heuristic is deliberately shallow, so the list holds files whose three `useState` are unrelated flags; the baseline is what that costs. | 70 · was 78 |
+| `check-feature-enumeration` | A feature id as a string literal outside its feature is a place that must be remembered when the feature list changes. Comments, import paths and index accesses are stripped. | 0 · invariant |
+| `check-canonical-mechanisms` | Five concerns with one documented mechanism each — the list primitive, the image component, the modal surface, the date formatter, device storage. The module that IS the canonical mechanism is never a finding. Six more concerns started here and reached zero; each is a `no-restricted-imports` ban now, which is where every one of these ends up. | 0 · was 50 |
+| `check-design-tokens` | A visual property written as a literal rather than a token, and a kit concept (section header, empty state, divider) restyled outside the kit. | 0 · was 207 |
+| `check-layer-purity` | The kit (`src/components`, `src/hooks`) imports no feature, owns no `.graphql`, and carries no file named after a domain. Schema-type imports are counted (5), not failed. A second concern covers KERNEL modules named after a feature; it reached zero too. | 0 · was 76 |
+| `check-feature-shape` | Every one of the 12 features has `manifest.ts` (its `id` equal to the directory name), `screens/`, `hooks/` and `components/`, and one with more than one screen declares `screens/registration.ts`. | 0 · invariant |
+| `check-dead-modules` | Every one of 1073 modules under `src/` has a PRODUCTION importer. An import inside a test does not count, and neither does a `jest.mock()` — a test for dead code is dead with it. | 0 · invariant |
+| `check-comment-budget` | No comment run over six lines, and no file whose comments exceed half its code. Tool directives are never counted. Vocabulary is ESLint's job (`no-warning-comments`); this is volume. | 0 · invariant |
+| `check-typography-roles` | Text is set by a named role, not by a size and a weight. `off-role-text` is at zero — every `<Text>` outside the kit names a role. `stylesheet-type` is the shrinking half: the blocks no role expresses (a responsive size map, a 10px badge, a Skia draw call). | 21 · stylesheet-type only |
+| `check-component-tier` | A kit component sits in the tier its composition puts it in, computed from what it RENDERS: an atom renders at most one other kit component, a molecule several atoms, an organism a molecule or a bottom sheet. | 0 · invariant, 97 components |
+| `check-screen-scaffold` | A screen's chrome comes from `Screen`, and nobody applies the top inset twice — `double-inset` is at zero, `screen-chrome` is the shrinking half. | 4 · chrome only |
+| `check-a11y-names` | A pressable with an `onPress`, no `accessibilityLabel`, and no child that can put words on screen reaches a screen reader as "button" and nothing else. RN's own `accessible` default names anything with a text child, so this is the icon-only shape. | 0 · invariant, was 64 |
 
 Every one takes `--list` (print each finding), `--update` (re-baseline, refused
-when it would write an empty record over a non-empty one) and `--self-test`
-(prove the check can still fail — a scanner that finds nothing looks exactly
-like a clean tree).
+when it would write an empty record over a non-empty one, or a first baseline
+over an absent one) and `--self-test` (prove the check can still fail — a
+scanner that finds nothing looks exactly like a clean tree).
 
-When a baseline reaches zero, promote the rule to an `import/no-restricted-paths`
-zone in `.eslintrc.js` and delete the baseline file, the way the kit half of
-`check-layer-purity` was promoted.
+When a baseline reaches zero, DELETE it: the tooling then treats the rule as an
+invariant and refuses to write it another. Where the rule is expressible as an
+import, promote it to an `import/no-restricted-paths` or `no-restricted-imports`
+zone in `.eslintrc.js` as well, the way the kit half of `check-layer-purity` was.
 
 ### Bans promoted out of the ratchet
 

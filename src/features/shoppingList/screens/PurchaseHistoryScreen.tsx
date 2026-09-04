@@ -11,10 +11,6 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 
-import {
-  PurchaseHistoryProvider,
-  usePurchaseHistoryContext,
-} from './PurchaseHistoryContext';
 import { Text } from '#components/atoms/Text';
 import { PaginatedHistoryScreen } from '#components/templates/PaginatedHistoryScreen';
 import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
@@ -46,14 +42,16 @@ const formatPrice = (
   return formatCurrency(amount, currencyCode ?? DEFAULT_CURRENCY);
 };
 
-type PurchaseHistoryItemProps = ListRenderItemInfo<PurchaseItem>;
+type PurchaseHistoryItemProps = ListRenderItemInfo<PurchaseItem> & {
+  totalCount: number;
+};
 
 const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
   item: purchase,
   index,
+  totalCount,
 }) => {
   const { t } = useTranslation();
-  const { totalCount } = usePurchaseHistoryContext();
   const priceText = formatPrice(purchase.totalPrice, purchase.currency.code);
   // At quantity 1 the per-unit price IS the total. Every other quantity gets
   // the rate — a fractional one most of all.
@@ -66,11 +64,11 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
     <View style={[styles.purchaseCard, commonStyles.shadow]}>
       <View style={styles.purchaseHeader}>
         <View style={styles.purchaseNumber}>
-          <Text size="xs" weight="bold" style={styles.purchaseNumberText}>
+          <Text role="label" style={styles.purchaseNumberText}>
             #{totalCount - index}
           </Text>
         </View>
-        <Text size="sm" weight="medium" style={styles.purchaseDate}>
+        <Text role="label" style={styles.purchaseDate}>
           {formatDate(purchase.purchaseDate)}
         </Text>
       </View>
@@ -79,10 +77,14 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
         <View style={styles.purchaseSummaryRow}>
           <View style={styles.purchaseInlineGroup}>
             <Icon name="cube-outline" size={18} tone="iconSecondary" />
-            <Text size="sm" tone="secondary" style={styles.purchaseDetailLabel}>
+            <Text
+              role="caption"
+              tone="secondary"
+              style={styles.purchaseDetailLabel}
+            >
               {t('purchaseHistory.quantityLabel')}
             </Text>
-            <Text size="sm" weight="medium">
+            <Text role="label">
               {purchase.quantity} {purchase.unitSymbol}
             </Text>
           </View>
@@ -91,18 +93,16 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
             <View style={styles.purchaseInlineGroup}>
               <Icon name="pricetag-outline" size={18} tone="iconSecondary" />
               <Text
-                size="sm"
+                role="caption"
                 tone="secondary"
                 style={styles.purchaseDetailLabel}
               >
                 {t('purchaseHistory.priceLabel')}
               </Text>
               <View style={styles.purchasePriceCell}>
-                <Text size="sm" weight="medium">
-                  {priceText}
-                </Text>
+                <Text role="label">{priceText}</Text>
                 {!!perUnitText && (
-                  <Text size="xs" tone="secondary">
+                  <Text role="caption" tone="secondary">
                     {t(
                       purchase.unitSymbol
                         ? 'purchaseAmountSheet.perUnitOfHint'
@@ -118,12 +118,16 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
 
         <View style={styles.purchaseDetailRow}>
           <Icon name="person-outline" size={18} tone="iconSecondary" />
-          <Text size="sm" tone="secondary" style={styles.purchaseDetailLabel}>
+          <Text
+            role="caption"
+            tone="secondary"
+            style={styles.purchaseDetailLabel}
+          >
             {t('purchaseHistory.purchasedBy')}
           </Text>
           {/* displayName -> email -> "Someone": `email` is null for anyone but
               the caller themself, and a profile is optional. */}
-          <Text size="sm" weight="medium" style={styles.purchaseDetailValue}>
+          <Text role="label" style={styles.purchaseDetailValue}>
             {purchase.user.profile?.displayName ||
               purchase.user.email ||
               t('labels.someone')}
@@ -138,9 +142,11 @@ const PurchaseHistoryItem = PurchaseHistoryItemComponent;
 
 const getPurchaseItemType = () => 'item';
 
-const renderItem = (info: ListRenderItemInfo<PurchaseItem>) => (
-  <PurchaseHistoryItem {...info} />
-);
+// A factory so the row gets the count as a prop and `renderItem` still has one
+// identity per count, not one per screen render.
+const makeRenderItem =
+  (totalCount: number) => (info: ListRenderItemInfo<PurchaseItem>) =>
+    <PurchaseHistoryItem {...info} totalCount={totalCount} />;
 
 const PurchaseHistoryHeader: React.FC<{
   totalCount: number;
@@ -150,24 +156,24 @@ const PurchaseHistoryHeader: React.FC<{
   const { t } = useTranslation();
   return (
     <View style={styles.statsContainer}>
-      <Text size="md">
+      <Text>
         {t('purchaseHistory.totalPurchases')}{' '}
-        <Text weight="bold" style={styles.statsValue}>
+        <Text role="bodyStrong" style={styles.statsValue}>
           {totalCount}
         </Text>
       </Text>
       {!!totalSpent && (
-        <Text size="md" style={styles.statsRow}>
+        <Text style={styles.statsRow}>
           {t('purchaseHistory.totalSpent')}{' '}
-          <Text weight="bold" style={styles.statsValue}>
+          <Text role="bodyStrong" style={styles.statsValue}>
             {totalSpent}
           </Text>
         </Text>
       )}
       {!!averageSpent && (
-        <Text size="md" style={styles.statsRow}>
+        <Text style={styles.statsRow}>
           {t('purchaseHistory.averagePrice')}{' '}
-          <Text weight="bold" style={styles.statsValue}>
+          <Text role="bodyStrong" style={styles.statsValue}>
             {averageSpent}
           </Text>
         </Text>
@@ -185,8 +191,13 @@ export const PurchaseHistoryScreen: React.FC<
   const { purchases, totalCount, state, loadMore, isFetchingMore, retry } =
     useItemPurchaseHistory(itemId);
 
-  // Priced purchases only — auto-recorded ones would drag the average to 0.
-  const pricedPurchases = purchases.filter(p => p.totalPrice > 0);
+  // Priced purchases only. A price is now NULL when it was never observed — a
+  // line moved to the pantry without one — which is unknown, not zero, and
+  // averaging it in would drag the mean toward zero.
+  const pricedPurchases = purchases.filter(
+    (p): p is typeof p & { totalPrice: number } =>
+      p.totalPrice != null && p.totalPrice > 0,
+  );
   const currencyCode = pricedPurchases[0]?.currency.code;
   const spent = pricedPurchases.reduce((sum, p) => sum + p.totalPrice, 0);
   const totalSpent = formatPrice(spent, currencyCode);
@@ -195,31 +206,29 @@ export const PurchaseHistoryScreen: React.FC<
     : null;
 
   return (
-    <PurchaseHistoryProvider value={{ totalCount }}>
-      <PaginatedHistoryScreen
-        title={t('labels.purchaseHistory')}
-        subtitle={itemName}
-        items={purchases}
-        state={state}
-        onRetry={retry}
-        onEndReached={loadMore}
-        isFetchingMore={isFetchingMore}
-        keyExtractor={keyExtractor}
-        renderItem={renderItem}
-        getItemType={getPurchaseItemType}
-        summary={
-          <PurchaseHistoryHeader
-            totalCount={totalCount}
-            totalSpent={totalSpent}
-            averageSpent={averageSpent}
-          />
-        }
-        emptyIcon="receipt-outline"
-        emptyTitle={t('purchaseHistory.emptyTitle')}
-        emptyDescription={t('purchaseHistory.emptySubtitle')}
-        componentName="PurchaseHistoryScreen"
-      />
-    </PurchaseHistoryProvider>
+    <PaginatedHistoryScreen
+      title={t('labels.purchaseHistory')}
+      subtitle={itemName}
+      items={purchases}
+      state={state}
+      onRetry={retry}
+      onEndReached={loadMore}
+      isFetchingMore={isFetchingMore}
+      keyExtractor={keyExtractor}
+      renderItem={makeRenderItem(totalCount)}
+      getItemType={getPurchaseItemType}
+      summary={
+        <PurchaseHistoryHeader
+          totalCount={totalCount}
+          totalSpent={totalSpent}
+          averageSpent={averageSpent}
+        />
+      }
+      emptyIcon="receipt-outline"
+      emptyTitle={t('purchaseHistory.emptyTitle')}
+      emptyDescription={t('purchaseHistory.emptySubtitle')}
+      componentName="PurchaseHistoryScreen"
+    />
   );
 };
 

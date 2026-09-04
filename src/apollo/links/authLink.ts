@@ -2,7 +2,7 @@ import { SetContextLink } from '@apollo/client/link/context';
 import { useStore } from '#store';
 import { env } from '#/config/env';
 import { LogoutCleanup } from '../logoutCleanup';
-import { getDeviceIdSync } from '#/utils/deviceId';
+import { getDeviceIdSync } from '#/storage/deviceId';
 import { isTokenExpired, isTokenExpiringSoon } from '#/utils/tokenExpiry';
 import { proactiveTokenRefresh } from './refreshToken';
 import { logger } from '#/utils/environment';

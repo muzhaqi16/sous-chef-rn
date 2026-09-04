@@ -10,19 +10,19 @@ import {
   usePreferences,
 } from '#store/useAppStore';
 import { authService } from '#/services/authService';
-import { useCredentialStorage } from '#hooks/auth/useCredentialStorage';
+import { useCredentialStorage } from '#features/profile/hooks/useCredentialStorage';
 import { useMutation } from '@apollo/client/react';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import { type UpdateSettingsInput } from '#/graphql/generated/schemaTypes';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import type { SettingItem } from '#components/molecules/SettingRow';
+import type { SettingItem } from '#components/organisms/SettingRow';
 
 import {
   PROFILE_SETTINGS_CONFIG,
   type SettingItemConfig,
 } from '#/config/settingsConfig';
 import { SUPPORTED_LANGUAGES } from '#/i18n/config';
-import { BiometricSetupModal } from '#components/organisms/BiometricSetupModal';
+import { BiometricSetupModal } from '#features/profile/components/BiometricSetupModal';
 import { errorService } from '#/services/errorService';
 import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
 
@@ -222,6 +222,9 @@ export const useConfigurableSettings = () => {
                         const email = user?.email;
                         try {
                           if (email) {
+                            // Server first, while the session that authorises
+                            // it is live; then the local slot.
+                            await authService.revokeDeviceCredentialForThisDevice();
                             await removeCredentials(email);
                             setBiometricEnabled(false);
                           }
@@ -277,7 +280,10 @@ export const useConfigurableSettings = () => {
             // each clear a different subset is how the shared-device residue
             // got there; this is the only one.
             const signOut = () => {
-              void authService.logout();
+              // Keeps the biometric credential: signing back in after a
+              // deliberate sign-out is exactly what it exists for, and the
+              // refresh-token lineage this revokes cannot serve that.
+              void authService.logout({ keepBiometricCredentials: true });
               logger.debug('User logged out');
             };
 

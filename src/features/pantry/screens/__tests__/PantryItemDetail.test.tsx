@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { screen } from '@testing-library/react-native';
-import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
+import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   GetPantryItemBatchesDocument,
@@ -72,7 +72,7 @@ jest.mock('#store/useAppStore', () => ({
   ),
 }));
 
-jest.mock('#components/molecules/Header', () => ({
+jest.mock('#components/organisms/Header', () => ({
   Header: ({ rightActions }: { rightActions?: HeaderAction[] }) => {
     const { View } = require('react-native');
     return (

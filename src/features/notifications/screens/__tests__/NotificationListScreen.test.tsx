@@ -89,7 +89,7 @@ jest.mock(
   }),
 );
 
-jest.mock('#components/molecules/Header', () => ({
+jest.mock('#components/organisms/Header', () => ({
   Header: ({ title }: { title?: string }) => {
     const { Text } = require('react-native');
     return <Text>{title}</Text>;
@@ -113,7 +113,7 @@ jest.mock('#features/notifications/utils/notificationGrouping', () => ({
   groupNotificationsByDate: jest
     .fn()
     .mockReturnValue({ urgent: [], today: [], earlier: [] }),
-  createSectionListData: jest.fn().mockReturnValue([]),
+  createNotificationFeedRows: jest.fn().mockReturnValue([]),
 }));
 
 beforeEach(() => {
@@ -144,7 +144,7 @@ describe('NotificationListScreen', () => {
   it('renders with notifications data', () => {
     const {
       groupNotificationsByDate,
-      createSectionListData,
+      createNotificationFeedRows,
     } = require('#features/notifications/utils/notificationGrouping');
     groupNotificationsByDate.mockReturnValue({
       urgent: [],
@@ -159,18 +159,17 @@ describe('NotificationListScreen', () => {
       ],
       earlier: [],
     });
-    createSectionListData.mockReturnValue([
+    createNotificationFeedRows.mockReturnValue([
+      { kind: 'header', title: 'Today' },
       {
-        title: 'Today',
-        data: [
-          {
-            id: 'n1',
-            title: 'Test',
-            message: 'msg',
-            category: 'PANTRY',
-            isRead: false,
-          },
-        ],
+        kind: 'item',
+        notification: {
+          id: 'n1',
+          title: 'Test',
+          message: 'msg',
+          category: 'PANTRY',
+          isRead: false,
+        },
       },
     ]);
 

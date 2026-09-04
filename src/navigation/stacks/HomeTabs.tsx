@@ -16,7 +16,7 @@ import { ShoppingListStack } from '#navigation/stacks/ShoppingListStack';
 import { RecipeStack } from '#navigation/stacks/RecipeStack';
 import { MealPlanStack } from '#navigation/stacks/MealPlanStack';
 import { TabBarActionsProvider } from '#/context/TabBarActionsContext';
-import { FloatingTabBar } from '#components/navigation/FloatingTabBar/FloatingTabBar';
+import { FloatingTabBar } from '#app/FloatingTabBar/FloatingTabBar';
 
 function HomeTabsLayout({ children }: { children: React.ReactNode }) {
   return (

@@ -20,7 +20,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
 import type { RootState } from '#store/index';
-import { showLocalNotification } from '#utils/notifications/localNotificationHelper';
+import { showLocalNotification } from '#/services/notifications/localNotificationHelper';
 import { registerFcmTapHandlers } from '#/services/push/nativePushMessaging';
 import { registerIosPushTapHandlers } from '#/services/push/iosPushMessaging';
 import {

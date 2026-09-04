@@ -4,7 +4,7 @@ import React from 'react';
 import type { TextInputProps } from 'react-native';
 import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import type { InfoRowProps } from '#components/molecules/InfoRow';
+import type { InfoRowProps } from '#components/atoms/InfoRow';
 import { ListSettings } from '../ListSettings';
 
 const render = (ui: React.ReactElement) => renderWithApollo(ui);
@@ -97,31 +97,34 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   },
 }));
 jest.mock('#/utils/finallyHelpers');
-jest.mock('#utils/ownershipHelpers', () => ({
+jest.mock('#features/shoppingList/utils/ownershipHelpers', () => ({
   isShoppingListOwner: jest.fn(() => true),
   getShoppingListRole: jest.fn(() => 'OWNER'),
   formatRoleDisplay: jest.fn(() => 'Owner'),
   getShoppingListOwnerInfo: jest.fn(() => null),
 }));
 
-jest.mock('#components/molecules/ScreenHeader', () => ({
-  ScreenHeader: ({
-    title,
-    rightElement,
+jest.mock('#components/templates/Screen', () => ({
+  Screen: ({
+    header,
+    children,
   }: {
-    title: string;
-    rightElement?: React.ReactNode;
+    header?: { title?: string; rightElement?: React.ReactNode };
+    children: React.ReactNode;
   }) => {
     const { View, Text } = require('react-native');
     return (
-      <View testID="screen-header">
-        <Text>{title}</Text>
-        {rightElement}
+      <View>
+        <View testID="screen-header">
+          <Text>{header?.title}</Text>
+          {header?.rightElement}
+        </View>
+        {children}
       </View>
     );
   },
 }));
-jest.mock('#components/molecules/InfoRow', () => ({
+jest.mock('#components/atoms/InfoRow', () => ({
   InfoRow: ({ label, value }: Pick<InfoRowProps, 'label' | 'value'>) => {
     const { View, Text } = require('react-native');
     return (
@@ -157,7 +160,7 @@ jest.mock('#components/molecules/ModalPicker', () => ({
     );
   },
 }));
-jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
+jest.mock('#components/molecules/BaseInput/BaseInput', () => ({
   BaseInput: ({ label, ...props }: { label?: string } & TextInputProps) => {
     const { View, Text, TextInput } = require('react-native');
     return (
@@ -250,13 +253,19 @@ describe('ListSettings', () => {
   });
 
   it('shows read-only view for non-owner collaborator', () => {
-    const { isShoppingListOwner } = require('#utils/ownershipHelpers');
+    const {
+      isShoppingListOwner,
+    } = require('#features/shoppingList/utils/ownershipHelpers');
     isShoppingListOwner.mockReturnValue(false);
 
-    const { getShoppingListRole } = require('#utils/ownershipHelpers');
+    const {
+      getShoppingListRole,
+    } = require('#features/shoppingList/utils/ownershipHelpers');
     getShoppingListRole.mockReturnValue('EDITOR');
 
-    const { formatRoleDisplay } = require('#utils/ownershipHelpers');
+    const {
+      formatRoleDisplay,
+    } = require('#features/shoppingList/utils/ownershipHelpers');
     formatRoleDisplay.mockReturnValue('Editor');
 
     render(<ListSettings route={editRoute} />);
@@ -269,7 +278,7 @@ describe('ListSettings', () => {
       isShoppingListOwner,
       getShoppingListRole,
       formatRoleDisplay,
-    } = require('#utils/ownershipHelpers');
+    } = require('#features/shoppingList/utils/ownershipHelpers');
     isShoppingListOwner.mockReturnValue(false);
     getShoppingListRole.mockReturnValue('EDITOR');
     formatRoleDisplay.mockReturnValue('Editor');
@@ -280,7 +289,7 @@ describe('ListSettings', () => {
   });
 
   it('shows Leave List section for non-owner collaborator', () => {
-    const ownerHelpers = require('#utils/ownershipHelpers');
+    const ownerHelpers = require('#features/shoppingList/utils/ownershipHelpers');
     ownerHelpers.isShoppingListOwner.mockReturnValue(false);
 
     const useShoppingListDetailsModule = require('#features/shoppingList/hooks/useShoppingListDetails');
@@ -305,7 +314,7 @@ describe('ListSettings', () => {
   });
 
   it('shows disabled Leave List when list is home-linked for non-owner', () => {
-    const ownerHelpers = require('#utils/ownershipHelpers');
+    const ownerHelpers = require('#features/shoppingList/utils/ownershipHelpers');
     ownerHelpers.isShoppingListOwner.mockReturnValue(false);
 
     const useShoppingListDetailsModule = require('#features/shoppingList/hooks/useShoppingListDetails');
@@ -331,7 +340,7 @@ describe('ListSettings', () => {
   });
 
   it('navigates to the linked home when a non-owner taps Manage Home', () => {
-    const ownerHelpers = require('#utils/ownershipHelpers');
+    const ownerHelpers = require('#features/shoppingList/utils/ownershipHelpers');
     ownerHelpers.isShoppingListOwner.mockReturnValue(false);
 
     const useShoppingListDetailsModule = require('#features/shoppingList/hooks/useShoppingListDetails');
@@ -364,7 +373,7 @@ describe('ListSettings', () => {
     // No ownership, no collaborator row, and no home membership — the only way
     // this state arises is the user having just left the linked home, so the
     // screen should self-unwind instead of stranding them on a ghost list.
-    const ownerHelpers = require('#utils/ownershipHelpers');
+    const ownerHelpers = require('#features/shoppingList/utils/ownershipHelpers');
     ownerHelpers.isShoppingListOwner.mockReturnValue(false);
 
     const useShoppingListDetailsModule = require('#features/shoppingList/hooks/useShoppingListDetails');
@@ -390,7 +399,7 @@ describe('ListSettings', () => {
   });
 
   it('shows shared info when list is shared and user is owner', () => {
-    const ownerHelpers = require('#utils/ownershipHelpers');
+    const ownerHelpers = require('#features/shoppingList/utils/ownershipHelpers');
     ownerHelpers.isShoppingListOwner.mockReturnValue(true);
 
     const useShoppingListDetailsModule = require('#features/shoppingList/hooks/useShoppingListDetails');

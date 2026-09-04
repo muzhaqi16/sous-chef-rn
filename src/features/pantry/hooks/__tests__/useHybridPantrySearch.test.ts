@@ -18,7 +18,7 @@ jest.mock('#hooks/utils/useDebouncedValue', () => ({
   useDebouncedValue: (value: unknown) => value,
 }));
 
-jest.mock('#/utils/hybridSort', () => ({
+jest.mock('#features/pantry/utils/hybridSort', () => ({
   shouldUseServerSort: (
     totalCount: number,
     pageSize: number,

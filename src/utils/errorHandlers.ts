@@ -9,10 +9,7 @@ import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from './errors/versionConflict';
-import {
-  isInvalidUnitError,
-  getInvalidUnitMessage,
-} from './errors/invalidUnit';
+import { isInvalidUnitError } from './errors/invalidUnit';
 import { errorService, localizedErrorMessage } from '#/services/errorService';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { storeApi } from '#store';
@@ -158,10 +155,12 @@ export function versionConflictCheck(
 export function invalidUnitCheck(): MutationErrorCheck {
   return {
     detect: error => isInvalidUnitError(error),
-    handle: error => {
+    // The refusal's own `message` is unlocalizable English by construction, and
+    // it names no units that would work — so the copy is ours.
+    handle: () => {
       alertService.alert(
         t('errors.invalidUnitTitle'),
-        getInvalidUnitMessage(error),
+        t('errors.codes.unitInvalid'),
       );
     },
   };

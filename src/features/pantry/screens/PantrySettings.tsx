@@ -5,13 +5,12 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#/utils/iconUtils';
 import { useTranslation } from '#/i18n';
-import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
+import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
-import { ScreenHeader } from '#components/molecules/ScreenHeader';
-import { LoadingInline } from '#components/atoms/Loading';
-import { InfoRow } from '#components/molecules/InfoRow';
+import { Loading } from '#components/molecules/Loading';
+import { InfoRow } from '#components/atoms/InfoRow';
 import { usePantrySettings } from '#features/pantry/hooks/usePantrySettings';
 import { useSelectedHomeId, useSetSelectedPantryId } from '#store/useAppStore';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -25,6 +24,7 @@ import {
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { Text } from '#components/atoms/Text';
+import { Screen } from '#components/templates/Screen';
 
 function syncPantryFormState(
   pantry:
@@ -207,42 +207,44 @@ export const PantrySettings: React.FC<
   // `loading && !pantry` — a cached copy renders instead of blanking the screen.
   if (pantryId && loadingPantry && !pantry) {
     return (
-      <View style={styles.container}>
-        <ScreenHeader title={t('pantrySettings.loading')} onBack={goBack} />
-        <LoadingInline message={t('pantrySettings.loadingData')} />
-      </View>
+      <Screen
+        header={{ title: t('pantrySettings.loading'), back: goBack }}
+        scroll="none"
+        gutter="none"
+      >
+        <Loading message={t('pantrySettings.loadingData')} />
+      </Screen>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <ScreenHeader
-        title={
-          !pantryId
-            ? t('pantrySettings.createTitle')
-            : t('pantrySettings.title')
-        }
-        onBack={goBack}
-        rightElement={
-          (
-            !pantryId ? permissions.canCreatePantry : permissions.canEditItems
-          ) ? (
-            <Pressable
-              onPress={handleSave}
-              disabled={saving}
-              style={({ pressed }) => pressed && styles.pressed}
-            >
-              <Text size="md" weight="semibold" tone="accent">
-                {saving
-                  ? t('labels.saving')
-                  : !pantryId
-                  ? t('labels.create')
-                  : t('labels.save')}
-              </Text>
-            </Pressable>
-          ) : undefined
-        }
-      />
+    <Screen
+      header={{
+        title: !pantryId
+          ? t('pantrySettings.createTitle')
+          : t('pantrySettings.title'),
+        back: goBack,
+        rightElement: (
+          !pantryId ? permissions.canCreatePantry : permissions.canEditItems
+        ) ? (
+          <Pressable
+            onPress={handleSave}
+            disabled={saving}
+            style={({ pressed }) => pressed && styles.pressed}
+          >
+            <Text role="bodyStrong" tone="accent">
+              {saving
+                ? t('labels.saving')
+                : !pantryId
+                ? t('labels.create')
+                : t('labels.save')}
+            </Text>
+          </Pressable>
+        ) : undefined,
+      }}
+      scroll="list"
+      gutter="none"
+    >
       <ScrollView style={styles.content}>
         <View style={commonStyles.settingsSection}>
           <Text style={commonStyles.settingsSectionTitle}>
@@ -274,7 +276,11 @@ export const PantrySettings: React.FC<
                 {t('pantrySettings.defaultPantryDesc')}
               </Text>
             </View>
-            <BaseSwitch value={isDefault} onValueChange={handleToggleDefault} />
+            <BaseSwitch
+              accessibilityLabel={t('pantrySettings.defaultPantry')}
+              value={isDefault}
+              onValueChange={handleToggleDefault}
+            />
           </View>
         </View>
 
@@ -303,8 +309,7 @@ export const PantrySettings: React.FC<
             <AppPressable style={styles.deleteButton} onPress={handleDelete}>
               <Icon name="trash-outline" size={20} tone="error" />
               <Text
-                size="md"
-                weight="semibold"
+                role="bodyStrong"
                 tone="error"
                 style={styles.deleteButtonText}
               >
@@ -312,18 +317,13 @@ export const PantrySettings: React.FC<
               </Text>
             </AppPressable>
 
-            <Text
-              size="sm"
-              tone="secondary"
-              lineHeight="normal"
-              style={styles.dangerWarning}
-            >
+            <Text role="caption" tone="secondary" style={styles.dangerWarning}>
               {t('pantrySettings.deleteWarning')}
             </Text>
           </View>
         ) : null}
       </ScrollView>
-    </View>
+    </Screen>
   );
 };
 

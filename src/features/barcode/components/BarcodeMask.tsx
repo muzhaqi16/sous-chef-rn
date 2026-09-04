@@ -2,7 +2,7 @@ import React from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import Svg, { Defs, Rect, Mask } from 'react-native-svg';
-import AnimatedScanLine from '#components/molecules/AnimatedScanLine';
+import AnimatedScanLine from '#features/barcode/components/AnimatedScanLine';
 
 interface BarcodeMaskProps {
   width?: number;

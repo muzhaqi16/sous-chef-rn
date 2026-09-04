@@ -242,7 +242,7 @@ describe('useCrudOperations', () => {
       // The real en.json errors.field.unit string — field wins over code.
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
-        "This item's unit can't be changed right now. Deplete its batches first, or choose a unit it converts to.",
+        "This item's unit can't be used right now. Deplete its batches first, or pick a unit it converts to \u2014 a made-up unit can't be measured against one.",
       );
     });
 

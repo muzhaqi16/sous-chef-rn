@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
-import { Button } from '#components/atoms/Button';
+import { Button } from '#components/molecules/Button';
 import { t as tGlobal } from '#/i18n';
 import { useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { Header } from '#components/molecules/Header';
 import { useUpdateUser, useUser } from '#store/useAppStore';
 import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -15,7 +14,6 @@ import {
   type VerifyEmailFn,
 } from '#features/auth/hooks/useVerifyEmail';
 import { logger } from '#/utils/environment';
-import { useToast } from '#/hooks/useToast';
 import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
 import {
   getRateLimitMessage,
@@ -25,6 +23,8 @@ import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
+import { Screen } from '#components/templates/Screen';
+import { toastService } from '#services/toastService';
 
 interface EmailVerificationRouteParams {
   token: string;
@@ -38,7 +38,6 @@ interface VerificationRun {
   verifyEmail: VerifyEmailFn;
   userId: string | undefined;
   updateUser: (updates: Partial<{ emailVerified: boolean }>) => void;
-  toast: ReturnType<typeof useToast>;
   setVerificationResult: (v: 'success' | 'error' | null) => void;
   setErrorMessage: (v: string) => void;
   /** Whichever busy flag drives the progress indicator for this run. */
@@ -53,7 +52,6 @@ async function performVerificationImpl({
   verifyEmail,
   userId,
   updateUser,
-  toast,
   setVerificationResult,
   setErrorMessage,
   setBusy,
@@ -99,10 +97,7 @@ async function performVerificationImpl({
 
       setVerificationResult('success');
 
-      toast({
-        message: tGlobal('auth.emailVerifiedToast'),
-        type: 'success',
-      });
+      toastService.success(tGlobal('auth.emailVerifiedToast'));
     } else {
       // A throttled request says how long to wait; the server's raw text is not a
       // user message.
@@ -133,10 +128,7 @@ async function performVerificationImpl({
     setErrorMessage(errorMsg);
     setVerificationResult('error');
 
-    toast({
-      message: errorMsg,
-      type: 'error',
-    });
+    toastService.error(errorMsg);
   }
 
   setBusy(false);
@@ -151,7 +143,6 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
   const { navigateToLogin, replaceWithLogin } = useAuthNavigation();
   const user = useUser();
   const updateUser = useUpdateUser();
-  const toast = useToast();
 
   const { token } = (route.params ??
     {}) as Partial<EmailVerificationRouteParams>;
@@ -180,7 +171,6 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
       verifyEmail,
       userId,
       updateUser,
-      toast,
       setVerificationResult,
       setErrorMessage,
       setBusy: setIsRetrying,
@@ -198,13 +188,12 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
       verifyEmail,
       userId,
       updateUser,
-      toast,
       setVerificationResult,
       setErrorMessage,
       setBusy: setIsVerifying,
       isRetry: false,
     });
-  }, [token, verifyEmail, userId, updateUser, toast]);
+  }, [token, verifyEmail, userId, updateUser]);
 
   // Held briefly so the success state registers; the cleanup cancels the pending
   // hand-off, so dismissing the screen doesn't navigate a second later.
@@ -229,8 +218,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
   }, [verificationResult, userId, replaceWithLogin, dismiss]);
 
   return (
-    <View style={styles.container}>
-      <Header onClose={dismiss} />
+    <Screen header={{ close: dismiss }} scroll="list" gutter="none">
       <View style={styles.content}>
         {!!isVerifying && (
           <>
@@ -240,10 +228,9 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
               message={t('auth.verifyingEmail')}
             />
             <Text
-              size="md"
+              role="body"
               tone="secondary"
               align="center"
-              lineHeight="relaxed"
               style={styles.subtitle}
             >
               {t('auth.verifyingEmailSubtitle')}
@@ -256,19 +243,13 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
             <View style={styles.iconContainer}>
               <Icon name="checkmark-circle" size={64} tone="success" />
             </View>
-            <Text
-              size="xl"
-              weight="semibold"
-              align="center"
-              style={styles.title}
-            >
+            <Text role="subheading" align="center" style={styles.title}>
               {t('auth.emailVerifiedTitle')}
             </Text>
             <Text
-              size="md"
+              role="body"
               tone="secondary"
               align="center"
-              lineHeight="relaxed"
               style={styles.subtitle}
             >
               {t('auth.emailVerifiedDescription')}
@@ -299,19 +280,13 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
             <View style={styles.iconContainer}>
               <Icon name="close-circle-outline" size={64} tone="error" />
             </View>
-            <Text
-              size="xl"
-              weight="semibold"
-              align="center"
-              style={styles.title}
-            >
+            <Text role="subheading" align="center" style={styles.title}>
               {t('auth.verificationFailedTitle')}
             </Text>
             <Text
-              size="md"
+              role="body"
               tone="secondary"
               align="center"
-              lineHeight="relaxed"
               style={styles.subtitle}
             >
               {errorMessage}
@@ -328,7 +303,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
           </>
         )}
       </View>
-    </View>
+    </Screen>
   );
 };
 

@@ -15,8 +15,10 @@ import {
   type AlertEntry,
   type AlertButton,
 } from '#/services/alertService';
-import { SPRING, TIMING, ALERT } from '#/constants/animations';
+import { ALERT } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
+import { zIndex } from '#/theme/foundations/zIndex';
+import { motion } from '#/theme/foundations/motion';
 
 interface AlertCardProps {
   entry: AlertEntry;
@@ -39,8 +41,8 @@ const AlertCard: React.FC<AlertCardProps> = ({
   };
 
   useEffect(() => {
-    scale.set(withSpring(1, SPRING.GENTLE));
-    opacity.set(withTiming(1, { duration: TIMING.STANDARD }));
+    scale.set(withSpring(1, motion.spring.GENTLE));
+    opacity.set(withTiming(1, { duration: motion.timing.STANDARD }));
   }, [scale, opacity]);
 
   const handleButtonPress = (button: AlertButton) => {
@@ -50,14 +52,18 @@ const AlertCard: React.FC<AlertCardProps> = ({
     button.onPress?.();
 
     scale.set(
-      withTiming(ALERT.EXIT_SCALE_TO, { duration: TIMING.FAST }, finished => {
-        'worklet';
-        if (finished) {
-          scheduleOnRN(handleDismissEntry);
-        }
-      }),
+      withTiming(
+        ALERT.EXIT_SCALE_TO,
+        { duration: motion.timing.FAST },
+        finished => {
+          'worklet';
+          if (finished) {
+            scheduleOnRN(handleDismissEntry);
+          }
+        },
+      ),
     );
-    opacity.set(withTiming(0, { duration: TIMING.FAST }));
+    opacity.set(withTiming(0, { duration: motion.timing.FAST }));
   };
 
   const isTop = stackIndex === 0;
@@ -82,12 +88,15 @@ const AlertCard: React.FC<AlertCardProps> = ({
       // ALERT.MAX_VISIBLE at once, and two matches fail a bare `by.id` with a
       // multiple-match error. The card behind is inert anyway.
       testID={isTop ? 'alert-modal' : 'alert-modal-behind'}
-      style={[styles.card, animatedStyle, { zIndex: 100 - stackIndex }]}
+      style={[
+        styles.card,
+        animatedStyle,
+        { zIndex: zIndex.modal - stackIndex },
+      ]}
       accessibilityViewIsModal={isTop}
     >
       <Text
-        size="lg"
-        weight="semibold"
+        role="heading"
         align="center"
         style={styles.title}
         accessibilityRole="header"
@@ -95,12 +104,7 @@ const AlertCard: React.FC<AlertCardProps> = ({
         {entry.title}
       </Text>
       {entry.message ? (
-        <Text
-          size="base"
-          tone="secondary"
-          align="center"
-          style={styles.message}
-        >
+        <Text tone="secondary" align="center" style={styles.message}>
           {entry.message}
         </Text>
       ) : null}
@@ -132,7 +136,7 @@ const AlertCard: React.FC<AlertCardProps> = ({
               onPress={() => handleButtonPress(button)}
             >
               <Text
-                size="base"
+                role="bodyStrong"
                 align="center"
                 style={[
                   styles.buttonText,
@@ -178,7 +182,7 @@ const AlertStack: React.FC<AlertStackProps> = ({ alerts, onDismiss }) => {
   useEffect(() => {
     backdropOpacity.set(
       withTiming(alerts.length > 0 ? ALERT.BACKDROP_OPACITY : 0, {
-        duration: TIMING.STANDARD,
+        duration: motion.timing.STANDARD,
       }),
     );
   }, [alerts.length, backdropOpacity]);
@@ -199,6 +203,7 @@ const AlertStack: React.FC<AlertStackProps> = ({ alerts, onDismiss }) => {
         <Pressable
           style={styles.backdropPressable}
           onPress={handleBackdropPress}
+          accessible={false}
         />
       </Animated.View>
 
@@ -298,15 +303,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
     padding: theme.spacing.mdPlus,
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 4,
-        blurRadius: 16,
-        spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.2)',
-      },
-    ],
+    ...theme.shadows.lg,
     minWidth: 300,
     maxWidth: '85%',
   },
@@ -346,20 +343,14 @@ const styles = StyleSheet.create(theme => ({
   destructiveButton: {
     backgroundColor: theme.colors.error,
   },
-  buttonText: {
-    fontWeight: theme.fonts.weight.semibold,
-  },
+  buttonText: {},
   defaultButtonText: {
     color: theme.colors.onPrimary,
   },
   cancelButtonText: {
     color: theme.colors.textSecondary,
-    fontWeight: theme.fonts.weight.medium,
   },
   destructiveButtonText: {
     color: theme.colors.onError,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

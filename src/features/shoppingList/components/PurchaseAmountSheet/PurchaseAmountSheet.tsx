@@ -6,7 +6,7 @@ import {
   BottomSheetModal,
   useStandardBottomSheet,
 } from '#hooks/useStandardBottomSheet';
-import { Header } from '#/components/molecules/Header';
+import { Header } from '#components/organisms/Header';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { formatQuantity } from '#/utils/formatQuantity';
@@ -22,6 +22,7 @@ import {
   unitPriceFromTotal,
 } from '#features/shoppingList/utils/purchasePrice';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
 interface PurchaseAmountSheetItem {
   id: string;
@@ -141,6 +142,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
           rightActions={[
             {
               icon: 'checkmark',
+              accessibilityLabel: t('labels.save'),
               onPress: handleConfirm,
               variant: 'primary',
               disabled: loading || !quantityIsUsable,
@@ -150,19 +152,14 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
         />
         <View style={styles.headerSpacer} />
         <View style={styles.sections}>
-          <Text size="lg" weight="semibold" style={styles.itemName}>
+          <Text role="heading" style={styles.itemName}>
             {item?.itemName ?? ''}
           </Text>
 
           <View style={styles.section}>
-            <Text
-              size="sm"
-              weight="medium"
-              tone="secondary"
-              style={styles.sectionLabel}
-            >
+            <SectionHeader variant="overline" style={styles.sectionLabel}>
               {t('labels.quantity')}
-            </Text>
+            </SectionHeader>
             <View style={styles.inputRow}>
               <ThemedBottomSheetTextInput
                 style={styles.input}
@@ -175,14 +172,14 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
                 testID="purchase-quantity-input"
               />
               {item?.unitName ? (
-                <Text size="base" tone="secondary" style={styles.affix}>
+                <Text tone="secondary" style={styles.affix}>
                   {item.unitName}
                 </Text>
               ) : null}
             </View>
             {quantityError ? (
               <Text
-                size="sm"
+                role="caption"
                 tone="error"
                 style={styles.fieldError}
                 testID="purchase-quantity-error"
@@ -193,16 +190,11 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
           </View>
 
           <View style={styles.section}>
-            <Text
-              size="sm"
-              weight="medium"
-              tone="secondary"
-              style={styles.sectionLabel}
-            >
+            <SectionHeader variant="overline" style={styles.sectionLabel}>
               {t('purchaseAmountSheet.totalPrice')}
-            </Text>
+            </SectionHeader>
             <View style={styles.inputRow}>
-              <Text size="base" tone="secondary" style={styles.prefix}>
+              <Text tone="secondary" style={styles.prefix}>
                 {t('purchaseAmountSheet.currencySymbol')}
               </Text>
               <ThemedBottomSheetTextInput
@@ -220,7 +212,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
               />
             </View>
             {perUnitPrice != null ? (
-              <Text size="xs" tone="secondary" style={styles.perUnitHint}>
+              <Text role="caption" tone="secondary" style={styles.perUnitHint}>
                 {t(
                   item?.unitName
                     ? 'purchaseAmountSheet.perUnitOfHint'
@@ -275,8 +267,7 @@ const styles = StyleSheet.create(theme => ({
   },
   input: {
     flex: 1,
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.subheading,
     paddingVertical: theme.spacing.md,
     color: theme.colors.textPrimary,
   },

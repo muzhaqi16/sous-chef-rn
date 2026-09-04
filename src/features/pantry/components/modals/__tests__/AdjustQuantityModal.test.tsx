@@ -2,6 +2,7 @@ import React from 'react';
 import { screen, userEvent } from '@testing-library/react-native';
 import { AdjustQuantityModal } from '#features/pantry/components/modals/AdjustQuantityModal';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
+import { AdjustQuantityModal_PantryItemFragmentDoc } from '#features/pantry/components/modals/AdjustQuantityModal.generated';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -23,7 +24,7 @@ jest.mock('#components/atoms/BottomSheetKeyboardAwareScrollView', () => {
   };
 });
 
-jest.mock('#components/atoms/BottomSheetHeader', () => {
+jest.mock('#components/molecules/BottomSheetHeader', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
@@ -33,7 +34,7 @@ jest.mock('#components/atoms/BottomSheetHeader', () => {
       onConfirm,
       confirmLabel,
     }: React.ComponentProps<
-      typeof import('#components/atoms/BottomSheetHeader').BottomSheetHeader
+      typeof import('#components/molecules/BottomSheetHeader').BottomSheetHeader
     >) =>
       R.createElement(
         RN.View,
@@ -79,7 +80,7 @@ jest.mock('#components/molecules/FractionInput', () => {
   };
 });
 
-jest.mock('#components/molecules/FormInput', () => {
+jest.mock('#components/atoms/FormInput', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
@@ -89,7 +90,7 @@ jest.mock('#components/molecules/FormInput', () => {
       onChangeText,
       placeholder,
     }: React.ComponentProps<
-      typeof import('#components/molecules/FormInput').FormInput
+      typeof import('#components/atoms/FormInput').FormInput
     >) =>
       R.createElement(
         RN.View,
@@ -105,14 +106,14 @@ jest.mock('#components/molecules/FormInput', () => {
   };
 });
 
-jest.mock('#components/atoms/FormattedItemSubtitle', () => {
+jest.mock('#components/molecules/FormattedItemSubtitle', () => {
   const RN = require('react-native');
   return {
     FormattedItemSubtitle: ({
       quantity,
       unitSymbol,
     }: React.ComponentProps<
-      typeof import('#components/atoms/FormattedItemSubtitle').FormattedItemSubtitle
+      typeof import('#components/molecules/FormattedItemSubtitle').FormattedItemSubtitle
     >) =>
       require('react').createElement(
         RN.Text,
@@ -154,20 +155,25 @@ const PANTRY_ITEM_ID = 'pantry-1';
 function makeCache(overrides: Record<string, unknown> = {}) {
   return seedCache([
     {
-      __typename: 'PantryItem',
-      id: PANTRY_ITEM_ID,
-      itemName: 'Sugar',
-      quantity: 3,
-      lastUsedAt: null,
-      remainingNetWeight: null,
-      unit: {
-        __typename: 'Unit',
-        id: 'u1',
-        symbol: 'cups',
-        displayAsFraction: false,
+      // The production selection the consumer reads, so a thin fixture fails
+      // here instead of defining its own idea of complete.
+      fragment: AdjustQuantityModal_PantryItemFragmentDoc,
+      data: {
+        __typename: 'PantryItem',
+        id: PANTRY_ITEM_ID,
+        itemName: 'Sugar',
+        quantity: 3,
+        lastUsedAt: null,
+        remainingNetWeight: null,
+        unit: {
+          __typename: 'Unit',
+          id: 'u1',
+          symbol: 'cups',
+          displayAsFraction: false,
+        },
+        netWeightUnit: null,
+        ...overrides,
       },
-      netWeightUnit: null,
-      ...overrides,
     },
   ]);
 }

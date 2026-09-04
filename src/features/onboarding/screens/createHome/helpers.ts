@@ -48,7 +48,7 @@ export const createPantryForHome = async (
     const result = await createPantry({
       homeId,
       name: pantryName,
-      description: 'Default pantry',
+      description: t('onBoarding.defaultPantryDescription'),
       isDefault: true,
       tags: ['default', 'onboarding'],
     });

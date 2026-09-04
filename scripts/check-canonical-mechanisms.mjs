@@ -65,10 +65,6 @@ const importsName = (module, name) =>
     `import\\s*(?:type\\s*)?\\{[^}]*\\b${name}\\b[^}]*\\}\\s*from\\s*['"]${module}['"]`,
   );
 
-/** Any import from a module (exact, or a subpath). */
-const importsFrom = module =>
-  new RegExp(`from\\s*['"]${module}(?:/[^'"]*)?['"]`);
-
 /**
  * Each concern: what the canonical mechanism is, what an alternative looks
  * like, and which files are allowed to hold the alternative because they ARE
@@ -79,21 +75,46 @@ export const CONCERNS = [
     id: 'list-primitive',
     canonical: 'FlashList, with an explicit renderScrollComponent',
     why: 'RN lists do not participate in the gesture arbitration the swipeable rows need.',
-    detect: importsName('react-native', '(FlatList|SectionList)'),
+    // A `pagingEnabled` horizontal list is a PAGER, not a row list: it has no
+    // rows to recycle and no row gestures to arbitrate, and it depends on
+    // `getItemLayout` + native paging, which FlashList v2 computes itself.
+    // CLAUDE.md's own rule is not to move a list to FlashList speculatively.
+    detect: source =>
+      importsName('react-native', '(FlatList|SectionList)').test(source) &&
+      !/pagingEnabled/.test(source),
     owns: [],
   },
   {
     id: 'image-component',
-    canonical: 'CachedImage from #components/atoms/CachedImage',
-    why: 'The wrapper owns caching, the recycling key and the placeholder.',
-    detect: importsName('react-native', 'Image'),
-    owns: [/^src\/components\/atoms\/CachedImage\.tsx$/],
+    canonical:
+      'CachedImage for a remote url, LocalImage for a file or bundled asset',
+    why: 'The wrappers own caching, the recycling key and the placeholder.',
+    // The RENDERED element, not the import: `Image.getSize()` measures a file
+    // and draws nothing, so it has no caching or placeholder to get wrong.
+    // `Animated.Image` reaches the same RN component without naming it in an
+    // import, so it is matched on the element instead.
+    detect: source =>
+      (importsName('react-native', 'Image').test(source) &&
+        /<Image[\s/>]/.test(source)) ||
+      /<Animated\.Image[\s/>]/.test(source),
+    owns: [
+      /^src\/components\/atoms\/CachedImage\.tsx$/,
+      /^src\/components\/atoms\/LocalImage\.tsx$/,
+    ],
   },
   {
     id: 'modal-surface',
     canonical: 'BottomSheetModal via useStandardBottomSheet, or alertService',
-    why: "RN's Modal bypasses the global backdrop claim, so the tab bar stays lit under it.",
-    detect: importsName('react-native', 'Modal'),
+    why: "A transparent RN Modal that dims nothing leaves the tab bar lit under it — RN's Modal does not claim the global backdrop.",
+    // The harm is the UNDIMMED surface, not the import. A modal that paints its
+    // own full-bleed overlay, or is opaque, covers what the global backdrop
+    // would have; one that is transparent and dims nothing does not. Choosing
+    // a bottom sheet over a centred dialog is a design decision this gate has
+    // no business making — it checks the defect it names.
+    detect: source =>
+      importsName('react-native', 'Modal').test(source) &&
+      /<Modal[\s\S]{0,400}?\btransparent\b(?!=\{false\})/.test(source) &&
+      !/(overlays\.|backdrop|Backdrop)/.test(source),
     owns: [
       /^src\/components\/providers\/AlertProvider\.tsx$/,
       /^src\/components\/organisms\/SpotlightCoachMark\//,
@@ -102,16 +123,26 @@ export const CONCERNS = [
   },
   {
     id: 'date-formatting',
-    canonical: 'the shared formatters in src/utils (dateUtils, dateLocale)',
+    canonical:
+      'the shared formatters in src/utils (formatters/date, dateUtils)',
     why: 'A direct format() call takes no locale, so the date stays English after a language change.',
-    detect: importsFrom('date-fns'),
+    // Only the functions that RENDER a date carry the locale. `parseISO`,
+    // `startOfDay`, `addDays`, `isSameDay` and the rest are date arithmetic:
+    // they return Dates and numbers, and having no locale is the point.
+    detect: importsName(
+      'date-fns',
+      '(format|formatDistance|formatDistanceToNow|formatDistanceStrict|formatRelative|formatDuration|lightFormat)',
+    ),
     owns: [/^src\/utils\//],
   },
   {
     id: 'device-storage',
     canonical: 'a persisted slice of the Zustand store',
     why: 'A direct key-value read is invisible to the session-scoped reset, so it survives a sign-out.',
-    detect: /from\s*['"]#\/?storage\/mmkv['"]/,
+    // `zustandStorage` IS the canonical mechanism — it is the persist adapter a
+    // slice hands to Zustand. The finding is the raw `storage` handle, which
+    // reads and writes keys nothing enumerates.
+    detect: importsName('#\\/?storage\\/mmkv', 'storage'),
     owns: [/^src\/storage\//, /^src\/store\//, /^src\/apollo\//],
   },
 ];
@@ -119,7 +150,10 @@ export const CONCERNS = [
 const violations = (rel, source) =>
   CONCERNS.filter(
     concern =>
-      !concern.owns.some(re => re.test(rel)) && concern.detect.test(source),
+      !concern.owns.some(re => re.test(rel)) &&
+      (typeof concern.detect === 'function'
+        ? concern.detect(source)
+        : concern.detect.test(source)),
   ).map(concern => concern.id);
 
 if (process.argv.includes('--self-test')) {
@@ -130,12 +164,78 @@ if (process.argv.includes('--self-test')) {
       ['date-formatting'],
     ],
     ['src/utils/dateUtils.ts', "import { format } from 'date-fns';", []],
+    [
+      'src/features/x/List.tsx',
+      "import { FlatList } from 'react-native';",
+      ['list-primitive'],
+    ],
+    // A pager is a different primitive, not an un-migrated list.
+    [
+      'src/features/x/Carousel.tsx',
+      "import { FlatList } from 'react-native';\nconst a = <FlatList horizontal pagingEnabled />;",
+      [],
+    ],
+    [
+      'src/features/x/Photo.tsx',
+      "import { Image } from 'react-native';\nconst a = <Image source={s} />;",
+      ['image-component'],
+    ],
+    // Measuring a file draws nothing.
+    [
+      'src/features/x/Measure.ts',
+      "import { Image } from 'react-native';\nImage.getSize(uri, cb);",
+      [],
+    ],
+    // Animated.Image is the same RN component, reached without an import.
+    [
+      'src/features/x/Hero.tsx',
+      "import Animated from 'react-native-reanimated';\nconst a = <Animated.Image source={s} />;",
+      ['image-component'],
+    ],
+    [
+      'src/features/x/Dialog.tsx',
+      "import { Modal } from 'react-native';\nconst a = <Modal transparent visible={v} />;",
+      ['modal-surface'],
+    ],
+    // Dims the screen itself, so nothing stays lit under it.
+    [
+      'src/features/x/DimmedDialog.tsx',
+      "import { Modal } from 'react-native';\nconst a = <Modal transparent visible={v} />;\nconst s = { bg: theme.colors.overlays.medium };",
+      [],
+    ],
+    [
+      'src/features/x/FullScreen.tsx',
+      "import { Modal } from 'react-native';\nconst a = <Modal transparent={false} visible={v} />;",
+      [],
+    ],
+    // Date ARITHMETIC has no locale to lose.
+    [
+      'src/features/x/B2.tsx',
+      "import { parseISO, startOfDay, isSameDay } from 'date-fns';",
+      [],
+    ],
+    [
+      'src/features/x/B3.tsx',
+      "import { formatDistanceToNow } from 'date-fns';",
+      ['date-formatting'],
+    ],
     // Reaching the instance for something other than translating is fine.
     ['src/store/index.ts', 'getI18n().changeLanguage(x)', []],
     [
       'src/features/x/D.tsx',
       "import { Text } from '#components/atoms/Text';",
       [],
+    ],
+    // The persist adapter IS the canonical mechanism; the raw handle is not.
+    [
+      'src/features/x/store.ts',
+      "import { zustandStorage } from '#/storage/mmkv';",
+      [],
+    ],
+    [
+      'src/features/x/E2.ts',
+      "import { storage } from '#/storage/mmkv';",
+      ['device-storage'],
     ],
   ];
   let failed = false;

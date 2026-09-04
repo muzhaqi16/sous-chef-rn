@@ -1,16 +1,17 @@
 import React from 'react';
 import { logger } from '#/utils/environment';
 import { useTranslation } from '#/i18n';
-import { View, Image, Linking } from 'react-native';
+import { View, Linking } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { AuthWrapper } from '#features/auth/components/AuthWrapper';
-import { Button } from '#components/atoms/Button';
+import { Button } from '#components/molecules/Button';
 import { Link } from '#components/atoms/Link';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { getWebAppUrl } from '#utils/environment';
 import { appConfig } from '#/config/appConfig';
 import { Text } from '#components/atoms/Text';
+import { LocalImage } from '#components/atoms/LocalImage';
 
 export function LandingAuthScreen() {
   const { t } = useTranslation();
@@ -20,7 +21,7 @@ export function LandingAuthScreen() {
     <AuthWrapper testID="landing-auth-screen">
       {/* 1. Hero image flex-zone */}
       <View style={styles.heroContainer}>
-        <Image
+        <LocalImage
           source={appConfig.assets.logo}
           style={styles.hero}
           resizeMode="contain"
@@ -29,15 +30,14 @@ export function LandingAuthScreen() {
 
       {/* 2. Content flex-zone */}
       <View style={styles.content}>
-        <Text size="lg" weight="bold" align="left">
+        <Text role="heading" align="left">
           {t('auth.landingTitle')}
         </Text>
 
-        <View style={styles.divider} />
+        <View style={styles.accentBar} />
 
         <Text
-          size="md"
-          weight="medium"
+          role="bodyStrong"
           tone="secondary"
           align="left"
           style={styles.subtitle}
@@ -72,7 +72,7 @@ export function LandingAuthScreen() {
           }}
         >
           <Text
-            size="sm"
+            role="caption"
             tone="secondary"
             align="center"
             style={styles.footerText}
@@ -104,21 +104,10 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: theme.spacing.xl,
   },
 
-  divider: {
-    width: 40,
-    height: 3,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radii.xs,
-    borderCurve: 'continuous',
-    alignSelf: 'flex-start',
-    marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
   txt: {
     textTransform: 'uppercase',
   },
   subtitle: {
-    lineHeight: theme.spacing.lg,
     width: '100%',
   },
 
@@ -131,10 +120,19 @@ const styles = StyleSheet.create(theme => ({
   },
 
   footerText: {
-    lineHeight: theme.fonts.size.md * 1.5,
     marginTop: theme.spacing.lg,
   },
   pressed: {
     opacity: theme.opacity.pressed,
+  },
+  accentBar: {
+    width: 40,
+    height: 3,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radii.xs,
+    borderCurve: 'continuous',
+    alignSelf: 'flex-start',
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
   },
 }));

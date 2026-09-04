@@ -7,7 +7,7 @@ import { localizedErrorMessage } from '#/services/errorService';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { Icon } from '#utils/iconUtils';
-import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
+import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import { type ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import {
@@ -18,7 +18,7 @@ import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { useTranslation } from '#/i18n';
-import { ROLE_PERMISSIONS } from '#/constants/collaboratorRoles';
+import { ROLE_PERMISSIONS } from '#features/shoppingList/constants/collaboratorRoles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
 import { Text } from '#components/atoms/Text';
@@ -215,12 +215,12 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerBlock}>
-          <Text size="md" weight="semibold">
+          <Text role="bodyStrong">
             {getCollaboratorDisplayName(collaborator)}
           </Text>
           {!!collaborator.email &&
             collaborator.email !== getCollaboratorDisplayName(collaborator) && (
-              <Text size="sm" tone="secondary" style={styles.emailCaption}>
+              <Text role="caption" tone="secondary" style={styles.emailCaption}>
                 {collaborator.email}
               </Text>
             )}
@@ -246,11 +246,9 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                       tone={isSelected ? 'primary' : 'textSecondary'}
                     />
                     <View>
-                      <Text size="md" weight="semibold">
-                        {t(roleInfo.labelKey)}
-                      </Text>
+                      <Text role="bodyStrong">{t(roleInfo.labelKey)}</Text>
                       <Text
-                        size="sm"
+                        role="caption"
                         tone="secondary"
                         style={styles.roleDescription}
                       >
@@ -264,11 +262,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                 {/* Show permissions preview for selected role */}
                 {!!isSelected && (
                   <View style={styles.permissionsContainer}>
-                    <Text
-                      size="sm"
-                      weight="semibold"
-                      style={styles.permissionsTitle}
-                    >
+                    <Text role="label" style={styles.permissionsTitle}>
                       {t('collaboratorRoles.permissionsTitle')}
                     </Text>
                     <View style={styles.permissionsList}>
@@ -282,7 +276,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                             }
                           />
                           <Text
-                            size="sm"
+                            role="caption"
                             style={
                               !permission.granted && styles.permissionDenied
                             }
@@ -302,19 +296,16 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
         {/* Granular per-permission overrides on top of the selected role. */}
         {!!permissions && (
           <View style={styles.customPermissions}>
-            <Text
-              size="sm"
-              weight="semibold"
-              style={styles.customPermissionsTitle}
-            >
+            <Text role="label" style={styles.customPermissionsTitle}>
               {t('shoppingListScreens.customPermissions')}
             </Text>
             {PERMISSION_ROWS.map(({ key, labelKey }) => (
               <View key={key} style={styles.permissionToggleRow}>
-                <Text size="sm" style={styles.permissionToggleLabel}>
+                <Text role="caption" style={styles.permissionToggleLabel}>
                   {t(labelKey)}
                 </Text>
                 <BaseSwitch
+                  accessibilityLabel={t(labelKey)}
                   value={permissions[key]}
                   onValueChange={value => handleTogglePermission(key, value)}
                 />

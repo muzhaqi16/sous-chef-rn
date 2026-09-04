@@ -16,7 +16,7 @@ import {
   UseRecurringShoppingList_ListFragmentDoc,
   type UseRecurringShoppingList_ListFragment,
 } from './useRecurringShoppingList.generated';
-import { addShoppingListToQueryCache } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { addShoppingListToQueryCache } from '#features/shoppingList/cache/list';
 import type { RecurringPattern } from '#/graphql/generated/schemaTypes';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';

@@ -5,8 +5,7 @@ import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
 import { SearchBar } from '#components/molecules/SearchBar';
-import { Header } from '#components/molecules/Header';
-import { DataStateView } from '#components/molecules/DataStateView';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 import { useDeleteRecipe } from '#features/recipes/hooks/useDeleteRecipe';
 import { MyRecipeCard } from '#features/recipes/components/MyRecipeCard';
@@ -21,6 +20,7 @@ import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { useLocalSearch } from '#hooks/search/useLocalSearch';
+import { Screen } from '#components/templates/Screen';
 
 const keyExtractor = (item: MyRecipeNode) => item.id;
 // Every row is the same component, so one recycling pool is correct.
@@ -54,6 +54,7 @@ export const MyRecipes: React.FC = () => {
   const perfCallbacks = useFlashListPerformance(flashListRef, {
     componentName: 'MyRecipes',
     hasRealContent: filteredRecipes.length > 0,
+    rowCount: filteredRecipes.length,
   });
   useDataReferenceTracker(
     filteredRecipes,
@@ -132,8 +133,12 @@ export const MyRecipes: React.FC = () => {
   );
 
   return (
-    <View style={styles.container} testID="my-recipes-screen">
-      <Header title={t('recipes.myRecipesTitle')} onBack={goBack} />
+    <Screen
+      testID="my-recipes-screen"
+      header={{ title: t('recipes.myRecipesTitle'), back: goBack }}
+      scroll="list"
+      gutter="none"
+    >
       <View style={styles.searchBarContainer}>
         <SearchBar
           value={searchQuery}
@@ -165,7 +170,7 @@ export const MyRecipes: React.FC = () => {
           {...FLASHLIST_DEFAULTS.fullScreen}
         />
       )}
-    </View>
+    </Screen>
   );
 };
 

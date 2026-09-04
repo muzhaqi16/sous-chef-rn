@@ -35,7 +35,7 @@ jest.mock('#/utils/connectionUtils', () => ({
   extractNodes: jest.fn(() => []),
 }));
 
-jest.mock('#/utils/errors/pantryItemDuplicate', () => {
+jest.mock('#domain/pantryItemDuplicate', () => {
   const isDup = jest.fn().mockReturnValue(false);
   const getInfo = jest.fn().mockReturnValue(null);
   const getInfoFromPayload = jest.fn().mockReturnValue(null);
@@ -342,7 +342,7 @@ describe('AddToPantrySheet', () => {
 
     beforeEach(() => {
       const { getPantryItemDuplicateInfoFromPayload } = jest.requireMock(
-        '#/utils/errors/pantryItemDuplicate',
+        '#domain/pantryItemDuplicate',
       );
       getPantryItemDuplicateInfoFromPayload.mockReturnValue({
         existingPantryItemId: 'pi-1',

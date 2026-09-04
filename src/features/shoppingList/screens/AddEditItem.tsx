@@ -3,15 +3,15 @@ import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
 import { useShoppingListItemWrites } from '#features/shoppingList/hooks/useShoppingListItemWrites';
 import { ItemSuggestion, CategoryType } from '#/graphql/generated/schemaTypes';
-import { FormModal } from '#components/organisms/FormModal';
-import { FormInput } from '#components/molecules/FormInput';
+import { FormScreen } from '#components/templates/FormScreen';
+import { FormInput } from '#components/atoms/FormInput';
 import { ItemAutocompleteField } from '#features/catalog/ui/autocomplete/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { CategoryAutocompleteField } from '#features/catalog/ui/autocomplete/CategoryAutocompleteField';
 import { BrandAutocompleteField } from '#features/catalog/ui/autocomplete/BrandAutocompleteField';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
 import { EditableCounter } from '#components/molecules/EditableCounter';
-import { FieldRow } from '#components/molecules/FieldRow';
+import { FieldRow } from '#components/atoms/FieldRow';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
@@ -279,7 +279,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   const modalTestID = isEdit ? 'edit-item-modal' : 'add-item-modal';
 
   return (
-    <FormModal
+    <FormScreen
       title={isEdit ? t('labels.editItem') : t('labels.addItem')}
       onClose={() => navigation.goBack()}
       // Wrapped in an arrow so the whole submit — including this body's read
@@ -461,6 +461,6 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         multiline
         numberOfLines={3}
       />
-    </FormModal>
+    </FormScreen>
   );
 };

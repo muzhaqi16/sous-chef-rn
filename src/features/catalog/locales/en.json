@@ -100,7 +100,9 @@
     "emptyTitle": "No suggestions yet",
     "emptyPantrySubtext": "Add items to your pantry to get personalized suggestions",
     "emptyShoppingListSubtext": "Add items to your list and they'll appear here for quick re-adding",
-    "addToPantry": "Add to Pantry"
+    "addToPantry": "Add to Pantry",
+    "addManuallyWithTerm": "Add \"{{term}}\" manually",
+    "noMatchesAddManually": "No matches. Add \"{{term}}\" manually"
   },
   "storageLocationSheet": {
     "editTitle": "Edit Storage Location",
@@ -335,7 +337,8 @@
     "quantityUnit": "Quantity & Unit",
     "quantityStock": "Quantity & Stock",
     "quantityRequired": "Quantity *",
-    "quantityCurrent": "Current Quantity"
+    "quantityCurrent": "Current Quantity",
+    "placeholderBrand": "e.g., Kellogg's"
   },
   "folderPicker": {
     "selectFolder": "Select Folder",
@@ -400,7 +403,8 @@
     "typeMoreToAddBrand": "Continue typing to add \"{{term}}\" as a custom brand",
     "typeMoreToAddStore": "Continue typing to add \"{{term}}\" as a custom store",
     "typeAtLeastTwo": "Type at least 2 characters to search",
-    "tryDifferentTerm": "Try a different search term"
+    "tryDifferentTerm": "Try a different search term",
+    "typeMoreToAddCategory": "Continue typing to use \"{{term}}\" as a custom category"
   },
   "unitEntryList": {
     "title": "Units",

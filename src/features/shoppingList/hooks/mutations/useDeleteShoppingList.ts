@@ -13,7 +13,7 @@ import {
   addOptimisticShoppingList,
   readShoppingListSnapshot,
   removeShoppingListFromCache,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+} from '#features/shoppingList/cache/list';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import type { MutationOutcome } from '#/utils/errors/mutationOutcome';
 import { toastService } from '#/services/toastService';

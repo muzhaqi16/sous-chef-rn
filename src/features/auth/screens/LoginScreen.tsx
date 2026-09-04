@@ -10,8 +10,8 @@ import { Icon } from '#utils/iconUtils';
 
 import { AuthFormTemplate } from '#features/auth/components/AuthFormTemplate';
 import { AuthWrapper } from '#features/auth/components/AuthWrapper';
-import { EmailInput } from '#components/atoms/EmailInput';
-import { PasswordInput } from '#components/atoms/PasswordInput';
+import { EmailInput } from '#components/molecules/EmailInput';
+import { PasswordInput } from '#components/molecules/PasswordInput';
 import { RememberMeModal } from '#features/auth/components/RememberMeModal';
 import { getLoginValidationSchema } from '#/utils/validation/auth';
 import { logValidationErrors } from '#/utils/validation/common';
@@ -23,6 +23,7 @@ import { authService } from '#/services/authService';
 import { Telemetry } from '#/services/telemetry';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
+import { authoritativeBiometryName } from '#components/organisms/biometric/biometryLabel';
 
 /** Module-level function to load auth info.
  *  Extracted from useEffect to avoid try-catch bailout. */
@@ -96,8 +97,10 @@ export function LoginScreen(): React.JSX.Element {
     handleRememberMeDecline,
     showRememberMePrompt,
   } = useRememberMe({
-    onAccept: async ({ email, password }) => {
-      await authService.storeCredentials(email, password);
+    // The password is not stored: enrolment asks the server for a device-bound
+    // credential and puts that behind biometry instead.
+    onAccept: async ({ email }) => {
+      await authService.enrolDeviceCredential(email);
       finishRememberMe();
     },
     onDecline: finishRememberMe,
@@ -162,18 +165,14 @@ export function LoginScreen(): React.JSX.Element {
 
     executeWithLoadingState(
       async () => {
-        const credentials = await authService.loadStoredCredentials(
-          biometricEmail ?? undefined,
+        // Exchanges the device credential; the password is never held, so
+        // there is nothing here to replay through `login`.
+        if (!biometricEmail) return;
+        const signedIn = await authService.signInWithDeviceCredential(
+          biometricEmail,
         );
 
-        if (credentials) {
-          await authService.login(
-            {
-              email: credentials.email,
-              password: credentials.password,
-            },
-            { showRememberPrompt: false },
-          );
+        if (signedIn) {
           Telemetry.trackEvent('login_success', {
             method: 'biometric',
             biometric_type: biometricInfo.biometryType,
@@ -215,9 +214,8 @@ export function LoginScreen(): React.JSX.Element {
     if (isBiometricLoading) return t('labels.authenticating');
     if (isLoggingIn) return t('auth.loggingIn');
 
-    if (biometricInfo.biometryType) {
-      return t('auth.useBiometryType', { type: biometricInfo.biometryType });
-    }
+    const named = authoritativeBiometryName(biometricInfo.biometryType);
+    if (named) return t('auth.useBiometryType', { type: named });
 
     return t('auth.useBiometric');
   };
@@ -289,8 +287,7 @@ export function LoginScreen(): React.JSX.Element {
               tone={isBiometricLoading ? 'textTertiary' : 'primary'}
             />
             <Text
-              size="md"
-              weight="medium"
+              role="bodyStrong"
               style={[
                 styles.biometricText,
                 (isBiometricLoading || isLoggingIn) &&

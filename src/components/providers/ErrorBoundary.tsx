@@ -46,8 +46,7 @@ const DefaultErrorFallback: React.FC<{
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.content}>
         <Text
-          size="xl"
-          weight="bold"
+          role="subheading"
           align="center"
           tone="error"
           style={styles.title}
@@ -55,7 +54,7 @@ const DefaultErrorFallback: React.FC<{
           {tGlobal('errors.boundary.title', 'Something went wrong')}
         </Text>
         <Text
-          size="md"
+          role="body"
           align="center"
           lineHeight="relaxed"
           tone="secondary"
@@ -69,13 +68,18 @@ const DefaultErrorFallback: React.FC<{
               )}
         </Text>
         {!!context && !!__DEV__ && (
-          <Text size="xs" align="center" tone="tertiary" style={styles.context}>
+          <Text
+            role="caption"
+            align="center"
+            tone="tertiary"
+            style={styles.context}
+          >
             {tGlobal('errors.boundary.contextPrefix', 'Context: ')}
             {context}
           </Text>
         )}
         <AppPressable style={styles.retryButton} onPress={retry}>
-          <Text size="md" weight="semibold" style={styles.retryButtonText}>
+          <Text role="bodyStrong" style={styles.retryButtonText}>
             {tGlobal('auth.tryAgain', 'Try Again')}
           </Text>
         </AppPressable>

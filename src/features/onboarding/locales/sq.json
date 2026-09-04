@@ -6,7 +6,8 @@
     "addPantryToHome": "Të shtojmë një qilar te {{homeName}}",
     "homeAlreadyConfigured": "Shtëpia dhe qilari janë konfiguruar tashmë",
     "pendingInvitesTitle": "Ke ftesa në pritje për shtëpi!",
-    "pendingInvitesSubtitle": "Prano një ftesë për t'iu bashkuar një shtëpie ekzistuese ose krijo tëndën",
+    "pendingInvitesSubtitle": "Hap një ftesë nga njoftimet e tua për t’u bashkuar me një shtëpi ekzistuese, ose krijo tënden",
+    "inviteOpenFromNotifications": "Hap këtë ftesë nga njoftimet e tua, ose nga emaili që të dërguam, për ta pranuar.",
     "or": "OSE",
     "createOwnHome": "Krijo shtëpinë time",
     "skipForNow": "Kapërce tani",
@@ -63,7 +64,9 @@
     "pantryNamePlaceholder": "p.sh. Qilari i kuzhinës",
     "checkingExistingSetup": "Po kontrollohet konfigurimi yt ekzistues...",
     "creatingHomeAndPantry": "Po krijohet shtëpia dhe qilari...",
-    "creatingPantry": "Po krijohet qilari..."
+    "creatingPantry": "Po krijohet qilari...",
+    "createdDuringOnboarding": "Krijuar gjatë konfigurimit",
+    "defaultPantryDescription": "Qilar i parazgjedhur"
   },
   "onboardingSteps": {
     "CreateHome": {
@@ -101,5 +104,8 @@
     "listMin": "Emri i listës duhet të ketë të paktën {{count}} karaktere",
     "listMax": "Emri i listës duhet të ketë më pak se {{count}} karaktere",
     "itemsMax": "Mund të zgjedhësh deri në {{count}} artikuj"
+  },
+  "onboarding": {
+    "progress": "Hapi {{step}} nga {{total}}"
   }
 }

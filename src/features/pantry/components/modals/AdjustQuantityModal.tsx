@@ -1,25 +1,29 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { Controller, useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { useTranslation } from '#/i18n';
 import { useFragment } from '@apollo/client/react';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { alertService } from '#/services/alertService';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { FractionInput } from '#components/molecules/FractionInput';
-import { FormInput } from '#components/molecules/FormInput';
-import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
-import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { FormInput } from '#components/atoms/FormInput';
+import { FormattedItemSubtitle } from '#components/molecules/FormattedItemSubtitle';
+import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { commonStyles } from '#/styles/commonStyles';
 import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 import { AdjustQuantityModal_PantryItemFragmentDoc } from './AdjustQuantityModal.generated';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
   formatNumberForInput,
   localizeNumericHint,
 } from '#/utils/formatters/number';
+import { Sheet } from '#components/templates/Sheet';
+import {
+  adjustQuantitySchema,
+  adjustQuantityDefaults,
+  parseQuantity,
+  parseRemainingWeight,
+  type AdjustQuantityFormValues,
+} from './adjustQuantityFormConfig';
 
 interface AdjustQuantityModalProps {
   visible: boolean;
@@ -46,14 +50,10 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
   });
   const pantryItem = pantryItemId && complete ? data : null;
 
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible: visible && !!pantryItem,
-    onDismiss: onClose,
-    snapPoints: ['65%', '85%'],
+  const { control, handleSubmit, reset } = useForm<AdjustQuantityFormValues>({
+    resolver: yupResolver(adjustQuantitySchema),
+    defaultValues: adjustQuantityDefaults(),
   });
-  const [quantityInput, setQuantityInput] = useState('');
-  const [reason, setReason] = useState('');
-  const [remainingWeightInput, setRemainingWeightInput] = useState('');
 
   // Reset state when sheet opens (render-time conditional state update).
   // Key on pantryItemId so the reset still fires on a different item, but a
@@ -64,120 +64,127 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
     setPrevVisible(visible);
     setPrevPantryItemId(pantryItem?.id);
     if (visible && pantryItem) {
-      setQuantityInput(formatNumberForInput(pantryItem.quantity));
-      setReason('');
-      setRemainingWeightInput('');
+      reset({
+        quantityInput: formatNumberForInput(pantryItem.quantity),
+        reason: '',
+        remainingWeightInput: '',
+      });
     }
   }
 
-  const handleConfirm = () => {
+  // Reaching here means the schema passed; a refusal renders under its field.
+  const handleConfirm = handleSubmit(values => {
     if (!pantryItem) return;
-
-    const newQuantity = parseFractionalInput(quantityInput);
-
-    if (newQuantity === null || isNaN(newQuantity) || newQuantity < 0) {
-      alertService.alert(t('labels.error'), t('errors.invalidQuantity'));
-      return;
-    }
-
-    if (!reason.trim()) {
-      alertService.alert(t('labels.error'), t('adjustQuantity.reasonRequired'));
-      return;
-    }
-
-    const parsedWeight = parseDecimalInput(remainingWeightInput);
-    const remainingNetWeight =
-      !isNaN(parsedWeight) && parsedWeight >= 0 ? parsedWeight : undefined;
-
-    onConfirm(newQuantity, reason.trim(), remainingNetWeight);
+    onConfirm(
+      parseQuantity(values),
+      values.reason.trim(),
+      parseRemainingWeight(values),
+    );
     onClose();
-  };
+  });
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetFormScrollView
-        style={commonStyles.bottomSheetScrollView}
-        contentContainerStyle={[
-          commonStyles.bottomSheetContent,
-          contentContainerStyle,
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        <BottomSheetHeader
-          title={t('adjustQuantity.title')}
-          onCancel={onClose}
-          onConfirm={handleConfirm}
-          confirmLabel={t('adjustQuantity.adjust')}
-        />
+    <Sheet
+      mode="form"
+      visible={visible ? !!pantryItem : false}
+      onDismiss={onClose}
+      snapPoints={['65%', '85%']}
+      contentContainerStyle={commonStyles.bottomSheetContent}
+    >
+      <BottomSheetHeader
+        title={t('adjustQuantity.title')}
+        onCancel={onClose}
+        onConfirm={handleConfirm}
+        confirmLabel={t('adjustQuantity.adjust')}
+      />
 
-        {!!pantryItem && (
-          <>
-            <View style={commonStyles.bottomSheetItemInfo}>
-              <Text style={commonStyles.bottomSheetItemName}>
-                {pantryItem.itemName}
+      {!!pantryItem && (
+        <>
+          <View style={commonStyles.bottomSheetItemInfo}>
+            <Text style={commonStyles.bottomSheetItemName}>
+              {pantryItem.itemName}
+            </Text>
+            <View style={commonStyles.bottomSheetItemRow}>
+              <Text style={commonStyles.bottomSheetItemLabel}>
+                {t('adjustQuantity.currentLabel')}
               </Text>
+              <FormattedItemSubtitle
+                quantity={pantryItem.quantity}
+                displayAsFraction={pantryItem.unit?.displayAsFraction}
+                unitSymbol={pantryItem.unit?.symbol}
+              />
+            </View>
+          </View>
+
+          {pantryItem.lastUsedAt != null &&
+            pantryItem.remainingNetWeight != null && (
               <View style={commonStyles.bottomSheetItemRow}>
                 <Text style={commonStyles.bottomSheetItemLabel}>
-                  {t('adjustQuantity.currentLabel')}
+                  {t('labels.remaining')}
+                  {formatNetWeightDisplay(
+                    pantryItem.remainingNetWeight,
+                    pantryItem.netWeightUnit,
+                  )}
                 </Text>
-                <FormattedItemSubtitle
-                  quantity={pantryItem.quantity}
-                  displayAsFraction={pantryItem.unit?.displayAsFraction}
-                  unitSymbol={pantryItem.unit?.symbol}
-                />
               </View>
-            </View>
+            )}
 
-            {pantryItem.lastUsedAt != null &&
-              pantryItem.remainingNetWeight != null && (
-                <View style={commonStyles.bottomSheetItemRow}>
-                  <Text style={commonStyles.bottomSheetItemLabel}>
-                    {t('labels.remaining')}
-                    {formatNetWeightDisplay(
-                      pantryItem.remainingNetWeight,
-                      pantryItem.netWeightUnit,
-                    )}
-                  </Text>
-                </View>
-              )}
-
-            <View style={commonStyles.bottomSheetSection}>
-              <FractionInput
-                label={t('adjustQuantity.newQuantity')}
-                required
-                value={quantityInput}
-                onChangeText={setQuantityInput}
-                placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
-                keyboardType="numeric"
-                useBottomSheetInput
-              />
-            </View>
-
-            <View style={commonStyles.bottomSheetSection}>
-              <FormInput
-                label={t('labels.reason')}
-                required
-                value={reason}
-                onChangeText={setReason}
-                placeholder={t('adjustQuantity.reasonPlaceholder')}
-                useBottomSheetInput
-              />
-            </View>
-
-            {pantryItem.lastUsedAt != null &&
-              pantryItem.remainingNetWeight != null && (
-                <FormInput
-                  label={t('labels.remainingWeight')}
-                  value={remainingWeightInput}
-                  onChangeText={setRemainingWeightInput}
-                  placeholder={t('adjustQuantity.remainingWeightPlaceholder')}
-                  keyboardType="decimal-pad"
+          <View style={commonStyles.bottomSheetSection}>
+            <Controller
+              control={control}
+              name="quantityInput"
+              render={({ field, fieldState }) => (
+                <FractionInput
+                  label={t('adjustQuantity.newQuantity')}
+                  required
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  error={fieldState.error?.message}
+                  placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
+                  keyboardType="numeric"
                   useBottomSheetInput
                 />
               )}
-          </>
-        )}
-      </BottomSheetFormScrollView>
-    </BottomSheetModal>
+            />
+          </View>
+
+          <View style={commonStyles.bottomSheetSection}>
+            <Controller
+              control={control}
+              name="reason"
+              render={({ field, fieldState }) => (
+                <FormInput
+                  label={t('labels.reason')}
+                  required
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  error={fieldState.error?.message}
+                  placeholder={t('adjustQuantity.reasonPlaceholder')}
+                  useBottomSheetInput
+                />
+              )}
+            />
+          </View>
+
+          {pantryItem.lastUsedAt != null &&
+            pantryItem.remainingNetWeight != null && (
+              <Controller
+                control={control}
+                name="remainingWeightInput"
+                render={({ field }) => (
+                  <FormInput
+                    label={t('labels.remainingWeight')}
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    placeholder={t('adjustQuantity.remainingWeightPlaceholder')}
+                    keyboardType="decimal-pad"
+                    useBottomSheetInput
+                  />
+                )}
+              />
+            )}
+        </>
+      )}
+    </Sheet>
   );
 };

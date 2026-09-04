@@ -85,7 +85,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
     <View style={styles.container}>
       <View style={styles.leftSection}>
         <View style={styles.titleRow}>
-          <Text size="base" weight="medium">
+          <Text role="bodyStrong">
             {t('pantryItemDetail.batch.number', { number: batch.batchNumber })}
           </Text>
           {!!batch.isOpened && (
@@ -101,13 +101,16 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
           )}
         </View>
 
-        <Text size="sm" style={styles.quantityText}>
+        <Text role="caption" style={styles.quantityText}>
           {formatQuantity(batch.quantity)} {unitSymbol ?? ''}
         </Text>
 
         {expiryInfo ? (
           <View style={styles.expiryRow}>
-            <Text size="sm" tone={expiryInfo.isExpired ? 'error' : 'warning'}>
+            <Text
+              role="caption"
+              tone={expiryInfo.isExpired ? 'error' : 'warning'}
+            >
               {expiryInfo.text}
             </Text>
             {!!batch.expiresAtIsManual && (
@@ -117,13 +120,13 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
         ) : null}
 
         {batch.store?.name ? (
-          <Text size="xs" tone="tertiary" style={styles.metaText}>
+          <Text role="caption" tone="tertiary" style={styles.metaText}>
             {batch.store.name}
           </Text>
         ) : null}
 
         {batch.costPerUnit != null && batch.costPerUnit > 0 ? (
-          <Text size="xs" tone="tertiary" style={styles.metaText}>
+          <Text role="caption" tone="tertiary" style={styles.metaText}>
             {t('pantryItemDetail.batch.costPerUnit', {
               cost: formatCurrency(batch.costPerUnit, DEFAULT_CURRENCY),
             })}
@@ -131,7 +134,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
         ) : null}
 
         {batch.depletedAt ? (
-          <Text size="xs" tone="tertiary" style={styles.metaText}>
+          <Text role="caption" tone="tertiary" style={styles.metaText}>
             {/* `depletedAt` is when the batch reached zero, whichever way —
                 so the label follows the STATUS. */}
             {t(
@@ -145,7 +148,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
 
         {batch.notes ? (
           <Text
-            size="xs"
+            role="caption"
             tone="tertiary"
             style={styles.metaText}
             numberOfLines={1}
@@ -159,6 +162,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
           {!batch.isOpened && !!onOpen && (
             <AppPressable
               onPress={() => onOpen(batch.id)}
+              accessibilityLabel={t('a11y.openBatch')}
               style={styles.actionButton}
               hitSlop={8}
             >
@@ -168,6 +172,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
           {!!onWaste && (
             <AppPressable
               onPress={() => onWaste(batch.id)}
+              accessibilityLabel={t('a11y.wasteBatch')}
               style={styles.actionButton}
               hitSlop={8}
             >

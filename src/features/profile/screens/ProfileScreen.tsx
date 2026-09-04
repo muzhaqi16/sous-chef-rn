@@ -6,35 +6,35 @@ import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
   withTiming,
-  Easing,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { ProfileHeader } from '#components/organisms/ProfileHeader';
+import { ProfileHeader } from '#features/profile/components/ProfileHeader';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { useProfileData } from '#features/profile/hooks/useProfileData';
 import { useConfigurableSettings } from '#features/profile/hooks/useConfigurableSettings';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { ActionTray } from '#/components/templates/ActionTray/ActionTray';
-import type { ActionTrayRef } from '#/components/templates/ActionTray/types';
+import { ActionTray } from '#components/templates/ActionTray/ActionTray';
+import type { ActionTrayRef } from '#components/templates/ActionTray/types';
 import { Icon } from '#/utils/iconUtils';
 import { Telemetry } from '#/services/telemetry';
 import { useEffect } from 'react';
 import { Environment } from '#/utils/environment';
 import { DEVELOPER_SECTION_ID } from '#/config/settingsConfig';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { ProfileSkeleton } from '#components/atoms/Skeleton/ProfileSkeleton';
+import { ProfileSkeleton } from '#features/profile/components/ProfileSkeleton';
 import {
   useCanAccessDevTools,
   useHasUnverifiedEmail,
 } from '#store/useAppStore';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { Text } from '#components/atoms/Text';
+import { motion } from '#/theme/foundations/motion';
+import { Screen } from '#components/templates/Screen';
 
 const HEADER_TIMING = {
-  duration: 300,
-  easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+  duration: motion.timing.SLOW,
+  easing: motion.easing.standard,
 };
 
 export const ProfileScreen = () => {
@@ -119,11 +119,7 @@ export const ProfileScreen = () => {
     return <ProfileSkeleton />;
   }
   return (
-    <ThemedSafeAreaView
-      style={styles.container}
-      edges={['left', 'right']}
-      testID="profile-screen"
-    >
+    <Screen scroll="list" gutter="none" testID="profile-screen">
       <ProfileHeader
         avatarUrl={profile?.avatar}
         name={
@@ -225,8 +221,7 @@ export const ProfileScreen = () => {
         <AppPressable style={styles.menuItem} onPress={handleDeleteAccount}>
           <Icon name="trash-outline" size={20} tone="error" />
           <Text
-            size="md"
-            weight="semibold"
+            role="bodyStrong"
             tone="error"
             style={styles.menuItemTextDestructive}
           >
@@ -234,7 +229,7 @@ export const ProfileScreen = () => {
           </Text>
         </AppPressable>
       </ActionTray>
-    </ThemedSafeAreaView>
+    </Screen>
   );
 };
 

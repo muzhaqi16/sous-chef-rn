@@ -1,19 +1,17 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { StyleSheet } from 'react-native-unistyles';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
+import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import {
   ChipScrollRow,
   type ChipOption,
-} from '#components/atoms/ChipScrollRow';
-import { FormInput } from '#components/molecules/FormInput';
-import { FormTextArea } from '#components/molecules/FormTextArea';
+} from '#components/molecules/ChipScrollRow';
+import { FormInput } from '#components/atoms/FormInput';
+import { FormTextArea } from '#components/atoms/FormTextArea';
 import { Text } from '#components/atoms/Text';
 import { TemplateCategory } from '#/graphql/generated/schemaTypes';
+import { Sheet } from '#components/templates/Sheet';
 
 const CATEGORY_OPTION_KEYS: { key: TemplateCategory; labelKey: string }[] = [
   { key: TemplateCategory.Weekly, labelKey: 'saveAsTemplate.categoryWeekly' },
@@ -63,11 +61,6 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
   const { t } = useTranslation();
   const categoryOptions: ChipOption<TemplateCategory>[] =
     CATEGORY_OPTION_KEYS.map(o => ({ key: o.key, label: t(o.labelKey) }));
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['70%'],
-  });
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -110,65 +103,66 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
   };
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetFormScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
-        showsVerticalScrollIndicator={false}
-      >
-        <BottomSheetHeader
-          title={t('labels.saveAsTemplate')}
-          onCancel={onClose}
-          onConfirm={handleSave}
-          confirmLabel={saving ? t('labels.saving') : t('labels.save')}
-          confirmDisabled={saving || disabled || !name.trim()}
-          confirmColor="primary"
-        />
+    <Sheet
+      mode="form"
+      visible={visible}
+      onDismiss={onClose}
+      snapPoints={['70%']}
+      contentContainerStyle={styles.contentContainer}
+      style={styles.scrollView}
+    >
+      <BottomSheetHeader
+        title={t('labels.saveAsTemplate')}
+        onCancel={onClose}
+        onConfirm={handleSave}
+        confirmLabel={saving ? t('labels.saving') : t('labels.save')}
+        confirmDisabled={saving || disabled || !name.trim()}
+        confirmColor="primary"
+      />
 
-        {!!homeName && (
-          <View style={styles.infoNote}>
-            <Text size="sm" tone="accent">
-              {t('saveAsTemplate.sharedWithHome', { name: homeName })}
-            </Text>
-          </View>
-        )}
-
-        <FormInput
-          label={t('labels.templateName')}
-          value={name}
-          onChangeText={setName}
-          placeholder={t('saveAsTemplate.templateNamePlaceholder')}
-          required
-        />
-
-        <FormTextArea
-          label={t('saveAsTemplate.descriptionLabel')}
-          value={description}
-          onChangeText={setDescription}
-          placeholder={t('saveAsTemplate.descriptionPlaceholder')}
-        />
-
-        {/* Category selector */}
-        <View style={styles.section}>
-          <Text size="sm" weight="medium" tone="secondary">
-            {t('labels.category')}
+      {!!homeName && (
+        <View style={styles.infoNote}>
+          <Text role="caption" tone="accent">
+            {t('saveAsTemplate.sharedWithHome', { name: homeName })}
           </Text>
-          <ChipScrollRow
-            options={categoryOptions}
-            selected={category}
-            onSelect={setCategory}
-            edgeFadeColor="surface"
-          />
         </View>
+      )}
 
-        <FormInput
-          label={t('saveAsTemplate.tagsLabel')}
-          value={tagsInput}
-          onChangeText={setTagsInput}
-          placeholder={t('saveAsTemplate.tagsPlaceholder')}
+      <FormInput
+        label={t('labels.templateName')}
+        value={name}
+        onChangeText={setName}
+        placeholder={t('saveAsTemplate.templateNamePlaceholder')}
+        required
+      />
+
+      <FormTextArea
+        label={t('saveAsTemplate.descriptionLabel')}
+        value={description}
+        onChangeText={setDescription}
+        placeholder={t('saveAsTemplate.descriptionPlaceholder')}
+      />
+
+      {/* Category selector */}
+      <View style={styles.section}>
+        <Text role="label" tone="secondary">
+          {t('labels.category')}
+        </Text>
+        <ChipScrollRow
+          options={categoryOptions}
+          selected={category}
+          onSelect={setCategory}
+          edgeFadeColor="surface"
         />
-      </BottomSheetFormScrollView>
-    </BottomSheetModal>
+      </View>
+
+      <FormInput
+        label={t('saveAsTemplate.tagsLabel')}
+        value={tagsInput}
+        onChangeText={setTagsInput}
+        placeholder={t('saveAsTemplate.tagsPlaceholder')}
+      />
+    </Sheet>
   );
 };
 

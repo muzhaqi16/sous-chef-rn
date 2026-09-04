@@ -3,9 +3,7 @@ import { render, screen, userEvent } from '@testing-library/react-native';
 import { OnboardingNavigation } from '../OnboardingNavigation/OnboardingNavigation';
 import { NavigationButton } from '../OnboardingNavigation/NavigationButton';
 
-jest.mock('#constants/animations', () => ({
-  TIMING: { FAST: 100, MODERATE: 200, STANDARD: 300, SLOW: 400 },
-}));
+jest.mock('#constants/animations', () => ({}));
 
 describe('NavigationButton', () => {
   const defaultAction = {

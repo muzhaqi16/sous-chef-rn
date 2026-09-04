@@ -836,6 +836,14 @@ export type BulkDeletePurchasesPayload = {
  */
 export type BulkDeletePurchasesResult = BulkDeletePurchasesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
+export type BulkDeviceFailure = {
+  __typename: 'BulkDeviceFailure';
+  /** The error code the single-device operation would have answered with. */
+  code: Scalars['String']['output'];
+  deviceId: Scalars['ID']['output'];
+  message: Scalars['String']['output'];
+};
+
 /**
  * Input for bulk device updates.
  * Only status fields that make sense for bulk operations.
@@ -877,6 +885,8 @@ export type BulkUpdateDevicesPayload = {
   __typename: 'BulkUpdateDevicesPayload';
   /** Devices that were successfully updated by the batch. */
   devices: Array<Device>;
+  /** Each id that was not updated, with why. */
+  failures: Array<BulkDeviceFailure>;
   summary: BulkSummary;
 };
 
@@ -1159,6 +1169,8 @@ export enum ChangeType {
   Deleted = 'DELETED',
   ExpirationUpdated = 'EXPIRATION_UPDATED',
   LocationUpdated = 'LOCATION_UPDATED',
+  /** The stack's portion definition or density override was edited */
+  MeasurementProfile = 'MEASUREMENT_PROFILE',
   QuantityUpdated = 'QUANTITY_UPDATED',
   WeightCorrected = 'WEIGHT_CORRECTED'
 }
@@ -1961,6 +1973,7 @@ export type CreatePantryItemInput = {
   item?: InputMaybe<InlineItemInput>;
   itemId?: InputMaybe<Scalars['ID']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  measurementProfile?: InputMaybe<MeasurementProfileInput>;
   netWeight?: InputMaybe<NetWeightInput>;
   pantryId: Scalars['ID']['input'];
   purchase?: InputMaybe<PurchaseInfoInput>;
@@ -2438,6 +2451,36 @@ export type Currency = {
   name: Scalars['String']['output'];
   symbol: Scalars['String']['output'];
   updatedAt: Scalars['DateTime']['output'];
+};
+
+/**
+ * How the currency on a pantry money figure was decided — observed from the
+ * purchase or the shopping list it came off, or assumed from the actor's
+ * preference, the system default, or the migration that introduced the column.
+ */
+export enum CurrencyProvenance {
+  Backfill = 'BACKFILL',
+  Default = 'DEFAULT',
+  List = 'LIST',
+  Purchase = 'PURCHASE',
+  User = 'USER'
+}
+
+/**
+ * What one currency's purchases came to. A total is only meaningful alongside
+ * the currency it is in, so spend is reported per currency and never summed
+ * across them.
+ */
+export type CurrencySpend = {
+  __typename: 'CurrencySpend';
+  /** The currency, or null for purchases that record none. */
+  currency: Maybe<Currency>;
+  /** Purchases in this currency that carry a price. */
+  pricedPurchaseCount: Scalars['Int']['output'];
+  /** Purchases in this currency, priced or not. */
+  purchaseCount: Scalars['Int']['output'];
+  /** Sum of the prices that were recorded. */
+  totalSpent: Scalars['Float']['output'];
 };
 
 export enum DataSource {
@@ -3160,6 +3203,55 @@ export type DeviceConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * A device-bound re-authentication credential: one entry in the account's
+ * signed-in-devices list.
+ *
+ * Metadata only. The secret itself is returned exactly once, by
+ * `issueDeviceCredential`, and there is no field here or anywhere else that
+ * reads it back.
+ */
+export type DeviceCredential = {
+  __typename: 'DeviceCredential';
+  createdAt: Scalars['DateTime']['output'];
+  /** The client-minted device identifier this credential is bound to. */
+  deviceId: Scalars['String']['output'];
+  /** Name of the registered device, when one is registered under this device id. */
+  deviceName: Maybe<Scalars['String']['output']>;
+  /** When the credential stops working. Extended by each successful exchange. */
+  expiresAt: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  /** When the credential was last exchanged for a session; null if never. */
+  lastUsedAt: Maybe<Scalars['DateTime']['output']>;
+};
+
+/**
+ * The one moment the secret is visible. Store it immediately; nothing can return
+ * it again.
+ */
+export type DeviceCredentialPayload = {
+  __typename: 'DeviceCredentialPayload';
+  /** The secret to store behind biometric authentication. Returned once, never readable again. */
+  credential: Scalars['String']['output'];
+  deviceCredential: DeviceCredential;
+};
+
+/**
+ * A session established by exchanging a device credential - NEVER cache.
+ *
+ * Deliberately not AuthPayload with an extra field: the credential expiry has no
+ * meaning on a password sign-in, and a nullable field there would read as a
+ * promise that path does not keep.
+ */
+export type DeviceCredentialSessionPayload = {
+  __typename: 'DeviceCredentialSessionPayload';
+  accessToken: Scalars['String']['output'];
+  /** The credential's new expiry, extended by this exchange. */
+  credentialExpiresAt: Scalars['DateTime']['output'];
+  refreshToken: Scalars['String']['output'];
+  user: User;
+};
+
 /** Composite sub-input for all device details */
 export type DeviceDetailsInput = {
   /**
@@ -3542,6 +3634,10 @@ export enum ErrorCode {
   /** Banned, suspended or deleted — a moderation decision, not a transient lockout. Clients end the session on this code. Also emitted top-level by the auth directive for the same account state. */
   AuthAccountSuspended = 'AUTH_ACCOUNT_SUSPENDED',
   AuthCredentialsInvalid = 'AUTH_CREDENTIALS_INVALID',
+  /** A device-bound re-authentication credential was refused and is permanently useless: unknown, revoked, expired, superseded by a newer credential for the same device, or presented with a device id it was not issued for. Uniform across all of those on purpose — which one applied is not disclosed. Clients clear the stored credential and fall back to the password screen. NOT emitted for a rate limit, which is recoverable and leaves the credential good. */
+  AuthDeviceCredentialInvalid = 'AUTH_DEVICE_CREDENTIAL_INVALID',
+  /** Credentials are valid but the email address on the account is unverified — a registration, or a re-registration of a deleted address, awaiting proof of the mailbox. Not a sign-out: the client prompts for the emailed code. */
+  AuthEmailNotVerified = 'AUTH_EMAIL_NOT_VERIFIED',
   /** Refresh token rejected by rotation and unrecoverable: unverifiable, unknown, revoked, or replayed long enough after use to be treated as compromise. The session is over. Emitted by the refresh mutation; the REST /refresh route reports the same code top-level. */
   AuthRefreshTokenInvalid = 'AUTH_REFRESH_TOKEN_INVALID',
   /** Refresh token was consumed by a recent rotation and a valid successor exists — the request lost a race, it did not end the session. Recommended handling: re-read stored credentials and retry with the current token. Clients must NOT sign the user out on this code. */
@@ -3563,6 +3659,20 @@ export enum ErrorCode {
   ValidationFailed = 'VALIDATION_FAILED',
   VersionConflict = 'VERSION_CONFLICT'
 }
+
+export type ExchangeDeviceCredentialInput = {
+  /** The secret returned once by issueDeviceCredential. */
+  credential: Scalars['String']['input'];
+  /** The device id the credential was issued for. */
+  deviceId: Scalars['String']['input'];
+};
+
+/**
+ * Result of ExchangeDeviceCredential. Select on DeviceCredentialSessionPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type ExchangeDeviceCredentialResult = AuthenticationError | ConflictError | DeviceCredentialSessionPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export enum ExpirationAction {
   Consumed = 'CONSUMED',
@@ -4218,7 +4328,6 @@ export type HomeInvite = {
   role: MembershipRole;
   sentAt: Scalars['DateTime']['output'];
   status: InviteStatus;
-  token: Scalars['String']['output'];
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
 };
@@ -4561,6 +4670,11 @@ export type InviteToHomePayload = {
   __typename: 'InviteToHomePayload';
   home: Maybe<Home>;
   homeInvite: HomeInvite;
+  /**
+   * The invite's bearer token. Returned only here, to the inviter, at creation;
+   * HomeInvite never carries it, so no list or nested read can disclose it.
+   */
+  token: Scalars['String']['output'];
 };
 
 /**
@@ -4589,6 +4703,7 @@ export type InviteToShoppingListPayload = {
   __typename: 'InviteToShoppingListPayload';
   collaborator: ShoppingListCollaborator;
   shoppingList: Maybe<ShoppingList>;
+  token: Maybe<Scalars['String']['output']>;
 };
 
 /**
@@ -4597,6 +4712,21 @@ export type InviteToShoppingListPayload = {
  * Always include a __typename so the variant can be discriminated.
  */
 export type InviteToShoppingListResult = ConflictError | ForbiddenError | InviteToShoppingListPayload | NotFoundError | ValidationError;
+
+export type IssueDeviceCredentialInput = {
+  /**
+   * The client-minted device identifier, the same value registerDevice uses. The
+   * credential is bound to it and is refused if presented with any other.
+   */
+  deviceId: Scalars['String']['input'];
+};
+
+/**
+ * Result of IssueDeviceCredential. Select on DeviceCredentialPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type IssueDeviceCredentialResult = ConflictError | DeviceCredentialPayload | ForbiddenError | NotFoundError | ValidationError;
 
 /**
  * Item/Product catalog type
@@ -6013,6 +6143,8 @@ export type MarkRecipeAsCookedPayload = {
   converged: Scalars['Boolean']['output'];
   cookingLog: CookingLog;
   recipe: Maybe<Recipe>;
+  /** Ingredients not deducted because no conversion reached the stack's unit. */
+  skippedIngredients: Array<SkippedRecipeIngredient>;
 };
 
 /**
@@ -6455,6 +6587,19 @@ export type MealTypeNutrition = {
   totalCarbs: Scalars['Float']['output'];
   totalFat: Scalars['Float']['output'];
   totalProtein: Scalars['Float']['output'];
+};
+
+/**
+ * How THIS stack is measured, beyond its net weight: one tracking unit holds
+ * portionsPerTrackingUnit of portionUnit (1 bulb = 10 cloves), and
+ * densityOverride corrects the catalog density for this stack (g/mL). Seeded
+ * from the catalog at creation when omitted; owned by the stack afterwards.
+ * portionUnitId and portionsPerTrackingUnit travel together.
+ */
+export type MeasurementProfileInput = {
+  densityOverride?: InputMaybe<Scalars['Float']['input']>;
+  portionUnitId?: InputMaybe<Scalars['ID']['input']>;
+  portionsPerTrackingUnit?: InputMaybe<Scalars['Float']['input']>;
 };
 
 /** Reusable sub-input for media assets (images) */
@@ -6907,12 +7052,10 @@ export type Mutation = {
   /** Create a new meal template */
   createMealTemplate: CreateMealTemplateResult;
   /**
-   * Create a new membership directly (owner/admin only).
-   *
-   * Admits the named user as an ACTIVE member immediately — no invitation, and
-   * no acceptance from the person being added. That makes it the most direct
-   * way to pull someone into the caller's scope, so it requires a verified
-   * email like the invite and join-link routes do.
+   * Add a member to a home directly, as a system operator. A home admin cannot:
+   * the person being added has not consented, so the invite and join-code
+   * routes — which end with them accepting — are the ways into a home. Requires
+   * a verified email like those routes do.
    */
   createMembership: CreateMembershipResult;
   /** Create a new notification. */
@@ -7014,7 +7157,12 @@ export type Mutation = {
   deleteMultipleNotifications: DeleteMultipleNotificationsResult;
   /** Delete a notification. */
   deleteNotification: DeleteNotificationResult;
-  /** Delete a pantry (owner only). */
+  /**
+   * Delete a pantry (owner only). Authorized in the resolver and the service
+   * rather than by a resource directive: the directive resolves the pantry
+   * through the live-row loader, which would refuse the idempotent replay of an
+   * already-deleted pantry before it could converge.
+   */
   deletePantry: DeletePantryResult;
   /** Delete a pantry item (soft delete). */
   deletePantryItem: DeletePantryItemResult;
@@ -7066,6 +7214,16 @@ export type Mutation = {
    */
   enableHomeJoinLink: EnableHomeJoinLinkResult;
   /**
+   * Exchange a device credential for a session.
+   *
+   * Unauthenticated by design: this is what a client calls when it holds no
+   * tokens. A refusal that makes the credential permanently useless reports
+   * AUTH_DEVICE_CREDENTIAL_INVALID and is the signal to clear the stored
+   * credential and ask for the password; a rate-limit refusal is not, and the
+   * credential is still good.
+   */
+  exchangeDeviceCredential: ExchangeDeviceCredentialResult;
+  /**
    * Create an editable copy of a recipe the caller does not own — an external
    * import or another user's. The fork is owned by the caller and carries a
    * reference back to its origin.
@@ -7079,6 +7237,15 @@ export type Mutation = {
   inviteToHome: InviteToHomeResult;
   /** Invite a user to collaborate on a shopping list. */
   inviteToShoppingList: InviteToShoppingListResult;
+  /**
+   * Issue a device-bound credential for the current session's account, so the
+   * client can re-establish a session on this device after a deliberate sign-out
+   * without retaining the account password.
+   *
+   * The secret is returned once. Issuing for a device that already holds a
+   * credential supersedes the old one, which stops working immediately.
+   */
+  issueDeviceCredential: IssueDeviceCredentialResult;
   /** Join a home using its join code. */
   joinHomeByCode: JoinHomeByCodeResult;
   /** Join a shared shopping list using its share code. */
@@ -7281,6 +7448,11 @@ export type Mutation = {
   restockPantryItem: RestockPantryItemResult;
   /** Restore a soft-deleted item */
   restoreItem: RestoreItemResult;
+  /**
+   * Revoke one device credential. The device's current session is unaffected -
+   * this ends the ability to sign back in on it, not the session running on it.
+   */
+  revokeDeviceCredential: RevokeDeviceCredentialResult;
   /** Send a test notification of a specific type to the current user. */
   sendTestNotification: SendTestNotificationResult;
   /** Share a shopping list publicly with an optional share code. */
@@ -8718,6 +8890,19 @@ export type MutationEnableHomeJoinLinkArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationExchangeDeviceCredentialArgs = {
+  input: ExchangeDeviceCredentialInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationForkRecipeArgs = {
   input: ForkRecipeInput;
 };
@@ -8772,6 +8957,19 @@ export type MutationInviteToHomeArgs = {
  */
 export type MutationInviteToShoppingListArgs = {
   input: InviteToShoppingListInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationIssueDeviceCredentialArgs = {
+  input: IssueDeviceCredentialInput;
 };
 
 
@@ -9396,6 +9594,19 @@ export type MutationRestockPantryItemArgs = {
  */
 export type MutationRestoreItemArgs = {
   input: RestoreItemInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationRevokeDeviceCredentialArgs = {
+  input: RevokeDeviceCredentialInput;
 };
 
 
@@ -11043,6 +11254,12 @@ export type PantryDeficit = {
   ingredient: RecipeIngredient;
   needed: Scalars['Float']['output'];
   needsToBuy: Scalars['Boolean']['output'];
+  /**
+   * Stacks of this ingredient whose amount could not be expressed in the
+   * ingredient's unit (a head of garlic with no clove anchor, say). They are
+   * excluded from the available total rather than counted as one each.
+   */
+  unconvertibleItems: Array<PantryItem>;
   unit: Unit;
 };
 
@@ -11125,6 +11342,12 @@ export type PantryItem = {
   changeHistory: PantryItemChangeConnection;
   condition: ItemCondition;
   /**
+   * The currency totalCost and costPerUnit are denominated in. Null when they
+   * are, and null with them when the costed batches disagree about currency —
+   * a sum across currencies is not a value, so none is reported.
+   */
+  costCurrency: Maybe<Currency>;
+  /**
    * Value of the REMAINING stock, per unit of quantity — derived from the
    * item's active batches alongside quantity itself.
    *
@@ -11138,6 +11361,8 @@ export type PantryItem = {
    */
   costPerUnit: Maybe<Scalars['Float']['output']>;
   createdAt: Scalars['DateTime']['output'];
+  /** Density for this stack in g/mL; the catalog's applies when null. */
+  densityOverride: Maybe<Scalars['Float']['output']>;
   earliestBatchExpiration: Maybe<Scalars['DateTime']['output']>;
   expirationAlert: Scalars['Boolean']['output'];
   expiresAt: Maybe<Scalars['DateTime']['output']>;
@@ -11168,6 +11393,14 @@ export type PantryItem = {
   pantry: Pantry;
   pantryId: Scalars['ID']['output'];
   photos: Array<PantryItemPhoto>;
+  portionUnit: Maybe<Unit>;
+  /**
+   * The stack's own portion definition: one tracking unit holds
+   * portionsPerTrackingUnit of portionUnit (1 bulb = 10 cloves). Seeded from
+   * the catalog's package hierarchy at creation, then owned by the stack.
+   */
+  portionUnitId: Maybe<Scalars['ID']['output']>;
+  portionsPerTrackingUnit: Maybe<Scalars['Float']['output']>;
   purchase: Maybe<Purchase>;
   /**
    * The purchase behind this stack's FIRST acquisition. It does not move when
@@ -11188,6 +11421,11 @@ export type PantryItem = {
   quantity: Scalars['Float']['output'];
   quantityBreakdown: Maybe<QuantityBreakdown>;
   remainingNetWeight: Maybe<Scalars['Float']['output']>;
+  /**
+   * Portions left, from the remaining net weight when the stack tracks one and
+   * from the quantity otherwise. Null when the stack defines no portion.
+   */
+  remainingPortions: Maybe<Scalars['Float']['output']>;
   restockQuantity: Maybe<Scalars['Float']['output']>;
   sourceShoppingListItemId: Maybe<Scalars['ID']['output']>;
   storageLocation: Maybe<StorageLocation>;
@@ -11252,6 +11490,10 @@ export type PantryItemBatch = {
    */
   costPerUnit: Maybe<Scalars['Float']['output']>;
   createdAt: Scalars['DateTime']['output'];
+  /** What this batch's cost figures are in; null on a batch that carries no cost. */
+  currency: Maybe<Currency>;
+  /** How that currency was decided — observed from a purchase or list, or assumed. */
+  currencyProvenance: Maybe<CurrencyProvenance>;
   depletedAt: Maybe<Scalars['DateTime']['output']>;
   expiresAt: Maybe<Scalars['DateTime']['output']>;
   expiresAtIsManual: Scalars['Boolean']['output'];
@@ -11508,6 +11750,10 @@ export type PantryItemUsage = {
   cookingLog: Maybe<CookingLog>;
   cookingLogId: Maybe<Scalars['ID']['output']>;
   costPerUnit: Maybe<Scalars['Float']['output']>;
+  /** What this row's cost figures are in; null on a row that carries no cost. */
+  currency: Maybe<Currency>;
+  /** How that currency was decided — observed from a purchase or list, or assumed. */
+  currencyProvenance: Maybe<CurrencyProvenance>;
   id: Scalars['ID']['output'];
   isComposted: Maybe<Scalars['Boolean']['output']>;
   isRecycled: Maybe<Scalars['Boolean']['output']>;
@@ -11582,7 +11828,14 @@ export type PantryStats = {
   storageLocationCounts: Array<StorageLocationCount>;
   storageStateCounts: Maybe<StorageStateCounts>;
   totalItems: Scalars['Int']['output'];
-  totalValue: Scalars['Float']['output'];
+  /**
+   * Value of the stock whose cost is known, summed over the pantry's items.
+   * Null when those values are in more than one currency — a sum across
+   * currencies is not a value. Zero for a pantry with nothing costed.
+   */
+  totalValue: Maybe<Scalars['Float']['output']>;
+  /** The currency totalValue is in; null when it is. */
+  valueCurrency: Maybe<Currency>;
 };
 
 /** Subtype discriminator for pantry domain events. */
@@ -11844,11 +12097,17 @@ export type Purchase = {
   store: Maybe<Store>;
   storeId: Maybe<Scalars['ID']['output']>;
   storeName: Maybe<Scalars['String']['output']>;
-  totalPrice: Scalars['Float']['output'];
+  /** Null with unitPrice. */
+  totalPrice: Maybe<Scalars['Float']['output']>;
   transactionId: Maybe<Scalars['String']['output']>;
   unit: Unit;
   unitId: Scalars['ID']['output'];
-  unitPrice: Scalars['Float']['output'];
+  /**
+   * Null when the price was never observed — a line moved to the pantry or
+   * marked purchased without one. The purchase still counts; its amount is
+   * unknown rather than zero.
+   */
+  unitPrice: Maybe<Scalars['Float']['output']>;
   unitSymbol: Scalars['String']['output'];
   updatedAt: Scalars['DateTime']['output'];
   user: User;
@@ -11927,9 +12186,23 @@ export type PurchaseOrderBy = {
 
 export type PurchaseStats = {
   __typename: 'PurchaseStats';
+  /**
+   * Mean spend per PRICED purchase, in the same currency. A purchase that
+   * records no price is unknown rather than zero, so it is not counted in
+   * the denominator.
+   */
   averagePurchaseAmount: Scalars['Float']['output'];
+  /** Every currency the account has purchased in, most-priced first. */
+  byCurrency: Array<CurrencySpend>;
+  /** The currency the two figures above are denominated in. */
+  currency: Maybe<Currency>;
   mostFrequentStore: Maybe<Scalars['String']['output']>;
   recentPurchases: Array<Purchase>;
+  /**
+   * Total spend in the currency named below — the account's primary, being
+   * the one it has priced the most purchases in. Never a sum across
+   * currencies: see byCurrency.
+   */
   totalAmountSpent: Scalars['Float']['output'];
   totalPurchases: Scalars['Int']['output'];
 };
@@ -12051,7 +12324,8 @@ export type Query = {
   compatibleUnitsForItem: Array<CompatibleUnit>;
   /**
    * Get ranked consumption-eligible units for a catalog item.
-   * Returns units in priority order: default consume unit → curated → auto measurement → tracking unit → portions.
+   * Returns units in priority order: the stack's own portion unit → default
+   * consume unit → curated → auto measurement → tracking unit → portions.
    * Requires an itemId (catalog item) plus the pantry item's tracking unit context.
    */
   consumptionUnitsForItem: Array<RankedUnit>;
@@ -12076,6 +12350,12 @@ export type Query = {
   device: Maybe<Device>;
   /** Get a single device by device identifier string */
   deviceByDeviceId: Maybe<Device>;
+  /**
+   * The account's device credentials - the signed-in-devices list. Live entries
+   * only; a revoked or expired credential is not shown, because it is not
+   * something a person can act on.
+   */
+  deviceCredentials: Array<DeviceCredential>;
   /**
    * Consolidated device query with comprehensive filtering.
    * Replaces: userDevices, myDevices, activeDevices, trustedDevices, verifiedDevices,
@@ -12410,6 +12690,7 @@ export type QueryCompatibleUnitsForItemArgs = {
 export type QueryConsumptionUnitsForItemArgs = {
   itemId: Scalars['ID']['input'];
   netWeightUnitId?: InputMaybe<Scalars['ID']['input']>;
+  portionUnitId?: InputMaybe<Scalars['ID']['input']>;
   trackingUnitId: Scalars['ID']['input'];
 };
 
@@ -12879,6 +13160,10 @@ export type RapidAttempt = {
 /**
  * Recipe type for meal instructions and ingredients
  * Cache: 30 minutes - published recipes are static content
+ *
+ * PRIVATE cache scope: a recipe may be a draft or private to its author, and a
+ * type-level hint cannot see which — so no response carrying one is ever stored
+ * in a shared cache.
  */
 export type Recipe = {
   __typename: 'Recipe';
@@ -12958,6 +13243,10 @@ export type Recipe = {
 /**
  * Recipe type for meal instructions and ingredients
  * Cache: 30 minutes - published recipes are static content
+ *
+ * PRIVATE cache scope: a recipe may be a draft or private to its author, and a
+ * type-level hint cannot see which — so no response carrying one is ever stored
+ * in a shared cache.
  */
 export type RecipeCookingLogsArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
@@ -12971,6 +13260,10 @@ export type RecipeCookingLogsArgs = {
 /**
  * Recipe type for meal instructions and ingredients
  * Cache: 30 minutes - published recipes are static content
+ *
+ * PRIVATE cache scope: a recipe may be a draft or private to its author, and a
+ * type-level hint cannot see which — so no response carrying one is ever stored
+ * in a shared cache.
  */
 export type RecipeForksConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
@@ -12984,6 +13277,10 @@ export type RecipeForksConnectionArgs = {
 /**
  * Recipe type for meal instructions and ingredients
  * Cache: 30 minutes - published recipes are static content
+ *
+ * PRIVATE cache scope: a recipe may be a draft or private to its author, and a
+ * type-level hint cannot see which — so no response carrying one is ever stored
+ * in a shared cache.
  */
 export type RecipeIngredientsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
@@ -12996,6 +13293,10 @@ export type RecipeIngredientsConnectionArgs = {
 /**
  * Recipe type for meal instructions and ingredients
  * Cache: 30 minutes - published recipes are static content
+ *
+ * PRIVATE cache scope: a recipe may be a draft or private to its author, and a
+ * type-level hint cannot see which — so no response carrying one is ever stored
+ * in a shared cache.
  */
 export type RecipeReviewsArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
@@ -13818,6 +14119,7 @@ export type RestockPantryItemInput = {
   expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
   id: Scalars['ID']['input'];
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
+  measurementProfile?: InputMaybe<MeasurementProfileInput>;
   notes?: InputMaybe<Scalars['String']['input']>;
   quantity: Scalars['Float']['input'];
   restockedAt?: InputMaybe<Scalars['DateTime']['input']>;
@@ -13871,6 +14173,26 @@ export type ReviewHelpful = {
   /** Null when the voter's account was permanently deleted. The vote still counts toward the review's helpful total. */
   user: Maybe<User>;
 };
+
+export type RevokeDeviceCredentialInput = {
+  id: Scalars['ID']['input'];
+};
+
+/**
+ * Outcome of revoking a device credential. Carries the revoked entry so a client
+ * can render or evict it by id.
+ */
+export type RevokeDeviceCredentialPayload = {
+  __typename: 'RevokeDeviceCredentialPayload';
+  deviceCredential: DeviceCredential;
+};
+
+/**
+ * Result of RevokeDeviceCredential. Select on RevokeDeviceCredentialPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type RevokeDeviceCredentialResult = ConflictError | ForbiddenError | NotFoundError | RevokeDeviceCredentialPayload | ValidationError;
 
 /** Sub-input for risk assessment data */
 export type RiskAssessmentInput = {
@@ -14247,7 +14569,6 @@ export type ShoppingListCollaborator = {
   shoppingListId: Scalars['ID']['output'];
   status: CollaboratorStatus;
   statusChangedAt: Maybe<Scalars['DateTime']['output']>;
-  token: Maybe<Scalars['String']['output']>;
 };
 
 /**
@@ -14678,6 +14999,18 @@ export type SkippedLowStockItem = {
   itemName: Scalars['String']['output'];
   pantryItemId: Scalars['ID']['output'];
   reason: Scalars['String']['output'];
+};
+
+/**
+ * A recipe ingredient the cook deduction could not express in a stack's unit.
+ * The stack was left untouched; nothing was deducted 1:1.
+ */
+export type SkippedRecipeIngredient = {
+  __typename: 'SkippedRecipeIngredient';
+  fromUnitId: Scalars['ID']['output'];
+  itemName: Scalars['String']['output'];
+  reason: Scalars['String']['output'];
+  toUnitId: Scalars['ID']['output'];
 };
 
 export enum SortOrder {
@@ -15208,6 +15541,16 @@ export type StoreSkuOpsInput = {
   storeSkus?: InputMaybe<Array<StoreSkuInput>>;
 };
 
+/** One currency's share of the caller's spend at a store. */
+export type StoreSpend = {
+  __typename: 'StoreSpend';
+  currency: Currency;
+  /** Purchases paid in this currency, priced or not. */
+  purchaseCount: Scalars['Int']['output'];
+  /** Sum of the priced purchases, rounded to the currency's minor unit. */
+  totalSpend: Scalars['Float']['output'];
+};
+
 /**
  * Store statistics for the CALLING user.
  *
@@ -15224,12 +15567,18 @@ export type StoreSkuOpsInput = {
  */
 export type StoreStats = {
   __typename: 'StoreStats';
-  /** Mean value of the CALLER's own purchases at this store. */
-  averagePurchaseAmount: Scalars['Float']['output'];
+  /**
+   * Mean value of the CALLER's priced purchases at this store. Null when those
+   * purchases were paid in more than one currency — one figure across
+   * currencies is not an amount — or when none carries a price.
+   */
+  averagePurchaseAmount: Maybe<Scalars['Float']['output']>;
   priceAccuracy: Maybe<Scalars['Float']['output']>;
   qualityRating: Maybe<Scalars['Float']['output']>;
   /** The CALLER's most recent purchases at this store. */
   recentActivity: Array<Purchase>;
+  /** The CALLER's spend at this store, one entry per currency it was paid in. */
+  spendByCurrency: Array<StoreSpend>;
   /** The CALLER's most-purchased items at this store. */
   topItems: Array<StoreTopItem>;
   /** Count of the CALLER's purchases at this store. */
@@ -15246,7 +15595,8 @@ export type StoreTopItem = {
   __typename: 'StoreTopItem';
   count: Scalars['Int']['output'];
   itemName: Scalars['String']['output'];
-  revenue: Scalars['Float']['output'];
+  /** Spend on this item. Null when the caller's purchases here span more than one currency. */
+  revenue: Maybe<Scalars['Float']['output']>;
 };
 
 export type Subscription = {
@@ -15754,6 +16104,8 @@ export enum TopLevelErrorCode {
   AuthAccountSuspended = 'AUTH_ACCOUNT_SUSPENDED',
   /** Login rejection. Existence-blind by construction — the message is the same whether the email is unknown or the password is wrong. */
   AuthCredentialsInvalid = 'AUTH_CREDENTIALS_INVALID',
+  /** A device-bound re-authentication credential was refused and is permanently useless: unknown, revoked, expired, superseded by a newer credential for the same device, or presented with a device id it was not issued for. Uniform across all of those on purpose — which one applied is not disclosed. Clients clear the stored credential and fall back to the password screen. NOT emitted for a rate limit, which is recoverable and leaves the credential good. */
+  AuthDeviceCredentialInvalid = 'AUTH_DEVICE_CREDENTIAL_INVALID',
   /** Credentials are valid and the session is live; the account's email address is unverified. A 403, not a 401 — clients must not sign the user out. */
   AuthEmailNotVerified = 'AUTH_EMAIL_NOT_VERIFIED',
   /** Refresh token rejected by rotation and unrecoverable: unverifiable, unknown, revoked, or replayed long enough after use to be treated as compromise. The session is over. */
@@ -16584,6 +16936,7 @@ export type UpdatePantryItemInput = {
   itemName?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   lowStockAlert?: InputMaybe<Scalars['Boolean']['input']>;
+  measurementProfile?: InputMaybe<MeasurementProfileInput>;
   netWeight?: InputMaybe<NetWeightInput>;
   quantity?: InputMaybe<Scalars['Float']['input']>;
   storage?: InputMaybe<StorageDetailsInput>;
@@ -17883,7 +18236,6 @@ export type ValidatePasswordResetTokenPayload = {
   __typename: 'ValidatePasswordResetTokenPayload';
   message: Scalars['String']['output'];
   status: PasswordActionStatus;
-  userId: Maybe<Scalars['ID']['output']>;
 };
 
 /**
@@ -17923,7 +18275,13 @@ export type VariationImage = {
 };
 
 export type VerifyEmailInput = {
+  /** The emailed 6-digit code, or the token from the emailed link. */
   code: Scalars['String']['input'];
+  /**
+   * Required with a 6-digit code: the code is matched only against this
+   * account's pending verification. Not needed with the link token.
+   */
+  email?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type VerifyEmailPayload = {

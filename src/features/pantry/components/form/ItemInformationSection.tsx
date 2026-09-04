@@ -7,9 +7,9 @@ import {
   DynamicFormFields,
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
-import { FormInput } from '#components/molecules/FormInput';
-import { Text } from '#components/atoms/Text';
+import { FormInput } from '#components/atoms/FormInput';
 import type { PantryItemFormData } from './PantryItemForm';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
 type SuggestedBrand = {
   id: string;
@@ -50,7 +50,7 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
       {
         name: 'brand',
         label: t('itemForm.brandOptional'),
-        placeholder: "e.g., Kellogg's",
+        placeholder: t('itemForm.placeholderBrand'),
         component: 'brandAutocomplete',
         props: { suggestedBrands, onBrandSelected },
       },
@@ -59,9 +59,9 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
 
   return (
     <View style={styles.section}>
-      <Text size="lg" weight="semibold" style={styles.sectionTitle}>
+      <SectionHeader style={styles.sectionTitleSpacing}>
         {t('itemForm.itemInformation')}
-      </Text>
+      </SectionHeader>
       <DynamicFormFields
         fields={getFields()}
         control={control}
@@ -75,7 +75,7 @@ const styles = StyleSheet.create(theme => ({
   section: {
     marginBottom: theme.spacing.lg,
   },
-  sectionTitle: {
+  sectionTitleSpacing: {
     marginBottom: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
     borderBottomWidth: theme.borderWidth.hairline,

@@ -2,25 +2,25 @@ import React, { useRef, useEffect } from 'react';
 import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { FormModal } from '#components/organisms/FormModal';
+import { FormScreen } from '#components/templates/FormScreen';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useRecipeFormWrites } from '#features/recipes/hooks/useRecipeFormWrites';
 import { useUser } from '#store/useAppStore';
 import { useRecipeForm } from './useRecipeForm';
-import { RecipeBasicFields } from './components/RecipeBasicFields';
-import { RecipeCategoryFields } from './components/RecipeCategoryFields';
-import { RecipeIngredientList } from './components/RecipeIngredientList';
+import { RecipeBasicFields } from '#features/recipes/components/recipeForm/RecipeBasicFields';
+import { RecipeCategoryFields } from '#features/recipes/components/recipeForm/RecipeCategoryFields';
+import { RecipeIngredientList } from '#features/recipes/components/recipeForm/RecipeIngredientList';
 import {
   RecipeIngredientEditor,
   type RecipeIngredientEditorRef,
-} from './components/RecipeIngredientEditor';
-import { RecipeStepList } from './components/RecipeStepList';
+} from '#features/recipes/components/recipeForm/RecipeIngredientEditor';
+import { RecipeStepList } from '#features/recipes/components/recipeForm/RecipeStepList';
 import {
   RecipeStepEditor,
   type RecipeStepEditorRef,
-} from './components/RecipeStepEditor';
-import { RecipeTagsSection } from './components/RecipeTagsSection';
-import type { IngredientFormState, StepFormState } from './useRecipeForm';
+} from '#features/recipes/components/recipeForm/RecipeStepEditor';
+import { RecipeTagsSection } from '#features/recipes/components/recipeForm/RecipeTagsSection';
+import type { IngredientFormState, StepFormState } from './formState';
 import type { RecipeCreatedBy } from '#features/recipes/utils/recipeCacheWriters';
 import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -53,13 +53,7 @@ export const RecipeFormScreen: React.FC<
     }
   }, [recipeRef, readRecipe, populateFromRecipe]);
 
-  const handleSave = async () => {
-    const error = form.validate();
-    if (error) {
-      alertService.alert(t('labels.validationError'), error);
-      return;
-    }
-
+  const onValid = async () => {
     // The save body is held in a local runner so the try below contains a
     // single plain call: the React Compiler bails out of this component when a
     // `?.`/`??`/ternary appears inside a try body, and this flow is full of
@@ -111,6 +105,10 @@ export const RecipeFormScreen: React.FC<
     }
   };
 
+  // A field the user can fix is reported ON the field: the list sections carry
+  // their own message, and the basic fields render theirs under the input.
+  const handleSave = form.handleSubmit(onValid);
+
   // Ingredient handlers
   const handleEditIngredient = (ingredient: IngredientFormState) => {
     ingredientEditorRef.current?.open(ingredient);
@@ -150,7 +148,7 @@ export const RecipeFormScreen: React.FC<
 
   return (
     <>
-      <FormModal
+      <FormScreen
         title={isEditMode ? t('recipes.editRecipe') : t('recipes.createRecipe')}
         onClose={goBack}
         onSave={handleSave}
@@ -158,7 +156,11 @@ export const RecipeFormScreen: React.FC<
         testID="recipe-form-screen"
       >
         {/* Basic fields */}
-        <RecipeBasicFields state={form.state} updateField={form.updateField} />
+        <RecipeBasicFields
+          state={form.state}
+          updateField={form.updateField}
+          errors={form.errors}
+        />
 
         {/* Category fields */}
         <RecipeCategoryFields
@@ -169,6 +171,7 @@ export const RecipeFormScreen: React.FC<
         {/* Ingredients */}
         <RecipeIngredientList
           ingredients={form.state.ingredients}
+          error={form.errors.ingredients?.message}
           onEditIngredient={handleEditIngredient}
           onRemoveIngredient={form.removeIngredient}
           onAddIngredient={handleAddIngredient}
@@ -177,6 +180,7 @@ export const RecipeFormScreen: React.FC<
         {/* Steps */}
         <RecipeStepList
           steps={form.state.steps}
+          error={form.errors.steps?.message}
           onEditStep={handleEditStep}
           onRemoveStep={form.removeStep}
           onAddStep={handleAddStep}
@@ -191,7 +195,7 @@ export const RecipeFormScreen: React.FC<
           onHealthGoalsChange={form.setHealthGoals}
           onIntolerancesChange={form.setIntolerances}
         />
-      </FormModal>
+      </FormScreen>
 
       {/* Bottom sheet editors */}
       <RecipeIngredientEditor

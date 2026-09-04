@@ -21,13 +21,13 @@ import {
   createAddToParentConnectionUpdater,
   adoptServerEntityId,
 } from '#/apollo/utils/cacheUpdaters';
+import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import {
-  addNewItemToShoppingListCache,
   addOptimisticShoppingListItem,
   adoptServerShoppingListItemId,
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+} from '#features/shoppingList/cache/items';
 import {
   addPantryItemLocally,
   revertOptimisticPantryItem,
@@ -35,7 +35,7 @@ import {
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { getPantryItemDuplicateFromResult } from '#/utils/errors/pantryItemDuplicate';
+import { getPantryItemDuplicateFromResult } from '#domain/pantryItemDuplicate';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';

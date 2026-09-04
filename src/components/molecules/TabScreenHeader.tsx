@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { OfflineStatusPill } from '#components/atoms/OfflineStatusPill';
+import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
 import { Text } from '#components/atoms/Text';
 
 interface TabScreenHeaderProps {
@@ -31,8 +31,7 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
   const titleContent = (
     <View style={styles.titleRow}>
       <Text
-        variant="title"
-        maxFontSizeMultiplier={1.5}
+        role="title"
         style={styles.title}
         numberOfLines={1}
         ellipsizeMode="tail"
@@ -46,12 +45,7 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
   return (
     <View style={styles.header}>
       <View style={styles.leftContent}>
-        <Text
-          size="sm"
-          tone="secondary"
-          maxFontSizeMultiplier={1.5}
-          style={styles.label}
-        >
+        <Text role="caption" tone="secondary" style={styles.label}>
           {label}
         </Text>
         {onTitlePress ? (
