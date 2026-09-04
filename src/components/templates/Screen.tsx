@@ -12,6 +12,10 @@ import { DataStateView } from '#components/organisms/DataStateView';
 import type { EmptyStateProps } from '#components/molecules/EmptyState';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import type { DataState } from '#hooks/data/useDataState';
+import {
+  KEYBOARD_DISMISS_MODE,
+  KEYBOARD_PERSIST_TAPS,
+} from '#components/templates/keyboardTaps';
 
 export interface ScreenHeaderConfig {
   /**
@@ -140,7 +144,8 @@ export const Screen: React.FC<ScreenProps> = ({
           // Stated, not inherited: KeyboardAwareScrollView supplies no default
           // and RN's is `never`, which spends the first tap on dismissing the
           // keyboard instead of on the control the person aimed at.
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps={KEYBOARD_PERSIST_TAPS}
+          keyboardDismissMode={KEYBOARD_DISMISS_MODE}
           refreshControl={plainRefresh}
         >
           {body}
@@ -153,7 +158,8 @@ export const Screen: React.FC<ScreenProps> = ({
           style={styles.body}
           contentContainerStyle={styles.scrollContent}
           contentInsetAdjustmentBehavior="automatic"
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps={KEYBOARD_PERSIST_TAPS}
+          keyboardDismissMode={KEYBOARD_DISMISS_MODE}
           refreshControl={plainRefresh}
         >
           {body}
