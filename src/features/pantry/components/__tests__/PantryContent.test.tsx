@@ -465,7 +465,27 @@ describe('PantryContent', () => {
           locationCounts={{ all: 18, fridge: 3, freezer: 0, pantry: 15 }}
         />,
       );
-      expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
+      expect(screen.getByTestId('pantry-list-skeleton-overlay')).toBeTruthy();
+      expect(screen.queryByText('Your pantry is empty')).toBeNull();
+    });
+
+    // The overlay is an absolute flap at `top: '100%'` of the header and the
+    // footer starts below it, so anything the footer draws while the flap is up
+    // shows through at a second origin — offset shimmer rows, or the empty
+    // state reading through as "empty" over a loading list.
+    it('renders nothing beneath the overlay while it is up', () => {
+      render(
+        <PantryContent
+          {...defaultProps}
+          items={[]}
+          loading={true}
+          locationCounts={{ all: 18, fridge: 3, freezer: 0, pantry: 15 }}
+        />,
+      );
+
+      expect(screen.getByTestId('pantry-list-skeleton-overlay')).toBeTruthy();
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+      expect(screen.queryByTestId('pantry-loading')).toBeNull();
       expect(screen.queryByText('Your pantry is empty')).toBeNull();
     });
 
@@ -881,8 +901,8 @@ describe('PantryContent', () => {
         />,
       );
       // The chrome (header/search/tabs) renders as the list header and stays
-      // visible; the skeleton fills the body below the sticky tabs.
-      expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
+      // visible; the overlay flap fills the body below the sticky tabs.
+      expect(screen.getByTestId('pantry-list-skeleton-overlay')).toBeTruthy();
       expect(screen.getByTestId('pantry-search-input')).toBeTruthy();
     });
 

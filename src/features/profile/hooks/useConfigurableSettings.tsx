@@ -23,6 +23,7 @@ import {
 } from '#/config/settingsConfig';
 import { SUPPORTED_LANGUAGES } from '#/i18n/config';
 import { BiometricSetupModal } from '#features/profile/components/BiometricSetupModal';
+import { authoritativeBiometryName } from '#components/organisms/biometric/biometryLabel';
 import { errorService } from '#/services/errorService';
 import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
 
@@ -186,9 +187,13 @@ export const useConfigurableSettings = () => {
           const wasDeclined = navState?.biometricDeclinedPermanently;
 
           let subtitle: string;
-          // `biometricType` is a device-reported name (Face ID, Touch ID)
-          // and stays as-is; only the sentence around it is translated.
-          const method = biometricType || t('biometrics.genericMethod');
+          // The device-reported name is only trustworthy where the platform
+          // has one sensor; elsewhere it names a reader that may not be the one
+          // the prompt accepts. It stays untranslated — the sentence around it
+          // carries the locale.
+          const method =
+            authoritativeBiometryName(biometricType) ??
+            t('biometrics.genericMethod');
           if (biometricLoading) {
             subtitle = t('biometrics.checkingAvailability');
           } else if (!biometricAvailable) {

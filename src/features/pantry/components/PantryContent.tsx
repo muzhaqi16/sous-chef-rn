@@ -301,6 +301,11 @@ export const PantryContent = React.forwardRef<
     // tab. No `useMinimumVisible` — the exit fade is the anti-flash smoothing.
     const overlayVisible = initialSkeletons || !perfCallbacks.hasContentLayout;
 
+    // The overlay covers the whole list area, so the footer renders NOTHING
+    // beneath it: its own skeleton rows start from a different origin (two
+    // offset sets of shimmer) and its empty state shows through the flap.
+    const footerVisible = !overlayVisible;
+
     useDataReferenceTracker(
       sortedItems,
       'PantryContent.sortedItems',
@@ -468,7 +473,7 @@ export const PantryContent = React.forwardRef<
                 </View>
               }
               ListFooterComponent={
-                isEmpty ? (
+                !footerVisible ? null : isEmpty ? (
                   <PantryEmptyState
                     showSkeletons={showSkeletons}
                     searchQuery={searchQuery}

@@ -1,6 +1,7 @@
 'use no memo';
 
 import { act } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import { AppTheme, UnitSystem } from '#/graphql/generated/schemaTypes';
 import { alertService, type AlertButton } from '#/services/alertService';
 import type { SettingItem } from '#components/organisms/SettingRow';
@@ -406,6 +407,35 @@ describe('useConfigurableSettings', () => {
     );
     expect(biometricItem.disabled).toBe(false);
     expect(biometricItem.subtitle).toContain('FaceID');
+  });
+
+  // Android answers with the first SENSOR present, not the one the prompt will
+  // accept, so the settings row said "Use Fingerprint to login" on a phone
+  // whose owner unlocks with their face.
+  it('names no modality on Android, where the reported type is a guess', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    mockGetBiometricInfo.mockResolvedValue({
+      isAvailable: true,
+      biometryType: 'Fingerprint',
+    });
+    mockCheckStoredCredentials.mockResolvedValue(false);
+
+    const { settings } = buildMocks();
+    const { result, rerender } = renderHookWithApollo(
+      () => useConfigurableSettings(),
+      { operationMocks: [settings.mock] },
+    );
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+    rerender(undefined);
+
+    const biometricItem = findByKey(
+      sectionById(result.current.sections, 'security').items,
+      'biometricAuthentication',
+    );
+    expect(biometricItem.subtitle).not.toContain('Fingerprint');
+    expect(biometricItem.subtitle).toContain('biometric');
   });
 
   it('biometric loading state shows checking message', () => {
