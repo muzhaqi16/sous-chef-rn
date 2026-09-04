@@ -189,10 +189,10 @@
       "body": "mutation ConvertExpiredToWaste($input: ConvertExpiredToWasteInput!) {\n  convertExpiredToWaste(input: $input) {\n    __typename\n    ... on ConvertExpiredToWastePayload {\n      pantryItem {\n        id\n        ...useConvertExpiredToWaste_pantryItem\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment useConvertExpiredToWaste_pantryItem on PantryItem {\n  id\n  version\n  quantity\n  condition\n  wasteReason\n  storageState\n  __typename\n}"
     },
     {
-      "id": "cfdced449d350f2b8aac0d561e9a2b223847cb06a7372c87e0a9cff7518d122c",
+      "id": "2562dc985aff9beb5eae461a67ef457e61aa044cb979916f82e639e7a581bcf5",
       "name": "ConvertQuantity",
       "type": "query",
-      "body": "query ConvertQuantity($pantryItemId: ID, $quantity: Float!, $fromUnitId: ID!, $toUnitId: ID!) {\n  convertQuantity(\n    pantryItemId: $pantryItemId\n    quantity: $quantity\n    fromUnitId: $fromUnitId\n    toUnitId: $toUnitId\n  ) {\n    value\n    displayText\n    unit {\n      id\n      name\n      symbol\n      type\n      displayAsFraction\n      minPrecision\n      autoConvertThreshold\n      __typename\n    }\n    __typename\n  }\n}"
+      "body": "query ConvertQuantity($pantryItemId: ID, $quantity: Float!, $fromUnitId: ID!, $toUnitId: ID!) {\n  convertQuantity(\n    pantryItemId: $pantryItemId\n    quantity: $quantity\n    fromUnitId: $fromUnitId\n    toUnitId: $toUnitId\n  ) {\n    value\n    __typename\n  }\n}"
     },
     {
       "id": "782223b384c7d114897adf2252c000b32d8dcfaa0cbdb333d69d0f74c4f6878d",

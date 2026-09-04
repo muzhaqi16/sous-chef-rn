@@ -14,17 +14,10 @@ query ConvertQuantity(
     fromUnitId: $fromUnitId
     toUnitId: $toUnitId
   ) {
+    # Only `value` is read. The unit block carried `minPrecision` and
+    # `autoConvertThreshold` — rebased by the vocabulary repair and never read,
+    # the retained-field class the rest of this change removes.
     value
-    displayText
-    unit {
-      id
-      name
-      symbol
-      type
-      displayAsFraction
-      minPrecision
-      autoConvertThreshold
-    }
   }
 }
 
