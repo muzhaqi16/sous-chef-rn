@@ -1,4 +1,5 @@
 import React from 'react';
+import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
@@ -11,7 +12,6 @@ import {
   type PantryItemBatchFragment,
 } from '#features/pantry/graphql/pantryFragments.generated';
 import { formatQuantity } from '#/utils/formatQuantity';
-import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 import { Text } from '#components/atoms/Text';
 import { Badge } from '#components/atoms/Badge';
 import { formatMonthDay } from '#/utils/formatters/date';
@@ -67,6 +67,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
   onWaste,
 }) => {
   const { t } = useTranslation();
+  const money = useMoney();
   // Per-entity cache subscription: re-renders only when this batch's
   // PantryItemBatchFragment fields change (e.g., status, isOpened, quantity
   // updated by openBatch / wasteBatch mutations). Falls back to the source
@@ -125,10 +126,10 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
           </Text>
         ) : null}
 
-        {batch.costPerUnit != null && batch.costPerUnit > 0 ? (
+        {batch.costPerUnit != null ? (
           <Text role="caption" tone="tertiary" style={styles.metaText}>
             {t('pantryItemDetail.batch.costPerUnit', {
-              cost: formatCurrency(batch.costPerUnit, DEFAULT_CURRENCY),
+              cost: money(batch.costPerUnit, batch.currency),
             })}
           </Text>
         ) : null}

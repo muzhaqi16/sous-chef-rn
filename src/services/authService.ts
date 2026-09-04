@@ -12,6 +12,7 @@ import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { errorService } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
+import { runSessionTeardown } from '#store/sessionTeardown';
 import { logger } from '#/utils/environment';
 import { isDeadCredentialCode } from '#/utils/authErrorCodes';
 import { isSuccessPayload } from '#/utils/errors/mutationPayload';
@@ -357,7 +358,15 @@ async function shouldShowPostLoginBiometricPrompt(targetUser: {
 
 async function login(
   input: LoginInput,
-  options?: { showRememberPrompt?: boolean },
+  options?: {
+    showRememberPrompt?: boolean;
+    /**
+     * A refusal the CALLER can act on, carrying the union member's `code`. The
+     * toast still fires; this is for a refusal with somewhere to go, such as
+     * `AUTH_EMAIL_NOT_VERIFIED`, which the emailed code clears.
+     */
+    onRefusal?: (code: string) => void;
+  },
 ): Promise<boolean> {
   const showRememberPrompt = options?.showRememberPrompt ?? true;
   const store = useStore.getState();
@@ -395,6 +404,7 @@ async function login(
 
     if (payload) {
       handleRejectedAuthPayload(payload, 'Login');
+      options?.onRefusal?.(payload.code);
       return false;
     }
 
@@ -469,6 +479,9 @@ async function register(
   }
 }
 
+/** Longest a best-effort revoke may hold the sign-out. */
+const REVOKE_BUDGET_MS = 3000;
+
 interface LogoutOptions {
   /**
    * KEEP this account's biometric credential across the sign-out, which is the
@@ -494,7 +507,7 @@ async function logout(options?: LogoutOptions): Promise<void> {
       // Server first, while the session that authorises it is still live: the
       // local delete below cannot be undone, so a revoke attempted after it
       // would have nothing left to authenticate with.
-      await revokeDeviceCredentialForThisDevice();
+      await revokeWithinBudget();
       // READ, not discarded: a failed delete leaves the previous user's device
       // credential on the device — the exact state this call exists to prevent.
       const removed = await removeCredentials(currentUserEmail);
@@ -512,6 +525,11 @@ async function logout(options?: LogoutOptions): Promise<void> {
     // notification reset clears the persisted inbox/badge (badge follows via
     // badgeSync's post-hydration path).
     deregisterDeviceOnLogout();
+
+    // The same teardown `endSession` runs. Two exits from a session otherwise
+    // leave two different resting states, and the deliberate one was the
+    // exit that skipped it.
+    await runSessionTeardown();
 
     await LogoutCleanup.performLogoutCleanup();
 
@@ -650,6 +668,10 @@ async function autoLogin(): Promise<boolean> {
  * costs the server a stale row, not the person a working sign-in.
  */
 async function revokeDeviceCredentialForThisDevice(): Promise<void> {
+  // Offline there is nothing to revoke against, and httpLink's abort plus
+  // retryLink's attempts would otherwise hold the sign-out for ~30s on the one
+  // path where the person is trying to leave the device.
+  if (useStore.getState().isOnline === false) return;
   try {
     const deviceId = getDeviceId();
     const listed = await client.query({
@@ -668,6 +690,16 @@ async function revokeDeviceCredentialForThisDevice(): Promise<void> {
   } catch (error) {
     logger.warn('Could not revoke the device credential server-side', error);
   }
+}
+
+/** The revoke, bounded. A slow network must not hold the local sign-out. */
+async function revokeWithinBudget(): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const budget = new Promise<void>(resolve => {
+    timer = setTimeout(resolve, REVOKE_BUDGET_MS);
+  });
+  await Promise.race([revokeDeviceCredentialForThisDevice(), budget]);
+  if (timer) clearTimeout(timer);
 }
 
 /**

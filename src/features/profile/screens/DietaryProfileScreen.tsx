@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -30,13 +31,13 @@ import { DietaryRestrictionSelector } from '#features/profile/components/Dietary
 import { CookingPreferencesSheet } from '#features/profile/components/CookingPreferencesSheet/CookingPreferencesSheet';
 import { MacroTargetsSheet } from '#features/profile/components/MacroTargetsSheet/MacroTargetsSheet';
 import { Text } from '#components/atoms/Text';
-import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 import { errorService } from '#/services/errorService';
 import { motion } from '#/theme/foundations/motion';
 import { EmptyState } from '#components/molecules/EmptyState';
 
 export const DietaryProfileScreen: React.FC = () => {
   const { t } = useTranslation();
+  const money = useMoney();
   const {
     profile,
     loading,
@@ -385,7 +386,7 @@ export const DietaryProfileScreen: React.FC = () => {
             <InfoRow
               label={t('dietary.budgetPerMeal')}
               value={profile.budgetPerMeal}
-              formatter={val => formatCurrency(Number(val), DEFAULT_CURRENCY)}
+              formatter={val => money(Number(val))}
               showBorder={false}
             />
           )}

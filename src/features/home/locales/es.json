@@ -53,7 +53,10 @@
     "roleLabel": "Rol: {{role}}",
     "descriptionLabel": "Descripción:",
     "acceptFailed": "No se pudo aceptar la invitación. Inténtalo de nuevo.",
-    "declineFailed": "No se pudo rechazar la invitación. Inténtalo de nuevo."
+    "declineFailed": "No se pudo rechazar la invitación. Inténtalo de nuevo.",
+    "unavailableHere": "Abre esta invitación desde su notificación, o desde el correo que te enviamos, para aceptarla.",
+    "wrongAccountTitle": "Has iniciado sesión con otra cuenta",
+    "wrongAccount": "Esta invitación se envió a otra persona. Inicia sesión con la cuenta invitada para aceptarla."
   },
   "homeManagement": {
     "title": "Mis Hogares",

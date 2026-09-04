@@ -79,7 +79,6 @@
     "declineInviteFailed": "Nuk u refuzua dot ftesa",
     "createShoppingListFailed": "Nuk u krijua dot lista e blerjeve",
     "loadItemsFailed": "Nuk u ngarkuan dot artikujt. Provoje sërish.",
-    "invitationExpired": "Kjo ftesë nuk është më e vlefshme. Mund të ketë skaduar ose të jetë përdorur tashmë.",
     "invitationUnavailable": "Kjo ftesë nuk është më e disponueshme. Mund të jetë përdorur, refuzuar ose skaduar.",
     "cameraPermission": "Nevojitet qasja te kamera për të skanuar barkode.",
     "cameraPermissionDenied": "Leja për kamerën u refuzua. Aktivizoje te cilësimet.",
@@ -168,7 +167,11 @@
       "batchId": "Ai grup nuk është më i disponueshëm. Rifresko dhe provo përsëri.",
       "pantryId": "Nuk ke leje të shtosh artikuj në këtë qilar.",
       "newPassword": "Ai fjalëkalim nuk i plotëson rregullat: 8–72 karaktere, me një shkronjë të madhe, një të vogël dhe një numër.",
-      "currentPassword": "Fjalëkalimi aktual nuk është i saktë. Kontrollo dhe provo përsëri."
+      "currentPassword": "Fjalëkalimi aktual nuk është i saktë. Kontrollo dhe provo përsëri.",
+      "servingsMade": "Shkruaj një numër racionesh më të madh se zero",
+      "key": "Ai imazh nuk u konfirmua dot. Zgjidhe sërish dhe provo përsëri.",
+      "imageUrl": "URL-ja e imazhit duhet të fillojë me http:// ose https://",
+      "website": "Uebsajti duhet të fillojë me http:// ose https://"
     }
   },
   "success": {
@@ -474,7 +477,8 @@
     "youReAllSet": "Gjithçka gati!",
     "durationDays_one": "{{count}} ditë",
     "durationDays_other": "{{count}} ditë",
-    "finish": "Përfundo"
+    "finish": "Përfundo",
+    "currency": "Monedha"
   },
   "instructions": {
     "pointCamera": "Drejtoje kamerën nga një barkod",
@@ -547,7 +551,9 @@
     "resetConfirm": "Vërtet dëshiron t'i rivendosësh të gjitha cilësimet te parazgjedhjet? Do të rivendosen edhe të gjithë udhëzuesit.",
     "resetSuccess": "Cilësimet dhe udhëzuesit u rivendosën.",
     "loadingSettings": "Po ngarkohen cilësimet...",
-    "updateFailed": "Nuk u përditësua dot cilësimi. Provoje sërish."
+    "updateFailed": "Nuk u përditësua dot cilësimi. Provoje sërish.",
+    "currencySubtitle": "Kostot e reja regjistrohen në këtë monedhë",
+    "currencyKeepsExisting": "Kostot e regjistruara më parë ruajnë monedhën në të cilën u regjistruan. Një qilar me kosto në më shumë se një monedhë e shfaq vlerën e tij si të panjohur."
   },
   "loader": {
     "brandTagline": "Asistenti yt i kuzhinës"
@@ -602,7 +608,8 @@
     "itemTooLargeBody": "Imazhi është shumë i madh. Fotot e artikujve duhet të jenë nën {{size}} MB.",
     "unreadableBody": "Nuk arritëm ta lexojmë atë skedar imazhi. Provo një tjetër.",
     "batchThrottledBody": "{{reason}} {{count}} foto nuk u ngarkuan — provo sërish së shpejti.",
-    "batchPartialBody": "{{count}} foto nuk u ngarkuan dot."
+    "batchPartialBody": "{{count}} foto nuk u ngarkuan dot.",
+    "contentMismatchBody": "Ai skedar nuk është lloji i imazhit që tregon emri i tij. Zgjidhe sërish ose zgjidh një tjetër."
   },
   "commonValidation": {
     "emailInvalid": "Shkruaj një email të vlefshëm",

@@ -14,12 +14,28 @@ const isDevelopment = __DEV__;
 const SENSITIVE_VARIABLE =
   /password|token|secret|credential|api[-_]?key|authorization/i;
 
-function maskVariables(variables: Record<string, unknown>) {
+// Every auth operation takes a single `$input`, so masking only the top level
+// would leave the credential one key down — exactly where it always is.
+const MAX_MASK_DEPTH = 6;
+
+function maskValue(value: unknown, depth: number): unknown {
+  if (depth >= MAX_MASK_DEPTH || value === null || typeof value !== 'object') {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map(entry => maskValue(entry, depth + 1));
+  }
   const out: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(variables)) {
-    out[key] = SENSITIVE_VARIABLE.test(key) ? '[MASKED]' : value;
+  for (const [key, nested] of Object.entries(value)) {
+    out[key] = SENSITIVE_VARIABLE.test(key)
+      ? '[MASKED]'
+      : maskValue(nested, depth + 1);
   }
   return out;
+}
+
+function maskVariables(variables: Record<string, unknown>) {
+  return maskValue(variables, 0) as Record<string, unknown>;
 }
 
 // Cold-start detection: first N operations have inflated timing due to JS thread contention

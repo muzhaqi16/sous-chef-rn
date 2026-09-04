@@ -73,6 +73,9 @@
       "title": "Crea casa",
       "subtitle": "Configura la tua casa"
     },
+    "CurrencySetup": {
+      "subtitle": "Scegli la tua valuta"
+    },
     "CreateShoppingList": {
       "subtitle": "Crea la tua prima lista"
     },

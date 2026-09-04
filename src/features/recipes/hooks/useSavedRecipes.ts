@@ -67,6 +67,7 @@ export function useSavedRecipes(folder?: string | null): UseSavedRecipesResult {
     selector: d => d.me?.savedRecipesConnection,
     loading,
     fetchMore,
+    refetch,
   });
 
   const recipes = connectionData.items as SavedRecipeNode[];

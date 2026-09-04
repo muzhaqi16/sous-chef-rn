@@ -1,5 +1,9 @@
 import { useMutation } from '@apollo/client/react';
 import {
+  classifyInvitationRefusal,
+  type InvitationRefusal,
+} from '#/domain/invitationRefusal';
+import {
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
 } from '#operations/home/home.generated';
@@ -33,10 +37,11 @@ export interface InvitationWriteResult {
   /** Set only by `acceptHome`, and only when the server accepted. */
   acceptedHomeId?: string;
   accepted?: boolean;
+  refusal?: InvitationRefusal;
 }
 
 /**
- * The four invite writes and the token lookup behind them. Each `update`
+ * The four invite writes and the token they need. Each `update`
  * prefers the payload's `inviteId` and falls back to the canonical
  * `invitation.id` (the server's `sourceId` correlation), so a notification
  * carrying only a sourceId still evicts its pending record.
@@ -49,10 +54,12 @@ export function useInvitationActions(
 
   const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument, {
     update: (cache, { data }) => {
+      // A refusal is a completed mutation, so this runs for one too. Every
+      // effect stays inside the payload check: the invite is still PENDING on
+      // a refusal, and evicting it here leaves nothing to accept later.
       const payload = data?.acceptHomeInvite;
-      if (payload?.__typename === 'AcceptHomeInvitePayload') {
-        addToHomes(cache, payload.membership.home, { position: 'end' });
-      }
+      if (payload?.__typename !== 'AcceptHomeInvitePayload') return;
+      addToHomes(cache, payload.membership.home, { position: 'end' });
       if (inviteId && userId) {
         removePendingHomeInvite(cache, userId, inviteId, { evictItem: true });
       }
@@ -95,7 +102,13 @@ export function useInvitationActions(
   const [declineShoppingListInvite] = useMutation(
     InvitationAcceptanceModalDeclineShoppingListInviteDocument,
     {
-      update: cache => {
+      update: (cache, { data }) => {
+        if (
+          data?.declineShoppingListInvite?.__typename !==
+          'DeclineShoppingListInvitePayload'
+        ) {
+          return;
+        }
         if (inviteId && userId) {
           removePendingCollaborationInvite(cache, userId, inviteId, {
             evictItem: true,
@@ -107,45 +120,75 @@ export function useInvitationActions(
 
   /**
    * The invite's bearer token, which rides in the notification that delivered
-   * it. No lookup behind this: the API discloses the raw token once, to the
-   * inviter, and stores only a digest, so no list can hand one back. Absent
-   * means the caller reports the invite as unavailable.
+   * it. There is no lookup behind it: the API discloses the raw token once, to
+   * the inviter, and stores only a digest, so no list can hand one back. Read
+   * at render so a surface holding none can decline to offer the action at all.
    */
-  const resolveToken = async (): Promise<string | undefined> =>
-    invitation?.token;
+  const token = invitation?.token;
 
-  const acceptHome = async (token: string): Promise<InvitationWriteResult> => {
-    const result = await acceptHomeInvite({ variables: { input: { token } } });
+  const acceptHome = async (
+    inviteToken: string,
+  ): Promise<InvitationWriteResult> => {
+    const result = await acceptHomeInvite({
+      variables: { input: { token: inviteToken } },
+    });
     if (result.error) return { error: result.error };
     const payload = result.data?.acceptHomeInvite;
     return payload?.__typename === 'AcceptHomeInvitePayload'
       ? { accepted: true, acceptedHomeId: payload.membership.homeId }
-      : { accepted: false };
+      : {
+          accepted: false,
+          refusal: classifyInvitationRefusal(payload?.__typename),
+        };
   };
 
-  const acceptList = async (token: string): Promise<InvitationWriteResult> => {
+  const acceptList = async (
+    inviteToken: string,
+  ): Promise<InvitationWriteResult> => {
     const result = await acceptShoppingListInvite({
-      variables: { input: { token } },
+      variables: { input: { token: inviteToken } },
     });
     if (result.error) return { error: result.error };
-    return {
-      accepted:
-        result.data?.acceptShoppingListInvite?.__typename ===
-        'AcceptShoppingListInvitePayload',
-    };
+    const payload = result.data?.acceptShoppingListInvite;
+    return payload?.__typename === 'AcceptShoppingListInvitePayload'
+      ? { accepted: true }
+      : {
+          accepted: false,
+          refusal: classifyInvitationRefusal(payload?.__typename),
+        };
   };
 
-  const declineHome = async (token: string): Promise<InvitationWriteResult> => {
-    const result = await declineHomeInvite({ variables: { input: { token } } });
-    return { error: result.error };
-  };
-
-  const declineList = async (token: string): Promise<InvitationWriteResult> => {
-    const result = await declineShoppingListInvite({
-      variables: { input: { token } },
+  const declineHome = async (
+    inviteToken: string,
+  ): Promise<InvitationWriteResult> => {
+    const result = await declineHomeInvite({
+      variables: { input: { token: inviteToken } },
     });
-    return { error: result.error };
+    if (result.error) return { error: result.error };
+    const payload = result.data?.declineHomeInvite;
+    return payload?.__typename === 'DeclineHomeInvitePayload'
+      ? { accepted: true }
+      : {
+          accepted: false,
+          refusal: classifyInvitationRefusal(payload?.__typename),
+        };
   };
 
-  return { resolveToken, acceptHome, acceptList, declineHome, declineList };
+  const declineList = async (
+    inviteToken: string,
+  ): Promise<InvitationWriteResult> => {
+    const result = await declineShoppingListInvite({
+      variables: { input: { token: inviteToken } },
+    });
+    if (result.error) return { error: result.error };
+    const payload = result.data?.declineShoppingListInvite;
+    return payload?.__typename === 'DeclineShoppingListInvitePayload'
+      ? { accepted: true }
+      : {
+          accepted: false,
+          refusal: classifyInvitationRefusal(payload?.__typename),
+        };
+  };
+
+  return { token, acceptHome, acceptList, declineHome, declineList };
 }

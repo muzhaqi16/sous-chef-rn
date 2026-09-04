@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -55,25 +55,34 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
       defaultValues: correctWeightDefaults(),
     });
 
-  // Reset state when sheet opens (render-time conditional state update).
-  // Key on pantryItemId so cache updates to the same item don't clobber input.
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevPantryItemId, setPrevPantryItemId] = useState(pantryItem?.id);
-  if (visible !== prevVisible || pantryItem?.id !== prevPantryItemId) {
-    setPrevVisible(visible);
-    setPrevPantryItemId(pantryItem?.id);
-    if (visible && pantryItem) {
-      reset({
-        weightInput: formatNumberForInput(pantryItem.netWeight),
-        unitDisplay:
-          pantryItem.netWeightUnit?.symbol ||
-          pantryItem.netWeightUnit?.name ||
-          '',
-        selectedUnitId: pantryItem.netWeightUnit?.id || null,
-        reason: '',
-      });
-    }
+  // `reset` notifies mounted `Controller` children synchronously, so calling it
+  // during render updates components that are not rendering. The seed is
+  // computed here (own state only) and applied from an effect. Keyed on the
+  // item id so a cache update to the same item does not clobber typed input.
+  const [pendingSeed, setPendingSeed] =
+    useState<CorrectWeightFormValues | null>(null);
+  const [seedKey, setSeedKey] = useState<string | null>(null);
+  const nextSeedKey = visible && pantryItem ? pantryItem.id : null;
+  if (nextSeedKey !== seedKey) {
+    setSeedKey(nextSeedKey);
+    setPendingSeed(
+      nextSeedKey && pantryItem
+        ? {
+            weightInput: formatNumberForInput(pantryItem.netWeight),
+            unitDisplay:
+              pantryItem.netWeightUnit?.symbol ||
+              pantryItem.netWeightUnit?.name ||
+              '',
+            selectedUnitId: pantryItem.netWeightUnit?.id || null,
+            reason: '',
+          }
+        : null,
+    );
   }
+
+  useEffect(() => {
+    if (pendingSeed) reset(pendingSeed);
+  }, [pendingSeed, reset]);
 
   const handleUnitSelected = (
     unitId: string | null,

@@ -12,8 +12,12 @@
 // authService.register.test.ts).
 
 const mockMutate = jest.fn();
+const mockQuery = jest.fn().mockResolvedValue({ data: {} });
 jest.mock('#/apollo/client', () => ({
-  client: { mutate: (...args: unknown[]) => mockMutate(...args) },
+  client: {
+    mutate: (...args: unknown[]) => mockMutate(...args),
+    query: (...args: unknown[]) => mockQuery(...args),
+  },
   cancelCachePersistence: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
@@ -199,6 +203,39 @@ describe('registerDeviceInBackground — getToken dead-window re-check (P2-13)',
 
     // No updateDevice(pushToken) — the token at registration already matched.
     expect(updateCallsWith('pushToken')).toHaveLength(0);
+  });
+});
+
+describe('logout — session teardown and pacing', () => {
+  it('runs the session teardown, as every other path that ends a session does', async () => {
+    const {
+      registerSessionTeardown,
+      clearSessionTeardown,
+    } = require('#store/sessionTeardown');
+    clearSessionTeardown();
+    const step = jest.fn();
+    registerSessionTeardown('probe', step);
+
+    mockStoreState.user = { id: 'u1', email: 'u1@example.com' };
+    await authService.logout();
+
+    expect(step).toHaveBeenCalledTimes(1);
+    clearSessionTeardown();
+  });
+
+  it('does not hold the sign-out behind a revoke while offline', async () => {
+    mockStoreState.user = { id: 'u1', email: 'u1@example.com' };
+    mockStoreState.isOnline = false;
+    mockQuery.mockClear();
+
+    await authService.logout();
+
+    // Nothing to revoke against, so the round trip is not attempted at all.
+    expect(mockQuery).not.toHaveBeenCalled();
+    expect(mockStoreState.resetStore).toHaveBeenCalledWith(
+      expect.objectContaining({ auth: true }),
+    );
+    mockStoreState.isOnline = true;
   });
 });
 

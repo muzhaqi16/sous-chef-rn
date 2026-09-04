@@ -5,7 +5,7 @@
  */
 
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 
 export class GraphQLDomainError extends Error {
   override readonly name = 'GraphQLDomainError';
@@ -66,4 +66,19 @@ const RESOURCE_ACCESS_LOST_CODES = new Set<string>([ErrorCode.Forbidden]);
 export function isResourceAccessLostError(error: unknown): boolean {
   const top = getTopLevelGraphQLError(error);
   return top !== null && RESOURCE_ACCESS_LOST_CODES.has(top.code);
+}
+
+/**
+ * True when the server refused a page request's CURSOR. Keyed on the code plus
+ * a cursor variable, never the message: the refusal is a bare `ValidationError`
+ * told apart only by English prose, and `after` can be wrong about nothing else.
+ */
+export function isDeadCursorError(
+  error: unknown,
+  variables: Record<string, unknown> | undefined,
+): boolean {
+  const cursor = variables?.after ?? variables?.cursor;
+  if (cursor == null || cursor === '') return false;
+  const top = getTopLevelGraphQLError(error);
+  return top?.code === TopLevelErrorCode.ValidationFailed;
 }

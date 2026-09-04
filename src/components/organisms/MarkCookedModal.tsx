@@ -55,15 +55,25 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
     }
   }
 
+  // Empty means "as many as the recipe makes" — the field opens pre-filled and
+  // the placeholder says so. A value the user TYPED that is not a positive
+  // number is a different thing: the server refuses it on `servingsMade`, and
+  // silently cooking a different number of servings than was entered is worse
+  // than saying so. `null` = use the default, `undefined` = unusable.
+  const typedServings = servingsInput.trim();
+  const parsedServings = typedServings
+    ? parseFractionalInput(typedServings)
+    : null;
+  const servingsError =
+    parsedServings != null && (isNaN(parsedServings) || parsedServings <= 0)
+      ? t('errors.field.servingsMade')
+      : undefined;
+
   const handleConfirm = () => {
-    const servingsValue = parseFractionalInput(servingsInput);
-    const finalServings =
-      servingsValue && !isNaN(servingsValue) && servingsValue > 0
-        ? servingsValue
-        : defaultServings || 1;
+    if (servingsError) return;
 
     onConfirm({
-      servings: finalServings,
+      servings: parsedServings ?? defaultServings ?? 1,
       deductFromPantry,
       useGranularDeduction:
         deductFromPantry && hasPantry && useGranularDeduction,
@@ -88,6 +98,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
         onConfirm={handleConfirm}
         confirmLabel={t('markCookedModal.markCooked')}
         confirmColor="success"
+        confirmDisabled={!!servingsError}
       />
 
       {/* Recipe Info */}
@@ -107,6 +118,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
             count: defaultServings || 1,
           })}
           keyboardType="numeric"
+          error={servingsError}
         />
       </View>
 

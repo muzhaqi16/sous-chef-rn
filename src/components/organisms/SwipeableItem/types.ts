@@ -21,6 +21,11 @@ export interface SwipeAction {
   onPress: () => void;
   testID?: string;
   /**
+   * Light haptic before the press; default true. Per-action on purpose — an
+   * action that opens its own confirming surface buzzes twice otherwise.
+   */
+  haptic?: boolean;
+  /**
    * The action removes the row, so an animating card slides out before running it.
    * Read by the ROW renderer (`ItemCard`, `SortableItem`), never by `SwipeableItem`.
    */

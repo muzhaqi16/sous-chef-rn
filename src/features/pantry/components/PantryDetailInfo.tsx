@@ -14,6 +14,7 @@ import {
   PantryDetailInfo_PantryItemFragmentDoc,
   type PantryDetailInfo_PantryItemFragment,
 } from './PantryDetailInfo.generated';
+import { resolveCurrency, usePreferredCurrency } from '#/domain/money';
 import {
   formatCondition,
   formatAcquisitionMethod,
@@ -55,6 +56,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   pricing,
 }) => {
   const { t } = useTranslation();
+  const preferredCurrency = usePreferredCurrency();
   // Per-entity cache subscription: re-renders only when this PantryItem's
   // fields change. Falls back to the source prop on cache miss so the
   // component renders correctly under test fixtures + tolerates stale state.
@@ -85,6 +87,12 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   const purchaseTotal = fromBatch
     ? fromBatch.totalCost
     : item.purchase?.totalPrice;
+  // The item's own currency denominates its cost rows; a purchase read off the
+  // Purchase record carries its own, which can differ from what the stack is in.
+  const itemCurrency = resolveCurrency(item.costCurrency, preferredCurrency);
+  const purchaseCurrency = fromBatch
+    ? itemCurrency
+    : resolveCurrency(item.purchase?.currency, preferredCurrency);
 
   return (
     <>
@@ -255,14 +263,14 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         />
       )}
       {/* Cost Per Unit Row */}
-      {!!formatCostOrNull(costPerUnit) && (
+      {!!formatCostOrNull(costPerUnit, itemCurrency) && (
         <InfoRow
           label={t(
             isAveraged
               ? 'labels.avgCostPerUnit'
               : 'pantryItemDetail.fields.costPerUnit',
           )}
-          value={formatCostOrNull(costPerUnit)}
+          value={formatCostOrNull(costPerUnit, itemCurrency)}
           icon="cash-outline"
           showColon={false}
           labelStyle={styles.labelText}
@@ -271,10 +279,10 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         />
       )}
       {/* Total Cost Row */}
-      {!!formatCostOrNull(item.totalCost) && (
+      {!!formatCostOrNull(item.totalCost, itemCurrency) && (
         <InfoRow
           label={t('labels.stockValue')}
-          value={formatCostOrNull(item.totalCost)}
+          value={formatCostOrNull(item.totalCost, itemCurrency)}
           icon="wallet-outline"
           showColon={false}
           labelStyle={styles.labelText}
@@ -317,7 +325,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           // The TOTAL, not the unit price the Cost/Unit row above already shows.
           value={`${formatDate(purchaseDate)}${
             purchaseTotal != null && purchaseTotal > 0
-              ? ` · ${formatCostOrNull(purchaseTotal)}`
+              ? ` · ${formatCostOrNull(purchaseTotal, purchaseCurrency)}`
               : ''
           }`}
           icon="receipt-outline"

@@ -12,7 +12,6 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAppStore } from '#store/useAppStore';
 import { useNotificationActionData } from '#features/notifications/hooks/useNotificationActionData';
 import { useExpirationNotificationSync } from '#features/notifications/hooks/useExpirationNotificationSync';
-import { useNotificationSync } from '#features/notifications/hooks/useNotificationSync';
 
 interface NotificationActionHandlerProps {
   children: (props: {
@@ -42,13 +41,11 @@ export const NotificationActionHandler: React.FC<
   const { toPantryMain, toShoppingListMain, toNotifications } =
     useAppNavigation();
   const setHomeAndPantry = useAppStore(state => state.setHomeAndPantry);
-  const currentUserId = useAppStore(state => state.user?.id);
   const { resolveExpirationLink, removeNotification } =
-    useNotificationActionData(currentUserId);
+    useNotificationActionData();
   const linkExpirationData = useNotificationStore(
     state => state.linkExpirationData,
   );
-  const { syncDelete } = useNotificationSync();
   const showInvitationModal = (notification: NotificationItem) => {
     if (
       notification.actionType === 'ACCEPT_HOME_INVITE' ||
@@ -197,15 +194,6 @@ export const NotificationActionHandler: React.FC<
     }
   };
 
-  const handleInvitationInvalidate = () => {
-    // Underlying server invite is gone — permanently delete the notification
-    // (server delete + optimistic local removal) so it stops reappearing on
-    // every cold start / foreground refresh.
-    if (currentNotificationId) {
-      syncDelete(currentNotificationId);
-    }
-  };
-
   return (
     <>
       {children({
@@ -224,7 +212,6 @@ export const NotificationActionHandler: React.FC<
         }}
         onAccept={handleInvitationAccept}
         onReject={handleInvitationReject}
-        onInvalidate={handleInvitationInvalidate}
       />
 
       <ExpirationActionSheet

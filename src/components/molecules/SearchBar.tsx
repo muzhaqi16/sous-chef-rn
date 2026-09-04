@@ -15,7 +15,10 @@ import {
   withUnistyles,
 } from 'react-native-unistyles';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
-import type { ThemedBottomSheetTextInputRef } from '#components/atoms/themedComponents';
+import type {
+  ThemedBottomSheetTextInputRef,
+  ThemedTextInputRef,
+} from '#components/atoms/themedComponents';
 import { ActionButton } from '#components/atoms/ActionButton';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#utils/iconUtils';
@@ -176,25 +179,30 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
     const resolvedPlaceholder = placeholder ?? t('searchBar.placeholder');
 
     const debounced = debounceMs !== undefined;
-    const inputRef = useRef<ThemedBottomSheetTextInputRef>(null);
+    // `BaseInput` renders gorhom's input inside a sheet and the plain one
+    // outside, and routes a different ref to each. A debounced SearchBar is
+    // uncontrolled, so a handle reaching neither cannot change what is shown.
+    const sheetInputRef = useRef<ThemedBottomSheetTextInputRef>(null);
+    const plainInputRef = useRef<ThemedTextInputRef>(null);
+    const liveInput = () => sheetInputRef.current ?? plainInputRef.current;
     const textRef = useRef('');
     const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [hasText, setHasText] = useState(false);
 
     useImperativeHandle(searchRef, () => ({
       clear: () => {
-        inputRef.current?.clear();
+        liveInput()?.clear();
         textRef.current = '';
         setHasText(false);
         onChangeText('');
         onClear?.();
       },
-      focus: () => inputRef.current?.focus(),
-      blur: () => inputRef.current?.blur(),
+      focus: () => liveInput()?.focus(),
+      blur: () => liveInput()?.blur(),
       getValue: () => textRef.current,
       setValue: (next: string) => {
         textRef.current = next;
-        inputRef.current?.setNativeProps?.({ text: next });
+        liveInput()?.setNativeProps?.({ text: next });
         setHasText(next.length > 0);
       },
     }));
@@ -209,7 +217,7 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
       if (defaultValue === undefined || defaultValue === textRef.current)
         return;
       textRef.current = defaultValue;
-      inputRef.current?.setNativeProps?.({ text: defaultValue });
+      liveInput()?.setNativeProps?.({ text: defaultValue });
       onChangeText(defaultValue);
     }, [defaultValue, onChangeText]);
 
@@ -233,7 +241,7 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
 
     const handleClear = () => {
       if (debounced) {
-        inputRef.current?.clear();
+        liveInput()?.clear();
         textRef.current = '';
         setHasText(false);
         if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -297,7 +305,8 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
         <BaseInput
           value={debounced ? undefined : value}
           defaultValue={debounced ? defaultValue : undefined}
-          sheetRef={debounced ? inputRef : undefined}
+          ref={debounced ? plainInputRef : undefined}
+          sheetRef={debounced ? sheetInputRef : undefined}
           onChangeText={handleChangeText}
           placeholder={resolvedPlaceholder}
           style={inputStyle}

@@ -20,6 +20,8 @@ import { useRememberMe } from '#features/auth/hooks/useRememberMe';
 import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
 import { useAppStore } from '#store/useAppStore';
 import { authService } from '#/services/authService';
+import { CodeVerificationScreen } from '#features/auth/screens/CodeVerificationScreen';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { Telemetry } from '#/services/telemetry';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
@@ -115,6 +117,9 @@ export function LoginScreen(): React.JSX.Element {
   const [shouldShowBiometricButton, setShouldShowBiometricButton] =
     useState(false);
   const [isBiometricLoading, setIsBiometricLoading] = useState(false);
+  // The address a refused-as-unverified sign-in was for. Null until the server
+  // says so; set, this screen becomes the code entry for that account.
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const [biometricEmail, setBiometricEmail] = useState<string | null>(null);
   const [biometricInfo, setBiometricInfo] = useState<{
     isAvailable: boolean;
@@ -143,7 +148,17 @@ export function LoginScreen(): React.JSX.Element {
     Telemetry.trackEvent('login_attempt', { method: 'email_password' });
 
     try {
-      await authService.login(input);
+      await authService.login(input, {
+        // A 403 that leaves the credentials valid: the mailbox is unproven, and
+        // the emailed code clears it. Sending the reader to enter that code is
+        // the only action available, so the screen offers it rather than
+        // leaving a toast on a form they can only re-submit.
+        onRefusal: code => {
+          if (code === ErrorCode.AuthEmailNotVerified) {
+            setUnverifiedEmail(input.email);
+          }
+        },
+      });
       Telemetry.trackEvent('login_success', { method: 'email_password' });
     } catch (err) {
       Telemetry.trackError(err instanceof Error ? err : 'Login failed', {
@@ -219,6 +234,12 @@ export function LoginScreen(): React.JSX.Element {
 
     return t('auth.useBiometric');
   };
+
+  // Rendered in place, as SignUpScreen does: `verifyEmail` is public and needs
+  // no session, and there is no signed-out verification ROUTE to navigate to.
+  if (unverifiedEmail !== null) {
+    return <CodeVerificationScreen context="signup" email={unverifiedEmail} />;
+  }
 
   return (
     <AuthWrapper testID="login-screen">

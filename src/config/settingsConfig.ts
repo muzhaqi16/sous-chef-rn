@@ -155,6 +155,14 @@ export const PROFILE_SETTINGS_CONFIG: SettingSectionConfig[] = [
         labelKey: 'labels.language',
         type: 'modal',
       },
+      {
+        // Options injected by useConfigurableSettings from the server's active
+        // currency list. Not a display preference: the server records a cost it
+        // is not told the currency of in this one.
+        key: 'currency',
+        labelKey: 'labels.currency',
+        type: 'modal',
+      },
     ],
   },
   {

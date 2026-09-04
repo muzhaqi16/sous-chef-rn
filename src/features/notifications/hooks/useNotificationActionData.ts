@@ -1,13 +1,14 @@
 import { useApolloClient } from '@apollo/client/react';
 import { GetExpirationNotificationsForPantryItemDocument } from '#features/notifications/graphql/expirationNotificationLookup.generated';
-import { applyNotificationRemoved } from '#features/notifications/utils/notificationCacheWrites';
 import { readExpiryReminderFields } from '#features/notifications/utils/notificationHelpers';
 import type { DisplayNotification } from '#features/notifications/utils/toDisplayNotification';
 import { errorService } from '#/services/errorService';
+import { useNotificationSync } from '#features/notifications/hooks/useNotificationSync';
 
 /** The cache reads and writes a notification's action buttons need. */
-export function useNotificationActionData(currentUserId: string | undefined) {
+export function useNotificationActionData() {
   const client = useApolloClient();
+  const { syncDelete } = useNotificationSync();
 
   /**
    * Find the expiration record behind a generic notification. `pantryItemId`
@@ -42,9 +43,14 @@ export function useNotificationActionData(currentUserId: string | undefined) {
     return match?.node ?? null;
   };
 
-  /** Drop a notification from the feed so its modal cannot be re-opened. */
+  /**
+   * Drop a notification from the feed so its modal cannot be re-opened. Through
+   * `syncDelete`, not a bare cache write: the server still holds the row, so a
+   * local-only removal returns on the next cold start — and an invite that
+   * returns without its token can never be actioned from this device again.
+   */
   const removeNotification = (notificationId: string) => {
-    applyNotificationRemoved(client.cache, currentUserId, notificationId);
+    void syncDelete(notificationId);
   };
 
   return { resolveExpirationLink, removeNotification };

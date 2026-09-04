@@ -1,4 +1,4 @@
-import { createMMKV, type MMKV } from 'react-native-mmkv';
+import { createMMKV, existsMMKV, type MMKV } from 'react-native-mmkv';
 import { StateStorage } from 'zustand/middleware';
 import { logger } from '#/utils/environment';
 import {
@@ -67,6 +67,10 @@ const getEncryptionKeyWithRetry = async (): Promise<DeviceEncryptionKey> => {
  */
 export const purgeRecoveryStorage = (): void => {
   try {
+    // `createMMKV` creates on open, so probing with it would materialise the
+    // recovery file on every device that never had an outage — and then find
+    // it there on every launch after.
+    if (!existsMMKV(RECOVERY_STORAGE_KEY)) return;
     const recovery = createMMKV({ id: RECOVERY_STORAGE_KEY });
     if (recovery.getAllKeys().length === 0) return;
     recovery.clearAll();

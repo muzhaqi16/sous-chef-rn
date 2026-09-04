@@ -4,10 +4,7 @@ import { StorageState } from '#/graphql/generated/schemaTypes';
 // render the result are responsible for re-running these on a language change.
 import { t as tGlobal } from '#/i18n';
 import type { Translate } from '#/i18n/types';
-import {
-  DEFAULT_CURRENCY,
-  formatCurrency as formatMoney,
-} from '#/utils/formatters/number';
+import { formatCurrency as formatMoney } from '#/utils/formatters/number';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 
 // Location type for filtering
@@ -295,10 +292,14 @@ export const formatAcquisitionMethod = (
     .join(' ');
 };
 
-// A cost, or null when there is no amount worth showing — callers omit the row
-// entirely rather than render a bare zero. Distinct from `formatCurrency`,
-// which always returns a string and takes the currency explicitly.
-export const formatCostOrNull = (amount?: number | null): string | null => {
-  if (amount == null || amount <= 0) return null;
-  return formatMoney(amount, DEFAULT_CURRENCY);
+// A cost, or null when the server recorded none — callers omit the row rather
+// than render an em dash beside populated ones. A cost recorded AS zero is a
+// fact somebody entered (a gift, a comped line) and is shown. Distinct from
+// `formatCurrency`, which always returns a string.
+export const formatCostOrNull = (
+  amount: number | null | undefined,
+  currency: string,
+): string | null => {
+  if (amount == null) return null;
+  return formatMoney(amount, currency);
 };

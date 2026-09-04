@@ -78,7 +78,7 @@ export const ShoppingListPickerSheet: React.FC<
 
   return (
     <Sheet
-      mode="view"
+      mode="list"
       visible={visible}
       title={t('labels.addToShoppingList')}
       snapPoints={['60%']}

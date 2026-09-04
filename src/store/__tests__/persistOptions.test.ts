@@ -284,6 +284,47 @@ describe('store persist options', () => {
       ]);
     });
 
+    it('carries feature hints and login counts out of the old MMKV keys', async () => {
+      const { storage } = require('#/storage/mmkv');
+      storage.set('feature_hint_shown_user-1_pantry_swipe', true);
+      storage.set('feature_hint_shown_user-1_list_reorder', true);
+      storage.set('login_count_user-1', 7);
+
+      const { migrate } = useStore.persist.getOptions();
+      const migrated = (await migrate!({}, 15)) as Record<string, unknown>;
+
+      expect(migrated.featureHintsShown).toMatchObject({
+        'feature_hint_shown_user-1_pantry_swipe': true,
+        'feature_hint_shown_user-1_list_reorder': true,
+      });
+      expect(migrated.loginCounts).toMatchObject({ 'user-1': 7 });
+    });
+
+    it('removes the old keys once they are carried', async () => {
+      const { storage } = require('#/storage/mmkv');
+      storage.set('feature_hint_shown_user-2_thing', true);
+
+      const { migrate } = useStore.persist.getOptions();
+      await migrate!({}, 15);
+
+      expect(storage.getAllKeys()).not.toContain(
+        'feature_hint_shown_user-2_thing',
+      );
+    });
+
+    it('leaves a v16 blob untouched', async () => {
+      const { storage } = require('#/storage/mmkv');
+      storage.set('feature_hint_shown_user-3_thing', true);
+
+      const { migrate } = useStore.persist.getOptions();
+      const migrated = (await migrate!(
+        { featureHintsShown: { existing: true } },
+        16,
+      )) as Record<string, unknown>;
+
+      expect(migrated.featureHintsShown).toEqual({ existing: true });
+    });
+
     it('leaves a v15 blob untouched', async () => {
       const { migrate } = useStore.persist.getOptions();
       const migrated = (await migrate!(v14Blob(), 15)) as Record<

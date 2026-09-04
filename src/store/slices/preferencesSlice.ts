@@ -11,6 +11,7 @@ import type {
 } from './preferenceTypes';
 import type { RootState } from '../index';
 import { logger } from '#/utils/environment';
+import { DEFAULT_CURRENCY } from '#/utils/formatters/number';
 
 /**
  * The one preference → `UnistylesRuntime` translation, shared by the `setTheme`
@@ -67,6 +68,11 @@ export interface PreferencesState {
   showTutorials: boolean;
   setShowTutorials: (enabled: boolean) => void;
 
+  // Currency — mirrored for the same reason, and read by every money surface:
+  // an Apollo watcher per list cell would be a query subscription per row.
+  preferredCurrency: string;
+  setPreferredCurrency: (code: string) => void;
+
   // Pantry Sort Preferences
   pantrySortOption: PantrySortOption;
   pantrySortDirection: PantrySortDirection;
@@ -100,6 +106,7 @@ const initialPreferencesState = {
   hapticFeedbackEnabled: true, // Enabled by default
   showNavigationLabels: true, // Enabled by default
   showTutorials: true,
+  preferredCurrency: DEFAULT_CURRENCY,
   pantrySortOption: PREFERENCE_DEFAULTS.pantrySortOption,
   pantrySortDirection: PREFERENCE_DEFAULTS.pantrySortDirection, // Newest first
   primaryColorOverride: null,
@@ -132,6 +139,7 @@ export const createPreferencesSlice: StateCreator<
   setShowNavigationLabels: enabled => set({ showNavigationLabels: enabled }),
 
   setShowTutorials: enabled => set({ showTutorials: enabled }),
+  setPreferredCurrency: code => set({ preferredCurrency: code }),
   setPantrySortOption: option => set({ pantrySortOption: option }),
   setPantrySortDirection: direction => set({ pantrySortDirection: direction }),
 

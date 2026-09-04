@@ -34,17 +34,8 @@ export const easing = {
   plain: Easing.ease,
 };
 
-/**
- * Reduce-motion substitutes. Every duration collapses to zero and every spring
- * is over-damped, so an animation driven by these lands on its end state in a
- * frame instead of being removed at the call site.
- */
-export const reducedTiming = Object.fromEntries(
-  Object.keys(timing).map(key => [key, 0]),
-) as typeof timing;
-
-export const reducedSpring = Object.fromEntries(
-  Object.keys(spring).map(key => [key, { damping: 100, stiffness: 1000 }]),
-) as typeof spring;
-
+// There are no reduce-motion substitutes here on purpose. Reanimated collapses
+// `withTiming`, `withSpring`, `withRepeat` and the entering/exiting builders
+// under the OS setting itself, so a second set of zeroed tokens is a mechanism
+// with nothing to drive. See `docs/verified-library-behaviour.md`.
 export const motion = { timing, spring, easing };

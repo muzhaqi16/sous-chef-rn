@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
+import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { ChartSection } from '#features/pantry/components/analytics/ChartSection';
 import { BreakdownPieChart } from '#features/pantry/components/charts/BreakdownPieChart';
-import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 import {
   AnalyticsSummaryCard,
   OfflineTabState,
@@ -32,6 +32,7 @@ export const WasteTab: React.FC<
   onRefresh,
 }) => {
   const { t } = useTranslation();
+  const money = useMoney();
 
   const wasteReasonData =
     wasteData?.wasteByReason?.map(item => ({
@@ -82,10 +83,7 @@ export const WasteTab: React.FC<
       <View style={styles.summaryRow}>
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.estValueLost')}
-          value={formatCurrency(
-            wasteData?.totalWasteValue ?? 0,
-            DEFAULT_CURRENCY,
-          )}
+          value={money(wasteData?.totalWasteValue)}
           icon="cash-outline"
           uniProps={theme => ({ color: theme.colors.error })}
         />

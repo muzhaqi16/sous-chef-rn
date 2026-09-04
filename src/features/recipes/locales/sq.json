@@ -279,7 +279,9 @@
     "createdFromRecipe": "Krijuar nga një recetë",
     "ratingBreakdownRow": "{{count}} vlerësime me {{stars}} yje",
     "favoriteA11y": "Shto te të preferuarat",
-    "unfavoriteA11y": "Hiq nga të preferuarat"
+    "unfavoriteA11y": "Hiq nga të preferuarat",
+    "stepsTooMany": "Një recetë mund të ketë maksimumi {{count}} hapa",
+    "stepsTooLarge": "Këta hapa janë shumë të gjatë për t’u ruajtur. Shkurtoji dhe provo sërish."
   },
   "recipeFilters": {
     "title": "Filtrat",

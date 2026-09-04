@@ -3,6 +3,7 @@ import { createNativeStackScreen } from '@react-navigation/native-stack';
 import { settingsScreenOptions } from '#navigation/detailScreenOptions';
 import { ProfileScreen } from './ProfileScreen';
 import { devtoolsScreens } from '#features/devtools/screens/registration';
+import { motion } from '#/theme/foundations/motion';
 
 // Infrequently visited, so loaded on demand to keep them out of cold start.
 const ProfilePhotoUploadScreen = React.lazy(
@@ -41,7 +42,10 @@ const VerifyEmailScreen = React.lazy(() =>
 export const profileScreens = {
   Profile: createNativeStackScreen({
     screen: ProfileScreen,
-    options: { animation: 'slide_from_right', animationDuration: 200 },
+    options: {
+      animation: 'slide_from_right',
+      animationDuration: motion.timing.STANDARD,
+    },
     linking: null,
   }),
   ProfilePhotoUpload: createNativeStackScreen({

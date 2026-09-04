@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -55,22 +55,30 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
     defaultValues: adjustQuantityDefaults(),
   });
 
-  // Reset state when sheet opens (render-time conditional state update).
-  // Key on pantryItemId so the reset still fires on a different item, but a
-  // cache update to the same item (mutation result) does not clobber user input.
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevPantryItemId, setPrevPantryItemId] = useState(pantryItem?.id);
-  if (visible !== prevVisible || pantryItem?.id !== prevPantryItemId) {
-    setPrevVisible(visible);
-    setPrevPantryItemId(pantryItem?.id);
-    if (visible && pantryItem) {
-      reset({
-        quantityInput: formatNumberForInput(pantryItem.quantity),
-        reason: '',
-        remainingWeightInput: '',
-      });
-    }
+  // `reset` notifies mounted `Controller` children synchronously, so calling it
+  // during render updates components that are not rendering. The seed is
+  // computed here (own state only) and applied from an effect. Keyed on the
+  // item id so a cache update to the same item does not clobber typed input.
+  const [pendingSeed, setPendingSeed] =
+    useState<AdjustQuantityFormValues | null>(null);
+  const [seedKey, setSeedKey] = useState<string | null>(null);
+  const nextSeedKey = visible && pantryItem ? pantryItem.id : null;
+  if (nextSeedKey !== seedKey) {
+    setSeedKey(nextSeedKey);
+    setPendingSeed(
+      nextSeedKey && pantryItem
+        ? {
+            quantityInput: formatNumberForInput(pantryItem.quantity),
+            reason: '',
+            remainingWeightInput: '',
+          }
+        : null,
+    );
   }
+
+  useEffect(() => {
+    if (pendingSeed) reset(pendingSeed);
+  }, [pendingSeed, reset]);
 
   // Reaching here means the schema passed; a refusal renders under its field.
   const handleConfirm = handleSubmit(values => {

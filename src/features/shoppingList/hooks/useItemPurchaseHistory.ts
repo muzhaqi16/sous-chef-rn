@@ -3,6 +3,7 @@ import {
   GetItemPurchaseHistoryDocument,
   type GetItemPurchaseHistoryQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import { loadPageWithCursorRecovery } from '#hooks/utils/cursorRecovery';
 import { useDataState } from '#hooks/data/useDataState';
 import { errorService } from '#/services/errorService';
 
@@ -44,15 +45,12 @@ export function useItemPurchaseHistory(itemId: string) {
 
   const loadMore = () => {
     if (!hasNextPage || !endCursor || loading || isFetchingMore) return;
-    // fetchMore rejects on network/GraphQL errors; catch it so a failed page
-    // doesn't surface as an unhandled promise rejection.
-    void fetchMore({
+    void loadPageWithCursorRecovery({
+      fetchMore,
+      refetch,
       variables: { itemId, first: PAGE_SIZE, after: endCursor },
-    }).catch(fetchError =>
-      errorService.reportError(fetchError, {
-        operation: 'PurchaseHistory.loadMore',
-      }),
-    );
+      operation: 'PurchaseHistory.loadMore',
+    });
   };
 
   // A failed read is not an empty history: rendering both as the empty state

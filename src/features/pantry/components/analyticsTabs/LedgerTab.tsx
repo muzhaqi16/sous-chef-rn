@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
+import { usePreferredCurrency } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
@@ -36,6 +37,7 @@ export const LedgerTab: React.FC<
   onRefresh,
 }) => {
   const { t } = useTranslation();
+  const preferredCurrency = usePreferredCurrency();
 
   const ledgerPeriodData =
     ledgerData?.periodData?.map(period => ({
@@ -159,13 +161,19 @@ export const LedgerTab: React.FC<
         <View style={styles.summaryRow}>
           <AnalyticsSummaryCard
             title={t('labels.totalSpent')}
-            value={money(ledgerData.costAnalytics.totalSpent)}
+            value={money(
+              ledgerData.costAnalytics.totalSpent,
+              preferredCurrency,
+            )}
             icon="cash-outline"
             uniProps={theme => ({ color: theme.colors.warning })}
           />
           <AnalyticsSummaryCard
             title={t('labels.avgCostPerUnit')}
-            value={money(ledgerData.costAnalytics.averageCostPerUnit)}
+            value={money(
+              ledgerData.costAnalytics.averageCostPerUnit,
+              preferredCurrency,
+            )}
             icon="calculator-outline"
             uniProps={theme => ({ color: theme.colors.warning })}
           />

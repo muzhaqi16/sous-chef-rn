@@ -15,11 +15,16 @@ import type { Translate } from '#/i18n/types';
 // Wrapped only so `uniProps` type-checks at the call sites; no static theme
 // mapping — every theme read happens via `uniProps={t => ({ … })}`.
 export const TrendLineChart = withUnistyles(BaseTrendLineChart);
-import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
+import { formatCurrency } from '#/utils/formatters/number';
 export const TopItemsBarChart = withUnistyles(BaseTopItemsBarChart);
-/** An em dash, as InfoRow uses: an amount nobody recorded is not $0.00. */
-export const money = (amount: number | null | undefined): string =>
-  amount == null ? '—' : formatCurrency(amount, DEFAULT_CURRENCY);
+/**
+ * An amount nobody recorded reads as an em dash, as InfoRow does. Module scope,
+ * so the currency is passed in — a caller resolves it with `useMoney`.
+ */
+export const money = (
+  amount: number | null | undefined,
+  currency: string,
+): string => formatCurrency(amount, currency);
 
 export const AnalyticsSummaryCard = withUnistyles(BaseAnalyticsSummaryCard);
 

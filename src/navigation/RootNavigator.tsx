@@ -65,6 +65,7 @@ import { Telemetry } from '#services/telemetry';
 import { NativePerformanceService } from '#services/performance/NativePerformanceService';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { appConfig } from '#/config/appConfig';
+import { motion } from '#/theme/foundations/motion';
 
 const DEEP_LINK_PREFIXES = [
   `${appConfig.identity.deepLink.scheme}://`,
@@ -81,7 +82,7 @@ const RootStack = createNativeStackNavigator({
   screenOptions: {
     headerShown: false,
     animation: 'slide_from_right',
-    animationDuration: 200,
+    animationDuration: motion.timing.STANDARD,
   },
   groups: {
     Auth: {

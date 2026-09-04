@@ -35,6 +35,7 @@ export function useMealPlans(filters?: MealPlanFilters) {
     selector: d => d.mealPlans,
     loading,
     fetchMore,
+    refetch,
   });
 
   // Edges arrive as masked refs (`{ __typename: 'MealPlan' } & { $fragmentRefs }`).

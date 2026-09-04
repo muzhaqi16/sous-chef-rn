@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
@@ -7,7 +8,6 @@ import { CachedImage } from '#components/atoms/CachedImage';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { formatQuantity } from '#utils/formatQuantity';
-import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 import { Card } from '#components/atoms/Card';
 
 interface Item {
@@ -41,6 +41,7 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
   editActionLabel,
 }) => {
   const { t } = useTranslation();
+  const money = useMoney();
   const showActions = !!onEditItem || !!onCreateVariant;
 
   return (
@@ -66,9 +67,9 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
             {item.displayUnit?.name ? ` ${item.displayUnit.name}` : ''}
           </Text>
         )}
-        {!!item?.price && (
+        {item?.price != null && (
           <Text role="subheading" tone="success">
-            {formatCurrency(item.price, DEFAULT_CURRENCY)}
+            {money(item.price)}
           </Text>
         )}
         <Text role="caption" tone="secondary" style={styles.itemBarcode}>

@@ -13,7 +13,8 @@ import { commonStyles } from '#/styles/commonStyles';
 
 import { Text } from '#components/atoms/Text';
 import { PaginatedHistoryScreen } from '#components/templates/PaginatedHistoryScreen';
-import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
+import { formatCurrency } from '#/utils/formatters/number';
+import { usePreferredCurrency } from '#/domain/money';
 import { formatDateTime } from '#/utils/formatters/date';
 
 const keyExtractor = (item: { id: string }) => item.id;
@@ -37,9 +38,13 @@ const formatDate = (dateString: string) => {
 const formatPrice = (
   amount: number | null | undefined,
   currencyCode: string | null | undefined,
+  preferredCurrency: string,
 ): string | null => {
-  if (amount == null || amount <= 0) return null;
-  return formatCurrency(amount, currencyCode ?? DEFAULT_CURRENCY);
+  // Only an ABSENT price has nothing to show. A price recorded as zero is a
+  // price somebody entered — a comped or free line — and it is counted in the
+  // totals below, so suppressing its own row would disagree with them.
+  if (amount == null) return null;
+  return formatCurrency(amount, currencyCode ?? preferredCurrency);
 };
 
 type PurchaseHistoryItemProps = ListRenderItemInfo<PurchaseItem> & {
@@ -52,12 +57,21 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
   totalCount,
 }) => {
   const { t } = useTranslation();
-  const priceText = formatPrice(purchase.totalPrice, purchase.currency.code);
+  const preferredCurrency = usePreferredCurrency();
+  const priceText = formatPrice(
+    purchase.totalPrice,
+    purchase.currency.code,
+    preferredCurrency,
+  );
   // At quantity 1 the per-unit price IS the total. Every other quantity gets
   // the rate — a fractional one most of all.
   const perUnitText =
     purchase.quantity !== 1
-      ? formatPrice(purchase.unitPrice, purchase.currency.code)
+      ? formatPrice(
+          purchase.unitPrice,
+          purchase.currency.code,
+          preferredCurrency,
+        )
       : null;
 
   return (
@@ -190,19 +204,24 @@ export const PurchaseHistoryScreen: React.FC<
 
   const { purchases, totalCount, state, loadMore, isFetchingMore, retry } =
     useItemPurchaseHistory(itemId);
+  const preferredCurrency = usePreferredCurrency();
 
-  // Priced purchases only. A price is now NULL when it was never observed — a
-  // line moved to the pantry without one — which is unknown, not zero, and
-  // averaging it in would drag the mean toward zero.
+  // Priced purchases only. A price is NULL when it was never observed — a line
+  // moved to the pantry without one — which is unknown, not zero, and averaging
+  // it in would drag the mean toward zero. A price RECORDED as zero is a price
+  // somebody entered and belongs in both figures.
   const pricedPurchases = purchases.filter(
-    (p): p is typeof p & { totalPrice: number } =>
-      p.totalPrice != null && p.totalPrice > 0,
+    (p): p is typeof p & { totalPrice: number } => p.totalPrice != null,
   );
   const currencyCode = pricedPurchases[0]?.currency.code;
   const spent = pricedPurchases.reduce((sum, p) => sum + p.totalPrice, 0);
-  const totalSpent = formatPrice(spent, currencyCode);
+  const totalSpent = formatPrice(spent, currencyCode, preferredCurrency);
   const averageSpent = pricedPurchases.length
-    ? formatPrice(spent / pricedPurchases.length, currencyCode)
+    ? formatPrice(
+        spent / pricedPurchases.length,
+        currencyCode,
+        preferredCurrency,
+      )
     : null;
 
   return (

@@ -181,6 +181,52 @@ describe('wsLink', () => {
       // After disabling, state should be stable
       expect(state.hasClient).toBe(true);
     });
+
+    it('abandons a dial parked on the backoff instead of releasing it', async () => {
+      // `url()` resolving IS the dial: graphql-ws builds the socket straight
+      // after it, with no disposed check. A session end must leave the parked
+      // promise unsettled, exactly as it does for an offline waiter.
+      enableAutoReconnect();
+      await dialGate();
+
+      let settled = false;
+      const parked = dialGate().then(() => {
+        settled = true;
+      });
+
+      disableAutoReconnect();
+      for (let i = 0; i < 8; i++) await Promise.resolve();
+
+      expect(settled).toBe(false);
+      void parked;
+    });
+  });
+
+  describe('the dial backoff', () => {
+    it('still spreads clients once the delay reaches its ceiling', async () => {
+      // Clamping delay+jitter together makes every client at the ceiling
+      // compute the same number — a herd, at the moment a herd costs most.
+      jest.useFakeTimers();
+      enableAutoReconnect();
+      const spy = jest.spyOn(global, 'setTimeout');
+
+      for (let i = 0; i < 12; i++) {
+        const dial = dialGate();
+        await Promise.resolve();
+        jest.runOnlyPendingTimers();
+        await dial;
+      }
+
+      const waits = spy.mock.calls
+        .map(call => Number(call[1]))
+        .filter(ms => ms >= 30000);
+      spy.mockRestore();
+      jest.useRealTimers();
+
+      expect(waits.length).toBeGreaterThan(3);
+      expect(Math.max(...waits)).toBeLessThanOrEqual(37500);
+      expect(new Set(waits).size).toBeGreaterThan(1);
+    });
   });
 
   describe('enableAutoReconnect', () => {
@@ -1137,7 +1183,7 @@ describe('wsLink', () => {
       setAppState('active');
       for (let i = 0; i < 8; i++) await gateSettlesWithin(400_000);
 
-      expect(await gateSettlesWithin(31_000)).toBe(true);
+      expect(await gateSettlesWithin(38_000)).toBe(true);
     });
 
     /** Settle the dial gate, reporting whether `ms` was enough for it. */
@@ -1166,7 +1212,10 @@ describe('wsLink', () => {
       // Climb the exponent past the cap so the ceiling is what binds.
       for (let i = 0; i < 8; i++) await gateSettlesWithin(400_000);
 
-      expect(await gateSettlesWithin(31_000)).toBe(true);
+      // The ceiling caps the base and jitter adds up to 25% on top, so the
+      // worst case here is 37.5s. A 31s bound would only hold if jitter were
+      // clamped away — which is what let every client re-dial in one tick.
+      expect(await gateSettlesWithin(38_000)).toBe(true);
     });
 
     it('stretches the ceiling once failures become a streak', async () => {
@@ -1190,7 +1239,7 @@ describe('wsLink', () => {
       seedStore();
       for (let i = 0; i < 8; i++) await gateSettlesWithin(400_000);
 
-      expect(await gateSettlesWithin(31_000)).toBe(true);
+      expect(await gateSettlesWithin(38_000)).toBe(true);
     });
 
     // The throttle stopwatch has to be monotonic: on a wall clock a backwards

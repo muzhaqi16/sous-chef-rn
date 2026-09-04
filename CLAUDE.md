@@ -38,11 +38,12 @@ node scripts/check-design-tokens.mjs             # also in pre-commit
 node scripts/check-typography-roles.mjs          # also in pre-commit
 node scripts/check-component-tier.mjs            # also in pre-commit
 node scripts/check-screen-scaffold.mjs           # also in pre-commit
+node scripts/check-a11y-names.mjs                # also in pre-commit
 node scripts/check-dependency-audit.mjs          # also in PR checks + weekly
 node scripts/check-bundled-secrets.mjs --self-test
 ```
 
-Each of the eleven boundary gates takes `--list` (every finding), `--update`
+Each of the twelve boundary gates takes `--list` (every finding), `--update`
 (re-baseline) and `--self-test` (prove it can still fail). A NON-EMPTY baseline
 is a debt list that may only shrink; an EMPTY one is an invariant, and any
 finding there is a regression to fix:
@@ -53,13 +54,14 @@ finding there is a regression to fix:
 | `check-hook-return-types` | a feature hook's return type may not name the data library — its companion, since the screen imports nothing | 0 |
 | `check-import-cycles` | no new LOAD-TIME import cycle; `import type` and `await import()` edges do not count | 0 |
 | `check-single-consumer` | a module in `components`/`hooks`/`context`/`utils`/`constants` used by exactly one feature belongs to that feature | hard rule |
-| `check-form-state` | a form holds its fields in react-hook-form, not `useState` | 75 |
+| `check-form-state` | a form holds its fields in react-hook-form, not `useState` | 70 |
 | `check-feature-enumeration` | a feature id in a string outside its feature is a place the feature list has to be remembered | 0 |
 | `check-canonical-mechanisms` | one mechanism per concern — the list primitive, the image component, the modal surface, the date formatter, device storage. The full concern table, gates included, is § One mechanism per concern | 0 |
-| `check-design-tokens` | a visual property is a token, not a literal; a kit concept is not restyled in a feature | 0 |
+| `check-design-tokens` | a visual property is a token, not a literal; a kit concept is not restyled in a feature | 0 failing / 9 colour + 162 icon-size tracked |
 | `check-typography-roles` | text is set by a named role, not by size and weight | 21 |
 | `check-component-tier` | a kit component sits in the tier its composition puts it in | 0 |
 | `check-screen-scaffold` | a screen's chrome comes from `Screen`, and nobody applies the top inset twice | 4 chrome / 0 double-inset |
+| `check-a11y-names` | a control with an `onPress` and no text child carries an `accessibilityLabel` | 0 |
 
 When one reaches zero, promote it to a hard `import/no-restricted-paths` zone
 and delete the baseline — the same promotion the kit half of
@@ -478,17 +480,19 @@ one nobody has been able to express yet, not one that is optional.
 | Device storage | a persisted slice of the Zustand store | `check-canonical-mechanisms` · `no-restricted-imports` on `#storage/mmkv` |
 | A screen's chrome | `Screen` (`#components/templates/Screen`) | `check-screen-scaffold` |
 | A sheet's shell | `Sheet` (`#components/templates/Sheet`) | `bottomSheetShell.test.ts` |
-| A loading indicator | `Loading` / `LoadingBranded` (`#components/molecules/Loading`) | — |
+| A loading indicator | `Loading` / `LoadingBranded` (`#components/molecules/Loading`) | `check-canonical-mechanisms` |
 | A toast | `toastService` — in and out of the React tree alike | `no-restricted-syntax` on its arguments |
 | Navigating | `useAppNavigation` | `no-restricted-imports` on `useNavigation` |
 | Setting text | a typography ROLE (`<Text role="body">`) | `check-typography-roles` |
 | A colour, radius, z-index or spacing step | a `theme.*` token | `check-design-tokens` |
 | Elevation | a step of `theme.shadows` | `check-design-tokens` |
-| A duration, spring or curve | `theme.motion` | — |
+| A duration, spring or curve | `theme.motion` | `check-design-tokens` (at or below the 300 ms scale ceiling; above it is a loop's own period) |
 | A form's fields | react-hook-form + a yup schema beside the form | `check-form-state` |
-| Reduce motion | nothing — Reanimated applies it itself | `probe-reanimated-reduce-motion.mjs` |
+| Searching a loaded list | `filterByTerm` / `useLocalSearch` (`#hooks/search/useLocalSearch`) | `check-canonical-mechanisms` |
+| Reduce motion | nothing — Reanimated applies it itself | `no-restricted-imports` on `useReducedMotion` · `probe-reanimated-reduce-motion.mjs` |
 | Memoization | nothing — the React Compiler does it | `check-compiler-bailouts` |
-| A shared actions bag | `createActionsContext` | — |
+| A shared actions bag | `createActionsContext` | — (no gate: a context holding callbacks is not distinguishable from any other context by shape) |
+| Where a value lives | Apollo if the server owns it, else a Zustand slice; a context only for what a subtree passes down | — (no gate: the choice is not visible at any one call site — `check-single-consumer` catches a context only one feature reaches, which is a different question) |
 
 When a gate's baseline reaches zero, promote it to an
 `import/no-restricted-paths` or `no-restricted-imports` zone and delete the
@@ -504,8 +508,13 @@ baseline — the same promotion the kit half of `check-layer-purity` already got
   `node scripts/check-screen-scaffold.mjs`. A bare `<SafeAreaView>` (no `edges`)
   insets all four sides and is the usual way that happens.
 - **A sheet's shell is `Sheet`** (`src/components/templates/Sheet.tsx`):
-  `view | form | action`. `form` supplies both the keyboard offset and the
-  input context, so inputs inside resolve to gorhom's `BottomSheetTextInput`.
+  `view | form | action | list`. `form` supplies both the keyboard offset and
+  the input context, so inputs inside resolve to gorhom's
+  `BottomSheetTextInput`. **A sheet holding a scrollable that fills its parent
+  uses `list`**, which hands the child to the modal: `BottomSheetView` (what
+  `view` renders) is absolutely positioned with no height, so a `flex: 1` list
+  inside it sizes to its own content and never scrolls.
+  `__tests__/ui/viewSheetScrollableIsBounded.test.ts` holds that.
 - **A full-screen form is `FormScreen`, not a sheet.** It is a screen with a
   form's chrome; the name is the only thing it shares with a modal.
 
@@ -608,7 +617,9 @@ baseline — the same promotion the kit half of `check-layer-purity` already got
   setting with no config. `useMotionEnabled()`
   (`src/hooks/animations/useMotionEnabled.ts`) is the ONE `useReducedMotion`
   read, and only for what a zero duration cannot stop — a loop's resting state,
-  an ambient illustration. Verified 2026-09-03 vs
+  an ambient illustration. A `no-restricted-imports` entry holds that, with
+  `useMotionEnabled` as its single exemption; the theme carries no zeroed
+  motion twin, because the library needs none. Verified 2026-09-03 vs
   `react-native-reanimated@4.6.0` — re-check:
   `node scripts/probe-reanimated-reduce-motion.mjs`; mechanism:
   `docs/verified-library-behaviour.md#reanimated-applies-reduce-motion-itself`.
@@ -1138,6 +1149,7 @@ npm run check:form-state && npm run check:feature-enumeration
 npm run check:canonical-mechanisms && npm run check:design-tokens
 npm run check:typography-roles
 npm run check:component-tier && npm run check:screen-scaffold
+npm run check:a11y-names
 npm run check:dependency-audit
 ```
 

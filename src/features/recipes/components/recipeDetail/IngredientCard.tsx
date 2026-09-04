@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -7,7 +8,6 @@ import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
 import { getSpoonacularIngredientImageUrl } from '#/services/spoonacular/utils';
 import type { DisplayIngredient } from '#features/recipes/hooks/useRecipeData';
-import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 import { Card } from '#components/atoms/Card';
 
 interface IngredientCardProps {
@@ -31,6 +31,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
   onPress,
 }) => {
   const { t } = useTranslation();
+  const money = useMoney();
   const isBackend = isBackendIngredient(ingredient);
   const ingredientName = ingredient.name || t('labels.unknown');
   const quantity = (isBackend ? ingredient.quantity : ingredient.amount) || '';
@@ -74,7 +75,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
       <Text role="label" align="center" numberOfLines={2}>
         {ingredientName}
       </Text>
-      {estimatedPrice != null && estimatedPrice > 0 ? (
+      {estimatedPrice != null ? (
         <Text
           role="label"
           tone="accent"
@@ -82,7 +83,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
           style={styles.price}
           numberOfLines={1}
         >
-          {formatCurrency(estimatedPrice, DEFAULT_CURRENCY)}
+          {money(estimatedPrice)}
         </Text>
       ) : null}
       {isAdded ? (

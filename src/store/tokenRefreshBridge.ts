@@ -3,6 +3,7 @@
  * schedules from SYNCHRONOUS actions so it cannot `await import()`, and a static
  * import closes `store → authSlice → apollo/links/* → store`.
  */
+import { registerSessionTeardown } from './sessionTeardown';
 
 export interface TokenRefreshBridge {
   schedule: (accessToken: string) => void;
@@ -39,6 +40,11 @@ export const cancelProactiveRefresh = (): void => {
   pendingToken = null;
   bridge?.cancel();
 };
+
+// A held token is a credential for an account that is signing out, and
+// `resetStore` applies SESSION_SCOPED_STATE directly rather than through
+// `clearAuth`, so the sign-out path reaches no other canceller.
+registerSessionTeardown('token-refresh', cancelProactiveRefresh);
 
 /**
  * Refresh now, for the app-resume path. A no-op before Apollo registers, which

@@ -16,11 +16,36 @@ describe('getInvitableRoles', () => {
     ]);
   });
 
-  it('Admin can invite Members and Admins', () => {
+  it('Admin can invite Members but not Admins', () => {
+    // Conferring ADMIN is the home owner's alone: a non-owner who could grant
+    // it would escalate by inviting a second address of their own.
     expect(getInvitableRoles(MembershipRole.Admin)).toEqual([
       MembershipRole.Member,
-      MembershipRole.Admin,
     ]);
+  });
+
+  it('never offers OWNER, whoever is asking', () => {
+    for (const role of [
+      MembershipRole.Guest,
+      MembershipRole.Member,
+      MembershipRole.Admin,
+      MembershipRole.Owner,
+    ]) {
+      expect(getInvitableRoles(role, true)).not.toContain(MembershipRole.Owner);
+    }
+  });
+
+  it('offers ADMIN to the owner alone', () => {
+    expect(getInvitableRoles(MembershipRole.Owner)).toContain(
+      MembershipRole.Admin,
+    );
+    for (const role of [
+      MembershipRole.Guest,
+      MembershipRole.Member,
+      MembershipRole.Admin,
+    ]) {
+      expect(getInvitableRoles(role, true)).not.toContain(MembershipRole.Admin);
+    }
   });
 
   it('Owner can invite Guests, Members, and Admins', () => {
@@ -45,7 +70,6 @@ describe('getInvitableRoles', () => {
     it('explicitly false does NOT block Admin invites', () => {
       expect(getInvitableRoles(MembershipRole.Admin, false)).toEqual([
         MembershipRole.Member,
-        MembershipRole.Admin,
       ]);
     });
 

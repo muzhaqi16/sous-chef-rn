@@ -1,3 +1,4 @@
+import { t } from '#/i18n';
 /**
  * Ownership, roles and user info for shopping lists and homes. `user.email` is
  * nullable — the API returns it only for the caller's own record — so it is
@@ -217,23 +218,21 @@ export function getInitials(displayName?: string | null): string {
 }
 
 /**
- * Format a role for display
+ * A collaborator role, in the reader's language. The labels already exist under
+ * `collaboratorRoles.*`; an unmapped role falls back to the shared unknown
+ * label rather than to the identifier with its capitalisation changed.
  */
-export function formatRoleDisplay(role: string | null): string {
-  if (!role) return 'Unknown';
+const ROLE_LABEL_KEYS: Record<string, string> = {
+  OWNER: 'collaboratorRoles.owner',
+  ADMIN: 'labels.admin',
+  EDITOR: 'collaboratorRoles.editor',
+  VIEWER: 'collaboratorRoles.viewer',
+  SHOPPER: 'collaboratorRoles.shopper',
+  CONTRIBUTOR: 'collaboratorRoles.contributor',
+  MEMBER: 'roles.member',
+};
 
-  switch (role) {
-    case 'OWNER':
-      return 'Owner';
-    case 'ADMIN':
-      return 'Admin';
-    case 'EDITOR':
-      return 'Editor';
-    case 'VIEWER':
-      return 'Viewer';
-    case 'MEMBER':
-      return 'Member';
-    default:
-      return role.charAt(0) + role.slice(1).toLowerCase();
-  }
+export function formatRoleDisplay(role: string | null): string {
+  const key = role ? ROLE_LABEL_KEYS[role] : undefined;
+  return key ? t(key) : t('labels.unknown');
 }

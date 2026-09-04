@@ -143,8 +143,8 @@ export const CreateShoppingListScreen = () => {
       <OnBoardingWrapper
         title={t('onBoarding.shoppingListsTitle')}
         subtitle={t('onBoarding.checkingExistingLists')}
-        step={2}
-        totalSteps={7}
+        step={3}
+        totalSteps={8}
         onSkip={() => skipToStep('SelectPantryItems')}
       >
         <View style={styles.centeredSpinner}>
@@ -164,8 +164,8 @@ export const CreateShoppingListScreen = () => {
       <OnBoardingWrapper
         title={t('labels.youReAllSet')}
         subtitle={t('onBoarding.shoppingListConfigured')}
-        step={2}
-        totalSteps={7}
+        step={3}
+        totalSteps={8}
         onSkip={() => skipToStep('SelectPantryItems')}
         testID="onboarding-create-shopping-list-screen"
       >
@@ -212,8 +212,8 @@ export const CreateShoppingListScreen = () => {
     <OnBoardingWrapper
       title={t('onBoarding.createShoppingListTitle')}
       subtitle={t('onBoarding.createShoppingListSubtitle')}
-      step={2}
-      totalSteps={7}
+      step={3}
+      totalSteps={8}
       onSkip={() => skipToStep('SelectPantryItems')}
       testID="onboarding-create-shopping-list-screen"
     >

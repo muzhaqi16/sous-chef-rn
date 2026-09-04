@@ -122,6 +122,7 @@ export function usePaginatedShoppingItems({
     selector: d => d.shoppingList?.itemsConnection,
     loading: uLoading,
     fetchMore: uFetchMore,
+    refetch: uRefetch,
   });
 
   const purchased = useConnectionData({
@@ -129,6 +130,7 @@ export function usePaginatedShoppingItems({
     selector: d => d.shoppingList?.itemsConnection,
     loading: pLoading,
     fetchMore: pFetchMore,
+    refetch: pRefetch,
   });
 
   const refetchQuietly = async (

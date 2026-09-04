@@ -302,7 +302,7 @@ const CreateHomeScreenComponent = () => {
         title={t('onBoarding.pendingInvitesTitle')}
         subtitle={t('onBoarding.pendingInvitesSubtitle')}
         step={1}
-        totalSteps={7}
+        totalSteps={8}
         onSkip={() => skipToStep('CreateShoppingList')}
       >
         <View style={styles.invitesContainer}>
@@ -343,7 +343,7 @@ const CreateHomeScreenComponent = () => {
         title={getTitle()}
         subtitle={getSubtitle()}
         step={1}
-        totalSteps={7}
+        totalSteps={8}
         onSkip={() => skipToStep('CreateShoppingList')}
       >
         <View style={styles.existingResourcesContainer}>
@@ -400,7 +400,7 @@ const CreateHomeScreenComponent = () => {
       title={getTitle()}
       subtitle={getSubtitle()}
       step={1}
-      totalSteps={7}
+      totalSteps={8}
       onSkip={() => skipToStep('CreateShoppingList')}
       testID="onboarding-create-home-screen"
     >

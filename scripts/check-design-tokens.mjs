@@ -94,6 +94,52 @@ export const CONCERNS = [
     owns: [/^src\/theme\//],
   },
   {
+    id: 'colour-literal',
+    // TRACKED, not failing: half of these need a token that does not exist yet
+    // (three more scrim depths, a light-scrim family, a ripple family), and two
+    // are a colour decision rather than a substitution — the star's amber and
+    // the scanner's edge. A rule whose token is missing is a rule people work
+    // around, so the number is reported until the tokens land.
+    tracked: true,
+    token: 'a theme.colors token',
+    why: 'A literal colour does not follow the colour scheme, so it is the one thing on screen that stays light in the dark theme. Over a ground the theme does not paint — a photo, a camera preview — the role is `onScrim`.',
+    detect: colourLiteral,
+    // The theme, and the four DATA palettes: a colour the person PICKS is
+    // content, not styling, and a token set cannot enumerate it. Each is a
+    // fixed list the user chooses from, or an illustration's own paint.
+    owns: [
+      /^src\/theme\//,
+      // The brand identity a rebrand edits in one place.
+      /^src\/config\/appConfig\.ts$/,
+      // The storage-location colour choices, stored per location.
+      /^src\/features\/catalog\/components\/storageLocationFormConfig\.ts$/,
+      // The accent-colour picker's swatches.
+      /^src\/features\/profile\/screens\/AppearanceScreen\.tsx$/,
+      // An illustration's palette: the loader draws a paper bag and a tomato.
+      /^src\/components\/atoms\/SousChefLoader\.tsx$/,
+    ],
+  },
+  {
+    id: 'icon-size-literal',
+    // TRACKED, not failing: 335 sites across 162 files, of which 222 already
+    // write a value the scale HAS (16/20/24/32/48/64) and 113 sit between
+    // steps. The first group is a codemod, the second a per-site decision; both
+    // are larger than one change, and the count is the target for that work.
+    tracked: true,
+    token:
+      'a named step of the matching theme.sizes scale (icon, avatar, button)',
+    why: 'A literal size does not move with the density setting, and an off-scale one is a size only this call site has — 18, 14 and 22 all sit between named icon steps. Any `size={N}` prop counts, so an avatar or a control height is a finding against its own scale.',
+    detect: /\bsize=\{[0-9]+\}/,
+    owns: [/^src\/theme\//],
+  },
+  {
+    id: 'motion-duration-literal',
+    token: 'a step of theme.motion.timing',
+    why: 'A transition duration is a whole-app decision. A number above the scale is a LOOP period (a 1500ms shimmer, a 1200ms bob) and stays a literal — the scale stops at 300ms because nothing shorter is a loop.',
+    detect: shortDuration,
+    owns: [/^src\/theme\//],
+  },
+  {
     id: 'kit-concept-restyled',
     token: 'the kit component for the concept',
     why: 'A section header, an empty state or a divider RESTYLED here is one that will not follow when the shared one changes.',
@@ -105,6 +151,34 @@ export const CONCERNS = [
     owns: [/^src\/components\//, /^src\/theme\//, /^src\/styles\//],
   },
 ];
+
+/**
+ * A colour written out rather than named. The hex form is anchored between
+ * MATCHING quotes because `'#features/...'` is an import alias, not a colour —
+ * `#fea` is three hex digits followed by a path.
+ */
+const COLOUR_LITERAL =
+  /(['"])#(?:[0-9A-Fa-f]{3,4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})\1|\b(?:rgba?|hsla?)\(/;
+
+export function colourLiteral(source) {
+  return COLOUR_LITERAL.test(source);
+}
+
+/**
+ * The motion scale stops at 300ms, so a duration at or below it is a
+ * TRANSITION and has a token. Above it is a loop's own period, which no
+ * animation shares and which the scale deliberately does not carry.
+ */
+const MOTION_SCALE_CEILING_MS = 300;
+
+export function shortDuration(source) {
+  for (const match of source.matchAll(
+    /\b(?:animationDuration|duration)\s*[:=]\s*([0-9]+)\b/g,
+  )) {
+    if (Number(match[1]) <= MOTION_SCALE_CEILING_MS) return true;
+  }
+  return false;
+}
 
 const CONCEPT_KEYS =
   /\b(sectionTitle|sectionHeader|sectionLabel|emptyContainer|emptyText|loadingContainer|divider|separator)\s*:\s*\{/g;
@@ -129,6 +203,19 @@ export function restyledKitConcept(source) {
   }
   return false;
 }
+
+const FAILING_CONCERNS = CONCERNS.filter(c => !c.tracked);
+const TRACKED_CONCERNS = CONCERNS.filter(c => c.tracked);
+
+/**
+ * Per tracked concern, a count that may only go DOWN. "Does not fail" must not
+ * mean "may grow", or the number is an impression again. Not a baseline file:
+ * this gate is promoted, and the tooling refuses to write one back.
+ */
+const TRACKED_CEILING = {
+  'colour-literal': 9,
+  'icon-size-literal': 162,
+};
 
 const violations = (rel, source) =>
   CONCERNS.filter(
@@ -189,6 +276,47 @@ if (process.argv.includes('--self-test')) {
       'const s = { divider: { color: theme.colors.divider } };',
       [],
     ],
+    // A colour the person PICKS is content: the swatch list is the data.
+    [
+      'src/features/x/J.tsx',
+      "const s = { color: '#fff' };",
+      ['colour-literal'],
+    ],
+    [
+      'src/features/x/K.tsx',
+      "const s = { backgroundColor: 'rgba(0, 0, 0, 0.6)' };",
+      ['colour-literal'],
+    ],
+    [
+      'src/features/profile/screens/AppearanceScreen.tsx',
+      "const swatches = [{ hex: '#2563EB' }];",
+      [],
+    ],
+    // `#fea` inside an import alias is three hex digits, not a colour.
+    ['src/features/x/L.tsx', "import x from '#features/y';", []],
+    [
+      'src/features/x/M.tsx',
+      'const s = <Icon size={18} />;',
+      ['icon-size-literal'],
+    ],
+    [
+      'src/features/x/N.tsx',
+      'const s = <Icon size={theme.sizes.icon.sm} />;',
+      [],
+    ],
+    // At or below the scale ceiling it is a transition and has a token.
+    [
+      'src/features/x/O.tsx',
+      'const o = { animationDuration: 250 };',
+      ['motion-duration-literal'],
+    ],
+    // Above it, the number is a LOOP's own period and stays a literal.
+    ['src/features/x/P.tsx', 'withTiming(0, { duration: 1200 });', []],
+    [
+      'src/features/x/Q.tsx',
+      'const o = { animationDuration: motion.timing.MODERATE };',
+      [],
+    ],
     // A token read is the point, not a finding.
     [
       'src/features/x/G.tsx',
@@ -237,19 +365,37 @@ for (const file of files) {
   }
 }
 
-const current = [...findings].sort();
+const isTracked = pair =>
+  TRACKED_CONCERNS.some(c => pair.startsWith(`${c.id}::`));
+
+/** The invariant: these must stay empty. */
+const current = findings.filter(pair => !isTracked(pair)).sort();
+/** Reported on every run, never failed. */
+const trackedPairs = findings.filter(isTracked).sort();
+const trackedCount = id =>
+  trackedPairs.filter(pair => pair.startsWith(`${id}::`)).length;
+const trackedSummary = TRACKED_CONCERNS.map(
+  c => `${trackedCount(c.id)} ${c.id.replace('-literal', '')}`,
+).join(', ');
 
 if (flags.list) {
+  // Tracked pairs are listed too — the count is only useful if the files
+  // behind it can be read.
+  const all = [...current, ...trackedPairs];
   for (const concern of CONCERNS) {
-    const hits = current
+    const hits = all
       .filter(f => f.startsWith(`${concern.id}::`))
       .map(f => f.split('::')[1]);
-    console.log(`\n${concern.id} (${hits.length}) — use ${concern.token}`);
+    const label = concern.tracked
+      ? ` (${hits.length}, tracked — ceiling ${TRACKED_CEILING[concern.id]})`
+      : ` (${hits.length})`;
+    console.log(`\n${concern.id}${label} — use ${concern.token}`);
     console.log(`    ${concern.why}`);
     for (const rel of hits) console.log(`      ${rel}`);
   }
   console.log(
-    `\n${current.length} file/concern pair(s) across ${files.length} files.`,
+    `\n${current.length} failing pair(s) and ${trackedPairs.length} tracked, ` +
+      `across ${files.length} files.`,
   );
   process.exit(0);
 }
@@ -265,7 +411,7 @@ if (flags.update) {
   BASELINE.write({
     pairs: current,
     countsByConcern: Object.fromEntries(
-      CONCERNS.map(c => [
+      FAILING_CONCERNS.map(c => [
         c.id,
         current.filter(f => f.startsWith(`${c.id}::`)).length,
       ]),
@@ -309,7 +455,53 @@ if (removed.length) {
   process.exit(1);
 }
 
+const grown = TRACKED_CONCERNS.filter(
+  c => trackedCount(c.id) > TRACKED_CEILING[c.id],
+);
+
+if (grown.length) {
+  console.error(
+    `\n✗ check-design-tokens: ${grown.length} tracked concern(s) grew.\n`,
+  );
+  for (const concern of grown) {
+    console.error(
+      `    ${concern.id.padEnd(24)} ${trackedCount(concern.id)} file(s), ` +
+        `ceiling ${TRACKED_CEILING[concern.id]}`,
+    );
+    console.error(`    ${''.padEnd(24)} use ${concern.token}`);
+  }
+  console.error(
+    `\n  Tracked means the token does not exist yet, not that the count may\n` +
+      `  grow. See TRACKED_CEILING in this file.\n`,
+  );
+  process.exit(1);
+}
+
+const slack = TRACKED_CONCERNS.filter(
+  c => trackedCount(c.id) < TRACKED_CEILING[c.id],
+);
+
+if (slack.length) {
+  console.error(
+    `\n✗ check-design-tokens: ${slack.length} tracked ceiling(s) are stale.\n`,
+  );
+  for (const concern of slack) {
+    console.error(
+      `    ${concern.id.padEnd(24)} ${trackedCount(concern.id)} file(s), ` +
+        `ceiling still ${TRACKED_CEILING[concern.id]}`,
+    );
+  }
+  console.error(
+    `\n  Good — lower TRACKED_CEILING in this file to the new number, so the\n` +
+      `  ceiling cannot outlive the work that brought it down.\n`,
+  );
+  process.exit(1);
+}
+
 console.log(
-  `check-design-tokens: ${current.length} literal(s) across ${CONCERNS.length} ` +
-    `concerns, baseline ${baseline.pairs?.length ?? 0}.`,
+  `check-design-tokens: ${current.length} literal(s) across ` +
+    `${FAILING_CONCERNS.length} concerns, baseline ` +
+    `${baseline.pairs?.length ?? 0}.\n` +
+    `${trackedSummary} (tracked at ceiling, not failed — the tokens they need ` +
+    `do not exist yet).`,
 );

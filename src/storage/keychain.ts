@@ -191,12 +191,21 @@ export async function saveCredentials(
  * a resolved-but-empty read. Both mean the same thing: this slot can never be
  * unlocked again and must be re-enrolled.
  */
+const INVALIDATED =
+  /KeyPermanentlyInvalidated|E_CRYPTO_FAILED|BiometryCurrentSet|changed or deleted their auth/i;
+
 function isPermanentlyInvalidated(error: unknown): boolean {
-  const text =
-    error instanceof Error ? `${error.name} ${error.message}` : String(error);
-  return /KeyPermanentlyInvalidated|E_CRYPTO_FAILED|BiometryCurrentSet/i.test(
-    text,
-  );
+  if (error === null || typeof error !== 'object') {
+    return INVALIDATED.test(String(error));
+  }
+  // The Android bridge splits one rejection across three fields: the library's
+  // code on `code`, the Java class on `name`, and the platform's prose on
+  // `message`. Reading only two of them misses whichever carries the signal.
+  const { code, name, message } = error as Record<string, unknown>;
+  const text = [code, name, message]
+    .filter((part): part is string => typeof part === 'string')
+    .join(' ');
+  return INVALIDATED.test(text);
 }
 
 /**

@@ -43,6 +43,7 @@ import {
 } from './slices/networkSlice';
 import {
   zustandStorage,
+  storage,
   STORAGE_KEY,
   isRecoveryStorage,
   openedWithEmptyStore,
@@ -277,6 +278,26 @@ type PersistedKey = (typeof PERSISTED_KEYS)[number];
 const PERSISTED_KEY_SET: ReadonlySet<string> = new Set(PERSISTED_KEYS);
 
 /** Keys allowed in the blob beyond the allowlist: the keychain-fallback pair. */
+// Where feature-hint and login-count state sat before it moved into the
+// persisted store maps. Read once by the v16 migration, then removed.
+const LEGACY_HINT_PREFIX = 'feature_hint_shown_';
+const LEGACY_LOGIN_COUNT_PREFIX = 'login_count_';
+
+const legacyTutorialKeys = (): string[] => {
+  try {
+    return storage
+      .getAllKeys()
+      .filter(
+        key =>
+          key.startsWith(LEGACY_HINT_PREFIX) ||
+          key.startsWith(LEGACY_LOGIN_COUNT_PREFIX),
+      );
+  } catch {
+    // Storage not initialised yet — nothing to carry over.
+    return [];
+  }
+};
+
 const BLOB_ONLY_KEYS: ReadonlySet<string> = new Set([
   'accessToken',
   'refreshToken',
@@ -341,7 +362,7 @@ export const useStore = create<RootState>()(
       ),
       {
         name: STORAGE_KEY,
-        version: 15,
+        version: 16,
         storage: createJSONStorage(() => zustandStorage),
         migrate: (persistedState: unknown, version: number) => {
           // v8 → v9: lift nested profile fields to top level — the greeting
@@ -396,6 +417,35 @@ export const useStore = create<RootState>()(
               delete state.cachedUnits;
               delete state.lastUnitsFetchedAt;
             }
+          }
+
+          // v15 → v16: carry the feature-hint and login-count state that used
+          // to sit in standalone MMKV keys into the persisted maps that now
+          // hold it. Same key strings, different home — without this every
+          // dismissed coach mark replays and every login count restarts at 0.
+          if (version < 16) {
+            const state = (persistedState ?? {}) as Record<string, unknown>;
+            const hints = {
+              ...((state.featureHintsShown as Record<string, boolean>) ?? {}),
+            };
+            const counts = {
+              ...((state.loginCounts as Record<string, number>) ?? {}),
+            };
+
+            for (const key of legacyTutorialKeys()) {
+              if (key.startsWith(LEGACY_HINT_PREFIX)) {
+                if (storage.getBoolean(key)) hints[key] = true;
+              } else {
+                const userId = key.slice(LEGACY_LOGIN_COUNT_PREFIX.length);
+                const value = storage.getNumber(key);
+                if (userId && typeof value === 'number') counts[userId] = value;
+              }
+              storage.remove(key);
+            }
+
+            state.featureHintsShown = hints;
+            state.loginCounts = counts;
+            persistedState = state;
           }
 
           return persistedState;

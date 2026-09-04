@@ -50,6 +50,7 @@ export function useRecipeManagement(filters?: RecipeFilters) {
     loading,
     fetchMore,
     cursorVariableName: 'cursor',
+    refetch,
   });
 
   const recipes = connectionData.items as MyRecipeNode[];

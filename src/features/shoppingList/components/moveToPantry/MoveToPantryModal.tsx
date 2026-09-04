@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
+import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import { StyleSheet } from 'react-native-unistyles';
@@ -18,8 +19,6 @@ import { StorageStateControl } from './StorageStateControl';
 import { ExpirationDateField } from './ExpirationDateField';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
-  DEFAULT_CURRENCY,
-  formatCurrency,
   formatNumberForInput,
   localizeNumericHint,
 } from '#/utils/formatters/number';
@@ -67,6 +66,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   confirmDisabled = false,
 }) => {
   const { t } = useTranslation();
+  const money = useMoney();
 
   const {
     shoppingListItem,
@@ -127,8 +127,14 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   );
   const [prevSelectedPantryId, setPrevSelectedPantryId] =
     useState(selectedPantryId);
+  // `setValue` notifies mounted `Controller` children synchronously, so the
+  // seed is accumulated here and applied from an effect — writing it during
+  // render updates components that are not rendering.
+  const [pendingSeed, setPendingSeed] =
+    useState<Partial<MoveToPantryFormValues> | null>(null);
   // Both blocks below can run in ONE pass, where `unitId` still holds its
   // pre-update value — so the seed block would overwrite what the reset queued.
+  let seedThisPass: Partial<MoveToPantryFormValues> | null = null;
   let unitIdThisPass = unitId;
   if (
     visible !== prevVisible ||
@@ -139,25 +145,24 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     setPrevShoppingListItemId(shoppingListItem?.id);
     setPrevSelectedPantryId(selectedPantryId);
     if (visible && shoppingListItem) {
-      setValue('quantityInput', formatNumberForInput(seedQuantity) || '1');
-      setValue('unitValue', resolvedUnit.symbol);
-      setValue('unitId', resolvedUnit.id);
-      unitIdThisPass = resolvedUnit.id;
-      setValue('pantryId', selectedPantryId);
-      setValue('storageState', StorageState.Ambient);
-      setValue('expirationDate', undefined);
-      setShowDatePicker(false);
-      setValue('removeFromList', true);
-      setValue(
-        'actualPriceInput',
-        formatNumberForInput(
+      seedThisPass = {
+        quantityInput: formatNumberForInput(seedQuantity) || '1',
+        unitValue: resolvedUnit.symbol,
+        unitId: resolvedUnit.id,
+        pantryId: selectedPantryId,
+        storageState: StorageState.Ambient,
+        expirationDate: undefined,
+        removeFromList: true,
+        actualPriceInput: formatNumberForInput(
           totalFromUnitPrice(purchasedUnitPrice, seedQuantity ?? 1),
         ),
-      );
+        notes: '',
+      };
+      unitIdThisPass = resolvedUnit.id;
+      setShowDatePicker(false);
       setSeededUnitPrice(purchasedUnitPrice);
       setAmountsTouched(false);
       setPriceTouched(false);
-      setValue('notes', '');
     }
   }
 
@@ -172,20 +177,35 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     // A line with no unit of its own takes the purchase's, which arrives with
     // the amounts rather than with the fragment.
     if (!unitIdThisPass && purchasedUnit) {
-      setValue('unitValue', purchasedUnit.unitSymbol);
-      setValue('unitId', purchasedUnit.unitId);
+      seedThisPass = {
+        ...seedThisPass,
+        unitValue: purchasedUnit.unitSymbol,
+        unitId: purchasedUnit.unitId,
+      };
     }
     if (!amountsTouched && purchasedQuantity != null) {
-      setValue('quantityInput', formatNumberForInput(purchasedQuantity) || '1');
-      setValue(
-        'actualPriceInput',
-        formatNumberForInput(
+      seedThisPass = {
+        ...seedThisPass,
+        quantityInput: formatNumberForInput(purchasedQuantity) || '1',
+        actualPriceInput: formatNumberForInput(
           totalFromUnitPrice(purchasedUnitPrice, purchasedQuantity),
         ),
-      );
+      };
       setSeededUnitPrice(purchasedUnitPrice);
     }
   }
+
+  if (seedThisPass) setPendingSeed(seedThisPass);
+
+  useEffect(() => {
+    if (!pendingSeed) return;
+    for (const [field, value] of Object.entries(pendingSeed)) {
+      setValue(
+        field as keyof MoveToPantryFormValues,
+        value as MoveToPantryFormValues[keyof MoveToPantryFormValues],
+      );
+    }
+  }, [pendingSeed, setValue]);
 
   // Editing the quantity holds the PER-UNIT price and re-derives the total:
   // stocking 3 of 5 bought at $0.59 records $1.77, not the whole $2.95. Once
@@ -413,7 +433,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                       ? 'purchaseAmountSheet.perUnitOfHint'
                       : 'purchaseAmountSheet.perUnitHint',
                     {
-                      price: formatCurrency(perUnitPrice, DEFAULT_CURRENCY),
+                      price: money(perUnitPrice),
                       unit: lineUnitLabel,
                     },
                   )}

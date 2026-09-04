@@ -1,9 +1,10 @@
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
 /**
- * Mirrors the API's HomeAccessControl invite check: OWNER/ADMIN may always
- * invite, so `canInviteOthers` gates MEMBER only. OWNER is never invitable — it
- * is reserved for home creators.
+ * Mirrors the API's invite check: OWNER/ADMIN always may, so `canInviteOthers`
+ * gates MEMBER only. Two ceilings on what may be CONFERRED — OWNER never, ADMIN
+ * only by the owner, or a member could invite a second address of their own as
+ * ADMIN and escalate.
  */
 export function getInvitableRoles(
   userRole: MembershipRole,
@@ -19,9 +20,9 @@ export function getInvitableRoles(
       return canInviteOthers === false ? [] : [MembershipRole.Member];
 
     case MembershipRole.Admin:
-      // Admins can invite members and other admins — the API permits this
-      // unconditionally, so the flag is ignored for admins
-      return [MembershipRole.Member, MembershipRole.Admin];
+      // Admins invite members; conferring ADMIN is the owner's alone. The flag
+      // is ignored for admins — the capability comes with the role.
+      return [MembershipRole.Member];
 
     case MembershipRole.Owner:
       // Owners can invite anyone except another owner

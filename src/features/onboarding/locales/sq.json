@@ -73,6 +73,9 @@
       "title": "Krijo shtëpinë",
       "subtitle": "Konfiguro shtëpinë tënde"
     },
+    "CurrencySetup": {
+      "subtitle": "Zgjidh monedhën tënde"
+    },
     "CreateShoppingList": {
       "subtitle": "Krijo listën tënde të parë"
     },

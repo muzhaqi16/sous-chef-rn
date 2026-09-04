@@ -122,6 +122,13 @@ fragment PantryItemDetail_pantryItem on PantryItem {
   acquisitionMethod
   costPerUnit
   totalCost
+  # What totalCost and costPerUnit are denominated in. Null when they are, and
+  # when the costed batches disagree about currency. Read rather than assumed:
+  # a cost recorded in euros stays euros whatever the account prefers now.
+  costCurrency {
+    id
+    code
+  }
   purchase {
     id
     purchaseDate

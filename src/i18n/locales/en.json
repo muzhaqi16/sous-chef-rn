@@ -78,7 +78,6 @@
     "acceptInviteFailed": "Failed to accept invitation",
     "declineInviteFailed": "Failed to decline invitation",
     "createShoppingListFailed": "Failed to create shopping list",
-    "invitationExpired": "This invitation is no longer valid. It may have expired or already been used.",
     "invitationUnavailable": "This invitation is no longer available. It may have been used, declined, or expired.",
     "loadItemsFailed": "Unable to load items. Please try again.",
     "cameraPermission": "Camera access is required to scan barcodes.",
@@ -168,7 +167,11 @@
       "batchId": "That batch is no longer available. Refresh and try again.",
       "pantryId": "You don't have permission to add items to this pantry.",
       "newPassword": "That password doesn’t meet the rules: 8–72 characters, with an uppercase letter, a lowercase letter and a number.",
-      "currentPassword": "That current password isn’t right. Check it and try again."
+      "currentPassword": "That current password isn’t right. Check it and try again.",
+      "servingsMade": "Enter a number of servings greater than zero",
+      "key": "That image could not be confirmed. Pick it again and retry.",
+      "imageUrl": "Image URL must start with http:// or https://",
+      "website": "Website must start with http:// or https://"
     }
   },
   "success": {
@@ -474,7 +477,8 @@
     "youReAllSet": "You're all set!",
     "durationDays_one": "{{count}} day",
     "durationDays_other": "{{count}} days",
-    "finish": "Finish"
+    "finish": "Finish",
+    "currency": "Currency"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",
@@ -547,7 +551,9 @@
     "resetConfirm": "Are you sure you want to reset all app settings to their default values? This will also reset all tutorials.",
     "resetSuccess": "Settings and tutorials have been reset to defaults.",
     "loadingSettings": "Loading settings...",
-    "updateFailed": "Failed to update setting. Please try again."
+    "updateFailed": "Failed to update setting. Please try again.",
+    "currencySubtitle": "New costs are recorded in this currency",
+    "currencyKeepsExisting": "Costs already recorded keep the currency they were recorded in. A pantry holding costs in more than one currency shows its value as unknown."
   },
   "loader": {
     "brandTagline": "Your Kitchen Assistant"
@@ -602,7 +608,8 @@
     "coverUpdateFailedBody": "Failed to update profile cover",
     "itemImageUpdateFailedBody": "Failed to update item image",
     "batchThrottledBody": "{{reason}} {{count}} photo(s) were not uploaded — try again shortly.",
-    "batchPartialBody": "{{count}} photo(s) could not be uploaded."
+    "batchPartialBody": "{{count}} photo(s) could not be uploaded.",
+    "contentMismatchBody": "That file is not the kind of image its name says it is. Pick it again, or choose another."
   },
   "commonValidation": {
     "emailInvalid": "Please enter a valid email address",

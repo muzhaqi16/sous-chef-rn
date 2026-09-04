@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
+import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
 import { useShoppingListItemDetail } from '#features/shoppingList/hooks/useShoppingListItemDetail';
@@ -26,7 +27,6 @@ import {
   PRIORITY_OPTION_BY_VALUE,
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
-import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 import { totalFromUnitPrice } from '#features/shoppingList/utils/purchasePrice';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 
@@ -57,6 +57,7 @@ export const ShoppingListItemDetail: React.FC<
   StaticScreenProps<RouteParams>
 > = ({ route }) => {
   const { t } = useTranslation();
+  const money = useMoney();
   useScreenTransition('ShoppingListItemDetail');
   const { toEditItem, toPurchaseHistory, goBack } = useAppNavigation();
   const { listId, itemId } = route.params;
@@ -265,9 +266,7 @@ export const ShoppingListItemDetail: React.FC<
           )}
           {estimatedPrice != null && (
             <DetailRow label={t('shoppingListScreens.estimatedPrice')}>
-              <Text role="label">
-                {formatCurrency(estimatedPrice, DEFAULT_CURRENCY)}
-              </Text>
+              <Text role="label">{money(estimatedPrice)}</Text>
             </DetailRow>
           )}
           {!!item.purchaseInfo?.isPurchased &&
@@ -282,9 +281,7 @@ export const ShoppingListItemDetail: React.FC<
           {purchasedTotal != null && (
             <DetailRow label={t('labels.totalPaid')}>
               <View style={styles.paidCell}>
-                <Text role="label">
-                  {formatCurrency(purchasedTotal, DEFAULT_CURRENCY)}
-                </Text>
+                <Text role="label">{money(purchasedTotal)}</Text>
                 {perUnitSubline != null && (
                   <Text role="caption" tone="secondary">
                     {t(
@@ -292,7 +289,7 @@ export const ShoppingListItemDetail: React.FC<
                         ? 'purchaseAmountSheet.perUnitOfHint'
                         : 'purchaseAmountSheet.perUnitHint',
                       {
-                        price: formatCurrency(perUnitSubline, DEFAULT_CURRENCY),
+                        price: money(perUnitSubline),
                         unit: unitSymbol,
                       },
                     )}

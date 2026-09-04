@@ -30,6 +30,8 @@ export interface SettingItem {
   type: string;
   testID?: string;
   subtitle?: string;
+  /** `modal` only: a compact form for the row, when the option label is long. */
+  valueLabel?: string;
   disabled?: boolean;
   value?: string | boolean;
   /** `switch` only: a write is in flight, so the control shows a spinner. */
@@ -209,7 +211,8 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           {item.type === 'modal' && (
             <View style={styles.modalValueContainer}>
               <Text tone="secondary" numberOfLines={1} ellipsizeMode="tail">
-                {item.options?.find(opt => opt.value === item.value)?.label ||
+                {item.valueLabel ||
+                  item.options?.find(opt => opt.value === item.value)?.label ||
                   t('labels.select')}
               </Text>
               <Icon name="chevron-forward" size={20} tone="textSecondary" />
@@ -299,17 +302,23 @@ const styles = StyleSheet.create(theme => ({
   row: { flexDirection: 'row', alignItems: 'center' },
   rowLabelColumn: {
     marginLeft: theme.spacing.sm,
-    flexShrink: 1,
+    // Takes the row's free space rather than only yielding it: with
+    // `flexShrink` alone a long value keeps its full width and the label
+    // column collapses, wrapping a subtitle into a narrow column beside it.
+    flex: 1,
   },
   rowSubtitle: {
     marginTop: theme.spacing.xs,
   },
-  rowSpacer: { flex: 1 },
+  rowSpacer: { width: theme.spacing.sm },
   modalValueContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: theme.spacing.xs,
+    // The value truncates (it already asks for one line); without this it
+    // holds its natural width and the label column pays for it instead.
+    flexShrink: 1,
   },
   sheetContent: {
     paddingHorizontal: theme.spacing.lg,

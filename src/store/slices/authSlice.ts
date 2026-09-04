@@ -68,6 +68,8 @@ export interface User {
   lastName?: string;
   profilePicture?: string;
   name?: string;
+  /** ISO code; null until the person states one. See `src/domain/money.ts`. */
+  preferredCurrency?: string | null;
 }
 
 /**
@@ -200,6 +202,11 @@ export const createAuthSlice: StateCreator<
         state.accessToken = accessToken;
         state.refreshToken = refreshToken;
         state.isAutoLoggingIn = false; // Clear auto-login state on success
+        // Mirrored out of the auth payload so every money surface can read it
+        // without a query of its own; the reset manager clears it on sign-out.
+        if (user.preferredCurrency) {
+          state.preferredCurrency = user.preferredCurrency;
+        }
       });
 
       persistSessionTokens(accessToken, refreshToken);

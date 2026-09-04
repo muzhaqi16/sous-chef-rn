@@ -235,8 +235,10 @@ describe('ownershipHelpers', () => {
       expect(formatRoleDisplay(input)).toBe(expected);
     });
 
-    it('title-cases unknown roles', () => {
-      expect(formatRoleDisplay('MODERATOR')).toBe('Moderator');
+    it('does not put an unmapped identifier on screen', () => {
+      // Title-casing a role the client has no copy for shows the server's
+      // identifier in English to every reader, whatever language they chose.
+      expect(formatRoleDisplay('MODERATOR')).toBe('Unknown');
     });
 
     it('returns Unknown for null', () => {

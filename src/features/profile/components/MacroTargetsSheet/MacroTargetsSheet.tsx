@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -58,21 +58,33 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
   });
   const [saving, setSaving] = useState(false);
 
-  // Reset form when modal opens (render-time conditional state update)
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevInitialValues, setPrevInitialValues] = useState(initialValues);
-  if (visible !== prevVisible || initialValues !== prevInitialValues) {
-    setPrevVisible(visible);
-    setPrevInitialValues(initialValues);
-    if (visible) {
-      reset({
-        calories: initialValues?.calorieTarget?.toString() || '',
-        protein: initialValues?.proteinTarget?.toString() || '',
-        carbs: initialValues?.carbsTarget?.toString() || '',
-        fat: initialValues?.fatTarget?.toString() || '',
-      });
-    }
+  // The sheet has ONE subject, so opening it is the only thing that should
+  // re-seed the fields. Keying on the `initialValues` object instead makes a
+  // background profile refresh — which rebuilds that literal — discard what the
+  // person is typing. The seed is applied from an effect rather than during
+  // render: `reset` notifies mounted `Controller` children synchronously, and
+  // updating them mid-parent-render interleaves two passes.
+  const [pendingSeed, setPendingSeed] = useState<MacroTargetsFormValues | null>(
+    null,
+  );
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
+    setPendingSeed(
+      visible
+        ? {
+            calories: initialValues?.calorieTarget?.toString() || '',
+            protein: initialValues?.proteinTarget?.toString() || '',
+            carbs: initialValues?.carbsTarget?.toString() || '',
+            fat: initialValues?.fatTarget?.toString() || '',
+          }
+        : null,
+    );
   }
+
+  useEffect(() => {
+    if (pendingSeed) reset(pendingSeed);
+  }, [pendingSeed, reset]);
 
   // Reaching here means every target is in range; a refusal renders under the
   // field it is about. A failed SAVE is not a field the user can edit, so it

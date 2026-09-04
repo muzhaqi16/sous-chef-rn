@@ -73,6 +73,9 @@
       "title": "Crear hogar",
       "subtitle": "Configura tu hogar"
     },
+    "CurrencySetup": {
+      "subtitle": "Elige tu moneda"
+    },
     "CreateShoppingList": {
       "subtitle": "Crea tu primera lista"
     },

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -12,8 +13,6 @@ import { Text } from '#components/atoms/Text';
 import { formatQuantity } from '#/utils/formatQuantity';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
-  DEFAULT_CURRENCY,
-  formatCurrency,
   formatNumberForInput,
   localizeNumericHint,
 } from '#/utils/formatters/number';
@@ -73,6 +72,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   loading = false,
 }) => {
   const { t } = useTranslation();
+  const money = useMoney();
   // No snap points: the sheet measures its own content, so the keyboard lift
   // seats it on the keyboard instead of stretching a fixed height up the
   // screen and pushing the price field off the bottom edge.
@@ -218,7 +218,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
                     ? 'purchaseAmountSheet.perUnitOfHint'
                     : 'purchaseAmountSheet.perUnitHint',
                   {
-                    price: formatCurrency(perUnitPrice, DEFAULT_CURRENCY),
+                    price: money(perUnitPrice),
                     unit: item?.unitName,
                   },
                 )}

@@ -53,6 +53,16 @@ function combine(
       );
     }
   }
+  // `fields` is merged key by key above; every OTHER key is resolved by the
+  // spread below, so a collision there would be decided by ordering alone.
+  for (const key of Object.keys(incoming)) {
+    if (key !== 'fields' && key in existing) {
+      throw new Error(
+        `Two features declare \`${key}\` for ${typename}. ` +
+          'One would silently overwrite the other — give it to one feature.',
+      );
+    }
+  }
   return {
     ...existing,
     ...incoming,

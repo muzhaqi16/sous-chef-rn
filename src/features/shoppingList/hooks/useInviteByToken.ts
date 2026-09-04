@@ -1,5 +1,10 @@
 import { useFragment, useMutation, useQuery } from '@apollo/client/react';
 import {
+  classifyInvitationRefusal,
+  isInvitationPayload,
+  type InvitationRefusal,
+} from '#/domain/invitationRefusal';
+import {
   AcceptShoppingListInviteDocument,
   DeclineShoppingListInviteDocument,
 } from '#features/shoppingList/graphql/collaboration.generated';
@@ -17,6 +22,16 @@ import {
 } from '#features/shoppingList/screens/AcceptInvite.generated';
 
 export type InvitationType = 'shopping_list' | 'home' | 'unknown';
+
+export type InviteOutcome =
+  | { ok: true }
+  | { ok: false; refusal: InvitationRefusal };
+
+/** The payload member is the only success; everything else is a refusal. */
+const outcomeOf = (typename: string | undefined): InviteOutcome =>
+  isInvitationPayload(typename)
+    ? { ok: true }
+    : { ok: false, refusal: classifyInvitationRefusal(typename) };
 
 /**
  * Resolve an invite straight from a deep-link token, and accept or decline it.
@@ -67,24 +82,34 @@ export function useInviteByToken(token: string | undefined) {
     ? 'home'
     : 'unknown';
 
-  const accept = async (inviteToken: string) => {
+  const accept = async (inviteToken: string): Promise<InviteOutcome> => {
+    const input = { input: { token: inviteToken } };
     if (invitationType === 'shopping_list') {
-      await acceptShoppingListInvite({
-        variables: { input: { token: inviteToken } },
-      });
-    } else if (invitationType === 'home') {
-      await acceptHomeInvite({ variables: { input: { token: inviteToken } } });
+      const result = await acceptShoppingListInvite({ variables: input });
+      if (result.error) return { ok: false, refusal: 'refused' };
+      return outcomeOf(result.data?.acceptShoppingListInvite?.__typename);
     }
+    if (invitationType === 'home') {
+      const result = await acceptHomeInvite({ variables: input });
+      if (result.error) return { ok: false, refusal: 'refused' };
+      return outcomeOf(result.data?.acceptHomeInvite?.__typename);
+    }
+    return { ok: false, refusal: 'invalid' };
   };
 
-  const decline = async (inviteToken: string) => {
+  const decline = async (inviteToken: string): Promise<InviteOutcome> => {
+    const input = { input: { token: inviteToken } };
     if (invitationType === 'shopping_list') {
-      await declineShoppingListInvite({
-        variables: { input: { token: inviteToken } },
-      });
-    } else if (invitationType === 'home') {
-      await declineHomeInvite({ variables: { input: { token: inviteToken } } });
+      const result = await declineShoppingListInvite({ variables: input });
+      if (result.error) return { ok: false, refusal: 'refused' };
+      return outcomeOf(result.data?.declineShoppingListInvite?.__typename);
     }
+    if (invitationType === 'home') {
+      const result = await declineHomeInvite({ variables: input });
+      if (result.error) return { ok: false, refusal: 'refused' };
+      return outcomeOf(result.data?.declineHomeInvite?.__typename);
+    }
+    return { ok: false, refusal: 'invalid' };
   };
 
   const shoppingListInviteDisplay: AcceptInvite_ShoppingListInviteFragment | null =

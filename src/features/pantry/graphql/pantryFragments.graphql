@@ -13,6 +13,13 @@ fragment PantryItemBatchFragment on PantryItemBatch {
   expiresAtIsManual
   costPerUnit
   totalCost
+  # What this batch's cost figures are in; null on a batch carrying no cost.
+  # Read rather than assumed: a batch bought abroad keeps the currency it was
+  # bought in, whatever the account's preference is set to now.
+  currency {
+    id
+    code
+  }
   store {
     id
     name

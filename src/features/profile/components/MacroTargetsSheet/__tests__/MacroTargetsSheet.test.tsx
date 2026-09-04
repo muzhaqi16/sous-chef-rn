@@ -1,6 +1,11 @@
 'use no memo';
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import {
+  render,
+  screen,
+  fireEvent,
+  userEvent,
+} from '@testing-library/react-native';
 import { MacroTargetsSheet } from '#features/profile/components/MacroTargetsSheet/MacroTargetsSheet';
 
 jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
@@ -86,6 +91,57 @@ describe('MacroTargetsSheet', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('re-seeding while open', () => {
+    // The screen builds `initialValues` as a literal, so every profile refetch
+    // hands the sheet a new object describing the same targets.
+    it('keeps typed input when the same targets arrive as a new object', () => {
+      const { rerender } = render(
+        <MacroTargetsSheet
+          {...defaultProps}
+          initialValues={{ calorieTarget: 2000 }}
+        />,
+      );
+
+      fireEvent.changeText(
+        screen.getByTestId('input-Daily Calories (kcal)'),
+        '2500',
+      );
+
+      rerender(
+        <MacroTargetsSheet
+          {...defaultProps}
+          initialValues={{ calorieTarget: 2000 }}
+        />,
+      );
+
+      expect(
+        screen.getByTestId('input-Daily Calories (kcal)').props.value,
+      ).toBe('2500');
+    });
+
+    it('seeds from the targets when it opens', () => {
+      const { rerender } = render(
+        <MacroTargetsSheet
+          {...defaultProps}
+          visible={false}
+          initialValues={{ calorieTarget: 1800 }}
+        />,
+      );
+
+      rerender(
+        <MacroTargetsSheet
+          {...defaultProps}
+          visible={true}
+          initialValues={{ calorieTarget: 1800 }}
+        />,
+      );
+
+      expect(
+        screen.getByTestId('input-Daily Calories (kcal)').props.value,
+      ).toBe('1800');
+    });
   });
 
   it('renders the title', () => {

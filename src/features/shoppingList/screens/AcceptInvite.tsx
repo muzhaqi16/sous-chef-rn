@@ -9,6 +9,7 @@ import { Icon } from '#utils/iconUtils';
 import { useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useInviteByToken } from '#features/shoppingList/hooks/useInviteByToken';
+import type { InvitationRefusal } from '#/domain/invitationRefusal';
 import { errorService, localizedErrorMessage } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
@@ -48,6 +49,33 @@ export const AcceptInvite: React.FC = () => {
   const resolveInviteToken = (): string | undefined =>
     invitationType === 'unknown' ? undefined : token;
 
+  /**
+   * Copy per refusal reason. The account-mismatch sentence is reserved for the
+   * permission refusal that means it; a spent or revoked invite gets the copy
+   * written for that, rather than a sentence naming a cause it did not carry.
+   */
+  const reportRefusal = (refusal: InvitationRefusal, fallbackKey: string) => {
+    if (refusal === 'inviteeMismatch') {
+      alertService.alert(
+        t('invitationAcceptance.wrongAccountTitle'),
+        t('invitationAcceptance.wrongAccount'),
+      );
+      return;
+    }
+    if (refusal === 'unavailable' || refusal === 'alreadyResolved') {
+      alertService.alert(t('labels.error'), t('errors.invitationUnavailable'));
+      return;
+    }
+    if (refusal === 'invalid') {
+      alertService.alert(
+        t('labels.error'),
+        t('invitationAcceptance.invalidInvitation'),
+      );
+      return;
+    }
+    alertService.alert(t('labels.error'), t(fallbackKey));
+  };
+
   const handleAccept = () => {
     const inviteToken = resolveInviteToken();
 
@@ -68,7 +96,11 @@ export const AcceptInvite: React.FC = () => {
           );
           return;
         }
-        await accept(inviteToken);
+        const outcome = await accept(inviteToken);
+        if (!outcome.ok) {
+          reportRefusal(outcome.refusal, 'invitationAcceptance.acceptFailed');
+          return;
+        }
         alertService.alert(
           t('labels.success'),
           invitationType === 'home'
@@ -114,7 +146,14 @@ export const AcceptInvite: React.FC = () => {
           onPress: () => {
             executeWithLoadingState(
               async () => {
-                await decline(inviteToken);
+                const outcome = await decline(inviteToken);
+                if (!outcome.ok) {
+                  reportRefusal(
+                    outcome.refusal,
+                    'invitationAcceptance.declineFailed',
+                  );
+                  return;
+                }
                 goBack();
               },
               setProcessing,

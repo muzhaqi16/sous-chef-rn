@@ -65,6 +65,12 @@ const ALLOWED_DROPS: Record<string, string[]> = {
   'src/hooks/navigation/useAppNavigation.ts': [
     '@react-navigation/native#useNavigation',
   ],
+  // The ONE read of the preference. Reanimated collapses its own animations, so
+  // this exists only for what a zero duration cannot stop: a loop's resting
+  // state, an ambient illustration.
+  'src/hooks/animations/useMotionEnabled.ts': [
+    'react-native-reanimated#useReducedMotion',
+  ],
   'src/components/molecules/Loading.tsx': ['react-native#ActivityIndicator'],
   // Device storage's writers.
   'src/apollo/**/*.{ts,tsx}': ['#storage/mmkv#*', '#/storage/mmkv#*'],

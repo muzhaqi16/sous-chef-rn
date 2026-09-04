@@ -136,6 +136,38 @@ export const CONCERNS = [
     owns: [/^src\/utils\//],
   },
   {
+    id: 'local-search',
+    canonical: 'useLocalSearch / filterByTerm (#hooks/search/useLocalSearch)',
+    why: 'A hand-rolled filter re-decides case folding, trimming and which fields are searched, so two lists in one app match differently on the same term.',
+    // A list SEARCH is a `.filter` over data. `toLowerCase().includes(...)` on
+    // its own is string classification — an error message read for "timeout" —
+    // and shares nothing with it but the call.
+    detect: source =>
+      /\.filter\(/.test(source) &&
+      /toLowerCase\(\)[\s\S]{0,120}?\.includes\(/.test(source),
+    owns: [
+      /^src\/hooks\/search\//,
+      /^src\/hooks\/ui\/useAutocompleteSearch\.ts$/,
+      // Ingredient-to-pantry matching, which contains BOTH ways on purpose so
+      // "tomato" matches "cherry tomatoes" and "olive oil" matches "oil". No
+      // term is typed, so there is no search behaviour to make consistent.
+      /^src\/services\/spoonacular\/utils\.ts$/,
+    ],
+  },
+  {
+    id: 'loading-indicator',
+    canonical:
+      'Loading / LoadingBranded (#components/molecules/Loading), or a themed spinner from themedComponents',
+    why: 'A raw ActivityIndicator takes the platform default colour, so it is the one spinner that does not follow the brand or the colour scheme.',
+    detect: importsName('react-native', 'ActivityIndicator'),
+    // The two files that OWN the mechanism: the molecule people reach for, and
+    // the `withUnistyles` wrappers every themed spinner is built from.
+    owns: [
+      /^src\/components\/molecules\/Loading\.tsx$/,
+      /^src\/components\/atoms\/themedComponents\.tsx$/,
+    ],
+  },
+  {
     id: 'device-storage',
     canonical: 'a persisted slice of the Zustand store',
     why: 'A direct key-value read is invisible to the session-scoped reset, so it survives a sign-out.',
@@ -158,6 +190,37 @@ const violations = (rel, source) =>
 
 if (process.argv.includes('--self-test')) {
   const cases = [
+    [
+      'src/features/x/List.tsx',
+      'const r = items.filter(i => i.name.toLowerCase().includes(term));',
+      ['local-search'],
+    ],
+    // String classification, not a list search: no `.filter` over data.
+    [
+      'src/apollo/offlineQueue/queueErrorPolicy.ts',
+      "const retry = message.toLowerCase().includes('timeout');",
+      [],
+    ],
+    [
+      'src/features/x/Searched.tsx',
+      "import { useLocalSearch } from '#hooks/search/useLocalSearch';",
+      [],
+    ],
+    [
+      'src/features/x/Spinner.tsx',
+      "import { View, ActivityIndicator } from 'react-native';",
+      ['loading-indicator'],
+    ],
+    [
+      'src/components/molecules/Loading.tsx',
+      "import { ActivityIndicator } from 'react-native';",
+      [],
+    ],
+    [
+      'src/features/x/Themed.tsx',
+      "import { ThemedActivityIndicator } from '#components/atoms/themedComponents';",
+      [],
+    ],
     [
       'src/features/x/B.tsx',
       "import { format } from 'date-fns';",

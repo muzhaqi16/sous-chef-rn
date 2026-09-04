@@ -220,11 +220,14 @@ const getReconnectDelay = (attempt: number): number => {
     dialFailureStreak >= DIAL_FAILURE_STREAK_LIMIT
       ? STREAK_MAX_RECONNECT_DELAY_MS
       : MAX_RECONNECT_DELAY_MS;
-  const delay = BASE_RECONNECT_DELAY_MS * Math.pow(2, attempt);
-  // Jitter (up to 25%) prevents a thundering herd, and is clamped WITH the
-  // delay so the ceiling constant is the real worst case rather than 1.25x it.
-  const jitter = delay * 0.25 * Math.random();
-  return Math.min(delay + jitter, ceiling);
+  // The ceiling caps the BASE; jitter (up to 25%) then spreads on top of it.
+  // Clamping the sum instead would make every client past the ceiling compute
+  // exactly the ceiling, and they would all re-dial in the same tick.
+  const delay = Math.min(
+    BASE_RECONNECT_DELAY_MS * Math.pow(2, attempt),
+    ceiling,
+  );
+  return delay + delay * 0.25 * Math.random();
 };
 
 const sleep = (ms: number) =>
@@ -233,7 +236,9 @@ const sleep = (ms: number) =>
 // The backoff wait, interruptible. A bare `sleep` cannot be shortened, so a
 // network that recovers mid-wait would still sit out the whole stretched
 // ceiling with nothing in the app able to reach it.
-let cancelDialDelay: (() => void) | null = null;
+// `proceed: false` abandons the wait instead of ending it. Resolving IS the
+// dial, exactly as for an online waiter, so a teardown must not resolve.
+let cancelDialDelay: ((proceed: boolean) => void) | null = null;
 
 const delayDial = (ms: number): Promise<void> =>
   new Promise<void>(resolve => {
@@ -241,10 +246,10 @@ const delayDial = (ms: number): Promise<void> =>
       cancelDialDelay = null;
       resolve();
     }, ms);
-    cancelDialDelay = () => {
+    cancelDialDelay = proceed => {
       clearTimeout(timeout);
       cancelDialDelay = null;
-      resolve();
+      if (proceed) resolve();
     };
   });
 
@@ -691,7 +696,7 @@ export const reconnectWebSocket = () => {
   lastReconnectTime = now;
   // A dial parked on the backoff would otherwise hold the new token until the
   // wait elapsed, which past the streak limit is minutes.
-  cancelDialDelay?.();
+  cancelDialDelay?.(true);
 
   try {
     logger.info('🔄 WebSocket reconnecting with new token...');
@@ -714,7 +719,7 @@ export const resumeWebSocketAfterOnline = () => {
   logger.info('🔌 Device back online — resuming deferred WebSocket reconnect');
   dialAttempts = 0;
   dialFailureStreak = 0;
-  cancelDialDelay?.();
+  cancelDialDelay?.(true);
   releaseOnlineWaiters();
 };
 
@@ -729,7 +734,7 @@ export const disableAutoReconnect = () => {
   dialFailureStreak = 0;
   lastDialFailureLogAt = null;
   dialStage = 'dialing';
-  cancelDialDelay?.();
+  cancelDialDelay?.(false);
   sessionAuthRefreshAttempted = false;
   // Not `releaseOnlineWaiters` — that would dial. See abandonOnlineWaiters.
   abandonOnlineWaiters();

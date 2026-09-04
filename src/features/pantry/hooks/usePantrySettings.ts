@@ -15,7 +15,10 @@ import {
   snapshotFields,
   updateEntityFieldsLocalFirst,
 } from '#/apollo/utils/localFirstFields';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import {
+  classifyCreateResult,
+  classifyDeleteResult,
+} from '#/apollo/utils/classifyCreateResult';
 import {
   addPantryToHomeCache,
   buildOptimisticPantry,
@@ -234,7 +237,11 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
       context: { localFirst: true },
     });
 
-    if (classifyCreateResult(result) !== 'rejected') {
+    // A delete CONVERGES: an already-deleted pantry answers with a success
+    // payload, and an id the server never held with NotFoundError. Both leave
+    // the row gone, which is what was asked for — reverting the second would
+    // restore a pantry the server cannot send.
+    if (classifyDeleteResult(result) !== 'rejected') {
       return { status: 'ok', rejectionMessage: null, result };
     }
 

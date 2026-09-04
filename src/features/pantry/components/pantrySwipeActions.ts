@@ -7,7 +7,8 @@ import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
 /**
  * The pantry's swipe vocabulary — left: consume / waste / restock, right:
  * edit / delete. Domain verbs belong to the feature, not the kit's swipe
- * components.
+ * components. `haptic: false` on the left three: each opens its own sheet,
+ * which buzzes on its outcome, so only edit and delete buzz on the swipe.
  */
 export const pantrySwipeActions = ({
   onConsume,
@@ -29,6 +30,7 @@ export const pantrySwipeActions = ({
       icon: 'restaurant-outline',
       labelKey: 'swipeActions.consume',
       onPress: onConsume,
+      haptic: false,
       removesRow: true,
     });
   if (onWaste)
@@ -37,6 +39,7 @@ export const pantrySwipeActions = ({
       icon: 'warning-outline',
       labelKey: 'swipeActions.recordWaste',
       onPress: onWaste,
+      haptic: false,
       removesRow: true,
     });
   if (onRestock)
@@ -45,6 +48,7 @@ export const pantrySwipeActions = ({
       icon: 'add-circle-outline',
       labelKey: 'swipeActions.restock',
       onPress: onRestock,
+      haptic: false,
     });
 
   const right: SwipeAction[] = [];

@@ -17,6 +17,7 @@ import {
   useSavedRecipes,
   type SavedRecipeNode,
 } from '#features/recipes/hooks/useSavedRecipes';
+import { filterByTerm } from '#hooks/search/useLocalSearch';
 import { useRecipeFolders } from '#features/recipes/hooks/useRecipeFolders';
 import { useRecipeTags } from '#features/recipes/hooks/useRecipeTags';
 import { useFolderActions } from '#features/recipes/hooks/useFolderActions';
@@ -88,16 +89,10 @@ export const SavedRecipes: React.FC = () => {
       });
     }
 
-    const q = searchQuery.trim().toLowerCase();
-    if (q) {
-      result = result.filter(saved => {
-        const name = (saved.recipe.name ?? '').toLowerCase();
-        const description = (saved.recipe.description ?? '').toLowerCase();
-        return name.includes(q) || description.includes(q);
-      });
-    }
-
-    return result;
+    return filterByTerm(result, searchQuery, [
+      saved => saved.recipe.name,
+      saved => saved.recipe.description,
+    ]);
   })();
 
   // Folder, tags and search can each empty this list while the library is full,

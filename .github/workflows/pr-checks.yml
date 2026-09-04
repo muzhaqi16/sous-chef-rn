@@ -320,6 +320,25 @@ jobs:
       - name: Screen scaffold
         run: node scripts/check-screen-scaffold.mjs
 
+      # Zero-baseline invariants that ran only in pre-push, which is local and
+      # skippable — so their green result was evidence about one machine.
+      - name: Hook return types (self-test)
+        run: node scripts/check-hook-return-types.mjs --self-test
+
+      - name: Hook return types
+        run: node scripts/check-hook-return-types.mjs
+
+      - name: Import cycles (self-test)
+        run: node scripts/check-import-cycles.mjs --self-test
+
+      - name: Import cycles
+        run: node scripts/check-import-cycles.mjs
+
+      # Catches a variant style frozen at its first-render value — a defect
+      # neither ESLint nor tsc can see, since it exists only in Babel output.
+      - name: Unistyles variant staleness
+        run: node scripts/check-unistyles-variant-staleness.mjs
+
       - name: Accessible names (self-test)
         run: node scripts/check-a11y-names.mjs --self-test
 

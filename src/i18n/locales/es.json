@@ -79,7 +79,6 @@
     "declineInviteFailed": "No se pudo rechazar la invitación",
     "createShoppingListFailed": "No se pudo crear la lista de la compra",
     "loadItemsFailed": "No se pudieron cargar los artículos. Inténtalo de nuevo.",
-    "invitationExpired": "Esta invitación ya no es válida. Es posible que haya caducado o ya se haya usado.",
     "invitationUnavailable": "Esta invitación ya no está disponible. Es posible que se haya usado, rechazado o caducado.",
     "cameraPermission": "Se necesita acceso a la cámara para escanear códigos de barras.",
     "cameraPermissionDenied": "Se denegó el permiso de la cámara. Actívalo en los ajustes.",
@@ -168,7 +167,11 @@
       "batchId": "Ese lote ya no está disponible. Actualiza e inténtalo de nuevo.",
       "pantryId": "No tienes permiso para añadir artículos a esta despensa.",
       "newPassword": "Esa contraseña no cumple las reglas: de 8 a 72 caracteres, con una mayúscula, una minúscula y un número.",
-      "currentPassword": "Esa contraseña actual no es correcta. Compruébala e inténtalo de nuevo."
+      "currentPassword": "Esa contraseña actual no es correcta. Compruébala e inténtalo de nuevo.",
+      "servingsMade": "Introduce un número de raciones mayor que cero",
+      "key": "No se pudo confirmar esa imagen. Vuelve a elegirla e inténtalo de nuevo.",
+      "imageUrl": "La URL de la imagen debe empezar por http:// o https://",
+      "website": "El sitio web debe empezar por http:// o https://"
     }
   },
   "success": {
@@ -474,7 +477,8 @@
     "youReAllSet": "¡Todo listo!",
     "durationDays_one": "{{count}} día",
     "durationDays_other": "{{count}} días",
-    "finish": "Finalizar"
+    "finish": "Finalizar",
+    "currency": "Moneda"
   },
   "instructions": {
     "pointCamera": "Apunta la cámara a un código de barras",
@@ -547,7 +551,9 @@
     "resetConfirm": "¿Seguro que quieres restablecer todos los ajustes a sus valores predeterminados? También se reiniciarán todos los tutoriales.",
     "resetSuccess": "Los ajustes y tutoriales se han restablecido.",
     "loadingSettings": "Cargando ajustes...",
-    "updateFailed": "No se pudo actualizar el ajuste. Inténtalo de nuevo."
+    "updateFailed": "No se pudo actualizar el ajuste. Inténtalo de nuevo.",
+    "currencySubtitle": "Los nuevos costes se registran en esta moneda",
+    "currencyKeepsExisting": "Los costes ya registrados conservan la moneda en la que se registraron. Una despensa con costes en más de una moneda muestra su valor como desconocido."
   },
   "loader": {
     "brandTagline": "Tu asistente de cocina"
@@ -602,7 +608,8 @@
     "itemTooLargeBody": "La imagen es demasiado grande. Las fotos de artículos deben pesar menos de {{size}} MB.",
     "unreadableBody": "No pudimos leer ese archivo de imagen. Prueba con otro.",
     "batchThrottledBody": "{{reason}} No se subieron {{count}} foto(s); inténtalo de nuevo en breve.",
-    "batchPartialBody": "No se pudieron subir {{count}} foto(s)."
+    "batchPartialBody": "No se pudieron subir {{count}} foto(s).",
+    "contentMismatchBody": "Ese archivo no es el tipo de imagen que indica su nombre. Vuelve a elegirlo o selecciona otro."
   },
   "commonValidation": {
     "emailInvalid": "Introduce una dirección de email válida",

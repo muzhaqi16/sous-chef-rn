@@ -1,4 +1,5 @@
 import { useQuery } from '@apollo/client/react';
+import { loadPageWithCursorRecovery } from '#hooks/utils/cursorRecovery';
 import { GetPantryItemUsageHistoryDocument } from '#features/pantry/graphql/pantry.generated';
 import type { UsageRecord } from '#features/pantry/components/UsageHistoryRow';
 import { useDataState } from '#hooks/data/useDataState';
@@ -32,13 +33,12 @@ export function usePantryUsageHistory(pantryItemId: string) {
 
   const loadMore = () => {
     if (!hasNextPage || !endCursor || loading || isFetchingMore) return;
-    void fetchMore({
+    void loadPageWithCursorRecovery({
+      fetchMore,
+      refetch,
       variables: { pantryItemId, first: PAGE_SIZE, after: endCursor },
-    }).catch(fetchError =>
-      errorService.reportError(fetchError, {
-        operation: 'PantryUsageHistory.loadMore',
-      }),
-    );
+      operation: 'PantryUsageHistory.loadMore',
+    });
   };
 
   // A failed read is not an empty ledger — `useDataState` also splits offline

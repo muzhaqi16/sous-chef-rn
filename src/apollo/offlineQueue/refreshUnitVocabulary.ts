@@ -28,7 +28,9 @@ export function refreshUnitVocabulary(): void {
   for (const fieldName of UNIT_ROOT_FIELDS) {
     cache.evict({ id: 'ROOT_QUERY', fieldName });
   }
-  cache.gc();
+  // No `gc()` here. Those evictions are the retired unit's last reference, so
+  // collecting would take the row the retry reads and leave the replay
+  // re-sending an id nothing can resolve.
 
   logger.info('♻️ Queue: unit vocabulary refreshed');
 }

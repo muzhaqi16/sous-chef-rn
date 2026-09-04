@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
@@ -18,7 +19,6 @@ import {
 import type { MealPlanPermissions } from '#features/mealPlan/utils/mealPlanPermissions';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
-import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 import { Text } from '#components/atoms/Text';
 import { formatDateRangeWithYear } from '#/utils/formatters/date';
 import { SectionHeader } from '#components/atoms/SectionHeader';
@@ -92,6 +92,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
   deleting,
 }) => {
   const { t } = useTranslation();
+  const money = useMoney();
 
   // Per-entity cache subscription: re-renders only when this MealPlan's
   // fields change. Falls back to the source prop on cache miss.
@@ -198,14 +199,14 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
         {mealPlan.budgetAmount != null ? (
           <Text role="caption" tone="tertiary" style={styles.planDate}>
             {t('mealPlanSettings.budgetSpent', {
-              spent: formatCurrency(mealPlan.actualCost, DEFAULT_CURRENCY),
-              budget: formatCurrency(mealPlan.budgetAmount, DEFAULT_CURRENCY),
+              spent: money(mealPlan.actualCost),
+              budget: money(mealPlan.budgetAmount),
             })}
           </Text>
         ) : mealPlan.actualCost > 0 ? (
           <Text role="caption" tone="tertiary" style={styles.planDate}>
             {t('mealPlanSettings.spentAmount', {
-              spent: formatCurrency(mealPlan.actualCost, DEFAULT_CURRENCY),
+              spent: money(mealPlan.actualCost),
             })}
           </Text>
         ) : null}

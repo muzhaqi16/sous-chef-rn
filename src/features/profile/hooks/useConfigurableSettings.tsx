@@ -26,6 +26,7 @@ import { BiometricSetupModal } from '#features/profile/components/BiometricSetup
 import { authoritativeBiometryName } from '#components/organisms/biometric/biometryLabel';
 import { errorService } from '#/services/errorService';
 import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
+import { useCurrencyPreference } from '#features/profile/hooks/useCurrencyPreference';
 
 /**
  * Builds the profile screen's setting rows. Takes no profile — every row here
@@ -37,6 +38,12 @@ export const useConfigurableSettings = () => {
   const user = useUser();
   const { getUserNavigationState } = useNavigationUtils();
   const { language, setLanguage } = usePreferences();
+  const {
+    preferredCurrency,
+    currentLabel: currencyLabel,
+    options: currencyOptions,
+    selectCurrency,
+  } = useCurrencyPreference();
   const { checkStoredCredentials, getBiometricInfo, removeCredentials } =
     useCredentialStorage();
   const { resetBiometricDeclination, markBiometricEnabled } =
@@ -176,6 +183,19 @@ export const useConfigurableSettings = () => {
               setLanguage(v);
               updateUserPreferences({ regional: { language: v } });
             },
+          };
+        }
+        break;
+
+      case 'currency':
+        if (config.type === 'modal') {
+          return {
+            ...baseItem,
+            value: preferredCurrency,
+            valueLabel: currencyLabel,
+            subtitle: t('settings.currencySubtitle'),
+            options: currencyOptions,
+            onSave: selectCurrency,
           };
         }
         break;

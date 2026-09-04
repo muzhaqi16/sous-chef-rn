@@ -28,6 +28,12 @@ export interface UseConnectionDataConfig<TData, C extends ConnectionResult> {
   fetchMoreVariables?: Record<string, unknown>;
   /** Cursor variable name (default: 'after') */
   cursorVariableName?: string;
+  /**
+   * Apollo `refetch`. Re-reads the collection from page one when the server
+   * refuses the stored cursor, which otherwise strands the list. Optional so an
+   * existing caller keeps compiling; pass it wherever the query exposes one.
+   */
+  refetch?: () => Promise<unknown>;
 }
 
 export interface ConnectionData<TNode> {
@@ -55,6 +61,7 @@ export function useConnectionData<TData, C extends ConnectionResult>(
     fetchMore,
     fetchMoreVariables,
     cursorVariableName = 'after',
+    refetch,
   } = config;
 
   const connection = data ? selector(data) : undefined;
@@ -71,6 +78,7 @@ export function useConnectionData<TData, C extends ConnectionResult>(
     fetchMore,
     fetchMoreVariables,
     cursorVariableName,
+    restart: refetch,
   });
 
   return {

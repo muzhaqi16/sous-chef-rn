@@ -72,8 +72,8 @@ export const SelectPantryItems = () => {
       <OnBoardingWrapper
         title={t('onBoarding.stockPantryTitle')}
         subtitle={t('onBoarding.stockPantrySubtitle')}
-        step={3}
-        totalSteps={7}
+        step={4}
+        totalSteps={8}
         onBack={() => navigateToPreviousStep('CreateShoppingList')}
         onSkip={() => navigateToNextStep('SelectPantryItems')}
       >
@@ -91,8 +91,8 @@ export const SelectPantryItems = () => {
       <OnBoardingWrapper
         title={t('onBoarding.stockPantryTitle')}
         subtitle={t('onBoarding.stockPantrySubtitle')}
-        step={3}
-        totalSteps={7}
+        step={4}
+        totalSteps={8}
         onBack={() => navigateToPreviousStep('CreateShoppingList')}
         onSkip={() => navigateToNextStep('SelectPantryItems')}
       >
@@ -179,8 +179,8 @@ export const SelectPantryItems = () => {
     <OnBoardingWrapper
       title={t('onBoarding.stockPantryTitle')}
       subtitle={t('onBoarding.stockPantrySubtitleOptional')}
-      step={3}
-      totalSteps={7}
+      step={4}
+      totalSteps={8}
       onBack={() => navigateToPreviousStep('CreateShoppingList')}
       onSkip={() => navigateToNextStep('SelectPantryItems')}
       testID="onboarding-select-pantry-items-screen"

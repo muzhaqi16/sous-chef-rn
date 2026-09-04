@@ -309,6 +309,12 @@ const RESTRICTED_IMPORT_PATHS = [
       "Use `useAppNavigation` from '#hooks/navigation/useAppNavigation'. It is the one place that knows screen names, so a rename surfaces as a type error rather than a runtime miss, and its `goBack` guards on `canGoBack`. For an escape hatch it returns the raw prop: `const { navigation } = useAppNavigation()` gives you `dispatch` and `addListener`.",
   },
   {
+    name: 'react-native-reanimated',
+    importNames: ['useReducedMotion'],
+    message:
+      "Don't branch an animation on reduce motion — `withTiming`, `withSpring`, `withRepeat` and the entering/exiting builders already collapse under the OS setting with no config, so a component that checks it is a second mechanism for a concern the library owns. `useMotionEnabled` from '#hooks/animations/useMotionEnabled' is the ONE read, and only for what a zero duration cannot stop: a loop's resting state, an ambient illustration.",
+  },
+  {
     name: '#/i18n/config',
     importNames: ['getI18n'],
     message:
@@ -1024,6 +1030,16 @@ module.exports = {
       rules: {
         'no-restricted-imports': restrictedImports({
           allow: { '@react-navigation/native': ['useNavigation'] },
+        }),
+      },
+    },
+    {
+      // `useMotionEnabled` IS the canonical mechanism — the one read of the
+      // preference, for the loops a zero duration cannot stop.
+      files: ['src/hooks/animations/useMotionEnabled.ts'],
+      rules: {
+        'no-restricted-imports': restrictedImports({
+          allow: { 'react-native-reanimated': ['useReducedMotion'] },
         }),
       },
     },

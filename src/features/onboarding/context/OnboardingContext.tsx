@@ -52,6 +52,13 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
     subtitleKey: 'onboardingSteps.CreateHome.subtitle',
   },
   {
+    // Before CreateShoppingList and SelectPantryItems, both of which can record
+    // a cost — and a cost keeps the currency it was recorded in.
+    id: 'CurrencySetup',
+    titleKey: 'labels.currency',
+    subtitleKey: 'onboardingSteps.CurrencySetup.subtitle',
+  },
+  {
     id: 'CreateShoppingList',
     titleKey: 'labels.shoppingList',
     subtitleKey: 'onboardingSteps.CreateShoppingList.subtitle',

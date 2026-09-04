@@ -73,6 +73,9 @@
       "title": "Create Home",
       "subtitle": "Set up your household"
     },
+    "CurrencySetup": {
+      "subtitle": "Pick your currency"
+    },
     "CreateShoppingList": {
       "subtitle": "Create your first list"
     },

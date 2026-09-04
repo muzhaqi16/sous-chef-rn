@@ -45,6 +45,7 @@ const baseItem: PantryDetailInfo_PantryItemFragment = {
   __typename: 'PantryItem',
   id: 'pi1',
   quantity: 2,
+  costCurrency: null,
   unit: { __typename: 'Unit', id: 'u1', name: 'liters', symbol: 'L' },
   storageLocation: null,
   brand: null,
@@ -95,6 +96,7 @@ describe('PantryDetailInfo', () => {
             purchaseDate: '2026-08-30T00:00:00Z',
             unitPrice: 0.59,
             totalPrice: 2.95,
+            currency: { __typename: 'Currency', id: 'cur-usd', code: 'USD' },
           },
         }}
       />,

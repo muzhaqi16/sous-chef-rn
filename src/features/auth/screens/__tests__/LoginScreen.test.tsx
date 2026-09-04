@@ -1,5 +1,12 @@
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import {
+  render,
+  screen,
+  userEvent,
+  waitFor,
+} from '@testing-library/react-native';
+import { authService } from '#/services/authService';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { LoginScreen } from '../LoginScreen';
 
 // --- Mocks ---
@@ -116,9 +123,20 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',
 }));
 
-jest.mock('#/utils/validation/auth', () => ({
-  getLoginValidationSchema: () => ({}),
-}));
+// A REAL yup schema, permissive: `yupResolver` calls schema methods, so a plain
+// `{}` throws the moment a submit actually validates — which no test did until
+// the refusal tests below. Permissive because the mocked AuthFormTemplate
+// renders no inputs to type into; the login rules themselves are covered by
+// `utils/validation/__tests__/auth`.
+jest.mock('#/utils/validation/auth', () => {
+  const yup = jest.requireActual('yup');
+  return {
+    // Spread, not replace: the screen this routes to on a refusal builds its
+    // own schema from the same module.
+    ...jest.requireActual('#/utils/validation/auth'),
+    getLoginValidationSchema: () => yup.object({}),
+  };
+});
 
 describe('LoginScreen', () => {
   beforeEach(() => {
@@ -169,5 +187,47 @@ describe('LoginScreen', () => {
     render(<LoginScreen />);
     await user.press(screen.getByTestId('login-signup-link'));
     expect(mockNavigateToSignUp).toHaveBeenCalledTimes(1);
+  });
+
+  // AUTH_EMAIL_NOT_VERIFIED is a 403 that leaves the credential valid, and the
+  // emailed code is what clears it. Left as a toast on this form, the only
+  // thing the reader can do is submit the same password again.
+  it('offers code entry when the mailbox is unverified', async () => {
+    const loginSpy = jest
+      .spyOn(authService, 'login')
+      .mockImplementation(async (_input, options) => {
+        options?.onRefusal?.('AUTH_EMAIL_NOT_VERIFIED');
+        return false;
+      });
+    const user = userEvent.setup();
+    // Apollo-wrapped: the screen it routes to owns the verify mutation.
+    renderWithApollo(<LoginScreen />);
+
+    await user.press(screen.getByTestId('login-submit-button'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('code-verification-screen')).toBeTruthy();
+    });
+    // Not a sign-out: nothing cleared the stored credentials on the way here.
+    expect(loginSpy).toHaveBeenCalledTimes(1);
+    loginSpy.mockRestore();
+  });
+
+  it('stays on the form for a refusal with nowhere to go', async () => {
+    const loginSpy = jest
+      .spyOn(authService, 'login')
+      .mockImplementation(async (_input, options) => {
+        options?.onRefusal?.('AUTH_CREDENTIALS_INVALID');
+        return false;
+      });
+    const user = userEvent.setup();
+    render(<LoginScreen />);
+
+    await user.press(screen.getByTestId('login-submit-button'));
+
+    await waitFor(() => expect(loginSpy).toHaveBeenCalledTimes(1));
+    expect(screen.queryByTestId('code-verification-screen')).toBeNull();
+    expect(screen.getByTestId('login-screen')).toBeTruthy();
+    loginSpy.mockRestore();
   });
 });

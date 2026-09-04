@@ -1,4 +1,5 @@
 import { useApolloClient, useQuery } from '@apollo/client/react';
+import { loadPageWithCursorRecovery } from '#hooks/utils/cursorRecovery';
 import { GetPantryItemBatchHistoryDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   PantryItemBatchFragmentDoc,
@@ -74,13 +75,12 @@ export function usePantryBatchHistory(pantryItemId: string) {
 
   const loadMore = () => {
     if (!hasNextPage || !endCursor || loading || isFetchingMore) return;
-    void fetchMore({
+    void loadPageWithCursorRecovery({
+      fetchMore,
+      refetch,
       variables: { pantryItemId, first: PAGE_SIZE, after: endCursor },
-    }).catch(fetchError =>
-      errorService.reportError(fetchError, {
-        operation: 'PantryBatchHistory.loadMore',
-      }),
-    );
+      operation: 'PantryBatchHistory.loadMore',
+    });
   };
 
   const state = useDataState({

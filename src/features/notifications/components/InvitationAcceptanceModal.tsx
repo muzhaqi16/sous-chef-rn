@@ -10,22 +10,18 @@ import {
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
 import { toastService } from '#/services/toastService';
-import { t as tGlobal } from '#/i18n';
+import { localizedErrorMessage } from '#/services/errorService';
 import { useInvitationActions } from '#features/notifications/hooks/useInvitationActions';
+import type { InvitationRefusal } from '#/domain/invitationRefusal';
 import { useUser } from '#store/useAppStore';
 import type { InvitationData } from '#features/notifications/types';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 
-const getInvitationErrorMessage = (
-  error: unknown,
-  fallback: string,
-): string => {
-  const msg = (error as Error)?.message?.toLowerCase() || '';
-  return msg.includes('expired') || msg.includes('invalid')
-    ? tGlobal('errors.invitationExpired')
-    : (error as Error)?.message || fallback;
-};
+// The caller's copy goes INTO the resolver, never after it: the resolver is
+// total and yields to this fallback on a transport code.
+const getInvitationErrorMessage = (error: unknown, fallback: string): string =>
+  localizedErrorMessage(error, fallback);
 
 interface InvitationAcceptanceModalProps {
   visible: boolean;
@@ -33,38 +29,56 @@ interface InvitationAcceptanceModalProps {
   onClose: () => void;
   onAccept?: (invitation: InvitationData) => void;
   onReject?: (invitation: InvitationData) => void;
-  onInvalidate?: (invitation: InvitationData) => void;
 }
 
 export const InvitationAcceptanceModal: React.FC<
   InvitationAcceptanceModalProps
-> = ({ visible, invitation, onClose, onAccept, onReject, onInvalidate }) => {
+> = ({ visible, invitation, onClose, onAccept, onReject }) => {
   const { t } = useTranslation();
-  const invitationUnavailableMsg = t('errors.invitationUnavailable');
   const user = useUser();
   const userId = user?.id ?? null;
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
 
-  const { resolveToken, acceptHome, acceptList, declineHome, declineList } =
+  const { token, acceptHome, acceptList, declineHome, declineList } =
     useInvitationActions(invitation, userId);
 
+  /**
+   * Copy per refusal reason. The account-mismatch sentence belongs only to the
+   * permission refusal that means it; a spent or revoked invite gets copy
+   * written for that, and every remaining reason still reaches the reader.
+   */
+  const reportRefusal = (
+    refusal: InvitationRefusal | undefined,
+    fallbackKey: string,
+  ) => {
+    onClose();
+    if (refusal === 'inviteeMismatch') {
+      // The link is good and the invite stays PENDING — the reader is signed
+      // in as somebody else, which no retry fixes and no eviction should hide.
+      alertService.alert(
+        t('invitationAcceptance.wrongAccountTitle'),
+        t('invitationAcceptance.wrongAccount'),
+      );
+      return;
+    }
+    if (refusal === 'unavailable' || refusal === 'alreadyResolved') {
+      toastService.error(t('errors.invitationUnavailable'));
+      return;
+    }
+    if (refusal === 'invalid') {
+      toastService.error(t('invitationAcceptance.invalidInvitation'));
+      return;
+    }
+    toastService.error(t(fallbackKey));
+  };
+
   const handleAccept = () => {
-    if (!invitation) return;
+    if (!invitation || !token) return;
 
     setAccepting(true);
     executeAsyncWithCleanup(
       async () => {
-        const token = await resolveToken();
-
-        if (!token) {
-          onInvalidate?.(invitation);
-          onClose();
-          toastService.error(invitationUnavailableMsg);
-          setAccepting(false);
-          return;
-        }
-
         const outcome =
           invitation.type === 'HOME_INVITE'
             ? await acceptHome(token)
@@ -81,15 +95,18 @@ export const InvitationAcceptanceModal: React.FC<
           return;
         }
 
-        if (outcome.accepted) {
-          // The homeId travels with the invitation so the handler can select it.
-          onAccept?.(
-            outcome.acceptedHomeId
-              ? { ...invitation, acceptedHomeId: outcome.acceptedHomeId }
-              : invitation,
-          );
-          onClose();
+        if (!outcome.accepted) {
+          reportRefusal(outcome.refusal, 'invitationAcceptance.acceptFailed');
+          return;
         }
+
+        // The homeId travels with the invitation so the handler can select it.
+        onAccept?.(
+          outcome.acceptedHomeId
+            ? { ...invitation, acceptedHomeId: outcome.acceptedHomeId }
+            : invitation,
+        );
+        onClose();
       },
       () => setAccepting(false),
       (error: unknown) => {
@@ -119,19 +136,10 @@ export const InvitationAcceptanceModal: React.FC<
           text: t('labels.decline'),
           style: 'destructive',
           onPress: () => {
+            if (!token) return;
             setRejecting(true);
             executeAsyncWithCleanup(
               async () => {
-                const token = await resolveToken();
-
-                if (!token) {
-                  onInvalidate?.(invitation);
-                  onClose();
-                  toastService.error(invitationUnavailableMsg);
-                  setRejecting(false);
-                  return;
-                }
-
                 const outcome =
                   invitation.type === 'HOME_INVITE'
                     ? await declineHome(token)
@@ -144,6 +152,14 @@ export const InvitationAcceptanceModal: React.FC<
                       outcome.error,
                       t('invitationAcceptance.declineFailed'),
                     ),
+                  );
+                  return;
+                }
+
+                if (!outcome.accepted) {
+                  reportRefusal(
+                    outcome.refusal,
+                    'invitationAcceptance.declineFailed',
                   );
                   return;
                 }
@@ -236,42 +252,53 @@ export const InvitationAcceptanceModal: React.FC<
             </View>
           </View>
 
-          {/* Actions */}
-          <View style={styles.actions}>
-            <AppPressable
-              style={styles.rejectButton}
-              onPress={handleReject}
-              disabled={accepting || rejecting}
-            >
-              {rejecting ? (
-                <ErrorActivityIndicator />
-              ) : (
-                <>
-                  <Icon name="close" size={20} tone="error" />
-                  <Text role="bodyStrong" tone="error">
-                    {t('labels.reject')}
-                  </Text>
-                </>
-              )}
-            </AppPressable>
+          {/* Actions. The token rides in the notification that delivered this
+              invite and the API discloses it once, so a surface holding none
+              says where the invite can be opened rather than offering a
+              control that has nothing to send. */}
+          {!token ? (
+            <View style={styles.unavailable}>
+              <Text role="caption" tone="secondary">
+                {t('invitationAcceptance.unavailableHere')}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.actions}>
+              <AppPressable
+                style={styles.rejectButton}
+                onPress={handleReject}
+                disabled={accepting || rejecting}
+              >
+                {rejecting ? (
+                  <ErrorActivityIndicator />
+                ) : (
+                  <>
+                    <Icon name="close" size={20} tone="error" />
+                    <Text role="bodyStrong" tone="error">
+                      {t('labels.reject')}
+                    </Text>
+                  </>
+                )}
+              </AppPressable>
 
-            <AppPressable
-              style={styles.acceptButton}
-              onPress={handleAccept}
-              disabled={accepting || rejecting}
-            >
-              {accepting ? (
-                <OnPrimaryActivityIndicator />
-              ) : (
-                <>
-                  <Icon name="checkmark" size={20} tone="onPrimary" />
-                  <Text role="bodyStrong" style={styles.acceptText}>
-                    {t('labels.accept')}
-                  </Text>
-                </>
-              )}
-            </AppPressable>
-          </View>
+              <AppPressable
+                style={styles.acceptButton}
+                onPress={handleAccept}
+                disabled={accepting || rejecting}
+              >
+                {accepting ? (
+                  <OnPrimaryActivityIndicator />
+                ) : (
+                  <>
+                    <Icon name="checkmark" size={20} tone="onPrimary" />
+                    <Text role="bodyStrong" style={styles.acceptText}>
+                      {t('labels.accept')}
+                    </Text>
+                  </>
+                )}
+              </AppPressable>
+            </View>
+          )}
         </View>
       </View>
     </Modal>
@@ -339,6 +366,10 @@ const styles = StyleSheet.create(theme => ({
   },
   entityText: {
     marginLeft: theme.spacing.xs,
+  },
+  unavailable: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
   },
   actions: {
     flexDirection: 'row',

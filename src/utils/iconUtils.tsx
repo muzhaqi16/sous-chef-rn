@@ -1,4 +1,5 @@
 import React from 'react';
+import { sizes } from '#/theme/foundations/sizes';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { withUnistyles } from 'react-native-unistyles';
 import type { Theme } from '#/theme/themes';
@@ -50,9 +51,13 @@ export const TONE_TO_COLOR = {
 
 export type IconTone = keyof typeof TONE_TO_COLOR;
 
+/** A named step of `theme.sizes.icon`, resolved here so a call site need not. */
+export type IconSizeName = keyof typeof sizes.icon;
+
 interface IconProps {
   name: string;
-  size?: number;
+  /** A named step, or a raw number where no step fits. */
+  size?: number | IconSizeName;
   /** Static color (hex / rgba). Use `tone` for theme-derived colors. */
   color?: string;
   /** Theme-derived color that reactively updates when the user changes the
@@ -61,13 +66,30 @@ interface IconProps {
   library?: IconLibrary;
 }
 
-export const Icon: React.FC<IconProps> = ({ name, size = 24, color, tone }) => {
+export const Icon: React.FC<IconProps> = ({
+  name,
+  size = 'md',
+  color,
+  tone,
+}) => {
+  // A named step resolves from the THEME, not the foundation module: resolving
+  // it here would freeze it exactly as a literal does, which is the thing the
+  // name exists to avoid. A raw number is the caller's own decision and passes
+  // through. `uniProps` wins over the prop, so the prop carries the fallback.
+  const px = typeof size === 'number' ? size : sizes.icon[size];
+  const sizeProps = (t: Theme) =>
+    typeof size === 'number' ? {} : { size: t.sizes.icon[size] };
   // `color` is an explicit override and wins over `tone`. This supports the
   // pattern `<Icon color={maybeOverride} tone="textSecondary" />` where the
   // tone is the theme-reactive fallback when the override is undefined.
   if (color != null) {
     return (
-      <Ionicons name={name as IoniconsIconName} size={size} color={color} />
+      <ThemedIonicons
+        name={name as IoniconsIconName}
+        size={px}
+        color={color}
+        uniProps={t => sizeProps(t as Theme)}
+      />
     );
   }
   if (tone) {
@@ -75,8 +97,11 @@ export const Icon: React.FC<IconProps> = ({ name, size = 24, color, tone }) => {
     return (
       <ThemedIonicons
         name={name as IoniconsIconName}
-        size={size}
-        uniProps={t => ({ color: resolveColor(t as Theme) })}
+        size={px}
+        uniProps={t => ({
+          color: resolveColor(t as Theme),
+          ...sizeProps(t as Theme),
+        })}
       />
     );
   }
@@ -85,8 +110,11 @@ export const Icon: React.FC<IconProps> = ({ name, size = 24, color, tone }) => {
   return (
     <ThemedIonicons
       name={name as IoniconsIconName}
-      size={size}
-      uniProps={t => ({ color: (t as Theme).colors.textPrimary })}
+      size={px}
+      uniProps={t => ({
+        color: (t as Theme).colors.textPrimary,
+        ...sizeProps(t as Theme),
+      })}
     />
   );
 };

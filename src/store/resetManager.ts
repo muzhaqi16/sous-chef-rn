@@ -10,6 +10,7 @@ import { runSessionTeardown } from './sessionTeardown';
 import { resetSessionScopedStores } from './sessionScopedStores';
 import { logger } from '#/utils/environment';
 import { getApolloResetBridge } from './apolloResetBridge';
+import { DEFAULT_CURRENCY } from '#/utils/formatters/number';
 
 /**
  * Which server verdict ended the session — log line only; `endSession` performs
@@ -85,6 +86,9 @@ const SESSION_SCOPED_STATE = {
   // the next person on a shared device starts from the default rather than
   // inheriting someone else's answer.
   showTutorials: true,
+  // Likewise the previous account's: it denominates what the server records
+  // next, so inheriting it would price one person's pantry in another's money.
+  preferredCurrency: DEFAULT_CURRENCY,
 } satisfies Partial<RootState>;
 
 export const createResetManager = (

@@ -1017,12 +1017,6 @@
       "body": "query MySavedRecipes($folder: String, $first: Int, $after: String) {\n  me {\n    id\n    savedRecipesConnection(folder: $folder, first: $first, after: $after) {\n      edges {\n        node {\n          id\n          folder\n          tags\n          createdAt\n          updatedAt\n          recipe {\n            id\n            name\n            description\n            __typename\n          }\n          ...SavedRecipeCard_savedRecipe\n          __typename\n        }\n        cursor\n        __typename\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n        __typename\n      }\n      totalCount\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment SavedRecipeCard_savedRecipe on SavedRecipe {\n  id\n  folder\n  tags\n  notes\n  personalRating\n  cookedCount\n  lastCookedAt\n  recipe {\n    id\n    name\n    description\n    imageUrl\n    servings\n    prepTimeMinutes\n    cookTimeMinutes\n    totalTimeMinutes\n    __typename\n  }\n  __typename\n}"
     },
     {
-      "id": "3d89af3219e51c73bb55bb1ec92e50e07abfc4d8a4eaf24954b345aba058fb43",
-      "name": "MyShoppingListInvites",
-      "type": "query",
-      "body": "query MyShoppingListInvites {\n  me {\n    id\n    pendingCollaborationInvitesConnection(first: 50) {\n      edges {\n        node {\n          id\n          shoppingListId\n          collaboratorId\n          email\n          role\n          status\n          canEdit\n          canAddItems\n          canRemoveItems\n          canMarkPurchased\n          canInviteOthers\n          invitedAt\n          expiresAt\n          shoppingList {\n            id\n            name\n            description\n            __typename\n          }\n          collaborator {\n            id\n            email\n            profile {\n              id\n              displayName\n              avatar\n              __typename\n            }\n            __typename\n          }\n          invitedBy {\n            id\n            email\n            profile {\n              id\n              displayName\n              avatar\n              __typename\n            }\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
-    },
-    {
       "id": "90c547fd90297470da79dcf31a2bd1352576e6fd46b27b5211d9c5edd61e062f",
       "name": "MyShoppingListsEvents",
       "type": "subscription",

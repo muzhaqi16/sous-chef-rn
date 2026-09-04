@@ -37,8 +37,9 @@ export const SwipeActions: React.FC<SwipeActionsProps> = ({
         <SwipeActionButton
           key={action.key}
           onPress={() => {
-            // Confirms the SWIPE registered, whatever the action then opens.
-            HapticService.light();
+            // Confirms the swipe registered. Opt-out is per action: one that
+            // opens its own confirming surface would buzz twice.
+            if (action.haptic !== false) HapticService.light();
             swipeableRef?.current?.close();
             action.onPress();
           }}

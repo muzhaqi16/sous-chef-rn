@@ -136,6 +136,9 @@ export function usePantryQuery(
       itemsOrderBy: itemsOrderBy ?? undefined,
     },
     cursorVariableName: 'itemsCursor',
+    // A cursor restored from device storage can outlive the encoding that made
+    // it; re-reading page one is the only way forward when the server refuses.
+    restart: refetch,
   });
 
   const pantryStorageLocations = storageLocations.nodes;

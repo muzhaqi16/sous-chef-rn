@@ -1,54 +1,5 @@
 # Local copies of shoppingList collaboration operations per the Feature API
 # Boundary Convention. The shoppingList feature's graphql/ folder is internal.
-query MyShoppingListInvites {
-  me {
-    id
-    # Explicit generous page size: relying on the server's implicit default
-    # could silently miss a pending invite and misreport it as unavailable.
-    pendingCollaborationInvitesConnection(first: 50) {
-      edges {
-        node {
-          id
-          shoppingListId
-          collaboratorId
-          email
-          role
-          status
-          canEdit
-          canAddItems
-          canRemoveItems
-          canMarkPurchased
-          canInviteOthers
-          invitedAt
-          expiresAt
-          shoppingList {
-            id
-            name
-            description
-          }
-          collaborator {
-            id
-            email
-            profile {
-              id
-              displayName
-              avatar
-            }
-          }
-          invitedBy {
-            id
-            email
-            profile {
-              id
-              displayName
-              avatar
-            }
-          }
-        }
-      }
-    }
-  }
-}
 
 # Local colocated fragment per the Feature API Boundary Convention.
 # Selects only what the cache-update path (createAddToQueryFieldUpdater) needs

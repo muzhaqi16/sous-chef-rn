@@ -29,6 +29,11 @@ import { createHash } from 'crypto';
  *
  * Re-record by running this test: the failure message prints the new hash.
  */
+// Re-recorded 2026-09-04: `mergeTypePolicies` now refuses a collision on any
+// policy key, not just `fields`, and `registry.cache.ts` joined the file list
+// below. Both are guards over the assembly; no `merge` or `read` changed, so
+// an old blob restores exactly as before. No version bump.
+//
 // Bumped to 'shape-2' on 2026-09-04: the API merged 46 alias `Unit` rows into
 // their canonical row and rebased every `conversionFactor` onto millilitres. A
 // persisted blob parses exactly as before and is wrong — it holds unit ids the
@@ -47,7 +52,7 @@ import { createHash } from 'crypto';
 // `features/<name>/cache/typePolicies.ts`, byte-identical, and `cache.ts`
 // became the assembler. Nothing a `merge` or `read` does changed, so an old
 // blob restores exactly as before. No version bump.
-const REVIEWED_CACHE_POLICY_HASH = '81703e8112c3cbc5';
+const REVIEWED_CACHE_POLICY_HASH = '8262ffac8b778262';
 
 const FEATURES = join('src', 'features');
 
@@ -61,6 +66,10 @@ const shapeFiles = (): string[] => {
   return [
     join('src', 'apollo', 'cache.ts'),
     join('src', 'apollo', 'cacheFieldPolicies.ts'),
+    // The assembly, not just the parts: dropping a feature from
+    // `FEATURE_TYPE_POLICIES` uninstalls every policy it declares while the
+    // file holding them is untouched, so the hash would not move.
+    join('src', 'features', 'registry.cache.ts'),
     ...featurePolicies,
   ];
 };

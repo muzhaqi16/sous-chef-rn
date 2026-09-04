@@ -105,4 +105,30 @@ describe('the i18n launch path', () => {
     // to a manifest that only a later consumer needs.
     expect(reached.size).toBeLessThanOrEqual(90);
   });
+
+  it('stays roughly the WEIGHT it is, not just the module count', () => {
+    // A count cannot separate a 200-byte module from a 46KB one. The generated
+    // schema types are the worked example: one value-import of an enum from
+    // them puts every enum in the file on this path, and the count moves by 1.
+    // Locale JSON is excluded — it is the payload this path exists to carry.
+    const codeBytes = [...reached]
+      .filter(file => !file.endsWith('.json'))
+      .reduce((total, file) => total + fs.statSync(file).size, 0);
+
+    expect(codeBytes).toBeLessThanOrEqual(220_000);
+  });
+
+  it('does not value-import the generated schema types', () => {
+    // `import type` is free; the value form pulls in every generated enum.
+    const offenders = [...reached]
+      .filter(file => file.endsWith('.ts') || file.endsWith('.tsx'))
+      .filter(file =>
+        /import\s+(?!type\b)[^;]*from\s*['"][^'"]*generated\/schemaTypes['"]/.test(
+          fs.readFileSync(file, 'utf8'),
+        ),
+      )
+      .map(file => path.relative(ROOT, file));
+
+    expect(offenders).toEqual([]);
+  });
 });

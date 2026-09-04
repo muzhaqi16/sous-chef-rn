@@ -45,6 +45,15 @@ describe('isSessionEndingAuthCode', () => {
     expect(isDeadCredentialCode('AUTH_ACCOUNT_LOCKED')).toBe(false);
   });
 
+  // AUTH_EMAIL_NOT_VERIFIED is now a union-member code as well as a top-level
+  // one, so it reaches these predicates from both channels. It is a 403 that
+  // leaves the credential VALID — the emailed code clears it — and signing the
+  // user out over an unproven mailbox destroys a working session for nothing.
+  it('keeps the session on an unverified mailbox', () => {
+    expect(isSessionEndingAuthCode('AUTH_EMAIL_NOT_VERIFIED')).toBe(false);
+    expect(isDeadCredentialCode('AUTH_EMAIL_NOT_VERIFIED')).toBe(false);
+  });
+
   it.each(['VALIDATION_FAILED', 'CONFLICT', 'NOT_FOUND', 'AUTH_TOKEN_INVALID'])(
     'leaves the session alone on %s',
     code => {

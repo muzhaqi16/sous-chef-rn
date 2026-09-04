@@ -137,6 +137,10 @@ export const Screen: React.FC<ScreenProps> = ({
       return (
         <ThemedKeyboardAwareScrollView
           contentContainerStyle={styles.scrollContent}
+          // Stated, not inherited: KeyboardAwareScrollView supplies no default
+          // and RN's is `never`, which spends the first tap on dismissing the
+          // keyboard instead of on the control the person aimed at.
+          keyboardShouldPersistTaps="handled"
           refreshControl={plainRefresh}
         >
           {body}
@@ -149,6 +153,7 @@ export const Screen: React.FC<ScreenProps> = ({
           style={styles.body}
           contentContainerStyle={styles.scrollContent}
           contentInsetAdjustmentBehavior="automatic"
+          keyboardShouldPersistTaps="handled"
           refreshControl={plainRefresh}
         >
           {body}

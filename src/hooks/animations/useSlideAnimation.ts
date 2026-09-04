@@ -25,7 +25,7 @@ const defaultEasing = motion.easing.standard;
 export function useSlideAnimation({
   itemId,
   slideDistance = 30,
-  duration = 200,
+  duration = motion.timing.STANDARD,
   easing,
   withOpacity = false,
   opacityTarget = 0,

@@ -279,7 +279,9 @@
     "createdFromRecipe": "Creata da una ricetta",
     "ratingBreakdownRow": "{{count}} recensioni con {{stars}} stelle",
     "favoriteA11y": "Aggiungi ai preferiti",
-    "unfavoriteA11y": "Rimuovi dai preferiti"
+    "unfavoriteA11y": "Rimuovi dai preferiti",
+    "stepsTooMany": "Una ricetta può avere al massimo {{count}} passaggi",
+    "stepsTooLarge": "Questi passaggi sono troppo lunghi per essere salvati. Accorciali e riprova."
   },
   "recipeFilters": {
     "title": "Filtri",
