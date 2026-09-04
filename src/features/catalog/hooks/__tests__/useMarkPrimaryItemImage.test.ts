@@ -8,6 +8,7 @@ import { ErrorCode, ItemImageStatus } from '#/graphql/generated/schemaTypes';
 import { MarkPrimaryItemImageDocument } from '#features/catalog/hooks/useMarkPrimaryItemImage.generated';
 import { useMarkPrimaryItemImage } from '#features/catalog/hooks/useMarkPrimaryItemImage';
 import { alertService } from '#/services/alertService';
+import { ItemPhotoCarousel_ItemPhotoFragmentDoc } from '#features/catalog/ui/ItemPhotoCarousel.generated';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -122,9 +123,17 @@ describe('useMarkPrimaryItemImage', () => {
   // callback and no refetch. Seeded with the incumbent hero so this asserts the
   // demotion too, not just that something was written.
   it('flips the primary flag on both photos in the cache', async () => {
+    // Held to the selection the carousel reads, so the incumbent hero is a
+    // complete photo rather than a two-field stand-in.
     const cache = seedCache([
-      { __typename: 'ItemPhoto', id: 'photo-1', isPrimary: true },
-      { __typename: 'ItemPhoto', id: 'photo-2', isPrimary: false },
+      {
+        fragment: ItemPhotoCarousel_ItemPhotoFragmentDoc,
+        data: photo('photo-1', true),
+      },
+      {
+        fragment: ItemPhotoCarousel_ItemPhotoFragmentDoc,
+        data: photo('photo-2', false),
+      },
     ]);
     const { mock } = recordMock(MarkPrimaryItemImageDocument, {
       data: {

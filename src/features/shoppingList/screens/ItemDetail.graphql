@@ -83,7 +83,10 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
     # PRIVATE/no-store for its ownership data.
     canEdit
     imageUrl
-    images { url kind }
+    images {
+      url
+      kind
+    }
     photos {
       id
       ...ItemPhotoCarousel_itemPhoto

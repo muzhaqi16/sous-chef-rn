@@ -1,12 +1,12 @@
 import { renderHook } from '@testing-library/react-native';
-import type { getMealPlanPermissions } from '#utils/permissions/mealPlanPermissions';
+import type { getMealPlanPermissions } from '#features/mealPlan/utils/mealPlanPermissions';
 import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import type { MealPlanMain_MealPlanFragment } from '#features/mealPlan/screens/MealPlanMain.generated';
 import { useMealPlanPermissions } from '../useMealPlanPermissions';
 
 type MealPlanLike = MealPlanDisplayFragment | MealPlanMain_MealPlanFragment;
 
-jest.mock('#utils/permissions/mealPlanPermissions', () => ({
+jest.mock('#features/mealPlan/utils/mealPlanPermissions', () => ({
   getMealPlanPermissions: jest.fn(
     (
       mealPlan: Parameters<typeof getMealPlanPermissions>[0],

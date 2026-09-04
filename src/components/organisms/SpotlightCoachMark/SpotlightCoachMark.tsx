@@ -10,7 +10,6 @@ import {
   withSpring,
   withDelay,
   cancelAnimation,
-  useReducedMotion,
 } from 'react-native-reanimated';
 import {
   usePanGesture,
@@ -28,9 +27,9 @@ import {
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { SPRING, TIMING } from '#constants/animations';
+
 import { Text } from '#components/atoms/Text';
-import { useShowTutorials } from '#hooks/settings/useShowTutorials';
+import { useShowTutorials } from '#store/useAppStore';
 import {
   HOLE_PADDING,
   TOOLTIP_MARGIN,
@@ -40,6 +39,8 @@ import {
   HOLE_TIMING_CONFIG,
 } from './spotlightConstants';
 import { SpotlightTooltip } from './SpotlightTooltip';
+import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
+import { motion } from '#/theme/foundations/motion';
 
 export interface TargetRect {
   x: number;
@@ -144,7 +145,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   const pulseOpacity = useSharedValue(1);
   const tooltipTranslateY = useSharedValue(showAbove ? 10 : -10);
   const tooltipOpacity = useSharedValue(0);
-  const reducedMotion = useReducedMotion();
+  const motionEnabled = useMotionEnabled();
 
   // Animated hole geometry for smooth step transitions
   const animHoleTop = useSharedValue(holeTop);
@@ -177,8 +178,11 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
     // Cross-fade tooltip (fade out → wait for hole to settle → fade in)
     tooltipOpacity.set(
       withSequence(
-        withTiming(0, { duration: TIMING.INSTANT }),
-        withDelay(TIMING.STANDARD, withTiming(1, { duration: TIMING.FAST })),
+        withTiming(0, { duration: motion.timing.INSTANT }),
+        withDelay(
+          motion.timing.STANDARD,
+          withTiming(1, { duration: motion.timing.FAST }),
+        ),
       ),
     );
   } else if (rectChanged) {
@@ -192,10 +196,10 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
 
   useLayoutEffect(() => {
     // Pulse ring — gentle opacity breathing (skipped when reduced motion is on)
-    if (!reducedMotion) {
+    if (motionEnabled) {
       pulseOpacity.set(
         withDelay(
-          TIMING.STANDARD,
+          motion.timing.STANDARD,
           withRepeat(
             withSequence(
               withTiming(0.4, { duration: 800 }),
@@ -210,9 +214,9 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
 
     // Tooltip entry
     tooltipOpacity.set(
-      withDelay(100, withTiming(1, { duration: TIMING.STANDARD })),
+      withDelay(100, withTiming(1, { duration: motion.timing.STANDARD })),
     );
-    tooltipTranslateY.set(withDelay(100, withSpring(0, SPRING.GENTLE)));
+    tooltipTranslateY.set(withDelay(100, withSpring(0, motion.spring.GENTLE)));
 
     return () => {
       cancelAnimation(pulseOpacity);
@@ -224,7 +228,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
     tooltipTranslateY,
     tooltipOpacity,
     showAbove,
-    reducedMotion,
+    motionEnabled,
   ]);
 
   // ── Animated styles ──
@@ -305,7 +309,11 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
       >
         {/* Dismiss overlay — covers entire screen, handles taps outside the hole */}
         {!allowGesturePassthrough && (
-          <Pressable style={styles.dismissArea} onPress={onDismiss} />
+          <Pressable
+            style={styles.dismissArea}
+            onPress={onDismiss}
+            accessible={false}
+          />
         )}
 
         {/* Dim overlay with cutout + pulse ring — single Skia Canvas replaces
@@ -350,6 +358,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
               },
             ]}
             onPress={onTargetPress}
+            accessibilityLabel={title}
             testID="spotlight-target"
           />
         )}
@@ -388,7 +397,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
             // the right half would cover the default top-right spot, so move
             // skip to the left; a left-anchored hole (even a wide one) keeps
             // skip at its default top-right.
-            holeTop < theme.spacing.xl * 3 &&
+            holeTop < theme.spacing['4xl'] &&
             holeLeft + holeWidth / 2 > screenWidth / 2
               ? { right: undefined, left: theme.spacing.lg }
               : undefined,
@@ -397,7 +406,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
           accessibilityRole="button"
           accessibilityLabel={t('tutorial.skipTutorial')}
         >
-          <Text size="md" weight="medium" style={styles.skipText}>
+          <Text role="bodyStrong" style={styles.skipText}>
             {totalSteps != null && totalSteps > 1
               ? t('labels.skipAll')
               : t('labels.skip')}
@@ -458,11 +467,11 @@ const styles = StyleSheet.create(theme => ({
     ...StyleSheet.absoluteFillObject,
   },
   passthroughContainer: {
-    zIndex: 9999,
+    zIndex: theme.zIndex.overlay,
   },
   passthroughMeasure: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 9999,
+    zIndex: theme.zIndex.overlay,
   },
   dismissArea: {
     ...StyleSheet.absoluteFillObject,
@@ -472,13 +481,13 @@ const styles = StyleSheet.create(theme => ({
   },
   skipButton: {
     position: 'absolute',
-    top: theme.spacing.xl * 2,
+    top: theme.spacing['3xl'],
     right: theme.spacing.lg,
-    zIndex: 10,
+    zIndex: theme.zIndex.raised,
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
   },
   skipText: {
-    color: theme.colors.white,
+    color: theme.colors.onScrim,
   },
 }));

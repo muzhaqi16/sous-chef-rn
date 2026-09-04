@@ -6,7 +6,7 @@ import type { SettingsSectionProps } from '#components/organisms/SettingsSection
 import type {
   ActionTrayProps,
   ActionTrayRef,
-} from '#/components/templates/ActionTray/types';
+} from '#components/templates/ActionTray/types';
 import { ProfileScreen } from '../ProfileScreen';
 
 // --- Mocks ---
@@ -128,7 +128,7 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',
 }));
 
-jest.mock('#components/organisms/ProfileHeader', () => {
+jest.mock('#features/profile/components/ProfileHeader', () => {
   const { View, Text, Pressable } = require('react-native');
   return {
     ProfileHeader: ({
@@ -187,7 +187,7 @@ jest.mock('#components/organisms/SettingsSection', () => {
   };
 });
 
-jest.mock('#/components/templates/ActionTray/ActionTray', () => {
+jest.mock('#components/templates/ActionTray/ActionTray', () => {
   const R = require('react');
   const RN = require('react-native');
   const ActionTray = R.forwardRef(function MockActionTray(
@@ -203,7 +203,7 @@ jest.mock('#/components/templates/ActionTray/ActionTray', () => {
   return { ActionTray };
 });
 
-jest.mock('#components/atoms/Skeleton/ProfileSkeleton', () => ({
+jest.mock('#features/profile/components/ProfileSkeleton', () => ({
   ProfileSkeleton: () => 'ProfileSkeleton',
 }));
 

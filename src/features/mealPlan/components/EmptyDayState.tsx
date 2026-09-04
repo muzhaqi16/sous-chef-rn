@@ -1,10 +1,10 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { format } from 'date-fns';
-import { EmptyState } from '#components/atoms/EmptyState';
+import { EmptyState } from '#components/molecules/EmptyState';
 import { getTabBarBottomPadding } from '#constants/layout';
 import { type MealType } from '#/graphql/generated/schemaTypes';
+import { formatFullWeekdayMonthDay } from '#/utils/formatters/date';
 
 interface EmptyDayStateProps {
   selectedDate: Date;
@@ -21,7 +21,7 @@ export const EmptyDayState: React.FC<EmptyDayStateProps> = ({
     <EmptyState
       icon="restaurant-outline"
       title={t('emptyDay.title')}
-      description={format(selectedDate, 'EEEE, MMMM d')}
+      description={formatFullWeekdayMonthDay(selectedDate)}
       action={
         onAddMeal
           ? {

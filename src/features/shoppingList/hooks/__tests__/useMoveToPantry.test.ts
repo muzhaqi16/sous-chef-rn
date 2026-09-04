@@ -11,7 +11,7 @@ import { toastService } from '#/services/toastService';
 import {
   removeItemFromShoppingListForMoveToPantry,
   restoreItemToShoppingListAfterMoveToPantry,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+} from '#features/shoppingList/cache/moveToPantry';
 import { useStore } from '#store';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
@@ -34,8 +34,8 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
-jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/shoppingListCacheUpdaters'),
+jest.mock('#features/shoppingList/cache/moveToPantry', () => ({
+  ...jest.requireActual('#features/shoppingList/cache/moveToPantry'),
   removeItemFromShoppingListForMoveToPantry: jest.fn(),
   restoreItemToShoppingListAfterMoveToPantry: jest.fn(),
 }));

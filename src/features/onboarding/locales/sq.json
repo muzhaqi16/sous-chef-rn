@@ -1,0 +1,114 @@
+{
+  "onBoarding": {
+    "welcomeTitle": "Mirë se vini! Të konfigurojmë shtëpinë tuaj",
+    "almostThere": "Pothuajse atje!",
+    "createHomeSubtitle": "Krijo shtëpinë dhe qilarin për të filluar",
+    "addPantryToHome": "Të shtojmë një qilar te {{homeName}}",
+    "homeAlreadyConfigured": "Shtëpia dhe qilari janë konfiguruar tashmë",
+    "pendingInvitesTitle": "Ke ftesa në pritje për shtëpi!",
+    "pendingInvitesSubtitle": "Hap një ftesë nga njoftimet e tua për t’u bashkuar me një shtëpi ekzistuese, ose krijo tënden",
+    "inviteOpenFromNotifications": "Hap këtë ftesë nga njoftimet e tua, ose nga emaili që të dërguam, për ta pranuar.",
+    "or": "OSE",
+    "createOwnHome": "Krijo shtëpinë time",
+    "skipForNow": "Kapërce tani",
+    "existingHome": "Shtëpi ekzistuese",
+    "homeAndPantryNote": "Ishin konfiguruar tashmë. Mund të vazhdosh te hapi tjetër ose të krijosh të tjera më vonë te cilësimet.",
+    "homeNotFound": "Shtëpia u krijua, por nuk u gjet. Provoje sërish.",
+    "setupError": "Ndodhi një gabim gjatë konfigurimit",
+    "defaultPantryName": "Qilari i kuzhinës",
+    "shoppingListsTitle": "Listat e blerjeve",
+    "checkingExistingLists": "Po kontrollohen listat ekzistuese...",
+    "checkingYourShoppingLists": "Po kontrollohen listat e tua të blerjeve...",
+    "shoppingListConfigured": "Lista jote e blerjeve është konfiguruar tashmë",
+    "shoppingListAlreadySetUp": "Ishte konfiguruar tashmë. Mund të vazhdosh te hapi tjetër ose të krijosh të tjera më vonë te cilësimet.",
+    "createShoppingListTitle": "Krijo listën e blerjeve",
+    "createShoppingListSubtitle": "Mund t'i shtosh artikuj më vonë",
+    "shoppingListName": "Emri i listës së blerjeve",
+    "shoppingListPlaceholder": "p.sh. Blerjet javore",
+    "creatingList": "Po krijohet lista...",
+    "createList": "Krijo listën",
+    "defaultShoppingListName": "Blerjet javore",
+    "createShoppingListError": "Ndodhi një gabim gjatë krijimit të listës.",
+    "stockPantryTitle": "Mbush qilarin",
+    "stockPantrySubtitle": "Zgjidh artikujt që ke tashmë në shtëpi",
+    "stockPantrySubtitleOptional": "Zgjidh artikujt që ke tashmë në shtëpi (opsionale)",
+    "addItemSingular": "Shto {{count}} artikull",
+    "addItemPlural": "Shto {{count}} artikuj",
+    "profilePictureSubtitle": "Shto një foto për të personalizuar profilin tënd",
+    "chooseFromGallery": "Zgjidh nga galeria",
+    "chooseFromGalleryDescription": "Zgjidh një foto ekzistuese",
+    "takeAPhoto": "Bëj një foto",
+    "takeAPhotoDescription": "Përdor kamerën tënde",
+    "cropAndCenter": "Prit dhe qendro",
+    "cropHint": "Rregullo foton para ngarkimit",
+    "termsOfService": "Kushtet e shërbimit",
+    "legalNotice": "Duke vazhduar ju pranoni",
+    "uploadAndContinue": "Ngarko dhe vazhdo",
+    "updateProfilePhotoFailed": "Përditësimi i fotos së profilit dështoi. Provo sërish.",
+    "cameraPermissionTakePhotoMessage": "Qasja në kamerë kërkohet për të bërë një foto. Aktivizoje te cilësimet.",
+    "completeTitle": "Gjithçka gati!",
+    "completeSubtitle": "Shtëpia jote është gati për përdorim",
+    "congratulations": "Urime! Ke konfiguruar me sukses:",
+    "summaryHomeAndPantry": "Shtëpia dhe qilari yt",
+    "summaryShoppingList": "Lista jote e blerjeve",
+    "summaryInitialPantryItems": "Artikujt fillestarë të qilarit",
+    "summaryInvitedFamily": "Anëtarët e familjes të ftuar",
+    "completeInfo": "Mund të menaxhosh gjithçka nga cilësimet e aplikacionit në çdo kohë.",
+    "completeOnboardingError": "Përfundimi i konfigurimit dështoi. Provo sërish.",
+    "userNotFoundError": "Përdoruesi nuk u gjet. Provo të hysh përsëri.",
+    "settingUpSecurity": "Po konfigurohet siguria...",
+    "checkingBiometricAvailability": "Po kontrollohet disponueshmëria biometrike...",
+    "secureYourAccount": "Siguro llogarinë tënde",
+    "homeNamePlaceholder": "p.sh. Shtëpia ime",
+    "defaultPantryNameLabel": "Emri i parazgjedhur i qilarit",
+    "pantryNamePlaceholder": "p.sh. Qilari i kuzhinës",
+    "checkingExistingSetup": "Po kontrollohet konfigurimi yt ekzistues...",
+    "creatingHomeAndPantry": "Po krijohet shtëpia dhe qilari...",
+    "creatingPantry": "Po krijohet qilari...",
+    "createdDuringOnboarding": "Krijuar gjatë konfigurimit",
+    "defaultPantryDescription": "Qilar i parazgjedhur"
+  },
+  "onboardingSteps": {
+    "CreateHome": {
+      "title": "Krijo shtëpinë",
+      "subtitle": "Konfiguro shtëpinë tënde"
+    },
+    "CurrencySetup": {
+      "subtitle": "Zgjidh monedhën tënde"
+    },
+    "CreateShoppingList": {
+      "subtitle": "Krijo listën tënde të parë"
+    },
+    "SelectPantryItems": {
+      "title": "Artikujt e qilarit",
+      "subtitle": "Zgjidh çfarë ke"
+    },
+    "ProfilePictureUpload": {
+      "subtitle": "Shto foton tënde"
+    },
+    "InviteMembers": {
+      "subtitle": "Ndaje me familjen"
+    },
+    "BiometricSetup": {
+      "subtitle": "Konfiguro biometrinë"
+    },
+    "OnboardingComplete": {
+      "title": "Përfundimi"
+    }
+  },
+  "onboardingValidation": {
+    "homeRequired": "Emri i shtëpisë është i detyrueshëm",
+    "homeMin": "Emri i shtëpisë duhet të ketë të paktën {{count}} karaktere",
+    "homeMax": "Emri i shtëpisë duhet të ketë më pak se {{count}} karaktere",
+    "pantryRequired": "Emri i qilarit është i detyrueshëm",
+    "pantryMin": "Emri i qilarit duhet të ketë të paktën {{count}} karaktere",
+    "pantryMax": "Emri i qilarit duhet të ketë më pak se {{count}} karaktere",
+    "listRequired": "Emri i listës është i detyrueshëm",
+    "listMin": "Emri i listës duhet të ketë të paktën {{count}} karaktere",
+    "listMax": "Emri i listës duhet të ketë më pak se {{count}} karaktere",
+    "itemsMax": "Mund të zgjedhësh deri në {{count}} artikuj"
+  },
+  "onboarding": {
+    "progress": "Hapi {{step}} nga {{total}}"
+  }
+}

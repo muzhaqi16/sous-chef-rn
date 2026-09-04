@@ -146,26 +146,39 @@ describe('useRecipeForm', () => {
     expect(result.current.state.steps[1].sortOrder).toBe(1);
   });
 
-  it('validate returns error when name is empty', () => {
+  // Each refusal has to reach the FIELD it is about — the screen renders the
+  // name's under its input and the two lists' under their sections — so the
+  // submit is driven through `handleSubmit` and the errors read back per key.
+  const submit = async (result: {
+    current: ReturnType<typeof useRecipeForm>;
+  }) => {
+    await act(async () => {
+      await result.current.handleSubmit(async () => {})();
+    });
+  };
+
+  it('attaches the missing-name refusal to `name`', async () => {
     const { result } = renderHook(() => useRecipeForm());
 
-    const error = result.current.validate();
-    expect(error).toBe('Recipe name is required');
+    await submit(result);
+    expect(result.current.errors.name?.message).toBe('Recipe name is required');
   });
 
-  it('validate returns error when no ingredients', () => {
+  it('attaches the empty-list refusal to `ingredients`', async () => {
     const { result } = renderHook(() => useRecipeForm());
 
     act(() => {
       result.current.updateField('name', 'Test Recipe');
     });
 
-    expect(result.current.validate()).toBe(
+    await submit(result);
+    expect(result.current.errors.ingredients?.message).toBe(
       'At least one ingredient is required',
     );
+    expect(result.current.errors.name).toBeUndefined();
   });
 
-  it('validate returns error when no steps', () => {
+  it('attaches the empty-list refusal to `steps`', async () => {
     const { result } = renderHook(() => useRecipeForm());
 
     act(() => {
@@ -173,24 +186,28 @@ describe('useRecipeForm', () => {
       result.current.addIngredient({ name: 'Egg' });
     });
 
-    expect(result.current.validate()).toBe(
+    await submit(result);
+    expect(result.current.errors.steps?.message).toBe(
       'At least one instruction step is required',
     );
   });
 
-  it('validate returns error for empty ingredient names', () => {
+  it('attaches a blank ingredient name to that ingredient, not the list', async () => {
     const { result } = renderHook(() => useRecipeForm());
 
     act(() => {
       result.current.updateField('name', 'Test Recipe');
-      result.current.addIngredient(); // Empty ingredient
+      result.current.addIngredient();
       result.current.addStep('Step 1');
     });
 
-    expect(result.current.validate()).toBe('All ingredients must have a name');
+    await submit(result);
+    expect(result.current.errors.ingredients?.[0]?.name?.message).toBe(
+      'All ingredients must have a name',
+    );
   });
 
-  it('validate returns null for valid form', () => {
+  it('raises nothing for a valid form', async () => {
     const { result } = renderHook(() => useRecipeForm());
 
     act(() => {
@@ -199,7 +216,8 @@ describe('useRecipeForm', () => {
       result.current.addStep('Cook egg');
     });
 
-    expect(result.current.validate()).toBeNull();
+    await submit(result);
+    expect(result.current.errors).toEqual({});
   });
 
   it('buildCreateInput creates proper input structure', () => {
@@ -399,17 +417,5 @@ describe('useRecipeForm', () => {
     expect(result.current.state.diets).toEqual([Diet.Vegan]);
     expect(result.current.state.healthGoals).toEqual([HealthGoal.HighProtein]);
     expect(result.current.state.intolerances).toEqual([Intolerance.Gluten]);
-  });
-
-  it('hasDirtyFields detects changes from initial state', () => {
-    const { result } = renderHook(() => useRecipeForm());
-
-    expect(result.current.hasDirtyFields).toBe(false);
-
-    act(() => {
-      result.current.updateField('name', 'Changed');
-    });
-
-    expect(result.current.hasDirtyFields).toBe(true);
   });
 });

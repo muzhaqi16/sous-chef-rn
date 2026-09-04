@@ -2,10 +2,10 @@ import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
 import { DetailTemplate } from '../DetailTemplate';
-import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
+import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import type { IconName } from '#utils/iconUtils';
 
-jest.mock('../../molecules/Header', () => {
+jest.mock('#components/organisms/Header', () => {
   const { View, Text: RNText, Pressable } = require('react-native');
   return {
     Header: ({
@@ -36,7 +36,7 @@ jest.mock('../../molecules/Header', () => {
   };
 });
 
-jest.mock('#components/atoms/Button', () => {
+jest.mock('#components/molecules/Button', () => {
   const { Pressable, Text: RNText } = require('react-native');
   return {
     Button: ({
@@ -115,7 +115,11 @@ describe('DetailTemplate', () => {
 
   it('renders header actions', async () => {
     const user = userEvent.setup();
-    const headerAction = { icon: 'edit' as IconName, onPress: jest.fn() };
+    const headerAction = {
+      icon: 'edit' as IconName,
+      accessibilityLabel: 'Edit',
+      onPress: jest.fn(),
+    };
     render(<DetailTemplate {...defaultProps} headerActions={[headerAction]} />);
     await user.press(screen.getByTestId('header-action-0'));
     expect(headerAction.onPress).toHaveBeenCalledTimes(1);

@@ -10,8 +10,10 @@ import type {
 import {
   getClientId,
   getQueuedInput,
+  readUnitSpec,
   type SyncBuilder,
   type SyncBuilderTable,
+  type UnitSpec,
 } from '#/apollo/offlineQueue/syncBuilder';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 
@@ -69,6 +71,10 @@ const buildPantryItemSync: SyncBuilder = (mutation, cache) => {
       ? { ...(existingItem ?? {}), name: itemName }
       : existingItem;
 
+  // A create sends `unit: { unitId }`; an edit already sends `{ unitSymbol }`.
+  // Both come back carrying the symbol, which is the half a retired id needs.
+  const unit = readUnitSpec(cache, (rest.unit ?? {}) as UnitSpec);
+
   return {
     syncMutation: SyncPantryItemDocument,
     syncVariables: {
@@ -76,6 +82,7 @@ const buildPantryItemSync: SyncBuilder = (mutation, cache) => {
         ...rest,
         pantryId,
         ...(item != null && { item }),
+        ...(unit && { unit }),
         clientId,
       },
     },
@@ -104,11 +111,15 @@ const buildPantryItemQuantitySync: SyncBuilder = (mutation, cache) => {
       ? parseFractionalInput(input.quantity) ?? NaN
       : input.quantity;
 
+  // Carries the cached symbol beside the id: an id the vocabulary repair
+  // retired cannot be re-resolved, a symbol can.
+  const unit = readUnitSpec(cache, { unitId: input.unitId });
+
   const syncInput: SyncPantryItemInput = {
     clientId: clientId as string,
     pantryId,
     ...(quantity != null && Number.isFinite(quantity) && { quantity }),
-    ...(input.unitId != null && { unit: { unitId: input.unitId } }),
+    ...(unit && { unit }),
     ...(input.version != null && { version: input.version }),
   };
   return {

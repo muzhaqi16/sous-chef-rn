@@ -106,7 +106,7 @@ jest.mock('#features/recipes/hooks/usePublishRecipe', () => ({
   })),
 }));
 
-jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
+jest.mock('#components/providers/ScreenErrorBoundary', () => ({
   RecipeDetailErrorBoundary: ({ children }: { children: React.ReactNode }) =>
     children,
 }));
@@ -119,15 +119,18 @@ jest.mock('#components/atoms/BackButton', () => ({
   BackButton: () => 'BackButton',
 }));
 
-jest.mock('#components/templates/BottomSheetAction', () => ({
-  BottomSheetAction: () => null,
-}));
-
-jest.mock('#components/molecules/FolderPicker', () => ({
+jest.mock('#features/recipes/components/FolderPicker', () => ({
   FolderPicker: () => null,
 }));
 
-jest.mock('#components/modals/MarkCookedModal', () => ({
+// The picker pulls in gorhom's scrollable creator through the sheet shell,
+// which this suite's mock set does not stand up.
+jest.mock(
+  '#features/recipes/components/recipeDetail/ShoppingListPickerSheet',
+  () => ({ ShoppingListPickerSheet: () => null }),
+);
+
+jest.mock('#components/organisms/MarkCookedModal', () => ({
   MarkCookedModal: () => null,
 }));
 
@@ -163,7 +166,7 @@ jest.mock('#features/recipes/components/ReviewSection', () => ({
   ReviewSection: () => null,
 }));
 
-jest.mock('../components/IngredientCard', () => ({
+jest.mock('#features/recipes/components/recipeDetail/IngredientCard', () => ({
   IngredientCard: () => null,
 }));
 

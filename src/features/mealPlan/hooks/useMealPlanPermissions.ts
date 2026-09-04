@@ -2,7 +2,7 @@ import { useUser } from '#store/useAppStore';
 import {
   getMealPlanPermissions,
   type MealPlanPermissions,
-} from '#utils/permissions/mealPlanPermissions';
+} from '#features/mealPlan/utils/mealPlanPermissions';
 import { type MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { type MealPlanMain_MealPlanFragment } from '#features/mealPlan/screens/MealPlanMain.generated';
 

@@ -142,6 +142,78 @@ describe('classifyError — ReplayRejectedError', () => {
   });
 });
 
+describe('classifyError — a retired unit reference', () => {
+  // The API merged 46 alias `Unit` rows into their canonical row. A write
+  // queued before that names an id the server cannot resolve; the write itself
+  // is fine, so it is re-resolved and re-sent rather than reverted.
+  it('classifies a NotFoundError naming a Unit as retryable', () => {
+    const error = new ReplayRejectedError(
+      'NotFoundError',
+      'Unit not found',
+      'NOT_FOUND',
+      'Unit',
+    );
+
+    const queueError = classifyError(error);
+
+    expect(queueError.type).toBe('stale-reference');
+    expect(queueError.retryable).toBe(true);
+  });
+
+  it('matches the resource name case-insensitively', () => {
+    // `resource` is documented as a logical type name, not an enum, so its
+    // casing is not part of a contract worth pinning a behaviour to.
+    const error = new ReplayRejectedError(
+      'NotFoundError',
+      'Unit not found',
+      'NOT_FOUND',
+      'unit',
+    );
+
+    expect(classifyError(error).type).toBe('stale-reference');
+  });
+
+  it('classifies a UNIT_INVALID refusal as retryable whatever the typename', () => {
+    const error = new ReplayRejectedError(
+      'ValidationError',
+      'That unit cannot be used here',
+      'UNIT_INVALID',
+    );
+
+    const queueError = classifyError(error);
+
+    expect(queueError.type).toBe('stale-reference');
+    expect(queueError.retryable).toBe(true);
+    expect(queueError.code).toBe('UNIT_INVALID');
+  });
+
+  it('leaves a NotFoundError about anything else permanently rejected', () => {
+    // Without the resource check this would retry a genuinely deleted row:
+    // the item being gone and its unit being gone share a typename and a code.
+    const error = new ReplayRejectedError(
+      'NotFoundError',
+      'Pantry item not found',
+      'NOT_FOUND',
+      'PantryItem',
+    );
+
+    const queueError = classifyError(error);
+
+    expect(queueError.type).toBe('unknown');
+    expect(queueError.retryable).toBe(false);
+  });
+
+  it('leaves a NotFoundError carrying no resource permanently rejected', () => {
+    const error = new ReplayRejectedError(
+      'NotFoundError',
+      'Not found',
+      'NOT_FOUND',
+    );
+
+    expect(classifyError(error).type).toBe('unknown');
+  });
+});
+
 describe('classifyError — auth codes', () => {
   // The whole token-side family routes to `auth`, not just AUTH_TOKEN_EXPIRED:
   // QueueManager answers that classification with one proactiveTokenRefresh(),

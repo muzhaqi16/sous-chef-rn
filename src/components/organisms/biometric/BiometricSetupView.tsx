@@ -4,7 +4,6 @@ import { StyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
-import { PasswordInput } from '#components/atoms/PasswordInput';
 
 interface BiometricSetupViewProps {
   iconName: string;
@@ -14,11 +13,6 @@ interface BiometricSetupViewProps {
   benefits?: string[];
   /** Optional footer note (shown on the full-screen surfaces). */
   footer?: string;
-  needsPassword: boolean;
-  password: string;
-  onPasswordChange: (value: string) => void;
-  passwordLabel: string;
-  passwordPlaceholder: string;
   isEnabling: boolean;
   enableLabel: string;
   skipLabel: string;
@@ -39,11 +33,6 @@ export const BiometricSetupView: React.FC<BiometricSetupViewProps> = ({
   description,
   benefits,
   footer,
-  needsPassword,
-  password,
-  onPasswordChange,
-  passwordLabel,
-  passwordPlaceholder,
   isEnabling,
   enableLabel,
   skipLabel,
@@ -58,10 +47,10 @@ export const BiometricSetupView: React.FC<BiometricSetupViewProps> = ({
       </View>
     </View>
 
-    <Text size="xl" weight="bold" align="center" style={styles.title}>
+    <Text role="subheading" align="center" style={styles.title}>
       {title}
     </Text>
-    <Text size="md" tone="secondary" align="center" style={styles.description}>
+    <Text tone="secondary" align="center" style={styles.description}>
       {description}
     </Text>
 
@@ -70,33 +59,9 @@ export const BiometricSetupView: React.FC<BiometricSetupViewProps> = ({
         {benefits.map(benefit => (
           <View key={benefit} style={styles.benefitItem}>
             <Icon name="checkmark-circle" size={20} tone="success" />
-            <Text size="md" style={styles.benefitText}>
-              {benefit}
-            </Text>
+            <Text style={styles.benefitText}>{benefit}</Text>
           </View>
         ))}
-      </View>
-    )}
-
-    {!!needsPassword && (
-      <View style={styles.passwordSection}>
-        <Text
-          size="sm"
-          tone="secondary"
-          align="center"
-          style={styles.passwordLabel}
-        >
-          {passwordLabel}
-        </Text>
-        <PasswordInput
-          value={password}
-          onChangeText={onPasswordChange}
-          placeholder={passwordPlaceholder}
-          showToggle
-          autoCapitalize="none"
-          autoCorrect={false}
-          style={styles.passwordInput}
-        />
       </View>
     )}
 
@@ -108,7 +73,7 @@ export const BiometricSetupView: React.FC<BiometricSetupViewProps> = ({
         testID={testID ? `${testID}-enable` : undefined}
         accessibilityLabel={enableLabel}
       >
-        <Text size="md" weight="semibold" style={styles.primaryButtonText}>
+        <Text role="bodyStrong" style={styles.primaryButtonText}>
           {enableLabel}
         </Text>
       </AppPressable>
@@ -120,14 +85,14 @@ export const BiometricSetupView: React.FC<BiometricSetupViewProps> = ({
         testID={testID ? `${testID}-skip` : undefined}
         accessibilityLabel={skipLabel}
       >
-        <Text size="md" weight="semibold" tone="secondary">
+        <Text role="bodyStrong" tone="secondary">
           {skipLabel}
         </Text>
       </AppPressable>
     </View>
 
     {!!footer && (
-      <Text size="sm" tone="secondary" align="center">
+      <Text role="caption" tone="secondary" align="center">
         {footer}
       </Text>
     )}
@@ -149,7 +114,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     borderColor: theme.colors.primary,
   },
   title: {
@@ -172,17 +137,6 @@ const styles = StyleSheet.create(theme => ({
   },
   benefitText: {
     flex: 1,
-  },
-  passwordSection: {
-    alignSelf: 'stretch',
-    marginBottom: theme.spacing.lg,
-  },
-  passwordLabel: {
-    marginBottom: theme.spacing.sm,
-  },
-  passwordInput: {
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
   },
   buttons: {
     alignSelf: 'stretch',
@@ -207,10 +161,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     alignItems: 'center',
     backgroundColor: 'transparent',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

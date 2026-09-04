@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState, useImperativeHandle } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { useApolloClient } from '@apollo/client/react';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,15 +24,10 @@ import {
   type PantryItemActions,
 } from './PantryActionsContext';
 import { usePantrySorting } from './hooks/usePantrySorting';
-import {
-  PantryContent_PantryItemFragmentDoc,
-  type PantryContent_PantryItemFragment,
-} from './PantryContent.generated';
 import { PantryAlertBar } from '#features/pantry/components/PantryAlertBar';
-import { PaginationFooter } from '#components/organisms/PaginationFooter';
+import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
-import { preloadImages } from '#components/atoms/CachedImage';
-import { resolveImageUrl } from '#utils/imageUtils';
+import { usePantryImagePreload } from '#features/pantry/hooks/usePantryImagePreload';
 import { useOverlayBackdropPresence } from '#components/providers/OverlayBackdropProvider';
 import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
@@ -49,7 +43,6 @@ import {
   DRAW_DISTANCE,
   MVCP_DISABLED,
   getDefaultPantryTabs,
-  IMAGE_PRELOAD_COUNT,
 } from './pantryDisplay/constants';
 import {
   renderPantryListItem,
@@ -134,7 +127,6 @@ export const PantryContent = React.forwardRef<
     useCommitTracking('PantryContent');
     const { t } = useTranslation();
     const { bottom: safeBottom } = useSafeAreaInsets();
-    const client = useApolloClient();
     const flashListRef = useRef<FlashListRef<PantryListItem>>(null);
     const settingsIconRef = useRef<View>(null);
 
@@ -283,6 +275,7 @@ export const PantryContent = React.forwardRef<
       componentName: 'PantryContent',
       reportInterval: 10000,
       hasRealContent: !initialSkeletons,
+      rowCount: listData.length,
     });
     // FlashList re-renders EVERY mounted cell when this prop's identity changes,
     // so it must never change: the live handler (which flips to `undefined` as
@@ -304,9 +297,14 @@ export const PantryContent = React.forwardRef<
     // The blank-window cover: FlashList holds every cell invisible until its
     // first layout commits while the header chrome paints immediately, so the
     // cover mounts inside ListHeaderComponent from the FIRST commit and
-    // releases on `hasContentLayout`. No `useMinimumVisible` — the exit fade is
-    // the anti-flash smoothing, and the latch can't fire before rows exist.
+    // releases on `hasContentLayout`, which `rowCount` resolves for an empty
+    // tab. No `useMinimumVisible` — the exit fade is the anti-flash smoothing.
     const overlayVisible = initialSkeletons || !perfCallbacks.hasContentLayout;
+
+    // The overlay covers the whole list area, so the footer renders NOTHING
+    // beneath it: its own skeleton rows start from a different origin (two
+    // offset sets of shimmer) and its empty state shows through the flap.
+    const footerVisible = !overlayVisible;
 
     useDataReferenceTracker(
       sortedItems,
@@ -314,30 +312,7 @@ export const PantryContent = React.forwardRef<
       perfCallbacks.onDataReferenceChange,
     );
 
-    // Fragment refs carry no field data at runtime (masked), so image URLs come
-    // from a one-shot `cache.readFragment` inside an idle callback.
-    useEffect(() => {
-      if (sortedItems.length === 0) return;
-
-      const handle = requestIdleCallback(() => {
-        const urls: string[] = [];
-        for (const node of sortedItems.slice(0, IMAGE_PRELOAD_COUNT)) {
-          const item =
-            client.cache.readFragment<PantryContent_PantryItemFragment>({
-              fragment: PantryContent_PantryItemFragmentDoc,
-              fragmentName: 'PantryContent_pantryItem',
-              from: node,
-            });
-          if (!item) continue;
-          const url = resolveImageUrl(item);
-          if (url) urls.push(url);
-        }
-        if (urls.length > 0) {
-          preloadImages(urls);
-        }
-      });
-      return () => cancelIdleCallback(handle);
-    }, [sortedItems, client]);
+    usePantryImagePreload(sortedItems);
 
     // The switch skeleton applies to server-mode fetches only; client-mode
     // switches are instant and never arm the latch.
@@ -498,7 +473,7 @@ export const PantryContent = React.forwardRef<
                 </View>
               }
               ListFooterComponent={
-                isEmpty ? (
+                !footerVisible ? null : isEmpty ? (
                   <PantryEmptyState
                     showSkeletons={showSkeletons}
                     searchQuery={searchQuery}
@@ -570,10 +545,10 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
   },
   searchContainer: {
-    paddingHorizontal: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.base,
   },
   statsContainer: {
-    paddingHorizontal: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.base,
   },
   listContentEmpty: {
     paddingHorizontal: 0,

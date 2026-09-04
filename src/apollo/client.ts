@@ -7,7 +7,14 @@ import {
 } from '@apollo/client';
 import { logger } from '#/utils/environment';
 import { createLink } from './links/index';
-import { registerApolloClient } from './links/refreshToken';
+import { proactiveTokenRefresh } from './links/refreshToken';
+import { registerApolloClient } from './clientRegistry';
+import {
+  cancelTokenRefresh,
+  scheduleTokenRefresh,
+} from './links/tokenScheduler';
+import { registerTokenRefreshBridge } from '#store/tokenRefreshBridge';
+import { registerApolloResetBridge } from '#store/apolloResetBridge';
 import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 import { isStorageReady } from '#storage/mmkv';
@@ -119,15 +126,6 @@ function initializeClient() {
 }
 
 /**
- * Cancel any pending cache persistence
- * Important: Call this during logout to prevent writing stale cache data
- */
-export function cancelCachePersistence() {
-  apolloCachePersistence.cancel();
-  logger.info('🛑 Apollo: Cache persistence timer cancelled');
-}
-
-/**
  * Flush any pending (debounced) cache write to disk immediately. Call when the
  * app backgrounds so the last few seconds of cache writes — including
  * optimistic local-first creates — survive a fast app-kill and paint from disk
@@ -232,3 +230,27 @@ export const client = initializeClient();
 // this singleton directly without forming a circular dependency, so it reads
 // the reference we register here at call time.
 registerApolloClient(client);
+
+// Same inversion in the other direction: `authSlice` schedules a proactive
+// refresh from synchronous actions and cannot import the scheduler without
+// closing store → authSlice → links → store.
+registerTokenRefreshBridge({
+  schedule: accessToken =>
+    scheduleTokenRefresh(accessToken, async () => {
+      await proactiveTokenRefresh();
+    }),
+  cancel: cancelTokenRefresh,
+  refreshNow: async () => {
+    await proactiveTokenRefresh();
+  },
+});
+
+// What a session end does to Apollo. Registered rather than imported by the
+// store, for the same cycle — and so each step stays reachable from a test.
+registerApolloResetBridge({
+  cancelTokenRefresh,
+  clearPersistedCache: () => apolloCachePersistence.clear(),
+  clearStore: async () => {
+    await client.clearStore();
+  },
+});

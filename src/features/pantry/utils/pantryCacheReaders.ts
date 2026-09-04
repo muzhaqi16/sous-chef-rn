@@ -4,7 +4,7 @@
  * answer at all, and its refusal carries no usable ids on the replay path.
  */
 import { gql, type ApolloCache } from '@apollo/client';
-import type { PantryItemDuplicateInfo } from '#/utils/errors/pantryItemDuplicate';
+import type { PantryItemDuplicateInfo } from '#domain/pantryItemDuplicate';
 import { logger } from '#/utils/environment';
 
 /**

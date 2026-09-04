@@ -142,7 +142,12 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: ID) {
   }
 }
 
-query GetOnboardingItems($filters: ItemFilters, $orderBy: ItemOrderBy, $first: Int, $after: String) {
+query GetOnboardingItems(
+  $filters: ItemFilters
+  $orderBy: ItemOrderBy
+  $first: Int
+  $after: String
+) {
   items(filters: $filters, orderBy: $orderBy, first: $first, after: $after) {
     edges {
       cursor

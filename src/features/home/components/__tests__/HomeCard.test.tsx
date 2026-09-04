@@ -16,9 +16,7 @@ jest.mock('#utils/iconUtils', () => ({
   Icon: 'Icon',
 }));
 
-jest.mock('#constants/animations', () => ({
-  TIMING: { FAST: 200 },
-}));
+jest.mock('#constants/animations', () => ({}));
 
 jest.mock('../HomeActions', () => {
   const { View, Text, Pressable } = require('react-native');

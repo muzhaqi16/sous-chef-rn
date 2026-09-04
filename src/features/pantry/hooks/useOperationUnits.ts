@@ -1,7 +1,7 @@
 import { useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
-import type { PickableUnit } from '#components/molecules/unitPickerTypes';
+import type { PickableUnit } from '#features/pantry/components/unitPickerTypes';
 import {
   ConsumptionUnitsForItemDocument,
   RestockUnitsForItemDocument,
@@ -21,8 +21,8 @@ export enum PantryOperation {
 
 /**
  * What this hook selects, and exactly what `UnitPicker` accepts. The shape is
- * the kit's — see `#components/molecules/unitPickerTypes` for why the
- * dependency points that way.
+ * the component's — see `#features/pantry/components/unitPickerTypes` for why
+ * the dependency points that way.
  */
 export type SelectedUnitInfo = PickableUnit;
 
@@ -39,6 +39,7 @@ export interface RankedUnitInfo {
   commonFractions: number[] | null;
   isWholeContainer: boolean;
   displayAsFraction: boolean;
+  hasStandardCountFactor: boolean;
   // For useConversionPreview compatibility (not available from ranked queries)
   conversionRatio: number | null;
   conversionConfidence: number | null;
@@ -56,6 +57,12 @@ interface UseOperationUnitsOptions {
   trackingUnitId: string | undefined;
   trackingUnitType: UnitType | undefined;
   netWeightUnitId?: string | null;
+  /**
+   * The stack's own portion unit. Without it the list is what the CATALOG
+   * supports, which is narrower than what `createPantryItemUsage` accepts for
+   * a stack that defines its own portion ("1 bulb = 10 cloves").
+   */
+  portionUnitId?: string | null;
   operation: PantryOperation;
 }
 
@@ -99,9 +106,27 @@ function toRankedUnitInfo(
     commonFractions: ru.commonFractions,
     isWholeContainer: ru.isWholeContainer,
     displayAsFraction: ru.unit.displayAsFraction,
+    hasStandardCountFactor: ru.unit.hasStandardCountFactor,
     conversionRatio: null,
     conversionConfidence: null,
   };
+}
+
+/**
+ * Two COUNT units convert only when both declare a universal factor (dozen =
+ * 12); a clove and a head each carry a factor of 1 to "piece" that means
+ * nothing. Applied ONLY to `AUTO` — derived from role and convertibility alone.
+ * `CURATED` and `TRACKING_UNIT` carry an item-scoped relationship and stand.
+ */
+function convertsFromTracking(
+  unit: RankedUnitInfo,
+  trackingUnitType: UnitType | undefined,
+): boolean {
+  if (unit.source !== UnitSource.Auto) return true;
+  if (trackingUnitType !== UnitType.Count || unit.unitType !== UnitType.Count) {
+    return true;
+  }
+  return unit.hasStandardCountFactor;
 }
 
 function buildGroups(
@@ -156,6 +181,7 @@ export function useOperationUnits({
   trackingUnitId,
   trackingUnitType,
   netWeightUnitId,
+  portionUnitId,
   operation,
 }: UseOperationUnitsOptions): UseOperationUnitsResult {
   const { t } = useTranslation();
@@ -169,6 +195,7 @@ export function useOperationUnits({
       itemId: itemId!,
       trackingUnitId: trackingUnitId!,
       netWeightUnitId,
+      portionUnitId,
     },
     skip: !isConsumption || !itemId || !trackingUnitId,
   });
@@ -187,7 +214,9 @@ export function useOperationUnits({
     : restockResult.loading;
   const error = isConsumption ? consumptionResult.error : restockResult.error;
 
-  const allUnits = rawUnits.map(ru => toRankedUnitInfo(ru, trackingUnitId));
+  const allUnits = rawUnits
+    .map(ru => toRankedUnitInfo(ru, trackingUnitId))
+    .filter(unit => convertsFromTracking(unit, trackingUnitType));
   const groups = buildGroups(allUnits, trackingUnitType, t);
 
   // Default unit = first in ranked list (rank 1), prefer net weight unit for dual-tracked items

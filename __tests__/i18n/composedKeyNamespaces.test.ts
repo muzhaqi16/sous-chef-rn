@@ -2,10 +2,12 @@ import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { getI18n } from '#/i18n/config';
 import en from '#/i18n/locales/en.json';
-// profileValidation and itemValidation moved to the features that own them.
-// Imported directly, like `en`, so removing a namespace is a compile error.
+// profileValidation, itemValidation and onboardingValidation moved to the
+// features that own them. Imported directly, like `en`, so removing a namespace
+// is a compile error.
 import profileEn from '#features/profile/locales/en.json';
 import catalogEn from '#features/catalog/locales/en.json';
+import onboardingEn from '#features/onboarding/locales/en.json';
 import {
   PRIORITY_OPTIONS,
   PRIORITY_OPTION_BY_VALUE,
@@ -47,7 +49,7 @@ const cases = [
   },
   {
     namespace: 'onboardingValidation',
-    keys: Object.keys(en.onboardingValidation),
+    keys: Object.keys(onboardingEn.onboardingValidation),
   },
   { namespace: 'itemValidation', keys: Object.keys(catalogEn.itemValidation) },
   { namespace: 'toasts', keys: Object.keys(en.toasts) },

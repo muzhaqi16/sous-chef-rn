@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { SettingsSection } from '#components/organisms/SettingsSection';
-import type { SettingItem } from '#components/molecules/SettingRow';
+import type { SettingItem } from '#components/organisms/SettingRow';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useProfileData } from '#features/profile/hooks/useProfileData';
 import { useUser } from '#store/useAppStore';
@@ -10,17 +10,13 @@ import {
   type SettingItemConfig,
   type SettingOptionConfig,
 } from '#/config/settingsConfig';
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
+import { useUpdateProfile } from '#features/profile/hooks/useUpdateProfile';
 import {
   ProfileVisibility,
   type UpdateProfileInput,
 } from '#/graphql/generated/schemaTypes';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
-import { errorService } from '#/services/errorService';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 
@@ -28,8 +24,7 @@ export const PersonalInformationScreen: React.FC = () => {
   const { t } = useTranslation();
   const { profile, refetch } = useProfileData();
   const user = useUser();
-  const client = useApolloClient();
-  const [updateProfileMutation] = useMutation(UpdateUserProfileDocument);
+  const { updateProfile: writeProfile } = useUpdateProfile(profile);
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = () => {
@@ -37,37 +32,11 @@ export const PersonalInformationScreen: React.FC = () => {
   };
 
   const updateProfile = async (input: UpdateProfileInput) => {
-    if (!profile) return;
-    const cacheId = client.cache.identify({
-      __typename: 'UserProfile',
-      id: profile.id,
-    });
-    const { revert } = optimisticFieldUpdate(
-      client.cache,
-      cacheId,
-      profile,
-      input,
-      'Update Profile',
-    );
-
-    let result;
-    try {
-      result = await updateProfileMutation({
-        variables: { input },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'PersonalInformation.updateProfile',
-      });
-    }
-
-    // Rejection restores the snapshot; a queued (null) result keeps the write.
-    // `alertIfRejected` stays quiet when the mutation THREW, which
-    // `errorService` above already reported, so the two never double-report.
-    if (classifyCreateResult(result) === 'rejected') {
-      revert();
-      alertIfRejected(result, t('errors.updateProfileFailed'));
+    const outcome = await writeProfile(input);
+    // `alertIfRejected` stays quiet when the mutation THREW, which the hook has
+    // already reported, so the two never double-report.
+    if (outcome.rejected) {
+      alertIfRejected(outcome.result, t('errors.updateProfileFailed'));
     }
   };
 

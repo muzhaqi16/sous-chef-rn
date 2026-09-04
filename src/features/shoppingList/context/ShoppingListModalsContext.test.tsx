@@ -62,16 +62,22 @@ jest.mock('@gorhom/bottom-sheet', () => {
   };
 });
 
-import { useShoppingListModals } from './ShoppingListModalsContext';
+import {
+  useShoppingListModalActions,
+  useAnyShoppingListSheetVisible,
+} from './ShoppingListModalsContext';
 
 describe('ShoppingListModalsContext', () => {
-  describe('useShoppingListModals', () => {
-    it('throws when used outside provider', () => {
-      expect(() => {
-        renderHook(() => useShoppingListModals());
-      }).toThrow(
-        'useShoppingListModals must be used within ShoppingListModalsProvider',
-      );
-    });
+  it('throws when the commands are read outside the provider', () => {
+    expect(() => {
+      renderHook(() => useShoppingListModalActions());
+    }).toThrow('ShoppingListModalsContext is missing its provider');
+  });
+
+  // A component shared with screens that have no sheets reads this, so outside
+  // the provider it answers "nothing is open" rather than throwing.
+  it('reports no sheet open outside the provider', () => {
+    const { result } = renderHook(() => useAnyShoppingListSheetVisible());
+    expect(result.current).toBe(false);
   });
 });

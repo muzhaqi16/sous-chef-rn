@@ -1,5 +1,5 @@
 import type { DocumentNode } from 'graphql';
-import { storage } from '#storage/mmkv';
+import { storage, isRecoveryStorage } from '#storage/mmkv';
 import {
   QueueCapacityError,
   QueuedMutation,
@@ -126,7 +126,12 @@ export class QueueStore {
         }),
       }));
 
-      storage.set(QUEUE_STORAGE_KEY, JSON.stringify(serialized));
+      // A queued mutation carries its full variables, so it is written only to
+      // the encrypted instance. The in-memory cache below still updates, so a
+      // quarantined session queues and replays normally within its lifetime.
+      if (!isRecoveryStorage()) {
+        storage.set(QUEUE_STORAGE_KEY, JSON.stringify(serialized));
+      }
 
       this.cache = mutations;
     } catch (error) {
@@ -144,7 +149,9 @@ export class QueueStore {
   }
 
   setCurrentUserId(userId: string): void {
-    storage.set(CURRENT_USER_KEY, userId);
+    if (!isRecoveryStorage()) {
+      storage.set(CURRENT_USER_KEY, userId);
+    }
     this.currentUserId = userId;
     this.pendingClientIds = null;
     // The pending count is user-scoped, so a user switch changes it even

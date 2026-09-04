@@ -15,14 +15,15 @@ import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { useBarcodeOutput } from '../hooks/useBarcodeOutput';
 import { usePermission } from '#hooks/permissions/usePermission';
 import { ThemedBarcodeMask } from '../components/ThemedBarcodeMask';
-import { Button } from '#components/atoms/Button';
+import { Button } from '#components/molecules/Button';
 import { IconButton } from '#components/atoms/IconButton';
 import { HapticService } from '#services/haptic/HapticService';
-import { useHiddenStatusBar } from '#hooks/useHiddenStatusBar';
-import { TIMING } from '#/constants/animations';
-import type { BarcodeSource } from '#/types/navigation';
+import { useHiddenStatusBar } from '#features/barcode/hooks/useHiddenStatusBar';
+
+import type { BarcodeSource } from '#features/barcode/types';
 import { Text } from '#components/atoms/Text';
 import { logger } from '#/utils/environment';
+import { motion } from '#/theme/foundations/motion';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -83,7 +84,7 @@ export const BarcodeScannerScreen: React.FC<
   const [onScannerFocus] = useState(() => () => {
     const handle = setTimeout(
       () => setScreenSettled(true),
-      TIMING.SLOW + TIMING.STANDARD,
+      motion.timing.SLOW + motion.timing.STANDARD,
     );
     return () => clearTimeout(handle);
   });
@@ -223,12 +224,7 @@ export const BarcodeScannerScreen: React.FC<
   if (!hasPermission) {
     return (
       <View style={styles.centeredContainer}>
-        <Text
-          size="lg"
-          weight="semibold"
-          align="center"
-          style={styles.messageText}
-        >
+        <Text role="heading" align="center" style={styles.messageText}>
           {t('errors.cameraPermission')}
         </Text>
         {isBlocked ? (
@@ -251,12 +247,7 @@ export const BarcodeScannerScreen: React.FC<
   if (!device) {
     return (
       <View style={styles.centeredContainer}>
-        <Text
-          size="lg"
-          weight="semibold"
-          align="center"
-          style={styles.messageText}
-        >
+        <Text role="heading" align="center" style={styles.messageText}>
           {t('errors.noCameraDevice')}
         </Text>
         <Button onPress={handleGoBack} variant="primary" size="medium">
@@ -296,7 +287,7 @@ export const BarcodeScannerScreen: React.FC<
           style={styles.headerButton}
           accessibilityLabel={t('barcodeScanner.closeScanner')}
         />
-        <Text size="lg" weight="semibold" style={styles.headerTitle}>
+        <Text role="heading" style={styles.headerTitle}>
           {t('labels.scanBarcode')}
         </Text>
         <IconButton
@@ -313,18 +304,17 @@ export const BarcodeScannerScreen: React.FC<
       </View>
 
       <View style={styles.instructionsContainer}>
-        <Text
-          size="md"
-          weight="semibold"
-          align="center"
-          style={styles.instructionsText}
-        >
+        <Text role="bodyStrong" align="center" style={styles.instructionsText}>
           {hasScanned
             ? t('status.barcodeScanned')
             : t('instructions.pointCamera')}
         </Text>
         {!!isScanning && !hasScanned && (
-          <Text size="sm" align="center" style={styles.subInstructionsText}>
+          <Text
+            role="caption"
+            align="center"
+            style={styles.subInstructionsText}
+          >
             {t('instructions.barcodeVisible')}
           </Text>
         )}
@@ -340,7 +330,7 @@ export const BarcodeScannerScreen: React.FC<
             <View
               style={[styles.scanDot, isScanning && styles.scanDotActive]}
             />
-            <Text size="sm" weight="medium" style={styles.scanStatusText}>
+            <Text role="label" style={styles.scanStatusText}>
               {isScanning ? t('status.scanning') : t('status.readyToScan')}
             </Text>
           </View>
@@ -373,7 +363,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.md,
   },
   messageText: {
-    color: theme.colors.white,
+    color: theme.colors.onScrim,
   },
   header: {
     position: 'absolute',
@@ -384,7 +374,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
-    zIndex: 1,
+    zIndex: theme.zIndex.raised,
   },
   headerButton: {
     width: 44,
@@ -395,7 +385,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   headerTitle: {
-    color: theme.colors.white,
+    color: theme.colors.onScrim,
   },
   instructionsContainer: {
     position: 'absolute',
@@ -408,23 +398,15 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
     alignItems: 'center',
-    zIndex: 1,
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 4,
-        blurRadius: 12,
-        spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.3)',
-      },
-    ],
+    zIndex: theme.zIndex.raised,
+    ...theme.shadows.lg,
   },
   instructionsText: {
-    color: theme.colors.white,
+    color: theme.colors.onScrim,
     marginBottom: theme.spacing.xs,
   },
   subInstructionsText: {
-    color: theme.colors.white,
+    color: theme.colors.onScrim,
     opacity: 0.85,
   },
   bottomControls: {
@@ -433,7 +415,7 @@ const styles = StyleSheet.create(theme => ({
     left: theme.spacing.lg,
     right: theme.spacing.lg,
     alignItems: 'center',
-    zIndex: 1,
+    zIndex: theme.zIndex.raised,
   },
   scanIndicator: { alignItems: 'center' },
   scanDot: {
@@ -445,6 +427,6 @@ const styles = StyleSheet.create(theme => ({
   },
   scanDotActive: { backgroundColor: theme.colors.primary },
   scanStatusText: {
-    color: theme.colors.white,
+    color: theme.colors.onScrim,
   },
 }));

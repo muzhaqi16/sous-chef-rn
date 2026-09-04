@@ -27,9 +27,9 @@ import { OnboardingStack } from './stacks/OnboardingStack';
 import { HomeTabs } from './stacks/HomeTabs';
 import { BarcodeStack } from './stacks/BarcodeStack';
 import { NotificationStack } from './stacks/NotificationStack';
-import { VerificationGateScreen } from '#screens/auth/CodeVerificationScreen';
-import { EmailVerificationDeepLinkScreen } from '#screens/auth/EmailVerificationDeepLinkScreen';
-import { ResetPasswordScreen } from '#screens/auth/ResetPasswordScreen';
+import { VerificationGateScreen } from '#features/auth/screens/CodeVerificationScreen';
+import { EmailVerificationDeepLinkScreen } from '#features/auth/screens/EmailVerificationDeepLinkScreen';
+import { ResetPasswordScreen } from '#features/auth/screens/ResetPasswordScreen';
 import { AcceptInvite } from '#features/shoppingList/screens/AcceptInvite';
 import { JoinByShareCodeScreen } from '#features/shoppingList/screens/JoinByShareCodeScreen';
 import { JoinHomeByCodeScreen } from '#features/home/screens/JoinHomeByCodeScreen';
@@ -51,7 +51,7 @@ import {
   topInsetWith,
   noInsetScreenLayout,
 } from '#navigation/layouts/TopInsetLayout';
-import { PostLoginBiometricScreen } from '#screens/auth/PostLoginBiometricScreen';
+import { PostLoginBiometricScreen } from '#features/auth/screens/PostLoginBiometricScreen';
 import { useDeepLinkRouter } from '#hooks/deepLink/useDeepLinkRouter';
 import {
   useIsAuth,
@@ -65,6 +65,7 @@ import { Telemetry } from '#services/telemetry';
 import { NativePerformanceService } from '#services/performance/NativePerformanceService';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { appConfig } from '#/config/appConfig';
+import { motion } from '#/theme/foundations/motion';
 
 const DEEP_LINK_PREFIXES = [
   `${appConfig.identity.deepLink.scheme}://`,
@@ -81,7 +82,7 @@ const RootStack = createNativeStackNavigator({
   screenOptions: {
     headerShown: false,
     animation: 'slide_from_right',
-    animationDuration: 200,
+    animationDuration: motion.timing.STANDARD,
   },
   groups: {
     Auth: {

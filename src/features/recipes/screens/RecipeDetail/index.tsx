@@ -1,22 +1,23 @@
 import { PROTECTED_RECIPE_FOLDERS } from '#features/recipes/utils/folders';
 import React, { useState } from 'react';
-import { View, ActivityIndicator, Linking, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
+import { alertService } from '#/services/alertService';
+import { openWebUrl } from '#features/recipes/utils/externalUrl';
+import {
+  Pressable,
+  SuccessActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
-import { DetailTitleRow } from '#components/molecules/DetailTitleRow';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 
-const SuccessActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.success,
-}));
-
-import { FolderPicker } from '#components/molecules/FolderPicker';
-import { RecipeDetailErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
-import { MarkCookedModal } from '#components/modals/MarkCookedModal';
+import { FolderPicker } from '#features/recipes/components/FolderPicker';
+import { RecipeDetailErrorBoundary } from '#components/providers/ScreenErrorBoundary';
+import { MarkCookedModal } from '#components/organisms/MarkCookedModal';
 import { IngredientMatchingSheet } from '#features/recipes/components/modals/IngredientMatchingSheet';
 import { SaveRecipeSheet } from '#features/recipes/components/modals/SaveRecipeSheet/SaveRecipeSheet';
 import { ManageRecipeSheet } from '#features/recipes/components/modals/ManageRecipeSheet/ManageRecipeSheet';
@@ -29,21 +30,22 @@ import { ReviewSection } from '#features/recipes/components/ReviewSection';
 import { useRecipeDetail } from '../../hooks/useRecipeDetail';
 import { useForkRecipe } from '#features/recipes/hooks/useForkRecipe';
 import { usePublishRecipe } from '#features/recipes/hooks/usePublishRecipe';
-import { RecipeEnrichment } from './components/RecipeEnrichment';
-import { IngredientCard } from './components/IngredientCard';
-import { RecipeHeroImage } from './components/RecipeHeroImage';
+import { RecipeEnrichment } from '#features/recipes/components/recipeDetail/RecipeEnrichment';
+import { IngredientCard } from '#features/recipes/components/recipeDetail/IngredientCard';
+import { RecipeHeroImage } from '#features/recipes/components/recipeDetail/RecipeHeroImage';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
-import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
-import { SavedRecipeMetadataPanel } from './components/SavedRecipeMetadataPanel';
-import { RecipeInstructions } from './components/RecipeInstructions';
-import { ShoppingListPickerSheet } from './components/ShoppingListPickerSheet';
+import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
+import { SavedRecipeMetadataPanel } from '#features/recipes/components/recipeDetail/SavedRecipeMetadataPanel';
+import { RecipeInstructions } from '#features/recipes/components/recipeDetail/RecipeInstructions';
+import { ShoppingListPickerSheet } from '#features/recipes/components/recipeDetail/ShoppingListPickerSheet';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useUser } from '#store/useAppStore';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
-import { EmptyState } from '#components/atoms/EmptyState';
+import { EmptyState } from '#components/molecules/EmptyState';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
-const IngredientSeparator = () => <View style={{ width: 12 }} />;
+const IngredientSeparator = () => <View style={styles.ingredientGap} />;
 
 const RecipeDetailScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -137,6 +139,15 @@ const RecipeDetailScreen: React.FC = () => {
     if (recipeId) setPublished(recipeId, !displayData?.isPublished);
   };
 
+  // The source URL comes from the recipe provider or another member, so it is
+  // opened only as a web address — any other scheme reaches a different app.
+  const handleOpenSource = async () => {
+    const opened = await openWebUrl(displayData?.sourceUrl);
+    if (!opened) {
+      alertService.alert(t('labels.error'), t('errors.linkNotOpenable'));
+    }
+  };
+
   // State for save/manage recipe sheets
   const [showSaveSheet, setShowSaveSheet] = useState(false);
   const [showManageSheet, setShowManageSheet] = useState(false);
@@ -205,6 +216,7 @@ const RecipeDetailScreen: React.FC = () => {
       ? [
           {
             icon: 'create-outline',
+            accessibilityLabel: t('labels.edit'),
             onPress: handleEditRecipe,
             variant: 'primary',
             testID: 'recipe-edit-button',
@@ -239,6 +251,7 @@ const RecipeDetailScreen: React.FC = () => {
       ? [
           {
             icon: isInOtherFolder ? 'folder' : 'folder-outline',
+            accessibilityLabel: t('folderPicker.selectFolder'),
             onPress: handleFolderPress,
             variant: 'primary',
             disabled: saving || updatingFolderTags,
@@ -250,6 +263,9 @@ const RecipeDetailScreen: React.FC = () => {
       ? [
           {
             icon: isInFavorites ? 'heart' : 'heart-outline',
+            accessibilityLabel: isInFavorites
+              ? t('recipes.unfavoriteA11y')
+              : t('recipes.favoriteA11y'),
             onPress: handleHeartPress,
             tone: 'favorite',
             loading: saving || updatingFolderTags,
@@ -330,7 +346,7 @@ const RecipeDetailScreen: React.FC = () => {
         {/* Recipe Metadata */}
         <View style={styles.metadata}>
           {displayData.servings != null && (
-            <Text style={styles.metadataText}>
+            <Text role="caption" style={styles.metadataText}>
               🍽️ {t('recipes.servingsCount', { count: displayData.servings })}
             </Text>
           )}
@@ -416,7 +432,9 @@ const RecipeDetailScreen: React.FC = () => {
           <View style={styles.tags}>
             {!!displayData.vegetarian && (
               <View style={styles.tag}>
-                <Text style={styles.tagText}>{t('recipes.vegetarian')}</Text>
+                <Text role="label" style={styles.tagText}>
+                  {t('recipes.vegetarian')}
+                </Text>
               </View>
             )}
             {!!displayData.vegan && (
@@ -442,8 +460,10 @@ const RecipeDetailScreen: React.FC = () => {
         {/* Description */}
         {!!displayData.summary && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('recipes.about')}</Text>
-            <Text style={styles.description}>
+            <SectionHeader style={styles.sectionTitleSpacing}>
+              {t('recipes.about')}
+            </SectionHeader>
+            <Text role="body" style={styles.description}>
               {typeof displayData.summary === 'string'
                 ? displayData.summary.replace(/<[^>]*>/g, '')
                 : displayData.summary}
@@ -455,15 +475,15 @@ const RecipeDetailScreen: React.FC = () => {
         {!!displayData.ingredients && displayData.ingredients.length > 0 && (
           <View style={styles.ingredientsSection}>
             <View style={styles.ingredientsSectionHeader}>
-              <Text style={styles.sectionTitle}>
+              <SectionHeader style={styles.sectionTitleSpacing}>
                 {t('itemPhotos.perspective.ingredient_list')}
-              </Text>
+              </SectionHeader>
               <Pressable
                 onPress={handleAddAll}
                 disabled={addingToList}
                 style={({ pressed }) => pressed && { opacity: 0.7 }}
               >
-                <Text style={styles.addAllButton}>
+                <Text role="label" style={styles.addAllButton}>
                   {addingToList ? t('labels.adding') : t('recipes.addAll')}
                 </Text>
               </Pressable>
@@ -505,19 +525,17 @@ const RecipeDetailScreen: React.FC = () => {
               styles.attribution,
               displayData.sourceUrl && pressed && { opacity: 0.7 },
             ]}
-            onPress={() =>
-              displayData.sourceUrl && Linking.openURL(displayData.sourceUrl)
-            }
+            onPress={handleOpenSource}
             disabled={!displayData.sourceUrl}
           >
-            <Text style={styles.attributionText}>
+            <Text role="caption" style={styles.attributionText}>
               {t('recipes.recipeFrom', {
                 source: displayData.sourceName || t('recipes.externalSource'),
               })}
             </Text>
             {!!displayData.sourceUrl && (
               <View style={styles.viewOriginalLink}>
-                <Text style={styles.viewOriginalText}>
+                <Text role="label" style={styles.viewOriginalText}>
                   {t('recipes.viewOriginalRecipe')}
                 </Text>
                 <Icon name="open-outline" size={14} tone="primary" />
@@ -637,7 +655,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
   },
   metadataText: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
   },
   metadataTextSuccess: {
@@ -662,9 +679,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
   },
   tagText: {
-    fontSize: theme.fonts.size.xs,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
   },
   section: {
     marginBottom: theme.spacing.xl,
@@ -680,21 +695,11 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
   },
-  sectionTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-  },
   addAllButton: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
   },
   description: {
-    fontSize: theme.fonts.size.md,
     color: theme.colors.textSecondary,
-    lineHeight: 22,
   },
   ingredientsList: {
     paddingVertical: theme.spacing.sm,
@@ -702,12 +707,11 @@ const styles = StyleSheet.create(theme => ({
   },
   attribution: {
     paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
     marginTop: theme.spacing.xl,
   },
   attributionText: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     fontStyle: 'italic',
     textAlign: 'center',
@@ -720,8 +724,12 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
   },
   viewOriginalText: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
+  },
+  ingredientGap: {
+    width: theme.spacing.base,
+  },
+  sectionTitleSpacing: {
+    marginBottom: theme.spacing.sm,
   },
 }));

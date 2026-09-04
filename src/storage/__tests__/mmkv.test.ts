@@ -158,12 +158,107 @@ describe('mmkv storage', () => {
       await initPromise;
 
       expect(getKey).toHaveBeenCalledTimes(2);
-      expect(createMMKV).toHaveBeenCalledTimes(1);
       expect(createMMKV).toHaveBeenCalledWith({
         id: mmkvModule.STORAGE_KEY,
         encryptionKey: 'recovered-key',
         encryptionType: 'AES-256',
       });
+      // The session instance is the encrypted one; the only other open is the
+      // deferred recovery purge below, which never runs keyless on the primary.
+      expect(createMMKV).not.toHaveBeenCalledWith({
+        id: mmkvModule.STORAGE_KEY,
+      });
+    });
+  });
+
+  // Whatever a quarantined session wrote is plaintext on disk, so the next
+  // launch that can open the encrypted file erases it.
+  describe('recovery storage purge', () => {
+    const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
+
+    afterEach(() => {
+      process.env.NODE_ENV = ORIGINAL_NODE_ENV;
+      jest.useRealTimers();
+      jest.resetModules();
+    });
+
+    const loadWithRecoveryFile = (
+      keys: string[],
+      { primaryKeys = ['primary'] }: { primaryKeys?: string[] } = {},
+    ) => {
+      process.env.NODE_ENV = 'development';
+      jest.resetModules();
+      const { DeviceKeyManager } = jest.requireMock(
+        '#/utils/security/deviceKey',
+      ) as { DeviceKeyManager: { getDeviceEncryptionKey: jest.Mock } };
+      DeviceKeyManager.getDeviceEncryptionKey.mockReset();
+      DeviceKeyManager.getDeviceEncryptionKey.mockResolvedValue({
+        key: 'a-key',
+        encryptionType: 'AES-256' as const,
+      });
+      const { createMMKV } = jest.requireMock('react-native-mmkv') as {
+        createMMKV: jest.Mock;
+      };
+      createMMKV.mockClear();
+      const clearAll = jest.fn();
+      createMMKV.mockImplementation((opts: { id: string }) => ({
+        id: opts.id,
+        set: jest.fn(),
+        getString: jest.fn(),
+        getAllKeys: jest.fn(() =>
+          opts.id.endsWith('-recovery') ? keys : primaryKeys,
+        ),
+        clearAll,
+      }));
+      const mmkvModule = require('../mmkv') as typeof import('../mmkv');
+      return { mmkvModule, createMMKV, clearAll };
+    };
+
+    it('clears the recovery file once the encrypted instance opens', async () => {
+      jest.useFakeTimers();
+      const { mmkvModule, createMMKV, clearAll } = loadWithRecoveryFile([
+        'leftover',
+      ]);
+
+      await mmkvModule.initializeSecureStorage();
+      await jest.runAllTimersAsync();
+
+      expect(createMMKV).toHaveBeenCalledWith({
+        id: mmkvModule.RECOVERY_STORAGE_KEY,
+      });
+      expect(clearAll).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports an empty encrypted store, which hydration reads', async () => {
+      jest.useFakeTimers();
+      const { mmkvModule } = loadWithRecoveryFile([], { primaryKeys: [] });
+
+      await mmkvModule.initializeSecureStorage();
+      await jest.runAllTimersAsync();
+
+      expect(mmkvModule.openedWithEmptyStore()).toBe(true);
+    });
+
+    it('does not report an empty store when it has data', async () => {
+      jest.useFakeTimers();
+      const { mmkvModule } = loadWithRecoveryFile([], {
+        primaryKeys: ['sous-chef-storage'],
+      });
+
+      await mmkvModule.initializeSecureStorage();
+      await jest.runAllTimersAsync();
+
+      expect(mmkvModule.openedWithEmptyStore()).toBe(false);
+    });
+
+    it('does not clear an already-empty recovery file', async () => {
+      jest.useFakeTimers();
+      const { mmkvModule, clearAll } = loadWithRecoveryFile([]);
+
+      await mmkvModule.initializeSecureStorage();
+      await jest.runAllTimersAsync();
+
+      expect(clearAll).not.toHaveBeenCalled();
     });
   });
 

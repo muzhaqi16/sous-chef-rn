@@ -37,12 +37,10 @@ export const UsageHistoryRow: React.FC<{ usage: UsageRecord }> = ({
   return (
     <View style={styles.row}>
       <View style={styles.dateStore}>
-        <Text size="base" weight="medium">
-          {formatDate(usage.usedAt)}
-        </Text>
+        <Text role="bodyStrong">{formatDate(usage.usedAt)}</Text>
         {!!purposeLabel && (
           <Text
-            size="sm"
+            role="caption"
             tone={isAdjustment ? undefined : 'secondary'}
             style={[styles.store, isAdjustment && styles.adjustmentPurpose]}
           >
@@ -50,14 +48,13 @@ export const UsageHistoryRow: React.FC<{ usage: UsageRecord }> = ({
           </Text>
         )}
         {!!isAdjustment && !!usage.adjustmentReason && (
-          <Text size="xs" tone="tertiary" style={styles.adjustmentReason}>
+          <Text role="caption" tone="tertiary" style={styles.adjustmentReason}>
             {usage.adjustmentReason}
           </Text>
         )}
       </View>
       <Text
-        size="base"
-        weight="semibold"
+        role="bodyStrong"
         style={isAdjustment ? styles.adjustmentQuantity : undefined}
       >
         {quantityPrefix}

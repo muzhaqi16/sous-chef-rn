@@ -3,9 +3,9 @@ import { View, RefreshControl, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '#utils/iconUtils';
-import { Header, HeaderVariant } from '../molecules/Header';
-import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
-import { Button } from '#components/atoms/Button';
+import { Header, HeaderVariant } from '../organisms/Header';
+import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
+import { Button } from '#components/molecules/Button';
 import { DetailSection } from '../molecules/DetailSection';
 
 interface TemplateSection {

@@ -5,13 +5,15 @@
 // variables. Instead, use inline jest.fn() and retrieve mocks after import.
 // ---------------------------------------------------------------------------
 
-jest.mock('../client', () => ({
-  client: {
-    clearStore: jest.fn(() => Promise.resolve()),
-    stop: jest.fn(),
-    cache: { gc: jest.fn(() => []) },
-  },
-  cancelCachePersistence: jest.fn(),
+const mockClient = {
+  clearStore: jest.fn(() => Promise.resolve()),
+  stop: jest.fn(),
+  cache: { gc: jest.fn(() => []) },
+};
+jest.mock('#/apollo/clientRegistry', () => ({
+  getApolloClient: () => mockClient,
+  registerApolloClient: jest.fn(),
+  clearApolloClient: jest.fn(),
 }));
 
 jest.mock('../links/tokenScheduler', () => ({
@@ -23,6 +25,7 @@ jest.mock('../offline/ApolloCachePersistence', () => ({
     clear: jest.fn(),
     cancel: jest.fn(),
   },
+  cancelCachePersistence: jest.fn(),
 }));
 
 jest.mock('../offline/OptimisticDataPersistence', () => ({
@@ -62,7 +65,7 @@ jest.mock('../links/refreshToken', () => ({
 // ---------------------------------------------------------------------------
 
 import { LogoutCleanup } from '../logoutCleanup';
-import { client, cancelCachePersistence } from '../client';
+import { cancelCachePersistence } from '../offline/ApolloCachePersistence';
 import { cancelTokenRefresh } from '../links/tokenScheduler';
 import { apolloCachePersistence } from '../offline/ApolloCachePersistence';
 import { optimisticDataPersistence } from '../offline/OptimisticDataPersistence';
@@ -117,13 +120,13 @@ describe('LogoutCleanup', () => {
 
     it('stops in-flight queries', async () => {
       await LogoutCleanup.performLogoutCleanup();
-      expect(client.stop).toHaveBeenCalled();
+      expect(mockClient.stop).toHaveBeenCalled();
     });
 
     it('clears Apollo cache by default', async () => {
       await LogoutCleanup.performLogoutCleanup();
-      expect(client.clearStore).toHaveBeenCalled();
-      expect(client.cache.gc).toHaveBeenCalledWith({
+      expect(mockClient.clearStore).toHaveBeenCalled();
+      expect(mockClient.cache.gc).toHaveBeenCalledWith({
         resetResultCache: true,
       });
       expect(apolloCachePersistence.clear).toHaveBeenCalled();
@@ -142,7 +145,7 @@ describe('LogoutCleanup', () => {
 
     it('skips cache clearing when clearCache is false', async () => {
       await LogoutCleanup.performLogoutCleanup({ clearCache: false });
-      expect(client.clearStore).not.toHaveBeenCalled();
+      expect(mockClient.clearStore).not.toHaveBeenCalled();
     });
 
     it('suppresses errors by default', async () => {
@@ -315,7 +318,7 @@ describe('session teardown step', () => {
 
     const { disposeWebSocket } = require('../links/wsLink');
 
-    expect(client.stop).toHaveBeenCalled();
+    expect(mockClient.stop).toHaveBeenCalled();
     expect(disposeWebSocket).toHaveBeenCalled();
     expect(apolloCachePersistence.clear).toHaveBeenCalled();
   });

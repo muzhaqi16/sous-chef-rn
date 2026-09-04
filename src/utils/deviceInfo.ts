@@ -1,7 +1,10 @@
 import { Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import { logger } from './environment';
-import { storage, isStorageReady } from '#/storage/mmkv';
+import {
+  readDeviceFingerprint,
+  writeDeviceFingerprint,
+} from '#/storage/deviceIdentity';
 import { DeviceType, MobilePlatform } from '#/graphql/generated/schemaTypes';
 
 export interface DeviceInformation {
@@ -405,8 +408,6 @@ const collectDisplayInfo = async () => {
   return displayInfo;
 };
 
-const DEVICE_FINGERPRINT_KEY = 'device_fingerprint';
-
 /** Combines every device identifier the platform will give us into one string. */
 const computeDeviceFingerprint = async (): Promise<string> => {
   try {
@@ -485,16 +486,11 @@ const computeDeviceFingerprint = async (): Promise<string> => {
  * fallbacks above survive a restart as well.
  */
 export const generateDeviceFingerprint = async (): Promise<string> => {
-  const storageReady = isStorageReady();
-  if (storageReady) {
-    const stored = storage.getString(DEVICE_FINGERPRINT_KEY);
-    if (stored) return stored;
-  }
+  const stored = readDeviceFingerprint();
+  if (stored) return stored;
 
   const fingerprint = await computeDeviceFingerprint();
-  if (storageReady) {
-    storage.set(DEVICE_FINGERPRINT_KEY, fingerprint);
-  }
+  writeDeviceFingerprint(fingerprint);
   return fingerprint;
 };
 

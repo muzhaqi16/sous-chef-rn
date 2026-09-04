@@ -1,4 +1,4 @@
-import { client } from '../client';
+import { getApolloClient } from '#/apollo/clientRegistry';
 import type { OperationVariables, TypedDocumentNode } from '@apollo/client';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
@@ -15,6 +15,7 @@ import {
 import { convertToSyncMutation } from './convertToSyncMutation';
 import { reconcileReplaySuccess } from './queueReplayReconcilers';
 import { proactiveTokenRefresh } from '../links/refreshToken';
+import { refreshUnitVocabulary } from './refreshUnitVocabulary';
 import {
   classifyError,
   calculateRetryDelay,
@@ -26,6 +27,19 @@ import { logger } from '#/utils/environment';
 import { Telemetry } from '#/services/telemetry';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { registerSessionTeardown } from '#store/sessionTeardown';
+
+/**
+ * The queue only ever runs after `client.ts` has evaluated — it is the link
+ * chain that starts a drain — so a missing client here is a wiring bug, not a
+ * state to handle.
+ */
+const requireApolloClient = () => {
+  const client = getApolloClient();
+  if (!client) {
+    throw new Error('Apollo client not registered before a queue drain');
+  }
+  return client;
+};
 
 const DEFAULT_CONFIG: QueueConfig = {
   retryDelayMs: 1000,
@@ -42,6 +56,10 @@ export class QueueManager {
   private processingPromise: Promise<void> | null = null;
   private failureHandler: FailureHandler | null = null;
   private drainTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Whether this drain has already re-fetched the unit vocabulary. */
+  private hasRefreshedUnits = false;
+  /** Entries that have already spent their one re-resolution attempt. */
+  private staleReferenceRetried = new Set<string>();
 
   constructor(config: Partial<QueueConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -125,6 +143,11 @@ export class QueueManager {
       logger.error('❌ Queue: Token validation failed, cannot process');
       return;
     }
+
+    // Per-drain, not per-entry: a backlog of writes naming the same retired
+    // unit draws one refresh between them, and an entry gets one re-resolution.
+    this.hasRefreshedUnits = false;
+    this.staleReferenceRetried.clear();
 
     // Recover entries a killed process left mid-replay: drains are serialized
     // by isProcessing, so any PROCESSING entry visible here is stranded debris,
@@ -246,6 +269,7 @@ export class QueueManager {
   private async executeMutation(
     mutation: QueuedMutation,
   ): Promise<Record<string, unknown> | undefined> {
+    const client = requireApolloClient();
     const { syncMutation, syncVariables } = convertToSyncMutation(
       mutation,
       client.cache,
@@ -353,6 +377,29 @@ export class QueueManager {
       }
       useStore.getState().setNeedsTokenRefresh(false);
       logger.info(`🔐 Queue: Token refreshed for ${mutation.id}, retrying`);
+    }
+
+    // A unit the write names was merged away by the API's vocabulary repair.
+    // Refresh the vocabulary and re-send ONCE — `convertToSyncMutation` rebuilds
+    // the sync input from the cache on every attempt, so the rebuilt write
+    // resolves against current rows. A second refusal is a real one: drop
+    // `retryable` so it falls through to revert-and-inform below.
+    if (queueError.type === 'stale-reference') {
+      if (this.staleReferenceRetried.has(mutation.id)) {
+        logger.warn(
+          `❌ Queue: ${mutation.id} still names a retired unit after re-resolution`,
+        );
+        queueError.retryable = false;
+      } else {
+        this.staleReferenceRetried.add(mutation.id);
+        if (!this.hasRefreshedUnits) {
+          this.hasRefreshedUnits = true;
+          refreshUnitVocabulary();
+        }
+        logger.info(
+          `♻️ Queue: ${mutation.id} names a retired unit, re-resolving and retrying`,
+        );
+      }
     }
 
     // Retryable errors (refreshed-auth, network, 5xx): bounded in-run retries
@@ -535,7 +582,7 @@ export class QueueManager {
    * the generic ApolloCache type erases that to `unknown`.
    */
   private extractCacheSnapshot(): Record<string, unknown> {
-    return client.cache.extract() as Record<string, unknown>;
+    return requireApolloClient().cache.extract() as Record<string, unknown>;
   }
 
   private findCachedTypename(

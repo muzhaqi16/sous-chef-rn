@@ -1,0 +1,238 @@
+import { t } from '#/i18n';
+/**
+ * Ownership, roles and user info for shopping lists and homes. `user.email` is
+ * nullable — the API returns it only for the caller's own record — so it is
+ * never a guaranteed display label; see the `OwnerInfo` consumers' fallbacks.
+ */
+interface ShoppingListOwnership {
+  userId: string;
+  user?: {
+    id: string;
+    email?: string | null;
+    profile?: {
+      displayName?: string | null;
+      avatar?: string | null;
+    } | null;
+  } | null;
+}
+
+interface ShoppingListCollaborator {
+  collaboratorId?: string | null;
+  role: string;
+  status: string;
+  collaborator?: {
+    id: string;
+    email?: string | null;
+    profile?: {
+      displayName?: string | null;
+      avatar?: string | null;
+    } | null;
+  } | null;
+}
+
+export interface ShoppingListWithOwnership {
+  ownerships?: ShoppingListOwnership[] | null;
+  collaboratorsConnection?: {
+    edges?: Array<{ node?: ShoppingListCollaborator | null } | null> | null;
+    totalCount?: number | null;
+  } | null;
+}
+
+import { extractNodes } from '#/utils/connectionUtils';
+
+/**
+ * Home Types (matching GraphQL schema)
+ */
+interface HomeMember {
+  userId?: string;
+  role: string;
+  status?: string;
+  user?: {
+    id: string;
+    email?: string | null;
+    profile?: {
+      displayName?: string | null;
+      avatar?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
+    } | null;
+  } | null;
+}
+
+export interface HomeWithMembers {
+  members?: HomeMember[] | null;
+  membersConnection?: {
+    edges?: Array<{ node?: HomeMember | null } | null> | null;
+  } | null;
+}
+
+const resolveHomeMembers = (home: HomeWithMembers): HomeMember[] => {
+  if (Array.isArray(home.members)) {
+    return home.members.filter(Boolean) as HomeMember[];
+  }
+
+  return extractNodes<HomeMember>(home.membersConnection);
+};
+
+const resolveCollaborators = (
+  list: ShoppingListWithOwnership,
+): ShoppingListCollaborator[] => {
+  return extractNodes<ShoppingListCollaborator>(list.collaboratorsConnection);
+};
+
+/**
+ * User Info Type
+ */
+export interface OwnerInfo {
+  id: string;
+  email?: string | null;
+  displayName?: string | null;
+  avatar?: string | null;
+}
+
+/**
+ * Get owner information for a shopping list
+ */
+export function getShoppingListOwnerInfo(
+  list: ShoppingListWithOwnership,
+): OwnerInfo | null {
+  const ownership = list.ownerships?.[0];
+  if (!ownership?.user) return null;
+
+  return {
+    id: ownership.user.id,
+    email: ownership.user.email,
+    displayName: ownership.user.profile?.displayName,
+    avatar: ownership.user.profile?.avatar,
+  };
+}
+
+/**
+ * Shopping list with optional home for display avatar resolution
+ */
+export interface ShoppingListWithHome extends ShoppingListWithOwnership {
+  /**
+   * Identity fields are declared alongside the member shape so a list that
+   * selects only `home { id name }` still satisfies this type — the avatar
+   * resolver falls back to the list owner when no members were selected.
+   */
+  home?: (HomeWithMembers & { id?: string; name?: string }) | null;
+}
+
+/**
+ * Get display avatar info for a shopping list.
+ * Priority: Home owner (if list belongs to a home) > List owner
+ */
+export function getShoppingListDisplayAvatarInfo(
+  list: ShoppingListWithHome,
+): OwnerInfo | null {
+  // If list has a home, show home owner's avatar
+  if (list.home) {
+    const homeOwnerInfo = getHomeOwnerInfo(list.home);
+    if (homeOwnerInfo) {
+      return homeOwnerInfo;
+    }
+  }
+
+  // Fall back to list owner
+  return getShoppingListOwnerInfo(list);
+}
+
+/**
+ * Check if current user is the owner of a shopping list
+ */
+export function isShoppingListOwner(
+  list: ShoppingListWithOwnership,
+  currentUserId?: string,
+): boolean {
+  if (!currentUserId) return false;
+  return list.ownerships?.some(o => o.userId === currentUserId) || false;
+}
+
+/**
+ * Get current user's role in a shopping list (as a collaborator)
+ */
+export function getShoppingListRole(
+  list: ShoppingListWithOwnership,
+  currentUserId?: string,
+  homeMyMembership?: { role: string } | null,
+): string | null {
+  if (!currentUserId) return null;
+
+  // Check if owner
+  if (isShoppingListOwner(list, currentUserId)) {
+    return 'OWNER';
+  }
+
+  // Check collaborators using resolver (supports both array and connection)
+  const collaborators = resolveCollaborators(list);
+  const collaboration = collaborators.find(
+    c => c.collaboratorId === currentUserId,
+  );
+
+  // Fall back to home membership role for home-linked lists
+  return collaboration?.role || homeMyMembership?.role || null;
+}
+
+/**
+ * Get owner information for a home
+ */
+export function getHomeOwnerInfo(home: HomeWithMembers): OwnerInfo | null {
+  const owner = resolveHomeMembers(home).find(m => m.role === 'OWNER');
+  if (!owner?.user) return null;
+
+  return {
+    id: owner.user.id,
+    email: owner.user.email,
+    displayName: owner.user.profile?.displayName,
+    avatar: owner.user.profile?.avatar,
+  };
+}
+
+/**
+ * Check if current user is the owner of a home
+ */
+export function isHomeOwner(
+  home: HomeWithMembers,
+  currentUserId?: string,
+): boolean {
+  if (!currentUserId) return false;
+  return (
+    resolveHomeMembers(home).some(
+      m => m.userId && m.userId === currentUserId && m.role === 'OWNER',
+    ) || false
+  );
+}
+
+/** Avatar fallback: the first letter, capitalized; "?" for nullish. */
+export function getInitials(displayName?: string | null): string {
+  if (!displayName) return '?';
+
+  // Remove email domain if present
+  const name = displayName.split('@')[0];
+
+  // Get first character and uppercase
+  const initial = name.trim().charAt(0).toUpperCase();
+
+  return initial || '?';
+}
+
+/**
+ * A collaborator role, in the reader's language. The labels already exist under
+ * `collaboratorRoles.*`; an unmapped role falls back to the shared unknown
+ * label rather than to the identifier with its capitalisation changed.
+ */
+const ROLE_LABEL_KEYS: Record<string, string> = {
+  OWNER: 'collaboratorRoles.owner',
+  ADMIN: 'labels.admin',
+  EDITOR: 'collaboratorRoles.editor',
+  VIEWER: 'collaboratorRoles.viewer',
+  SHOPPER: 'collaboratorRoles.shopper',
+  CONTRIBUTOR: 'collaboratorRoles.contributor',
+  MEMBER: 'roles.member',
+};
+
+export function formatRoleDisplay(role: string | null): string {
+  const key = role ? ROLE_LABEL_KEYS[role] : undefined;
+  return key ? t(key) : t('labels.unknown');
+}

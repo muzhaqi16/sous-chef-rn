@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import type { IconTone } from '#utils/iconUtils';
-import { format, parseISO } from 'date-fns';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
+import { parseISO } from 'date-fns';
+import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { NutritionSummaryCard } from './NutritionSummaryCard';
 import { Icon } from '#utils/iconUtils';
 import { useFragment } from '@apollo/client/react';
@@ -18,11 +16,14 @@ import {
   MealPlanSettingsSheet_MealPlanFragmentDoc,
   type MealPlanSettingsSheet_MealPlanFragment,
 } from './MealPlanSettingsSheet.generated';
-import type { MealPlanPermissions } from '#utils/permissions/mealPlanPermissions';
+import type { MealPlanPermissions } from '#features/mealPlan/utils/mealPlanPermissions';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
-import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 import { Text } from '#components/atoms/Text';
+import { formatDateRangeWithYear } from '#/utils/formatters/date';
+import { SectionHeader } from '#components/atoms/SectionHeader';
+import { Divider } from '#components/atoms/Divider';
+import { Sheet } from '#components/templates/Sheet';
 
 interface MealPlanSettingsSheetProps {
   visible: boolean;
@@ -62,11 +63,15 @@ function ActionItem({
     >
       <Icon name={icon} size={22} tone={tone} />
       <View style={actionStyles.content}>
-        <Text size="md" weight="medium" style={actionStyles.label}>
+        <Text role="bodyStrong" style={actionStyles.label}>
           {label}
         </Text>
         {!!description && (
-          <Text size="sm" tone="secondary" style={actionStyles.description}>
+          <Text
+            role="caption"
+            tone="secondary"
+            style={actionStyles.description}
+          >
             {description}
           </Text>
         )}
@@ -87,11 +92,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
   deleting,
 }) => {
   const { t } = useTranslation();
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['80%'],
-  });
+  const money = useMoney();
 
   // Per-entity cache subscription: re-renders only when this MealPlan's
   // fields change. Falls back to the source prop on cache miss.
@@ -148,196 +149,180 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
 
   const dateRange =
     mealPlan.startDate && mealPlan.endDate
-      ? `${format(parseISO(mealPlan.startDate), 'MMM d')} - ${format(
+      ? formatDateRangeWithYear(
+          parseISO(mealPlan.startDate),
           parseISO(mealPlan.endDate),
-          'MMM d, yyyy',
-        )}`
+        )
       : null;
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
-        showsVerticalScrollIndicator={false}
-      >
-        <BottomSheetHeader
-          title={t('mealPlanSettings.planSettings')}
-          onCancel={onClose}
-          onConfirm={onClose}
-          confirmLabel={t('labels.done')}
-        />
+    <Sheet
+      mode="action"
+      visible={visible}
+      onDismiss={onClose}
+      snapPoints={['80%']}
+      contentContainerStyle={styles.contentContainer}
+      style={styles.scrollView}
+    >
+      <BottomSheetHeader
+        title={t('mealPlanSettings.planSettings')}
+        onCancel={onClose}
+        onConfirm={onClose}
+        confirmLabel={t('labels.done')}
+      />
 
-        {/* Plan info */}
-        <View style={styles.planInfo}>
-          <Text size="lg" weight="bold">
-            {mealPlan.name}
+      {/* Plan info */}
+      <View style={styles.planInfo}>
+        <Text role="heading">{mealPlan.name}</Text>
+        {mealPlan.description ? (
+          <Text role="caption" tone="secondary">
+            {mealPlan.description}
           </Text>
-          {mealPlan.description ? (
-            <Text size="sm" tone="secondary">
-              {mealPlan.description}
-            </Text>
-          ) : null}
-          {!!dateRange && (
-            <Text size="sm" tone="tertiary" style={styles.planDate}>
-              {dateRange}
-            </Text>
-          )}
-          {!!mealPlan.home?.name && (
-            <Text size="sm" tone="tertiary" style={styles.planDate}>
-              {t('mealPlanSettings.sharedWith', { name: mealPlan.home.name })}
-            </Text>
-          )}
-          {!!mealPlan.createdBy?.profile?.displayName && (
-            <Text size="sm" tone="tertiary" style={styles.planDate}>
-              {t('mealPlanSettings.createdBy', {
-                name: mealPlan.createdBy.profile.displayName,
-              })}
-            </Text>
-          )}
-          {mealPlan.budgetAmount != null ? (
-            <Text size="sm" tone="tertiary" style={styles.planDate}>
-              {t('mealPlanSettings.budgetSpent', {
-                spent: formatCurrency(mealPlan.actualCost, DEFAULT_CURRENCY),
-                budget: formatCurrency(mealPlan.budgetAmount, DEFAULT_CURRENCY),
-              })}
-            </Text>
-          ) : mealPlan.actualCost > 0 ? (
-            <Text size="sm" tone="tertiary" style={styles.planDate}>
-              {t('mealPlanSettings.spentAmount', {
-                spent: formatCurrency(mealPlan.actualCost, DEFAULT_CURRENCY),
-              })}
-            </Text>
-          ) : null}
-        </View>
-
-        {/* Actions */}
-        <View style={styles.section}>
-          <Text
-            size="xs"
-            weight="semibold"
-            tone="tertiary"
-            style={styles.sectionTitle}
-          >
-            {t('mealPlanSettings.actionsLabel')}
+        ) : null}
+        {!!dateRange && (
+          <Text role="caption" tone="tertiary" style={styles.planDate}>
+            {dateRange}
           </Text>
-          <View style={styles.actionsCard}>
-            <ActionItem
-              icon="cart-outline"
-              label={t('labels.generateShoppingList')}
-              description={t('mealPlanSettings.generateShoppingListDesc')}
-              onPress={() => {
-                onClose();
-                onGenerateShoppingList();
-              }}
-            />
-            {permissions.canDuplicate ? (
-              <>
-                <View style={styles.divider} />
-                <ActionItem
-                  icon="copy-outline"
-                  label={t('labels.duplicatePlan')}
-                  description={t('mealPlanSettings.duplicatePlanDesc')}
-                  onPress={() => {
-                    onClose();
-                    onDuplicate();
-                  }}
-                />
-              </>
-            ) : null}
-            <View style={styles.divider} />
-            <ActionItem
-              icon="nutrition-outline"
-              label={
-                showNutrition
-                  ? t('mealPlanSettings.hideNutrition')
-                  : t('mealPlanSettings.viewNutrition')
-              }
-              description={t('mealPlanSettings.viewNutritionDesc')}
-              onPress={() => setShowNutrition(prev => !prev)}
-            />
-            {!!dietaryProfile && (
-              <>
-                <View style={styles.divider} />
-                <ActionItem
-                  icon="fitness-outline"
-                  label={
-                    isDietaryLinked
-                      ? t('mealPlanSettings.nutritionTrackingOn')
-                      : t('labels.trackNutritionGoals')
-                  }
-                  description={t('mealPlanSettings.trackNutritionDesc')}
-                  onPress={handleToggleDietary}
-                />
-              </>
-            )}
-          </View>
-        </View>
+        )}
+        {!!mealPlan.home?.name && (
+          <Text role="caption" tone="tertiary" style={styles.planDate}>
+            {t('mealPlanSettings.sharedWith', { name: mealPlan.home.name })}
+          </Text>
+        )}
+        {!!mealPlan.createdBy?.profile?.displayName && (
+          <Text role="caption" tone="tertiary" style={styles.planDate}>
+            {t('mealPlanSettings.createdBy', {
+              name: mealPlan.createdBy.profile.displayName,
+            })}
+          </Text>
+        )}
+        {mealPlan.budgetAmount != null ? (
+          <Text role="caption" tone="tertiary" style={styles.planDate}>
+            {t('mealPlanSettings.budgetSpent', {
+              spent: money(mealPlan.actualCost),
+              budget: money(mealPlan.budgetAmount),
+            })}
+          </Text>
+        ) : mealPlan.actualCost > 0 ? (
+          <Text role="caption" tone="tertiary" style={styles.planDate}>
+            {t('mealPlanSettings.spentAmount', {
+              spent: money(mealPlan.actualCost),
+            })}
+          </Text>
+        ) : null}
+      </View>
 
-        {/* Nutrition details */}
-        {!!showNutrition && !!mealPlan.nutritionSummary && (
-          <View style={styles.nutritionContainer}>
-            <NutritionSummaryCard
-              nutritionSummary={mealPlan.nutritionSummary}
-              nutritionGoalProgress={mealPlan.nutritionGoalProgress}
-            />
+      {/* Actions */}
+      <View style={styles.section}>
+        <SectionHeader variant="overline">
+          {t('mealPlanSettings.actionsLabel')}
+        </SectionHeader>
+        <View style={styles.actionsCard}>
+          <ActionItem
+            icon="cart-outline"
+            label={t('labels.generateShoppingList')}
+            description={t('mealPlanSettings.generateShoppingListDesc')}
+            onPress={() => {
+              onClose();
+              onGenerateShoppingList();
+            }}
+          />
+          {permissions.canDuplicate ? (
+            <>
+              <Divider style={styles.dividerGap} />
+              <ActionItem
+                icon="copy-outline"
+                label={t('labels.duplicatePlan')}
+                description={t('mealPlanSettings.duplicatePlanDesc')}
+                onPress={() => {
+                  onClose();
+                  onDuplicate();
+                }}
+              />
+            </>
+          ) : null}
+          <Divider style={styles.dividerGap} />
+          <ActionItem
+            icon="nutrition-outline"
+            label={
+              showNutrition
+                ? t('mealPlanSettings.hideNutrition')
+                : t('mealPlanSettings.viewNutrition')
+            }
+            description={t('mealPlanSettings.viewNutritionDesc')}
+            onPress={() => setShowNutrition(prev => !prev)}
+          />
+          {!!dietaryProfile && (
+            <>
+              <Divider style={styles.dividerGap} />
+              <ActionItem
+                icon="fitness-outline"
+                label={
+                  isDietaryLinked
+                    ? t('mealPlanSettings.nutritionTrackingOn')
+                    : t('labels.trackNutritionGoals')
+                }
+                description={t('mealPlanSettings.trackNutritionDesc')}
+                onPress={handleToggleDietary}
+              />
+            </>
+          )}
+        </View>
+      </View>
+
+      {/* Nutrition details */}
+      {!!showNutrition && !!mealPlan.nutritionSummary && (
+        <View style={styles.nutritionContainer}>
+          <NutritionSummaryCard
+            nutritionSummary={mealPlan.nutritionSummary}
+            nutritionGoalProgress={mealPlan.nutritionGoalProgress}
+          />
+        </View>
+      )}
+
+      {/* Generated shopping lists */}
+      {!!mealPlan.generatedShoppingLists &&
+        mealPlan.generatedShoppingLists.length > 0 && (
+          <View style={styles.section}>
+            <SectionHeader variant="overline">
+              {t('mealPlanSettings.generatedLists')}
+            </SectionHeader>
+            <View style={styles.actionsCard}>
+              {mealPlan.generatedShoppingLists.map(list => (
+                <View key={list.id} style={styles.listRow}>
+                  <Icon name="list-outline" size={18} tone="textSecondary" />
+                  <Text role="caption" style={styles.listName}>
+                    {list.name}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
         )}
 
-        {/* Generated shopping lists */}
-        {!!mealPlan.generatedShoppingLists &&
-          mealPlan.generatedShoppingLists.length > 0 && (
-            <View style={styles.section}>
-              <Text
-                size="xs"
-                weight="semibold"
-                tone="tertiary"
-                style={styles.sectionTitle}
-              >
-                {t('mealPlanSettings.generatedLists')}
-              </Text>
-              <View style={styles.actionsCard}>
-                {mealPlan.generatedShoppingLists.map(list => (
-                  <View key={list.id} style={styles.listRow}>
-                    <Icon name="list-outline" size={18} tone="textSecondary" />
-                    <Text size="sm" style={styles.listName}>
-                      {list.name}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-
-        {/* Danger zone */}
-        {permissions.canDelete ? (
-          <View style={styles.section}>
-            <Text
-              size="xs"
-              weight="semibold"
-              tone="tertiary"
-              style={styles.sectionTitle}
-            >
-              {t('labels.dangerZone')}
-            </Text>
-            <View style={styles.actionsCard}>
-              <ActionItem
-                icon="trash-outline"
-                label={
-                  deleting
-                    ? t('mealPlanSettings.deletingLabel')
-                    : t('mealPlanSettings.deletePlanLabel')
-                }
-                description={t('mealPlanSettings.deletePlanDesc')}
-                onPress={handleDelete}
-                tone="error"
-                disabled={deleting}
-              />
-            </View>
+      {/* Danger zone */}
+      {permissions.canDelete ? (
+        <View style={styles.section}>
+          <SectionHeader variant="overline">
+            {t('labels.dangerZone')}
+          </SectionHeader>
+          <View style={styles.actionsCard}>
+            <ActionItem
+              icon="trash-outline"
+              label={
+                deleting
+                  ? t('mealPlanSettings.deletingLabel')
+                  : t('mealPlanSettings.deletePlanLabel')
+              }
+              description={t('mealPlanSettings.deletePlanDesc')}
+              onPress={handleDelete}
+              tone="error"
+              disabled={deleting}
+            />
           </View>
-        ) : null}
-      </BottomSheetScrollView>
-    </BottomSheetModal>
+        </View>
+      ) : null}
+    </Sheet>
   );
 };
 
@@ -362,19 +347,13 @@ const styles = StyleSheet.create(theme => ({
   section: {
     gap: theme.spacing.sm,
   },
-  sectionTitle: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
   actionsCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     overflow: 'hidden',
   },
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
+  dividerGap: {
     marginHorizontal: theme.spacing.md,
   },
   nutritionContainer: {

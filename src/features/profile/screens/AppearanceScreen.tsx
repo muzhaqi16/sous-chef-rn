@@ -5,13 +5,12 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
-import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useTheme as useThemePreference,
   useThemePreferences,
 } from '#store/useAppStore';
-import { useTheme } from '#hooks/useTheme';
+import { useTheme } from '#features/profile/hooks/useTheme';
 import {
   ThemePreference,
   DensityPreference,
@@ -20,6 +19,7 @@ import {
 import { DENSITY_META, FONT_SCALE_META } from '#/theme/appearanceConfig';
 import { appConfig } from '#/config/appConfig';
 import { Text } from '#components/atoms/Text';
+import { Screen } from '#components/templates/Screen';
 
 const APP_COLORS: {
   labelKey: string;
@@ -88,16 +88,17 @@ export default function AppearanceScreen() {
   const userThemePreference = useThemePreference();
 
   return (
-    <View style={styles.container}>
-      <Header
-        title={t('labels.appearance')}
-        onBack={() => navigation.goBack()}
-      />
+    <Screen
+      header={{
+        title: t('labels.appearance'),
+        back: () => navigation.goBack(),
+      }}
+      scroll="list"
+      gutter="none"
+    >
       <ScrollView contentContainerStyle={styles.content}>
         {/* Theme */}
-        <Text size="md" weight="semibold">
-          {t('appearance.themeSection')}
-        </Text>
+        <Text role="bodyStrong">{t('appearance.themeSection')}</Text>
         <SegmentedControl
           options={[
             ThemePreference.LIGHT,
@@ -120,9 +121,7 @@ export default function AppearanceScreen() {
         />
 
         {/* App Color */}
-        <Text size="md" weight="semibold">
-          {t('appearance.brandColor')}
-        </Text>
+        <Text role="bodyStrong">{t('appearance.brandColor')}</Text>
         <View style={styles.colorRow}>
           {APP_COLORS.map(c => (
             <AppPressable
@@ -141,9 +140,7 @@ export default function AppearanceScreen() {
         </View>
 
         {/* Density */}
-        <Text size="md" weight="semibold">
-          {t('appearance.density')}
-        </Text>
+        <Text role="bodyStrong">{t('appearance.density')}</Text>
         <SegmentedControl
           options={DENSITY_OPTIONS}
           value={densityPreference}
@@ -152,9 +149,7 @@ export default function AppearanceScreen() {
         />
 
         {/* Font Scale */}
-        <Text size="md" weight="semibold">
-          {t('appearance.fontScale')}
-        </Text>
+        <Text role="bodyStrong">{t('appearance.fontScale')}</Text>
         <SegmentedControl
           options={FONT_SCALE_OPTIONS}
           value={fontScalePreference}
@@ -165,17 +160,23 @@ export default function AppearanceScreen() {
         {/* High Contrast */}
         <View style={styles.switchRow}>
           <View>
-            <Text size="md" weight="medium">
-              {t('appearance.highContrast')}
-            </Text>
-            <Text size="sm" tone="secondary" style={styles.switchDescription}>
+            <Text role="bodyStrong">{t('appearance.highContrast')}</Text>
+            <Text
+              role="caption"
+              tone="secondary"
+              style={styles.switchDescription}
+            >
               {t('appearance.highContrastDesc')}
             </Text>
           </View>
-          <BaseSwitch value={highContrast} onValueChange={setHighContrast} />
+          <BaseSwitch
+            accessibilityLabel={t('appearance.highContrast')}
+            value={highContrast}
+            onValueChange={setHighContrast}
+          />
         </View>
       </ScrollView>
-    </View>
+    </Screen>
   );
 }
 
@@ -198,7 +199,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.full,
   },
   colorSwatchSelected: {
-    borderWidth: 3,
+    borderWidth: theme.borderWidth.thick,
     borderColor: theme.colors.textPrimary,
   },
   switchRow: {

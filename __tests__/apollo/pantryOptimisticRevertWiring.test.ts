@@ -88,8 +88,8 @@ describe('optimistic pantry-item revert wiring', () => {
     expect(creators.length).toBeGreaterThanOrEqual(3);
     expect(creators).toEqual(
       expect.arrayContaining([
-        'src/features/barcode/components/SearchResults.tsx',
-        'src/features/pantry/components/modals/AddToPantrySheet/AddToPantrySheet.tsx',
+        'src/features/barcode/hooks/useAddScannedItem.ts',
+        'src/features/pantry/hooks/mutations/useAddToPantry.ts',
         'src/features/pantry/hooks/usePantryItemSubmission.ts',
       ]),
     );

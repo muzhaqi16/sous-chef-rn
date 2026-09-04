@@ -1,5 +1,6 @@
 import {
   formatCurrency,
+  UNKNOWN_AMOUNT,
   formatDecimal,
   formatNumberForInput,
   resetNumberFormatterCache,
@@ -145,8 +146,36 @@ describe('formatCurrency', () => {
     expect(formatCurrency(4.5, null)).toBe('4.50');
   });
 
-  it('treats a missing amount as zero, as the call sites expect', () => {
+  it('reads a missing amount as unknown, never as an amount of zero', () => {
     onLocale('en-US');
-    expect(formatCurrency(null, 'USD')).toContain('0.00');
+    // The API withholds a figure it cannot state — no cost recorded, or costs
+    // in two currencies. Rendering that as $0.00 asserts something it did not.
+    expect(formatCurrency(null, 'USD')).toBe(UNKNOWN_AMOUNT);
+    expect(formatCurrency(undefined, 'USD')).toBe(UNKNOWN_AMOUNT);
+    expect(formatCurrency(NaN, 'USD')).toBe(UNKNOWN_AMOUNT);
+    expect(formatCurrency(null, 'USD')).not.toContain('0.00');
+  });
+
+  it('shows a recorded zero as an amount', () => {
+    onLocale('en-US');
+    expect(formatCurrency(0, 'USD')).toContain('0.00');
+  });
+
+  it("uses the currency's own minor unit, not a fixed two places", () => {
+    onLocale('en-US');
+    // JPY has no minor unit. Forcing two places invents a precision the
+    // currency's smallest coin does not have.
+    const jpy = formatCurrency(1234, 'JPY');
+    expect(jpy).toContain('1,234');
+    expect(jpy).not.toContain('1,234.00');
+    // A three-decimal currency keeps all three.
+    expect(formatCurrency(1.234, 'BHD')).toContain('1.234');
+  });
+
+  it('takes an explicit minor unit only where Intl cannot supply one', () => {
+    onLocale('en-US');
+    // No currency: nothing tells the formatter how many places to use.
+    expect(formatCurrency(1234, null, 0)).toBe('1,234');
+    expect(formatCurrency(4.5, 'NOTACURRENCY', 3)).toBe('NOTACURRENCY 4.500');
   });
 });

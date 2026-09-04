@@ -1,6 +1,6 @@
 import { object, string, ref } from 'yup';
 import { emailRule, newPasswordRule, passwordRule } from './common';
-import { getI18n } from '#/i18n/config';
+import { t } from '#/i18n';
 
 /**
  * These schemas are built once at module scope, so a message resolved eagerly
@@ -8,7 +8,7 @@ import { getI18n } from '#/i18n/config';
  * function when the rule fails, so the lookup lands after any language change.
  */
 const msg = (key: string, options?: Record<string, unknown>) => (): string =>
-  getI18n().t(`auth.${key}`, options);
+  t(`auth.${key}`, options);
 
 // ----------------------------------------------------------------------------
 

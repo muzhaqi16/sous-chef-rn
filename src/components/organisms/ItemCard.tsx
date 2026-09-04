@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
+import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import type {
   SwipeAction,
   SwipeableRef,
-} from '#components/molecules/SwipeableItem/types';
+} from '#components/organisms/SwipeableItem/types';
 import { ListItem } from '../molecules/ListItem';
 import { StyleSheet } from 'react-native-unistyles';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
@@ -135,7 +135,7 @@ export const ItemCard = ItemCardComponent;
 const styles = StyleSheet.create(theme => ({
   container: {
     opacity: 1, // Prevent transparency inheritance
-    marginHorizontal: theme.spacing['3'],
+    marginHorizontal: theme.spacing.base,
     marginVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',

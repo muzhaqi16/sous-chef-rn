@@ -114,6 +114,26 @@ MODE=release DEVICE_ID=emulator-5554 npm run android
 The script sets up an `adb reverse tcp:4000 tcp:4000` tunnel before launching,
 so a debug build reaches an API running on your machine.
 
+**`release` and `staging` are built by CI, not locally.** They are produced by
+`build-android.yml`, which writes the signing key and the env file from repository
+secrets. Locally you build `debug`, `staging`/`production` (debug builds against a
+deployed API), or `localRelease`.
+
+**`localRelease` is the release-shaped local build.** Minified, Hermes bytecode,
+`initWith release`, and debug-signed on purpose — which is what lets it build
+with no upload key, and what earns it `ALLOW_LAUNCH_ARG_AUTH`
+(`scripts/check-launch-arg-auth.mjs` enforces both halves). Use it for any
+measurement or profiling run.
+
+**Signing fails closed.** `release` and `staging` need all four of
+`MYAPP_UPLOAD_STORE_FILE`, `MYAPP_UPLOAD_STORE_PASSWORD`, `MYAPP_UPLOAD_KEY_ALIAS`
+and `MYAPP_UPLOAD_KEY_PASSWORD`; without them the Gradle build **fails** instead
+of falling back to the committed `debug.keystore`. Since those variants only ever
+build in CI, the case this guards is a CI one: a secret that is renamed, rotated
+away, or missing from a newly added environment would otherwise produce a
+debug-signed artifact that looks like a release and is updatable by anyone
+holding the public debug key. It fails the workflow instead.
+
 ### Android device helpers
 
 ```bash
@@ -391,18 +411,18 @@ npm test
 
 `npm run lint:fix` and `npm run format` auto-fix what they can.
 
-Two checks are not part of those, and nothing runs them for you:
+The ratchets below run in `pre-commit`, `pre-push` or PR checks. One does not,
+and nothing runs it for you:
 
 ```bash
-node scripts/check-compiler-bailouts.mjs   # no new React Compiler bailouts,
-                                           # and no extracted leaf re-absorbed
 node scripts/check-bundled-secrets.mjs --self-test
 ```
 
-`check-compiler-bailouts` guards a file COUNT and, separately, WHICH function
-bails in the files where a variant call was deliberately extracted into a
-leaf — moving it back into the composite keeps the count unchanged and would
-otherwise pass.
+`check-compiler-bailouts` (pre-push) guards a file COUNT; separately, WHICH
+function bails in the files where a variant call was deliberately extracted into
+a leaf — moving it back into the composite keeps the count unchanged and would
+otherwise pass; and separately again, the `'use no memo'` opt-out list, which is
+EMPTY, so needing the directive means the Babel plugin order has regressed.
 
 **Why `check:version-sync` is a pre-push hook and not a habit:** it compares
 `package.json`, `versionName`, and **each** `MARKETING_VERSION` in the
@@ -414,18 +434,88 @@ nothing else failing to warn you. iOS `CURRENT_PROJECT_VERSION` and Android
 `versionCode` are deliberately NOT compared: they are per-platform build
 counters on independent sequences, read by `getBuildNumber()`.
 
+### The boundary ratchets
+
+Sixteen checks hold boundaries that names and imports cannot see. Each keeps a
+JSON baseline beside it, and the baseline is a claim about the rule: a NON-EMPTY
+one is a worklist that may only shrink; an ABSENT one means the rule is an
+INVARIANT and the tooling refuses to write it a baseline, because doing so would
+hand back the exemptions it was promoted out of.
+
+| Check | What it holds | Findings |
+| --- | --- | --- |
+| `check-data-layer-boundary` | A screen, sheet or cell does not run an operation, hold the client, or write the cache. It reads data through a hook in its feature's `hooks/`. `useFragment` and the masking types are NOT flagged — with `dataMasking` on, a cell subscribing to one entity is the documented pattern. `alertRejectedMutation` is not flagged either: it sits under `src/apollo/` but turns a refusal into localized copy. Generated operation types (40) and colocated `.graphql` documents (31) are TRACKED, not failed. | 0 · invariant |
+| `check-import-cycles` | No LOAD-TIME import cycle. `import type` is skipped (TypeScript erases it) and so is `await import(...)` (it runs after both modules initialize) — writing a type-only import as a value import is what put 40 of the original 48 cycles in the tree. The last eight were the auth/link/store core; inverting them behind `store/sessionTeardown.ts` closed them. | 0 · invariant |
+| `check-hook-return-types` | The other half of the same seam: a feature hook must not HAND a screen a library type. The boundary check cannot see it, because the screen imports nothing. All 215 exported hooks' return types are resolved through the TypeScript checker — the type and each property one level down, which is where a leak shows (`error: ApolloError`). Runs in pre-push, beside typecheck, because it builds its own TS program. | 0 · invariant |
+| `check-single-consumer` | A module in `components`, `hooks`, `context`, `utils` or `constants` that exactly one feature reaches belongs to that feature. Reach is transitive. It has no baseline at all now — a hard rule over 245 shared modules. | 0 · hard rule |
+| `check-form-state` | A form-shaped file with 3+ `useState` and no `useForm` is a hand-rolled form. Three is the threshold because two flags beside a real form are ordinary. The heuristic is deliberately shallow, so the list holds files whose three `useState` are unrelated flags; the baseline is what that costs. | 70 · was 78 |
+| `check-feature-enumeration` | A feature id as a string literal outside its feature is a place that must be remembered when the feature list changes. Comments, import paths and index accesses are stripped. | 0 · invariant |
+| `check-canonical-mechanisms` | Seven concerns with one documented mechanism each — the list primitive, the image component, the modal surface, the date formatter, device storage, the loading indicator, and a loaded list's search. The module that IS the canonical mechanism is never a finding, and neither is a use that only LOOKS like the concern: `toLowerCase().includes(...)` with no `.filter` over data is string classification, not a search. Six more concerns started here and reached zero; each is a `no-restricted-imports` ban now, which is where every one of these ends up. | 0 · was 50 |
+| `check-design-tokens` | A visual property written as a literal rather than a token, and a kit concept (section header, empty state, divider) restyled outside the kit. Six concerns FAIL at zero. Two are TRACKED against a ceiling that may only fall, because the token they want does not exist yet: colour (9 files — three more scrim depths, a light-scrim family, a ripple family) and icon size (162 files, 335 sites). A motion duration at or below the 300 ms scale ceiling is a transition and fails; above it the number is a loop's own period and is left alone. | 0 failing · 9 + 162 tracked |
+| `check-layer-purity` | The kit (`src/components`, `src/hooks`) imports no feature, owns no `.graphql`, and carries no file named after a domain. Schema-type imports are counted (5), not failed. A second concern covers KERNEL modules named after a feature; it reached zero too. | 0 · was 76 |
+| `check-feature-shape` | Every one of the 12 features has `manifest.ts` (its `id` equal to the directory name), `screens/`, `hooks/` and `components/`, and one with more than one screen declares `screens/registration.ts`. | 0 · invariant |
+| `check-dead-modules` | Every one of 1073 modules under `src/` has a PRODUCTION importer. An import inside a test does not count, and neither does a `jest.mock()` — a test for dead code is dead with it. | 0 · invariant |
+| `check-comment-budget` | No comment run over six lines, and no file whose comments exceed half its code. Tool directives are never counted. Vocabulary is ESLint's job (`no-warning-comments`); this is volume. | 0 · invariant |
+| `check-typography-roles` | Text is set by a named role, not by a size and a weight. `off-role-text` is at zero — every `<Text>` outside the kit names a role. `stylesheet-type` is the shrinking half: the blocks no role expresses (a responsive size map, a 10px badge, a Skia draw call). | 21 · stylesheet-type only |
+| `check-component-tier` | A kit component sits in the tier its composition puts it in, computed from what it RENDERS: an atom renders at most one other kit component, a molecule several atoms, an organism a molecule or a bottom sheet. | 0 · invariant, 97 components |
+| `check-screen-scaffold` | A screen's chrome comes from `Screen`, and nobody applies the top inset twice — `double-inset` is at zero, `screen-chrome` is the shrinking half. | 4 · chrome only |
+| `check-a11y-names` | A pressable with an `onPress`, no `accessibilityLabel`, and no child that can put words on screen reaches a screen reader as "button" and nothing else. RN's own `accessible` default names anything with a text child, so this is the icon-only shape. | 0 · invariant, was 64 |
+
+`check-unistyles-variant-staleness` sits beside these in pre-push rather than
+in the table: it compiles each file to find a style read frozen at its
+first-render value, so its "baseline" is an anti-vacuity scan floor rather
+than a list of exempt files.
+
+Every one takes `--list` (print each finding), `--update` (re-baseline, refused
+when it would write an empty record over a non-empty one, or a first baseline
+over an absent one) and `--self-test` (prove the check can still fail — a
+scanner that finds nothing looks exactly like a clean tree).
+
+When a baseline reaches zero, DELETE it: the tooling then treats the rule as an
+invariant and refuses to write it another. Where the rule is expressible as an
+import, promote it to an `import/no-restricted-paths` or `no-restricted-imports`
+zone in `.eslintrc.js` as well, the way the kit half of `check-layer-purity` was.
+
+### Bans promoted out of the ratchet
+
+Six concerns started as ratchet entries, were refactored to zero, and are now
+hard `no-restricted-imports` bans — the promotion path the ratchet exists to
+feed. Each names the module that IS the canonical mechanism as its only
+exemption:
+
+| Banned import | Use instead | Exempt |
+| --- | --- | --- |
+| `useNavigation` from React Navigation | `useAppNavigation`, whose `navigation` field is the escape hatch for `dispatch` and `addListener` | the two navigation wrappers |
+| `getI18n` from `#/i18n/config` | `t` from `#/i18n` (`tGlobal` in a `.tsx`), or `useTranslation()` | `src/i18n`, and the four modules that need the instance to read or change the language |
+| RN `ActivityIndicator` | a themed spinner from `themedComponents` | `themedComponents`, and `Loading` for its caller-supplied colour |
+| `react-native-permissions` | `PermissionService` | the service |
+| `react-native-turbo-image` | `CachedImage` | `CachedImage`, and `RecipeHeroImage` for its shared-transition wrapper |
+| `@react-native-vector-icons/ionicons` | `Icon` with a `tone`; `type IconName` for a name | `iconUtils`, and `Toast` for a runtime nested-theme lookup |
+
+### Dependency vulnerabilities
+
+`check-dependency-audit` fails a PR on a known vulnerability in a PRODUCTION
+dependency at `high` or above, and `dependency-audit.yml` runs the same check
+weekly, opening or updating one `security`-labelled issue. An advisory that
+cannot be fixed goes in `scripts/accepted-advisories.json` with a reason and a
+revisit date, and is reported on every run.
+
+Dependabot proposes upgrades; it fails nothing, and its
+`open-pull-requests-limit: 0` on the actions ecosystem stops version-update PRs
+only. Detection does not depend on either.
+
 ### Git hooks (installed by husky on `npm install`)
 
 | Hook | Runs |
 | --- | --- |
-| **pre-commit** | `lint-staged` — ESLint + Prettier + related Jest tests on staged files — then the whole-tree checks that cost ~0.2s together: `check-i18n`, `check-codegen-orphans`, `check-version-sync`, `check-startup-origin`, `check-launch-arg-auth` |
+| **pre-commit** | `lint-staged` — ESLint + Prettier + related Jest tests on staged files — then the whole-tree checks that cost ~0.2s together: `check-i18n`, `check-codegen-orphans`, `check-version-sync`, `check-startup-origin`, `check-launch-arg-auth`, plus the structural ratchets `check-layer-purity`, `check-feature-shape`, `check-dead-modules`, `check-data-layer-boundary`, `check-single-consumer`, `check-form-state`, `check-feature-enumeration`, `check-test-cache-fidelity`, `check-comment-budget` |
 | **commit-msg** | commitlint — [Conventional Commits](https://www.conventionalcommits.org/) required |
-| **pre-push** | `typecheck`, `check:compiler-bailouts` and `check:unistyles-variants` **concurrently**, then a codegen drift check |
+| **pre-push** | `typecheck`, `check:compiler-bailouts`, `check:unistyles-variants`, `check:hook-return-types` and `check:import-cycles` **concurrently**, then a codegen drift check |
 
 The split is by cost. The five sub-second checks run per commit so a broken
-locale key or a version drift surfaces at the commit that caused it. The three
+locale key or a version drift surfaces at the commit that caused it. The five
 expensive ones are independent, so pre-push runs them at the same time — ~22s
-instead of the ~45s they cost in sequence — each into its own log so the output
+instead of the ~1m they cost in sequence — each into its own log so the output
 does not interleave.
 
 **A tag-only push skips the code gates entirely.** Git names every ref being

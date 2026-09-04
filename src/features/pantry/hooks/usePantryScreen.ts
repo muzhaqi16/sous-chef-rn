@@ -14,9 +14,9 @@ import {
   sortOptionToOrderBy,
   filterByLocation,
 } from '#features/pantry/utils/pantryFilters';
-import { PAGE_SIZE } from '#/constants/pagination';
+import { PAGE_SIZE } from '#features/pantry/constants/pagination';
 import { logger } from '#/utils/environment';
-import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
+import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 import { StorageLocationIcon } from '#features/catalog/ui/StorageLocationIcon';
 import { PREFERENCE_DEFAULTS } from '#store/slices/preferenceTypes';
 import type {

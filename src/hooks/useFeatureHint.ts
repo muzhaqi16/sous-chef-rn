@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { storage } from '#/storage/mmkv';
-import { useShowTutorials } from '#hooks/settings/useShowTutorials';
+import { useShowTutorials } from '#store/useAppStore';
 import { useUserId } from '#store/useAppStore';
-import { useStore } from '#store';
+import { storeApi } from '#store';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 
 const FEATURE_HINT_PREFIX = 'feature_hint_shown_';
@@ -62,7 +61,7 @@ export const useFeatureHint = ({
 
   // Check if hint has been shown before (reactive state so dismiss updates immediately)
   const [hasBeenShown, setHasBeenShown] = useState(
-    () => storage.getBoolean(storageKey) ?? false,
+    () => storeApi.getState().featureHintsShown[storageKey] ?? false,
   );
 
   // Initialize visibility: show immediately if showOnMount with no delay
@@ -73,7 +72,7 @@ export const useFeatureHint = ({
   // React to external resets (centralized signal hook)
   const wasReset = useTutorialResetSignal();
   if (wasReset) {
-    setHasBeenShown(storage.getBoolean(storageKey) ?? false);
+    setHasBeenShown(storeApi.getState().featureHintsShown[storageKey] ?? false);
     setIsVisible(false);
   }
 
@@ -107,7 +106,7 @@ export const useFeatureHint = ({
     show() {
       if (
         tutorialsEnabledRef.current &&
-        !(storage.getBoolean(storageKeyRef.current) ?? false)
+        !(storeApi.getState().featureHintsShown[storageKeyRef.current] ?? false)
       ) {
         setIsVisible(true);
       }
@@ -118,10 +117,10 @@ export const useFeatureHint = ({
     dismiss() {
       setIsVisible(false);
       setHasBeenShown(true);
-      storage.set(storageKeyRef.current, true);
+      storeApi.getState().markFeatureHintShown(storageKeyRef.current);
     },
     reset() {
-      storage.remove(storageKeyRef.current);
+      storeApi.getState().clearFeatureHint(storageKeyRef.current);
       setHasBeenShown(false);
       setIsVisible(false);
     },
@@ -147,7 +146,10 @@ export const hasFeatureHintBeenShown = (
   userId?: string,
 ): boolean => {
   if (suppressedForE2E) return true;
-  return storage.getBoolean(buildStorageKey(userId, featureId)) ?? false;
+  return (
+    storeApi.getState().featureHintsShown[buildStorageKey(userId, featureId)] ??
+    false
+  );
 };
 
 /**
@@ -157,35 +159,27 @@ export const markFeatureHintAsShown = (
   featureId: string,
   userId?: string,
 ): void => {
-  storage.set(buildStorageKey(userId, featureId), true);
+  storeApi.getState().markFeatureHintShown(buildStorageKey(userId, featureId));
 };
 
 export const resetFeatureHint = (featureId: string, userId?: string): void => {
-  storage.remove(buildStorageKey(userId, featureId));
+  storeApi.getState().clearFeatureHint(buildStorageKey(userId, featureId));
 };
 
 /** Clears every hint, for all users. */
 export const resetAllFeatureHints = (): void => {
-  const allKeys = storage.getAllKeys();
-  allKeys.forEach(key => {
-    if (key.startsWith(FEATURE_HINT_PREFIX)) {
-      storage.remove(key);
-    }
-  });
-  // Set synchronously — the GraphQL → MMKV sync is async, and hooks re-read the
-  // key the moment the generation below bumps.
-  storage.set('user_show_tutorials', true);
-  useStore.getState().bumpTutorialResetGeneration();
+  const store = storeApi.getState();
+  store.clearAllFeatureHints();
+  // Set synchronously — the server sync is async, and the hooks re-read the
+  // moment the generation below bumps.
+  store.setShowTutorials(true);
+  store.bumpTutorialResetGeneration();
 };
 
 // Login count, for spacing out post-login modals.
-const LOGIN_COUNT_PREFIX = 'login_count_';
-
-export const getLoginCount = (userId: string): number => {
-  return storage.getNumber(`${LOGIN_COUNT_PREFIX}${userId}`) ?? 0;
-};
+export const getLoginCount = (userId: string): number =>
+  storeApi.getState().loginCounts[userId] ?? 0;
 
 export const incrementLoginCount = (userId: string): void => {
-  const key = `${LOGIN_COUNT_PREFIX}${userId}`;
-  storage.set(key, (storage.getNumber(key) ?? 0) + 1);
+  storeApi.getState().incrementLoginCount(userId);
 };

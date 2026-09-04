@@ -1,0 +1,137 @@
+# An advisory published after the last pull request is invisible to the PR gate
+# until someone opens one. This runs on a schedule so a vulnerability in a
+# dependency already on the default branch is found within the week, and files
+# exactly one tracked issue rather than a run nobody watches.
+name: Dependency Audit (scheduled)
+
+permissions:
+  contents: read
+  issues: write
+
+on:
+  schedule:
+    # Mondays, 09:00 UTC.
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: dependency-audit
+  cancel-in-progress: false
+
+env:
+  ISSUE_TITLE: "Dependency audit: production vulnerabilities"
+
+jobs:
+  audit:
+    name: Audit production dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Self-test the dependency audit gate
+        run: node scripts/check-dependency-audit.mjs --self-test
+
+      # `--json` exits 1 when it finds something, which is the signal, not an
+      # error — the step must continue so the issue below can be filed.
+      - name: Audit production dependencies
+        id: audit
+        run: |
+          set +e
+          node scripts/check-dependency-audit.mjs --level=high --json > audit.json
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          set -e
+          node -e '
+            const r = require("./audit.json");
+            const fs = require("fs");
+            const lines = [];
+            lines.push("Weekly audit of production dependencies at severity **" + r.level + "** or above.");
+            lines.push("");
+            if (r.blocking.length === 0) {
+              lines.push("No blocking advisories.");
+            } else {
+              lines.push("| Severity | Package | Advisory | Fix |");
+              lines.push("| --- | --- | --- | --- |");
+              for (const f of r.blocking) {
+                lines.push("| " + f.severity + " | `" + f.package + "` | [" + f.title + "](" + f.id + ") | " + (f.fixAvailable ? "available" : "none") + " |");
+              }
+            }
+            if (r.excused.length > 0) {
+              lines.push("");
+              lines.push("Accepted (recorded in `scripts/accepted-advisories.json`):");
+              for (const e of r.excused) {
+                lines.push("- `" + e.package + "` — " + e.acceptance.reason + " (revisit " + (e.acceptance.revisit || "unset") + ")");
+              }
+            }
+            if (r.expired.length > 0) {
+              lines.push("");
+              lines.push("**Acceptances past their revisit date:** " + r.expired.map(e => e.id || e.package).join(", "));
+            }
+            lines.push("");
+            lines.push("Fix by upgrading the dependency, or record the advisory in `scripts/accepted-advisories.json` with a reason and a revisit date.");
+            fs.writeFileSync("issue-body.md", lines.join("\n"));
+            console.log("blocking=" + r.blocking.length);
+          ' >> "$GITHUB_OUTPUT"
+
+      - name: Open or update the tracked issue
+        if: steps.audit.outputs.blocking != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # A label named on `gh issue create` that does not exist fails the
+          # call, so make sure it is there first.
+          gh label create security --color B60205 \
+            --description "Security finding needing action" 2>/dev/null || true
+
+          existing=$(gh issue list --state open --search "$ISSUE_TITLE in:title" \
+            --json number,title --jq \
+            ".[] | select(.title == \"$ISSUE_TITLE\") | .number" | head -1)
+
+          {
+            echo ""
+            echo "---"
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } >> issue-body.md
+
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --body-file issue-body.md
+            gh issue comment "$existing" \
+              --body "Re-checked on $(date -u +%Y-%m-%d): still ${{ steps.audit.outputs.blocking }} blocking advisory(ies)."
+            echo "Updated issue #$existing"
+          else
+            gh issue create --title "$ISSUE_TITLE" --body-file issue-body.md \
+              --label security
+            echo "Opened a new issue"
+          fi
+
+      - name: Close the tracked issue when the tree is clean
+        if: steps.audit.outputs.blocking == '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          existing=$(gh issue list --state open --search "$ISSUE_TITLE in:title" \
+            --json number,title --jq \
+            ".[] | select(.title == \"$ISSUE_TITLE\") | .number" | head -1)
+          if [ -n "$existing" ]; then
+            gh issue close "$existing" \
+              --comment "No blocking advisories as of $(date -u +%Y-%m-%d)."
+            echo "Closed issue #$existing"
+          else
+            echo "Clean, and no issue open."
+          fi
+
+      # The run's own record, so a clean week is visible without opening an issue.
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Dependency audit" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Blocking advisories: ${{ steps.audit.outputs.blocking }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f issue-body.md ]; then cat issue-body.md >> "$GITHUB_STEP_SUMMARY"; fi

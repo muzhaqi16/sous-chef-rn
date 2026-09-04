@@ -12,7 +12,7 @@ import {
 import {
   moveShoppingListItemToPurchased,
   moveShoppingListItemToUnpurchased,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+} from '#features/shoppingList/cache/connections';
 import { useToggleShoppingItem } from '../useToggleShoppingItem';
 
 jest.mock('#/services/errorService');
@@ -21,8 +21,8 @@ jest.mock('#/services/errorService');
 // purchase-record writer must be the real one, because these tests assert on
 // what it leaves in the cache — and a partial factory silently makes any export
 // the hook reaches next `undefined`.
-jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/shoppingListCacheUpdaters'),
+jest.mock('#features/shoppingList/cache/connections', () => ({
+  ...jest.requireActual('#features/shoppingList/cache/connections'),
   moveShoppingListItemToPurchased: jest.fn(),
   moveShoppingListItemToUnpurchased: jest.fn(),
 }));

@@ -18,7 +18,7 @@ import { parse, Kind } from 'graphql';
 const ROOT = resolve(__dirname, '..', '..');
 
 const TYPE_NAME = 'ShoppingListItemPurchaseInfo';
-const WRITER = 'src/apollo/utils/shoppingListCacheUpdaters.ts';
+const WRITER = 'src/features/shoppingList/cache/purchase.ts';
 
 /** Field names declared on the SDL type. */
 function schemaFields(): string[] {
@@ -39,9 +39,7 @@ function schemaFields(): string[] {
 /** Field names inside the writer's `PURCHASE_INFO_FIELDS` selection. */
 function writerFields(): string[] {
   const source = readFileSync(resolve(ROOT, WRITER), 'utf8');
-  const match = source.match(
-    /const PURCHASE_INFO_FIELDS = `([\s\S]*?)`;/,
-  );
+  const match = source.match(/const PURCHASE_INFO_FIELDS = `([\s\S]*?)`;/);
   if (!match) throw new Error(`PURCHASE_INFO_FIELDS not found in ${WRITER}`);
 
   // Field names are the first token on each line; a nested selection's own

@@ -49,3 +49,37 @@ export function t(
 export function useTranslation(options?: UseTranslationOptions<undefined>) {
   return useI18nextTranslation(undefined, options);
 }
+
+// ---------------------------------------------------------------------------
+// The current language
+// ---------------------------------------------------------------------------
+
+/**
+ * The language i18next actually resolved, stripped of any region suffix, with
+ * `en` as the floor. Defined here so nothing outside `src/i18n` reaches the
+ * instance for it — the tag drives date-fns locales and Android channel copy,
+ * and both want the same normalization.
+ */
+export function getResolvedLanguage(): string {
+  const i18n = getI18n();
+  return (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0];
+}
+
+/**
+ * Switch languages. The store owns WHEN this happens; the instance stays behind
+ * this entry point so the switch cannot drift from how the language is read.
+ */
+export async function changeLanguage(language: string): Promise<void> {
+  await getI18n().changeLanguage(language);
+}
+
+/**
+ * Run `listener` after every language change; returns the unsubscribe. Anything
+ * cached per language — an Android channel name, a memoized formatter — renews
+ * itself here rather than waiting to be rebuilt by chance.
+ */
+export function onLanguageChanged(listener: () => void): () => void {
+  const i18n = getI18n();
+  i18n.on('languageChanged', listener);
+  return () => i18n.off('languageChanged', listener);
+}

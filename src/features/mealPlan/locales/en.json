@@ -128,7 +128,6 @@
   },
   "templateCard": {
     "usedTimes": "Used {{count}}x",
-    "durationDays": "{{count}} days",
     "servings": "{{count}} servings"
   },
   "templatePreview": {

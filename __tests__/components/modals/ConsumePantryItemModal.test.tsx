@@ -25,7 +25,7 @@ jest.mock('#features/pantry/components/modals/PantryActionModal', () => ({
 jest.mock('../../../src/components/molecules/FractionInput', () => ({
   FractionInput: () => null,
 }));
-jest.mock('../../../src/components/molecules/FormInput', () => ({
+jest.mock('../../../src/components/atoms/FormInput', () => ({
   FormInput: () => null,
 }));
 

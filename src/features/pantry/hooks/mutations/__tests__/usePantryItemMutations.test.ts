@@ -87,7 +87,7 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   },
 }));
 
-jest.mock('#/apollo/utils/pantryCacheUpdaters', () => ({
+jest.mock('#features/pantry/cache/items', () => ({
   addToPantryItemsCache: jest.fn(),
   removeFromPantryItemsCache: jest.fn(),
   adjustPantryItemCount: jest.fn(),

@@ -53,7 +53,10 @@
     "roleLabel": "Ruolo: {{role}}",
     "descriptionLabel": "Descrizione:",
     "acceptFailed": "Impossibile accettare l'invito. Riprova.",
-    "declineFailed": "Impossibile rifiutare l'invito. Riprova."
+    "declineFailed": "Impossibile rifiutare l'invito. Riprova.",
+    "unavailableHere": "Apri questo invito dalla sua notifica, o dall'email che ti abbiamo inviato, per accettarlo.",
+    "wrongAccountTitle": "Hai effettuato l'accesso con un altro account",
+    "wrongAccount": "Questo invito è stato inviato a un'altra persona. Accedi con l'account invitato per accettarlo."
   },
   "homeManagement": {
     "title": "Le Mie Case",

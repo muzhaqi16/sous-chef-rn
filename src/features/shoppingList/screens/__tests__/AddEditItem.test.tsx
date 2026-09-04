@@ -58,13 +58,16 @@ jest.mock('#features/shoppingList/hooks/useShoppingListItemForm', () => ({
   },
 }));
 
-jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
+jest.mock('#features/shoppingList/cache/connections', () => ({
+  addNewItemToShoppingListCache: jest.fn(),
+}));
+
+jest.mock('#features/shoppingList/cache/items', () => {
   const { classifyCreateResult } = jest.requireActual(
     '#/apollo/utils/classifyCreateResult',
   );
   const revertOptimisticShoppingListItem = jest.fn();
   return {
-    addNewItemToShoppingListCache: jest.fn(),
     adoptServerShoppingListItemId: jest.fn(),
     buildAddItemsReconcileUpdate: jest.fn(() => jest.fn()),
     revertOptimisticShoppingListItem,
@@ -100,8 +103,8 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
-jest.mock('#components/organisms/FormModal', () => ({
-  FormModal: ({
+jest.mock('#components/templates/FormScreen', () => ({
+  FormScreen: ({
     title,
     children,
     onClose,
@@ -131,7 +134,7 @@ jest.mock('#components/organisms/FormModal', () => ({
     );
   },
 }));
-jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
+jest.mock('#components/molecules/BaseInput/BaseInput', () => ({
   BaseInput: ({
     label,
     testID,
@@ -261,7 +264,7 @@ jest.mock('#components/molecules/EditableCounter', () => ({
     );
   },
 }));
-jest.mock('#components/molecules/FieldRow', () => ({
+jest.mock('#components/atoms/FieldRow', () => ({
   FieldRow: ({ children }: { children?: React.ReactNode }) => {
     const { View } = require('react-native');
     return <View>{children}</View>;

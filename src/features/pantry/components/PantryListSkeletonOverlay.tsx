@@ -2,9 +2,10 @@ import React from 'react';
 import { View } from 'react-native';
 import Animated, { FadeOut } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
-import { TIMING } from '#constants/animations';
+
 import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
 import { PantryStickyTabs } from './pantryDisplay/PantryStickyTabs';
+import { motion } from '#/theme/foundations/motion';
 
 // A screenful is enough: the flap only covers the area below the header, and
 // each shimmer is a UI-thread animation running during the row-mount window.
@@ -23,7 +24,7 @@ const SKELETON_ROWS = 8;
 export const PantryListSkeletonOverlay: React.FC = () => (
   <Animated.View
     testID="pantry-list-skeleton-overlay"
-    exiting={FadeOut.duration(TIMING.STANDARD)}
+    exiting={FadeOut.duration(motion.timing.STANDARD)}
     style={styles.flap}
     pointerEvents="none"
   >

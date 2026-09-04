@@ -53,7 +53,10 @@
     "roleLabel": "Roli: {{role}}",
     "descriptionLabel": "Përshkrim:",
     "acceptFailed": "Pranimi i ftesës dështoi. Provo sërish.",
-    "declineFailed": "Refuzimi i ftesës dështoi. Provo sërish."
+    "declineFailed": "Refuzimi i ftesës dështoi. Provo sërish.",
+    "unavailableHere": "Hape këtë ftesë nga njoftimi i saj, ose nga email-i që të dërguam, për ta pranuar.",
+    "wrongAccountTitle": "Je i kyçur me një llogari tjetër",
+    "wrongAccount": "Kjo ftesë iu dërgua dikujt tjetër. Kyçu me llogarinë e ftuar për ta pranuar."
   },
   "homeManagement": {
     "title": "Shtëpitë e Mia",

@@ -6,6 +6,7 @@ import {
   renderWithApollo,
   seedCache,
 } from '../../helpers/apolloMockProvider';
+import { WriteReviewSheet_ReviewFragmentDoc } from '#features/recipes/components/WriteReviewSheet.generated';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
@@ -38,10 +39,15 @@ const REVIEW_ID = 'r1';
 function makeCache() {
   return seedCache([
     {
-      __typename: 'RecipeReview',
-      id: REVIEW_ID,
-      rating: 4,
-      comment: 'Nice',
+      // The production selection the consumer reads, so a thin fixture fails
+      // here instead of defining its own idea of complete.
+      fragment: WriteReviewSheet_ReviewFragmentDoc,
+      data: {
+        __typename: 'RecipeReview',
+        id: REVIEW_ID,
+        rating: 4,
+        comment: 'Nice',
+          },
     },
   ]);
 }

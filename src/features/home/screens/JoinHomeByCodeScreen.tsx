@@ -2,20 +2,15 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { useNavigation } from '@react-navigation/native';
+
 import type { StaticScreenProps } from '@react-navigation/native';
-import { useMutation, useQuery } from '@apollo/client/react';
-import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
-import { Header } from '#components/molecules/Header';
-import { Button } from '#components/atoms/Button';
+import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
+import { Button } from '#components/molecules/Button';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
-import { ErrorState } from '#components/atoms/ErrorState';
+import { ErrorState } from '#components/molecules/ErrorState';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
-import {
-  GetHomeByJoinCodeDocument,
-  JoinHomeByCodeDocument,
-} from '#operations/home/home.generated';
+import { useJoinHomeByCode } from '#features/home/hooks/useJoinHomeByCode';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useJoinLinkAuthGate } from '#hooks/deepLink/useJoinLinkAuthGate';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
@@ -23,6 +18,7 @@ import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { unwrapPayload } from '#/utils/errors/mutationPayload';
+import { Screen } from '#components/templates/Screen';
 
 /**
  * Join a home via share link or a typed code. Mirrors
@@ -33,8 +29,7 @@ export const JoinHomeByCodeScreen: React.FC<
   StaticScreenProps<{ joinCode?: string }>
 > = ({ route }) => {
   const { t } = useTranslation();
-  const { goBack } = useNavigation();
-  const { toPantryMain } = useAppNavigation();
+  const { goBack, toPantryMain } = useAppNavigation();
   const initialCode = route.params?.joinCode ?? '';
 
   // Joining requires auth — queue the code and redirect to sign-in when logged
@@ -47,18 +42,12 @@ export const JoinHomeByCodeScreen: React.FC<
   const [inputValue, setInputValue] = useState(initialCode);
   const [joining, setJoining] = useState(false);
 
-  const { data, loading: previewLoading } = useQuery(
-    GetHomeByJoinCodeDocument,
-    {
-      variables: { joinCode: code },
-      skip: !code || isLoggedOut,
-      fetchPolicy: 'cache-and-network',
-    },
-  );
-  const home = data?.homeByJoinCode ?? null;
+  const { home, previewLoading, joinHome } = useJoinHomeByCode({
+    code,
+    skip: isLoggedOut,
+  });
 
   const { requireVerifiedEmail } = useVerifiedEmailGate();
-  const [joinMutation] = useMutation(JoinHomeByCodeDocument);
 
   const handleFind = () => {
     const trimmed = inputValue.trim();
@@ -81,12 +70,8 @@ export const JoinHomeByCodeScreen: React.FC<
 
     executeWithLoadingState(
       async () => {
-        const { data: joinData } = await joinMutation({
-          variables: { input: { joinCode: code } },
-        });
-
         const result = unwrapPayload(
-          joinData?.joinHomeByCode,
+          await joinHome(code),
           'JoinHomeByCodePayload',
           t('joinHome.joinFailed'),
         );
@@ -124,15 +109,10 @@ export const JoinHomeByCodeScreen: React.FC<
           <View style={styles.iconContainer}>
             <Icon name="home-outline" size={48} tone="primary" />
           </View>
-          <Text size="lg" weight="semibold" align="center" style={styles.title}>
+          <Text role="heading" align="center" style={styles.title}>
             {t('joinHome.enterCodeTitle')}
           </Text>
-          <Text
-            size="md"
-            tone="secondary"
-            align="center"
-            style={styles.description}
-          >
+          <Text tone="secondary" align="center" style={styles.description}>
             {t('joinHome.enterCodeDescription')}
           </Text>
           <BaseInput
@@ -177,14 +157,19 @@ export const JoinHomeByCodeScreen: React.FC<
         <View style={styles.iconContainer}>
           <Icon name="home" size={48} tone="primary" />
         </View>
-        <Text size="md" tone="secondary" align="center" style={styles.title}>
+        <Text tone="secondary" align="center" style={styles.title}>
           {t('joinHome.invitedToJoin')}
         </Text>
         <View style={styles.previewCard}>
-          <Text size="lg" weight="semibold" align="center">
+          <Text role="heading" align="center">
             {home.name}
           </Text>
-          <Text size="sm" tone="secondary" align="center" style={styles.meta}>
+          <Text
+            role="caption"
+            tone="secondary"
+            align="center"
+            style={styles.meta}
+          >
             {t('joinHome.memberCount', { count: memberCount })} ·{' '}
             {t('joinHome.pantryCount', { count: pantryCount })}
           </Text>
@@ -207,14 +192,17 @@ export const JoinHomeByCodeScreen: React.FC<
   };
 
   return (
-    <View style={styles.container}>
-      <Header
-        title={t('labels.joinHome')}
-        onBack={() => goBack()}
-        centerTitle
-      />
+    <Screen
+      header={{
+        title: t('labels.joinHome'),
+        back: () => goBack(),
+        centerTitle: true,
+      }}
+      scroll="none"
+      gutter="none"
+    >
       {renderBody()}
-    </View>
+    </Screen>
   );
 };
 
@@ -253,7 +241,7 @@ const styles = StyleSheet.create(theme => ({
   inputText: {
     textAlign: 'center',
     letterSpacing: 2,
-    fontSize: theme.typography.fontSize.lg,
+    ...theme.type.heading,
   },
   previewCard: {
     width: '100%',

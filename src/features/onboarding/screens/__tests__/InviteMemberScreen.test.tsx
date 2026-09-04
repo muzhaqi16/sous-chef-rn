@@ -1,0 +1,350 @@
+'use no memo';
+
+import React from 'react';
+import { fireEvent, screen, userEvent } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { alertService } from '#/services/alertService';
+import type { EmailInput as EmailInputComponent } from '#components/molecules/EmailInput';
+import { InviteMemberScreen } from '../InviteMemberScreen';
+
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
+
+const mockNavigateToNextStep = jest.fn();
+// The verification gate is exercised in its own suite; here it always allows
+// the action so these tests stay focused on their own behaviour.
+jest.mock('#hooks/auth/useEmailVerification', () => ({
+  useVerifiedEmailGate: () => ({
+    requireVerifiedEmail: () => true,
+    hasUnverifiedEmail: false,
+  }),
+  useEmailVerificationActions: () => ({
+    skipVerification: jest.fn(),
+    resumeVerification: jest.fn(),
+  }),
+}));
+
+jest.mock('#features/onboarding/hooks/useOnboardingNavigation', () => ({
+  useOnboardingNavigation: () => ({
+    navigateToNextStep: mockNavigateToNextStep,
+  }),
+}));
+
+let mockSelectedHomeId: string | null = 'h1';
+let mockSelectedShoppingListId: string | null = 'sl1';
+
+jest.mock('#store/useAppStore', () => {
+  const fn = (
+    selector: (state: {
+      selectedHomeId: string | null;
+      selectedShoppingListId: string | null;
+    }) => unknown,
+  ) =>
+    selector({
+      selectedHomeId: mockSelectedHomeId,
+      selectedShoppingListId: mockSelectedShoppingListId,
+    });
+  fn.getState = () => ({});
+  fn.setState = jest.fn();
+  fn.subscribe = jest.fn();
+  return {
+    useAppStore: fn,
+    useUser: jest.fn(() => ({ id: 'u1', email: 'me@test.com' })),
+    useSelectedHomeId: jest.fn(() => mockSelectedHomeId),
+  };
+});
+
+jest.mock('#hooks/performance/useScreenTransition');
+jest.mock('#/utils/finallyHelpers');
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
+
+// The stub renders `errorMessage` the way the real `BaseInput` does, so a test
+// can see WHERE a refusal landed.
+jest.mock('#components/molecules/EmailInput', () => ({
+  EmailInput: ({
+    errorMessage,
+    ...props
+  }: React.ComponentProps<typeof EmailInputComponent>) => {
+    const { TextInput, Text, View } = require('react-native');
+    return (
+      <View>
+        <TextInput placeholder="Enter email address" {...props} />
+        {!!errorMessage && <Text>{errorMessage}</Text>}
+      </View>
+    );
+  },
+}));
+jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
+  OnBoardingWrapper: ({
+    title,
+    subtitle,
+    children,
+  }: {
+    title?: string;
+    subtitle?: string;
+    children?: React.ReactNode;
+  }) => {
+    const { View, Text } = require('react-native');
+    return (
+      <View testID="onboarding-wrapper">
+        <Text>{title}</Text>
+        <Text>{subtitle}</Text>
+        {children}
+      </View>
+    );
+  },
+}));
+jest.mock('#components/molecules/Button', () => ({
+  Button: ({
+    title,
+    onPress,
+    disabled,
+    testID,
+  }: {
+    title?: string;
+    onPress: () => void;
+    disabled?: boolean;
+    testID?: string;
+  }) => {
+    const { Pressable, Text } = require('react-native');
+    return (
+      <Pressable onPress={onPress} disabled={disabled} testID={testID}>
+        <Text>{title}</Text>
+      </Pressable>
+    );
+  },
+}));
+
+describe('InviteMemberScreen', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockSelectedHomeId = 'h1';
+    mockSelectedShoppingListId = 'sl1';
+  });
+
+  it('renders invite title', () => {
+    renderWithApollo(<InviteMemberScreen />);
+    expect(screen.getByText('Invite family & friends')).toBeTruthy();
+  });
+
+  it('shows subtitle for both resources', () => {
+    renderWithApollo(<InviteMemberScreen />);
+    expect(
+      screen.getByText(/Invite others to your home and shopping lists/),
+    ).toBeTruthy();
+  });
+
+  it('shows email input', () => {
+    renderWithApollo(<InviteMemberScreen />);
+    expect(screen.getByPlaceholderText('Enter email address')).toBeTruthy();
+  });
+
+  it('shows empty invites message initially', () => {
+    renderWithApollo(<InviteMemberScreen />);
+    expect(screen.getByText('No invitations added yet')).toBeTruthy();
+  });
+
+  it('shows tip text', () => {
+    renderWithApollo(<InviteMemberScreen />);
+    expect(
+      screen.getByText(/You can always invite more people later/),
+    ).toBeTruthy();
+  });
+
+  it('shows send invites button disabled initially', () => {
+    renderWithApollo(<InviteMemberScreen />);
+    expect(screen.getByText('Send Invites')).toBeTruthy();
+  });
+
+  it('shows nothing-to-share state when neither resource exists', () => {
+    mockSelectedHomeId = null;
+    mockSelectedShoppingListId = null;
+    renderWithApollo(<InviteMemberScreen />);
+    expect(screen.getByText('Nothing to share yet')).toBeTruthy();
+  });
+
+  it('adds an invite when valid email is entered', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<InviteMemberScreen />);
+    const input = screen.getByPlaceholderText('Enter email address');
+    fireEvent.changeText(input, 'friend@test.com');
+    await user.press(screen.getByText('Add'));
+    expect(screen.getByText('friend@test.com')).toBeTruthy();
+    expect(screen.getByText(/Inviting 1 person/)).toBeTruthy();
+  });
+
+  // Each refusal renders UNDER the input. An alert covers the field it is about,
+  // and a dismissed alert cannot say which address it meant.
+  it('reports an unreadable address on the field', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<InviteMemberScreen />);
+    const input = screen.getByPlaceholderText('Enter email address');
+    fireEvent.changeText(input, 'not-an-email');
+    await user.press(screen.getByText('Add'));
+    expect(
+      await screen.findByText('Please enter a valid email address'),
+    ).toBeTruthy();
+    expect(alertService.alert).not.toHaveBeenCalled();
+  });
+
+  it('reports an address already on the list on the field', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<InviteMemberScreen />);
+    const input = screen.getByPlaceholderText('Enter email address');
+    fireEvent.changeText(input, 'friend@test.com');
+    await user.press(screen.getByText('Add'));
+    fireEvent.changeText(input, 'friend@test.com');
+    await user.press(screen.getByText('Add'));
+    expect(
+      await screen.findByText('This email has already been added'),
+    ).toBeTruthy();
+    expect(alertService.alert).not.toHaveBeenCalled();
+  });
+
+  it('reports the signed-in account on the field', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<InviteMemberScreen />);
+    const input = screen.getByPlaceholderText('Enter email address');
+    fireEvent.changeText(input, 'me@test.com');
+    await user.press(screen.getByText('Add'));
+    expect(await screen.findByText("You can't invite yourself")).toBeTruthy();
+    expect(alertService.alert).not.toHaveBeenCalled();
+  });
+
+  it('removes an invite when remove button pressed', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<InviteMemberScreen />);
+    const input = screen.getByPlaceholderText('Enter email address');
+    fireEvent.changeText(input, 'friend@test.com');
+    await user.press(screen.getByText('Add'));
+    expect(screen.getByText('friend@test.com')).toBeTruthy();
+    // Press the remove button (X)
+    await user.press(screen.getByText('✕'));
+    expect(screen.getByText('No invitations added yet')).toBeTruthy();
+  });
+
+  it('shows subtitle when only home available', () => {
+    mockSelectedShoppingListId = null;
+    renderWithApollo(<InviteMemberScreen />);
+    expect(screen.getByText(/Invite others to your home/)).toBeTruthy();
+  });
+
+  it('shows subtitle when only shopping list available', () => {
+    mockSelectedHomeId = null;
+    renderWithApollo(<InviteMemberScreen />);
+    expect(
+      screen.getByText(/Invite others to your shopping list/),
+    ).toBeTruthy();
+  });
+
+  it('shows subtitle when neither resource exists', () => {
+    mockSelectedHomeId = null;
+    mockSelectedShoppingListId = null;
+    renderWithApollo(<InviteMemberScreen />);
+    expect(
+      screen.getByText(/Create a home or shopping list first/),
+    ).toBeTruthy();
+  });
+
+  it('sends invites and navigates on success when invites exist', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<InviteMemberScreen />);
+    const input = screen.getByPlaceholderText('Enter email address');
+    fireEvent.changeText(input, 'friend@test.com');
+    await user.press(screen.getByText('Add'));
+
+    // Press send
+    await user.press(screen.getByText(/Send.*Invite/));
+
+    const { executeWithLoadingState } = require('#/utils/finallyHelpers');
+    expect(executeWithLoadingState).toHaveBeenCalled();
+  });
+
+  it('send button is disabled when no invites to send', () => {
+    renderWithApollo(<InviteMemberScreen />);
+    // Button renders "Send Invites" but is disabled when no invites are added
+    expect(screen.getByText(/Send.*Invite/)).toBeTruthy();
+  });
+
+  it('shows "Continue" button in nothing-to-share state', () => {
+    mockSelectedHomeId = null;
+    mockSelectedShoppingListId = null;
+    renderWithApollo(<InviteMemberScreen />);
+    expect(screen.getByText('Continue')).toBeTruthy();
+  });
+
+  it('navigates from nothing-to-share when Continue is pressed', async () => {
+    const user = userEvent.setup();
+    mockSelectedHomeId = null;
+    mockSelectedShoppingListId = null;
+    renderWithApollo(<InviteMemberScreen />);
+    await user.press(screen.getByText('Continue'));
+    expect(mockNavigateToNextStep).toHaveBeenCalledWith('InviteMembers');
+  });
+
+  it('shows "people" plural text when multiple invites added', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<InviteMemberScreen />);
+    const input = screen.getByPlaceholderText('Enter email address');
+    fireEvent.changeText(input, 'a@test.com');
+    await user.press(screen.getByText('Add'));
+    fireEvent.changeText(input, 'b@test.com');
+    await user.press(screen.getByText('Add'));
+    expect(screen.getByText(/Inviting 2 people/)).toBeTruthy();
+  });
+
+  it('clears email input after adding invite', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<InviteMemberScreen />);
+    const input = screen.getByPlaceholderText('Enter email address');
+    fireEvent.changeText(input, 'friend@test.com');
+    await user.press(screen.getByText('Add'));
+    // Input should be cleared
+    expect(input.props.value).toBe('');
+  });
+
+  it('adds invite on submit editing (keyboard return)', async () => {
+    renderWithApollo(<InviteMemberScreen />);
+    const input = screen.getByPlaceholderText('Enter email address');
+    fireEvent.changeText(input, 'friend@test.com');
+    fireEvent(input, 'submitEditing');
+    // `handleSubmit` validates asynchronously, so the row lands a tick later.
+    expect(await screen.findByText('friend@test.com')).toBeTruthy();
+  });
+
+  it('does not show tap to change hint when only one resource', async () => {
+    const user = userEvent.setup();
+    mockSelectedShoppingListId = null;
+    renderWithApollo(<InviteMemberScreen />);
+    const input = screen.getByPlaceholderText('Enter email address');
+    fireEvent.changeText(input, 'friend@test.com');
+    await user.press(screen.getByText('Add'));
+    expect(screen.queryByText(/(tap to change)/)).toBeNull();
+  });
+
+  it('sends home invite for home-type invites', async () => {
+    const user = userEvent.setup();
+    mockSelectedShoppingListId = null;
+
+    renderWithApollo(<InviteMemberScreen />);
+    const input = screen.getByPlaceholderText('Enter email address');
+    fireEvent.changeText(input, 'friend@test.com');
+    await user.press(screen.getByText('Add'));
+    await user.press(screen.getByText(/Send.*Invite/));
+
+    const { executeWithLoadingState } = require('#/utils/finallyHelpers');
+    expect(executeWithLoadingState).toHaveBeenCalled();
+  });
+
+  it('shows empty state description in nothing-to-share view', () => {
+    mockSelectedHomeId = null;
+    mockSelectedShoppingListId = null;
+    renderWithApollo(<InviteMemberScreen />);
+    expect(
+      screen.getByText(/You need to create a home or shopping list first/),
+    ).toBeTruthy();
+  });
+});

@@ -13,7 +13,7 @@ import {
   versionConflictCheck,
 } from '#/utils/errorHandlers';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import { isUnpurchasedVariant } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { isUnpurchasedVariant } from '#features/shoppingList/cache/connections';
 import { logger } from '#/utils/environment';
 
 interface ShoppingListItem {

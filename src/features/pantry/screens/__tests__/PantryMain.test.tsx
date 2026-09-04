@@ -44,6 +44,8 @@ jest.mock('#store', () => {
     getState: () => ({
       pendingPantryScrollToTop: false,
       setPendingPantryScrollToTop: jest.fn(),
+      featureHintsShown: {},
+      markFeatureHintShown: jest.fn(),
     }),
     setState: jest.fn(),
     subscribe: jest.fn(),
@@ -204,7 +206,7 @@ jest.mock('#services/telemetry', () => ({
 }));
 
 // --- Error boundary & performance ---
-jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
+jest.mock('#components/providers/ScreenErrorBoundary', () => ({
   PantryErrorBoundary: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
   ),
@@ -260,7 +262,7 @@ jest.mock(
   },
 );
 jest.mock(
-  '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark',
+  '#components/organisms/SpotlightCoachMark/SpotlightCoachMark',
   () => ({
     SpotlightCoachMark: () => null,
   }),
@@ -272,7 +274,7 @@ jest.mock('#components/molecules/TabScreenHeader', () => ({
   TabScreenHeader: () => null,
 }));
 jest.mock('#components/molecules/SearchBar', () => ({ SearchBar: () => null }));
-jest.mock('#components/molecules/FilterTabs/FilterTabs', () => ({
+jest.mock('#components/organisms/FilterTabs/FilterTabs', () => ({
   FilterTabs: () => null,
 }));
 

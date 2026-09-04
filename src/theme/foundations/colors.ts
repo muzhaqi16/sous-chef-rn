@@ -221,3 +221,27 @@ export const darkFilterTab: typeof colors.filterTab = {
   countText: colors.neutral[100],
   activeCountBg: colors.filterTab.activeCountBg,
 };
+
+// The categorical ramp a chart assigns by CATEGORY, not by magnitude. Each step
+// is opaque and separated from its neighbours and from `primary`, which the
+// chart puts first so a rebrand reaches it. The dark steps are their own —
+// pastels that read on white go muddy on charcoal.
+export const chartCategorical = [
+  '#4ECDC4',
+  '#45B7D1',
+  '#96CEB4',
+  '#FFEAA7',
+  '#DDA0DD',
+  '#F4A261',
+  '#8E7DBE',
+];
+
+export const darkChartCategorical: typeof chartCategorical = [
+  '#2DD4BF',
+  '#38BDF8',
+  '#4ADE80',
+  '#FACC15',
+  '#E879F9',
+  '#FB923C',
+  '#A78BFA',
+];

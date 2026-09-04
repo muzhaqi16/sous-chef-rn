@@ -2,18 +2,17 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   ThemedActivityIndicator,
   ThemedBottomSheetTextInput,
 } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { TagInput } from '#components/molecules/TagInput';
+import { TagInput } from '#features/recipes/components/TagInput';
 import { Text } from '#components/atoms/Text';
-import { InlineFolderChooser } from '#components/molecules/InlineFolderChooser';
+import { InlineFolderChooser } from '#features/recipes/components/InlineFolderChooser';
+import { SectionHeader } from '#components/atoms/SectionHeader';
+import { Sheet } from '#components/templates/Sheet';
 
 export interface ManageRecipeSheetProps {
   visible: boolean;
@@ -51,11 +50,6 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   recipeName,
 }) => {
   const { t } = useTranslation();
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['85%', '95%'],
-  });
 
   // Local state for editing
   const [selectedFolder, setSelectedFolder] = useState<string | null>(
@@ -137,147 +131,127 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   ];
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetKeyboardAwareScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text size="xl" weight="semibold">
-              {t('manageRecipe.title')}
-            </Text>
-            {!!recipeName && (
-              <Text
-                size="sm"
-                tone="secondary"
-                style={styles.recipeName}
-                numberOfLines={1}
-              >
-                {recipeName}
-              </Text>
-            )}
-          </View>
-          <View style={styles.headerButtons}>
-            <Pressable
-              onPress={handleRemove}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              disabled={updating}
-              style={({ pressed }) => pressed && styles.pressed}
+    <Sheet
+      mode="form"
+      visible={visible}
+      onDismiss={onClose}
+      snapPoints={['85%', '95%']}
+      contentContainerStyle={styles.contentContainer}
+      style={styles.scrollView}
+    >
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Text role="subheading">{t('manageRecipe.title')}</Text>
+          {!!recipeName && (
+            <Text
+              role="caption"
+              tone="secondary"
+              style={styles.recipeName}
+              numberOfLines={1}
             >
-              <Icon name="trash-outline" size={22} tone="error" />
-            </Pressable>
-            <Pressable
-              onPress={onClose}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              style={({ pressed }) => pressed && styles.pressed}
-            >
-              <Icon name="close" size={24} tone="textPrimary" />
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Loading indicator */}
-        {!!updating && (
-          <View style={styles.updatingBanner}>
-            <ThemedActivityIndicator size="small" />
-            <Text size="sm" weight="medium" tone="accent">
-              {t('manageRecipe.updating')}
-            </Text>
-          </View>
-        )}
-
-        {/* Rating */}
-        <Text
-          size="sm"
-          weight="semibold"
-          tone="secondary"
-          style={styles.sectionLabel}
-        >
-          {t('manageRecipe.yourRating')}
-        </Text>
-        <View style={styles.ratingContainer}>
-          {[1, 2, 3, 4, 5].map(star => (
-            <Pressable
-              key={star}
-              onPress={() => handleRatingPress(star)}
-              hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
-              disabled={updating}
-              style={({ pressed }) => pressed && styles.pressed}
-            >
-              <Icon
-                name={
-                  rating !== null && star <= rating ? 'star' : 'star-outline'
-                }
-                size={32}
-                color={
-                  rating !== null && star <= rating ? '#FFB800' : undefined
-                }
-                tone={
-                  rating !== null && star <= rating
-                    ? undefined
-                    : 'textSecondary'
-                }
-              />
-            </Pressable>
-          ))}
-          {rating !== null && (
-            <Text size="sm" tone="secondary" style={styles.ratingText}>
-              {t('manageRecipe.ratingFormat', { rating })}
+              {recipeName}
             </Text>
           )}
         </View>
+        <View style={styles.headerButtons}>
+          <Pressable
+            onPress={handleRemove}
+            accessibilityLabel={t('labels.remove')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            disabled={updating}
+            style={({ pressed }) => pressed && styles.pressed}
+          >
+            <Icon name="trash-outline" size={22} tone="error" />
+          </Pressable>
+          <Pressable
+            onPress={onClose}
+            accessibilityLabel={t('labels.close')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={({ pressed }) => pressed && styles.pressed}
+          >
+            <Icon name="close" size={24} tone="textPrimary" />
+          </Pressable>
+        </View>
+      </View>
 
-        <InlineFolderChooser
-          folders={displayFolders}
-          selectedFolder={selectedFolder}
-          onSelect={handleSelectFolder}
-          onCreateFolder={handleCreateFolder}
-        />
+      {/* Loading indicator */}
+      {!!updating && (
+        <View style={styles.updatingBanner}>
+          <ThemedActivityIndicator size="small" />
+          <Text role="label" tone="accent">
+            {t('manageRecipe.updating')}
+          </Text>
+        </View>
+      )}
 
-        {/* Tags */}
-        <Text
-          size="sm"
-          weight="semibold"
-          tone="secondary"
-          style={styles.sectionLabel}
-        >
-          {t('manageRecipe.tags')}
-        </Text>
-        <TagInput
-          tags={tags}
-          onTagsChange={handleTagsChange}
-          suggestions={availableTags}
-          placeholder={t('manageRecipe.tagsPlaceholder')}
-          maxTags={5}
-          editable={!updating}
-        />
+      {/* Rating */}
+      <SectionHeader variant="overline" style={styles.sectionLabel}>
+        {t('manageRecipe.yourRating')}
+      </SectionHeader>
+      <View style={styles.ratingContainer}>
+        {[1, 2, 3, 4, 5].map(star => (
+          <Pressable
+            key={star}
+            onPress={() => handleRatingPress(star)}
+            accessibilityLabel={t('a11y.rateStars', { count: star })}
+            hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
+            disabled={updating}
+            style={({ pressed }) => pressed && styles.pressed}
+          >
+            <Icon
+              name={rating !== null && star <= rating ? 'star' : 'star-outline'}
+              size={32}
+              color={rating !== null && star <= rating ? '#FFB800' : undefined}
+              tone={
+                rating !== null && star <= rating ? undefined : 'textSecondary'
+              }
+            />
+          </Pressable>
+        ))}
+        {rating !== null && (
+          <Text role="caption" tone="secondary" style={styles.ratingText}>
+            {t('manageRecipe.ratingFormat', { rating })}
+          </Text>
+        )}
+      </View>
 
-        {/* Notes */}
-        <Text
-          size="sm"
-          weight="semibold"
-          tone="secondary"
-          style={styles.sectionLabel}
-        >
-          {t('manageRecipe.notes')}
-        </Text>
-        <ThemedBottomSheetTextInput
-          style={styles.notesInput}
-          placeholder={t('labels.addAnyNotesAboutThisRecipe')}
-          value={notes}
-          onChangeText={setNotes}
-          onBlur={handleNotesBlur}
-          multiline
-          numberOfLines={3}
-          textAlignVertical="top"
-          editable={!updating}
-        />
-      </BottomSheetKeyboardAwareScrollView>
-    </BottomSheetModal>
+      <InlineFolderChooser
+        folders={displayFolders}
+        selectedFolder={selectedFolder}
+        onSelect={handleSelectFolder}
+        onCreateFolder={handleCreateFolder}
+      />
+
+      {/* Tags */}
+      <SectionHeader variant="overline" style={styles.sectionLabel}>
+        {t('manageRecipe.tags')}
+      </SectionHeader>
+      <TagInput
+        tags={tags}
+        onTagsChange={handleTagsChange}
+        suggestions={availableTags}
+        placeholder={t('manageRecipe.tagsPlaceholder')}
+        maxTags={5}
+        editable={!updating}
+      />
+
+      {/* Notes */}
+      <SectionHeader variant="overline" style={styles.sectionLabel}>
+        {t('manageRecipe.notes')}
+      </SectionHeader>
+      <ThemedBottomSheetTextInput
+        style={styles.notesInput}
+        placeholder={t('labels.addAnyNotesAboutThisRecipe')}
+        value={notes}
+        onChangeText={setNotes}
+        onBlur={handleNotesBlur}
+        multiline
+        numberOfLines={3}
+        textAlignVertical="top"
+        editable={!updating}
+      />
+    </Sheet>
   );
 };
 
@@ -331,13 +305,13 @@ const styles = StyleSheet.create(theme => ({
     marginLeft: theme.spacing.sm,
   },
   notesInput: {
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
-    fontSize: theme.fonts.size.base,
+    ...theme.type.body,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
     minHeight: 80,

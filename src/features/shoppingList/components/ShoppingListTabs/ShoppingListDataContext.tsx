@@ -4,9 +4,10 @@ import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import type { ShoppingListRowItem } from '../SortableShoppingList/types';
 
 /**
- * Per-tab data for shopping list tabs.
- * Provided via context so renderScene doesn't capture item arrays,
- * preventing TabView from re-calling renderScene on every data change.
+ * Per-tab data for shopping list tabs. It reaches the scenes through context so
+ * `renderScene` captures no item array — tab-view re-calls the scene renderer
+ * whenever its identity changes. One context PER TAB, plus one for the query, so
+ * a change to the shopping items does not re-render the mounted purchased tab.
  */
 export interface ShoppingListTabData {
   items: ShoppingListRowItem[];
@@ -40,9 +41,11 @@ interface ShoppingListDataState {
   searchQuery: string;
 }
 
-const ShoppingListDataContext = createContext<ShoppingListDataState | null>(
-  null,
-);
+const TAB_CONTEXTS = {
+  shopping: createContext<ShoppingListTabData | null>(null),
+  purchased: createContext<ShoppingListTabData | null>(null),
+};
+const SearchQueryContext = createContext<string | null>(null);
 
 interface ProviderProps {
   children: React.ReactNode;
@@ -53,29 +56,33 @@ export const ShoppingListDataProvider: React.FC<ProviderProps> = ({
   children,
   data,
 }) => (
-  <ShoppingListDataContext.Provider value={data}>
-    {children}
-  </ShoppingListDataContext.Provider>
+  <TAB_CONTEXTS.shopping.Provider value={data.shopping}>
+    <TAB_CONTEXTS.purchased.Provider value={data.purchased}>
+      <SearchQueryContext.Provider value={data.searchQuery}>
+        {children}
+      </SearchQueryContext.Provider>
+    </TAB_CONTEXTS.purchased.Provider>
+  </TAB_CONTEXTS.shopping.Provider>
 );
 
 export function useShoppingListData(
   tab: 'shopping' | 'purchased',
 ): ShoppingListTabData {
-  const ctx = useContext(ShoppingListDataContext);
+  const ctx = useContext(TAB_CONTEXTS[tab]);
   if (!ctx) {
     throw new Error(
       'useShoppingListData must be used within ShoppingListDataProvider',
     );
   }
-  return ctx[tab];
+  return ctx;
 }
 
 export function useShoppingListSearchQuery(): string {
-  const ctx = useContext(ShoppingListDataContext);
-  if (!ctx) {
+  const ctx = useContext(SearchQueryContext);
+  if (ctx === null) {
     throw new Error(
       'useShoppingListSearchQuery must be used within ShoppingListDataProvider',
     );
   }
-  return ctx.searchQuery;
+  return ctx;
 }

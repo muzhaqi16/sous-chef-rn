@@ -3,7 +3,7 @@
 import React from 'react';
 import { screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
+import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { FilteredPantryItems } from '../FilteredPantryItems';
 
 // Structural shape consumed by the screen via the mocked `usePantryManagement`.
@@ -141,7 +141,7 @@ jest.mock('#features/pantry/hooks/usePantryManagement', () => ({
   },
 }));
 
-jest.mock('#components/molecules/Header', () => ({
+jest.mock('#components/organisms/Header', () => ({
   Header: ({
     title,
     rightActions,
@@ -160,7 +160,7 @@ jest.mock('#components/molecules/Header', () => ({
     );
   },
 }));
-jest.mock('#components/molecules/SwipeableItem/SwipeableItem', () => ({
+jest.mock('#components/organisms/SwipeableItem/SwipeableItem', () => ({
   SwipeableItem: ({
     children,
     onPress,

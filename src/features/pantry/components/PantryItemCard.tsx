@@ -6,7 +6,6 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  Easing,
   cancelAnimation,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -15,24 +14,25 @@ import { StyleSheet } from 'react-native-unistyles';
 import { differenceInCalendarDays } from 'date-fns';
 import { useFragment } from '@apollo/client/react';
 import { type FragmentType } from '@apollo/client/masking';
-import { BaseItemCard } from '#components/molecules/BaseItemCard/BaseItemCard';
-import { CardLeftSlot } from '#components/molecules/BaseItemCard/CardLeftSlot';
-import { CardContent } from '#components/molecules/BaseItemCard/CardContent';
-import { CardRightSlot } from '#components/molecules/BaseItemCard/CardRightSlot';
-import type { CardVariant } from '#components/molecules/BaseItemCard/types';
+import { BaseItemCard } from '#features/pantry/components/BaseItemCard/BaseItemCard';
+import { CardLeftSlot } from '#features/pantry/components/BaseItemCard/CardLeftSlot';
+import { CardContent } from '#features/pantry/components/BaseItemCard/CardContent';
+import { CardRightSlot } from '#features/pantry/components/BaseItemCard/CardRightSlot';
+import type { CardVariant } from '#features/pantry/components/BaseItemCard/types';
 import { SLIDE_PRESETS } from '#/constants/animations';
 import { usePantryActions } from './PantryActionsContext';
 import { Text } from '#components/atoms/Text';
 import { resolveImageUrl } from '#utils/imageUtils';
-import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
+import { useIsPendingSync } from '#features/pantry/hooks/useIsPendingSync';
 import {
   getExpirationStatus,
   formatPackageBreakdown,
-  formatRemainingNetWeight,
+  formatNetWeightDisplay,
   formatQuantityBreakdown,
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated';
+import { motion } from '#/theme/foundations/motion';
 
 // Slide animation distance only; no reactive updates needed.
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -57,7 +57,7 @@ const ExpirationText: React.FC<{
   styles.useVariants({ expiryStatus: status });
   return (
     <Text
-      weight={bold ? 'medium' : undefined}
+      role={bold ? 'bodyStrong' : 'body'}
       style={styles.expiration}
       numberOfLines={1}
     >
@@ -103,7 +103,7 @@ const SlideAnimatedWrapper: React.FC<{
 
     const config = {
       duration: SLIDE_PRESETS.exitWithFade.duration,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+      easing: motion.easing.standard,
     };
 
     slide.set(
@@ -215,12 +215,24 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
     pantryItem.packageBreakdown,
     pantryItem.quantityBreakdown?.totalContentUnits,
   );
-  const remainingNetWeightText = hasConsumptionStarted(pantryItem)
-    ? formatRemainingNetWeight(
+  const remainingAmount = hasConsumptionStarted(pantryItem)
+    ? formatNetWeightDisplay(
         pantryItem.remainingNetWeight,
         pantryItem.netWeightUnit,
       )
     : null;
+  const remainingNetWeightText = remainingAmount
+    ? t('pantryItemCard.remainingAmount', { amount: remainingAmount })
+    : null;
+  // The stack's own portion definition ("1 bulb = 10 cloves"), which the server
+  // seeds from the catalog and the stack then owns.
+  const portionsLeftText =
+    pantryItem.remainingPortions != null && pantryItem.portionUnit
+      ? t('pantryItemCard.portionsLeft', {
+          count: pantryItem.remainingPortions,
+          unit: pantryItem.portionUnit.symbol || pantryItem.portionUnit.name,
+        })
+      : null;
   const quantityBreakdownText = formatQuantityBreakdown(
     pantryItem.quantityBreakdown,
   );
@@ -231,9 +243,10 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   const detailText =
     quantityBreakdownText ||
     packageBreakdownText ||
+    portionsLeftText ||
     remainingNetWeightText ||
     (activeBatchCount && activeBatchCount > 1
-      ? `${activeBatchCount} batches`
+      ? t('pantryItemDetail.batch.historyTotal', { count: activeBatchCount })
       : undefined) ||
     undefined;
 
@@ -269,14 +282,14 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   const getSubtitle = () => {
     if (isPendingSync) {
       return (
-        <Text weight="medium" tone="secondary" style={styles.pendingSync}>
+        <Text role="bodyStrong" tone="secondary" style={styles.pendingSync}>
           {t('status.syncing')}
         </Text>
       );
     }
     if (isOutOfStock) {
       return (
-        <Text weight="medium" tone="warning" style={styles.outOfStock}>
+        <Text role="bodyStrong" tone="warning" style={styles.outOfStock}>
           {t('pantryScreen.outOfStock')}
         </Text>
       );
@@ -294,7 +307,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
     // on the right.
     if (locationOnLeft) {
       return (
-        <Text size="sm" tone="secondary" numberOfLines={1}>
+        <Text role="caption" tone="secondary" numberOfLines={1}>
           {location}
         </Text>
       );
@@ -353,7 +366,6 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   expiration: {
-    fontSize: theme.typography.fontSize.sm - 1,
     variants: {
       expiryStatus: {
         expired: { color: theme.colors.expiration.expiredText },
@@ -365,9 +377,7 @@ const styles = StyleSheet.create(theme => ({
   pendingSync: {
     fontStyle: 'italic',
   },
-  outOfStock: {
-    fontSize: theme.typography.fontSize.sm - 1,
-  },
+  outOfStock: {},
 }));
 
 // PantryItemVariant alias for backwards compatibility

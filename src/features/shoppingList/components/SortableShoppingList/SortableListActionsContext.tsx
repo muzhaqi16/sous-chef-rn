@@ -7,7 +7,7 @@ import React, {
   type ReactNode,
 } from 'react';
 import { createActionsContext } from '#hooks/utils/createActionsContext';
-import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
+import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 
 export interface SortableListActions {
   onItemPress?: (id: string) => void;

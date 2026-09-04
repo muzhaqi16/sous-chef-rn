@@ -36,552 +36,786 @@ const COMPOSED_KEY_REASON =
   'scan can see a composed key, and no lint rule caught it. The prefixes are ' +
   'checked by `composedKeyNamespaces.test.ts`.';
 
-const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> = [
-  {
-    keys: [
-      'pantryItemDetail.batch.historySummary_one',
-      'pantryItemDetail.batch.historySummary_other',
-    ],
-    reason:
-      'The two plural forms of ONE key. English does not inflect the ' +
-      'adjective, so both read "{{active}} active of {{total}}"; es/it/sq all ' +
-      'differ ("activo"/"activos"). Merging them would drop the forms those ' +
-      'locales need, which is the defect the pair exists to fix.',
-  },
-  {
-    keys: ['recipes.difficultyLabel.MEDIUM', 'shoppingListScreens.priorityMedium'],
-    reason:
-      'Two adjectives that happen to coincide, not one string used twice. ' +
-      'Each agrees with a different noun — recipe DIFFICULTY vs shopping-list ' +
-      'PRIORITY — and they match in all four locales only because both nouns ' +
-      'are feminine in es/it. The siblings already diverge (es "Fácil"/' +
-      '"Difícil" vs "Baja"/"Alta"), so merging the middle term would couple ' +
-      'the shopping list to the recipes namespace and break the first locale ' +
-      'where the two nouns take different agreement. Per CLAUDE.md, noun ' +
-      'agreement belongs in per-context keys.',
-  },
-  {
-    keys: ['errors.entityHome', 'labels.home', 'notifications.categoryHome', 'invitationAcceptance.resourceHome', 'homeManagement.statsHome_one', 'joinHome.homeFallback'],
-    reason:
-      'The English is one word for two roles: sq "Shtëpia" vs ' +
-      '"Shtëpi". One form would be wrong in the other context, so the ' +
-      'distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['errors.entityMember', 'inviteUser.roleMemberLabel', 'homeManagement.statsMember_one', 'roles.member', 'homeRoles.member'],
-    reason:
-      'Same string, but the keys are reached by different mechanisms ' +
-      'and cannot be re-pointed at one another.',
-  },
-  {
-    keys: ['errors.entityInvite', 'homeManagement.cardInvite'],
-    reason:
-      'The English is one word for two roles: es "Invitación" vs ' +
-      '"Invitar"; it "Invito" vs "Invita"; sq "Ftesë" vs "Fto". One ' +
-      'form would be wrong in the other context, so the distinction ' +
-      'belongs in the key rather than in a runtime parameter.',
-  },
-  {
-    keys: ['loading.loading', 'shoppingListScreens.loading', 'pantrySettings.loading', 'listTemplate.loading'],
-    reason:
-      'Same string, but the keys are reached by different mechanisms ' +
-      'and cannot be re-pointed at one another.',
-  },
-  {
-    keys: ['labels.back', 'itemPhotos.perspective.back'],
-    reason:
-      'The English is one word for two roles: es "Atrás" vs ' +
-      '"Reverso"; it "Indietro" vs "Retro"; sq "Mbrapa" vs "Prapa". ' +
-      'One form would be wrong in the other context, so the ' +
-      'distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['labels.pantry', 'notifications.categoryPantry', 'navigation.tabs.pantry', 'pantryScreen.tabPantry', 'homeManagement.statsPantry_one'],
-    reason:
-      'The English is one word for two roles: sq "Qilari" vs "Qilar". ' +
-      'One form would be wrong in the other context, so the ' +
-      'distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['labels.default', 'recipes.defaultBadge', 'appearance.colorDefault', 'appearance.fontDefault', 'moveToPantry.defaultLabel', 'homeManagement.cardDefault', 'storageLocationCard.default'],
-    reason:
-      'The English is one word for two roles: es "Predeterminado" vs ' +
-      '"Predeterminada"; it "Predefinito" vs "Predefinita"; sq "I ' +
-      'parazgjedhur" vs "Parazgjedhur" vs "Të parazgjedhura". One ' +
-      'form would be wrong in the other context, so the distinction ' +
-      'belongs in the key rather than in a runtime parameter.',
-  },
-  {
-    keys: ['recipes.description', 'mealPlan.description', 'saveAsTemplate.descriptionLabel', 'mealTemplateBuilder.description', 'addItemForm.fields.description.label'],
-    reason:
-      'The English is one word for two roles: sq "Përshkrim" vs ' +
-      '"Përshkrimi". One form would be wrong in the other context, so ' +
-      'the distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['recipes.healthGoals', 'dietaryProfile.goalsTitle'],
-    reason:
-      'The English is one word for two roles: sq "Synimet ' +
-      'shëndetësore" vs "Synime shëndetësore". One form would be ' +
-      'wrong in the other context, so the distinction belongs in the ' +
-      'key rather than in a runtime parameter.',
-  },
-  {
-    keys: ['recipes.notes', 'pantryItemDetail.notes', 'shoppingListScreens.notes', 'manageRecipe.notes', 'recordWaste.notes', 'restockItem.notes', 'consumeItem.notes', 'addToPantry.notes', 'itemForm.notes'],
-    reason:
-      'The English is one word for two roles: sq "Shënime" vs ' +
-      '"Shënimet". One form would be wrong in the other context, so ' +
-      'the distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['recipes.optional', 'ingredientMatch.optional'],
-    reason:
-      'The English is one word for two roles: sq "Opsionale" vs ' +
-      '"Opsional". One form would be wrong in the other context, so ' +
-      'the distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['recipes.tags', 'recipes.recipeTags', 'pantryItemDetail.tags', 'manageRecipe.tags', 'mealTemplateBuilder.tags', 'addToPantry.tags', 'addItemForm.fields.tags.label', 'itemForm.tags'],
-    reason:
-      'The English is one word for two roles: sq "Etiketa" vs ' +
-      '"Etiketat". One form would be wrong in the other context, so ' +
-      'the distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['recipes.nutritionTitle', 'pantryItemDetail.nutrition', 'itemPhotos.perspective.nutrition_label'],
-    reason:
-      'The English is one word for two roles: it "Valori ' +
-      'nutrizionali" vs "Nutrizione"; sq "Ushqyerja" vs "Ushqyesit". ' +
-      'One form would be wrong in the other context, so the ' +
-      'distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['recipes.vegetarian', 'recipes.diet.VEGETARIAN', 'recipeFilters.diets.vegetarian', 'addMealSheet.dietVegetarian', 'dietaryProfile.diets.vegetarian'],
-    reason:
-      'The English is one word for two roles: es "Vegetariana" vs ' +
-      '"Vegetariano"; it "Vegetariana" vs "Vegetariano"; sq ' +
-      '"Vegjetariane" vs "Vegjetarian". One form would be wrong in ' +
-      'the other context, so the distinction belongs in the key ' +
-      'rather than in a runtime parameter.',
-  },
-  {
-    keys: ['recipes.vegan', 'recipes.diet.VEGAN', 'recipeFilters.diets.vegan', 'addMealSheet.dietVegan', 'dietaryProfile.diets.vegan'],
-    reason:
-      'The English is one word for two roles: es "Vegana" vs ' +
-      '"Vegano"; it "Vegana" vs "Vegano"; sq "Vegane" vs "Vegan". One ' +
-      'form would be wrong in the other context, so the distinction ' +
-      'belongs in the key rather than in a runtime parameter.',
-  },
-  {
-    keys: ['recipes.filterAll', 'notifications.categoryAll', 'templateBrowser.categoryAll', 'pantryScreen.tabAll', 'pantryTabs.all'],
-    reason:
-      'The English is one word for two roles: es "Todas" vs "Todos"; ' +
-      'it "Tutte" vs "Tutti". One form would be wrong in the other ' +
-      'context, so the distinction belongs in the key rather than in ' +
-      'a runtime parameter.',
-  },
-  {
-    keys: ['recipes.listItemCount_one', 'storageLocations.itemSingular', 'pantryScreen.itemCount_one', 'storageLocationCard.itemCount_one'],
-    reason:
-      'The English is one word for two roles: it "{{count}} elemento" ' +
-      'vs "{{count}} articolo". One form would be wrong in the other ' +
-      'context, so the distinction belongs in the key rather than in ' +
-      'a runtime parameter.',
-  },
-  {
-    keys: ['recipes.listItemCount_other', 'pantrySettings.itemsCount', 'storageLocations.itemPlural', 'generateShoppingList.itemsCount', 'pantryScreen.itemCount_other', 'storageLocationCard.itemCount_other'],
-    reason:
-      'The English is one word for two roles: it "{{count}} elementi" ' +
-      'vs "{{count}} articoli". One form would be wrong in the other ' +
-      'context, so the distinction belongs in the key rather than in ' +
-      'a runtime parameter.',
-  },
-  {
-    keys: ['recipes.diet.LACTO_VEGETARIAN', 'dietaryProfile.diets.lactoVegetarian'],
-    reason:
-      'The English is one word for two roles: es "Lacto-vegetariano" ' +
-      'vs "Lacto-vegetariana"; it "Latto-vegetariano" vs ' +
-      '"Latto-vegetariana"; sq "Lakto-vegjetarian" vs ' +
-      '"Lakto-vegjetariane". One form would be wrong in the other ' +
-      'context, so the distinction belongs in the key rather than in ' +
-      'a runtime parameter.',
-  },
-  {
-    keys: ['recipes.diet.OVO_VEGETARIAN', 'dietaryProfile.diets.ovoVegetarian'],
-    reason:
-      'The English is one word for two roles: es "Ovo-vegetariano" vs ' +
-      '"Ovo-vegetariana"; it "Ovo-vegetariano" vs "Ovo-vegetariana"; ' +
-      'sq "Ovo-vegjetarian" vs "Ovo-vegjetariane". One form would be ' +
-      'wrong in the other context, so the distinction belongs in the ' +
-      'key rather than in a runtime parameter.',
-  },
-  {
-    keys: ['recipes.diet.PESCETARIAN', 'recipeFilters.diets.pescetarian', 'dietaryProfile.diets.pescetarian'],
-    reason:
-      'The English is one word for two roles: es "Pescetariano" vs ' +
-      '"Pescetariana"; it "Pescetariano" vs "Pescetariana"; sq ' +
-      '"Peshkatar" vs "Pescetariane" vs "Peshkatariane". One form ' +
-      'would be wrong in the other context, so the distinction ' +
-      'belongs in the key rather than in a runtime parameter.',
-  },
-  {
-    keys: ['recipes.diet.PRIMAL', 'recipeFilters.diets.primal', 'dietaryProfile.diets.primal'],
-    reason:
-      'The English is one word for two roles: sq "Primal" vs ' +
-      '"Primale". One form would be wrong in the other context, so ' +
-      'the distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['recipes.intolerance.EGG', 'recipeFilters.intolerances.egg', 'dietaryProfile.intolerances.egg'],
-    reason:
-      'The English is one word for two roles: it "Uovo" vs "Uova". ' +
-      'One form would be wrong in the other context, so the ' +
-      'distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['recipes.intolerance.SULFITE', 'recipeFilters.intolerances.sulfite', 'dietaryProfile.intolerances.sulfite'],
-    reason:
-      'The English is one word for two roles: es "Sulfito" vs ' +
-      '"Sulfitos"; it "Solfito" vs "Solfiti"; sq "Sulfit" vs ' +
-      '"Sulfite". One form would be wrong in the other context, so ' +
-      'the distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['recipes.macroProtein', 'dietary.protein', 'nutritionSummary.macroProtein'],
-    reason:
-      'The English is one word for two roles: es "Proteínas" vs ' +
-      '"Proteína"; sq "Proteina" vs "Proteinë". One form would be ' +
-      'wrong in the other context, so the distinction belongs in the ' +
-      'key rather than in a runtime parameter.',
-  },
-  {
-    keys: ['recipes.macroFat', 'dietary.fat', 'nutritionSummary.macroFat'],
-    reason:
-      'The English is one word for two roles: es "Grasas" vs "Grasa"; ' +
-      'sq "Yndyra" vs "Yndyrë". One form would be wrong in the other ' +
-      'context, so the distinction belongs in the key rather than in ' +
-      'a runtime parameter.',
-  },
-  {
-    keys: ['recipes.servingsCount_other', 'addMealSheet.servings', 'mealPlanItem.servings', 'templateCard.servings'],
-    reason:
-      'The English is one word for two roles: sq "{{count}} pjesë" vs ' +
-      '"{{count}} racione". One form would be wrong in the other ' +
-      'context, so the distinction belongs in the key rather than in ' +
-      'a runtime parameter.',
-  },
-  {
-    keys: ['pantryItemDetail.fields.purchased', 'shoppingListScreens.purchased', 'addToPantry.methodPurchased', 'shoppingListScreen.tabPurchased'],
-    reason:
-      'The English is one word for two roles: es "Comprado" vs ' +
-      '"Comprados"; it "Acquistato" vs "Acquistati"; sq "Blerë" vs ' +
-      '"Të blera". One form would be wrong in the other context, so ' +
-      'the distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['pantryItemDetail.fields.added', 'pantryAnalytics.added', 'barcode.added'],
-    reason:
-      'The English is one word for two roles: sq "Shtuar" vs "Të ' +
-      'shtuar" vs "U shtua". One form would be wrong in the other ' +
-      'context, so the distinction belongs in the key rather than in ' +
-      'a runtime parameter.',
-  },
-  {
-    keys: ['pantryItemDetail.batch.wasted', 'pantryAnalytics.wasted', 'usagePurpose.WASTE'],
-    reason:
-      'The English is one word for two roles: sq "Shpenzuar" vs "Të ' +
-      'humbur" vs "Hedhur". One form would be wrong in the other ' +
-      'context, so the distinction belongs in the key rather than in ' +
-      'a runtime parameter.',
-  },
-  {
-    keys: ['pantryItemDetail.batch.expired', 'shoppingListScreens.statusExpired', 'pantryAnalytics.reasonExpired', 'filteredPantry.expired', 'recordWaste.reasonExpired', 'addToPantry.conditionExpired', 'expiration.expired'],
-    reason:
-      'The English is one word for two roles: es "Caducado" vs ' +
-      '"Caducada"; it "Scaduto" vs "Scaduta"; sq "Skaduar" vs "I ' +
-      'skaduar". One form would be wrong in the other context, so the ' +
-      'distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['shoppingListScreens.membersCount', 'joinHome.memberCount_other'],
-    reason:
-      'Same string, but the keys are reached by different mechanisms ' +
-      'and cannot be re-pointed at one another.',
-  },
-  {
-    keys: ['shoppingListScreens.deleteListConfirmMessage', 'shoppingListSelector.deleteAlertMessage_one'],
-    reason:
-      'Same string, but the keys are reached by different mechanisms ' +
-      'and cannot be re-pointed at one another.',
-  },
-  {
-    keys: ['shoppingListScreens.patternDaily', 'pantryAnalytics.granularityDaily'],
-    reason:
-      'The English is one word for two roles: es "Diariamente" vs ' +
-      '"Diario"; it "Ogni giorno" vs "Giornaliero"; sq "Çdo ditë" vs ' +
-      '"Ditore". One form would be wrong in the other context, so the ' +
-      'distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['shoppingListScreens.patternWeekly', 'mealPlan.weekly', 'pantryAnalytics.granularityWeekly', 'saveAsTemplate.categoryWeekly'],
-    reason:
-      'The English is one word for two roles: es "Semanalmente" vs ' +
-      '"Semanal"; it "Ogni settimana" vs "Settimanale"; sq "Çdo javë" ' +
-      'vs "Javor" vs "Javore". One form would be wrong in the other ' +
-      'context, so the distinction belongs in the key rather than in ' +
-      'a runtime parameter.',
-  },
-  {
-    keys: ['shoppingListScreens.patternMonthly', 'mealPlan.monthly', 'pantryAnalytics.granularityMonthly', 'saveAsTemplate.categoryMonthly'],
-    reason:
-      'The English is one word for two roles: es "Mensualmente" vs ' +
-      '"Mensual"; it "Ogni mese" vs "Mensile"; sq "Çdo muaj" vs ' +
-      '"Mujor" vs "Mujore". One form would be wrong in the other ' +
-      'context, so the distinction belongs in the key rather than in ' +
-      'a runtime parameter.',
-  },
-  {
-    keys: ['shoppingListScreens.patternCustom', 'storageLocationForm.typeCustom', 'saveAsTemplate.categoryCustom', 'templatePreview.customMeal'],
-    reason:
-      'The English is one word for two roles: es "Personalizado" vs ' +
-      '"Personalizada"; it "Personalizzato" vs "Personalizzata"; sq ' +
-      '"E personalizuar" vs "I personalizuar". One form would be ' +
-      'wrong in the other context, so the distinction belongs in the ' +
-      'key rather than in a runtime parameter.',
-  },
-  {
-    keys: ['shoppingListScreens.listStatusActive', 'shoppingListScreens.statusActive', 'mealPlanSelector.filterActive'],
-    reason:
-      'The English is one word for two roles: es "Activa" vs "Activo" ' +
-      'vs "Activos"; it "Attiva" vs "Attivo" vs "Attivi"; sq "Aktive" ' +
-      'vs "Aktiv" vs "Aktivë". One form would be wrong in the other ' +
-      'context, so the distinction belongs in the key rather than in ' +
-      'a runtime parameter.',
-  },
-  {
-    keys: ['shoppingListScreens.listStatusTemplate', 'mealPlanSelector.createFromTemplate'],
-    reason:
-      'The English is one word for two roles: sq "Model" vs "Modeli". ' +
-      'One form would be wrong in the other context, so the ' +
-      'distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['shoppingListScreens.owner', 'inviteUser.roleOwnerLabel', 'roles.owner', 'collaboratorRoles.owner', 'homeRoles.owner'],
-    reason:
-      'The English is one word for two roles: sq "Pronari" vs ' +
-      '"Pronar". One form would be wrong in the other context, so the ' +
-      'distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['shoppingListScreens.estimatedPricePlaceholder', 'addToPantry.costPlaceholder'],
-    reason:
-      'The English is one word for two roles: es "p. ej., 4,99" vs ' +
-      '"ej., 4,99". One form would be wrong in the other context, so ' +
-      'the distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['mealPlan.personal', 'mealPlanSelector.personalSubtitle'],
-    reason:
-      'The English is one word for two roles: sq "Personale" vs ' +
-      '"Personal". One form would be wrong in the other context, so ' +
-      'the distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['pantryAnalytics.tabWaste', 'pantryAnalytics.purposeWaste'],
-    reason:
-      'The English is one word for two roles: it "Sprechi" vs ' +
-      '"Spreco"; sq "Mbeturinat" vs "Mbeturinë". One form would be ' +
-      'wrong in the other context, so the distinction belongs in the ' +
-      'key rather than in a runtime parameter.',
-  },
-  {
-    keys: ['pantryAnalytics.composted', 'recordWaste.composted'],
-    reason:
-      'The English is one word for two roles: sq "Kompostuar" vs "Të ' +
-      'kompostuara". One form would be wrong in the other context, so ' +
-      'the distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['pantryAnalytics.consumed', 'expirationAction.consumed', 'usagePurpose.GENERAL'],
-    reason:
-      'The English is one word for two roles: sq "Të konsumuar" vs ' +
-      '"Konsumuar". One form would be wrong in the other context, so ' +
-      'the distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['pantryAnalytics.purposeCooking', 'consumeItem.purposeCooking', 'usagePurpose.COOKING'],
-    reason:
-      'The English is one word for two roles: es "Cocina" vs ' +
-      '"Cocinar" vs "Cocinado"; it "Cucina" vs "Cucinato"; sq "Gatim" ' +
-      'vs "Gatuar". One form would be wrong in the other context, so ' +
-      'the distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['pantryAnalytics.purposeRestock', 'restockItem.restock', 'duplicateItem.restock', 'swipeActions.restock'],
-    reason:
-      'The English is one word for two roles: es "Reabastecimiento" ' +
-      'vs "Reponer"; it "Riassortimento" vs "Rifornisci"; sq ' +
-      '"Riblerje" vs "Riplotëso". One form would be wrong in the ' +
-      'other context, so the distinction belongs in the key rather ' +
-      'than in a runtime parameter.',
-  },
-  {
-    keys: ['pantryAnalytics.purposeTransfer', 'consumeItem.purposeTransfer', 'homeDetail.transferOwnershipConfirm', 'usagePurpose.TRANSFER'],
-    reason:
-      'The English is one word for two roles: es "Transferencia" vs ' +
-      '"Traslado" vs "Transferir"; it "Trasferimento" vs ' +
-      '"Trasferisci"; sq "Transferim" vs "Transfero". One form would ' +
-      'be wrong in the other context, so the distinction belongs in ' +
-      'the key rather than in a runtime parameter.',
-  },
-  {
-    keys: ['pantryAnalytics.reasonBurnt', 'recordWaste.reasonBurnt'],
-    reason:
-      'The English is one word for two roles: sq "I djegur" vs ' +
-      '"Djegur". One form would be wrong in the other context, so the ' +
-      'distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['pantryAnalytics.reasonSpilled', 'recordWaste.reasonSpilled'],
-    reason:
-      'The English is one word for two roles: sq "I derdhur" vs ' +
-      '"Derdhur". One form would be wrong in the other context, so ' +
-      'the distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['pantryAnalytics.reasonSpoiled', 'recordWaste.reasonSpoiled', 'addToPantry.conditionSpoiled'],
-    reason:
-      'The English is one word for two roles: es "Estropeado" vs ' +
-      '"Estropeada"; it "Andato a male" vs "Andata a male"; sq "I ' +
-      'prishur" vs "Prishur". One form would be wrong in the other ' +
-      'context, so the distinction belongs in the key rather than in ' +
-      'a runtime parameter.',
-  },
-  {
-    keys: ['notifications.categoryShopping', 'shoppingListScreen.tabShopping'],
-    reason:
-      'The English is one word for two roles: es "Compras" vs "Por ' +
-      'comprar"; it "Spesa" vs "Da comprare"; sq "Blerjet" vs "Për të ' +
-      'blerë". One form would be wrong in the other context, so the ' +
-      'distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['dietary.title', 'profile.sections.dietaryProfile', 'profile.labels.dietaryProfile'],
-    reason:
-      'The English is one word for two roles: es "Perfil alimentario" ' +
-      'vs "Perfil alimenticio". One form would be wrong in the other ' +
-      'context, so the distinction belongs in the key rather than in ' +
-      'a runtime parameter.',
-  },
-  {
-    keys: ['onBoarding.createList', 'addItemSheet.createList', 'shoppingListScreen.noListsAction'],
-    reason:
-      'The English is one word for two roles: sq "Krijo listën" vs ' +
-      '"Krijo listë" vs "Krijo Listë". One form would be wrong in the ' +
-      'other context, so the distinction belongs in the key rather ' +
-      'than in a runtime parameter.',
-  },
-  {
-    keys: ['filteredPantry.expiresInDays', 'expiration.expiresInDays_other'],
-    reason:
-      'Same string, but the keys are reached by different mechanisms ' +
-      'and cannot be re-pointed at one another.',
-  },
-  {
-    keys: ['nutritionGoal.labelFatG', 'macroTargets.fat'],
-    reason:
-      'The English is one word for two roles: sq "Yndyrë (g)" vs ' +
-      '"Yndyrna (g)". One form would be wrong in the other context, ' +
-      'so the distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['manageRecipe.tagsPlaceholder', 'saveRecipe.tagsPlaceholder'],
-    reason:
-      'The English is one word for two roles: es "Añadir ' +
-      'etiquetas..." vs "Añade etiquetas...". One form would be wrong ' +
-      'in the other context, so the distinction belongs in the key ' +
-      'rather than in a runtime parameter.',
-  },
-  {
-    keys: ['homeManagement.modeCreate', 'onboardingSteps.CreateHome.title'],
-    reason:
-      'The English is one word for two roles: sq "Krijo Shtëpi" vs ' +
-      '"Krijo shtëpinë". One form would be wrong in the other ' +
-      'context, so the distinction belongs in the key rather than in ' +
-      'a runtime parameter.',
-  },
-  {
-    keys: ['homeManagement.statsMember_other', 'homeManagement.cardMembersSectionTitle'],
-    reason:
-      'The English is one word for two roles: sq "Anëtarë" vs ' +
-      '"Anëtarët". One form would be wrong in the other context, so ' +
-      'the distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['addItemForm.fields.upc.label', 'barcode.upc'],
-    reason:
-      'The English is one word for two roles: sq "UPC/Barkodi" vs ' +
-      '"UPC/Barkod". One form would be wrong in the other context, so ' +
-      'the distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['netWeightEntry.weightLabel', 'unitType.WEIGHT'],
-    reason:
-      'The English is one word for two roles: sq "Pesha" vs "Peshë". ' +
-      'One form would be wrong in the other context, so the ' +
-      'distinction belongs in the key rather than in a runtime ' +
-      'parameter.',
-  },
-  {
-    keys: ['itemSubtitle.contentUnitCount_one', 'itemSubtitle.contentUnitCount_other'],
-    reason:
-      'Same string, but the keys are reached by different mechanisms ' +
-      'and cannot be re-pointed at one another.',
-  },
-  {
-    keys: [
-      'suggestItemEdit.rejectedTitle',
-      'suggestItemEdit.failedTitle',
-      'reportItem.rejectedTitle',
-      'reportItem.failedTitle',
-    ],
-    reason: COMPOSED_KEY_REASON,
-  },
-  {
-    keys: [
-      'itemPhotos.setPrimary.rejectedTitle',
-      'itemPhotos.setPrimary.failedTitle',
-    ],
-    reason: COMPOSED_KEY_REASON,
-  },
-];
+const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
+  [
+    {
+      keys: [
+        'pantryItemCard.portionsLeft_one',
+        'pantryItemCard.portionsLeft_other',
+      ],
+      reason:
+        'The two plural forms of ONE key. English carries the count on the ' +
+        'server-supplied unit name, so both read "{{count}} {{unit}} left"; ' +
+        'es/it/sq inflect the verb ("Queda"/"Quedan"). Merging them would drop ' +
+        'the forms those locales need.',
+    },
+    {
+      keys: [
+        'pantryItemDetail.batch.historySummary_one',
+        'pantryItemDetail.batch.historySummary_other',
+      ],
+      reason:
+        'The two plural forms of ONE key. English does not inflect the ' +
+        'adjective, so both read "{{active}} active of {{total}}"; es/it/sq all ' +
+        'differ ("activo"/"activos"). Merging them would drop the forms those ' +
+        'locales need, which is the defect the pair exists to fix.',
+    },
+    {
+      keys: [
+        'recipes.difficultyLabel.MEDIUM',
+        'shoppingListScreens.priorityMedium',
+      ],
+      reason:
+        'Two adjectives that happen to coincide, not one string used twice. ' +
+        'Each agrees with a different noun — recipe DIFFICULTY vs shopping-list ' +
+        'PRIORITY — and they match in all four locales only because both nouns ' +
+        'are feminine in es/it. The siblings already diverge (es "Fácil"/' +
+        '"Difícil" vs "Baja"/"Alta"), so merging the middle term would couple ' +
+        'the shopping list to the recipes namespace and break the first locale ' +
+        'where the two nouns take different agreement. Per CLAUDE.md, noun ' +
+        'agreement belongs in per-context keys.',
+    },
+    {
+      keys: [
+        'errors.entityHome',
+        'labels.home',
+        'notifications.categoryHome',
+        'invitationAcceptance.resourceHome',
+        'homeManagement.statsHome_one',
+        'joinHome.homeFallback',
+      ],
+      reason:
+        'The English is one word for two roles: sq "Shtëpia" vs ' +
+        '"Shtëpi". One form would be wrong in the other context, so the ' +
+        'distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'errors.entityMember',
+        'inviteUser.roleMemberLabel',
+        'homeManagement.statsMember_one',
+        'roles.member',
+        'homeRoles.member',
+      ],
+      reason:
+        'Same string, but the keys are reached by different mechanisms ' +
+        'and cannot be re-pointed at one another.',
+    },
+    {
+      keys: ['errors.entityInvite', 'homeManagement.cardInvite'],
+      reason:
+        'The English is one word for two roles: es "Invitación" vs ' +
+        '"Invitar"; it "Invito" vs "Invita"; sq "Ftesë" vs "Fto". One ' +
+        'form would be wrong in the other context, so the distinction ' +
+        'belongs in the key rather than in a runtime parameter.',
+    },
+    {
+      keys: [
+        'loading.loading',
+        'shoppingListScreens.loading',
+        'pantrySettings.loading',
+        'listTemplate.loading',
+      ],
+      reason:
+        'Same string, but the keys are reached by different mechanisms ' +
+        'and cannot be re-pointed at one another.',
+    },
+    {
+      keys: ['labels.back', 'itemPhotos.perspective.back'],
+      reason:
+        'The English is one word for two roles: es "Atrás" vs ' +
+        '"Reverso"; it "Indietro" vs "Retro"; sq "Mbrapa" vs "Prapa". ' +
+        'One form would be wrong in the other context, so the ' +
+        'distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'labels.pantry',
+        'notifications.categoryPantry',
+        'navigation.tabs.pantry',
+        'pantryScreen.tabPantry',
+        'homeManagement.statsPantry_one',
+      ],
+      reason:
+        'The English is one word for two roles: sq "Qilari" vs "Qilar". ' +
+        'One form would be wrong in the other context, so the ' +
+        'distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'labels.default',
+        'recipes.defaultBadge',
+        'appearance.colorDefault',
+        'appearance.fontDefault',
+        'moveToPantry.defaultLabel',
+        'homeManagement.cardDefault',
+        'storageLocationCard.default',
+      ],
+      reason:
+        'The English is one word for two roles: es "Predeterminado" vs ' +
+        '"Predeterminada"; it "Predefinito" vs "Predefinita"; sq "I ' +
+        'parazgjedhur" vs "Parazgjedhur" vs "Të parazgjedhura". One ' +
+        'form would be wrong in the other context, so the distinction ' +
+        'belongs in the key rather than in a runtime parameter.',
+    },
+    {
+      keys: [
+        'recipes.description',
+        'mealPlan.description',
+        'saveAsTemplate.descriptionLabel',
+        'mealTemplateBuilder.description',
+        'addItemForm.fields.description.label',
+      ],
+      reason:
+        'The English is one word for two roles: sq "Përshkrim" vs ' +
+        '"Përshkrimi". One form would be wrong in the other context, so ' +
+        'the distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: ['recipes.healthGoals', 'dietaryProfile.goalsTitle'],
+      reason:
+        'The English is one word for two roles: sq "Synimet ' +
+        'shëndetësore" vs "Synime shëndetësore". One form would be ' +
+        'wrong in the other context, so the distinction belongs in the ' +
+        'key rather than in a runtime parameter.',
+    },
+    {
+      keys: [
+        'recipes.notes',
+        'pantryItemDetail.notes',
+        'shoppingListScreens.notes',
+        'manageRecipe.notes',
+        'recordWaste.notes',
+        'restockItem.notes',
+        'consumeItem.notes',
+        'addToPantry.notes',
+        'itemForm.notes',
+      ],
+      reason:
+        'The English is one word for two roles: sq "Shënime" vs ' +
+        '"Shënimet". One form would be wrong in the other context, so ' +
+        'the distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: ['recipes.optional', 'ingredientMatch.optional'],
+      reason:
+        'The English is one word for two roles: sq "Opsionale" vs ' +
+        '"Opsional". One form would be wrong in the other context, so ' +
+        'the distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'recipes.tags',
+        'recipes.recipeTags',
+        'pantryItemDetail.tags',
+        'manageRecipe.tags',
+        'mealTemplateBuilder.tags',
+        'addToPantry.tags',
+        'addItemForm.fields.tags.label',
+        'itemForm.tags',
+      ],
+      reason:
+        'The English is one word for two roles: sq "Etiketa" vs ' +
+        '"Etiketat". One form would be wrong in the other context, so ' +
+        'the distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'recipes.nutritionTitle',
+        'pantryItemDetail.nutrition',
+        'itemPhotos.perspective.nutrition_label',
+      ],
+      reason:
+        'The English is one word for two roles: it "Valori ' +
+        'nutrizionali" vs "Nutrizione"; sq "Ushqyerja" vs "Ushqyesit". ' +
+        'One form would be wrong in the other context, so the ' +
+        'distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'recipes.vegetarian',
+        'recipes.diet.VEGETARIAN',
+        'recipeFilters.diets.vegetarian',
+        'addMealSheet.dietVegetarian',
+        'dietaryProfile.diets.vegetarian',
+      ],
+      reason:
+        'The English is one word for two roles: es "Vegetariana" vs ' +
+        '"Vegetariano"; it "Vegetariana" vs "Vegetariano"; sq ' +
+        '"Vegjetariane" vs "Vegjetarian". One form would be wrong in ' +
+        'the other context, so the distinction belongs in the key ' +
+        'rather than in a runtime parameter.',
+    },
+    {
+      keys: [
+        'recipes.vegan',
+        'recipes.diet.VEGAN',
+        'recipeFilters.diets.vegan',
+        'addMealSheet.dietVegan',
+        'dietaryProfile.diets.vegan',
+      ],
+      reason:
+        'The English is one word for two roles: es "Vegana" vs ' +
+        '"Vegano"; it "Vegana" vs "Vegano"; sq "Vegane" vs "Vegan". One ' +
+        'form would be wrong in the other context, so the distinction ' +
+        'belongs in the key rather than in a runtime parameter.',
+    },
+    {
+      keys: [
+        'recipes.filterAll',
+        'notifications.categoryAll',
+        'templateBrowser.categoryAll',
+        'pantryScreen.tabAll',
+        'pantryTabs.all',
+      ],
+      reason:
+        'The English is one word for two roles: es "Todas" vs "Todos"; ' +
+        'it "Tutte" vs "Tutti". One form would be wrong in the other ' +
+        'context, so the distinction belongs in the key rather than in ' +
+        'a runtime parameter.',
+    },
+    {
+      keys: [
+        'recipes.listItemCount_one',
+        'storageLocations.itemSingular',
+        'pantryScreen.itemCount_one',
+        'storageLocationCard.itemCount_one',
+      ],
+      reason:
+        'The English is one word for two roles: it "{{count}} elemento" ' +
+        'vs "{{count}} articolo". One form would be wrong in the other ' +
+        'context, so the distinction belongs in the key rather than in ' +
+        'a runtime parameter.',
+    },
+    {
+      keys: [
+        'recipes.listItemCount_other',
+        'pantrySettings.itemsCount',
+        'storageLocations.itemPlural',
+        'generateShoppingList.itemsCount',
+        'pantryScreen.itemCount_other',
+        'storageLocationCard.itemCount_other',
+      ],
+      reason:
+        'The English is one word for two roles: it "{{count}} elementi" ' +
+        'vs "{{count}} articoli". One form would be wrong in the other ' +
+        'context, so the distinction belongs in the key rather than in ' +
+        'a runtime parameter.',
+    },
+    {
+      keys: [
+        'recipes.diet.LACTO_VEGETARIAN',
+        'dietaryProfile.diets.lactoVegetarian',
+      ],
+      reason:
+        'The English is one word for two roles: es "Lacto-vegetariano" ' +
+        'vs "Lacto-vegetariana"; it "Latto-vegetariano" vs ' +
+        '"Latto-vegetariana"; sq "Lakto-vegjetarian" vs ' +
+        '"Lakto-vegjetariane". One form would be wrong in the other ' +
+        'context, so the distinction belongs in the key rather than in ' +
+        'a runtime parameter.',
+    },
+    {
+      keys: [
+        'recipes.diet.OVO_VEGETARIAN',
+        'dietaryProfile.diets.ovoVegetarian',
+      ],
+      reason:
+        'The English is one word for two roles: es "Ovo-vegetariano" vs ' +
+        '"Ovo-vegetariana"; it "Ovo-vegetariano" vs "Ovo-vegetariana"; ' +
+        'sq "Ovo-vegjetarian" vs "Ovo-vegjetariane". One form would be ' +
+        'wrong in the other context, so the distinction belongs in the ' +
+        'key rather than in a runtime parameter.',
+    },
+    {
+      keys: [
+        'recipes.diet.PESCETARIAN',
+        'recipeFilters.diets.pescetarian',
+        'dietaryProfile.diets.pescetarian',
+      ],
+      reason:
+        'The English is one word for two roles: es "Pescetariano" vs ' +
+        '"Pescetariana"; it "Pescetariano" vs "Pescetariana"; sq ' +
+        '"Peshkatar" vs "Pescetariane" vs "Peshkatariane". One form ' +
+        'would be wrong in the other context, so the distinction ' +
+        'belongs in the key rather than in a runtime parameter.',
+    },
+    {
+      keys: [
+        'recipes.diet.PRIMAL',
+        'recipeFilters.diets.primal',
+        'dietaryProfile.diets.primal',
+      ],
+      reason:
+        'The English is one word for two roles: sq "Primal" vs ' +
+        '"Primale". One form would be wrong in the other context, so ' +
+        'the distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'recipes.intolerance.EGG',
+        'recipeFilters.intolerances.egg',
+        'dietaryProfile.intolerances.egg',
+      ],
+      reason:
+        'The English is one word for two roles: it "Uovo" vs "Uova". ' +
+        'One form would be wrong in the other context, so the ' +
+        'distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'recipes.intolerance.SULFITE',
+        'recipeFilters.intolerances.sulfite',
+        'dietaryProfile.intolerances.sulfite',
+      ],
+      reason:
+        'The English is one word for two roles: es "Sulfito" vs ' +
+        '"Sulfitos"; it "Solfito" vs "Solfiti"; sq "Sulfit" vs ' +
+        '"Sulfite". One form would be wrong in the other context, so ' +
+        'the distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'recipes.macroProtein',
+        'dietary.protein',
+        'nutritionSummary.macroProtein',
+      ],
+      reason:
+        'The English is one word for two roles: es "Proteínas" vs ' +
+        '"Proteína"; sq "Proteina" vs "Proteinë". One form would be ' +
+        'wrong in the other context, so the distinction belongs in the ' +
+        'key rather than in a runtime parameter.',
+    },
+    {
+      keys: ['recipes.macroFat', 'dietary.fat', 'nutritionSummary.macroFat'],
+      reason:
+        'The English is one word for two roles: es "Grasas" vs "Grasa"; ' +
+        'sq "Yndyra" vs "Yndyrë". One form would be wrong in the other ' +
+        'context, so the distinction belongs in the key rather than in ' +
+        'a runtime parameter.',
+    },
+    {
+      keys: [
+        'recipes.servingsCount_other',
+        'addMealSheet.servings',
+        'mealPlanItem.servings',
+        'templateCard.servings',
+      ],
+      reason:
+        'The English is one word for two roles: sq "{{count}} pjesë" vs ' +
+        '"{{count}} racione". One form would be wrong in the other ' +
+        'context, so the distinction belongs in the key rather than in ' +
+        'a runtime parameter.',
+    },
+    {
+      keys: [
+        'pantryItemDetail.fields.purchased',
+        'shoppingListScreens.purchased',
+        'addToPantry.methodPurchased',
+        'shoppingListScreen.tabPurchased',
+      ],
+      reason:
+        'The English is one word for two roles: es "Comprado" vs ' +
+        '"Comprados"; it "Acquistato" vs "Acquistati"; sq "Blerë" vs ' +
+        '"Të blera". One form would be wrong in the other context, so ' +
+        'the distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'pantryItemDetail.fields.added',
+        'pantryAnalytics.added',
+        'barcode.added',
+      ],
+      reason:
+        'The English is one word for two roles: sq "Shtuar" vs "Të ' +
+        'shtuar" vs "U shtua". One form would be wrong in the other ' +
+        'context, so the distinction belongs in the key rather than in ' +
+        'a runtime parameter.',
+    },
+    {
+      keys: [
+        'pantryItemDetail.batch.wasted',
+        'pantryAnalytics.wasted',
+        'usagePurpose.WASTE',
+      ],
+      reason:
+        'The English is one word for two roles: sq "Shpenzuar" vs "Të ' +
+        'humbur" vs "Hedhur". One form would be wrong in the other ' +
+        'context, so the distinction belongs in the key rather than in ' +
+        'a runtime parameter.',
+    },
+    {
+      keys: [
+        'pantryItemDetail.batch.expired',
+        'shoppingListScreens.statusExpired',
+        'pantryAnalytics.reasonExpired',
+        'filteredPantry.expired',
+        'recordWaste.reasonExpired',
+        'addToPantry.conditionExpired',
+        'expiration.expired',
+      ],
+      reason:
+        'The English is one word for two roles: es "Caducado" vs ' +
+        '"Caducada"; it "Scaduto" vs "Scaduta"; sq "Skaduar" vs "I ' +
+        'skaduar". One form would be wrong in the other context, so the ' +
+        'distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: ['shoppingListScreens.membersCount', 'joinHome.memberCount_other'],
+      reason:
+        'Same string, but the keys are reached by different mechanisms ' +
+        'and cannot be re-pointed at one another.',
+    },
+    {
+      keys: [
+        'shoppingListScreens.deleteListConfirmMessage',
+        'shoppingListSelector.deleteAlertMessage_one',
+      ],
+      reason:
+        'Same string, but the keys are reached by different mechanisms ' +
+        'and cannot be re-pointed at one another.',
+    },
+    {
+      keys: [
+        'shoppingListScreens.patternDaily',
+        'pantryAnalytics.granularityDaily',
+      ],
+      reason:
+        'The English is one word for two roles: es "Diariamente" vs ' +
+        '"Diario"; it "Ogni giorno" vs "Giornaliero"; sq "Çdo ditë" vs ' +
+        '"Ditore". One form would be wrong in the other context, so the ' +
+        'distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'shoppingListScreens.patternWeekly',
+        'mealPlan.weekly',
+        'pantryAnalytics.granularityWeekly',
+        'saveAsTemplate.categoryWeekly',
+      ],
+      reason:
+        'The English is one word for two roles: es "Semanalmente" vs ' +
+        '"Semanal"; it "Ogni settimana" vs "Settimanale"; sq "Çdo javë" ' +
+        'vs "Javor" vs "Javore". One form would be wrong in the other ' +
+        'context, so the distinction belongs in the key rather than in ' +
+        'a runtime parameter.',
+    },
+    {
+      keys: [
+        'shoppingListScreens.patternMonthly',
+        'mealPlan.monthly',
+        'pantryAnalytics.granularityMonthly',
+        'saveAsTemplate.categoryMonthly',
+      ],
+      reason:
+        'The English is one word for two roles: es "Mensualmente" vs ' +
+        '"Mensual"; it "Ogni mese" vs "Mensile"; sq "Çdo muaj" vs ' +
+        '"Mujor" vs "Mujore". One form would be wrong in the other ' +
+        'context, so the distinction belongs in the key rather than in ' +
+        'a runtime parameter.',
+    },
+    {
+      keys: [
+        'shoppingListScreens.patternCustom',
+        'storageLocationForm.typeCustom',
+        'saveAsTemplate.categoryCustom',
+        'templatePreview.customMeal',
+      ],
+      reason:
+        'The English is one word for two roles: es "Personalizado" vs ' +
+        '"Personalizada"; it "Personalizzato" vs "Personalizzata"; sq ' +
+        '"E personalizuar" vs "I personalizuar". One form would be ' +
+        'wrong in the other context, so the distinction belongs in the ' +
+        'key rather than in a runtime parameter.',
+    },
+    {
+      keys: [
+        'shoppingListScreens.listStatusActive',
+        'shoppingListScreens.statusActive',
+        'mealPlanSelector.filterActive',
+      ],
+      reason:
+        'The English is one word for two roles: es "Activa" vs "Activo" ' +
+        'vs "Activos"; it "Attiva" vs "Attivo" vs "Attivi"; sq "Aktive" ' +
+        'vs "Aktiv" vs "Aktivë". One form would be wrong in the other ' +
+        'context, so the distinction belongs in the key rather than in ' +
+        'a runtime parameter.',
+    },
+    {
+      keys: [
+        'shoppingListScreens.listStatusTemplate',
+        'mealPlanSelector.createFromTemplate',
+      ],
+      reason:
+        'The English is one word for two roles: sq "Model" vs "Modeli". ' +
+        'One form would be wrong in the other context, so the ' +
+        'distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'shoppingListScreens.owner',
+        'inviteUser.roleOwnerLabel',
+        'roles.owner',
+        'collaboratorRoles.owner',
+        'homeRoles.owner',
+      ],
+      reason:
+        'The English is one word for two roles: sq "Pronari" vs ' +
+        '"Pronar". One form would be wrong in the other context, so the ' +
+        'distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'shoppingListScreens.estimatedPricePlaceholder',
+        'addToPantry.costPlaceholder',
+      ],
+      reason:
+        'The English is one word for two roles: es "p. ej., 4,99" vs ' +
+        '"ej., 4,99". One form would be wrong in the other context, so ' +
+        'the distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: ['mealPlan.personal', 'mealPlanSelector.personalSubtitle'],
+      reason:
+        'The English is one word for two roles: sq "Personale" vs ' +
+        '"Personal". One form would be wrong in the other context, so ' +
+        'the distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: ['pantryAnalytics.tabWaste', 'pantryAnalytics.purposeWaste'],
+      reason:
+        'The English is one word for two roles: it "Sprechi" vs ' +
+        '"Spreco"; sq "Mbeturinat" vs "Mbeturinë". One form would be ' +
+        'wrong in the other context, so the distinction belongs in the ' +
+        'key rather than in a runtime parameter.',
+    },
+    {
+      keys: ['pantryAnalytics.composted', 'recordWaste.composted'],
+      reason:
+        'The English is one word for two roles: sq "Kompostuar" vs "Të ' +
+        'kompostuara". One form would be wrong in the other context, so ' +
+        'the distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'pantryAnalytics.consumed',
+        'expirationAction.consumed',
+        'usagePurpose.GENERAL',
+      ],
+      reason:
+        'The English is one word for two roles: sq "Të konsumuar" vs ' +
+        '"Konsumuar". One form would be wrong in the other context, so ' +
+        'the distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'pantryAnalytics.purposeCooking',
+        'consumeItem.purposeCooking',
+        'usagePurpose.COOKING',
+      ],
+      reason:
+        'The English is one word for two roles: es "Cocina" vs ' +
+        '"Cocinar" vs "Cocinado"; it "Cucina" vs "Cucinato"; sq "Gatim" ' +
+        'vs "Gatuar". One form would be wrong in the other context, so ' +
+        'the distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'pantryAnalytics.purposeRestock',
+        'restockItem.restock',
+        'duplicateItem.restock',
+        'swipeActions.restock',
+      ],
+      reason:
+        'The English is one word for two roles: es "Reabastecimiento" ' +
+        'vs "Reponer"; it "Riassortimento" vs "Rifornisci"; sq ' +
+        '"Riblerje" vs "Riplotëso". One form would be wrong in the ' +
+        'other context, so the distinction belongs in the key rather ' +
+        'than in a runtime parameter.',
+    },
+    {
+      keys: [
+        'pantryAnalytics.purposeTransfer',
+        'consumeItem.purposeTransfer',
+        'homeDetail.transferOwnershipConfirm',
+        'usagePurpose.TRANSFER',
+      ],
+      reason:
+        'The English is one word for two roles: es "Transferencia" vs ' +
+        '"Traslado" vs "Transferir"; it "Trasferimento" vs ' +
+        '"Trasferisci"; sq "Transferim" vs "Transfero". One form would ' +
+        'be wrong in the other context, so the distinction belongs in ' +
+        'the key rather than in a runtime parameter.',
+    },
+    {
+      keys: ['pantryAnalytics.reasonBurnt', 'recordWaste.reasonBurnt'],
+      reason:
+        'The English is one word for two roles: sq "I djegur" vs ' +
+        '"Djegur". One form would be wrong in the other context, so the ' +
+        'distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: ['pantryAnalytics.reasonSpilled', 'recordWaste.reasonSpilled'],
+      reason:
+        'The English is one word for two roles: sq "I derdhur" vs ' +
+        '"Derdhur". One form would be wrong in the other context, so ' +
+        'the distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'pantryAnalytics.reasonSpoiled',
+        'recordWaste.reasonSpoiled',
+        'addToPantry.conditionSpoiled',
+      ],
+      reason:
+        'The English is one word for two roles: es "Estropeado" vs ' +
+        '"Estropeada"; it "Andato a male" vs "Andata a male"; sq "I ' +
+        'prishur" vs "Prishur". One form would be wrong in the other ' +
+        'context, so the distinction belongs in the key rather than in ' +
+        'a runtime parameter.',
+    },
+    {
+      keys: [
+        'notifications.categoryShopping',
+        'shoppingListScreen.tabShopping',
+      ],
+      reason:
+        'The English is one word for two roles: es "Compras" vs "Por ' +
+        'comprar"; it "Spesa" vs "Da comprare"; sq "Blerjet" vs "Për të ' +
+        'blerë". One form would be wrong in the other context, so the ' +
+        'distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'dietary.title',
+        'profile.sections.dietaryProfile',
+        'profile.labels.dietaryProfile',
+      ],
+      reason:
+        'The English is one word for two roles: es "Perfil alimentario" ' +
+        'vs "Perfil alimenticio". One form would be wrong in the other ' +
+        'context, so the distinction belongs in the key rather than in ' +
+        'a runtime parameter.',
+    },
+    {
+      keys: [
+        'onBoarding.createList',
+        'addItemSheet.createList',
+        'shoppingListScreen.noListsAction',
+      ],
+      reason:
+        'The English is one word for two roles: sq "Krijo listën" vs ' +
+        '"Krijo listë" vs "Krijo Listë". One form would be wrong in the ' +
+        'other context, so the distinction belongs in the key rather ' +
+        'than in a runtime parameter.',
+    },
+    {
+      keys: ['filteredPantry.expiresInDays', 'expiration.expiresInDays_other'],
+      reason:
+        'Same string, but the keys are reached by different mechanisms ' +
+        'and cannot be re-pointed at one another.',
+    },
+    {
+      keys: ['nutritionGoal.labelFatG', 'macroTargets.fat'],
+      reason:
+        'The English is one word for two roles: sq "Yndyrë (g)" vs ' +
+        '"Yndyrna (g)". One form would be wrong in the other context, ' +
+        'so the distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: ['manageRecipe.tagsPlaceholder', 'saveRecipe.tagsPlaceholder'],
+      reason:
+        'The English is one word for two roles: es "Añadir ' +
+        'etiquetas..." vs "Añade etiquetas...". One form would be wrong ' +
+        'in the other context, so the distinction belongs in the key ' +
+        'rather than in a runtime parameter.',
+    },
+    {
+      keys: ['homeManagement.modeCreate', 'onboardingSteps.CreateHome.title'],
+      reason:
+        'The English is one word for two roles: sq "Krijo Shtëpi" vs ' +
+        '"Krijo shtëpinë". One form would be wrong in the other ' +
+        'context, so the distinction belongs in the key rather than in ' +
+        'a runtime parameter.',
+    },
+    {
+      keys: [
+        'homeManagement.statsMember_other',
+        'homeManagement.cardMembersSectionTitle',
+      ],
+      reason:
+        'The English is one word for two roles: sq "Anëtarë" vs ' +
+        '"Anëtarët". One form would be wrong in the other context, so ' +
+        'the distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: ['addItemForm.fields.upc.label', 'barcode.upc'],
+      reason:
+        'The English is one word for two roles: sq "UPC/Barkodi" vs ' +
+        '"UPC/Barkod". One form would be wrong in the other context, so ' +
+        'the distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: ['netWeightEntry.weightLabel', 'unitType.WEIGHT'],
+      reason:
+        'The English is one word for two roles: sq "Pesha" vs "Peshë". ' +
+        'One form would be wrong in the other context, so the ' +
+        'distinction belongs in the key rather than in a runtime ' +
+        'parameter.',
+    },
+    {
+      keys: [
+        'itemSubtitle.contentUnitCount_one',
+        'itemSubtitle.contentUnitCount_other',
+      ],
+      reason:
+        'Same string, but the keys are reached by different mechanisms ' +
+        'and cannot be re-pointed at one another.',
+    },
+    {
+      keys: [
+        'suggestItemEdit.rejectedTitle',
+        'suggestItemEdit.failedTitle',
+        'reportItem.rejectedTitle',
+        'reportItem.failedTitle',
+      ],
+      reason: COMPOSED_KEY_REASON,
+    },
+    {
+      keys: [
+        'itemPhotos.setPrimary.rejectedTitle',
+        'itemPhotos.setPrimary.failedTitle',
+      ],
+      reason: COMPOSED_KEY_REASON,
+    },
+  ];
 
 const flatten = (obj: unknown, prefix = ''): Record<string, string> => {
   const out: Record<string, string> = {};
@@ -646,6 +880,7 @@ const RUNTIME_COMPOSED_NAMESPACES = [
   'auth',
   'baseDimension',
   'commonValidation',
+  'cookingPreferences.skillLevels',
   'cuisines',
   'errors.codes',
   'errors.field',
@@ -667,7 +902,11 @@ const RUNTIME_COMPOSED_NAMESPACES = [
   'unitType',
   'usagePurpose',
 ];
-const ALERT_PREFIXES = ['suggestItemEdit', 'reportItem', 'itemPhotos.setPrimary'];
+const ALERT_PREFIXES = [
+  'suggestItemEdit',
+  'reportItem',
+  'itemPhotos.setPrimary',
+];
 const ALERT_SUFFIXES = [
   'notFoundTitle',
   'notFoundBody',
@@ -708,8 +947,12 @@ describe('shared copy has one canonical home', () => {
       .filter(([, keys]) => keys.some(isCanonical))
       .map(
         ([value, keys]) =>
-          `${JSON.stringify(value)}\n    canonical: ${keys.filter(isCanonical).join(', ')}` +
-          `\n    redeclared as: ${keys.filter(k => !isCanonical(k)).join(', ')}`,
+          `${JSON.stringify(value)}\n    canonical: ${keys
+            .filter(isCanonical)
+            .join(', ')}` +
+          `\n    redeclared as: ${keys
+            .filter(k => !isCanonical(k))
+            .join(', ')}`,
       );
 
     expect(offenders).toEqual([]);
@@ -748,9 +991,7 @@ describe('shared copy has one canonical home', () => {
     // would go on excusing a future duplicate that happened to match.
     const stale = INTENTIONAL.filter(entry => {
       const values = entry.keys.map(k => en[k]);
-      return (
-        values.some(v => v === undefined) || new Set(values).size !== 1
-      );
+      return values.some(v => v === undefined) || new Set(values).size !== 1;
     }).map(entry => entry.keys.join(', '));
 
     expect(stale).toEqual([]);

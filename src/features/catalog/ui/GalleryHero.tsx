@@ -45,9 +45,9 @@ export const GalleryHero: React.FC<GalleryHeroProps> = ({
   />
 );
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
   heroInner: {
-    borderRadius: 0,
+    borderRadius: theme.radii.none,
     borderCurve: 'continuous',
   },
-});
+}));

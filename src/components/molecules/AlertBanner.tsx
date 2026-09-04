@@ -47,16 +47,16 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
             library={iconLibrary}
           />
         ) : (
-          <Text size="base">{icon}</Text>
+          <Text>{icon}</Text>
         )}
       </View>
 
       <View style={styles.content}>
-        <Text size="sm" weight="semibold" style={styles.title}>
+        <Text role="label" style={styles.title}>
           {title}
         </Text>
         {!!subtitle && (
-          <Text size="xs" style={styles.subtitle}>
+          <Text role="caption" style={styles.subtitle}>
             {subtitle}
           </Text>
         )}
@@ -83,14 +83,14 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing['3'],
+    padding: theme.spacing.base,
     paddingRight: theme.spacing.md,
     marginHorizontal: theme.spacing.md,
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.md,
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     variants: {
       variant: {
         error: {
@@ -119,7 +119,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing['2.5'],
+    marginRight: theme.spacing.smPlus,
     variants: {
       variant: {
         error: { backgroundColor: theme.colors.alertBanner.error.iconBg },

@@ -18,30 +18,37 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { useMealPlanItemActions } from '../useMealPlanItemActions';
+import { MealPlanItemActions_OptimisticFullItemFragmentDoc } from '../useMealPlanItemActions.generated';
 
 const seedToggleItem = (overrides: Record<string, unknown> = {}) =>
   seedCache([
     {
-      __typename: 'MealPlanItem' as const,
-      id: 'mpi-1',
-      isCompleted: false,
-      completedAt: null,
-      servings: 1,
-      notes: null,
-      customMealName: null,
-      calories: null,
-      usedPantryItems: [],
-      mealType: 'DINNER',
-      date: '2025-06-15',
-      recipe: {
-        __typename: 'Recipe' as const,
-        id: 'r-1',
-        name: 'Pasta',
+      // The compound selection `toggleCompleted` reads back, so a fixture too
+      // thin for it fails here rather than reverting the optimistic write.
+      fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
+      fragmentName: 'MealPlanItemActions_optimisticFullItem',
+      data: {
+        __typename: 'MealPlanItem' as const,
+        id: 'mpi-1',
+        isCompleted: false,
+        completedAt: null,
         servings: 1,
-        imageUrl: null,
-        totalTimeMinutes: 0,
+        notes: null,
+        customMealName: null,
+        calories: null,
+        usedPantryItems: [],
+        mealType: 'DINNER',
+        date: '2025-06-15',
+        recipe: {
+          __typename: 'Recipe' as const,
+          id: 'r-1',
+          name: 'Pasta',
+          servings: 1,
+          imageUrl: null,
+          totalTimeMinutes: 0,
+        },
+        ...overrides,
       },
-      ...overrides,
     },
   ]);
 

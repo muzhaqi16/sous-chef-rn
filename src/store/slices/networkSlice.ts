@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { RootState } from '../index';
+import type { RootState } from '../index';
 import { storage } from '#/storage/mmkv';
 
 const OFFLINE_MODE_KEY = 'user_offline_mode';

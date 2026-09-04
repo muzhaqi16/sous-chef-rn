@@ -7,7 +7,7 @@ import {
   userEvent,
 } from '@testing-library/react-native';
 import { QuantityEditSheet } from '../QuantityEditSheet';
-import type { HeaderAction } from '#/components/atoms/HeaderActionIcon';
+import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 
 type QuantityEditSheetProps = React.ComponentProps<typeof QuantityEditSheet>;
 type QuantityEditSheetItem = NonNullable<QuantityEditSheetProps['item']>;
@@ -43,7 +43,7 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#/components/molecules/Header', () => ({
+jest.mock('#components/organisms/Header', () => ({
   Header: ({
     title,
     rightActions,
@@ -94,7 +94,7 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
   },
 }));
 
-jest.mock('#/components/atoms/Chip', () => {
+jest.mock('#features/shoppingList/components/Chip', () => {
   const { Text, Pressable } = require('react-native');
   return ({
     label,

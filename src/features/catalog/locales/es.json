@@ -100,7 +100,9 @@
     "emptyTitle": "Aún no hay sugerencias",
     "emptyPantrySubtext": "Añade artículos a tu despensa para recibir sugerencias personalizadas",
     "emptyShoppingListSubtext": "Añade artículos a tu lista y aparecerán aquí para volver a añadirlos rápido",
-    "addToPantry": "Añadir a la despensa"
+    "addToPantry": "Añadir a la despensa",
+    "addManuallyWithTerm": "Añadir «{{term}}» manualmente",
+    "noMatchesAddManually": "Sin coincidencias. Añadir «{{term}}» manualmente"
   },
   "storageLocationSheet": {
     "editTitle": "Editar ubicación de almacenamiento",
@@ -335,7 +337,8 @@
     "quantityUnit": "Cantidad y unidad",
     "quantityStock": "Cantidad y existencias",
     "quantityRequired": "Cantidad *",
-    "quantityCurrent": "Cantidad actual"
+    "quantityCurrent": "Cantidad actual",
+    "placeholderBrand": "p. ej., Kellogg’s"
   },
   "folderPicker": {
     "selectFolder": "Seleccionar carpeta",
@@ -400,7 +403,8 @@
     "typeMoreToAddBrand": "Sigue escribiendo para añadir «{{term}}» como marca personalizada",
     "typeMoreToAddStore": "Sigue escribiendo para añadir «{{term}}» como tienda personalizada",
     "typeAtLeastTwo": "Escribe al menos 2 caracteres para buscar",
-    "tryDifferentTerm": "Prueba con otro término de búsqueda"
+    "tryDifferentTerm": "Prueba con otro término de búsqueda",
+    "typeMoreToAddCategory": "Sigue escribiendo para usar «{{term}}» como categoría personalizada"
   },
   "unitEntryList": {
     "title": "Unidades",

@@ -39,7 +39,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
         >
           <Icon name="star-outline" size={22} tone="textSecondary" />
           <Text
-            size="xs"
+            role="caption"
             tone="secondary"
             numberOfLines={2}
             style={styles.actionText}
@@ -56,7 +56,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
         >
           <Icon name="person-add" size={22} tone="textSecondary" />
           <Text
-            size="xs"
+            role="caption"
             tone="secondary"
             numberOfLines={2}
             style={styles.actionText}
@@ -73,7 +73,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
         >
           <Icon name="trash-outline" size={22} tone="error" />
           <Text
-            size="xs"
+            role="caption"
             tone="error"
             numberOfLines={2}
             style={styles.actionText}
@@ -90,8 +90,8 @@ const styles = StyleSheet.create(theme => ({
   homeActions: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
-    paddingTop: theme.spacing['3'],
-    borderTopWidth: 1,
+    paddingTop: theme.spacing.base,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
   },
   actionButton: {
@@ -116,7 +116,6 @@ const styles = StyleSheet.create(theme => ({
     // Text defaults to variant="body", whose lineHeight of 24 survives the
     // size="xs" override — on a two-line label that alone adds 18dp of dead
     // height to the row.
-    lineHeight: theme.fonts.size.xs * 1.25,
     textAlign: 'center',
   },
 }));

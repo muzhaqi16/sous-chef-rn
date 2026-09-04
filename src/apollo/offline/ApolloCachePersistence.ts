@@ -1,17 +1,17 @@
 import type { NormalizedCacheObject } from '@apollo/client';
-import { storage, isStorageReady } from '#storage/mmkv';
+import { storage, isStorageReady, isRecoveryStorage } from '#storage/mmkv';
 import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
 
 const CACHE_STORAGE_KEY = 'apollo-cache-v1';
 const CACHE_VERSION_KEY = 'apollo-cache-version';
 /**
- * The SHAPE of a persisted blob, not the app that wrote it — keying on app
- * version would purge the cache on every update. Bump by hand when a `cache.ts`
- * change makes persisted data unsafe; `cacheSchemaVersion.test.ts` fails on any
- * edit to that file until the decision has been made.
+ * The SHAPE of a persisted blob, not the app that wrote it. Bump by hand for a
+ * `cache.ts` change that makes old data unsafe, OR a server change that
+ * redefines what persisted data means — retired ids and rewritten values parse
+ * cleanly and are still wrong. `cacheSchemaVersion.test.ts` pins it.
  */
-const CURRENT_CACHE_VERSION = 'shape-1';
+const CURRENT_CACHE_VERSION = 'shape-2';
 
 /**
  * Keys from a retired split-blob scheme. Kept so `load()` can migrate an install
@@ -169,6 +169,11 @@ class ApolloCachePersistence {
    * one extract happens per window rather than one per cache operation.
    */
   scheduleExtractAndSave(extractor: () => NormalizedCacheObject): void {
+    // The cache holds server data — names, emails, household membership. On the
+    // unencrypted recovery instance the session may continue, but none of that
+    // may reach disk. Returning BEFORE the debounce also leaves no timer to
+    // fire after the decision was made.
+    if (isRecoveryStorage()) return;
     if (this.paused) {
       this.pendingWhilePaused = true;
       this.pausedExtractor = extractor;
@@ -276,6 +281,7 @@ class ApolloCachePersistence {
    * @param cache - Normalized cache object from cache.extract()
    */
   saveImmediate(cache: NormalizedCacheObject): void {
+    if (isRecoveryStorage()) return;
     // Clear pending debounced save
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);
@@ -416,3 +422,12 @@ class ApolloCachePersistence {
  * Singleton instance for global access
  */
 export const apolloCachePersistence = new ApolloCachePersistence();
+
+/**
+ * Cancel a pending debounced write. Called on sign-out, so the last few seconds
+ * of the previous account's cache never reach disk.
+ */
+export function cancelCachePersistence(): void {
+  apolloCachePersistence.cancel();
+  logger.info('🛑 Apollo: Cache persistence timer cancelled');
+}

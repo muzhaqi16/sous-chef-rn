@@ -13,6 +13,8 @@ import { SelectorItemContainer } from './SelectorItemContainer';
 import type { SelectorConfig, SelectableItem } from './types';
 import { Text } from '#components/atoms/Text';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
+import { motion } from '#/theme/foundations/motion';
+import { EmptyState } from '#components/molecules/EmptyState';
 
 interface SelectorContentProps<T extends SelectableItem> {
   config: SelectorConfig<T>;
@@ -23,20 +25,12 @@ const LoadingState = () => {
   return (
     <Animated.View entering={FadeIn} style={styles.loadingContainer}>
       <ThemedActivityIndicator size="large" />
-      <Text size="md" tone="secondary" style={styles.loadingText}>
+      <Text tone="secondary" style={styles.loadingText}>
         {t('loading.loading')}
       </Text>
     </Animated.View>
   );
 };
-
-const EmptyState: React.FC<{ message: string }> = ({ message }) => (
-  <Animated.View entering={FadeIn} style={styles.emptyContainer}>
-    <Text size="md" tone="secondary" align="center">
-      {message}
-    </Text>
-  </Animated.View>
-);
 
 export const SelectorContent = <T extends SelectableItem>({
   config,
@@ -115,7 +109,9 @@ export const SelectorContent = <T extends SelectableItem>({
           {String(item[displayProperty])}
         </Text>
         {!!isSelected && (
-          <Animated.View entering={FadeInUp.duration(200).springify()}>
+          <Animated.View
+            entering={FadeInUp.duration(motion.timing.STANDARD).springify()}
+          >
             <Icon name="checkmark" size={18} tone="primary" />
           </Animated.View>
         )}
@@ -132,7 +128,9 @@ export const SelectorContent = <T extends SelectableItem>({
     return (
       <Animated.View layout={LinearTransition} style={styles.container}>
         {listHeader}
-        <EmptyState message={emptyMessage} />
+        <Animated.View entering={FadeIn}>
+          <EmptyState size="compact" title={emptyMessage} />
+        </Animated.View>
       </Animated.View>
     );
   }
@@ -168,12 +166,6 @@ const styles = StyleSheet.create(theme => ({
   },
   loadingText: {
     marginTop: theme.spacing.md,
-  },
-  emptyContainer: {
-    minHeight: 120,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xl,
   },
   defaultItemText: {
     flex: 1,

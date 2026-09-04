@@ -1246,6 +1246,9 @@ mutation SyncShoppingListItem($input: SyncShoppingListItemInput!) {
     ... on ValidationError {
       field
     }
+    ... on NotFoundError {
+      resource
+    }
   }
 }
 
@@ -1273,6 +1276,9 @@ mutation SyncDeleteShoppingListItem($input: SyncDeleteShoppingListItemInput!) {
     }
     ... on ValidationError {
       field
+    }
+    ... on NotFoundError {
+      resource
     }
   }
 }
@@ -1306,6 +1312,9 @@ mutation SyncMoveShoppingListItem($input: SyncMoveShoppingListItemInput!) {
     }
     ... on ValidationError {
       field
+    }
+    ... on NotFoundError {
+      resource
     }
   }
 }

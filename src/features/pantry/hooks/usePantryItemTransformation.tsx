@@ -4,12 +4,8 @@ import { StorageState } from '#/graphql/generated/schemaTypes';
 // render the result are responsible for re-running these on a language change.
 import { t as tGlobal } from '#/i18n';
 import type { Translate } from '#/i18n/types';
-// Plural keys need the options form, which the module-level t does not take.
-import { getI18n } from '#/i18n/config';
-import {
-  DEFAULT_CURRENCY,
-  formatCurrency as formatMoney,
-} from '#/utils/formatters/number';
+import { formatCurrency as formatMoney } from '#/utils/formatters/number';
+import { formatMonthDayYear } from '#/utils/formatters/date';
 
 // Location type for filtering
 export type PantryLocation = 'fridge' | 'freezer' | 'pantry';
@@ -67,7 +63,7 @@ export const getExpirationStatus = (
   }
   if (expiresIn < 0) {
     return {
-      text: getI18n().t('expiration.expiredDaysAgo', {
+      text: tGlobal('expiration.expiredDaysAgo', {
         count: Math.abs(expiresIn),
       }),
       type: 'expired',
@@ -81,12 +77,12 @@ export const getExpirationStatus = (
   }
   if (expiresIn <= 3) {
     return {
-      text: getI18n().t('expiration.expiresInDays', { count: expiresIn }),
+      text: tGlobal('expiration.expiresInDays', { count: expiresIn }),
       type: 'warning',
     };
   }
   return {
-    text: getI18n().t('expiration.daysLeft', { count: expiresIn }),
+    text: tGlobal('expiration.daysLeft', { count: expiresIn }),
     type: 'normal',
   };
 };
@@ -180,8 +176,12 @@ export const formatNetWeightDisplay = (
   if (!netWeight) return null;
   const unitStr = netWeightUnit?.symbol || netWeightUnit?.name || '';
 
-  // Same g→kg, ml→L upscaling as formatQuantityDisplay
-  if (netWeight >= 1000 && (unitStr === 'g' || unitStr === 'ml')) {
+  // Same g→kg, mL→L upscaling as formatQuantityDisplay — and the same
+  // case-insensitive match, the canonical symbol being `mL`.
+  if (
+    netWeight >= 1000 &&
+    (unitStr === 'g' || unitStr.toLowerCase() === 'ml')
+  ) {
     return `${(netWeight / 1000).toFixed(1)} ${unitStr === 'g' ? 'kg' : 'L'}`;
   }
 
@@ -189,21 +189,6 @@ export const formatNetWeightDisplay = (
     ? netWeight.toString()
     : netWeight.toFixed(netWeight < 10 ? 2 : 1).replace(/\.?0+$/, '');
   return `${formatted} ${unitStr}`.trim();
-};
-
-// Helper to format remaining net weight for display (e.g., "25 oz remaining")
-export const formatRemainingNetWeight = (
-  remainingNetWeight?: number | null,
-  netWeightUnit?: { symbol?: string | null; name?: string | null } | null,
-): string | null => {
-  if (remainingNetWeight == null) return null;
-  const unitStr = netWeightUnit?.symbol || netWeightUnit?.name || '';
-  const formatted = Number.isInteger(remainingNetWeight)
-    ? remainingNetWeight.toString()
-    : remainingNetWeight
-        .toFixed(remainingNetWeight < 10 ? 2 : 1)
-        .replace(/\.?0+$/, '');
-  return `${formatted} ${unitStr} remaining`.trim();
 };
 
 // Helper to format live quantity breakdown (e.g., "1 full case + 9 loose cans")
@@ -257,7 +242,7 @@ export const getExpiryInfo = (expiresAt: string | null | undefined) => {
       isUrgent: true,
     };
   return {
-    text: getI18n().t('expiration.daysToExpire', { count: diffDays }),
+    text: tGlobal('expiration.daysToExpire', { count: diffDays }),
     isExpired: false,
     isUrgent: diffDays <= 3,
   };
@@ -269,11 +254,7 @@ export const formatDate = (dateString: string | null | undefined) => {
   const date = new Date(dateString);
   // Device locale, not a hardcoded 'en-US': the day/month order and month
   // names have to match the rest of the UI.
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  return formatMonthDayYear(date);
 };
 
 // Calculate days in pantry
@@ -311,9 +292,14 @@ export const formatAcquisitionMethod = (
     .join(' ');
 };
 
-// Format a money amount for display, or null when there is no amount worth
-// showing — callers omit the row entirely rather than render a bare zero.
-export const formatCurrency = (amount?: number | null): string | null => {
-  if (amount == null || amount <= 0) return null;
-  return formatMoney(amount, DEFAULT_CURRENCY);
+// A cost, or null when the server recorded none — callers omit the row rather
+// than render an em dash beside populated ones. A cost recorded AS zero is a
+// fact somebody entered (a gift, a comped line) and is shown. Distinct from
+// `formatCurrency`, which always returns a string.
+export const formatCostOrNull = (
+  amount: number | null | undefined,
+  currency: string,
+): string | null => {
+  if (amount == null) return null;
+  return formatMoney(amount, currency);
 };

@@ -22,7 +22,7 @@ jest.mock('#components/molecules/DynamicFormFields', () => {
   };
 });
 
-jest.mock('#components/molecules/FormInput', () => ({
+jest.mock('#components/atoms/FormInput', () => ({
   FormInput: 'FormInput',
 }));
 

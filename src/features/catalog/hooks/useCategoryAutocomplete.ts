@@ -4,9 +4,9 @@ import {
   CategorySuggestion,
   CategoryType,
 } from '#/graphql/generated/schemaTypes';
-import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
+import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { useAppStore, useIsOnline } from '#store/useAppStore';
-import { filterByName } from '#/utils/arrayUtils';
+import { filterByName } from '#features/catalog/utils/arrayUtils';
 
 interface UseCategoryAutocompleteOptions {
   categoryType?: CategoryType;

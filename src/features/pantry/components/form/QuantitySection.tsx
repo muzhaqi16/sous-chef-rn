@@ -3,12 +3,12 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { Control, Controller, FieldErrors } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
-import { FormInput } from '#components/molecules/FormInput';
+import { FormInput } from '#components/atoms/FormInput';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
-import { FieldRow } from '#components/molecules/FieldRow';
-import { Text } from '#components/atoms/Text';
+import { FieldRow } from '#components/atoms/FieldRow';
 import type { PantryItemFormData } from './PantryItemForm';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
 interface QuantitySectionProps {
   control: Control<PantryItemFormData>;
@@ -34,9 +34,9 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
   const { t } = useTranslation();
   return (
     <View style={styles.section}>
-      <Text size="lg" weight="semibold" style={styles.sectionTitle}>
+      <SectionHeader style={styles.sectionTitleSpacing}>
         {t('itemForm.quantityStock')}
-      </Text>
+      </SectionHeader>
 
       {/* Row 1: Quantity + Tracking Unit */}
       <FieldRow>
@@ -112,10 +112,10 @@ const styles = StyleSheet.create(theme => ({
   section: {
     marginBottom: theme.spacing.lg,
   },
-  sectionTitle: {
+  sectionTitleSpacing: {
     marginBottom: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
 }));

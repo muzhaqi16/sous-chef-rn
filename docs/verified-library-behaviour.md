@@ -837,3 +837,86 @@ left the read incomplete — the exact case its own comment says it fixed.
 Ask the cache instead of walking the value: a strict `readFragment` of the
 selection returns `null` when the cache cannot satisfy it, which is Apollo's own
 notion of completeness and therefore the one the later read will use.
+
+### Reanimated applies reduce motion itself
+
+**Claim:** `withTiming`, `withSpring`, `withRepeat` and the entering/exiting
+builders already honour the OS "reduce motion" setting with no config and no
+call-site branch. A branch is needed only for motion a zero duration cannot
+stop — a loop's resting state, an ambient illustration, a shimmer.
+
+**Verified 2026-09-03 against `react-native-reanimated@4.6.0`.**
+`getReduceMotionFromConfig` in `animation/utilCommon.js` reads
+`!config || config === ReduceMotion.System ? isReduceMotionOnUI.value : …`, so
+an animation that passes no `reduceMotion` resolves to the device setting;
+`timing.js`, `spring/spring.js` and `repeat.js` each pass their config through
+`getReduceMotionForAnimation`, and `BaseAnimationBuilder` initialises
+`reduceMotionV = ReduceMotion.System`.
+
+This is why `src/theme/foundations/motion.ts` holds one set of tokens rather
+than a reduced twin of each: reducing them in the app would duplicate what the
+library does a layer below, and the duplicate is what goes stale.
+
+Re-check:
+
+```
+node scripts/probe-reanimated-reduce-motion.mjs
+```
+
+`src/hooks/animations/useMotionEnabled.ts` is the single `useReducedMotion`
+read, for the loop cases.
+
+### The image picker hands back a cache `file://`, and its head is sliceable
+
+**Claim:** reading an image's leading bytes with `fetch(uri)` → `blob.slice(0, n)`
+→ `FileReader.readAsDataURL` works for every URI this app's picker produces, and
+`content://` never arises. The upload confirm step verifies the object's magic
+bytes against the extension its key was minted for, so the presign must ask for
+the type the BYTES are, not the type the picker or the file name reports.
+
+**Verified on device 2026-09-04, SM-S908U1 (Android 16, API 36), against
+`react-native-image-picker@8.2.1` + RN 0.86.3 (Hermes).** Picking a photo
+through the Android Photo Picker returned
+
+```
+file:///data/user/0/dev.souschef.app/cache/rn_image_picker_lib_temp_<uuid>.png
+```
+
+— the library COPIES the selection into the app's own cache, so the app always
+reads a path it owns and no media permission is involved (the app declares
+neither `READ_MEDIA_IMAGES` nor `READ_EXTERNAL_STORAGE`). Against that URI:
+`blob.size` 99, `head.size` 12 — the slice really is bounded, not a whole-file
+read — and the decoded bytes were `89 50 4E 47 0D 0A 1A 0A 00 00 00 0D`, the PNG
+signature plus the IHDR length.
+
+Three things that do NOT work, each of which reads as the same
+`Network request failed` and so cannot be told apart by its message:
+
+- `fetch` on a `data:` URI.
+- `fetch` on a `file://` outside the app's sandbox (`/sdcard/Download/...`).
+- `fetch` on a MediaStore `content://` **for an app holding no media
+  permission** — which is why the sniffer must degrade to the reported type
+  rather than refuse, even though this app never sees one.
+
+**`global` is not bound in every Hermes scope.** `global.atob` threw
+`Property 'global' doesn't exist` on this device while bare `atob` resolved, so
+`bytesFromDataUrl` uses the bare form. The failure would have been silent: the
+sniffer reads a throw as "unreadable" and falls back to the picker's type.
+
+Re-check: connect the debugger (`argent-metro-debugger`) and evaluate
+
+```js
+(async () => {
+  const res = await fetch(PICKED_URI);          // from the picker's response
+  const head = (await res.blob()).slice(0, 12);
+  const url = await new Promise(r => {
+    const fr = new FileReader();
+    fr.onloadend = () => r(String(fr.result));
+    fr.readAsDataURL(head);
+  });
+  const bin = atob(url.slice(url.indexOf(',') + 1));
+  return Array.from({ length: 12 }, (_, i) => bin.charCodeAt(i));
+})()
+```
+
+Guarded by `src/utils/__tests__/imageValidation.test.ts` (`sniffImageMimeType`).

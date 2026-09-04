@@ -60,7 +60,7 @@ const FilterTabItemComponent: React.FC<FilterTabItemProps> = ({
         style={[styles.tab, isActive && styles.tabActive]}
       >
         <Text
-          weight="semibold"
+          role="bodyStrong"
           style={[styles.tabLabel, isActive && styles.tabLabelActive]}
         >
           {title}
@@ -70,7 +70,7 @@ const FilterTabItemComponent: React.FC<FilterTabItemProps> = ({
             style={[styles.countBadge, isActive && styles.countBadgeActive]}
           >
             <Text
-              weight="bold"
+              role="bodyStrong"
               style={[styles.countText, isActive && styles.countTextActive]}
             >
               {count}
@@ -89,25 +89,24 @@ const styles = StyleSheet.create(theme => ({
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing['3'] + 2,
+    paddingHorizontal: theme.spacing.basePlus,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
-    gap: theme.spacing.xs + 2,
+    gap: theme.spacing.xsPlus,
     backgroundColor: theme.colors.filterTab.inactiveBg,
   },
   tabActive: {
     backgroundColor: theme.colors.filterTab.activeBg,
   },
   tabLabel: {
-    fontSize: theme.typography.fontSize.sm - 1,
     color: theme.colors.filterTab.inactiveText,
   },
   tabLabelActive: {
     color: theme.colors.filterTab.activeText,
   },
   countBadge: {
-    paddingHorizontal: theme.spacing.xs + 3,
+    paddingHorizontal: theme.spacing.xsPlus,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
@@ -117,7 +116,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.filterTab.activeCountBg,
   },
   countText: {
-    fontSize: theme.typography.fontSize.xs - 1,
     color: theme.colors.filterTab.countText,
   },
   countTextActive: {

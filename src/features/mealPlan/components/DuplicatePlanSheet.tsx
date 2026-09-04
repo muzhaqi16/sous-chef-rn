@@ -2,14 +2,19 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
-import { BottomSheetLayout } from '#components/atoms/BottomSheetLayout';
+import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';
-import { format, addDays, differenceInDays, parseISO } from 'date-fns';
-import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
-import { FormInput } from '#components/molecules/FormInput';
+import { addDays, differenceInDays, parseISO } from 'date-fns';
+import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
+import { FormInput } from '#components/atoms/FormInput';
 import { Icon } from '#utils/iconUtils';
 import { type MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { Text } from '#components/atoms/Text';
+import {
+  formatMonthDay,
+  formatMonthDayYear,
+  formatWeekdayMonthDay,
+} from '#/utils/formatters/date';
 
 interface DuplicatePlanSheetProps {
   visible: boolean;
@@ -79,7 +84,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
   };
 
   return (
-    <BottomSheetLayout
+    <Sheet
       visible={visible}
       onDismiss={onClose}
       snapPoints={['55%']}
@@ -102,12 +107,12 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
 
       {!!mealPlan && !!mealPlan.startDate && !!mealPlan.endDate && (
         <View style={styles.currentInfo}>
-          <Text size="sm" tone="secondary" style={styles.currentLabel}>
+          <Text role="caption" tone="secondary" style={styles.currentLabel}>
             {t('duplicatePlan.currentPlanLabel')}
           </Text>
-          <Text size="md" weight="medium">
-            {format(parseISO(mealPlan.startDate), 'MMM d')} -{' '}
-            {format(parseISO(mealPlan.endDate), 'MMM d, yyyy')}
+          <Text role="bodyStrong">
+            {formatMonthDay(parseISO(mealPlan.startDate))} -{' '}
+            {formatMonthDayYear(parseISO(mealPlan.endDate))}
           </Text>
         </View>
       )}
@@ -122,29 +127,29 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
 
       {/* Date adjustment */}
       <View style={styles.section}>
-        <Text size="sm" weight="medium" tone="secondary">
+        <Text role="label" tone="secondary">
           {t('labels.startDate')}
         </Text>
         <View style={styles.dateAdjust}>
           <Pressable
             onPress={() => setStartDateOffset(prev => prev - 7)}
+            accessibilityLabel={t('a11y.previousWeek')}
             style={styles.dateButton}
             hitSlop={8}
           >
             <Icon name="chevron-back" size={20} tone="primary" />
           </Pressable>
           <View style={styles.dateDisplay}>
-            <Text size="md" weight="semibold">
-              {format(newStartDate, 'EEE, MMM d')}
-            </Text>
-            <Text size="sm" tone="secondary" style={styles.dateSubtext}>
+            <Text role="bodyStrong">{formatWeekdayMonthDay(newStartDate)}</Text>
+            <Text role="caption" tone="secondary" style={styles.dateSubtext}>
               {t('duplicatePlan.endDateSubtext', {
-                date: format(newEndDate, 'EEE, MMM d'),
+                date: formatWeekdayMonthDay(newEndDate),
               })}
             </Text>
           </View>
           <Pressable
             onPress={() => setStartDateOffset(prev => prev + 7)}
+            accessibilityLabel={t('a11y.nextWeek')}
             style={styles.dateButton}
             hitSlop={8}
           >
@@ -159,11 +164,11 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
           size={18}
           tone="textSecondary"
         />
-        <Text size="sm" style={styles.infoText}>
+        <Text role="caption" style={styles.infoText}>
           {t('duplicatePlan.infoText')}
         </Text>
       </View>
-    </BottomSheetLayout>
+    </Sheet>
   );
 };
 

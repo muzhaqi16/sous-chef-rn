@@ -7,7 +7,8 @@ import { MealPlanItemCard } from './MealPlanItemCard';
 import { Text } from '#components/atoms/Text';
 import { type MealType } from '#/graphql/generated/schemaTypes';
 import { type MealPlanItemCard_ItemFragment } from './MealPlanItemCard.generated';
-import { type SwipeableRef } from '#components/molecules/SwipeableItem/types';
+import { type SwipeableRef } from '#components/organisms/SwipeableItem/types';
+import { useTranslation } from '#/i18n';
 
 interface MealTypeSectionProps {
   mealType: MealType;
@@ -36,15 +37,15 @@ export const MealTypeSection: React.FC<MealTypeSectionProps> = ({
   onSwipeableWillOpen,
   onSwipeableClose,
 }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text size="md" weight="semibold">
-          {label}
-        </Text>
+        <Text role="bodyStrong">{label}</Text>
         {!!onAddMeal && (
           <Pressable
             onPress={() => onAddMeal(mealType)}
+            accessibilityLabel={t('labels.addNamed', { name: label })}
             style={styles.addButton}
             hitSlop={8}
           >

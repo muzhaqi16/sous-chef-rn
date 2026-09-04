@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { errorService } from '#/services/errorService';
 import { useApolloClient, useQuery } from '@apollo/client/react';
-import type { RecipeInformation } from '#/services/recipeApi/types';
+import type { RecipeInformation } from '#/services/spoonacular/types';
 import { MyRecipesDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   UseRecipeFavoriteState_RecipeFragmentDoc,

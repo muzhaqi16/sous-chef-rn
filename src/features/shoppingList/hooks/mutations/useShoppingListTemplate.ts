@@ -15,7 +15,7 @@ import {
   UseShoppingListTemplate_ListFragmentDoc,
   type UseShoppingListTemplate_ListFragment,
 } from './useShoppingListTemplate.generated';
-import { addShoppingListToQueryCache } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { addShoppingListToQueryCache } from '#features/shoppingList/cache/list';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
 import { errorService } from '#/services/errorService';

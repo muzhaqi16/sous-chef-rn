@@ -55,7 +55,9 @@
       "totalEntries_one": "{{count}} voce",
       "totalEntries_other": "{{count}} voci",
       "emptyTitle": "Nessun utilizzo"
-    }
+    },
+    "shelfLifeBoth": "{{days}} g ({{openedDays}} g dopo l'apertura)",
+    "shelfLifeOpened": "{{days}} g dopo l'apertura"
   },
   "pantrySettings": {
     "createTitle": "Crea nuova dispensa",
@@ -356,7 +358,9 @@
     "invalidWaste": "Inserisci una quantità di spreco valida",
     "stillCalculating": "Calcolo della quantità disponibile in corso...",
     "exceedsAvailableConsume": "Non puoi consumare più della quantità disponibile ({{amount}} {{unit}})",
-    "exceedsAvailableWaste": "Non puoi sprecare più della quantità disponibile ({{amount}} {{unit}})"
+    "exceedsAvailableWaste": "Non puoi sprecare più della quantità disponibile ({{amount}} {{unit}})",
+    "remainingAfter": "Rimanente: {{amount}} {{unit}}",
+    "exceedsAvailable": "Supera la disponibilità ({{amount}} {{unit}})"
   },
   "duplicateItem": {
     "title": "Articolo già in dispensa",
@@ -413,5 +417,10 @@
   "batchSection": {
     "viewAll_one": "Vedi il lotto",
     "viewAll_other": "Vedi tutti i {{count}} lotti"
+  },
+  "pantryItemCard": {
+    "remainingAmount": "{{amount}} rimanenti",
+    "portionsLeft_one": "Rimane {{count}} {{unit}}",
+    "portionsLeft_other": "Rimangono {{count}} {{unit}}"
   }
 }

@@ -20,22 +20,22 @@ jest.mock('../../../src/components/atoms/BottomSheetFormScrollView', () => ({
   BottomSheetFormScrollView: ({ children }: { children: React.ReactNode }) =>
     children,
 }));
-jest.mock('../../../src/components/atoms/BottomSheetHeader', () => ({
+jest.mock('../../../src/components/molecules/BottomSheetHeader', () => ({
   BottomSheetHeader: (props: { title: string }) => {
     const { Text } = require('react-native');
     return <Text>{props.title}</Text>;
   },
 }));
-jest.mock('../../../src/components/atoms/ChipScrollRow', () => ({
+jest.mock('../../../src/components/molecules/ChipScrollRow', () => ({
   ChipScrollRow: () => null,
 }));
-jest.mock('../../../src/components/molecules/FormInput', () => ({
+jest.mock('../../../src/components/atoms/FormInput', () => ({
   FormInput: (props: { label: string }) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;
   },
 }));
-jest.mock('../../../src/components/molecules/FormTextArea', () => ({
+jest.mock('../../../src/components/atoms/FormTextArea', () => ({
   FormTextArea: (props: { label: string }) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;

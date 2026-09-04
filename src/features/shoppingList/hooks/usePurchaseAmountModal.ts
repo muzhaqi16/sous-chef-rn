@@ -3,7 +3,7 @@ import { useFragment } from '@apollo/client/react';
 import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { UsePurchaseAmountModal_ItemFragmentDoc } from './usePurchaseAmountModal.generated';
 import { t } from '#/i18n';
-import { unitPriceFromTotal } from '#/utils/purchasePrice';
+import { unitPriceFromTotal } from '#features/shoppingList/utils/purchasePrice';
 
 export interface PurchaseAmountItem {
   id: string;

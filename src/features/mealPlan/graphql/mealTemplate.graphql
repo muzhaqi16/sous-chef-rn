@@ -17,7 +17,8 @@ query GetMealTemplates(
     edges {
       node {
         id
-        ...MealTemplateDisplay      }
+        ...MealTemplateDisplay
+      }
       cursor
     }
     pageInfo {
@@ -31,9 +32,11 @@ query GetMealTemplates(
 query GetMealTemplate($id: ID!) {
   mealTemplate(id: $id) {
     id
-    ...MealTemplateDisplay    items {
+    ...MealTemplateDisplay
+    items {
       id
-      ...MealTemplateItemFragment    }
+      ...MealTemplateItemFragment
+    }
   }
 }
 

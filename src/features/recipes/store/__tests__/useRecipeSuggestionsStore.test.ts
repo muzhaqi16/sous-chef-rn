@@ -1,5 +1,5 @@
 import { useRecipeSuggestionsStore } from '../useRecipeSuggestionsStore';
-import type { RecipeInformation } from '#/services/recipeApi/types';
+import type { RecipeInformation } from '#/services/spoonacular/types';
 
 describe('useRecipeSuggestionsStore', () => {
   beforeEach(() => {

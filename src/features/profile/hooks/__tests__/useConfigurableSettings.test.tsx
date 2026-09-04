@@ -1,9 +1,10 @@
 'use no memo';
 
 import { act } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import { AppTheme, UnitSystem } from '#/graphql/generated/schemaTypes';
 import { alertService, type AlertButton } from '#/services/alertService';
-import type { SettingItem } from '#components/molecules/SettingRow';
+import type { SettingItem } from '#components/organisms/SettingRow';
 import {
   recordMock,
   renderHookWithApollo,
@@ -31,8 +32,12 @@ jest.mock('#/apollo/links/refreshToken');
 // keys, and two sign-out paths clearing different subsets is what left the
 // previous person's data on a shared device.
 const mockLogout = jest.fn();
+const mockRevokeDeviceCredential = jest.fn().mockResolvedValue(undefined);
 jest.mock('#/services/authService', () => ({
-  authService: { logout: (...args: unknown[]) => mockLogout(...args) },
+  authService: {
+    logout: (...args: unknown[]) => mockLogout(...args),
+    revokeDeviceCredentialForThisDevice: () => mockRevokeDeviceCredential(),
+  },
 }));
 
 const mockGetUserNavigationState = jest.fn(
@@ -74,7 +79,7 @@ const mockGetBiometricInfo = jest.fn().mockResolvedValue({
 });
 const mockRemoveCredentials = jest.fn();
 
-jest.mock('#hooks/auth/useCredentialStorage', () => ({
+jest.mock('#features/profile/hooks/useCredentialStorage', () => ({
   useCredentialStorage: jest.fn(() => ({
     checkStoredCredentials: mockCheckStoredCredentials,
     getBiometricInfo: mockGetBiometricInfo,
@@ -137,7 +142,7 @@ jest.mock('#utils/dateUtils', () => ({
   extractDateString: jest.fn((v: unknown) => v || ''),
 }));
 
-jest.mock('#components/organisms/BiometricSetupModal', () => ({
+jest.mock('#features/profile/components/BiometricSetupModal', () => ({
   BiometricSetupModal: 'BiometricSetupModal',
 }));
 
@@ -307,6 +312,29 @@ describe('useConfigurableSettings', () => {
     mockPendingCount.mockReturnValue(0);
   });
 
+  // Signing back in after a deliberate sign-out is the case biometric sign-in
+  // exists for, so the sign-out keeps the enrolment that makes it possible.
+  // Clearing it here leaves the login screen with no biometric button at all.
+  it('keeps the biometric credential across a deliberate sign-out', async () => {
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
+
+    const logoutItem = findByKey(
+      sectionById(result.current.sections, 'logout').items,
+      'logout',
+    );
+
+    await act(async () => {
+      logoutItem.onPress?.();
+    });
+
+    expect(mockLogout).toHaveBeenCalledWith({
+      keepBiometricCredentials: true,
+    });
+  });
+
   it('biometric setting shows not available when device lacks biometrics', () => {
     const { settings } = buildMocks();
     const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
@@ -379,6 +407,35 @@ describe('useConfigurableSettings', () => {
     );
     expect(biometricItem.disabled).toBe(false);
     expect(biometricItem.subtitle).toContain('FaceID');
+  });
+
+  // Android answers with the first SENSOR present, not the one the prompt will
+  // accept, so the settings row said "Use Fingerprint to login" on a phone
+  // whose owner unlocks with their face.
+  it('names no modality on Android, where the reported type is a guess', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    mockGetBiometricInfo.mockResolvedValue({
+      isAvailable: true,
+      biometryType: 'Fingerprint',
+    });
+    mockCheckStoredCredentials.mockResolvedValue(false);
+
+    const { settings } = buildMocks();
+    const { result, rerender } = renderHookWithApollo(
+      () => useConfigurableSettings(),
+      { operationMocks: [settings.mock] },
+    );
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+    rerender(undefined);
+
+    const biometricItem = findByKey(
+      sectionById(result.current.sections, 'security').items,
+      'biometricAuthentication',
+    );
+    expect(biometricItem.subtitle).not.toContain('Fingerprint');
+    expect(biometricItem.subtitle).toContain('biometric');
   });
 
   it('biometric loading state shows checking message', () => {

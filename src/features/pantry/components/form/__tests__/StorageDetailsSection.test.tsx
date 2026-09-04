@@ -20,7 +20,7 @@ jest.mock('#components/molecules/DynamicFormFields', () => {
   };
 });
 
-jest.mock('#components/molecules/FormTextArea', () => ({
+jest.mock('#components/atoms/FormTextArea', () => ({
   FormTextArea: 'FormTextArea',
 }));
 

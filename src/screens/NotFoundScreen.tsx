@@ -2,13 +2,15 @@ import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useNavigation, CommonActions } from '@react-navigation/native';
-import { Button } from '#components/atoms/Button';
+import { CommonActions } from '@react-navigation/native';
+import { Button } from '#components/molecules/Button';
 import { Text } from '#components/atoms/Text';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 
 export const NotFoundScreen = () => {
   const { t } = useTranslation();
-  const { dispatch } = useNavigation();
+  const { navigation } = useAppNavigation();
+  const { dispatch } = navigation;
 
   const handleGoHome = () => {
     dispatch(
@@ -21,7 +23,7 @@ export const NotFoundScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text size="md" align="center" style={styles.text}>
+      <Text align="center" style={styles.text}>
         {t('notFound.message')}
       </Text>
       <View style={styles.buttonContainer}>

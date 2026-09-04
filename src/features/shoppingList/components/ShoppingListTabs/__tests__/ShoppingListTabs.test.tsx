@@ -99,7 +99,7 @@ jest.mock('../PurchasedTab', () => ({
   },
 }));
 
-jest.mock('#components/atoms/EmptyState', () => ({
+jest.mock('#components/molecules/EmptyState', () => ({
   EmptyState: ({
     title,
     description,
@@ -117,7 +117,7 @@ jest.mock('#components/atoms/EmptyState', () => ({
   },
 }));
 
-jest.mock('#components/atoms/Skeleton/SkeletonList', () => ({
+jest.mock('#features/shoppingList/components/SkeletonList', () => ({
   SkeletonList: () => {
     const { View } = require('react-native');
     return <View testID="skeleton-list" />;

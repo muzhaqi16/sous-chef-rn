@@ -6,6 +6,7 @@ import { shadows } from '../foundations/shadows';
 import { sizes } from '../foundations/sizes';
 import { zIndex } from '../foundations/zIndex';
 import { breakpoints } from '../foundations/breakpoints';
+import { lightTheme, darkTheme } from '../themes';
 
 describe('theme foundations', () => {
   describe('colors', () => {
@@ -100,9 +101,9 @@ describe('theme foundations', () => {
     });
 
     it('exports intermediate spacing values', () => {
-      expect(spacing['2.5']).toBe(10);
-      expect(spacing['3']).toBe(12);
-      expect(spacing['5']).toBe(20);
+      expect(spacing.smPlus).toBe(10);
+      expect(spacing.base).toBe(12);
+      expect(spacing.mdPlus).toBe(20);
     });
   });
 
@@ -349,5 +350,35 @@ describe('theme foundations', () => {
         expect(values[i]).toBeGreaterThan(values[i - 1]);
       }
     });
+  });
+});
+
+describe('light and dark declare the same tokens', () => {
+  // A token defined in one theme and not the other is invisible until someone
+  // switches appearance: the read yields undefined and the style silently
+  // drops. Parity is asserted per group, so the failure names the group.
+  it.each([
+    ['colors', lightTheme.colors, darkTheme.colors],
+    ['shadows', lightTheme.shadows, darkTheme.shadows],
+    ['motion.timing', lightTheme.motion.timing, darkTheme.motion.timing],
+    ['motion.spring', lightTheme.motion.spring, darkTheme.motion.spring],
+    ['motion.easing', lightTheme.motion.easing, darkTheme.motion.easing],
+  ])('%s has the same keys in both themes', (_group, light, dark) => {
+    expect(Object.keys(dark).sort()).toEqual(Object.keys(light).sort());
+  });
+
+  it('every elevation step reads darker on the dark ground', () => {
+    const opacityOf = (step: { boxShadow?: { color: string }[] }) =>
+      Number(step.boxShadow?.[0].color.match(/([\d.]+)\)$/)?.[1] ?? 0);
+
+    for (const key of ['sm', 'md', 'lg', 'xl', 'card'] as const) {
+      expect(opacityOf(darkTheme.shadows[key])).toBeGreaterThan(
+        opacityOf(lightTheme.shadows[key]),
+      );
+    }
+  });
+
+  it('motion is shared, not duplicated per theme', () => {
+    expect(darkTheme.motion).toBe(lightTheme.motion);
   });
 });

@@ -1,4 +1,4 @@
-import { deleteAction } from '#components/molecules/SwipeableItem/commonActions';
+import { deleteAction } from '#components/organisms/SwipeableItem/commonActions';
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
@@ -8,9 +8,9 @@ import { useFragment } from '@apollo/client/react';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
-import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
+import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import { ListItem } from '#components/molecules/ListItem';
-import { type SwipeableRef } from '#components/molecules/SwipeableItem/types';
+import { type SwipeableRef } from '#components/organisms/SwipeableItem/types';
 import {
   MealPlanItemCard_ItemFragmentDoc,
   type MealPlanItemCard_ItemFragment,
@@ -68,6 +68,9 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
         onToggleCompleted(item.id, item.isCompleted, !!item.recipe)
       }
       hitSlop={8}
+      accessibilityLabel={
+        item.isCompleted ? t('a11y.markIncomplete') : t('a11y.markComplete')
+      }
     >
       <Icon
         name={item.isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
@@ -102,14 +105,14 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
     metaText || hasPantryDeductions ? (
       <>
         {!!metaText && (
-          <Text size="sm" tone="secondary">
+          <Text role="caption" tone="secondary">
             {metaText}
           </Text>
         )}
         {!!hasPantryDeductions && (
           <View style={styles.pantryBadge}>
             <Icon name="leaf-outline" size={12} tone="success" />
-            <Text size="xs" weight="medium" style={styles.pantryBadgeText}>
+            <Text role="label" style={styles.pantryBadgeText}>
               {t('mealPlanItem.pantryUpdated')}
             </Text>
           </View>
@@ -148,7 +151,7 @@ MealPlanItemCard.displayName = 'MealPlanItemCard';
 
 const styles = StyleSheet.create(theme => ({
   rowWrapper: {
-    marginBottom: theme.spacing['2.5'],
+    marginBottom: theme.spacing.smPlus,
   },
   image: {
     width: 48,

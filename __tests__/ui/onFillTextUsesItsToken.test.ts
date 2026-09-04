@@ -43,32 +43,17 @@ const FILL_GROUP = FILL_NAMES.join('|');
 const FILLS = new RegExp(
   `backgroundColor:\\s*theme\\.colors\\.(${FILL_GROUP})\\b`,
 );
-const WHITE = /\bcolor:\s*theme\.colors\.white\b/;
+/**
+ * A hardcoded white. `theme.colors.white` is gone — text over a photo, a
+ * camera preview or a dark scrim reads `onScrim` — so what is left to catch is
+ * a raw literal, which no type error can.
+ */
+const WHITE =
+  /\bcolor:\s*['"`](?:#fff(?:fff)?|white|rgba?\(\s*255\s*,\s*255\s*,\s*255[^)]*\))['"`]/i;
 
 /** The fill an `on*` token names — `onPrimary` belongs to `primary`. */
 const fillOfOnToken = (token: string): string =>
   token.slice(2, 3).toLowerCase() + token.slice(3);
-
-/**
- * White text that is NOT on the fill — a scrim over a photo or the camera, or a
- * translucent badge layered on top of one. Keyed `<file>#<style>` with a reason.
- */
-const NOT_ON_THE_FILL: Record<string, string> = {
-  'src/features/catalog/ui/ItemPhotoCarousel.tsx#pendingText':
-    'a pill on the photo itself, not on the primary fill',
-  'src/features/shoppingList/components/moveToPantry/PantrySelector.tsx#defaultBadgeTextActive':
-    'sits on overlays.light, a dark scrim drawn over the filled option',
-  'src/features/barcode/screens/BarcodeScannerScreen.tsx#messageText':
-    'camera overlay chrome',
-  'src/features/barcode/screens/BarcodeScannerScreen.tsx#headerTitle':
-    'camera overlay chrome',
-  'src/features/barcode/screens/BarcodeScannerScreen.tsx#instructionsText':
-    'camera overlay chrome',
-  'src/features/barcode/screens/BarcodeScannerScreen.tsx#subInstructionsText':
-    'camera overlay chrome',
-  'src/features/barcode/screens/BarcodeScannerScreen.tsx#scanStatusText':
-    'camera overlay chrome',
-};
 
 const suspects = FILES.flatMap(file => {
   const blocks = styleBlocks(readFileSync(file, 'utf8'));
@@ -212,20 +197,17 @@ describe('text on a primary or danger fill', () => {
     expect(FILES.length).toBeGreaterThan(400);
   });
 
-  it('reads onPrimary/onError rather than a hardcoded white', () => {
-    const offenders = suspects.filter(s => !(s in NOT_ON_THE_FILL));
-
-    expect(offenders).toEqual([]);
+  it('still recognises a hardcoded white', () => {
+    // `suspects` is empty across the tree, so an inert pattern would pass here
+    // for the wrong reason.
+    for (const literal of ["'#fff'", '"#FFFFFF"', "'white'", "'rgba(255, 255, 255, 0.8)'"]) {
+      expect(WHITE.test(`color: ${literal},`)).toBe(true);
+    }
+    expect(WHITE.test('color: theme.colors.onPrimary,')).toBe(false);
   });
 
-  it('keeps the not-on-the-fill list honest', () => {
-    // An entry whose style stopped matching is a stale exemption that will
-    // silently cover the next style to take its name.
-    const stale = Object.keys(NOT_ON_THE_FILL).filter(
-      k => !suspects.includes(k),
-    );
-
-    expect(stale).toEqual([]);
+  it('reads onPrimary/onError/onScrim rather than a hardcoded white', () => {
+    expect(suspects).toEqual([]);
   });
 
   it('never paints an on-token over a fill it does not name', () => {
@@ -265,5 +247,94 @@ describe('palette groups pairing a fill with its own text', () => {
     );
 
     expect(stale).toEqual([]);
+  });
+});
+
+/**
+ * A component whose foreground names an `on*` token while its SIBLING style
+ * file paints the ground from a raw palette ramp. Neither half is wrong alone,
+ * both are tokens, and the two scans above cannot see it: one only knows the
+ * six semantic fill names, the other only reads a single block.
+ *
+ * `SwipeableItem` shipped this — an icon on `onPrimary` (dark, because it is
+ * picked against ORANGE) over `charade.950` navy, at 1.28:1.
+ */
+const ON_TOKEN_COLOR = /\bcolor:\s*theme\.colors\.(on[A-Z]\w*)/g;
+const RAMP_FILL = /backgroundColor:\s*theme\.colors\.(\w+)\[['"](\d+)['"]\]/g;
+
+/**
+ * What an `on*` token actually paints. `onScrim` is fixed light; the rest are
+ * `onColor(fill, white, near-black)`, so they follow the fill they are NAMED
+ * for — which is the whole trap when they are painted on a different ground.
+ */
+const ON_TOKEN_FILL: Record<string, string | undefined> = {
+  // `appConfig.branding.primaryColor` defaults to jaffa; a rebrand moves it,
+  // and the point here is that it is ORANGE-ish, so `onPrimary` lands dark.
+  onPrimary: colors.jaffa['500'],
+  onError: colors.error,
+  onSuccess: colors.success,
+  onWarning: colors.warning,
+  onInfo: colors.info,
+};
+
+/** `RAMP_FILL` captures the ramp name from source text, so the lookup has to
+ * survive a name the palette does not carry. */
+const rampStep = (ramp: string, step: string): string | undefined => {
+  const scale: unknown = Reflect.get(colors, ramp);
+  if (typeof scale !== 'object' || scale === null) return undefined;
+  const value: unknown = Reflect.get(scale, step);
+  return typeof value === 'string' ? value : undefined;
+};
+
+const resolveOnToken = (token: string): string | undefined => {
+  const light = colors.neutral[0];
+  if (token === 'onScrim') return light;
+
+  const fill = ON_TOKEN_FILL[token];
+  if (!fill || !chroma.valid(fill)) return undefined;
+
+  const dark = colors.neutral[900];
+  return chroma.contrast(fill, light) >= chroma.contrast(fill, dark)
+    ? light
+    : dark;
+};
+
+const crossFileOnTokenPairs = FILES.flatMap(file => {
+  if (!/\.tsx$/.test(file)) return [];
+  const dir = file.slice(0, file.lastIndexOf('/'));
+  const stylePath = `${dir}/styles.ts`;
+  let styleSource: string;
+  try {
+    styleSource = readFileSync(stylePath, 'utf8');
+  } catch {
+    return [];
+  }
+
+  const grounds = [...styleSource.matchAll(RAMP_FILL)].map(m =>
+    rampStep(m[1], m[2]),
+  );
+  const ground = grounds.find(g => typeof g === 'string' && chroma.valid(g));
+  if (!ground) return [];
+
+  const source = readFileSync(file, 'utf8');
+  return [...source.matchAll(ON_TOKEN_COLOR)].flatMap(m => {
+    const fg = resolveOnToken(m[1]);
+    if (!fg) return [];
+    return [
+      {
+        pair: `${file} ${m[1]} on ${stylePath} ramp fill`,
+        ratio: Number(chroma.contrast(fg, ground).toFixed(2)),
+      },
+    ];
+  });
+});
+
+describe('a foreground token over a ground painted in a sibling style file', () => {
+  it('finds the pairs it exists to check', () => {
+    expect(crossFileOnTokenPairs.length).toBeGreaterThan(0);
+  });
+
+  it('meets AA for normal text', () => {
+    expect(crossFileOnTokenPairs.filter(p => p.ratio < AA_NORMAL)).toEqual([]);
   });
 });

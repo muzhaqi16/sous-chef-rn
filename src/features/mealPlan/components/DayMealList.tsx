@@ -86,12 +86,7 @@ export const DayMealList: React.FC<DayMealListProps> = ({
               style={styles.addMealButton}
             >
               <Icon name="add-circle-outline" size={20} tone="primary" />
-              <Text
-                size="md"
-                weight="medium"
-                tone="accent"
-                style={styles.addMealText}
-              >
+              <Text role="bodyStrong" tone="accent" style={styles.addMealText}>
                 {t('labels.addAMeal')}
               </Text>
             </AppPressable>
@@ -123,7 +118,7 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderStyle: 'dashed',
   },

@@ -1,4 +1,5 @@
 import { StorageLocation } from '#/graphql/generated/schemaTypes';
+import { filterByTerm } from '#hooks/search/useLocalSearch';
 
 interface UseStorageLocationAutocompleteOptions {
   storageLocations: StorageLocation[];
@@ -14,15 +15,11 @@ export function useStorageLocationAutocomplete({
     if (!searchTerm || searchTerm.length < 1) {
       return storageLocations;
     }
-    const lowerSearch = searchTerm.toLowerCase();
-    return storageLocations.filter(location => {
-      const matchesName = location.name.toLowerCase().includes(lowerSearch);
-      const matchesType = location.type.toLowerCase().includes(lowerSearch);
-      const matchesParent = location.parentLocation?.name
-        .toLowerCase()
-        .includes(lowerSearch);
-      return matchesName || matchesType || matchesParent;
-    });
+    return filterByTerm(storageLocations, searchTerm, [
+      l => l.name,
+      l => l.type,
+      l => l.parentLocation?.name,
+    ]);
   })();
 
   // Sort: default first, then alphabetically

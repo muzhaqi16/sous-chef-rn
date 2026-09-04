@@ -2,12 +2,12 @@ import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { commonStyles } from '#/styles/commonStyles';
+import { Card } from '#components/atoms/Card';
 
 /** A trailing icon button on a recipe row. */
 export interface RecipeCardAction {
@@ -44,10 +44,11 @@ export const RecipeCardView: React.FC<RecipeCardViewProps> = ({
   const { t } = useTranslation();
 
   return (
-    <AppPressable
+    <Card
       onPress={onPress}
+      padding="none"
+      radius="xl"
       style={styles.card}
-      accessibilityRole="button"
       accessibilityLabel={name}
     >
       {!!imageUrl && (
@@ -60,10 +61,10 @@ export const RecipeCardView: React.FC<RecipeCardViewProps> = ({
         </View>
       )}
       <View style={styles.body}>
-        <Text size="md" weight="medium" numberOfLines={1}>
+        <Text role="bodyStrong" numberOfLines={1}>
           {name}
         </Text>
-        <Text size="sm" tone="secondary" numberOfLines={1}>
+        <Text role="caption" tone="secondary" numberOfLines={1}>
           {t('recipes.servingsCount', { count: servings })}
           {totalMinutes != null
             ? ` • ${t('labels.min', { count: totalMinutes })}`
@@ -85,7 +86,7 @@ export const RecipeCardView: React.FC<RecipeCardViewProps> = ({
           ))}
         </View>
       )}
-    </AppPressable>
+    </Card>
   );
 };
 
@@ -94,17 +95,13 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    padding: theme.spacing['3'],
+    padding: theme.spacing.base,
     // Match the search bar inset so rows line up with it instead of going
     // edge-to-edge — same floating-card treatment as BaseItemCard.
-    marginHorizontal: theme.spacing['3'],
-    marginBottom: theme.spacing['2.5'],
-    borderRadius: theme.radii.xl,
-    borderCurve: 'continuous',
-    borderWidth: 1,
+    marginHorizontal: theme.spacing.base,
+    marginBottom: theme.spacing.smPlus,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: 'transparent',
-    backgroundColor: theme.colors.surface,
-    ...theme.shadows.card,
   },
   body: {
     flex: 1,

@@ -162,7 +162,7 @@ jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({
 const mockDeferredScreen = jest.fn(
   ({ fallback }: DeferredScreenMockProps) => fallback,
 );
-jest.mock('#components/molecules/WeekStrip', () => ({
+jest.mock('#features/mealPlan/components/WeekStrip', () => ({
   WeekStrip: () => null,
 }));
 jest.mock('#features/mealPlan/components/MonthCalendar', () => ({
@@ -204,7 +204,7 @@ jest.mock('#features/mealPlan/components/DuplicatePlanSheet', () => ({
 jest.mock('#features/mealPlan/components/NutritionSummaryCard', () => ({
   NutritionSummaryCard: () => null,
 }));
-jest.mock('#components/modals/MarkCookedModal', () => ({
+jest.mock('#components/organisms/MarkCookedModal', () => ({
   MarkCookedModal: () => null,
 }));
 jest.mock(

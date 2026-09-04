@@ -1,4 +1,4 @@
-import { Observable, type ApolloClient } from '@apollo/client';
+import { Observable } from '@apollo/client';
 import type { ApolloLink } from '@apollo/client/link';
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import { logger } from '#/utils/environment';
@@ -17,17 +17,7 @@ import {
   registerRefreshInFlightCheck,
   registerTokenRefresh,
 } from './wsLink';
-
-// The Apollo client singleton is injected after creation rather than imported
-// directly, which would form a circular dependency:
-// client → links/index → errorLink → refreshToken → client. `client.ts` calls
-// registerApolloClient() once the client exists; the refresh mutation reads the
-// reference at call time, by which point it is always set.
-let apolloClient: ApolloClient | null = null;
-
-export const registerApolloClient = (clientInstance: ApolloClient): void => {
-  apolloClient = clientInstance;
-};
+import { getApolloClient } from '#/apollo/clientRegistry';
 
 // Shape of the error thrown by the refresh mutation that the reactive logic
 // inspects. All fields are optional — reads are individually guarded.
@@ -237,6 +227,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
       `Attempting token refresh (attempt ${refreshState.retryCount}/${REFRESH_CONFIG.MAX_RETRIES})`,
     );
 
+    const apolloClient = getApolloClient();
     if (!apolloClient) {
       throw new Error('Apollo client not registered for token refresh');
     }

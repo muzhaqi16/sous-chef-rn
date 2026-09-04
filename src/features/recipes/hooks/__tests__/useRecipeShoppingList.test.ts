@@ -11,7 +11,7 @@ import {
   AddItemsToShoppingListFromRecipeDocument,
   GetShoppingListsLiteForRecipeDocument,
 } from '../useRecipeDetail.generated';
-import type { RecipeIngredient as ExternalRecipeIngredient } from '#/services/recipeApi/types';
+import type { RecipeIngredient as ExternalRecipeIngredient } from '#/services/spoonacular/types';
 import { useRecipeShoppingList } from '../useRecipeShoppingList';
 
 jest.mock('#store/useAppStore', () => ({

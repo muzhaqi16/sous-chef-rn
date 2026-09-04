@@ -4,7 +4,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { NavigationState, Route } from 'react-native-tab-view';
-import type { FilterTabActionButton } from '#components/molecules/FilterTabs/types';
+import type { FilterTabActionButton } from '#components/organisms/FilterTabs/types';
 import { FilterTabItem } from './FilterTabItem';
 import { Text } from '#components/atoms/Text';
 
@@ -80,7 +80,7 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
               ]}
             >
               {btn.label ? (
-                <Text size="sm" weight="semibold" tone="accent">
+                <Text role="label" tone="accent">
                   {btn.label}
                 </Text>
               ) : btn.icon ? (
@@ -108,7 +108,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.base,
   },
   scrollView: {
     flexShrink: 1,
@@ -119,7 +119,7 @@ const styles = StyleSheet.create(theme => ({
   actionButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: theme.spacing.sm + 2,
+    paddingHorizontal: theme.spacing.smPlus,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',

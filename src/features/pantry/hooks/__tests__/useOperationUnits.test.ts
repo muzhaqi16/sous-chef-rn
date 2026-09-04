@@ -29,6 +29,7 @@ function makeRankedUnit(overrides: Record<string, unknown> = {}) {
       unitRole: UnitRole.Measurement,
       commonFractions: null,
       displayAsFraction: false,
+      hasStandardCountFactor: false,
     },
     ...overrides,
   };
@@ -97,7 +98,11 @@ describe('useOperationUnits', () => {
             ...defaultOptions,
             operation: PantryOperation.Consume,
           }),
-        { wrapper: createApolloTestWrapper({ operationMocks: [consumptionMock([makeRankedUnit()])] }) },
+        {
+          wrapper: createApolloTestWrapper({
+            operationMocks: [consumptionMock([makeRankedUnit()])],
+          }),
+        },
       );
 
       await waitFor(() => expect(result.current.loading).toBe(false));
@@ -111,7 +116,11 @@ describe('useOperationUnits', () => {
             ...defaultOptions,
             operation: PantryOperation.Waste,
           }),
-        { wrapper: createApolloTestWrapper({ operationMocks: [consumptionMock([makeRankedUnit()])] }) },
+        {
+          wrapper: createApolloTestWrapper({
+            operationMocks: [consumptionMock([makeRankedUnit()])],
+          }),
+        },
       );
 
       await waitFor(() => expect(result.current.loading).toBe(false));
@@ -145,7 +154,11 @@ describe('useOperationUnits', () => {
             ...defaultOptions,
             operation: PantryOperation.Consume,
           }),
-        { wrapper: createApolloTestWrapper({ operationMocks: [consumptionMock([makeRankedUnit()])] }) },
+        {
+          wrapper: createApolloTestWrapper({
+            operationMocks: [consumptionMock([makeRankedUnit()])],
+          }),
+        },
       );
 
       expect(result.current.loading).toBe(true);
@@ -187,6 +200,83 @@ describe('useOperationUnits', () => {
     });
   });
 
+  describe('count-to-count conversion', () => {
+    // A clove and a head each carry a factor of 1 to "piece" that means
+    // nothing, so an AUTO-derived count unit without a universal factor only
+    // earns a UNIT_INVALID once the amount is typed.
+    const countUnit = (
+      id: string,
+      hasStandardCountFactor: boolean,
+      source = UnitSource.Auto,
+    ) =>
+      makeRankedUnit({
+        source,
+        unit: {
+          __typename: 'Unit',
+          id,
+          name: id,
+          symbol: id,
+          type: UnitType.Count,
+          unitRole: UnitRole.Portion,
+          commonFractions: null,
+          displayAsFraction: false,
+          hasStandardCountFactor,
+        },
+      });
+
+    const renderConsume = (units: ReturnType<typeof makeRankedUnit>[]) =>
+      renderHook(
+        () =>
+          useOperationUnits({
+            ...defaultOptions,
+            trackingUnitType: UnitType.Count,
+            operation: PantryOperation.Consume,
+          }),
+        {
+          wrapper: createApolloTestWrapper({
+            operationMocks: [consumptionMock(units)],
+          }),
+        },
+      );
+
+    it('drops an AUTO count unit with no universal factor', async () => {
+      const { result } = renderConsume([
+        countUnit('dozen', true),
+        countUnit('head', false),
+      ]);
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.allUnits.map(u => u.unitId)).toEqual(['dozen']);
+    });
+
+    it('keeps a CURATED count unit, which carries an item-scoped relationship', async () => {
+      // The stack's own "1 bulb = 10 cloves" arrives this way; filtering it out
+      // would remove exactly what the measurement profile makes possible.
+      const { result } = renderConsume([
+        countUnit('clove', false, UnitSource.Curated),
+      ]);
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.allUnits.map(u => u.unitId)).toEqual(['clove']);
+    });
+
+    it('keeps the tracking unit whatever its factor', async () => {
+      const { result } = renderConsume([
+        countUnit('head', false, UnitSource.TrackingUnit),
+      ]);
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.allUnits.map(u => u.unitId)).toEqual(['head']);
+    });
+
+    it('leaves a weight unit alone — the rule is count-to-count only', async () => {
+      const { result } = renderConsume([makeRankedUnit()]);
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.allUnits).toHaveLength(1);
+    });
+  });
+
   describe('grouping', () => {
     it('correctly groups units by UnitType with tracking type first', async () => {
       const { result } = renderHook(
@@ -196,62 +286,64 @@ describe('useOperationUnits', () => {
             operation: PantryOperation.Consume,
           }),
         {
-          wrapper: createApolloTestWrapper({ operationMocks: [
-            consumptionMock([
-              makeRankedUnit({
-                rank: 1,
-                unit: {
-                  __typename: 'Unit',
-                  id: 'u-g',
-                  name: 'gram',
-                  symbol: 'g',
-                  type: UnitType.Weight,
-                  unitRole: UnitRole.Measurement,
-                  commonFractions: null,
-                  displayAsFraction: false,
-                },
-              }),
-              makeRankedUnit({
-                rank: 2,
-                unit: {
-                  __typename: 'Unit',
-                  id: 'u-ml',
-                  name: 'milliliter',
-                  symbol: 'ml',
-                  type: UnitType.Volume,
-                  unitRole: UnitRole.Measurement,
-                  commonFractions: null,
-                  displayAsFraction: false,
-                },
-              }),
-              makeRankedUnit({
-                rank: 3,
-                unit: {
-                  __typename: 'Unit',
-                  id: 'u-piece',
-                  name: 'piece',
-                  symbol: 'pc',
-                  type: UnitType.Count,
-                  unitRole: UnitRole.Portion,
-                  commonFractions: null,
-                  displayAsFraction: false,
-                },
-              }),
-              makeRankedUnit({
-                rank: 4,
-                unit: {
-                  __typename: 'Unit',
-                  id: 'u-oz',
-                  name: 'ounce',
-                  symbol: 'oz',
-                  type: UnitType.Weight,
-                  unitRole: UnitRole.Measurement,
-                  commonFractions: null,
-                  displayAsFraction: false,
-                },
-              }),
-            ]),
-          ] }),
+          wrapper: createApolloTestWrapper({
+            operationMocks: [
+              consumptionMock([
+                makeRankedUnit({
+                  rank: 1,
+                  unit: {
+                    __typename: 'Unit',
+                    id: 'u-g',
+                    name: 'gram',
+                    symbol: 'g',
+                    type: UnitType.Weight,
+                    unitRole: UnitRole.Measurement,
+                    commonFractions: null,
+                    displayAsFraction: false,
+                  },
+                }),
+                makeRankedUnit({
+                  rank: 2,
+                  unit: {
+                    __typename: 'Unit',
+                    id: 'u-ml',
+                    name: 'milliliter',
+                    symbol: 'ml',
+                    type: UnitType.Volume,
+                    unitRole: UnitRole.Measurement,
+                    commonFractions: null,
+                    displayAsFraction: false,
+                  },
+                }),
+                makeRankedUnit({
+                  rank: 3,
+                  unit: {
+                    __typename: 'Unit',
+                    id: 'u-piece',
+                    name: 'piece',
+                    symbol: 'pc',
+                    type: UnitType.Count,
+                    unitRole: UnitRole.Portion,
+                    commonFractions: null,
+                    displayAsFraction: false,
+                  },
+                }),
+                makeRankedUnit({
+                  rank: 4,
+                  unit: {
+                    __typename: 'Unit',
+                    id: 'u-oz',
+                    name: 'ounce',
+                    symbol: 'oz',
+                    type: UnitType.Weight,
+                    unitRole: UnitRole.Measurement,
+                    commonFractions: null,
+                    displayAsFraction: false,
+                  },
+                }),
+              ]),
+            ],
+          }),
         },
       );
 
@@ -278,24 +370,26 @@ describe('useOperationUnits', () => {
             operation: PantryOperation.Consume,
           }),
         {
-          wrapper: createApolloTestWrapper({ operationMocks: [
-            consumptionMock([
-              makeRankedUnit({ rank: 1, source: UnitSource.TrackingUnit }),
-              makeRankedUnit({
-                rank: 2,
-                unit: {
-                  __typename: 'Unit',
-                  id: 'u-ml',
-                  name: 'milliliter',
-                  symbol: 'ml',
-                  type: UnitType.Volume,
-                  unitRole: UnitRole.Measurement,
-                  commonFractions: null,
-                  displayAsFraction: false,
-                },
-              }),
-            ]),
-          ] }),
+          wrapper: createApolloTestWrapper({
+            operationMocks: [
+              consumptionMock([
+                makeRankedUnit({ rank: 1, source: UnitSource.TrackingUnit }),
+                makeRankedUnit({
+                  rank: 2,
+                  unit: {
+                    __typename: 'Unit',
+                    id: 'u-ml',
+                    name: 'milliliter',
+                    symbol: 'ml',
+                    type: UnitType.Volume,
+                    unitRole: UnitRole.Measurement,
+                    commonFractions: null,
+                    displayAsFraction: false,
+                  },
+                }),
+              ]),
+            ],
+          }),
         },
       );
 
@@ -320,15 +414,17 @@ describe('useOperationUnits', () => {
             operation: PantryOperation.Consume,
           }),
         {
-          wrapper: createApolloTestWrapper({ operationMocks: [
-            consumptionMock([
-              makeRankedUnit({
-                rank: 1,
-                defaultIncrement: 50,
-                commonFractions: [0.25, 0.5, 0.75],
-              }),
-            ]),
-          ] }),
+          wrapper: createApolloTestWrapper({
+            operationMocks: [
+              consumptionMock([
+                makeRankedUnit({
+                  rank: 1,
+                  defaultIncrement: 50,
+                  commonFractions: [0.25, 0.5, 0.75],
+                }),
+              ]),
+            ],
+          }),
         },
       );
 
@@ -345,7 +441,11 @@ describe('useOperationUnits', () => {
             ...defaultOptions,
             operation: PantryOperation.Consume,
           }),
-        { wrapper: createApolloTestWrapper({ operationMocks: [consumptionMock([])] }) },
+        {
+          wrapper: createApolloTestWrapper({
+            operationMocks: [consumptionMock([])],
+          }),
+        },
       );
 
       await waitFor(() => expect(result.current.loading).toBe(false));
@@ -364,7 +464,11 @@ describe('useOperationUnits', () => {
             ...defaultOptions,
             operation: PantryOperation.Consume,
           }),
-        { wrapper: createApolloTestWrapper({ operationMocks: [consumptionErrorMock()] }) },
+        {
+          wrapper: createApolloTestWrapper({
+            operationMocks: [consumptionErrorMock()],
+          }),
+        },
       );
 
       await waitFor(() => expect(result.current.error).toBeDefined());
@@ -378,7 +482,11 @@ describe('useOperationUnits', () => {
             ...defaultOptions,
             operation: PantryOperation.Restock,
           }),
-        { wrapper: createApolloTestWrapper({ operationMocks: [restockErrorMock()] }) },
+        {
+          wrapper: createApolloTestWrapper({
+            operationMocks: [restockErrorMock()],
+          }),
+        },
       );
 
       await waitFor(() => expect(result.current.error).toBeDefined());

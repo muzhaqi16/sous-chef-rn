@@ -316,7 +316,11 @@ export const GlobalBackdrop: React.FC = () => {
       style={[styles.backdrop, animatedStyle]}
       pointerEvents={isVisible ? 'auto' : 'none'}
     >
-      <Pressable style={styles.pressable} onPress={handlePress} />
+      <Pressable
+        style={styles.pressable}
+        onPress={handlePress}
+        accessible={false}
+      />
     </Animated.View>
   );
 };

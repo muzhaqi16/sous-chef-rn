@@ -25,7 +25,6 @@ import { useSelectedHomeId } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { t } from '#/i18n';
-import { getI18n } from '#/i18n/config';
 import { toastService } from '#/services/toastService';
 import { authService } from '#/services/authService';
 import { useSubscriptionTransportRecovery } from './useSubscriptionTransportRecovery';
@@ -101,12 +100,12 @@ function handleBannedOrSuspended(
   subtype: UserSubtype,
 ) {
   const reason = payload.reason
-    ? getI18n().t('accountEvents.reasonSuffix', { reason: payload.reason })
+    ? t('accountEvents.reasonSuffix', { reason: payload.reason })
     : '';
   const message =
     subtype === UserSubtype.Banned
-      ? getI18n().t('accountEvents.accountBanned', { reason })
-      : getI18n().t('accountEvents.accountSuspended', { reason });
+      ? t('accountEvents.accountBanned', { reason })
+      : t('accountEvents.accountSuspended', { reason });
   toastService.error(message);
   authService.logout();
 }

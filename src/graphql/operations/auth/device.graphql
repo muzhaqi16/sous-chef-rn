@@ -43,5 +43,3 @@ mutation UpdateDevice($input: UpdateDeviceInput!) {
 # ============================================
 # SUBSCRIPTIONS
 # ============================================
-
-

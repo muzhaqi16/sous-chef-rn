@@ -40,6 +40,7 @@ export const AppPressable: React.FC<AppPressableProps> = ({
   ripple = false,
   onPress,
   android_ripple,
+  accessibilityRole,
   ...rest
 }) => {
   const handlePress = (event: GestureResponderEvent) => {
@@ -50,6 +51,10 @@ export const AppPressable: React.FC<AppPressableProps> = ({
   return (
     <Pressable
       {...rest}
+      // RN already sets `accessible`, so children collapse into one node and
+      // their text is the name; an icon-only one needs a label, which
+      // `check-a11y-names.mjs` requires.
+      accessibilityRole={accessibilityRole ?? (onPress ? 'button' : undefined)}
       onPress={onPress ? handlePress : undefined}
       android_ripple={android_ripple ?? (ripple ? RIPPLE.SUBTLE : undefined)}
       style={state => [

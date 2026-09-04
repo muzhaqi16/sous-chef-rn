@@ -50,7 +50,7 @@ jest.mock('../../../src/features/mealPlan/hooks/useMealTemplates', () => ({
 jest.mock('../../../src/features/mealPlan/components/TemplateCard', () => ({
   TemplateCard: () => null,
 }));
-jest.mock('../../../src/components/atoms/ChipScrollRow', () => ({
+jest.mock('../../../src/components/molecules/ChipScrollRow', () => ({
   ChipScrollRow: () => null,
 }));
 

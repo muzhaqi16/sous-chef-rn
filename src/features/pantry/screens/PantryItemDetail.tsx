@@ -1,36 +1,22 @@
 import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';
 import { DetailSection } from '#components/molecules/DetailSection';
-import { DetailTitleRow } from '#components/molecules/DetailTitleRow';
+import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
+import { CachedImage } from '#components/atoms/CachedImage';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
-import Animated from 'react-native-reanimated';
-import { useApolloClient, useFragment, useQuery } from '@apollo/client/react';
-import { DataStateView } from '#components/molecules/DataStateView';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
-import {
-  PantryItemBatchFragmentDoc,
-  type PantryItemBatchFragment,
-} from '#features/pantry/graphql/pantryFragments.generated';
-import {
-  PantryItemDetail_PantryItemFragmentDoc,
-  type PantryItemDetail_PantryItemFragment,
-} from '#features/pantry/screens/PantryItemDetail.generated';
 import { useTranslation } from '#/i18n';
-import {
-  GetPantryItemDocument,
-  GetPantryItemBatchesDocument,
-} from '#features/pantry/graphql/pantry.generated';
+import { usePantryItemDetailData } from '#features/pantry/hooks/usePantryItemDetailData';
 import {
   useSelectedShoppingListId,
   useSelectedPantryId,
 } from '#store/useAppStore';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
-import { isResourceNotFoundError } from '#/utils/errors/notFound';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { resolveImageUrl, galleryPhotos } from '#utils/imageUtils';
 import {
@@ -44,14 +30,13 @@ import {
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import { getUnitDisplayText } from '#utils/formatQuantity';
 import { PantryDetailInfo } from '#features/pantry/components/PantryDetailInfo';
-import { summarizeBatchPricing } from '#features/pantry/utils/summarizeBatchPricing';
 import { PantryUsageHistory } from '#features/pantry/components/PantryUsageHistory';
-import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
+import { parseNutritions, hasNutritionData } from '#domain/nutrition';
 import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { GalleryHero } from '#features/catalog/ui/GalleryHero';
 import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
-import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
+import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { Icon } from '#/utils/iconUtils';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { BatchSection } from '#features/pantry/components/BatchSection';
@@ -61,6 +46,7 @@ import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { useRecipeSuggestionsForItem } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
+import { commonStyles } from '#/styles/commonStyles';
 
 /**
  * Extracted so `styles.useVariants` is called once per instance.
@@ -72,7 +58,11 @@ const ExpiryColumnText: React.FC<{
 }> = ({ text, isUrgent, isExpired }) => {
   const status = isExpired ? 'expired' : isUrgent ? 'urgent' : 'normal';
   styles.useVariants({ expiryStatus: status });
-  return <Text style={styles.infoColumnValue}>{text}</Text>;
+  return (
+    <Text role="label" style={styles.infoColumnValue}>
+      {text}
+    </Text>
+  );
 };
 
 export const PantryItemDetail: React.FC<
@@ -97,92 +87,23 @@ export const PantryItemDetail: React.FC<
   const [refreshing, setRefreshing] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
-  // A locally-created item owns its id before the server does, so a fetch before
-  // the create is acknowledged can only return RESOURCE_NOT_FOUND — and that
-  // error state never retries itself. Skipping makes the acknowledgement the
-  // fetch trigger; the optimistic entity renders the screen meanwhile.
-  const isUnconfirmed = useIsCreateUnconfirmed(itemId);
-
-  // `data` is deliberately unused: this query exists to FETCH and reconcile into
-  // the normalized entity the render path below reads.
   const {
-    refetch,
-    loading: itemLoading,
-    error: itemError,
-  } = useQuery(GetPantryItemDocument, {
-    variables: { id: itemId },
-    skip: isUnconfirmed,
-  });
-  const client = useApolloClient();
+    item,
+    batches,
+    batchPricing,
+    batchTotalCount,
+    deletedOnServer,
+    itemLoading,
+    itemError,
+    isUnconfirmed,
+    refreshAll,
+  } = usePantryItemDetailData(itemId);
 
-  // No status filter: the derived costs and the expired-batch check both read
-  // the whole active set from this one fetch, while the section shows a few.
-  const { data: batchesData, refetch: refetchBatches } = useQuery(
-    GetPantryItemBatchesDocument,
-    {
-      variables: { pantryItemId: itemId },
-      fetchPolicy: 'cache-and-network',
-      // Resolves the pantry item first, so it 404s on an unconfirmed id too.
-      skip: isUnconfirmed,
-    },
-  );
-
-  // Batches are a separate query, so pull-to-refresh must refetch both.
   const handleRefresh = () => {
-    executeRefreshWithFinally(
-      () => Promise.all([refetch(), refetchBatches()]),
-      setRefreshing,
-    );
+    executeRefreshWithFinally(refreshAll, setRefreshing);
   };
 
   const permissions = usePantryPermissions();
-
-  // Keyed by ENTITY, not by the query result: that is what lets a locally-created
-  // item render with no API at all, since `data` is undefined while the query is
-  // skipped. It is also the only reactivity signal available — under
-  // `dataMasking` the query's `data.pantryItem` is a masked ref whose identity is
-  // stable across field changes.
-  const livePantryItem = useFragment({
-    fragment: PantryItemDetail_PantryItemFragmentDoc,
-    fragmentName: 'PantryItemDetail_pantryItem',
-    from: { __typename: 'PantryItem', id: itemId },
-  });
-
-  // Materializes the masked ref into the unmasked entity. `readFragment` reads
-  // the mutable cache during render, so the compiler memoizes it against the
-  // reactive values named here — the `livePantryItem.data` guard is load-bearing:
-  // gating on the masked ref instead would pin this to a stale snapshot until a
-  // refetch, hiding in-place edits.
-  const item =
-    livePantryItem.complete && livePantryItem.data
-      ? client.cache.readFragment<PantryItemDetail_PantryItemFragment>({
-          fragment: PantryItemDetail_PantryItemFragmentDoc,
-          fragmentName: 'PantryItemDetail_pantryItem',
-          from: { __typename: 'PantryItem', id: itemId },
-        }) ?? null
-      : null;
-
-  // The pantry resolver throws rather than returning null, so a row deleted on
-  // another device arrives as RESOURCE_NOT_FOUND. Only trust it once the create
-  // is acknowledged — the identical error means "not told yet" while unconfirmed.
-  const deletedOnServer = !isUnconfirmed && isResourceNotFoundError(itemError);
-
-  // Edges arrive masked; materialize each so status/expiresAt reads and
-  // BatchSection's sort/filter work directly.
-  const batches: PantryItemBatchFragment[] =
-    batchesData?.pantryItemBatchesConnection?.edges
-      ?.map(edge =>
-        client.cache.readFragment<PantryItemBatchFragment>({
-          fragment: PantryItemBatchFragmentDoc,
-          fragmentName: 'PantryItemBatchFragment',
-          from: edge.node,
-        }),
-      )
-      .filter((b): b is PantryItemBatchFragment => b != null) ?? [];
-
-  // Only how to LABEL the item's own money fields — the server derives their
-  // values from these same batches.
-  const batchPricing = summarizeBatchPricing(batches);
 
   const { suggestedRecipes, loadingRecipes } = useRecipeSuggestionsForItem(
     item?.itemName ?? undefined,
@@ -261,7 +182,7 @@ export const PantryItemDetail: React.FC<
   if (!item || deletedOnServer) {
     return (
       <CollapsingHeroDetail onBack={goBack} testID="pantry-item-detail">
-        <View style={styles.loadingContainer}>
+        <View style={commonStyles.loadingContainer}>
           <DataStateView state={itemState} onRetry={handleRefresh} />
         </View>
       </CollapsingHeroDetail>
@@ -282,6 +203,7 @@ export const PantryItemDetail: React.FC<
       ? [
           {
             icon: 'close-circle-outline',
+            accessibilityLabel: t('labels.discard'),
             onPress: actions.handleDiscardExpired,
             variant: 'error',
             testID: 'pantry-item-discard-button',
@@ -295,6 +217,7 @@ export const PantryItemDetail: React.FC<
           {
             icon:
               actions.addToListStatus === 'success' ? 'cart' : 'cart-outline',
+            accessibilityLabel: t('labels.addToShoppingList'),
             onPress: actions.handleAddToShoppingList,
             variant:
               actions.addToListStatus === 'success' ? 'success' : 'primary',
@@ -308,16 +231,19 @@ export const PantryItemDetail: React.FC<
       ? ([
           {
             icon: 'swap-vertical-outline',
+            accessibilityLabel: t('adjustQuantity.title'),
             onPress: () => actions.setAdjustModalVisible(true),
             testID: 'pantry-item-adjust-button',
           },
           {
             icon: 'create-outline',
+            accessibilityLabel: t('labels.edit'),
             onPress: handleEdit,
             testID: 'pantry-item-edit-button',
           },
           {
             icon: 'trash-outline',
+            accessibilityLabel: t('labels.delete'),
             onPress: actions.handleDelete,
             variant: 'error',
             testID: 'pantry-item-delete-button',
@@ -353,7 +279,7 @@ export const PantryItemDetail: React.FC<
           title={item.itemName}
           numberOfLines={2}
           trailing={
-            <Text style={styles.quantityBadge}>
+            <Text role="heading" style={styles.quantityBadge}>
               {item.quantity} {getUnitDisplayText(item.unit)}
             </Text>
           }
@@ -362,7 +288,7 @@ export const PantryItemDetail: React.FC<
         {!!(categoryName || storageStateDisplay) && (
           <View style={styles.categoryBadge}>
             <Icon name="restaurant-outline" size={16} tone="primary" />
-            <Text style={styles.categoryText}>
+            <Text role="label" style={styles.categoryText}>
               {categoryName || t('labels.item')}
               {storageStateDisplay
                 ? t('pantryItemDetail.inLocation', {
@@ -376,7 +302,7 @@ export const PantryItemDetail: React.FC<
         <DetailSection>
           <View style={styles.infoColumns}>
             <View style={styles.infoColumn}>
-              <Text style={styles.infoColumnLabel}>
+              <Text role="caption" style={styles.infoColumnLabel}>
                 {t('pantryItemDetail.inThePantry')}
               </Text>
               <Text style={styles.infoColumnValue}>
@@ -440,10 +366,7 @@ export const PantryItemDetail: React.FC<
             <BatchSection
               batches={batches}
               unitSymbol={item.unit?.symbol ?? undefined}
-              totalCount={
-                batchesData?.pantryItemBatchesConnection?.totalCount ??
-                undefined
-              }
+              totalCount={batchTotalCount}
               onViewAll={() =>
                 toPantryBatchHistory({
                   pantryItemId: itemId,
@@ -488,20 +411,23 @@ export const PantryItemDetail: React.FC<
                   style={styles.recipeCard}
                   onPress={() => handleRecipePress(recipe.id)}
                 >
-                  <Animated.Image
-                    source={{ uri: recipe.image }}
+                  <CachedImage
+                    uri={recipe.image}
                     style={styles.recipeImage}
-                    resizeMode="cover"
                     sharedTransitionTag={`recipe-image-${recipe.id}`}
                   />
-                  <Text style={styles.recipeTitle} numberOfLines={2}>
+                  <Text
+                    role="label"
+                    style={styles.recipeTitle}
+                    numberOfLines={2}
+                  >
                     {recipe.title}
                   </Text>
                 </AppPressable>
               ))}
             </ScrollView>
           ) : (
-            <Text style={styles.noRecipes}>
+            <Text role="caption" style={styles.noRecipes}>
               {t('pantryItemDetail.noRecipeSuggestions')}
             </Text>
           )}
@@ -538,14 +464,7 @@ export const PantryItemDetail: React.FC<
 };
 
 const styles = StyleSheet.create(theme => ({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   quantityBadge: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
   },
   categoryBadge: {
@@ -556,9 +475,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.xs,
   },
   categoryText: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
   },
   infoColumns: {
     flexDirection: 'row',
@@ -569,15 +486,12 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   infoColumnLabel: {
-    fontSize: theme.fonts.size.xs,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   infoColumnValue: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
     variants: {
@@ -606,18 +520,12 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
   },
   recipeTitle: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
     marginTop: theme.spacing.xs,
-    fontWeight: theme.fonts.weight.medium,
   },
   noRecipes: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.md,
     fontStyle: 'italic',
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

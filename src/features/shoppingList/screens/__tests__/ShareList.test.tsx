@@ -5,36 +5,43 @@ import type { TextInputProps } from 'react-native';
 import { screen } from '@testing-library/react-native';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import { ShareList } from '../ShareList';
+import { ShoppingListCollaboratorFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 
 const seedCollaboratorCache = () =>
   seedCache([
     {
-      __typename: 'ShoppingListCollaborator',
-      id: 'c1',
-      email: 'owner@test.com',
-      role: 'OWNER',
-      status: 'ACTIVE',
-      collaboratorId: 'u1',
-      canAddItems: true,
-      canRemoveItems: true,
-      canEditItems: true,
-      canMarkPurchased: true,
-      invitedAt: '2024-01-01T00:00:00Z',
-      collaborator: null,
+      fragment: ShoppingListCollaboratorFragmentDoc,
+      data: {
+        __typename: 'ShoppingListCollaborator',
+        id: 'c1',
+        email: 'owner@test.com',
+        role: 'OWNER',
+        status: 'ACTIVE',
+        collaboratorId: 'u1',
+        canAddItems: true,
+        canRemoveItems: true,
+        canEditItems: true,
+        canMarkPurchased: true,
+        invitedAt: '2024-01-01T00:00:00Z',
+        collaborator: null,
+      },
     },
     {
-      __typename: 'ShoppingListCollaborator',
-      id: 'c2',
-      email: 'member@test.com',
-      role: 'CONTRIBUTOR',
-      status: 'ACTIVE',
-      collaboratorId: 'u2',
-      canAddItems: true,
-      canRemoveItems: false,
-      canEditItems: false,
-      canMarkPurchased: true,
-      invitedAt: '2024-01-05T00:00:00Z',
-      collaborator: null,
+      fragment: ShoppingListCollaboratorFragmentDoc,
+      data: {
+        __typename: 'ShoppingListCollaborator',
+        id: 'c2',
+        email: 'member@test.com',
+        role: 'CONTRIBUTOR',
+        status: 'ACTIVE',
+        collaboratorId: 'u2',
+        canAddItems: true,
+        canRemoveItems: false,
+        canEditItems: false,
+        canMarkPurchased: true,
+        invitedAt: '2024-01-05T00:00:00Z',
+        collaborator: null,
+      },
     },
   ]);
 
@@ -134,13 +141,13 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
 }));
 jest.mock('#/utils/finallyHelpers');
 
-jest.mock('#components/atoms/EmailInput', () => ({
+jest.mock('#components/molecules/EmailInput', () => ({
   EmailInput: (props: TextInputProps) => {
     const { TextInput } = require('react-native');
     return <TextInput placeholder="Enter email address" {...props} />;
   },
 }));
-jest.mock('#components/molecules/Header', () => ({
+jest.mock('#components/organisms/Header', () => ({
   Header: ({ title }: { title?: string }) => {
     const { View, Text } = require('react-native');
     return (
@@ -150,10 +157,10 @@ jest.mock('#components/molecules/Header', () => ({
     );
   },
 }));
-jest.mock('#components/atoms/Loading', () => ({
-  LoadingInline: () => null,
+jest.mock('#components/molecules/Loading', () => ({
+  Loading: () => null,
 }));
-jest.mock('#components/atoms/Button', () => ({
+jest.mock('#components/molecules/Button', () => ({
   Button: ({ title, onPress }: { title?: string; onPress: () => void }) => {
     const { Pressable, Text } = require('react-native');
     return (
@@ -163,7 +170,7 @@ jest.mock('#components/atoms/Button', () => ({
     );
   },
 }));
-jest.mock('#components/atoms/OfflineGate', () => ({
+jest.mock('#features/shoppingList/components/OfflineGate', () => ({
   OfflineGate: ({ children }: { children: React.ReactNode }) => children,
 }));
 jest.mock('#components/molecules/AlertBanner', () => ({

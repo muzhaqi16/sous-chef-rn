@@ -2,41 +2,26 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import {
   Pressable,
-  WhiteActivityIndicator,
+  OnPrimaryActivityIndicator,
 } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
-import { Header } from '#components/molecules/Header';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useFragment, useMutation, useQuery } from '@apollo/client/react';
-import {
-  AcceptShoppingListInviteDocument,
-  DeclineShoppingListInviteDocument,
-} from '#features/shoppingList/graphql/collaboration.generated';
-import {
-  AcceptHomeInviteDocument,
-  DeclineHomeInviteDocument,
-} from '#operations/home/home.generated';
-import {
-  AcceptInvite_ShoppingListInviteFragmentDoc,
-  AcceptInvite_HomeInviteFragmentDoc,
-  GetHomeInviteByTokenDocument,
-  GetShoppingListInviteByTokenDocument,
-  type AcceptInvite_ShoppingListInviteFragment,
-  type AcceptInvite_HomeInviteFragment,
-} from './AcceptInvite.generated';
+import { useInviteByToken } from '#features/shoppingList/hooks/useInviteByToken';
+import type { InvitationRefusal } from '#/domain/invitationRefusal';
 import { errorService, localizedErrorMessage } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
-
-type InvitationType = 'shopping_list' | 'home' | 'unknown';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { commonStyles } from '#/styles/commonStyles';
+import { Screen } from '#components/templates/Screen';
 
 export const AcceptInvite: React.FC = () => {
   const { t } = useTranslation();
-  const { goBack } = useNavigation();
+  const { goBack } = useAppNavigation();
   const route = useRoute();
   const { token } = (route.params ?? {}) as {
     token?: string;
@@ -45,78 +30,51 @@ export const AcceptInvite: React.FC = () => {
   const [processing, setProcessing] = useState(false);
 
   // This screen is the deep-link acceptance surface: the invite is resolved
-  // straight from the URL token (accept-invitation?token=…) via the *ByToken
-  // queries, since it may not be in the user's cached pending list on a fresh
-  // device. In-app acceptance from a notification is handled separately by
-  // InvitationAcceptanceModal.
-  const { data: tokenHomeInviteData, loading: tokenHomeInviteLoading } =
-    useQuery(GetHomeInviteByTokenDocument, {
-      variables: { token: token ?? '' },
-      skip: !token,
-    });
-  const { data: tokenListInviteData, loading: tokenListInviteLoading } =
-    useQuery(GetShoppingListInviteByTokenDocument, {
-      variables: { token: token ?? '' },
-      skip: !token,
-    });
-
-  // Mutations for shopping list invites
-  const [acceptShoppingListInvite] = useMutation(
-    AcceptShoppingListInviteDocument,
-  );
-  const [declineShoppingListInvite] = useMutation(
-    DeclineShoppingListInviteDocument,
-  );
-
-  // Mutations for home invites
-  const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument);
-  const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument);
-
-  const shoppingListInvite =
-    tokenListInviteData?.shoppingListInviteByToken ?? null;
-  const homeInvite = tokenHomeInviteData?.homeInviteByToken ?? null;
-
-  // Only when there is nothing to show: a warm cache renders the invite while
-  // the accompanying network leg is still open.
-  const loading =
-    (tokenHomeInviteLoading || tokenListInviteLoading) &&
-    !shoppingListInvite &&
-    !homeInvite;
-
-  // Unmask display fields via useFragment (pattern B — resilient fallback).
-  // The queries already select these fields, so the cache has them;
-  // useFragment reads from the normalized cache without needing a spread.
-  const shoppingListFragmentResult = useFragment({
-    fragment: AcceptInvite_ShoppingListInviteFragmentDoc,
-    fragmentName: 'AcceptInvite_shoppingListInvite',
-    from: shoppingListInvite ?? {
-      __typename: 'ShoppingListCollaborator',
-      id: '',
-    },
-  });
-  const shoppingListInviteData: AcceptInvite_ShoppingListInviteFragment | null =
-    shoppingListInvite && shoppingListFragmentResult.complete
-      ? shoppingListFragmentResult.data
-      : null;
-
-  const homeFragmentResult = useFragment({
-    fragment: AcceptInvite_HomeInviteFragmentDoc,
-    fragmentName: 'AcceptInvite_homeInvite',
-    from: homeInvite ?? { __typename: 'HomeInvite', id: '' },
-  });
-  const homeInviteDisplay: AcceptInvite_HomeInviteFragment | null =
-    homeInvite && homeFragmentResult.complete ? homeFragmentResult.data : null;
-
-  const invitationType: InvitationType = shoppingListInvite
-    ? 'shopping_list'
-    : homeInvite
-    ? 'home'
-    : 'unknown';
+  // straight from the URL token (accept-invitation?token=…), since it may not be
+  // in the user's cached pending list on a fresh device. In-app acceptance from
+  // a notification is handled by InvitationAcceptanceModal.
+  const {
+    invitationType,
+    hasInvite,
+    inviteRole,
+    shoppingListInviteDisplay,
+    homeInviteDisplay,
+    loading,
+    accept,
+    decline,
+  } = useInviteByToken(token);
 
   // The invite only ever resolves from the route token, so that token is the
   // credential the accept/decline mutations need.
   const resolveInviteToken = (): string | undefined =>
     invitationType === 'unknown' ? undefined : token;
+
+  /**
+   * Copy per refusal reason. The account-mismatch sentence is reserved for the
+   * permission refusal that means it; a spent or revoked invite gets the copy
+   * written for that, rather than a sentence naming a cause it did not carry.
+   */
+  const reportRefusal = (refusal: InvitationRefusal, fallbackKey: string) => {
+    if (refusal === 'inviteeMismatch') {
+      alertService.alert(
+        t('invitationAcceptance.wrongAccountTitle'),
+        t('invitationAcceptance.wrongAccount'),
+      );
+      return;
+    }
+    if (refusal === 'unavailable' || refusal === 'alreadyResolved') {
+      alertService.alert(t('labels.error'), t('errors.invitationUnavailable'));
+      return;
+    }
+    if (refusal === 'invalid') {
+      alertService.alert(
+        t('labels.error'),
+        t('invitationAcceptance.invalidInvitation'),
+      );
+      return;
+    }
+    alertService.alert(t('labels.error'), t(fallbackKey));
+  };
 
   const handleAccept = () => {
     const inviteToken = resolveInviteToken();
@@ -131,30 +89,25 @@ export const AcceptInvite: React.FC = () => {
 
     executeWithLoadingState(
       async () => {
-        if (invitationType === 'shopping_list') {
-          await acceptShoppingListInvite({
-            variables: { input: { token: inviteToken } },
-          });
-          alertService.alert(
-            t('labels.success'),
-            t('invitationAcceptance.shoppingListAccepted'),
-            [{ text: t('labels.ok'), onPress: () => goBack() }],
-          );
-        } else if (invitationType === 'home') {
-          await acceptHomeInvite({
-            variables: { input: { token: inviteToken } },
-          });
-          alertService.alert(
-            t('labels.success'),
-            t('invitationAcceptance.homeAccepted'),
-            [{ text: t('labels.ok'), onPress: () => goBack() }],
-          );
-        } else {
+        if (invitationType === 'unknown') {
           alertService.alert(
             t('labels.error'),
             t('invitationAcceptance.unknownType'),
           );
+          return;
         }
+        const outcome = await accept(inviteToken);
+        if (!outcome.ok) {
+          reportRefusal(outcome.refusal, 'invitationAcceptance.acceptFailed');
+          return;
+        }
+        alertService.alert(
+          t('labels.success'),
+          invitationType === 'home'
+            ? t('invitationAcceptance.homeAccepted')
+            : t('invitationAcceptance.shoppingListAccepted'),
+          [{ text: t('labels.ok'), onPress: () => goBack() }],
+        );
       },
       setProcessing,
       (error: unknown) => {
@@ -193,16 +146,14 @@ export const AcceptInvite: React.FC = () => {
           onPress: () => {
             executeWithLoadingState(
               async () => {
-                if (invitationType === 'shopping_list') {
-                  await declineShoppingListInvite({
-                    variables: { input: { token: inviteToken! } },
-                  });
-                } else if (invitationType === 'home') {
-                  await declineHomeInvite({
-                    variables: { input: { token: inviteToken! } },
-                  });
+                const outcome = await decline(inviteToken);
+                if (!outcome.ok) {
+                  reportRefusal(
+                    outcome.refusal,
+                    'invitationAcceptance.declineFailed',
+                  );
+                  return;
                 }
-
                 goBack();
               },
               setProcessing,
@@ -221,7 +172,7 @@ export const AcceptInvite: React.FC = () => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={commonStyles.loadingContainer}>
         <SousChefLoader
           size="small"
           showBrand={false}
@@ -231,10 +182,10 @@ export const AcceptInvite: React.FC = () => {
     );
   }
 
-  if (!shoppingListInvite && !homeInvite) {
+  if (!hasInvite) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text size="md" align="center" tone="error" style={styles.inviteText}>
+      <View style={commonStyles.loadingContainer}>
+        <Text align="center" tone="error" style={styles.inviteText}>
           {invitationType === 'unknown'
             ? t('invitationAcceptance.notFound')
             : t('invitationAcceptance.loadingDetails')}
@@ -246,7 +197,7 @@ export const AcceptInvite: React.FC = () => {
           ]}
           onPress={() => goBack()}
         >
-          <Text size="md" weight="semibold" style={styles.declineButtonText}>
+          <Text role="bodyStrong" style={styles.declineButtonText}>
             {t('labels.goBack')}
           </Text>
         </Pressable>
@@ -255,9 +206,7 @@ export const AcceptInvite: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
-      <Header onClose={() => goBack()} />
-
+    <Screen header={{ close: () => goBack() }} scroll="list" gutter="none">
       <View style={styles.content}>
         <View style={styles.iconContainer}>
           <Icon
@@ -267,16 +216,11 @@ export const AcceptInvite: React.FC = () => {
           />
         </View>
 
-        <Text size="lg" weight="semibold" align="center" style={styles.title}>
+        <Text role="heading" align="center" style={styles.title}>
           {t('invitationAcceptance.invitedHeading')}
         </Text>
 
-        <Text
-          size="md"
-          tone="secondary"
-          align="center"
-          style={styles.inviteText}
-        >
+        <Text tone="secondary" align="center" style={styles.inviteText}>
           {invitationType === 'home'
             ? t('invitationAcceptance.homeInviteText', {
                 inviter:
@@ -286,56 +230,41 @@ export const AcceptInvite: React.FC = () => {
               })
             : t('invitationAcceptance.listInviteText', {
                 inviter:
-                  shoppingListInviteData?.invitedBy?.profile?.displayName ||
-                  shoppingListInviteData?.invitedBy?.email ||
+                  shoppingListInviteDisplay?.invitedBy?.profile?.displayName ||
+                  shoppingListInviteDisplay?.invitedBy?.email ||
                   t('labels.someone'),
               })}
         </Text>
 
         <View style={styles.inviteDetails}>
-          <Text size="lg" weight="semibold">
+          <Text role="heading">
             {invitationType === 'home'
               ? homeInviteDisplay?.home?.name ||
                 t('invitationAcceptance.resourceHome')
-              : shoppingListInviteData?.shoppingList?.name ||
+              : shoppingListInviteDisplay?.shoppingList?.name ||
                 t('labels.shoppingList')}
           </Text>
-          <Text size="sm" tone="secondary" style={styles.inviteType}>
+          <Text role="caption" tone="secondary" style={styles.inviteType}>
             {invitationType === 'home'
               ? t('invitationAcceptance.resourceHome')
               : t('labels.shoppingList')}
           </Text>
-          <Text
-            size="xs"
-            weight="medium"
-            tone="secondary"
-            style={styles.inviteRole}
-          >
+          <Text role="label" tone="secondary" style={styles.inviteRole}>
             {t('invitationAcceptance.roleLabel', {
-              role:
-                (invitationType === 'home'
-                  ? homeInvite?.role
-                  : shoppingListInvite?.role) ?? '',
+              role: inviteRole,
             })}
           </Text>
         </View>
 
         {!!(
           invitationType === 'shopping_list' &&
-          shoppingListInviteData?.shoppingList?.description
+          shoppingListInviteDisplay?.shoppingList?.description
         ) && (
           <View style={styles.messageContainer}>
-            <Text
-              size="sm"
-              weight="semibold"
-              tone="secondary"
-              style={styles.messageLabel}
-            >
+            <Text role="label" tone="secondary" style={styles.messageLabel}>
               {t('invitationAcceptance.descriptionLabel')}
             </Text>
-            <Text size="md">
-              {shoppingListInviteData?.shoppingList?.description}
-            </Text>
+            <Text>{shoppingListInviteDisplay?.shoppingList?.description}</Text>
           </View>
         )}
 
@@ -348,7 +277,7 @@ export const AcceptInvite: React.FC = () => {
             onPress={handleDecline}
             disabled={processing}
           >
-            <Text size="md" weight="semibold" style={styles.declineButtonText}>
+            <Text role="bodyStrong" style={styles.declineButtonText}>
               {t('labels.decline')}
             </Text>
           </Pressable>
@@ -362,16 +291,16 @@ export const AcceptInvite: React.FC = () => {
             disabled={processing}
           >
             {processing ? (
-              <WhiteActivityIndicator size="small" />
+              <OnPrimaryActivityIndicator size="small" />
             ) : (
-              <Text size="md" weight="semibold" style={styles.acceptButtonText}>
+              <Text role="bodyStrong" style={styles.acceptButtonText}>
                 {t('labels.accept')}
               </Text>
             )}
           </Pressable>
         </View>
       </View>
-    </View>
+    </Screen>
   );
 };
 
@@ -380,12 +309,6 @@ export default AcceptInvite;
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: theme.colors.background,
   },
   content: {
@@ -431,16 +354,16 @@ const styles = StyleSheet.create(theme => ({
   actions: {
     flexDirection: 'row',
     marginTop: theme.spacing.xl,
-    gap: theme.spacing['3'],
+    gap: theme.spacing.base,
   },
   declineButton: {
     flex: 1,
-    paddingVertical: theme.spacing.sm + 2,
+    paddingVertical: theme.spacing.smPlus,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
     alignItems: 'center',
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   declineButtonText: {
@@ -448,7 +371,7 @@ const styles = StyleSheet.create(theme => ({
   },
   acceptButton: {
     flex: 1,
-    paddingVertical: theme.spacing.sm + 2,
+    paddingVertical: theme.spacing.smPlus,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
     alignItems: 'center',

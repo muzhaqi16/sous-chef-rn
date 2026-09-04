@@ -144,7 +144,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                 </Text>
                 {!!location.description && (
                   <Text
-                    size="xs"
+                    role="caption"
                     tone="secondary"
                     style={styles.description}
                     numberOfLines={1}
@@ -169,8 +169,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                   tone={actionsDisabled ? 'textSecondary' : undefined}
                 />
                 <Text
-                  size="sm"
-                  weight="medium"
+                  role="label"
                   tone={actionsDisabled ? 'tertiary' : undefined}
                 >
                   {t('labels.setDefault')}
@@ -188,8 +187,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                 tone={actionsDisabled ? 'textSecondary' : undefined}
               />
               <Text
-                size="sm"
-                weight="medium"
+                role="label"
                 tone={actionsDisabled ? 'tertiary' : undefined}
               >
                 {t('labels.edit')}
@@ -205,11 +203,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                 size={18}
                 tone={actionsDisabled ? 'textSecondary' : 'error'}
               />
-              <Text
-                size="sm"
-                weight="medium"
-                tone={actionsDisabled ? 'tertiary' : 'error'}
-              >
+              <Text role="label" tone={actionsDisabled ? 'tertiary' : 'error'}>
                 {t('labels.delete')}
               </Text>
             </AppPressable>
@@ -267,7 +261,7 @@ const styles = StyleSheet.create(theme => ({
   actions: {
     gap: theme.spacing.sm,
     paddingTop: theme.spacing.sm,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
   },
   actionButton: {

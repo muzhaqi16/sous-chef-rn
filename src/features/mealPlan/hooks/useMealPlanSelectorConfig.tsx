@@ -2,7 +2,8 @@ import React, { RefObject } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { format, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
+import { formatDateRange } from '#/utils/formatters/date';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import type {
@@ -25,10 +26,8 @@ interface UseMealPlanSelectorConfigOptions {
   listHeader?: React.ReactNode;
 }
 
-function formatDateRange(startDate: string, endDate: string): string {
-  const start = parseISO(startDate);
-  const end = parseISO(endDate);
-  return `${format(start, 'MMM d')} – ${format(end, 'MMM d')}`;
+function formatPlanDateRange(startDate: string, endDate: string): string {
+  return formatDateRange(parseISO(startDate), parseISO(endDate));
 }
 
 function formatPlanType(planType: string): string {
@@ -63,11 +62,9 @@ export function useMealPlanSelectorConfig(
         onPress={onPress}
       >
         <View style={styles.itemContent}>
-          <Text size="md" weight="semibold">
-            {item.name}
-          </Text>
-          <Text size="sm" tone="secondary" style={styles.itemSubtext}>
-            {formatDateRange(item.startDate, item.endDate)} ·{' '}
+          <Text role="bodyStrong">{item.name}</Text>
+          <Text role="caption" tone="secondary" style={styles.itemSubtext}>
+            {formatPlanDateRange(item.startDate, item.endDate)} ·{' '}
             {formatPlanType(item.planType)}
             {` · ${item.home?.name ?? personalLabel}`}
           </Text>

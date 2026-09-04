@@ -10,9 +10,9 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { useRecipeData } from '../useRecipeData';
-import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
+import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
 
-jest.mock('#/services/recipeApi/SpoonacularService', () => ({
+jest.mock('#/services/spoonacular/SpoonacularService', () => ({
   spoonacularService: {
     getRecipeInformation: jest.fn(),
   },

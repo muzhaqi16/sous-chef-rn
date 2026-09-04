@@ -2,6 +2,12 @@
 # and through it each jest worker. It cannot go in the lint-staged command
 # itself: lint-staged spawns without a shell, so an inline `NAME=value` prefix
 # is read as the executable name and fails with ENOENT.
+#
+# ESLint opts OUT of this cap, in package.json, by invoking node with an
+# explicit --max-old-space-size (a CLI flag beats NODE_OPTIONS). One process
+# lints every staged file at once, and a type-aware config over ~900 of them
+# needs several GB — at 1536 it dies with SIGABRT and reads as a lint failure.
+# jest keeps the cap: it is the one that spawns a worker per core.
 export NODE_OPTIONS=--max-old-space-size=1536
 
 npx lint-staged || exit 1
@@ -30,12 +36,60 @@ node scripts/check-launch-arg-auth.mjs || exit 1
 
 # The kit (src/components, src/hooks) is what a sibling app reuses wholesale,
 # and a feature is only liftable while every feature keeps the same shape. Both
-# drift one file at a time and neither is visible in a diff, so both are
-# ratchets against a recorded baseline — the baseline is the backlog, and a new
-# entry fails here rather than being discovered during an extraction.
+# drift one file at a time and neither is visible in a diff. Both hold at zero
+# and carry no baseline, so a new entry fails here rather than being discovered
+# during an extraction.
 node scripts/check-layer-purity.mjs || exit 1
 node scripts/check-feature-shape.mjs || exit 1
 node scripts/check-dead-modules.mjs || exit 1
+
+# A screen that holds the Apollo client makes every data-layer change a screen
+# change, and the tests that render it change too. It holds no baseline, so any
+# finding is a regression. Its companion — a hook HANDING a screen a library
+# type, which this cannot see because the screen imports nothing — is
+# `check-hook-return-types` in pre-push, where the TS program it needs already
+# gets built.
+node scripts/check-data-layer-boundary.mjs || exit 1
+
+# The kit rule the README states but nothing could see: a shared module used by
+# exactly one feature belongs to that feature. Names and imports cannot detect
+# it — only counting consumers, transitively, can. It went 101 to zero and holds
+# no baseline: a finding is a module to move.
+node scripts/check-single-consumer.mjs || exit 1
+
+# A form's state belongs to react-hook-form; a feature id in a string outside
+# its feature is a place that has to be remembered when the feature list
+# changes. The first is still a ratchet; the second is at zero.
+node scripts/check-form-state.mjs || exit 1
+node scripts/check-feature-enumeration.mjs || exit 1
+
+# One canonical mechanism per concern — the list primitive, the image
+# components, the modal surface, the date formatters, the storage layer. Each
+# alternative loses what the canonical one already solves. All five concerns are
+# at zero and hold no baseline.
+node scripts/check-canonical-mechanisms.mjs || exit 1
+
+# A literal where a token belongs is a value the theme cannot change — it does
+# not follow the colour scheme, the density setting or the text-size
+# preference. All five concerns are at zero and hold no baseline.
+node scripts/check-design-tokens.mjs || exit 1
+
+# A role carries size, weight, leading and tracking together. Setting one of
+# them beside it splits the definition, which is how the same kind of text came
+# to render at five sizes across the tree.
+node scripts/check-typography-roles.mjs || exit 1
+
+# An atom renders at most one other kit component, a molecule several atoms, an
+# organism a molecule or a sheet. The taxonomy was documentation, and
+# documentation drifted — `base/` held 25 components with no rule separating
+# them from `atoms/`.
+node scripts/check-component-tier.mjs || exit 1
+
+# `templates/Screen.tsx` owns the header, the insets, the gutter, the keyboard
+# host, the refresh control and the state slots. 67 screens got their chrome
+# through ten mechanisms before it existed.
+node scripts/check-screen-scaffold.mjs || exit 1
+node scripts/check-a11y-names.mjs || exit 1
 
 # A suite that passes its own bare `InMemoryCache` into the shared Apollo helper
 # reinstates, for itself alone, the reduced cache every other suite moved off —
@@ -47,6 +101,6 @@ node scripts/check-test-cache-fidelity.mjs || exit 1
 
 # Comment VOLUME. Long explanatory blocks rot faster than the code they sit on —
 # a sweep found 36 wrong comments, one describing the very bug the fix beneath
-# it removed. The baseline is EMPTY, so any finding is a regression. Narration
+# it removed. It holds no baseline, so any finding is a regression. Narration
 # about what the code used to do is ESLint's `no-warning-comments` instead.
 node scripts/check-comment-budget.mjs || exit 1

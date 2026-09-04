@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
+import { ProgressBar } from '#components/atoms/ProgressBar';
 
 interface RatingBreakdownProps {
   averageRating: number;
@@ -38,7 +39,7 @@ export const RatingBreakdown: React.FC<RatingBreakdownProps> = ({
     <View style={styles.container}>
       {/* Left: Average rating */}
       <View style={styles.averageSection}>
-        <Text size="3xl" weight="bold">
+        <Text role="display">
           {totalReviews > 0 ? averageRating.toFixed(1) : '—'}
         </Text>
         <View style={styles.starsRow}>
@@ -51,7 +52,7 @@ export const RatingBreakdown: React.FC<RatingBreakdownProps> = ({
             />
           ))}
         </View>
-        <Text size="xs" tone="secondary">
+        <Text role="caption" tone="secondary">
           {t('recipes.reviewCount', { count: totalReviews })}
         </Text>
       </View>
@@ -64,18 +65,24 @@ export const RatingBreakdown: React.FC<RatingBreakdownProps> = ({
           return (
             <View key={starLevel} style={styles.barRow}>
               <Text
-                size="xs"
+                role="caption"
                 tone="secondary"
                 align="right"
                 style={styles.barLabel}
               >
                 {starLevel}
               </Text>
-              <View style={styles.barTrack}>
-                <View style={[styles.barFill, { width: `${ratio * 100}%` }]} />
-              </View>
+              <ProgressBar
+                value={ratio}
+                tone="rating"
+                style={styles.barTrack}
+                accessibilityLabel={t('recipes.ratingBreakdownRow', {
+                  stars: starLevel,
+                  count,
+                })}
+              />
               <Text
-                size="xs"
+                role="caption"
                 tone="secondary"
                 align="right"
                 style={styles.barCount}
@@ -121,16 +128,6 @@ const styles = StyleSheet.create(theme => ({
   barTrack: {
     flex: 1,
     height: 8,
-    backgroundColor: theme.colors.border,
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-  },
-  barFill: {
-    height: '100%',
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.rating,
   },
   barCount: {
     width: 24,

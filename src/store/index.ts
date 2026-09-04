@@ -23,6 +23,7 @@ import {
 import { FontScalePreference } from './slices/preferenceTypes';
 import { createAppSlice, AppState } from './slices/appSlice';
 import { createUISlice, UIState } from './slices/uiSlice';
+import { createTutorialSlice, TutorialState } from './slices/tutorialSlice';
 import {
   createResetManager,
   ResetOptions,
@@ -40,10 +41,17 @@ import {
   hydrateOfflineModeFromStorage,
   NetworkState,
 } from './slices/networkSlice';
-import { zustandStorage, STORAGE_KEY, isRecoveryStorage } from '#/storage/mmkv';
+import {
+  zustandStorage,
+  storage,
+  STORAGE_KEY,
+  isRecoveryStorage,
+  openedWithEmptyStore,
+} from '#/storage/mmkv';
 import {
   loadSessionTokens,
   pickFresherSessionTokens,
+  clearSessionTokens,
   type SessionTokenLoadResult,
 } from '#/storage/keychain';
 import { logger } from '#/utils/environment';
@@ -58,6 +66,15 @@ import type { ErrorService } from '#/services/errorService';
 const hydrateSessionTokensThenFinish = async (
   state: RootState | undefined,
 ): Promise<void> => {
+  // A keychain item outlives the app on iOS. With the encrypted store empty
+  // there is no local state behind those tokens — a reinstall, or cleared app
+  // data — so the session is not resumed and the credentials are dropped.
+  if (openedWithEmptyStore()) {
+    await clearSessionTokens();
+    state?.setHydrated(true);
+    return;
+  }
+
   // `?? { status: 'absent' }` tolerates legacy test mocks resolving null.
   const result: SessionTokenLoadResult = (await loadSessionTokens()) ?? {
     status: 'absent',
@@ -114,10 +131,11 @@ export const handleStoreRehydration = (
   }
 
   // Before `isHydrated`, so the first paint is in the user's language. Lazy —
-  // `i18n/config` has load-time side effects.
-  if (state?.language && state.language !== 'en') {
-    import('#/i18n/config').then(({ getI18n }) => {
-      void getI18n().changeLanguage(state.language);
+  // `#/i18n` pulls in `i18n/config`, which has load-time side effects.
+  const language = state?.language;
+  if (language && language !== 'en') {
+    import('#/i18n').then(({ changeLanguage }) => {
+      void changeLanguage(language);
     });
   }
 
@@ -181,6 +199,7 @@ export type RootState = AuthState &
   AppState &
   NavigationState &
   UIState &
+  TutorialState &
   TelemetryState &
   NetworkState &
   ResetManagerState &
@@ -220,6 +239,7 @@ const PERSISTED_KEYS = classifyKeys(
   'highContrast',
   'hapticFeedbackEnabled',
   'showNavigationLabels',
+  'showTutorials',
   'pantrySortOption',
   'pantrySortDirection',
   'userPreferences',
@@ -244,6 +264,10 @@ const PERSISTED_KEYS = classifyKeys(
   'lastBrandsFetchedAt',
   'lastStoresFetchedAt',
 
+  // Tutorials: which hints each account has seen, and its login count.
+  'featureHintsShown',
+  'loginCounts',
+
   // Telemetry: the one real user choice (the feature flags are env-derived)
   'userConsent',
 );
@@ -254,6 +278,26 @@ type PersistedKey = (typeof PERSISTED_KEYS)[number];
 const PERSISTED_KEY_SET: ReadonlySet<string> = new Set(PERSISTED_KEYS);
 
 /** Keys allowed in the blob beyond the allowlist: the keychain-fallback pair. */
+// Where feature-hint and login-count state sat before it moved into the
+// persisted store maps. Read once by the v16 migration, then removed.
+const LEGACY_HINT_PREFIX = 'feature_hint_shown_';
+const LEGACY_LOGIN_COUNT_PREFIX = 'login_count_';
+
+const legacyTutorialKeys = (): string[] => {
+  try {
+    return storage
+      .getAllKeys()
+      .filter(
+        key =>
+          key.startsWith(LEGACY_HINT_PREFIX) ||
+          key.startsWith(LEGACY_LOGIN_COUNT_PREFIX),
+      );
+  } catch {
+    // Storage not initialised yet — nothing to carry over.
+    return [];
+  }
+};
+
 const BLOB_ONLY_KEYS: ReadonlySet<string> = new Set([
   'accessToken',
   'refreshToken',
@@ -308,6 +352,7 @@ export const useStore = create<RootState>()(
             ...createAppSlice(set, get, store),
             ...createNavigationSlice(set, get, store),
             ...createUISlice(set, get, store),
+            ...createTutorialSlice(set, get, store),
             ...createTelemetrySlice(set, get, store),
             ...createNetworkSlice(set, get, store),
             ...resetManager,
@@ -317,7 +362,7 @@ export const useStore = create<RootState>()(
       ),
       {
         name: STORAGE_KEY,
-        version: 14,
+        version: 16,
         storage: createJSONStorage(() => zustandStorage),
         migrate: (persistedState: unknown, version: number) => {
           // v8 → v9: lift nested profile fields to top level — the greeting
@@ -359,6 +404,48 @@ export const useStore = create<RootState>()(
                 }
               }
             }
+          }
+
+          // v14 → v15: drop the warmed unit vocabulary — the API merged 46
+          // alias `Unit` rows away, so a warmed row can name an id the server
+          // cannot resolve. The STAMP goes with the list: unit autocomplete is
+          // the only one running `localFirst`, and an empty list left with a
+          // fresh stamp stays empty for the whole TTL instead of re-warming.
+          if (version < 15) {
+            const state = persistedState as Record<string, unknown> | null;
+            if (state) {
+              delete state.cachedUnits;
+              delete state.lastUnitsFetchedAt;
+            }
+          }
+
+          // v15 → v16: carry the feature-hint and login-count state that used
+          // to sit in standalone MMKV keys into the persisted maps that now
+          // hold it. Same key strings, different home — without this every
+          // dismissed coach mark replays and every login count restarts at 0.
+          if (version < 16) {
+            const state = (persistedState ?? {}) as Record<string, unknown>;
+            const hints = {
+              ...((state.featureHintsShown as Record<string, boolean>) ?? {}),
+            };
+            const counts = {
+              ...((state.loginCounts as Record<string, number>) ?? {}),
+            };
+
+            for (const key of legacyTutorialKeys()) {
+              if (key.startsWith(LEGACY_HINT_PREFIX)) {
+                if (storage.getBoolean(key)) hints[key] = true;
+              } else {
+                const userId = key.slice(LEGACY_LOGIN_COUNT_PREFIX.length);
+                const value = storage.getNumber(key);
+                if (userId && typeof value === 'number') counts[userId] = value;
+              }
+              storage.remove(key);
+            }
+
+            state.featureHintsShown = hints;
+            state.loginCounts = counts;
+            persistedState = state;
           }
 
           return persistedState;

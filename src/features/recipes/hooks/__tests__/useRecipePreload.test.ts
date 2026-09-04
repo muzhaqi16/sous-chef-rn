@@ -12,12 +12,12 @@ import {
   MySavedRecipesDocument,
   type MySavedRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
-import type { RecipeInformation } from '#/services/recipeApi/types';
-import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
+import type { RecipeInformation } from '#/services/spoonacular/types';
+import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
 import { useRecipePreload, type PreloadedRecipe } from '../useRecipePreload';
 import { makeCache } from '#/apollo/cache';
 
-jest.mock('#/services/recipeApi/SpoonacularService', () => ({
+jest.mock('#/services/spoonacular/SpoonacularService', () => ({
   spoonacularService: { getRecipePriceBreakdown: jest.fn() },
 }));
 

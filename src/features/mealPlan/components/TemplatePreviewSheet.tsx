@@ -4,7 +4,7 @@ import { useTranslation } from '#/i18n';
 import {
   Pressable,
   PrimaryActivityIndicator,
-  WhiteActivityIndicator,
+  OnPrimaryActivityIndicator,
 } from '#components/atoms/themedComponents';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -12,12 +12,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { FormInput } from '#components/molecules/FormInput';
+import { FormInput } from '#components/atoms/FormInput';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { useMealTemplate } from '#features/mealPlan/hooks/useMealTemplate';
 import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { Text } from '#components/atoms/Text';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
 interface TemplatePreviewSheetProps {
   visible: boolean;
@@ -100,23 +101,27 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
       >
         {/* Template header */}
         <View style={styles.templateHeader}>
-          <Text size="lg" weight="bold" style={styles.templateName}>
+          <Text role="heading" style={styles.templateName}>
             {template.name}
           </Text>
           {!!template.description && (
-            <Text size="sm" tone="secondary" style={styles.templateDescription}>
+            <Text
+              role="caption"
+              tone="secondary"
+              style={styles.templateDescription}
+            >
               {template.description}
             </Text>
           )}
           <View style={styles.metaRow}>
-            <Text size="sm" tone="tertiary">
+            <Text role="caption" tone="tertiary">
               {t('templatePreview.metaLine', {
                 days: template.durationDays,
                 servings: template.defaultServings,
               })}
               {template.home?.name ? ` · ${template.home.name}` : ''}
             </Text>
-            <Text size="xs" weight="medium" tone="accent">
+            <Text role="label" tone="primary">
               {template.category.charAt(0) +
                 template.category.slice(1).toLowerCase()}
             </Text>
@@ -125,9 +130,9 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
 
         {/* Configuration form */}
         <View style={styles.configSection}>
-          <Text size="base" weight="semibold" style={styles.sectionTitle}>
+          <SectionHeader variant="title" style={styles.sectionTitle}>
             {t('templatePreview.configuration')}
-          </Text>
+          </SectionHeader>
           <FormInput
             label={t('templatePreview.planNameLabel')}
             value={nameOverride}
@@ -152,14 +157,14 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
 
         {/* Day-by-day preview */}
         <View style={styles.previewSection}>
-          <Text size="base" weight="semibold" style={styles.sectionTitle}>
+          <SectionHeader variant="title" style={styles.sectionTitle}>
             {t('templatePreview.preview')}
-          </Text>
+          </SectionHeader>
           {loading ? (
             <PrimaryActivityIndicator size="small" />
           ) : groupedByDay.length === 0 ? (
             <Text
-              size="sm"
+              role="caption"
               tone="tertiary"
               align="center"
               style={styles.emptyPreview}
@@ -169,26 +174,20 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
           ) : (
             groupedByDay.map(day => (
               <View key={day.dayOffset} style={styles.dayGroup}>
-                <Text
-                  size="sm"
-                  weight="semibold"
-                  tone="accent"
-                  style={styles.dayLabel}
-                >
+                <Text role="label" tone="primary" style={styles.dayLabel}>
                   {t('templatePreview.day', { day: day.dayOffset + 1 })}
                 </Text>
                 {day.items.map(item => (
                   <View key={item.id} style={styles.mealRow}>
-                    <Text
-                      size="xs"
-                      weight="medium"
-                      tone="tertiary"
-                      style={styles.mealType}
-                    >
+                    <Text role="label" tone="tertiary" style={styles.mealType}>
                       {item.mealType.charAt(0) +
                         item.mealType.slice(1).toLowerCase()}
                     </Text>
-                    <Text size="sm" style={styles.mealName} numberOfLines={1}>
+                    <Text
+                      role="caption"
+                      style={styles.mealName}
+                      numberOfLines={1}
+                    >
                       {item.recipe?.name ??
                         item.customMealName ??
                         t('templatePreview.customMeal')}
@@ -211,11 +210,11 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
           ]}
         >
           {confirmLoading ? (
-            <WhiteActivityIndicator size="small" />
+            <OnPrimaryActivityIndicator size="small" />
           ) : (
             <>
-              <Icon name="calendar-outline" size={20} tone="white" />
-              <Text size="base" weight="semibold" style={styles.confirmText}>
+              <Icon name="calendar-outline" size={20} tone="onPrimary" />
+              <Text role="bodyStrong" style={styles.confirmText}>
                 {t('labels.createMealPlan')}
               </Text>
             </>
@@ -230,13 +229,8 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
               pressed && styles.buttonPressed,
             ]}
           >
-            <Icon name="create-outline" size={18} tone="accent" />
-            <Text
-              size="base"
-              weight="medium"
-              tone="accent"
-              style={styles.editText}
-            >
+            <Icon name="create-outline" size={18} tone="primary" />
+            <Text role="bodyStrong" tone="primary" style={styles.editText}>
               {t('labels.editTemplate')}
             </Text>
           </Pressable>

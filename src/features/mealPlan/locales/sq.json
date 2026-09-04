@@ -128,7 +128,6 @@
   },
   "templateCard": {
     "usedTimes": "Përdorur {{count}} herë",
-    "durationDays": "{{count}} ditë",
     "servings": "{{count}} racione"
   },
   "templatePreview": {

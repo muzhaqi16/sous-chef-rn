@@ -1,4 +1,7 @@
-import { classifyCreateResult } from '../classifyCreateResult';
+import {
+  classifyDeleteResult,
+  classifyCreateResult,
+} from '../classifyCreateResult';
 
 describe('classifyCreateResult', () => {
   it("returns 'created' for a success payload", () => {
@@ -99,5 +102,43 @@ describe('classifyCreateResult', () => {
       },
     };
     expect(classifyCreateResult(result)).toBe('created');
+  });
+});
+
+describe('classifyDeleteResult', () => {
+  it('treats a row the server never held as gone, not refused', () => {
+    // Reverting this would restore a pantry the server cannot send, leaving a
+    // phantom no refresh can clear.
+    expect(
+      classifyDeleteResult({
+        data: {
+          deletePantry: {
+            __typename: 'NotFoundError',
+            code: 'RESOURCE_NOT_FOUND',
+            message: 'Pantry not found',
+          },
+        },
+      }),
+    ).toBe('created');
+  });
+
+  it('still refuses a real refusal', () => {
+    expect(
+      classifyDeleteResult({
+        data: {
+          deletePantry: {
+            __typename: 'ForbiddenError',
+            code: 'FORBIDDEN',
+            message: 'Not yours',
+          },
+        },
+      }),
+    ).toBe('rejected');
+  });
+
+  it('leaves a queued delete queued', () => {
+    expect(classifyDeleteResult({ data: { deletePantry: null } })).toBe(
+      'queued',
+    );
   });
 });

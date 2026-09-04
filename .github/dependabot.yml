@@ -54,6 +54,15 @@ updates:
 
   # Workflow actions are a supply-chain surface and are all direct by
   # definition, so there is no transitive noise to filter here.
+  #
+  # `open-pull-requests-limit: 0` stops VERSION-update PRs for this ecosystem
+  # only. It does not disable security updates, which run off the dependency
+  # graph and are governed by Settings > Advanced Security > Dependabot
+  # ("Dependabot security updates") rather than by this file — the same
+  # separation the scope note at the top describes for alerts. Detection does
+  # not depend on either: `.github/workflows/dependency-audit.yml` fails a PR
+  # and files a weekly issue on a vulnerable production dependency regardless
+  # of what Dependabot proposes.
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:

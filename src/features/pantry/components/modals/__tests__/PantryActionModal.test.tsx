@@ -8,6 +8,7 @@ import {
 import type { PantryActionModal_PantryItemFragment } from '../PantryActionModal.generated';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
+import { PantryActionModal_PantryItemFragmentDoc } from '#features/pantry/components/modals/PantryActionModal.generated';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -35,7 +36,7 @@ jest.mock('#components/atoms/BottomSheetKeyboardAwareScrollView', () => {
   };
 });
 
-jest.mock('#components/atoms/BottomSheetHeader', () => {
+jest.mock('#components/molecules/BottomSheetHeader', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
@@ -68,7 +69,7 @@ jest.mock('#components/atoms/BottomSheetHeader', () => {
   };
 });
 
-jest.mock('#components/atoms/FormattedItemSubtitle', () => {
+jest.mock('#components/molecules/FormattedItemSubtitle', () => {
   const RN = require('react-native');
   return {
     FormattedItemSubtitle: ({
@@ -128,7 +129,7 @@ jest.mock('#features/pantry/hooks/useConvertAvailableQuantity', () => ({
   })),
 }));
 
-jest.mock('#components/molecules/UnitPicker', () => ({
+jest.mock('#features/pantry/components/UnitPicker', () => ({
   UnitPicker: () => null,
 }));
 
@@ -137,27 +138,35 @@ const PANTRY_ITEM_ID = 'pantry-1';
 function makeCache(overrides: Record<string, unknown> = {}) {
   return seedCache([
     {
-      __typename: 'PantryItem',
-      id: PANTRY_ITEM_ID,
-      itemId: 'item-1',
-      itemName: 'Flour',
-      quantity: 5,
-      activeBatchCount: 1,
-      netWeight: null,
-      remainingNetWeight: null,
-      lastUsedAt: null,
-      unit: {
-        __typename: 'Unit',
-        id: 'u1',
-        symbol: 'lbs',
-        name: 'Pounds',
-        type: 'WEIGHT',
-        displayAsFraction: false,
+      // The production selection the consumer reads, so a thin fixture fails
+      // here instead of defining its own idea of complete.
+      fragment: PantryActionModal_PantryItemFragmentDoc,
+      data: {
+        __typename: 'PantryItem',
+        id: PANTRY_ITEM_ID,
+        itemId: 'item-1',
+        itemName: 'Flour',
+        quantity: 5,
+        activeBatchCount: 1,
+        netWeight: null,
+        remainingNetWeight: null,
+        portionUnitId: null,
+        portionUnit: null,
+        remainingPortions: null,
+        lastUsedAt: null,
+        unit: {
+          __typename: 'Unit',
+          id: 'u1',
+          symbol: 'lbs',
+          name: 'Pounds',
+          type: 'WEIGHT',
+          displayAsFraction: false,
+        },
+        netWeightUnit: null,
+        packageBreakdown: null,
+        quantityBreakdown: null,
+        ...overrides,
       },
-      netWeightUnit: null,
-      packageBreakdown: null,
-      quantityBreakdown: null,
-      ...overrides,
     },
   ]);
 }

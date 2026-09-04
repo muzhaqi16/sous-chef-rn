@@ -12,11 +12,11 @@ import { useIsHydrated } from '#store/useAppStore';
 import { client, restorePersistedCache } from '#/apollo/client';
 import { Navigation } from '#navigation/RootNavigator';
 import { SplashScreen } from '#screens/SplashScreen';
-import { ToastProvider } from '#components/atoms/Toast';
+import { ToastProvider } from '#components/molecules/Toast';
 import { OfflineTransitionToaster } from '#components/atoms/OfflineTransitionToaster';
 import { ThemedStatusBar } from '#components/atoms/ThemedStatusBar';
 import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
-import { useAppLifecycle } from '#hooks/app/useAppLifecycle';
+import { useAppLifecycle } from '#/app/useAppLifecycle';
 import { NotificationProvider } from '#features/notifications/components/NotificationProvider';
 import { AlertProvider } from '#/components/providers/AlertProvider';
 import { DataProvider } from '#/app/providers/DataProvider';
@@ -84,19 +84,23 @@ const App = () => {
                         2. OfflineTransitionToaster - renders null; fires the
                            offline/online announcement toast once at the root.
                         3. GlobalBackdrop - covers everything including status bar
+                        3b. ToastProvider - a LEAF, mounted last so the toast is
+                            last in the native order; it exposes no context, so
+                            nothing needs to sit inside it
                         4. BottomSheetModal portals (including ActionTray) render on top via @gorhom/bottom-sheet */}
                         <ThemedStatusBar />
                         <View style={styles.container}>
-                          <ToastProvider>
-                            <AlertProvider>
-                              <NotificationProvider>
-                                <Navigation />
-                              </NotificationProvider>
-                            </AlertProvider>
-                          </ToastProvider>
+                          <AlertProvider>
+                            <NotificationProvider>
+                              <Navigation />
+                            </NotificationProvider>
+                          </AlertProvider>
                           <OfflineTransitionToaster />
                         </View>
                         <GlobalBackdrop />
+                        {/* Last, so the card composites above every screen's
+                            header — including the ones on liquid glass. */}
+                        <ToastProvider />
                       </BottomSheetModalProvider>
                     </OverlayBackdropProvider>
                   </SafeAreaProvider>

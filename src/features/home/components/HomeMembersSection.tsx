@@ -92,9 +92,9 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
           );
         })
       ) : (
-        <View style={styles.emptyContainer}>
+        <View style={styles.emptyInset}>
           <Icon name="people-outline" size={24} tone="textSecondary" />
-          <Text size="sm" tone="secondary" style={styles.emptyText}>
+          <Text role="caption" tone="secondary">
             {t('homeMembers.noMembers')}
           </Text>
         </View>
@@ -104,8 +104,7 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
       {pendingInvites.length > 0 && (
         <View style={styles.invitesSection}>
           <Text
-            size="sm"
-            weight="semibold"
+            role="label"
             tone="secondary"
             style={styles.invitesSectionTitle}
           >
@@ -127,18 +126,17 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  emptyContainer: {
+  emptyInset: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: theme.spacing.md,
     gap: theme.spacing.sm,
   },
-  emptyText: {},
   invitesSection: {
     marginTop: theme.spacing.lg,
     paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
   },
   invitesSectionTitle: {

@@ -5,6 +5,7 @@
  * indirection: `dataMasking` leaves `node` as `{ __typename, id }`.
  */
 
+import { loadPageWithCursorRecovery } from '#hooks/utils/cursorRecovery';
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import { useApolloClient, useQuery } from '@apollo/client/react';
 import { GetNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
@@ -68,12 +69,15 @@ export function useNotificationHistory(
     // No local cap. The store capped at MAX_NOTIFICATIONS and evicted the
     // oldest, so paging past it fetched rows that could never become visible;
     // the cache has no such ceiling and the connection merges by node id.
-    fetchMore({
+    void loadPageWithCursorRecovery({
+      fetchMore,
+      refetch,
       variables: {
         filter: category ? { category } : undefined,
         first: PAGE_SIZE,
         after: endCursor,
       },
+      operation: 'NotificationHistory.loadMore',
     });
   };
 

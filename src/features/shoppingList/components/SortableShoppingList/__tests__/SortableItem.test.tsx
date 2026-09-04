@@ -22,7 +22,7 @@ const swipeableProps: {
   rightActions?: unknown[];
 }[] = [];
 
-jest.mock('#/components/molecules/SwipeableItem/SwipeableItem', () => ({
+jest.mock('#components/organisms/SwipeableItem/SwipeableItem', () => ({
   SwipeableItem: ({
     children,
     leftActions,
@@ -38,7 +38,7 @@ jest.mock('#/components/molecules/SwipeableItem/SwipeableItem', () => ({
   },
 }));
 
-jest.mock('#/components/molecules/ListItem', () => ({
+jest.mock('#components/molecules/ListItem', () => ({
   ListItem: ({
     title,
     subtitle,
@@ -65,7 +65,7 @@ jest.mock('#/components/molecules/ListItem', () => ({
   },
 }));
 
-jest.mock('#/components/atoms/AnimatedCheckbox', () => ({
+jest.mock('#features/shoppingList/components/AnimatedCheckbox', () => ({
   AnimatedCheckbox: ({
     checked,
     testID,
@@ -82,7 +82,7 @@ jest.mock('#/components/atoms/AnimatedCheckbox', () => ({
   },
 }));
 
-jest.mock('#/components/atoms/QuantityBadge', () => ({
+jest.mock('#features/shoppingList/components/QuantityBadge', () => ({
   QuantityBadge: ({
     quantity,
     unit,
@@ -99,7 +99,7 @@ jest.mock('#/components/atoms/QuantityBadge', () => ({
   },
 }));
 
-jest.mock('#/components/atoms/CachedImage', () => ({
+jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: () => {
     const { View } = require('react-native');
     return <View testID="cached-image" />;
@@ -118,7 +118,7 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#/constants/touch', () => ({
+jest.mock('#features/shoppingList/constants/touch', () => ({
   HIT_SLOP: { top: 8, bottom: 8, left: 8, right: 8 },
 }));
 
@@ -130,12 +130,10 @@ jest.mock('#hooks/animations/useSlideAnimation', () => ({
 }));
 
 jest.mock('#constants/animations', () => ({
-  standardEasing: { factory: jest.fn(() => jest.fn()) },
   staggeredEntryAnimation: { duration: 300 },
-  TIMING: { MODERATE: 300 },
 }));
 
-jest.mock('#context/StaggeredEntryContext', () => ({
+jest.mock('#features/shoppingList/context/StaggeredEntryContext', () => ({
   useStaggeredEntry: jest.fn(() => ({
     getEntryDelay: jest.fn(() => 0),
   })),
@@ -227,12 +225,21 @@ function seedItem(overrides: Record<string, unknown> = {}) {
     purchaseInfo: {
       __typename: 'ShoppingListItemPurchaseInfo',
       isPurchased: false,
+      movedToPantryAt: null,
     },
     item: null,
     ...overrides,
   };
   return entry;
 }
+
+/**
+ * Seeded against the row's OWN fragment, so a fixture too thin for what
+ * `SortableItem` reads fails here rather than rendering a blank row.
+ */
+const seedRow = (
+  entry: Record<string, unknown> & { __typename: string; id: string },
+) => seedCache([{ fragment: SortableItem_ItemFragmentDoc, data: entry }]);
 
 function rowItem(
   entry: ReturnType<typeof seedItem>,
@@ -273,7 +280,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     renderWithApollo(
       <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
       {
-        cache: seedCache([entry]),
+        cache: seedRow(entry),
       },
     );
     expect(screen.getByText('Milk')).toBeTruthy();
@@ -284,7 +291,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     renderWithApollo(
       <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
       {
-        cache: seedCache([entry]),
+        cache: seedRow(entry),
       },
     );
     expect(screen.getByText('2 liters')).toBeTruthy();
@@ -295,7 +302,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     renderWithApollo(
       <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
       {
-        cache: seedCache([entry]),
+        cache: seedRow(entry),
       },
     );
     expect(screen.getByTestId('swipeable-item')).toBeTruthy();
@@ -306,7 +313,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     renderWithApollo(
       <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
       {
-        cache: seedCache([entry]),
+        cache: seedRow(entry),
       },
     );
     expect(screen.getByTestId('list-item')).toBeTruthy();
@@ -317,7 +324,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     renderWithApollo(
       <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
       {
-        cache: seedCache([entry]),
+        cache: seedRow(entry),
       },
     );
     expect(screen.getByTestId('shopping-item-checkbox-item-1')).toBeTruthy();
@@ -328,7 +335,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     const entry = seedItem();
     renderWithApollo(
       <SwipeableListItem item={rowItem(entry, true)} index={0} target="Cell" />,
-      { cache: seedCache([entry]) },
+      { cache: seedRow(entry) },
     );
     expect(screen.getByText('checked')).toBeTruthy();
   });
@@ -338,7 +345,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     renderWithApollo(
       <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
       {
-        cache: seedCache([entry]),
+        cache: seedRow(entry),
       },
     );
     expect(screen.getByTestId('quantity-badge')).toBeTruthy();
@@ -406,7 +413,7 @@ describe('SwipeableListItem (SortableItem)', () => {
       const entry = seedItem();
       renderWithApollo(
         <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-        { cache: seedCache([entry]) },
+        { cache: seedRow(entry) },
       );
 
       const last = swipeableProps[swipeableProps.length - 1];
@@ -427,7 +434,7 @@ describe('SwipeableListItem (SortableItem)', () => {
       const entry = seedItem();
       renderWithApollo(
         <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-        { cache: seedCache([entry]) },
+        { cache: seedRow(entry) },
       );
 
       const last = swipeableProps[swipeableProps.length - 1];
@@ -449,7 +456,7 @@ describe('SwipeableListItem (SortableItem)', () => {
       const entry = seedItem();
       renderWithApollo(
         <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-        { cache: seedCache([entry]) },
+        { cache: seedRow(entry) },
       );
 
       const last = swipeableProps[swipeableProps.length - 1];
@@ -500,7 +507,7 @@ describe('SwipeableListItem (SortableItem)', () => {
           index={0}
           target="Cell"
         />,
-        { cache: seedCache([entry]) },
+        { cache: seedRow(entry) },
       );
 
       expect(
@@ -525,7 +532,7 @@ describe('SwipeableListItem (SortableItem)', () => {
           index={0}
           target="Cell"
         />,
-        { cache: seedCache([entry]) },
+        { cache: seedRow(entry) },
       );
 
       // The bulk move filters its working set on this same stamp, so offering
@@ -559,7 +566,7 @@ describe('SwipeableListItem (SortableItem)', () => {
           index={0}
           target="Cell"
         />,
-        { cache: seedCache([entry]) },
+        { cache: seedRow(entry) },
       );
       expect(mockRegisterRect).not.toHaveBeenCalledWith('checkbox', null);
 
@@ -586,7 +593,7 @@ describe('SwipeableListItem (SortableItem)', () => {
           index={0}
           target="Cell"
         />,
-        { cache: seedCache([entry]) },
+        { cache: seedRow(entry) },
       );
       expect(mockRegisterRect).not.toHaveBeenCalledWith('archiveIcon', null);
 
@@ -613,7 +620,7 @@ describe('SwipeableListItem (SortableItem)', () => {
           index={0}
           target="Cell"
         />,
-        { cache: seedCache([entry]) },
+        { cache: seedRow(entry) },
       );
       expect(mockRegisterRect).not.toHaveBeenCalledWith('itemCard', null);
 

@@ -152,6 +152,7 @@ const ListItemTitle: React.FC<{
   styles.useVariants({ purchased });
   return (
     <Text
+      role="bodyStrong"
       style={styles.title}
       numberOfLines={numberOfLines}
       ellipsizeMode="tail"
@@ -167,7 +168,12 @@ const ListItemSubtitle: React.FC<{
 }> = ({ purchased, children }) => {
   styles.useVariants({ purchased });
   return (
-    <Text style={styles.subtitle} numberOfLines={1} ellipsizeMode="tail">
+    <Text
+      role="caption"
+      style={styles.subtitle}
+      numberOfLines={1}
+      ellipsizeMode="tail"
+    >
       {children}
     </Text>
   );
@@ -189,7 +195,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     overflow: 'hidden',
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.borderLight,
   },
   contentContainer: {
@@ -207,14 +213,12 @@ const styles = StyleSheet.create(theme => ({
     flexShrink: 0, // Prevent checkbox from being compressed when no image exists
   },
   leftIcon: {
-    marginRight: theme.spacing['3'],
+    marginRight: theme.spacing.base,
   },
   content: {
     flex: 1,
   },
   title: {
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
     variants: {
       purchased: {
@@ -227,7 +231,6 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   subtitle: {
-    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
     variants: {
@@ -248,8 +251,5 @@ const styles = StyleSheet.create(theme => ({
         },
       },
     },
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

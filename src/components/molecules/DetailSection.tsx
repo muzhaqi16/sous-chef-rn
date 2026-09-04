@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Text } from '#components/atoms/Text';
+import { Card } from '#components/atoms/Card';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
 interface DetailSectionProps {
   title?: string;
@@ -28,42 +29,42 @@ export const DetailSection: React.FC<DetailSectionProps> = ({
   fill,
   style,
   children,
-}) => (
-  <View
-    style={[
-      transparent
-        ? styles.sectionTransparent
-        : flush
-        ? styles.sectionFlush
-        : styles.section,
-      !!fill && styles.fill,
-      style,
-    ]}
-  >
-    {!!title && <Text style={styles.sectionHeading}>{title}</Text>}
-    {children}
-  </View>
-);
+}) =>
+  transparent ? (
+    <View style={[styles.sectionTransparent, !!fill && styles.fill, style]}>
+      {!!title && (
+        <SectionHeader style={styles.sectionHeading}>{title}</SectionHeader>
+      )}
+      {children}
+    </View>
+  ) : (
+    <Card
+      radius="xl"
+      padding="none"
+      style={[
+        flush ? styles.sectionFlush : styles.section,
+        !!fill && styles.fill,
+        style,
+      ]}
+    >
+      {!!title && (
+        <SectionHeader style={styles.sectionHeading}>{title}</SectionHeader>
+      )}
+      {children}
+    </Card>
+  );
 
 const styles = StyleSheet.create(theme => ({
   section: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.xl,
-    borderCurve: 'continuous',
     marginHorizontal: theme.spacing.sm,
     marginBottom: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
-    ...theme.shadows.card,
   },
   sectionFlush: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.xl,
-    borderCurve: 'continuous',
     marginHorizontal: theme.spacing.sm,
     marginBottom: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
-    ...theme.shadows.card,
   },
   sectionTransparent: {
     marginHorizontal: theme.spacing.sm,
@@ -73,8 +74,6 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   sectionHeading: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },

@@ -11,8 +11,8 @@ import type {
   ShoppingListRowItem,
   SortableShoppingListProps,
 } from '../SortableShoppingList/types';
-import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
-import { PaginationFooter } from '#components/organisms/PaginationFooter';
+import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
+import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { ShoppingListItemSkeleton } from '#features/shoppingList/components/skeletons/ShoppingListItemSkeleton';
 
 interface StaggeredTabContentProps {

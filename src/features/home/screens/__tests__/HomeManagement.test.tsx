@@ -39,14 +39,14 @@ jest.mock('#features/home/hooks/useHomeManagement', () => ({
   })),
 }));
 
-jest.mock('#/hooks/useInviteUserModal', () => ({
+jest.mock('#features/home/hooks/useInviteUserModal', () => ({
   useInviteUserModal: jest.fn(() => ({
     show: jest.fn(),
     InviteModalComponent: null,
   })),
 }));
 
-jest.mock('#/utils/permissions/homePermissions', () => ({
+jest.mock('#features/home/utils/homePermissions', () => ({
   findUserMembership: jest.fn(
     (members: Array<{ user?: { id?: string } }> | undefined, userId: string) =>
       members?.find(m => m.user?.id === userId),
@@ -55,15 +55,15 @@ jest.mock('#/utils/permissions/homePermissions', () => ({
   canInviteToHome: jest.fn(() => true),
 }));
 
-jest.mock('#components/molecules/Header', () => ({
+jest.mock('#components/organisms/Header', () => ({
   Header: ({ title }: { title?: string }) => title,
 }));
 
-jest.mock('#/components/atoms/BaseInput/BaseInput', () => ({
+jest.mock('#components/molecules/BaseInput/BaseInput', () => ({
   BaseInput: () => null,
 }));
 
-jest.mock('#components/atoms/Button', () => ({
+jest.mock('#components/molecules/Button', () => ({
   Button: () => null,
 }));
 

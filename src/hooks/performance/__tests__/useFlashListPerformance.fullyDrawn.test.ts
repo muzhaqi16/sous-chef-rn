@@ -24,17 +24,19 @@ const markFullyDrawn = NativePerformanceService.markFullyDrawn as jest.Mock;
 const renderWithContent = (
   hasRealContent: boolean,
   onFirstContentLayout?: () => void,
+  rowCount = 1,
 ) => {
   const ref = { current: null };
   return renderHook(
-    (props: { hasRealContent: boolean }) =>
+    (props: { hasRealContent: boolean; rowCount?: number }) =>
       useFlashListPerformance(ref, {
         componentName: 'TestList',
         reportInterval: 0,
         hasRealContent: props.hasRealContent,
+        rowCount: props.rowCount ?? rowCount,
         onFirstContentLayout,
       }),
-    { initialProps: { hasRealContent } },
+    { initialProps: { hasRealContent, rowCount } },
   );
 };
 
@@ -121,6 +123,28 @@ describe('useFlashListPerformance — the first-content-layout latch', () => {
 
     expect(result.current.hasContentLayout).toBe(true);
     expect(onFirstContentLayout).toHaveBeenCalledTimes(1);
+  });
+
+  // The empty pantry shipped a permanent skeleton: FlashList commits once for
+  // data that goes empty to empty, that commit lands while the skeletons are
+  // still up, and the placeholder guard above discards it — so the list that
+  // needs no layout was the one that waited for one forever.
+  it('reports a layout for a settled EMPTY list, which never commits again', () => {
+    const { result, rerender } = renderWithContent(false, undefined, 0);
+
+    act(() => result.current.onCommitLayoutEffect());
+    rerender({ hasRealContent: true });
+
+    expect(result.current.hasContentLayout).toBe(true);
+  });
+
+  it('still waits for the commit when the settled list has rows', () => {
+    const { result, rerender } = renderWithContent(false, undefined, 3);
+
+    act(() => result.current.onCommitLayoutEffect());
+    rerender({ hasRealContent: true });
+
+    expect(result.current.hasContentLayout).toBe(false);
   });
 
   it('is one-shot: later commits do not re-fire the callback', () => {

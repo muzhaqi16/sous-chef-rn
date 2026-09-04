@@ -5,14 +5,14 @@ import {
   type GetShoppingListItemsFilteredQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
-import { PAGINATION } from '#/constants/shoppingList';
+import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import {
   useConnectionData,
   type ConnectionData,
 } from '#hooks/utils/useConnectionData';
 import { errorService } from '#/services/errorService';
-import { isAbortError } from '#/utils/errors/abort';
+import { isAbortError } from '#features/shoppingList/utils/abort';
 import type { HookReturn } from '#hooks/types';
 
 /**
@@ -122,6 +122,7 @@ export function usePaginatedShoppingItems({
     selector: d => d.shoppingList?.itemsConnection,
     loading: uLoading,
     fetchMore: uFetchMore,
+    refetch: uRefetch,
   });
 
   const purchased = useConnectionData({
@@ -129,6 +130,7 @@ export function usePaginatedShoppingItems({
     selector: d => d.shoppingList?.itemsConnection,
     loading: pLoading,
     fetchMore: pFetchMore,
+    refetch: pRefetch,
   });
 
   const refetchQuietly = async (

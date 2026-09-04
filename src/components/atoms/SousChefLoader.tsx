@@ -18,10 +18,10 @@ import {
   withTiming,
   withDelay,
   cancelAnimation,
-  useReducedMotion,
-  Easing,
 } from 'react-native-reanimated';
 import { Text } from '#components/atoms/Text';
+import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
+import { motion } from '#/theme/foundations/motion';
 
 // Colors for the grocery bag illustration
 const COLORS = {
@@ -162,15 +162,15 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
   const baguetteY = useSharedValue(0);
   const tomatoY = useSharedValue(0);
   const leavesY = useSharedValue(0);
-  const reducedMotion = useReducedMotion();
+  const motionEnabled = useMotionEnabled();
 
   // Start animations on mount with staggered timing (all on UI thread)
   useLayoutEffect(() => {
-    if (reducedMotion) return;
+    if (!motionEnabled) return;
 
     const bounceConfig = {
       duration: 600,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+      easing: motion.easing.standard,
     };
 
     const bounce = (amplitude: number) =>
@@ -197,7 +197,7 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
       cancelAnimation(tomatoY);
       cancelAnimation(leavesY);
     };
-  }, [baguetteY, tomatoY, leavesY, reducedMotion]);
+  }, [baguetteY, tomatoY, leavesY, motionEnabled]);
 
   // Derived transforms for Skia
   const baguetteTransform = useDerivedValue(() => [
@@ -232,16 +232,11 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
     <View style={componentStyles.container}>
       {!!showBrand && (
         <View style={componentStyles.brandContainer}>
-          <Text
-            size="2xl"
-            weight="bold"
-            tone="primary"
-            style={componentStyles.brandTitle}
-          >
+          <Text role="title" tone="primary" style={componentStyles.brandTitle}>
             Sous Chef
           </Text>
           <Text
-            size="sm"
+            role="caption"
             tone="secondary"
             style={componentStyles.brandSubtitle}
           >
@@ -349,7 +344,11 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
           },
         ]}
       >
-        <Text weight="bold" align="center" style={componentStyles.bannerText}>
+        <Text
+          role="bodyStrong"
+          align="center"
+          style={componentStyles.bannerText}
+        >
           {resolvedMessage.toUpperCase()}
         </Text>
       </View>
@@ -399,13 +398,13 @@ const componentStyles = StyleSheet.create(theme => ({
     variants: {
       size: {
         small: {
-          fontSize: theme.typography.fontSize['2xs'] * SIZES.small.scale,
+          ...theme.type.caption,
         },
         medium: {
-          fontSize: theme.typography.fontSize['2xs'] * SIZES.medium.scale,
+          ...theme.type.caption,
         },
         large: {
-          fontSize: theme.typography.fontSize['2xs'] * SIZES.large.scale,
+          ...theme.type.caption,
         },
       },
     },

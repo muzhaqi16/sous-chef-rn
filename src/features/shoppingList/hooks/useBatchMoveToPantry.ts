@@ -4,7 +4,7 @@ import { MovePurchasedItemsToPantryDocument } from './useBatchMoveToPantry.gener
 import {
   readMovedToPantryAt,
   writePurchaseInfo,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+} from '#features/shoppingList/cache/purchase';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { handleMutationError } from '#/utils/errorHandlers';

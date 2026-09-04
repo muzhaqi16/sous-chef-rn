@@ -4,9 +4,9 @@ import { useTranslation } from '#/i18n';
 
 import { StyleSheet } from 'react-native-unistyles';
 import { detailsPageBaseStyles } from './detailsPageStyles';
-import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { DropdownStack } from '#components/atoms/DropdownStack';
-import { FormInput } from '#components/molecules/FormInput';
+import { FormInput } from '#components/atoms/FormInput';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { Text } from '#components/atoms/Text';
@@ -14,8 +14,9 @@ import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
 import {
   ACQUISITION_METHOD_OPTIONS,
   acquisitionMethodLabelKey,
-} from '#/utils/items/itemEnumLabels';
+} from '#features/pantry/utils/itemEnumLabels';
 import { localizeNumericHint } from '#/utils/formatters/number';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
 export interface StockSettingsPageProps {
   minQuantity: string;
@@ -53,7 +54,7 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
   const formatMethodLabel = (value: AcquisitionMethod) =>
     t(acquisitionMethodLabelKey(value));
   return (
-    <BottomSheetKeyboardAwareScrollView
+    <BottomSheetFormScrollView
       key="stock"
       style={styles.page}
       contentContainerStyle={[
@@ -63,10 +64,10 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      <Text size="lg" weight="semibold" style={styles.sectionTitle}>
+      <SectionHeader style={styles.sectionTitleSpacing}>
         {t('addToPantry.lowStockSettings')}
-      </Text>
-      <Text size="sm" tone="secondary" style={styles.sectionDescription}>
+      </SectionHeader>
+      <Text role="caption" tone="secondary" style={styles.sectionDescription}>
         {t('addToPantry.lowStockHint')}
       </Text>
 
@@ -88,12 +89,12 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
         useBottomSheetInput
       />
 
-      <Text size="sm" tone="secondary" style={styles.helpText}>
+      <Text role="caption" tone="secondary" style={styles.helpText}>
         {t('addToPantry.emptyHint')}
       </Text>
 
       {/* Purchase Info */}
-      <Text size="lg" weight="semibold" style={styles.purchaseTitle}>
+      <Text role="heading" style={styles.purchaseTitle}>
         {t('addToPantry.purchaseInfo')}
       </Text>
 
@@ -127,13 +128,13 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
           formatLabel={formatMethodLabel}
         />
       </DropdownStack>
-    </BottomSheetKeyboardAwareScrollView>
+    </BottomSheetFormScrollView>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   ...detailsPageBaseStyles(theme),
-  sectionTitle: {
+  sectionTitleSpacing: {
     marginBottom: theme.spacing.xs,
   },
   sectionDescription: {

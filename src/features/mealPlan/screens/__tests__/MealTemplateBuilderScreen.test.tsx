@@ -21,8 +21,8 @@ jest.mock('#features/mealPlan/hooks/useMealTemplateEditor', () => ({
   })),
 }));
 
-jest.mock('#components/organisms/FormModal', () => ({
-  FormModal: ({
+jest.mock('#components/templates/FormScreen', () => ({
+  FormScreen: ({
     children,
     title,
     testID,
@@ -41,13 +41,13 @@ jest.mock('#components/organisms/FormModal', () => ({
   },
 }));
 
-jest.mock('#components/molecules/FormInput', () => ({
+jest.mock('#components/atoms/FormInput', () => ({
   FormInput: ({ testID }: { testID?: string }) => {
     const { View } = require('react-native');
     return <View testID={testID} />;
   },
 }));
-jest.mock('#components/molecules/FormTextArea', () => ({
+jest.mock('#components/atoms/FormTextArea', () => ({
   FormTextArea: () => null,
 }));
 jest.mock('#components/molecules/FormSelect', () => ({

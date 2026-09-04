@@ -15,32 +15,38 @@ import {
   useRecipeIngredientMatching,
   getAvailabilityStatus,
 } from '../useRecipeIngredientMatching';
+import { RecipeIngredientFragmentDoc } from '#features/recipes/graphql/recipeFragments.generated';
 
 type IngredientMatch = Parameters<typeof getAvailabilityStatus>[0];
 
 function seedIngredientCache(ids: string[]) {
   return seedCache(
     ids.map(id => ({
-      __typename: 'RecipeIngredient' as const,
-      id,
-      name: `Ingredient ${id}`,
-      quantity: 1,
-      // RecipeIngredientFragment selects estimatedPrice — without it the
-      // cache.readFragment in loadMatches is incomplete and returns null,
-      // filtering every match out (empty editableMatches).
-      estimatedPrice: null,
-      image: null,
-      isOptional: id === 'ing-3',
-      notes: null,
-      preparation: null,
-      sortOrder: 0,
-      section: null,
-      item: null,
-      unit: {
-        __typename: 'Unit' as const,
-        id: `u-${id}`,
-        name: 'cup',
-        symbol: 'cup',
+      // The production selection the consumer reads, so a thin fixture fails
+      // here instead of defining its own idea of complete.
+      fragment: RecipeIngredientFragmentDoc,
+      data: {
+        __typename: 'RecipeIngredient' as const,
+        id,
+        name: `Ingredient ${id}`,
+        quantity: 1,
+        // RecipeIngredientFragment selects estimatedPrice — without it the
+        // cache.readFragment in loadMatches is incomplete and returns null,
+        // filtering every match out (empty editableMatches).
+        estimatedPrice: null,
+        image: null,
+        isOptional: id === 'ing-3',
+        notes: null,
+        preparation: null,
+        sortOrder: 0,
+        section: null,
+        item: null,
+        unit: {
+          __typename: 'Unit' as const,
+          id: `u-${id}`,
+          name: 'cup',
+          symbol: 'cup',
+        },
       },
     })),
   );

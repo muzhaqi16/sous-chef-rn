@@ -2,7 +2,6 @@ import React, { useRef, useState } from 'react';
 import {
   useWindowDimensions,
   View,
-  Platform,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
@@ -12,14 +11,17 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { TabView, type Route } from 'react-native-tab-view';
 import { FilterTabBar } from './FilterTabBar';
-import type { FilterTabActionButton } from '#components/molecules/FilterTabs/types';
+import type { FilterTabActionButton } from '#components/organisms/FilterTabs/types';
 import { ShoppingTab } from './ShoppingTab';
 import { PurchasedTab } from './PurchasedTab';
-import { EmptyState, type EmptyStateProps } from '#components/atoms/EmptyState';
+import {
+  EmptyState,
+  type EmptyStateProps,
+} from '#components/molecules/EmptyState';
 import type { ShoppingListRowItem } from '../SortableShoppingList/types';
-import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
+import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 import { ItemSwipeActionsProvider } from '#components/organisms/itemSwipeActionsContext';
-import type { ItemSwipeActionsFactory } from '#components/molecules/SwipeableItem/types';
+import type { ItemSwipeActionsFactory } from '#components/organisms/SwipeableItem/types';
 import {
   ShoppingListTabsActionsProvider,
   type ShoppingListTabsActions,
@@ -32,6 +34,7 @@ import {
   useShoppingListTutorial,
   ShoppingListTutorialStep,
 } from '#features/shoppingList/context/ShoppingListTutorialContext';
+import { StyleSheet } from 'react-native-unistyles';
 
 type ShoppingListTabId = 'shopping' | 'purchased';
 
@@ -410,15 +413,10 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       {/* A value, not a ref: rows call it while rendering. */}
       <ItemSwipeActionsProvider value={itemSwipeActions}>
         <ShoppingListDataProvider data={tabData}>
-          <View
-            style={{
-              flex: 1,
-              ...(Platform.OS === 'android' && { elevation: 0 }),
-            }}
-          >
+          <View style={styles.tabBody}>
             {showEmptyState ? (
               <ScrollView
-                contentContainerStyle={{ flex: 1 }}
+                contentContainerStyle={styles.emptyScrollContent}
                 refreshControl={
                   onRefresh ? (
                     <ThemedRefreshControl
@@ -449,5 +447,18 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     </ShoppingListTabsActionsProvider>
   );
 };
+
+const styles = StyleSheet.create({
+  tabBody: {
+    flex: 1,
+    // Zero elevation keeps the tab body from casting an Android shadow over the
+    // floating tab bar.
+    elevation: 0,
+  },
+  // Lets the empty state fill the viewport rather than sit at the top.
+  emptyScrollContent: {
+    flex: 1,
+  },
+});
 
 export { ShoppingListTabs };

@@ -1,14 +1,14 @@
 import {
   deleteAction,
   editAction,
-} from '#components/molecules/SwipeableItem/commonActions';
-import type { SwipeAction } from '#components/molecules/SwipeableItem/types';
+} from '#components/organisms/SwipeableItem/commonActions';
+import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
 
 /**
  * The pantry's swipe vocabulary — left: consume / waste / restock, right:
  * edit / delete. Domain verbs belong to the feature, not the kit's swipe
- * components. `haptic: false` on the left three: only edit, delete and
- * toggle-purchase buzz.
+ * components. `haptic: false` on the left three: each opens its own sheet,
+ * which buzzes on its outcome, so only edit and delete buzz on the swipe.
  */
 export const pantrySwipeActions = ({
   onConsume,

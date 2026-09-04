@@ -5,13 +5,17 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { DeleteShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  DeleteShoppingListDocument,
+  type DeleteShoppingListMutation,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   addOptimisticShoppingList,
   readShoppingListSnapshot,
   removeShoppingListFromCache,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+} from '#features/shoppingList/cache/list';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import type { MutationOutcome } from '#/utils/errors/mutationOutcome';
 import { toastService } from '#/services/toastService';
 import { errorService, localizedErrorMessage } from '#/services/errorService';
 import { t } from '#/i18n';
@@ -29,7 +33,9 @@ export function useDeleteShoppingList() {
     },
   });
 
-  const deleteShoppingList = async (id: string) => {
+  const deleteShoppingList = async (
+    id: string,
+  ): Promise<MutationOutcome<DeleteShoppingListMutation> | undefined> => {
     // Snapshot first so a server rejection can restore the list.
     const snapshot = readShoppingListSnapshot(client.cache, id);
 

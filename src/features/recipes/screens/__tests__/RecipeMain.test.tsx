@@ -3,11 +3,11 @@
 import React from 'react';
 import { render, userEvent, act } from '@testing-library/react-native';
 import { RecipeMain } from '../RecipeMain';
-import type { transformRecipeForDisplay } from '#/utils/recipeTransform';
+import type { transformRecipeForDisplay } from '#domain/recipeTransform';
 import type {
   SearchRecipesResult,
   RecipeSearchResult,
-} from '#/services/recipeApi/types';
+} from '#/services/spoonacular/types';
 
 type RecipeMainItem = ReturnType<typeof transformRecipeForDisplay>;
 
@@ -107,7 +107,7 @@ jest.mock('#features/recipes/hooks/useRecipeScreen', () => ({
 jest.mock('#/utils/finallyHelpers');
 
 jest.mock(
-  '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark',
+  '#components/organisms/SpotlightCoachMark/SpotlightCoachMark',
   () => ({ SpotlightCoachMark: () => null }),
 );
 jest.mock('#hooks/ui/useTutorialSequence', () => ({
@@ -118,7 +118,7 @@ jest.mock('#hooks/ui/useTutorialSequence', () => ({
   })),
 }));
 jest.mock('#hooks/useFeatureHint', () => ({}));
-jest.mock('#/utils/recipeTransform', () => ({
+jest.mock('#domain/recipeTransform', () => ({
   transformRecipeForDisplay: jest.fn(
     (r: SearchRecipesResult | RecipeSearchResult) => ({
       id: String(r.id),
@@ -137,12 +137,15 @@ jest.mock('@gorhom/bottom-sheet', () => ({
   ),
   useBottomSheetSpringConfigs: jest.fn(() => ({})),
 }));
-jest.mock('../RecipeSearch/IngredientSelectorSheet', () => {
-  const R = require('react');
-  return {
-    IngredientSelectorSheet: R.forwardRef(() => null),
-  };
-});
+jest.mock(
+  '#features/recipes/components/recipeSearch/IngredientSelectorSheet',
+  () => {
+    const R = require('react');
+    return {
+      IngredientSelectorSheet: R.forwardRef(() => null),
+    };
+  },
+);
 
 let mockItemListImpl: (
   props: ItemListMockProps,
@@ -180,8 +183,8 @@ jest.mock('#/styles/commonStyles', () => ({ commonStyles: {} }));
 jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: 'CachedImage',
 }));
-jest.mock('#components/templates/BottomSheetAction', () => ({
-  BottomSheetAction: () => null,
+jest.mock('#components/templates/Sheet', () => ({
+  Sheet: () => null,
 }));
 jest.mock('../../context/IngredientSelectionContext', () => ({
   IngredientSelectionProvider: ({ children }: { children: React.ReactNode }) =>

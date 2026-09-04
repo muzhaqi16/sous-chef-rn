@@ -37,7 +37,7 @@ const RISKY_TOKENS = Object.entries(typography.fontSize)
  * each with its reason. Keyed `<file>#<styleName>`.
  */
 const ALLOWED: Record<string, string> = {
-  'src/components/modals/NumberInputSheet/NumberInputSheet.tsx#input':
+  'src/features/profile/components/NumberInputSheet/NumberInputSheet.tsx#input':
     'A TextInput, not the Text atom — it inherits no variant leading, and RN sizes the line box from the font.',
   'src/features/shoppingList/components/QuantityEditSheet/QuantityEditSheet.tsx#quantityInput':
     'Same: a TextInput, and digits carry nothing above the cap height.',

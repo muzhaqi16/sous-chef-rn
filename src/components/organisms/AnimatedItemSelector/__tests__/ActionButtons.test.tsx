@@ -11,9 +11,7 @@ jest.mock('#utils/iconUtils', () => ({
     return <Text>{name}</Text>;
   },
 }));
-jest.mock('#constants/animations', () => ({
-  TIMING: { FAST: 150, INSTANT: 50 },
-}));
+jest.mock('#constants/animations', () => ({}));
 
 describe('ActionButtons', () => {
   it('returns null for empty actions', () => {

@@ -40,23 +40,18 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
   return (
     <AppPressable onPress={() => onPress(template)} style={styles.card}>
       <View style={styles.header}>
-        <Text
-          size="base"
-          weight="semibold"
-          style={styles.name}
-          numberOfLines={1}
-        >
+        <Text role="bodyStrong" style={styles.name} numberOfLines={1}>
           {template.name}
         </Text>
         {template.usageCount > 0 && (
-          <Text size="xs" tone="tertiary" style={styles.usageCount}>
+          <Text role="caption" tone="tertiary" style={styles.usageCount}>
             {t('templateCard.usedTimes', { count: template.usageCount })}
           </Text>
         )}
       </View>
       {!!template.description && (
         <Text
-          size="sm"
+          role="caption"
           tone="secondary"
           style={styles.description}
           numberOfLines={2}
@@ -67,26 +62,26 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
       <View style={styles.metaRow}>
         <View style={styles.metaItem}>
           <Icon name="calendar-outline" size={14} tone="textTertiary" />
-          <Text size="sm" tone="secondary">
-            {t('templateCard.durationDays', { count: template.durationDays })}
+          <Text role="caption" tone="secondary">
+            {t('labels.durationDays', { count: template.durationDays })}
           </Text>
         </View>
         <View style={styles.metaItem}>
           <Icon name="people-outline" size={14} tone="textTertiary" />
-          <Text size="sm" tone="secondary">
+          <Text role="caption" tone="secondary">
             {t('templateCard.servings', { count: template.defaultServings })}
           </Text>
         </View>
         {!!template.home?.name && (
           <View style={styles.homeBadge}>
             <Icon name="home-outline" size={12} tone="textSecondary" />
-            <Text size="xs" tone="secondary">
+            <Text role="caption" tone="secondary">
               {template.home.name}
             </Text>
           </View>
         )}
         <View style={styles.categoryBadge}>
-          <Text size="xs" weight="medium" tone="accent">
+          <Text role="label" tone="accent">
             {template.category.charAt(0) +
               template.category.slice(1).toLowerCase()}
           </Text>
@@ -96,13 +91,13 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
         <View style={styles.tagRow}>
           {template.tags.slice(0, 3).map((tag, index) => (
             <View key={getMappingKey(tag, index)} style={styles.tag}>
-              <Text size="xs" tone="secondary">
+              <Text role="caption" tone="secondary">
                 {tag}
               </Text>
             </View>
           ))}
           {template.tags.length > 3 && (
-            <Text size="xs" tone="tertiary" style={styles.moreText}>
+            <Text role="caption" tone="tertiary" style={styles.moreText}>
               +{template.tags.length - 3}
             </Text>
           )}
@@ -122,7 +117,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     marginHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   pressed: {

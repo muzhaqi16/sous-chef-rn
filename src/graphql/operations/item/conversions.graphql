@@ -14,16 +14,30 @@ query ConvertQuantity(
     fromUnitId: $fromUnitId
     toUnitId: $toUnitId
   ) {
+    # Only `value` is read. The unit block carried `minPrecision` and
+    # `autoConvertThreshold` — rebased by the vocabulary repair and never read,
+    # the retained-field class the rest of this change removes.
     value
-    displayText
-    unit {
-      id
-      name
-      symbol
-      type
-      displayAsFraction
-      minPrecision
-      autoConvertThreshold
-    }
+  }
+}
+
+# Whether a conversion is possible AND how sure the server is of it. Below 1
+# means an assumption was made — a volume↔weight conversion at assumed water
+# density comes back at 0.5, which the preview marks as approximate.
+query CanConvert(
+  $pantryItemId: ID
+  $itemId: ID
+  $fromUnitId: ID!
+  $toUnitId: ID!
+) {
+  canConvert(
+    pantryItemId: $pantryItemId
+    itemId: $itemId
+    fromUnitId: $fromUnitId
+    toUnitId: $toUnitId
+  ) {
+    available
+    confidence
+    conversionType
   }
 }

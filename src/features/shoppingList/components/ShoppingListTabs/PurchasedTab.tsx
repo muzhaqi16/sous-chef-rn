@@ -3,18 +3,19 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, { FadeOut } from 'react-native-reanimated';
-import { TIMING } from '#constants/animations';
-import { SkeletonList } from '#components/atoms/Skeleton/SkeletonList';
+
+import { SkeletonList } from '#features/shoppingList/components/SkeletonList';
 import { ShoppingListItemSkeleton } from '#features/shoppingList/components/skeletons/ShoppingListItemSkeleton';
-import { EmptyState } from '#components/atoms/EmptyState';
+import { EmptyState } from '#components/molecules/EmptyState';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
-import { useMinimumVisible } from '#hooks/ui/useMinimumVisible';
+import { useMinimumVisible } from '#features/shoppingList/hooks/useMinimumVisible';
 import { StaggeredTabContent } from './StaggeredTabContent';
 import { useShoppingListTabsActions } from './ShoppingListTabsActionsContext';
 import {
   useShoppingListData,
   useShoppingListSearchQuery,
 } from './ShoppingListDataContext';
+import { motion } from '#/theme/foundations/motion';
 
 // Module-level flag: once purchased tab content has been shown, skip skeletons on remount.
 // Persists across component unmount/remount (stack navigation), resets on app restart.
@@ -140,7 +141,7 @@ const PurchasedTabComponent: React.FC = () => {
       {/* Skeleton overlay — Reanimated exiting prop handles fade-out + unmount */}
       {showSkeletons ? (
         <Animated.View
-          exiting={FadeOut.duration(TIMING.STANDARD)}
+          exiting={FadeOut.duration(motion.timing.STANDARD)}
           style={tabStyles.absoluteFill}
           pointerEvents="none"
         >

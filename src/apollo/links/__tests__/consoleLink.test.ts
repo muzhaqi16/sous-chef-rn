@@ -222,6 +222,54 @@ describe('createConsoleLink', () => {
     });
   });
 
+  describe('masking credentials in logged variables', () => {
+    // Every auth mutation takes a single `$input`, so a mask that reads only
+    // top-level keys never sees the credential it exists to hide.
+    const logged = (variables: OperationVariables): string => {
+      const link = createConsoleLink({
+        enabled: true,
+        logVariables: true,
+        logTiming: false,
+      });
+      link
+        .request(
+          createMockOperation('Login', OperationTypeNode.MUTATION, variables),
+          createMockForward(),
+        )
+        .subscribe({ next: () => {}, complete: () => {} });
+      return JSON.stringify(jest.mocked(console.log).mock.calls);
+    };
+
+    it.each([
+      ['Login', { input: { email: 'a@b.c', password: 'hunter2-secret' } }],
+      ['Register', { input: { email: 'a@b.c', password: 'hunter2-secret' } }],
+      ['ResetPassword', { input: { token: 't', password: 'hunter2-secret' } }],
+      [
+        'ChangePassword',
+        {
+          input: {
+            currentPassword: 'hunter2-secret',
+            newPassword: 'hunter2-secret',
+          },
+        },
+      ],
+    ])('masks the credential nested in %s’s $input', (_name, variables) => {
+      const out = logged(variables);
+      expect(out).not.toContain('hunter2-secret');
+      expect(out).toContain('[MASKED]');
+    });
+
+    it('masks a refresh token nested in $input', () => {
+      const out = logged({ input: { refreshToken: 'rt-secret-value' } });
+      expect(out).not.toContain('rt-secret-value');
+    });
+
+    it('leaves non-sensitive nested values readable', () => {
+      const out = logged({ input: { email: 'a@b.c', password: 'p' } });
+      expect(out).toContain('a@b.c');
+    });
+  });
+
   describe('logResponse option', () => {
     it('logs response data when enabled', done => {
       const link = createConsoleLink({

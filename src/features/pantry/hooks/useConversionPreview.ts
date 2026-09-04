@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLazyQuery } from '@apollo/client/react';
-import { ConvertQuantityDocument } from '#operations/item/conversions.generated';
+import {
+  ConvertQuantityDocument,
+  CanConvertDocument,
+} from '#operations/item/conversions.generated';
 import { errorService } from '#/services/errorService';
 
 interface UseConversionPreviewOptions {
@@ -24,6 +27,12 @@ interface ConversionPreviewResult {
   previewLoading: boolean;
   /** Raw input quantity converted to tracking/net-weight units (from API or local ratio) */
   convertedValue: number | null;
+  /**
+   * How sure the server is of this conversion. Below 1 means it assumed a
+   * property it does not know — water density, at 0.5 — so the preview says
+   * approximate before the amount is recorded. Null when nothing was asked.
+   */
+  confidence: number | null;
 }
 
 const DEBOUNCE_MS = 500;
@@ -54,11 +63,17 @@ export function useConversionPreview({
   const [previewText, setPreviewText] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [convertedValue, setConvertedValue] = useState<number | null>(null);
+  const [confidence, setConfidence] = useState<number | null>(null);
 
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [convertQuantity] = useLazyQuery(ConvertQuantityDocument, {
     fetchPolicy: 'network-only',
+  });
+  // Cache-first: a conversion's certainty is a property of the unit pair, not
+  // of the amount, so it does not change as the user types.
+  const [checkConversion] = useLazyQuery(CanConvertDocument, {
+    fetchPolicy: 'cache-first',
   });
 
   const isSameUnit =
@@ -81,6 +96,7 @@ export function useConversionPreview({
       setPreviewText(null);
       setPreviewLoading(false);
       setConvertedValue(null);
+      setConfidence(null);
     } else if (conversionRatio != null) {
       // Local computation — instant, no debounce
       const trackingValue = inputQuantity! / conversionRatio;
@@ -97,6 +113,44 @@ export function useConversionPreview({
       setPreviewLoading(true);
     }
   }
+
+  // Certainty rides on the unit pair alone, so it is asked once per pair
+  // rather than per keystroke — and asked even when a local ratio makes the
+  // preview itself free, since an assumed density is invisible in the number.
+  useEffect(() => {
+    if (!shouldShowPreview) return;
+
+    let cancelled = false;
+    void (async () => {
+      let result;
+      try {
+        result = await checkConversion({
+          variables: {
+            pantryItemId,
+            fromUnitId: selectedUnitId!,
+            toUnitId: trackingUnitId!,
+          },
+        });
+      } catch (error) {
+        errorService.reportError(error, {
+          operation: 'Error checking conversion certainty:',
+        });
+      }
+      if (cancelled) return;
+      const availability = result?.data?.canConvert;
+      setConfidence(availability?.available ? availability.confidence : null);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    shouldShowPreview,
+    pantryItemId,
+    selectedUnitId,
+    trackingUnitId,
+    checkConversion,
+  ]);
 
   // Debounced input preview conversion — network fallback only (skipped when local ratio available)
   useEffect(() => {
@@ -162,5 +216,6 @@ export function useConversionPreview({
     previewText,
     previewLoading,
     convertedValue,
+    confidence,
   };
 }

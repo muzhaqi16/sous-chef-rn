@@ -6,7 +6,7 @@ import type { SortableItem_ItemFragmentDoc } from './SortableItem.generated';
 import type {
   SwipeableRef,
   SwipeAction,
-} from '#/components/molecules/SwipeableItem/types';
+} from '#components/organisms/SwipeableItem/types';
 
 export type Positions = Record<number, number>;
 

@@ -1,0 +1,9 @@
+{
+  "counts": {
+    "screen-chrome::src/features/auth/screens/PostLoginBiometricScreen.tsx": 1,
+    "screen-chrome::src/features/mealPlan/screens/MealPlanMain.tsx": 1,
+    "screen-chrome::src/features/notifications/screens/NotificationListScreen.tsx": 1,
+    "screen-chrome::src/features/recipes/screens/RecipeMain.tsx": 1
+  },
+  "scannedFiles": 63
+}

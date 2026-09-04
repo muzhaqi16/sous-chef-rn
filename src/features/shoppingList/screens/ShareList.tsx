@@ -4,39 +4,34 @@ import { Text } from '#components/atoms/Text';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
-import { useNavigation } from '@react-navigation/native';
-import { Header } from '#components/molecules/Header';
-import { LoadingInline } from '#components/atoms/Loading';
+
+import { Loading } from '#components/molecules/Loading';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useMutation } from '@apollo/client/react';
-import { RemoveCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { isShoppingListOwner } from '#utils/ownershipHelpers';
-import {
-  useLeaveShoppingList,
-  removeCollaboratorFromShoppingListCache,
-} from '#features/shoppingList/hooks/useLeaveShoppingList';
+import { useRemoveCollaborator } from '#features/shoppingList/hooks/useRemoveCollaborator';
+import { isShoppingListOwner } from '#features/shoppingList/utils/ownershipHelpers';
+import { useLeaveShoppingList } from '#features/shoppingList/hooks/useLeaveShoppingList';
 import { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';
 import CollaboratorPermissionsBottomSheet, {
   CollaboratorPermissionsBottomSheetRef,
 } from '#features/shoppingList/components/CollaboratorPermissionsBottomSheet';
 import { useUser } from '#store/useAppStore';
-import { Button } from '#components/atoms/Button';
-import { OfflineGate } from '#components/atoms/OfflineGate';
+import { Button } from '#components/molecules/Button';
+import { OfflineGate } from '#features/shoppingList/components/OfflineGate';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { handleMutationError } from '#/utils/errorHandlers';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { CollaboratorMemberCard } from '#features/shoppingList/components/CollaboratorMemberCard';
 import { ShareCodeSection } from '#features/shoppingList/components/ShareCodeSection';
 import { ShareInviteSection } from '#features/shoppingList/components/ShareInviteSection';
+import { SectionHeader } from '#components/atoms/SectionHeader';
+import { Screen } from '#components/templates/Screen';
 
 export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   route,
 }) => {
   const { t } = useTranslation();
-  const { goBack } = useNavigation();
-  const { toHomeDetail } = useAppNavigation();
+  const { goBack, toHomeDetail } = useAppNavigation();
   const { listId } = route.params;
 
   const permissionsBottomSheetRef =
@@ -57,7 +52,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 
   const isHomeLinked = !!shoppingList?.homeId;
 
-  const [removeMember] = useMutation(RemoveCollaboratorDocument);
+  const { removeCollaborator } = useRemoveCollaborator(listId);
   const { leaveList, leaving } = useLeaveShoppingList(listId);
 
   // `collaborators` from useShoppingListDetails are already materialized
@@ -99,32 +94,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           // No refetch needed: the update() callback removes the collaborator
           // from the cached connection in place.
           onPress: async () => {
-            let result;
-            try {
-              result = await removeMember({
-                variables: { input: { id: memberId } },
-                update(cache, { data }) {
-                  // Only evict on success — a resolved error must not remove
-                  // the collaborator from the cache.
-                  if (
-                    data?.removeShoppingListCollaborator?.__typename !==
-                    'RemoveShoppingListCollaboratorPayload'
-                  ) {
-                    return;
-                  }
-                  removeCollaboratorFromShoppingListCache(
-                    cache,
-                    listId,
-                    memberId,
-                    { evictItem: true },
-                  );
-                },
-              });
-            } catch (error) {
-              handleMutationError(error, {
-                operation: 'Remove Collaborator',
-              });
-            }
+            const result = await removeCollaborator(memberId);
             alertIfRejected(result, t('errors.removeMemberFailed'));
           },
         },
@@ -180,17 +150,19 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   // shoppingList truthy across refetches, so this avoids the full-screen flash
   // every time a mutation triggers a refetch.
   if (loading && !shoppingList) {
-    return <LoadingInline />;
+    return <Loading />;
   }
 
   return (
-    <View style={styles.container}>
-      <Header
-        title={t('shoppingListScreens.shareTitle')}
-        onBack={() => goBack()}
-        centerTitle
-      />
-
+    <Screen
+      header={{
+        title: t('shoppingListScreens.shareTitle'),
+        back: () => goBack(),
+        centerTitle: true,
+      }}
+      scroll="list"
+      gutter="none"
+    >
       <OfflineGate
         message={t('shoppingListScreens.sharingOfflineMessage')}
         description={t('shoppingListScreens.sharingOfflineDescription')}
@@ -242,9 +214,9 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 
           {activeCollaborators.length > 0 && (
             <View style={styles.membersSection}>
-              <Text style={styles.sectionTitle}>
+              <SectionHeader style={styles.sectionTitleSpacing}>
                 {t('shoppingListScreens.currentMembers')}
-              </Text>
+              </SectionHeader>
               {activeCollaborators.map(member => (
                 <CollaboratorMemberCard
                   key={member.id}
@@ -267,8 +239,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           {/* Leave List section - only show for non-owners who are collaborators on non-home-linked lists */}
           {!!currentUserCollaborator && !isOwner && !isHomeLinked && (
             <View style={styles.leaveSection}>
-              <Text style={styles.sectionTitle}>{t('labels.dangerZone')}</Text>
-              <Text style={styles.leaveDescription}>
+              <SectionHeader style={styles.sectionTitleSpacing}>
+                {t('labels.dangerZone')}
+              </SectionHeader>
+              <Text role="caption" style={styles.leaveDescription}>
                 {t('shoppingListScreens.leaveDescription')}
               </Text>
               <Button
@@ -288,7 +262,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           onSuccess={refetch}
         />
       </OfflineGate>
-    </View>
+    </Screen>
   );
 };
 const styles = StyleSheet.create(theme => ({
@@ -301,31 +275,26 @@ const styles = StyleSheet.create(theme => ({
   },
   homeLinkedSection: {
     paddingBottom: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   homeLinkedButtonWrapper: {
     paddingHorizontal: theme.spacing.md,
-  },
-  sectionTitle: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing['3'],
   },
   membersSection: {
     padding: theme.spacing.md,
   },
   leaveSection: {
     padding: theme.spacing.md,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
     marginTop: 'auto',
     gap: theme.spacing.md,
   },
   leaveDescription: {
-    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    lineHeight: theme.typography.fontSize.sm * 1.5,
+  },
+  sectionTitleSpacing: {
+    marginBottom: theme.spacing.base,
   },
 }));

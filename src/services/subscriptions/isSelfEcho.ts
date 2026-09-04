@@ -5,7 +5,7 @@
  * for unstamped envelopes: it also drops events from the user's OTHER devices.
  */
 
-import { getDeviceIdSync } from '#/utils/deviceId';
+import { getDeviceIdSync } from '#/storage/deviceId';
 
 interface EchoFields {
   actorUserId?: string | null;

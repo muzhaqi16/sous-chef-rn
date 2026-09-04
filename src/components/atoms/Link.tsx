@@ -6,7 +6,7 @@ import { Text } from './Text';
 type LinkVariant = 'primary' | 'subtle';
 
 interface LinkProps
-  extends Omit<RNTextProps, 'style' | 'onPress' | 'disabled'> {
+  extends Omit<RNTextProps, 'style' | 'onPress' | 'disabled' | 'role'> {
   children: React.ReactNode;
   onPress?: () => void;
   disabled?: boolean;
@@ -26,12 +26,12 @@ export const Link: React.FC<LinkProps> = ({
 }) => {
   return (
     <Text
+      role="bodyStrong"
       {...rest}
       testID={testID}
       onPress={disabled ? undefined : onPress}
       accessibilityRole="link"
       accessibilityState={{ disabled }}
-      weight="semibold"
       tone={variant === 'subtle' ? 'onSurfaceVariant' : 'accent'}
       style={[disabled && styles.disabled, style]}
     >

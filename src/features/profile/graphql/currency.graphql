@@ -1,0 +1,15 @@
+# The currency picker's option list. `isActive: true` because a retired currency
+# is one nobody may choose any more, not one to offer and have refused.
+#
+# `decimalPlaces` is NOT for ordinary display — Intl reads a currency's minor
+# unit from its code — but for the degraded path where Intl rejects the code,
+# and for rounding an amount before it is sent.
+query GetCurrencies {
+  currencies(isActive: true) {
+    id
+    code
+    name
+    symbol
+    decimalPlaces
+  }
+}

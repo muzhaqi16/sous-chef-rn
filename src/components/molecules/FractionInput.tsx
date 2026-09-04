@@ -92,7 +92,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
         testID={testID}
       />
       {!hasError && !!value && !!isFocused && (
-        <Text size="xs" tone="secondary" style={styles.hintText}>
+        <Text role="caption" tone="secondary" style={styles.hintText}>
           {formatsHint}
         </Text>
       )}
@@ -102,20 +102,20 @@ export const FractionInput: React.FC<FractionInputProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   input: {
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing['3'],
-    fontSize: theme.typography.fontSize.base,
+    paddingVertical: theme.spacing.base,
+    ...theme.type.body,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
     variants: {
       focused: {
         true: {
           borderColor: theme.colors.primary,
-          borderWidth: 2,
+          borderWidth: theme.borderWidth.medium,
         },
       },
       error: {

@@ -5,19 +5,19 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  Easing,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import { useFragment } from '@apollo/client/react';
 import { type FragmentType } from '@apollo/client/masking';
-import { TIMING } from '#constants/animations';
+
 import { Icon } from '#utils/iconUtils';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { HomeCard_HomeFragmentDoc } from './HomeCard.generated';
+import { motion } from '#/theme/foundations/motion';
 
 interface HomeCardProps {
   homeRef: FragmentType<typeof HomeCard_HomeFragmentDoc>;
@@ -58,8 +58,8 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   useLayoutEffect(() => {
     highlightOpacity.set(
       withTiming(isHighlighted ? 1 : 0, {
-        duration: TIMING.FAST,
-        easing: Easing.out(Easing.ease),
+        duration: motion.timing.FAST,
+        easing: motion.easing.gentle,
       }),
     );
   }, [isHighlighted, highlightOpacity]);
@@ -115,18 +115,16 @@ export const HomeCard: React.FC<HomeCardProps> = ({
           disabled={!onPress}
         >
           <View style={styles.homeInfo}>
-            <Text size="lg" weight="semibold">
-              {home.name}
-            </Text>
+            <Text role="heading">{home.name}</Text>
 
-            <Text size="sm" tone="secondary" style={styles.homeDetails}>
+            <Text role="caption" tone="secondary" style={styles.homeDetails}>
               {t('joinHome.memberCount', { count: memberCount })} •{' '}
               {t('joinHome.pantryCount', { count: pantryCount })}
             </Text>
           </View>
           {!!isDefault && (
             <View style={styles.defaultBadge}>
-              <Text size="xs" weight="semibold" tone="accent">
+              <Text role="label" tone="accent">
                 {t('homeManagement.cardDefault')}
               </Text>
             </View>
@@ -183,7 +181,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: theme.spacing['3'],
+    marginBottom: theme.spacing.base,
     gap: theme.spacing.md,
   },
   homeInfo: {

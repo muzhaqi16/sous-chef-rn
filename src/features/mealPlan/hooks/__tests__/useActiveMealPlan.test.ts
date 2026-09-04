@@ -9,6 +9,41 @@ import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generat
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { useStore } from '#store';
 import { useActiveMealPlan } from '../useActiveMealPlan';
+import { MealPlanDisplayFragmentDoc } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+/**
+ * A plan complete for `MealPlanDisplay` — the selection every consumer reads.
+ * These tests only need the entity to EXIST, but seeding it against the real
+ * fragment is what keeps "in the cache" meaning the same thing here as in the app.
+ */
+const seedPlan = (id: string) =>
+  seedCache([
+    {
+      fragment: MealPlanDisplayFragmentDoc,
+      data: {
+        __typename: 'MealPlan' as const,
+        id,
+        name: 'Camping Trip',
+        description: null,
+        planType: 'WEEKLY',
+        startDate: '2025-06-15',
+        endDate: '2025-06-21',
+        servings: 1,
+        totalCalories: null,
+        totalProtein: null,
+        totalCarbs: null,
+        totalFat: null,
+        actualCost: null,
+        budgetAmount: null,
+        homeId: 'h1',
+        home: null,
+        user: { __typename: 'User' as const, id: 'u1' },
+        createdBy: null,
+        version: 1,
+        createdAt: '2025-01-01T00:00:00Z',
+        updatedAt: '2025-01-01T00:00:00Z',
+      },
+    },
+  ]);
 
 jest.mock('#/apollo/links/tokenScheduler');
 
@@ -126,9 +161,7 @@ describe('useActiveMealPlan', () => {
 
   it('evicts the dead plan so a persisted-cache hydrate cannot resurface it', async () => {
     useStore.setState({ selectedMealPlanId: 'plan-gone' });
-    const cache = seedCache([
-      { __typename: 'MealPlan', id: 'plan-gone', name: 'Camping Trip' },
-    ]);
+    const cache = seedPlan('plan-gone');
     const gone = missMock('plan-gone');
 
     const { result } = renderHookWithApollo(
@@ -146,9 +179,7 @@ describe('useActiveMealPlan', () => {
     // useMealPlan never asks, and nothing reads a miss.
     useStore.setState({ selectedMealPlanId: 'plan-unsynced' });
     unconfirmedCreates.mark('plan-unsynced');
-    const cache = seedCache([
-      { __typename: 'MealPlan', id: 'plan-unsynced', name: 'Camping Trip' },
-    ]);
+    const cache = seedPlan('plan-unsynced');
     const wouldMiss = missMock('plan-unsynced');
 
     const { result } = renderHookWithApollo(

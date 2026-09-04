@@ -1,24 +1,17 @@
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { useApolloClient } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { ExpirationAction } from '#/graphql/generated/schemaTypes';
-import { errorService } from '#/services/errorService';
-import { readExpiryReminderFields } from '#features/notifications/utils/notificationHelpers';
-import { GetExpirationNotificationsForPantryItemDocument } from '#features/notifications/graphql/expirationNotificationLookup.generated';
-import {
-  InvitationAcceptanceModal,
-  InvitationData,
-} from './InvitationAcceptanceModal';
+import { InvitationAcceptanceModal } from './InvitationAcceptanceModal';
+import type { InvitationData } from '#features/notifications/types';
 import { ExpirationActionSheet } from './ExpirationActionSheet';
 import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAppStore } from '#store/useAppStore';
-import { applyNotificationRemoved } from '#features/notifications/utils/notificationCacheWrites';
+import { useNotificationActionData } from '#features/notifications/hooks/useNotificationActionData';
 import { useExpirationNotificationSync } from '#features/notifications/hooks/useExpirationNotificationSync';
-import { useNotificationSync } from '#features/notifications/hooks/useNotificationSync';
 
 interface NotificationActionHandlerProps {
   children: (props: {
@@ -45,16 +38,14 @@ export const NotificationActionHandler: React.FC<
   const [selectedExpirationNotification, setSelectedExpirationNotification] =
     useState<NotificationItem | null>(null);
   const { syncMarkAction, syncMarkRead } = useExpirationNotificationSync();
-  const client = useApolloClient();
-
   const { toPantryMain, toShoppingListMain, toNotifications } =
     useAppNavigation();
   const setHomeAndPantry = useAppStore(state => state.setHomeAndPantry);
-  const currentUserId = useAppStore(state => state.user?.id);
+  const { resolveExpirationLink, removeNotification } =
+    useNotificationActionData();
   const linkExpirationData = useNotificationStore(
     state => state.linkExpirationData,
   );
-  const { syncDelete } = useNotificationSync();
   const showInvitationModal = (notification: NotificationItem) => {
     if (
       notification.actionType === 'ACCEPT_HOME_INVITE' ||
@@ -92,37 +83,6 @@ export const NotificationActionHandler: React.FC<
 
   // Resolves the ExpirationNotification behind a tapped EXPIRY_REMINDER
   // notification when the live subscription never linked it (e.g. loaded from
-  // launch/history rather than received while connected). pantryItemId comes
-  // from the payload rather than sourceId/sourceType, which alias either
-  // PantryItem or PantryItemBatch depending on which server path fired.
-  const resolveExpirationLink = async (notification: NotificationItem) => {
-    const pantryItemId = readExpiryReminderFields(
-      notification.payload,
-    )?.pantryItemId;
-    if (!pantryItemId) return null;
-
-    let result;
-    try {
-      result = await client.query({
-        query: GetExpirationNotificationsForPantryItemDocument,
-        variables: { pantryItemId },
-        fetchPolicy: 'network-only',
-      });
-    } catch (error) {
-      // Leaving `result` undefined resolves to no link, which is the correct
-      // outcome when the lookup cannot be made.
-      errorService.reportError(error, {
-        operation: 'resolveExpirationNotificationLink',
-      });
-    }
-
-    const edges = result?.data?.me?.expirationNotificationsConnection.edges;
-    const match = edges?.find(
-      edge => edge.node.genericNotificationId === notification.id,
-    );
-    return match?.node ?? null;
-  };
-
   const showExpirationActionSheet = async (notification: NotificationItem) => {
     if (notification.expirationNotificationId) {
       // State-driven: setting this triggers ExpirationActionSheet visible prop
@@ -199,18 +159,13 @@ export const NotificationActionHandler: React.FC<
   const handleInvitationAccept = async (invitation: InvitationData) => {
     // Remove the notification so the user can't re-open the modal
     if (currentNotificationId) {
-      applyNotificationRemoved(
-        client.cache,
-        currentUserId,
-        currentNotificationId,
-      );
+      removeNotification(currentNotificationId);
     }
 
     // Handle successful acceptance
     if (invitation.type === 'HOME_INVITE') {
       // Set the newly accepted home as selected
-      const acceptedHomeId = (invitation as { acceptedHomeId?: string })
-        .acceptedHomeId;
+      const acceptedHomeId = invitation.acceptedHomeId;
 
       if (acceptedHomeId) {
         setHomeAndPantry(acceptedHomeId, null);
@@ -235,20 +190,7 @@ export const NotificationActionHandler: React.FC<
 
   const handleInvitationReject = () => {
     if (currentNotificationId) {
-      applyNotificationRemoved(
-        client.cache,
-        currentUserId,
-        currentNotificationId,
-      );
-    }
-  };
-
-  const handleInvitationInvalidate = () => {
-    // Underlying server invite is gone — permanently delete the notification
-    // (server delete + optimistic local removal) so it stops reappearing on
-    // every cold start / foreground refresh.
-    if (currentNotificationId) {
-      syncDelete(currentNotificationId);
+      removeNotification(currentNotificationId);
     }
   };
 
@@ -270,7 +212,6 @@ export const NotificationActionHandler: React.FC<
         }}
         onAccept={handleInvitationAccept}
         onReject={handleInvitationReject}
-        onInvalidate={handleInvitationInvalidate}
       />
 
       <ExpirationActionSheet

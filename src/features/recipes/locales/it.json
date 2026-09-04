@@ -152,6 +152,8 @@
     "markCookedFailed": "Impossibile segnare la ricetta come cucinata",
     "cookExternalError": "Impossibile segnare ricette esterne come cucinate. Salva prima la ricetta.",
     "markedCookedDeducted": "Ricetta segnata come cucinata! Ingredienti detratti dalla dispensa.",
+    "markedCookedSkipped_one": "Ricetta segnata come cucinata. {{count}} ingrediente non è stato scalato.",
+    "markedCookedSkipped_other": "Ricetta segnata come cucinata. {{count}} ingredienti non sono stati scalati.",
     "markedCooked": "Ricetta segnata come cucinata!",
     "renameFolderFailedRetry": "Impossibile rinominare la cartella. Riprova.",
     "folderRenamed": "Rinominato \"{{oldName}}\" in \"{{newName}}\"",
@@ -273,7 +275,13 @@
     "ingredientCount_one": "{{count}} ingrediente",
     "ingredientCount_other": "{{count}} ingredienti",
     "ingredientRatio": "{{used}}/{{total}} ingredienti",
-    "matchRatio": "{{used}}/{{total}} corrispondenze"
+    "matchRatio": "{{used}}/{{total}} corrispondenze",
+    "createdFromRecipe": "Creata da una ricetta",
+    "ratingBreakdownRow": "{{count}} recensioni con {{stars}} stelle",
+    "favoriteA11y": "Aggiungi ai preferiti",
+    "unfavoriteA11y": "Rimuovi dai preferiti",
+    "stepsTooMany": "Una ricetta può avere al massimo {{count}} passaggi",
+    "stepsTooLarge": "Questi passaggi sono troppo lunghi per essere salvati. Accorciali e riprova."
   },
   "recipeFilters": {
     "title": "Filtri",

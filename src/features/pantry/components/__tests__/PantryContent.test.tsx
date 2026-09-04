@@ -5,11 +5,11 @@ import { screen, act, fireEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryContent } from '../PantryContent';
 import { PantryItem, StorageState } from '#/graphql/generated/schemaTypes';
-import type { EmptyStateProps } from '#components/atoms/EmptyState';
+import type { EmptyStateProps } from '#components/molecules/EmptyState';
 import type {
   FilterTabConfig,
   FilterTabsProps,
-} from '#components/molecules/FilterTabs/types';
+} from '#components/organisms/FilterTabs/types';
 import {
   PantryItemCard_PantryItemFragmentDoc,
   type PantryItemCard_PantryItemFragment,
@@ -98,6 +98,9 @@ function createMockPantryItem(
     netWeight: null,
     netWeightUnit: null,
     remainingNetWeight: null,
+    portionUnitId: null,
+    portionUnit: null,
+    remainingPortions: null,
     packageBreakdown: null,
     quantityBreakdown: null,
     costPerUnit: null,
@@ -181,7 +184,7 @@ jest.mock('#features/pantry/components/skeletons/PantryScreenSkeleton', () => ({
   },
 }));
 
-jest.mock('#components/atoms/EmptyState', () => ({
+jest.mock('#components/molecules/EmptyState', () => ({
   EmptyState: ({
     title,
     description,
@@ -203,7 +206,7 @@ jest.mock('#components/atoms/EmptyState', () => ({
   },
 }));
 
-jest.mock('#components/organisms/PaginationFooter', () => ({
+jest.mock('#components/atoms/PaginationFooter', () => ({
   PaginationFooter: () => null,
 }));
 
@@ -268,7 +271,7 @@ jest.mock('#components/molecules/SearchBar', () => ({
   },
 }));
 
-jest.mock('#components/molecules/FilterTabs/FilterTabs', () => ({
+jest.mock('#components/organisms/FilterTabs/FilterTabs', () => ({
   FilterTabs: ({
     tabs,
     onTabChange,
@@ -462,7 +465,27 @@ describe('PantryContent', () => {
           locationCounts={{ all: 18, fridge: 3, freezer: 0, pantry: 15 }}
         />,
       );
-      expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
+      expect(screen.getByTestId('pantry-list-skeleton-overlay')).toBeTruthy();
+      expect(screen.queryByText('Your pantry is empty')).toBeNull();
+    });
+
+    // The overlay is an absolute flap at `top: '100%'` of the header and the
+    // footer starts below it, so anything the footer draws while the flap is up
+    // shows through at a second origin — offset shimmer rows, or the empty
+    // state reading through as "empty" over a loading list.
+    it('renders nothing beneath the overlay while it is up', () => {
+      render(
+        <PantryContent
+          {...defaultProps}
+          items={[]}
+          loading={true}
+          locationCounts={{ all: 18, fridge: 3, freezer: 0, pantry: 15 }}
+        />,
+      );
+
+      expect(screen.getByTestId('pantry-list-skeleton-overlay')).toBeTruthy();
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+      expect(screen.queryByTestId('pantry-loading')).toBeNull();
       expect(screen.queryByText('Your pantry is empty')).toBeNull();
     });
 
@@ -878,8 +901,8 @@ describe('PantryContent', () => {
         />,
       );
       // The chrome (header/search/tabs) renders as the list header and stays
-      // visible; the skeleton fills the body below the sticky tabs.
-      expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
+      // visible; the overlay flap fills the body below the sticky tabs.
+      expect(screen.getByTestId('pantry-list-skeleton-overlay')).toBeTruthy();
       expect(screen.getByTestId('pantry-search-input')).toBeTruthy();
     });
 

@@ -5,7 +5,7 @@ import { handleMutationError } from '#/utils/errorHandlers';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { useIsApiUnavailable } from '#features/mealPlan/hooks/useIsApiUnavailable';
 import { t } from '#/i18n';
 import { errorService } from '#/services/errorService';
 

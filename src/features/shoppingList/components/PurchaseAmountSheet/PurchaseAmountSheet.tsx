@@ -1,24 +1,27 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   BottomSheetModal,
   useStandardBottomSheet,
 } from '#hooks/useStandardBottomSheet';
-import { Header } from '#/components/molecules/Header';
+import { Header } from '#components/organisms/Header';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { formatQuantity } from '#/utils/formatQuantity';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
-  DEFAULT_CURRENCY,
-  formatCurrency,
   formatNumberForInput,
   localizeNumericHint,
 } from '#/utils/formatters/number';
-import { totalFromUnitPrice, unitPriceFromTotal } from '#/utils/purchasePrice';
+import {
+  totalFromUnitPrice,
+  unitPriceFromTotal,
+} from '#features/shoppingList/utils/purchasePrice';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
 interface PurchaseAmountSheetItem {
   id: string;
@@ -69,6 +72,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   loading = false,
 }) => {
   const { t } = useTranslation();
+  const money = useMoney();
   // No snap points: the sheet measures its own content, so the keyboard lift
   // seats it on the keyboard instead of stretching a fixed height up the
   // screen and pushing the price field off the bottom edge.
@@ -138,6 +142,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
           rightActions={[
             {
               icon: 'checkmark',
+              accessibilityLabel: t('labels.save'),
               onPress: handleConfirm,
               variant: 'primary',
               disabled: loading || !quantityIsUsable,
@@ -147,19 +152,14 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
         />
         <View style={styles.headerSpacer} />
         <View style={styles.sections}>
-          <Text size="lg" weight="semibold" style={styles.itemName}>
+          <Text role="heading" style={styles.itemName}>
             {item?.itemName ?? ''}
           </Text>
 
           <View style={styles.section}>
-            <Text
-              size="sm"
-              weight="medium"
-              tone="secondary"
-              style={styles.sectionLabel}
-            >
+            <SectionHeader variant="overline" style={styles.sectionLabel}>
               {t('labels.quantity')}
-            </Text>
+            </SectionHeader>
             <View style={styles.inputRow}>
               <ThemedBottomSheetTextInput
                 style={styles.input}
@@ -172,14 +172,14 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
                 testID="purchase-quantity-input"
               />
               {item?.unitName ? (
-                <Text size="base" tone="secondary" style={styles.affix}>
+                <Text tone="secondary" style={styles.affix}>
                   {item.unitName}
                 </Text>
               ) : null}
             </View>
             {quantityError ? (
               <Text
-                size="sm"
+                role="caption"
                 tone="error"
                 style={styles.fieldError}
                 testID="purchase-quantity-error"
@@ -190,16 +190,11 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
           </View>
 
           <View style={styles.section}>
-            <Text
-              size="sm"
-              weight="medium"
-              tone="secondary"
-              style={styles.sectionLabel}
-            >
+            <SectionHeader variant="overline" style={styles.sectionLabel}>
               {t('purchaseAmountSheet.totalPrice')}
-            </Text>
+            </SectionHeader>
             <View style={styles.inputRow}>
-              <Text size="base" tone="secondary" style={styles.prefix}>
+              <Text tone="secondary" style={styles.prefix}>
                 {t('purchaseAmountSheet.currencySymbol')}
               </Text>
               <ThemedBottomSheetTextInput
@@ -217,13 +212,13 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
               />
             </View>
             {perUnitPrice != null ? (
-              <Text size="xs" tone="secondary" style={styles.perUnitHint}>
+              <Text role="caption" tone="secondary" style={styles.perUnitHint}>
                 {t(
                   item?.unitName
                     ? 'purchaseAmountSheet.perUnitOfHint'
                     : 'purchaseAmountSheet.perUnitHint',
                   {
-                    price: formatCurrency(perUnitPrice, DEFAULT_CURRENCY),
+                    price: money(perUnitPrice),
                     unit: item?.unitName,
                   },
                 )}
@@ -263,7 +258,7 @@ const styles = StyleSheet.create(theme => ({
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     borderColor: theme.colors.border,
@@ -272,8 +267,7 @@ const styles = StyleSheet.create(theme => ({
   },
   input: {
     flex: 1,
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.subheading,
     paddingVertical: theme.spacing.md,
     color: theme.colors.textPrimary,
   },

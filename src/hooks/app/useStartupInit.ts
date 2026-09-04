@@ -14,8 +14,12 @@ import { Telemetry } from '#services/telemetry';
 import { HapticService } from '#services/haptic/HapticService';
 import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
-import { hasCredentials, getLastBiometricEmail } from '#storage/keychain';
-import { initializeDeviceId } from '#/utils/deviceId';
+import {
+  hasCredentials,
+  getLastBiometricEmail,
+  clearTempRegistrationPassword,
+} from '#storage/keychain';
+import { initializeDeviceId } from '#/storage/deviceId';
 import { authService } from '#services/authService';
 import { registerQueueFailureHandler } from '#/apollo/offlineQueue/queueFailureHandler';
 
@@ -142,6 +146,10 @@ export function useStartupInit(): void {
         }
         hasCredentials(email).then(setHasStoredCredentials);
       });
+
+      // An earlier build kept the registration password in the keychain, where
+      // it outlives even an app deletion. Nothing writes it now; this purges it.
+      clearTempRegistrationPassword();
 
       const telemetryConfig = getTelemetryConfig();
       // A run that asked for telemetry keeps it even with background services

@@ -16,8 +16,6 @@ import {
   getBiometricCapability,
   saveLastBiometricEmail,
   getLastBiometricEmail,
-  saveTempRegistrationPassword,
-  loadTempRegistrationPassword,
   clearTempRegistrationPassword,
   saveSessionTokens,
   loadSessionTokens,
@@ -382,55 +380,88 @@ describe('keychain storage', () => {
     });
   });
 
-  describe('saveTempRegistrationPassword', () => {
-    it('saves password with temp service', async () => {
-      mockSetGenericPassword.mockResolvedValue(true);
-
-      await saveTempRegistrationPassword('user@test.com', 'temp-pass');
-      expect(mockSetGenericPassword).toHaveBeenCalledWith(
-        'user@test.com',
-        'temp-pass',
-        expect.objectContaining({
-          service: 'dev.souschef.app.temp.registration',
-        }),
+  describe('loadCredentials after a biometric enrolment change', () => {
+    /**
+     * What the Android bridge actually delivers. `KeychainModule` rejects with
+     * `promise.reject(Errors.E_CRYPTO_FAILED, throwable)`, and RN's
+     * `PromiseImpl` puts the code on `code`, the Java class name on `name`, and
+     * `CryptoFailedException`'s "Wrapped error: …" prose on `message`. The
+     * class name never reaches `message`, so a matcher reading only
+     * `name`+`message` finds none of its own patterns.
+     */
+    const androidInvalidation = () =>
+      Object.assign(
+        new Error(
+          'Wrapped error: User changed or deleted their auth credentials',
+        ),
+        {
+          code: 'E_CRYPTO_FAILED',
+          name: 'com.oblador.keychain.exceptions.CryptoFailedException',
+        },
       );
-    });
-  });
 
-  describe('loadTempRegistrationPassword', () => {
-    it('returns password when email matches', async () => {
-      mockGetGenericPassword.mockResolvedValue({
-        username: 'user@test.com',
-        password: 'temp-pass',
-      });
-
-      const result = await loadTempRegistrationPassword('user@test.com');
-      expect(result).toBe('temp-pass');
-    });
-
-    it('returns null and clears when email does not match', async () => {
-      mockGetGenericPassword.mockResolvedValue({
-        username: 'other@test.com',
-        password: 'temp-pass',
-      });
+    it('clears the slot on the shape Android actually rejects with', async () => {
+      mockGetGenericPassword.mockRejectedValue(androidInvalidation());
       mockResetGenericPassword.mockResolvedValue(true);
 
-      const result = await loadTempRegistrationPassword('user@test.com');
+      const result = await loadCredentials('user@test.com');
+
       expect(result).toBeNull();
+      expect(mockResetGenericPassword).toHaveBeenCalled();
     });
 
-    it('returns null when no credentials exist', async () => {
+    it('clears the slot when iOS names the accessibility constant', async () => {
+      mockGetGenericPassword.mockRejectedValue(
+        Object.assign(
+          new Error('The user name or passphrase you entered is not correct.'),
+          {
+            message: 'BiometryCurrentSet entry could not be decrypted',
+          },
+        ),
+      );
+      mockResetGenericPassword.mockResolvedValue(true);
+
+      await loadCredentials('user@test.com');
+
+      expect(mockResetGenericPassword).toHaveBeenCalled();
+    });
+
+    it('keeps the slot when the keystore is merely unreachable', async () => {
+      mockGetGenericPassword.mockRejectedValue(
+        Object.assign(
+          new Error('Wrapped error: keystore is temporarily busy'),
+          {
+            code: 'E_KEYSTORE_ACCESS_ERROR',
+            name: 'com.oblador.keychain.exceptions.KeyStoreAccessException',
+          },
+        ),
+      );
+
+      const result = await loadCredentials('user@test.com');
+
+      expect(result).toBeNull();
+      expect(mockResetGenericPassword).not.toHaveBeenCalled();
+    });
+
+    it('clears the slot when the entry has been removed by the OS', async () => {
       mockGetGenericPassword.mockResolvedValue(false);
+      mockResetGenericPassword.mockResolvedValue(true);
 
-      const result = await loadTempRegistrationPassword('user@test.com');
+      const result = await loadCredentials('user@test.com');
+
       expect(result).toBeNull();
+      expect(mockResetGenericPassword).toHaveBeenCalled();
     });
 
-    it('returns null on error', async () => {
-      mockGetGenericPassword.mockRejectedValue(new Error('Error'));
+    it('keeps the slot when the person cancels the prompt', async () => {
+      mockGetGenericPassword.mockRejectedValue(
+        new Error('User canceled the operation.'),
+      );
 
-      const result = await loadTempRegistrationPassword('user@test.com');
+      const result = await loadCredentials('user@test.com');
+
       expect(result).toBeNull();
+      expect(mockResetGenericPassword).not.toHaveBeenCalled();
     });
   });
 

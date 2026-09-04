@@ -1,69 +1,25 @@
-import { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useForm, useWatch, type PathValue } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import {
   RecipeStatus,
   type CreateRecipeInput,
   type UpdateRecipeInput,
   type RecipeIngredientInput,
-  type Difficulty,
-  type RecipeCategory,
   type Diet,
   type HealthGoal,
   type Intolerance,
 } from '#/graphql/generated/schemaTypes';
 import { type RecipeForm_RecipeFragment } from './RecipeForm.generated';
-import { stripPriceFromName } from '#/utils/stripPriceFromName';
+import type {
+  IngredientFormState,
+  StepFormState,
+  RecipeFormState,
+} from './formState';
+import { recipeFormSchema, recipeFormDefaults } from './recipeFormConfig';
+import { stripPriceFromName } from '#features/recipes/utils/stripPriceFromName';
 import { extractNodes } from '#/utils/connectionUtils';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatNumberForInput } from '#/utils/formatters/number';
-
-export interface IngredientFormState {
-  id: string; // local temp id
-  name: string;
-  quantity: number;
-  unitId?: string | null;
-  itemId?: string | null;
-  preparation?: string;
-  section?: string;
-  notes?: string;
-  isOptional: boolean;
-  sortOrder: number;
-}
-
-export interface StepFormState {
-  id: string; // local temp id
-  instruction: string;
-  sortOrder: number;
-}
-
-export interface RecipeFormState {
-  // Basic
-  name: string;
-  description: string;
-  imageUrl: string;
-  servings: string;
-  prepTimeMinutes: string;
-  cookTimeMinutes: string;
-  caloriesPerServing: string;
-  // Category
-  difficulty: Difficulty | null;
-  category: RecipeCategory | null;
-  cuisine: string;
-  status: RecipeStatus;
-  // Tags
-  diets: Diet[];
-  healthGoals: HealthGoal[];
-  intolerances: Intolerance[];
-  // Nested
-  ingredients: IngredientFormState[];
-  steps: StepFormState[];
-  // Meta
-  notes: string;
-  tips: string;
-  originalAuthor: string;
-  // Comma-separated recipe tags (freeform), split into a string[] on save.
-  tags: string;
-}
 
 let nextTempId = 1;
 function generateTempId(): string {
@@ -80,152 +36,117 @@ function parseCommaTags(raw: string): string[] | undefined {
 }
 
 export function useRecipeForm() {
-  const { t } = useTranslation();
-  const [state, setState] = useState<RecipeFormState>({
-    name: '',
-    description: '',
-    imageUrl: '',
-    servings: '4',
-    prepTimeMinutes: '',
-    cookTimeMinutes: '',
-    caloriesPerServing: '',
-    difficulty: null,
-    category: null,
-    cuisine: '',
-    status: RecipeStatus.Draft,
-    diets: [],
-    healthGoals: [],
-    intolerances: [],
-    ingredients: [],
-    steps: [],
-    notes: '',
-    tips: '',
-    originalAuthor: '',
-    tags: '',
+  const form = useForm<RecipeFormState>({
+    resolver: yupResolver(recipeFormSchema),
+    defaultValues: recipeFormDefaults(),
+    mode: 'onSubmit',
   });
+  const { control, setValue, getValues, reset } = form;
 
-  const [initialState, setInitialState] = useState<RecipeFormState | null>(
-    null,
-  );
+  // The children render plain inputs against a value object rather than one
+  // `Controller` each, so the whole form is watched. `useWatch`, never
+  // `watch()` — the React Compiler cannot memoize the function that returns.
+  const state = useWatch({ control }) as RecipeFormState;
 
   // Field updaters
+  // The children name a top-level field; react-hook-form's `PathValue` cannot
+  // reduce against an unresolved generic, so the bridge carries one cast.
   const updateField = <K extends keyof RecipeFormState>(
     field: K,
     value: RecipeFormState[K],
   ) => {
-    setState(prev => ({ ...prev, [field]: value }));
+    setValue(field, value as PathValue<RecipeFormState, K>, {
+      shouldDirty: true,
+    });
+  };
+
+  const setIngredients = (next: IngredientFormState[]) => {
+    setValue('ingredients', next, { shouldDirty: true, shouldValidate: true });
+  };
+
+  const setSteps = (next: StepFormState[]) => {
+    setValue('steps', next, { shouldDirty: true, shouldValidate: true });
   };
 
   // Ingredient management
   const addIngredient = (ingredient?: Partial<IngredientFormState>) => {
-    setState(prev => ({
-      ...prev,
-      ingredients: [
-        ...prev.ingredients,
-        {
-          id: generateTempId(),
-          name: '',
-          quantity: 1,
-          unitId: null,
-          itemId: null,
-          preparation: '',
-          section: '',
-          notes: '',
-          isOptional: false,
-          sortOrder: prev.ingredients.length,
-          ...ingredient,
-        },
-      ],
-    }));
+    const current = getValues('ingredients');
+    setIngredients([
+      ...current,
+      {
+        id: generateTempId(),
+        name: '',
+        quantity: 1,
+        unitId: null,
+        itemId: null,
+        preparation: '',
+        section: '',
+        notes: '',
+        isOptional: false,
+        sortOrder: current.length,
+        ...ingredient,
+      },
+    ]);
   };
 
   const updateIngredient = (
     id: string,
     updates: Partial<IngredientFormState>,
   ) => {
-    setState(prev => ({
-      ...prev,
-      ingredients: prev.ingredients.map(ing =>
+    setIngredients(
+      getValues('ingredients').map(ing =>
         ing.id === id ? { ...ing, ...updates } : ing,
       ),
-    }));
+    );
   };
 
   const removeIngredient = (id: string) => {
-    setState(prev => ({
-      ...prev,
-      ingredients: prev.ingredients.filter(ing => ing.id !== id),
-    }));
+    setIngredients(getValues('ingredients').filter(ing => ing.id !== id));
   };
 
   // Step management
   const addStep = (instruction?: string) => {
-    setState(prev => ({
-      ...prev,
-      steps: [
-        ...prev.steps,
-        {
-          id: generateTempId(),
-          instruction: instruction ?? '',
-          sortOrder: prev.steps.length,
-        },
-      ],
-    }));
+    const current = getValues('steps');
+    setSteps([
+      ...current,
+      {
+        id: generateTempId(),
+        instruction: instruction ?? '',
+        sortOrder: current.length,
+      },
+    ]);
   };
 
   const updateStep = (id: string, instruction: string) => {
-    setState(prev => ({
-      ...prev,
-      steps: prev.steps.map(step =>
+    setSteps(
+      getValues('steps').map(step =>
         step.id === id ? { ...step, instruction } : step,
       ),
-    }));
+    );
   };
 
   const removeStep = (id: string) => {
-    setState(prev => ({
-      ...prev,
-      steps: prev.steps.filter(step => step.id !== id),
-    }));
+    setSteps(getValues('steps').filter(step => step.id !== id));
   };
 
   const moveStep = (fromIndex: number, toIndex: number) => {
-    setState(prev => {
-      const newSteps = [...prev.steps];
-      const [moved] = newSteps.splice(fromIndex, 1);
-      newSteps.splice(toIndex, 0, moved);
-      return {
-        ...prev,
-        steps: newSteps.map((step, i) => ({ ...step, sortOrder: i })),
-      };
-    });
+    const newSteps = [...getValues('steps')];
+    const [moved] = newSteps.splice(fromIndex, 1);
+    newSteps.splice(toIndex, 0, moved);
+    setSteps(newSteps.map((step, i) => ({ ...step, sortOrder: i })));
   };
 
   // Tags
   const setDiets = (diets: Diet[]) => {
-    setState(prev => ({ ...prev, diets }));
+    setValue('diets', diets, { shouldDirty: true });
   };
 
   const setHealthGoals = (healthGoals: HealthGoal[]) => {
-    setState(prev => ({ ...prev, healthGoals }));
+    setValue('healthGoals', healthGoals, { shouldDirty: true });
   };
 
   const setIntolerances = (intolerances: Intolerance[]) => {
-    setState(prev => ({ ...prev, intolerances }));
-  };
-
-  // Validation
-  const validate = (): string | null => {
-    if (!state.name.trim()) return t('recipes.nameRequired');
-    if (state.ingredients.length === 0) return t('recipes.ingredientRequired');
-    if (state.steps.length === 0) return t('recipes.stepRequired');
-    // Check all ingredients have names
-    const emptyIngredient = state.ingredients.find(i => !i.name.trim());
-    if (emptyIngredient) return t('recipes.ingredientNameRequired');
-    // Check all steps have text
-    const emptyStep = state.steps.find(s => !s.instruction.trim());
-    if (emptyStep) return t('recipes.stepInstructionsRequired');
-    return null;
+    setValue('intolerances', intolerances, { shouldDirty: true });
   };
 
   // Build ingredient input array (shared by create and update-ingredients).
@@ -398,17 +319,15 @@ export function useRecipeForm() {
       originalAuthor: recipe.originalAuthor ?? '',
       tags: (recipe.tags ?? []).join(', '),
     };
-    setState(formState);
-    setInitialState(formState);
+    // `reset` re-baselines `isDirty`, so loading a recipe does not read as an
+    // edit — which is what the hand-rolled initial-state snapshot was for.
+    reset(formState);
   };
-
-  const hasDirtyFields = (() => {
-    if (!initialState) return state.name.trim().length > 0;
-    return JSON.stringify(state) !== JSON.stringify(initialState);
-  })();
 
   return {
     state,
+    errors: form.formState.errors,
+    handleSubmit: form.handleSubmit,
     updateField,
     addIngredient,
     updateIngredient,
@@ -420,11 +339,9 @@ export function useRecipeForm() {
     setDiets,
     setHealthGoals,
     setIntolerances,
-    validate,
     buildCreateInput,
     buildUpdateInput,
     buildIngredientsInput,
     populateFromRecipe,
-    hasDirtyFields,
   };
 }

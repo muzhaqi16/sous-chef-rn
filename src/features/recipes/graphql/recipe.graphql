@@ -531,9 +531,7 @@ query MatchRecipeIngredientsToPantry(
   }
 }
 
-mutation ConfirmRecipeConsumption(
-  $input: ConfirmRecipeConsumptionInput!
-) {
+mutation ConfirmRecipeConsumption($input: ConfirmRecipeConsumptionInput!) {
   confirmRecipeConsumption(input: $input) {
     __typename
     ... on ConfirmRecipeConsumptionPayload {
@@ -559,15 +557,19 @@ mutation ConfirmRecipeConsumption(
   }
 }
 
-mutation MarkRecipeAsCooked(
-  $input: MarkRecipeAsCookedInput!
-) {
+mutation MarkRecipeAsCooked($input: MarkRecipeAsCookedInput!) {
   markRecipeAsCooked(input: $input) {
     __typename
     ... on MarkRecipeAsCookedPayload {
       # Replay signal: true = the client-minted cooking-log id already existed
       # (idempotent replay), false = a fresh log row was created.
       converged
+      # Ingredients the server could NOT deduct: no conversion reached the
+      # stack's unit. Without this the toast reports unqualified success.
+      skippedIngredients {
+        itemName
+        reason
+      }
       cookingLog {
         id
         servingsMade
@@ -592,4 +594,3 @@ mutation MarkRecipeAsCooked(
     }
   }
 }
-

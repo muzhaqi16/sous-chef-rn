@@ -5,6 +5,8 @@ import {
   validateImageFile,
   getMimeTypeFromUri,
   normalizeImageMimeType,
+  sniffImageMimeType,
+  createImageValidationError,
 } from '#utils/imageValidation';
 import { useMutation } from '@apollo/client/react';
 import {
@@ -68,12 +70,34 @@ export const imageErrorMessage = (
         : t('imageUpload.itemTooLargeBody', {
             size: MAX_IMAGE_SIZE / 1024 / 1024,
           });
+    case 'CONTENT_MISMATCH':
+      return t('imageUpload.contentMismatchBody');
     case 'UNKNOWN_ERROR':
       return t('imageUpload.unreadableBody');
     default:
       return t('imageUpload.failedBody');
   }
 };
+
+/**
+ * A confirm refusal, coded so {@link imageErrorMessage} can name the cause. The
+ * server checks the uploaded object's magic bytes against the extension its key
+ * was minted for and reports a mismatch as a field error on `key` — a field the
+ * person never filled in, so it needs copy about the FILE they picked.
+ */
+function confirmRefusalError(
+  payload: { __typename?: string; field?: string | null } | null | undefined,
+): ImageValidationError {
+  const isByteMismatch =
+    payload?.__typename === 'ValidationError' &&
+    payload.field?.split('.').pop() === 'key';
+  return createImageValidationError(
+    isByteMismatch
+      ? 'Uploaded bytes do not match the key extension'
+      : 'Failed to confirm upload',
+    isByteMismatch ? 'CONTENT_MISMATCH' : 'UNKNOWN_ERROR',
+  );
+}
 
 export interface ImageFile {
   uri: string;
@@ -148,10 +172,12 @@ export const useImageUpload = () => {
   const uploadToObjectStorage = async (
     file: ImageFile,
     uploadData: PresignedUploadData,
+    // The type the KEY was minted for. The bytes must go up labelled the same
+    // way, or object storage stores a content-type the confirm step then reads
+    // back as a mismatch.
+    mimeType: string,
     onProgress?: (progress: number) => void,
   ): Promise<void> => {
-    const mimeType = file.type || getMimeTypeFromUri(file.uri);
-
     const form = new FormData();
     for (const field of uploadData.fields) {
       form.append(field.name, field.value);
@@ -263,13 +289,28 @@ export const useImageUpload = () => {
 
       onProgress?.(10);
 
-      // Step 1: Get presigned URL. The picker's raw type may be the
-      // non-standard 'image/jpg' (some Android providers) — normalize to
-      // the API-accepted set before the mutation or the server rejects it
-      // with a ValidationError.
-      const mimeType = normalizeImageMimeType(
-        fileToUpload.type || getMimeTypeFromUri(fileToUpload.uri),
-      );
+      // Presign for the type the file's BYTES say it is: confirm checks magic
+      // bytes against the key's extension, so presigning from the picker's
+      // report refuses the upload only after the whole file has transferred.
+      // An unreadable head falls back to the reported type rather than
+      // blocking the upload; 'image/jpg' is normalized either way.
+      const sniffed = await sniffImageMimeType(fileToUpload.uri);
+      if (!sniffed) {
+        // Deliberately NOT a refusal. A head that cannot be read means the
+        // bytes are unsupported OR the platform could not slice the blob, and
+        // both arrive as the same `Network request failed` — so refusing here
+        // would block legitimate uploads on any platform that cannot read a
+        // head. The server still checks the bytes; this only loses the early
+        // warning. See docs/verified-library-behaviour.md.
+        logger.warn(
+          'Image type not determined from bytes; using reported type',
+        );
+      }
+      const mimeType =
+        sniffed ??
+        normalizeImageMimeType(
+          fileToUpload.type || getMimeTypeFromUri(fileToUpload.uri),
+        );
       const { data: uploadData, error: uploadUrlError } = await createUploadUrl(
         {
           variables: {
@@ -301,6 +342,7 @@ export const useImageUpload = () => {
       await uploadToObjectStorage(
         fileToUpload,
         uploadResult,
+        mimeType,
         uploadProgress => {
           onProgress?.(30 + uploadProgress * 0.5);
         },
@@ -350,10 +392,11 @@ export const useImageUpload = () => {
           const { data } = await confirmProfileUpload({
             variables: { input: { key } },
           });
-          return data?.confirmProfileImageUpload?.__typename ===
-            'ConfirmProfileImageUploadPayload'
-            ? data.confirmProfileImageUpload.url
-            : null;
+          const payload = data?.confirmProfileImageUpload;
+          if (payload?.__typename === 'ConfirmProfileImageUploadPayload') {
+            return payload.url;
+          }
+          throw confirmRefusalError(payload);
         },
         options,
       );
@@ -388,10 +431,11 @@ export const useImageUpload = () => {
               input: { itemId, key, perspective, makePrimary },
             },
           });
-          return data?.confirmItemImageUpload?.__typename ===
-            'ConfirmItemImageUploadPayload'
-            ? data.confirmItemImageUpload.url
-            : null;
+          const payload = data?.confirmItemImageUpload;
+          if (payload?.__typename === 'ConfirmItemImageUploadPayload') {
+            return payload.url;
+          }
+          throw confirmRefusalError(payload);
         },
         options,
       );

@@ -1,8 +1,8 @@
 import { waitFor } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useRecipeSuggestionsForItem } from '../useRecipeSuggestionsForItem';
-import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
-import type { RecipeInformation } from '#/services/recipeApi/types';
+import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
+import type { RecipeInformation } from '#/services/spoonacular/types';
 
 const mockGetCachedSuggestions = jest.fn();
 const mockSetCachedSuggestions = jest.fn();
@@ -14,7 +14,7 @@ jest.mock('#features/recipes/store/useRecipeSuggestionsStore', () => ({
   }),
 }));
 
-jest.mock('#/services/recipeApi/SpoonacularService', () => {
+jest.mock('#/services/spoonacular/SpoonacularService', () => {
   const searchRecipes = jest.fn();
   return {
     spoonacularService: {

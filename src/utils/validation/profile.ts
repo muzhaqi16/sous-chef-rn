@@ -1,7 +1,7 @@
 import { object, string } from 'yup';
 import { nameRule, normalizeSmartPunctuation } from './common';
-import { getI18n } from '#/i18n/config';
 import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n';
 
 /**
  * Schemas are built once at module scope, so a message resolved eagerly would
@@ -10,7 +10,7 @@ import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
  * change. Same pattern as `validation/item.ts`.
  */
 const msg = (key: string, options?: Record<string, unknown>) => (): string =>
-  getI18n().t(`profileValidation.${key}`, options);
+  t(`profileValidation.${key}`, options);
 
 // display name rule
 const displayNameRule = string()

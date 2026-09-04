@@ -107,22 +107,39 @@ function getCurrencyFormatter(currency: string): Intl.NumberFormat | null {
 }
 
 /**
- * Symbol PLACEMENT is the locale's, never a hard-coded prefix: `1.234,56 €` and
- * `€1,234.56` are both correct in their locales. Degrades to `CODE 1234.56` when
- * Intl rejects the code, and to a plain number when none is given.
+ * What an amount nobody recorded reads as. The API withholds a money figure it
+ * cannot state — no cost, or costs in two currencies — and a withheld figure is
+ * not an amount of zero.
+ */
+export const UNKNOWN_AMOUNT = '—';
+
+/**
+ * Symbol PLACEMENT is the locale's and FRACTION DIGITS the currency's, so a
+ * zero-decimal currency is never forced to two places. Degrades to
+ * `CODE 1234.56`, then to a plain number. Absent is `UNKNOWN_AMOUNT`, never a
+ * formatted zero — to omit the row instead, see `formatCostOrNull`.
  */
 export function formatCurrency(
   value: number | null | undefined,
   currency: string | null | undefined,
+  decimalPlaces?: number | null,
 ): string {
-  const amount = value ?? 0;
-  const money = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+  if (value == null || !Number.isFinite(value)) return UNKNOWN_AMOUNT;
 
-  if (!currency) return formatDecimal(amount, money);
+  // Only the no-Intl paths need this: with a currency Intl knows, Intl supplies
+  // the minor unit itself. Two places is the fallback for a currency we were
+  // told nothing about.
+  const digits = decimalPlaces ?? 2;
+  const money = {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  };
+
+  if (!currency) return formatDecimal(value, money);
 
   const formatter = getCurrencyFormatter(currency);
-  if (!formatter) return `${currency} ${formatDecimal(amount, money)}`;
-  return formatter.format(amount);
+  if (!formatter) return `${currency} ${formatDecimal(value, money)}`;
+  return formatter.format(value);
 }
 
 /**

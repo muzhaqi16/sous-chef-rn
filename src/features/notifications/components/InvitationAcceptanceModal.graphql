@@ -1,48 +1,5 @@
 # Local copies of shoppingList collaboration operations per the Feature API
 # Boundary Convention. The shoppingList feature's graphql/ folder is internal.
-query MyShoppingListInvites {
-  me {
-    id
-    # Explicit generous page size: the token lookup does a find() over this
-    # single page, so relying on the server's implicit default could silently
-    # miss a pending invite and misreport it as unavailable.
-    pendingCollaborationInvitesConnection(first: 50) {
-      edges {
-        node {
-          id
-          token
-          shoppingListId
-          collaboratorId
-          email
-          role
-          status
-          canEdit
-          canAddItems
-          canRemoveItems
-          canMarkPurchased
-          canInviteOthers
-          invitedAt
-          expiresAt
-          shoppingList {
-            id
-            name
-            description
-          }
-          collaborator {
-            id
-            email
-            profile { id displayName avatar }
-          }
-          invitedBy {
-            id
-            email
-            profile { id displayName avatar }
-          }
-        }
-      }
-    }
-  }
-}
 
 # Local colocated fragment per the Feature API Boundary Convention.
 # Selects only what the cache-update path (createAddToQueryFieldUpdater) needs
@@ -70,11 +27,17 @@ fragment InvitationAcceptanceModal_collaborator on ShoppingListCollaborator {
   collaborator {
     id
     email
-    profile { id displayName avatar }
+    profile {
+      id
+      displayName
+      avatar
+    }
   }
 }
 
-mutation InvitationAcceptanceModalAcceptShoppingListInvite($input: AcceptShoppingListInviteInput!) {
+mutation InvitationAcceptanceModalAcceptShoppingListInvite(
+  $input: AcceptShoppingListInviteInput!
+) {
   acceptShoppingListInvite(input: $input) {
     __typename
     ... on AcceptShoppingListInvitePayload {
@@ -97,7 +60,9 @@ mutation InvitationAcceptanceModalAcceptShoppingListInvite($input: AcceptShoppin
   }
 }
 
-mutation InvitationAcceptanceModalDeclineShoppingListInvite($input: DeclineShoppingListInviteInput!) {
+mutation InvitationAcceptanceModalDeclineShoppingListInvite(
+  $input: DeclineShoppingListInviteInput!
+) {
   declineShoppingListInvite(input: $input) {
     __typename
     ... on DeclineShoppingListInvitePayload {

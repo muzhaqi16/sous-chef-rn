@@ -6,9 +6,10 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { MyRecipesDocument } from '#features/recipes/graphql/recipe.generated';
-import type { RecipeInformation } from '#/services/recipeApi/types';
+import type { RecipeInformation } from '#/services/spoonacular/types';
 import type { MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
 import { useRecipeFavoriteState } from '../useRecipeFavoriteState';
+import { UseRecipeFavoriteState_RecipeFragmentDoc } from '#features/recipes/hooks/useRecipeFavoriteState.generated';
 
 function seedRecipeCache(
   recipes: Array<{
@@ -20,37 +21,42 @@ function seedRecipeCache(
 ) {
   return seedCache(
     recipes.map(r => ({
-      __typename: 'Recipe' as const,
-      id: r.id,
-      name: `Recipe ${r.id}`,
-      description: null,
-      imageUrl: null,
-      servings: 1,
-      prepTimeMinutes: null,
-      cookTimeMinutes: null,
-      totalTimeMinutes: null,
-      difficulty: Difficulty.Easy,
-      category: RecipeCategory.Dinner,
-      cuisine: null,
-      status: 'PUBLISHED',
-      isExternal: true,
-      externalSource: r.externalSource,
-      externalId: r.externalId,
-      primarySource: null,
-      caloriesPerServing: null,
-      createdAt: '2025-01-01T00:00:00Z',
-      updatedAt: '2025-01-01T00:00:00Z',
-      savedDetails: r.folder
-        ? {
-            __typename: 'SavedRecipe' as const,
-            id: `sd-${r.id}`,
-            folder: r.folder,
-            tags: [],
-            notes: null,
-            personalRating: null,
-            cookedCount: 0,
-          }
-        : null,
+      // The production selection the consumer reads, so a thin fixture fails
+      // here instead of defining its own idea of complete.
+      fragment: UseRecipeFavoriteState_RecipeFragmentDoc,
+      data: {
+        __typename: 'Recipe' as const,
+        id: r.id,
+        name: `Recipe ${r.id}`,
+        description: null,
+        imageUrl: null,
+        servings: 1,
+        prepTimeMinutes: null,
+        cookTimeMinutes: null,
+        totalTimeMinutes: null,
+        difficulty: Difficulty.Easy,
+        category: RecipeCategory.Dinner,
+        cuisine: null,
+        status: 'PUBLISHED',
+        isExternal: true,
+        externalSource: r.externalSource,
+        externalId: r.externalId,
+        primarySource: null,
+        caloriesPerServing: null,
+        createdAt: '2025-01-01T00:00:00Z',
+        updatedAt: '2025-01-01T00:00:00Z',
+        savedDetails: r.folder
+          ? {
+              __typename: 'SavedRecipe' as const,
+              id: `sd-${r.id}`,
+              folder: r.folder,
+              tags: [],
+              notes: null,
+              personalRating: null,
+              cookedCount: 0,
+            }
+          : null,
+      },
     })),
   );
 }

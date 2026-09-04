@@ -4,7 +4,7 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { useAddShoppingItem } from '../useAddShoppingItem';
-import { addOptimisticShoppingListItem } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { addOptimisticShoppingListItem } from '#features/shoppingList/cache/items';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
 // The response mirrors the real batch payload the hook reads
@@ -27,15 +27,20 @@ const addItemMock = () =>
     },
   });
 
-jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
-  const actual = jest.requireActual('#/apollo/utils/shoppingListCacheUpdaters');
+jest.mock('#features/shoppingList/cache/connections', () => ({
+  ...jest.requireActual('#features/shoppingList/cache/connections'),
+  // A leaf cache writer, stubbed so the hook runs without a live cache.
+  addNewItemToShoppingListCache: jest.fn(),
+}));
+
+jest.mock('#features/shoppingList/cache/items', () => {
+  const actual = jest.requireActual('#features/shoppingList/cache/items');
   return {
     // Keep the REAL reconcileShoppingCreate (and the classifyCreateResult it
     // calls) so the keep/revert decision under test is production's — a
     // hand-copied reconciler drifts from the operation names it hard-codes.
     ...actual,
     // Leaf cache writers are stubbed so the hook runs without a live cache.
-    addNewItemToShoppingListCache: jest.fn(),
     adoptServerShoppingListItemId: jest.fn(),
     revertOptimisticShoppingListItem: jest.fn(),
     addOptimisticShoppingListItem: jest.fn(),

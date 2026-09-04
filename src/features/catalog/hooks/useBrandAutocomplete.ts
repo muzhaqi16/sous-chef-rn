@@ -1,8 +1,8 @@
 import { useLazyQuery } from '@apollo/client/react';
 import { SearchBrandsDocument } from '#operations/item/item.generated';
-import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
+import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { useAppStore, useIsOnline } from '#store/useAppStore';
-import { dedupeById, filterByName } from '#/utils/arrayUtils';
+import { dedupeById, filterByName } from '#features/catalog/utils/arrayUtils';
 
 interface SuggestedBrand {
   id: string;

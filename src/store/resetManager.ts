@@ -1,4 +1,4 @@
-import { RootState } from './index';
+import type { RootState } from './index';
 import { initialAppState } from './slices/appSlice';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 import { storage } from '#/storage/mmkv';
@@ -6,11 +6,11 @@ import {
   clearTempRegistrationPassword,
   clearSessionTokens,
 } from '#/storage/keychain';
-import { cancelTokenRefresh } from '#/apollo/links/tokenScheduler';
-import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import { runSessionTeardown } from './sessionTeardown';
 import { resetSessionScopedStores } from './sessionScopedStores';
 import { logger } from '#/utils/environment';
+import { getApolloResetBridge } from './apolloResetBridge';
+import { DEFAULT_CURRENCY } from '#/utils/formatters/number';
 
 /**
  * Which server verdict ended the session — log line only; `endSession` performs
@@ -82,6 +82,13 @@ const SESSION_SCOPED_STATE = {
   // Persisted, and shown directly to whoever opens the app next. Feature-owned
   // persisted state clears through resetSessionScopedStores() instead.
   cachedItemSuggestions: initialAppState.cachedItemSuggestions,
+  // The PREVIOUS account's setting. Login seeds it again from the server, so
+  // the next person on a shared device starts from the default rather than
+  // inheriting someone else's answer.
+  showTutorials: true,
+  // Likewise the previous account's: it denominates what the server records
+  // next, so inheriting it would price one person's pantry in another's money.
+  preferredCurrency: DEFAULT_CURRENCY,
 } satisfies Partial<RootState>;
 
 export const createResetManager = (
@@ -97,7 +104,7 @@ export const createResetManager = (
     if (resetOptions.auth) {
       // The proactive refresh timer outlives the tokens it was scheduled for
       // and would fire against a cleared session.
-      cancelTokenRefresh();
+      getApolloResetBridge()?.cancelTokenRefresh();
 
       // Under `auth`, not `preferences`: `LOGOUT` sets `preferences: false`, so
       // anything filed there survives a sign-out on a shared device.
@@ -139,17 +146,15 @@ export const createResetManager = (
       // The persisted blob goes first, in its OWN try: it is the copy that
       // survives a restart, so sharing a try with the in-memory clear lets a
       // failure there leave the signed-out account's entities on disk.
+      const apollo = getApolloResetBridge();
       try {
-        apolloCachePersistence.clear();
+        apollo?.clearPersistedCache();
       } catch (error) {
         logger.error('Error clearing persisted Apollo cache:', error);
       }
 
-      // Dynamic import breaks the require cycle
-      // (store → resetManager → apollo/client → links → store).
       try {
-        const { client } = await import('#/apollo/client');
-        await client.clearStore();
+        await apollo?.clearStore();
       } catch (error) {
         logger.error('Error clearing Apollo cache:', error);
       }

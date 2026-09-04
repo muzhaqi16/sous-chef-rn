@@ -7,6 +7,13 @@ fragment PantryItemCard_pantryItem on PantryItem {
   lastUsedAt
   netWeight
   remainingNetWeight
+  portionUnitId
+  portionUnit {
+    id
+    name
+    symbol
+  }
+  remainingPortions
   activeBatchCount
   updatedAt
   item {

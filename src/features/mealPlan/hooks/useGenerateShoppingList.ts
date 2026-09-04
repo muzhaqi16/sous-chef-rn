@@ -8,9 +8,8 @@ import {
   createAddToQueryConnectionUpdater,
   createAddToParentArrayUpdater,
 } from '#/apollo/utils/cacheUpdaters';
-import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { useIsApiUnavailable } from '#features/mealPlan/hooks/useIsApiUnavailable';
 import { t } from '#/i18n';
-import { getI18n } from '#/i18n/config';
 import { errorService } from '#/services/errorService';
 import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 
@@ -82,17 +81,17 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
         // recipes have no linked catalog items. Surface it instead of a
         // misleading "created with 0 items" success.
         toastService.info(
-          getI18n().t('generateShoppingList.readyNothingToAdd', {
+          t('generateShoppingList.readyNothingToAdd', {
             name: shoppingList.name,
           }),
         );
       } else {
         const homeName = shoppingList.home?.name;
         const shared = homeName
-          ? getI18n().t('generateShoppingList.sharedSuffix', { homeName })
+          ? t('generateShoppingList.sharedSuffix', { homeName })
           : '';
         toastService.success(
-          getI18n().t('generateShoppingList.createdSuccess', {
+          t('generateShoppingList.createdSuccess', {
             name: shoppingList.name,
             count: itemCount,
             shared,

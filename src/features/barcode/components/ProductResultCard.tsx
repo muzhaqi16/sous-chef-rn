@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
@@ -7,7 +8,7 @@ import { CachedImage } from '#components/atoms/CachedImage';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { formatQuantity } from '#utils/formatQuantity';
-import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
+import { Card } from '#components/atoms/Card';
 
 interface Item {
   id: string;
@@ -40,10 +41,11 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
   editActionLabel,
 }) => {
   const { t } = useTranslation();
+  const money = useMoney();
   const showActions = !!onEditItem || !!onCreateVariant;
 
   return (
-    <View style={styles.itemCard}>
+    <Card padding="none" style={styles.itemCard}>
       {item.imageUrl ? (
         <CachedImage
           uri={item.imageUrl}
@@ -57,30 +59,24 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
       )}
 
       <View style={styles.itemDetails}>
-        <Text size="2xl" weight="bold">
-          {item.name}
-        </Text>
-        {!!item.brandName && (
-          <Text size="md" tone="secondary">
-            {item.brandName}
-          </Text>
-        )}
+        <Text role="title">{item.name}</Text>
+        {!!item.brandName && <Text tone="secondary">{item.brandName}</Text>}
         {item.netWeight != null && (
-          <Text size="md" tone="secondary">
+          <Text tone="secondary">
             {formatQuantity(item.netWeight)}
             {item.displayUnit?.name ? ` ${item.displayUnit.name}` : ''}
           </Text>
         )}
-        {!!item?.price && (
-          <Text size="xl" weight="semibold" tone="success">
-            {formatCurrency(item.price, DEFAULT_CURRENCY)}
+        {item?.price != null && (
+          <Text role="subheading" tone="success">
+            {money(item.price)}
           </Text>
         )}
-        <Text size="sm" tone="secondary" style={styles.itemBarcode}>
+        <Text role="caption" tone="secondary" style={styles.itemBarcode}>
           {t('barcode.barcodeValue', { barcode: item.upc })}
         </Text>
         {format ? (
-          <Text size="xs" tone="tertiary" style={styles.itemFormat}>
+          <Text role="caption" tone="tertiary" style={styles.itemFormat}>
             {t('barcode.formatValue', { format })}
           </Text>
         ) : null}
@@ -91,36 +87,32 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
           {!!onEditItem && (
             <Pressable style={styles.actionLink} onPress={onEditItem}>
               <Icon name="create-outline" size={16} tone="primary" />
-              <Text size="sm" weight="medium" tone="accent">
+              <Text role="label" tone="accent">
                 {editActionLabel ?? t('labels.suggestEdit')}
               </Text>
             </Pressable>
           )}
           {!!onEditItem && !!onCreateVariant && (
-            <Text size="md" tone="tertiary" style={styles.actionSeparator}>
+            <Text tone="tertiary" style={styles.actionSeparator}>
               ·
             </Text>
           )}
           {!!onCreateVariant && (
             <Pressable style={styles.actionLink} onPress={onCreateVariant}>
               <Icon name="add-circle-outline" size={16} tone="primary" />
-              <Text size="sm" weight="medium" tone="accent">
+              <Text role="label" tone="accent">
                 {t('barcode.newVersion')}
               </Text>
             </Pressable>
           )}
         </View>
       ) : null}
-    </View>
+    </Card>
   );
 };
 const styles = StyleSheet.create(theme => ({
   itemCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.lg,
-    borderCurve: 'continuous',
     padding: theme.spacing.lg,
-    ...theme.shadows.md,
   },
   itemImage: {
     width: '100%',
@@ -156,7 +148,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     marginTop: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.borderLight,
   },
   actionLink: {

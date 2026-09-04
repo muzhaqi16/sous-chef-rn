@@ -25,8 +25,10 @@ type PurchaseNode = {
   id: string;
   purchaseDate: string;
   quantity: number;
-  unitPrice: number;
-  totalPrice: number;
+  // Nullable, as the schema has them: a price nobody observed is withheld,
+  // not reported as zero.
+  unitPrice: number | null;
+  totalPrice: number | null;
   currency: { __typename: 'Currency'; id: string; code: string };
   unitSymbol: string;
   user: {
@@ -166,13 +168,15 @@ describe('PurchaseHistoryScreen', () => {
   });
 
   it('omits price when a purchase has no recorded amount', async () => {
+    // NULL, not zero: the API withholds a price nobody observed, and zero is a
+    // price somebody entered. Only the first has nothing to show.
     const unpriced: PurchaseNode = {
       __typename: 'Purchase',
       id: 'p2',
       purchaseDate: '2026-02-01T10:00:00Z',
       quantity: 1,
-      unitPrice: 0,
-      totalPrice: 0,
+      unitPrice: null,
+      totalPrice: null,
       currency: { __typename: 'Currency', id: 'c1', code: 'USD' },
       unitSymbol: 'kg',
       user: purchaser('Sam'),
@@ -182,6 +186,29 @@ describe('PurchaseHistoryScreen', () => {
     });
     await waitFor(() => expect(screen.getByText('1 kg')).toBeTruthy());
     expect(screen.queryByText('Price:')).toBeNull();
+  });
+
+  it('shows a price recorded as zero', async () => {
+    // A comped or free line. Suppressing it would disagree with the totals,
+    // which count it.
+    const free: PurchaseNode = {
+      __typename: 'Purchase',
+      id: 'p3',
+      purchaseDate: '2026-02-01T10:00:00Z',
+      quantity: 1,
+      unitPrice: 0,
+      totalPrice: 0,
+      currency: { __typename: 'Currency', id: 'c1', code: 'USD' },
+      unitSymbol: 'kg',
+      user: purchaser('Sam'),
+    };
+    renderWithApollo(<PurchaseHistoryScreen route={route} />, {
+      operationMocks: [historyMock([free])],
+    });
+    await waitFor(() => expect(screen.getByText('1 kg')).toBeTruthy());
+    // The row AND the spend summary: the aggregate counts a recorded zero, so
+    // the row that produced it must not go blank.
+    expect(screen.getAllByText('$0.00').length).toBeGreaterThan(1);
   });
 
   it('names who recorded the purchase', async () => {

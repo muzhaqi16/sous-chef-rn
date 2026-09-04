@@ -8,11 +8,11 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { Header } from '#/components/molecules/Header';
+import { Header } from '#components/organisms/Header';
 import { StyleSheet } from 'react-native-unistyles';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
-import Chip from '#/components/atoms/Chip';
+import Chip from '#features/shoppingList/components/Chip';
 import { Icon } from '#utils/iconUtils';
 import {
   formatQuantity,
@@ -21,6 +21,7 @@ import {
 import { Text } from '#components/atoms/Text';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { localizeNumericHint } from '#/utils/formatters/number';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
 interface ItemUnit {
   id: string;
@@ -213,6 +214,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
           rightActions={[
             {
               icon: 'checkmark',
+              accessibilityLabel: t('labels.save'),
               onPress: handleSave,
               variant: 'primary',
               disabled: !hasChanges || !quantityIsValid || loading,
@@ -226,17 +228,13 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
           the padding lives here rather than on the measured view. */}
         <View style={styles.sections}>
           <View style={styles.section}>
-            <Text
-              size="sm"
-              weight="medium"
-              tone="secondary"
-              style={styles.sectionLabel}
-            >
+            <Text role="label" tone="secondary" style={styles.sectionLabel}>
               {t('labels.quantity')}
             </Text>
             <View style={styles.counterContainer}>
               <AppPressable
                 testID="quantity-edit-decrement"
+                accessibilityLabel={t('editableCounter.decrease')}
                 style={styles.counterButton}
                 onPress={handleDecrement}
                 disabled={decrementDisabled}
@@ -268,26 +266,25 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                     testID="quantity-edit-input"
                   />
                 ) : (
-                  <Text size="5xl" weight="semibold">
-                    {quantityInput || '0'}
-                  </Text>
+                  <Text role="display">{quantityInput || '0'}</Text>
                 )}
               </AppPressable>
 
               <AppPressable
                 testID="quantity-edit-increment"
+                accessibilityLabel={t('editableCounter.increase')}
                 style={styles.incrementButton}
                 onPress={handleIncrement}
                 disabled={stepDisabled}
               >
-                <Icon name="add" size={24} tone="white" />
+                <Icon name="add" size={24} tone="onPrimary" />
               </AppPressable>
             </View>
             {/* An empty field is "nothing typed yet", not a malformed quantity —
               the save button is disabled either way. */}
             {quantityInput.trim() !== '' && !quantityIsValid && (
               <Text
-                size="sm"
+                role="caption"
                 tone="error"
                 align="center"
                 style={styles.quantityHint}
@@ -299,14 +296,9 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
           </View>
 
           <View style={styles.section}>
-            <Text
-              size="sm"
-              weight="medium"
-              tone="secondary"
-              style={styles.sectionLabel}
-            >
+            <SectionHeader variant="overline" style={styles.sectionLabel}>
               {t('storageLocationForm.unit')}
-            </Text>
+            </SectionHeader>
 
             {itemUnits.length > 0 && (
               <View style={styles.chipsContainer}>
@@ -384,7 +376,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     backgroundColor: theme.colors.surface,
     borderColor: theme.colors.border,
   },
@@ -408,7 +400,7 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       editing: {
         true: {
-          borderWidth: 2,
+          borderWidth: theme.borderWidth.medium,
           borderRadius: theme.radii.md,
           borderCurve: 'continuous',
           paddingVertical: theme.spacing.xs,

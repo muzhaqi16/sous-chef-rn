@@ -1,4 +1,5 @@
 import React from 'react';
+import { sizes } from '#/theme/foundations/sizes';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { withUnistyles } from 'react-native-unistyles';
 import type { Theme } from '#/theme/themes';
@@ -17,40 +18,46 @@ export type IconLibrary = string;
 // this Icon re-renders, not the parent screen.
 const ThemedIonicons = withUnistyles(Ionicons);
 
-const TONE_TO_COLOR: Record<string, (t: Theme) => string> = {
-  primary: t => t.colors.primary,
-  secondary: t => t.colors.secondary,
-  border: t => t.colors.border,
-  textPrimary: t => t.colors.textPrimary,
-  textSecondary: t => t.colors.textSecondary,
-  textTertiary: t => t.colors.textTertiary,
-  textInverse: t => t.colors.textInverse,
-  textOnSurfaceVariant: t => t.colors.textOnSurfaceVariant,
-  error: t => t.colors.error,
-  warning: t => t.colors.warning,
-  expired: t => t.colors.expiration.expiredText,
-  success: t => t.colors.success,
-  info: t => t.colors.info,
-  danger: t => t.colors.danger,
-  iconOnPrimary: t => t.colors.iconOnPrimary,
-  iconDisabled: t => t.colors.iconDisabled,
-  iconSecondary: t => t.colors.iconSecondary,
-  iconTertiary: t => t.colors.iconTertiary,
-  onPrimary: t => t.colors.onPrimary,
-  onError: t => t.colors.onError,
-  background: t => t.colors.background,
-  white: t => t.colors.white,
-  black: t => t.colors.black,
-  favorite: t => t.colors.favorite,
-  rating: t => t.colors.rating,
-  navigationActive: t => t.colors.navigationActive,
+export const TONE_TO_COLOR = {
+  primary: (t: Theme) => t.colors.primary,
+  secondary: (t: Theme) => t.colors.secondary,
+  border: (t: Theme) => t.colors.border,
+  textPrimary: (t: Theme) => t.colors.textPrimary,
+  textSecondary: (t: Theme) => t.colors.textSecondary,
+  textTertiary: (t: Theme) => t.colors.textTertiary,
+  textInverse: (t: Theme) => t.colors.textInverse,
+  textOnSurfaceVariant: (t: Theme) => t.colors.textOnSurfaceVariant,
+  error: (t: Theme) => t.colors.error,
+  warning: (t: Theme) => t.colors.warning,
+  expired: (t: Theme) => t.colors.expiration.expiredText,
+  success: (t: Theme) => t.colors.success,
+  info: (t: Theme) => t.colors.info,
+  danger: (t: Theme) => t.colors.danger,
+  iconPrimary: (t: Theme) => t.colors.iconPrimary,
+  iconOnPrimary: (t: Theme) => t.colors.iconOnPrimary,
+  iconDisabled: (t: Theme) => t.colors.iconDisabled,
+  iconSecondary: (t: Theme) => t.colors.iconSecondary,
+  iconTertiary: (t: Theme) => t.colors.iconTertiary,
+  onPrimary: (t: Theme) => t.colors.onPrimary,
+  onError: (t: Theme) => t.colors.onError,
+  onScrim: (t: Theme) => t.colors.onScrim,
+  background: (t: Theme) => t.colors.background,
+  favorite: (t: Theme) => t.colors.favorite,
+  rating: (t: Theme) => t.colors.rating,
+  navigationActive: (t: Theme) => t.colors.navigationActive,
+  // Nested paths need an entry here; a caller cannot express one as a key.
+  alertBannerWarning: (t: Theme) => t.colors.alertBanner.warning.text,
 };
 
 export type IconTone = keyof typeof TONE_TO_COLOR;
 
+/** A named step of `theme.sizes.icon`, resolved here so a call site need not. */
+export type IconSizeName = keyof typeof sizes.icon;
+
 interface IconProps {
   name: string;
-  size?: number;
+  /** A named step, or a raw number where no step fits. */
+  size?: number | IconSizeName;
   /** Static color (hex / rgba). Use `tone` for theme-derived colors. */
   color?: string;
   /** Theme-derived color that reactively updates when the user changes the
@@ -59,13 +66,30 @@ interface IconProps {
   library?: IconLibrary;
 }
 
-export const Icon: React.FC<IconProps> = ({ name, size = 24, color, tone }) => {
+export const Icon: React.FC<IconProps> = ({
+  name,
+  size = 'md',
+  color,
+  tone,
+}) => {
+  // A named step resolves from the THEME, not the foundation module: resolving
+  // it here would freeze it exactly as a literal does, which is the thing the
+  // name exists to avoid. A raw number is the caller's own decision and passes
+  // through. `uniProps` wins over the prop, so the prop carries the fallback.
+  const px = typeof size === 'number' ? size : sizes.icon[size];
+  const sizeProps = (t: Theme) =>
+    typeof size === 'number' ? {} : { size: t.sizes.icon[size] };
   // `color` is an explicit override and wins over `tone`. This supports the
   // pattern `<Icon color={maybeOverride} tone="textSecondary" />` where the
   // tone is the theme-reactive fallback when the override is undefined.
   if (color != null) {
     return (
-      <Ionicons name={name as IoniconsIconName} size={size} color={color} />
+      <ThemedIonicons
+        name={name as IoniconsIconName}
+        size={px}
+        color={color}
+        uniProps={t => sizeProps(t as Theme)}
+      />
     );
   }
   if (tone) {
@@ -73,8 +97,11 @@ export const Icon: React.FC<IconProps> = ({ name, size = 24, color, tone }) => {
     return (
       <ThemedIonicons
         name={name as IoniconsIconName}
-        size={size}
-        uniProps={t => ({ color: resolveColor(t as Theme) })}
+        size={px}
+        uniProps={t => ({
+          color: resolveColor(t as Theme),
+          ...sizeProps(t as Theme),
+        })}
       />
     );
   }
@@ -83,8 +110,11 @@ export const Icon: React.FC<IconProps> = ({ name, size = 24, color, tone }) => {
   return (
     <ThemedIonicons
       name={name as IoniconsIconName}
-      size={size}
-      uniProps={t => ({ color: (t as Theme).colors.textPrimary })}
+      size={px}
+      uniProps={t => ({
+        color: (t as Theme).colors.textPrimary,
+        ...sizeProps(t as Theme),
+      })}
     />
   );
 };

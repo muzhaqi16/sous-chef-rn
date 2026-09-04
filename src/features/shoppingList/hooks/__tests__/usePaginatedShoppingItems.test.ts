@@ -19,7 +19,7 @@ jest.mock('#hooks/auth/useIsLoggedOut', () => ({
   useIsLoggedOut: () => false,
 }));
 
-jest.mock('#/constants/shoppingList', () => ({
+jest.mock('#features/shoppingList/utils/shoppingListConstants', () => ({
   PAGINATION: { ITEMS_PAGE_SIZE: 25 },
 }));
 

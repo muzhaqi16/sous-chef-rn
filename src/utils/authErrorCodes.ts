@@ -13,16 +13,28 @@ import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 // `AUTH_ACCOUNT_LOCKED` and `AUTH_EMAIL_NOT_VERIFIED` are in NO list below, on
 // purpose: the first is a self-clearing window, the second leaves the token
 // valid, so neither may end a session or spend a refresh.
-const DEAD_CREDENTIAL_CODES: string[] = [
+const DEAD_ACCOUNT_CREDENTIAL_CODES: string[] = [
   ErrorCode.AuthCredentialsInvalid,
   ErrorCode.AuthAccountSuspended,
 ];
 
+// The device-bound biometric credential is permanently useless — revoked,
+// expired, or presented with a device id it was not issued for. It says nothing
+// about the ACCOUNT, so it clears the keychain slot and ends no session; a
+// rate-limit refusal on the same exchange leaves the credential good and is
+// deliberately not here.
+const DEAD_CREDENTIAL_CODES: string[] = [
+  ...DEAD_ACCOUNT_CREDENTIAL_CODES,
+  ErrorCode.AuthDeviceCredentialInvalid,
+];
+
 // Plus the token-side refusals: the refresh token cannot be exchanged now or
 // later. AUTH_REFRESH_TOKEN_SUPERSEDED is pointedly ABSENT — same failed
-// exchange, living session; listing it turns a lost race into a sign-out.
+// exchange, living session; listing it turns a lost race into a sign-out. The
+// device credential is absent for the same shape of reason: it is exchanged
+// only when there is no session, so it can end none.
 const SESSION_ENDING_CODES: string[] = [
-  ...DEAD_CREDENTIAL_CODES,
+  ...DEAD_ACCOUNT_CREDENTIAL_CODES,
   ErrorCode.AuthRefreshTokenInvalid,
   ErrorCode.AuthTokenExpired,
   ErrorCode.AuthTokenMissing,

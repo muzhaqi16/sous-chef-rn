@@ -59,7 +59,7 @@ export const PantryItemSkeleton: React.FC<PantryItemSkeletonProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   wrapper: {
-    marginHorizontal: theme.spacing['3'],
+    marginHorizontal: theme.spacing.base,
   },
   container: {
     flexDirection: 'row',
@@ -67,21 +67,13 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.sm,
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.borderLight,
     backgroundColor: theme.colors.surface,
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 1,
-        blurRadius: 3,
-        spreadDistance: 0,
-        color: `${theme.colors.backgroundSecondary}0A`,
-      },
-    ],
+    ...theme.shadows.sm,
   },
   image: {
-    marginRight: theme.spacing['3'],
+    marginRight: theme.spacing.base,
   },
   content: {
     flex: 1,
@@ -92,7 +84,7 @@ const styles = StyleSheet.create(theme => ({
   },
   trailing: {
     alignItems: 'flex-end',
-    marginLeft: theme.spacing['3'],
+    marginLeft: theme.spacing.base,
   },
   location: {
     marginTop: theme.spacing.xs,

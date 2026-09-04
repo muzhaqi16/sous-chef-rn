@@ -10,21 +10,23 @@ import {
   usePreferences,
 } from '#store/useAppStore';
 import { authService } from '#/services/authService';
-import { useCredentialStorage } from '#hooks/auth/useCredentialStorage';
+import { useCredentialStorage } from '#features/profile/hooks/useCredentialStorage';
 import { useMutation } from '@apollo/client/react';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import { type UpdateSettingsInput } from '#/graphql/generated/schemaTypes';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import type { SettingItem } from '#components/molecules/SettingRow';
+import type { SettingItem } from '#components/organisms/SettingRow';
 
 import {
   PROFILE_SETTINGS_CONFIG,
   type SettingItemConfig,
 } from '#/config/settingsConfig';
 import { SUPPORTED_LANGUAGES } from '#/i18n/config';
-import { BiometricSetupModal } from '#components/organisms/BiometricSetupModal';
+import { BiometricSetupModal } from '#features/profile/components/BiometricSetupModal';
+import { authoritativeBiometryName } from '#components/organisms/biometric/biometryLabel';
 import { errorService } from '#/services/errorService';
 import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
+import { useCurrencyPreference } from '#features/profile/hooks/useCurrencyPreference';
 
 /**
  * Builds the profile screen's setting rows. Takes no profile — every row here
@@ -36,6 +38,12 @@ export const useConfigurableSettings = () => {
   const user = useUser();
   const { getUserNavigationState } = useNavigationUtils();
   const { language, setLanguage } = usePreferences();
+  const {
+    preferredCurrency,
+    currentLabel: currencyLabel,
+    options: currencyOptions,
+    selectCurrency,
+  } = useCurrencyPreference();
   const { checkStoredCredentials, getBiometricInfo, removeCredentials } =
     useCredentialStorage();
   const { resetBiometricDeclination, markBiometricEnabled } =
@@ -179,6 +187,19 @@ export const useConfigurableSettings = () => {
         }
         break;
 
+      case 'currency':
+        if (config.type === 'modal') {
+          return {
+            ...baseItem,
+            value: preferredCurrency,
+            valueLabel: currencyLabel,
+            subtitle: t('settings.currencySubtitle'),
+            options: currencyOptions,
+            onSave: selectCurrency,
+          };
+        }
+        break;
+
       // Security Settings
       case 'biometricAuthentication':
         if (config.type === 'switch') {
@@ -186,9 +207,13 @@ export const useConfigurableSettings = () => {
           const wasDeclined = navState?.biometricDeclinedPermanently;
 
           let subtitle: string;
-          // `biometricType` is a device-reported name (Face ID, Touch ID)
-          // and stays as-is; only the sentence around it is translated.
-          const method = biometricType || t('biometrics.genericMethod');
+          // The device-reported name is only trustworthy where the platform
+          // has one sensor; elsewhere it names a reader that may not be the one
+          // the prompt accepts. It stays untranslated — the sentence around it
+          // carries the locale.
+          const method =
+            authoritativeBiometryName(biometricType) ??
+            t('biometrics.genericMethod');
           if (biometricLoading) {
             subtitle = t('biometrics.checkingAvailability');
           } else if (!biometricAvailable) {
@@ -222,6 +247,9 @@ export const useConfigurableSettings = () => {
                         const email = user?.email;
                         try {
                           if (email) {
+                            // Server first, while the session that authorises
+                            // it is live; then the local slot.
+                            await authService.revokeDeviceCredentialForThisDevice();
                             await removeCredentials(email);
                             setBiometricEnabled(false);
                           }
@@ -277,7 +305,10 @@ export const useConfigurableSettings = () => {
             // each clear a different subset is how the shared-device residue
             // got there; this is the only one.
             const signOut = () => {
-              void authService.logout();
+              // Keeps the biometric credential: signing back in after a
+              // deliberate sign-out is exactly what it exists for, and the
+              // refresh-token lineage this revokes cannot serve that.
+              void authService.logout({ keepBiometricCredentials: true });
               logger.debug('User logged out');
             };
 

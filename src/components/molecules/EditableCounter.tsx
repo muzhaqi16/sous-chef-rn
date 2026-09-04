@@ -110,13 +110,13 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           accessible
           accessibilityRole="button"
           accessibilityLabel={t('editableCounter.decrease')}
-          accessibilityHint={`Current quantity is ${value}`}
+          accessibilityHint={t('a11y.currentQuantity', { value })}
           accessibilityState={{ disabled }}
         >
           <Icon
             name="remove-outline"
             size={16}
-            tone={disabled ? 'iconDisabled' : 'white'}
+            tone={disabled ? 'iconDisabled' : 'onPrimary'}
           />
         </Pressable>
 
@@ -149,18 +149,18 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           accessible
           accessibilityRole="button"
           accessibilityLabel={t('editableCounter.increase')}
-          accessibilityHint={`Current quantity is ${value}`}
+          accessibilityHint={t('a11y.currentQuantity', { value })}
           accessibilityState={{ disabled }}
         >
           <Icon
             name="add"
             size={16}
-            tone={disabled ? 'iconDisabled' : 'white'}
+            tone={disabled ? 'iconDisabled' : 'onPrimary'}
           />
         </Pressable>
       </View>
       {error ? (
-        <Text size="sm" tone="error" style={styles.errorText}>
+        <Text role="caption" tone="error" style={styles.errorText}>
           {error}
         </Text>
       ) : null}
@@ -178,7 +178,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     alignItems: 'center',
     height: 48,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.borderLight,
     borderStyle: 'solid',
     borderRadius: theme.radii.md,
@@ -188,7 +188,7 @@ const styles = StyleSheet.create(theme => ({
       focused: {
         true: {
           borderColor: theme.colors.primary,
-          borderWidth: 2,
+          borderWidth: theme.borderWidth.medium,
         },
       },
       disabled: {
@@ -199,13 +199,13 @@ const styles = StyleSheet.create(theme => ({
       error: {
         true: {
           borderColor: theme.colors.error,
-          borderWidth: 2,
+          borderWidth: theme.borderWidth.medium,
         },
       },
     },
   },
   button: {
-    zIndex: 9,
+    zIndex: theme.zIndex.raised,
     backgroundColor: theme.colors.primary,
     width: 35,
     height: 35,
@@ -213,7 +213,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
   pressed: {
@@ -221,8 +221,7 @@ const styles = StyleSheet.create(theme => ({
   },
   input: {
     flex: 1,
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
+    ...theme.type.bodyStrong,
     color: theme.colors.textPrimary,
     variants: {
       disabled: {

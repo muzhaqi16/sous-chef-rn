@@ -86,7 +86,7 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
 
           {!!hasMore && (
             <AppPressable onPress={onViewAll} style={styles.showAllButton}>
-              <Text size="sm" weight="medium" tone="accent">
+              <Text role="label" tone="accent">
                 {t('batchSection.viewAll', { count: allBatchCount })}
               </Text>
             </AppPressable>

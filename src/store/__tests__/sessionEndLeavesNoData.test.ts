@@ -95,6 +95,10 @@ const KEPT_ON_PURPOSE: Record<string, string> = {
   // per-account UI flags — no names, items, or messages.
   userPreferences: 'Record keyed by user id; per-account UI flags only',
   userNavigationStates: 'Record keyed by user id; per-account UI flags only',
+  featureHintsShown:
+    'Record keyed by `<user id>:<feature id>`; the same account signing back ' +
+    'in should not be shown every coach mark again',
+  loginCounts: 'Record keyed by user id; a count, and nothing else',
 
   // Catalog data warmed for offline autocomplete. Identical for every account
   // and independent of who was signed in; clearing it costs offline

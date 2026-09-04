@@ -27,20 +27,17 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
   item {
     id
     imageUrl
-    images { url kind }
+    images {
+      url
+      kind
+    }
   }
   unit {
     id
     name
     symbol
     type
-    isMetric
-    baseUnitId
-    conversionFactor
-    isCommon
     displayAsFraction
-    minPrecision
-    autoConvertThreshold
   }
   netWeightUnit {
     id
@@ -58,17 +55,33 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
   }
   packageBreakdown {
     count
-    contentUnit { id name symbol }
+    contentUnit {
+      id
+      name
+      symbol
+    }
     perUnitNetWeight
-    perUnitNetWeightUnit { id name symbol }
+    perUnitNetWeightUnit {
+      id
+      name
+      symbol
+    }
     totalNetWeight
   }
   quantityBreakdown {
     fullPackages
     looseContentUnits
-    contentUnit { id name symbol }
+    contentUnit {
+      id
+      name
+      symbol
+    }
     totalContentUnits
     remainingWeight
-    remainingWeightUnit { id name symbol }
+    remainingWeightUnit {
+      id
+      name
+      symbol
+    }
   }
 }

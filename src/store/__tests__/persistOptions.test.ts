@@ -229,4 +229,113 @@ describe('store persist options', () => {
       expect(migrated.user).toEqual({ id: 'user-1' });
     });
   });
+
+  describe('migrate (v15 unit-vocabulary drop)', () => {
+    // The API merged 46 alias `Unit` rows away and rebased every conversion
+    // factor, so a v14 blob's warmed units name ids the server cannot resolve.
+    const v14Blob = () => ({
+      cachedUnits: [{ id: 'unit-oz', symbol: 'oz', name: 'oz' }],
+      lastUnitsFetchedAt: 1756900000000,
+      cachedCategories: [{ id: 'cat-1', name: 'Produce' }],
+      lastCategoriesFetchedAt: 1756900000000,
+      theme: 'dark',
+      selectedHomeId: 'home-1',
+    });
+
+    it('drops the warmed unit list and its stamp together', async () => {
+      const { migrate } = useStore.persist.getOptions();
+      const migrated = (await migrate!(v14Blob(), 14)) as Record<
+        string,
+        unknown
+      >;
+
+      expect(migrated).not.toHaveProperty('cachedUnits');
+      // Without this the list re-warms only after the 24h TTL, and until then
+      // `localFirst` answers unit autocomplete from an empty local set.
+      expect(migrated).not.toHaveProperty('lastUnitsFetchedAt');
+    });
+
+    it('leaves every other warmed catalog slice alone', async () => {
+      const { migrate } = useStore.persist.getOptions();
+      const migrated = (await migrate!(v14Blob(), 14)) as Record<
+        string,
+        unknown
+      >;
+
+      expect(migrated.cachedCategories).toEqual([
+        { id: 'cat-1', name: 'Produce' },
+      ]);
+      expect(migrated.lastCategoriesFetchedAt).toBe(1756900000000);
+      expect(migrated.theme).toBe('dark');
+      expect(migrated.selectedHomeId).toBe('home-1');
+    });
+
+    it('runs for a blob older than v14 too', async () => {
+      const { migrate } = useStore.persist.getOptions();
+      const migrated = (await migrate!(v14Blob(), 12)) as Record<
+        string,
+        unknown
+      >;
+
+      expect(migrated).not.toHaveProperty('cachedUnits');
+      expect(migrated).not.toHaveProperty('lastUnitsFetchedAt');
+      expect(migrated.cachedCategories).toEqual([
+        { id: 'cat-1', name: 'Produce' },
+      ]);
+    });
+
+    it('carries feature hints and login counts out of the old MMKV keys', async () => {
+      const { storage } = require('#/storage/mmkv');
+      storage.set('feature_hint_shown_user-1_pantry_swipe', true);
+      storage.set('feature_hint_shown_user-1_list_reorder', true);
+      storage.set('login_count_user-1', 7);
+
+      const { migrate } = useStore.persist.getOptions();
+      const migrated = (await migrate!({}, 15)) as Record<string, unknown>;
+
+      expect(migrated.featureHintsShown).toMatchObject({
+        'feature_hint_shown_user-1_pantry_swipe': true,
+        'feature_hint_shown_user-1_list_reorder': true,
+      });
+      expect(migrated.loginCounts).toMatchObject({ 'user-1': 7 });
+    });
+
+    it('removes the old keys once they are carried', async () => {
+      const { storage } = require('#/storage/mmkv');
+      storage.set('feature_hint_shown_user-2_thing', true);
+
+      const { migrate } = useStore.persist.getOptions();
+      await migrate!({}, 15);
+
+      expect(storage.getAllKeys()).not.toContain(
+        'feature_hint_shown_user-2_thing',
+      );
+    });
+
+    it('leaves a v16 blob untouched', async () => {
+      const { storage } = require('#/storage/mmkv');
+      storage.set('feature_hint_shown_user-3_thing', true);
+
+      const { migrate } = useStore.persist.getOptions();
+      const migrated = (await migrate!(
+        { featureHintsShown: { existing: true } },
+        16,
+      )) as Record<string, unknown>;
+
+      expect(migrated.featureHintsShown).toEqual({ existing: true });
+    });
+
+    it('leaves a v15 blob untouched', async () => {
+      const { migrate } = useStore.persist.getOptions();
+      const migrated = (await migrate!(v14Blob(), 15)) as Record<
+        string,
+        unknown
+      >;
+
+      expect(migrated.cachedUnits).toEqual([
+        { id: 'unit-oz', symbol: 'oz', name: 'oz' },
+      ]);
+      expect(migrated.lastUnitsFetchedAt).toBe(1756900000000);
+    });
+  });
 });

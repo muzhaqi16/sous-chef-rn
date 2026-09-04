@@ -1,17 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { View } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
-import { LoadingState } from '../components/LoadingState';
-import { ErrorState } from '#components/atoms/ErrorState';
+import { LoadingBranded } from '#components/molecules/Loading';
+import { ErrorState } from '#components/molecules/ErrorState';
 import { ItemNotFound } from '../components/ItemNotFound';
 import { SearchResults } from '../components/SearchResults';
-import { Header } from '#components/molecules/Header';
 import AddItemForm, {
   type AddItemFormMode,
   type AddItemFormInitialData,
@@ -20,8 +18,9 @@ import { SuggestEditForm } from '../components/SuggestEditForm';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useBottomSheetState } from '#features/barcode/store/barcodeScannerStore';
 import { useSearchResults } from '../hooks/useSearchResults';
-import type { BarcodeSource } from '#/types/navigation';
+import type { BarcodeSource } from '#features/barcode/types';
 import type { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
+import { Screen } from '#components/templates/Screen';
 
 /** Build form initialData from a ScannedItem for edit/variant modes */
 function buildInitialDataFromItem(item: ScannedItem): AddItemFormInitialData {
@@ -148,9 +147,11 @@ export const SearchResultsScreen: React.FC<
   const renderContent = () => {
     if (isSearching || loading) {
       return (
-        <LoadingState
+        <LoadingBranded
           message={t('searchResults.searching')}
-          barcode={barcode}
+          submessage={
+            barcode ? t('barcode.barcodeValue', { barcode }) : undefined
+          }
         />
       );
     }
@@ -185,17 +186,21 @@ export const SearchResultsScreen: React.FC<
   };
 
   return (
-    <View style={styles.container}>
-      <Header
-        title={t('searchResults.title')}
-        onBack={handleBackPress}
-        rightActions={[
+    <Screen
+      header={{
+        title: t('searchResults.title'),
+        back: handleBackPress,
+        actions: [
           {
             icon: 'qr-code-outline',
+            accessibilityLabel: t('labels.scanAnother'),
             onPress: handleScanAnother,
           },
-        ]}
-      />
+        ],
+      }}
+      scroll="none"
+      gutter="none"
+    >
       {renderContent()}
 
       <BottomSheetModal
@@ -205,7 +210,7 @@ export const SearchResultsScreen: React.FC<
         backgroundStyle={styles.bottomSheetBackground}
         handleIndicatorStyle={styles.bottomSheetHandle}
       >
-        <BottomSheetKeyboardAwareScrollView
+        <BottomSheetFormScrollView
           style={styles.bottomSheetContent}
           keyboardShouldPersistTaps="handled"
         >
@@ -229,9 +234,9 @@ export const SearchResultsScreen: React.FC<
               loading={addingItem}
             />
           )}
-        </BottomSheetKeyboardAwareScrollView>
+        </BottomSheetFormScrollView>
       </BottomSheetModal>
-    </View>
+    </Screen>
   );
 };
 

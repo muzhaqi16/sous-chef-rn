@@ -9,8 +9,6 @@ query GetUnitBySymbol($symbol: String!) {
     symbol
     type
     isMetric
-    baseUnitId
-    conversionFactor
     notes
     isCommon
     sortOrder
@@ -36,8 +34,6 @@ query SearchUnits($query: String!, $type: UnitType, $limit: Int) {
     sortOrder
     displayAsFraction
     minPrecision
-    conversionFactor
-    baseUnitId
   }
 }
 
@@ -52,7 +48,5 @@ query GetCommonUnits($type: UnitType, $limit: Int) {
     sortOrder
     displayAsFraction
     minPrecision
-    conversionFactor
-    baseUnitId
   }
 }

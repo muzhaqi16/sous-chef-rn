@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SkeletonLine } from '#components/atoms/Skeleton/SkeletonLine';
 import { SkeletonRectangle } from '#components/atoms/Skeleton/SkeletonRectangle';
-import { ListItem } from '#/components/molecules/ListItem';
+import { ListItem } from '#components/molecules/ListItem';
 import { commonStyles } from '#/styles/commonStyles';
 
 interface RecipeItemSkeletonProps {

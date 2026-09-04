@@ -3,15 +3,15 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
-import { RestrictionSection } from '#/components/molecules/RestrictionSection/RestrictionSection';
-import { MultiSelectChipSheet } from '#/components/molecules/MultiSelectChipSheet/MultiSelectChipSheet';
+import { RestrictionSection } from '#features/profile/components/RestrictionSection/RestrictionSection';
+import { MultiSelectChipSheet } from '#components/organisms/MultiSelectChipSheet/MultiSelectChipSheet';
 import {
   Diet,
   Intolerance,
   HealthGoal,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
-import { isLifestyleDiet } from '#/constants/dietary';
+import { isLifestyleDiet } from '#domain/dietary';
 import { executeWriteWithFinally } from '#/utils/finallyHelpers';
 import { logger } from '#/utils/environment';
 

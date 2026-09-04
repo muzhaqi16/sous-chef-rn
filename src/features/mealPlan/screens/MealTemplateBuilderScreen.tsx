@@ -2,22 +2,32 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { useQuery } from '@apollo/client/react';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Pressable } from '#components/atoms/themedComponents';
-import { FormModal } from '#components/organisms/FormModal';
-import { FormInput } from '#components/molecules/FormInput';
-import { FormTextArea } from '#components/molecules/FormTextArea';
+import { FormScreen } from '#components/templates/FormScreen';
+import { FormInput } from '#components/atoms/FormInput';
+import { FormTextArea } from '#components/atoms/FormTextArea';
 import { FormSelect } from '#components/molecules/FormSelect';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
-import { alertService } from '#/services/alertService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useMealTemplateEditor } from '#features/mealPlan/hooks/useMealTemplateEditor';
-import { GetMealTemplateForEditDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
+import { useMealTemplateForEdit } from '#features/mealPlan/hooks/useMealTemplateForEdit';
 import { TemplateCategory, MealType } from '#/graphql/generated/schemaTypes';
 import { generateId } from '#/utils/generateId';
+import { SectionHeader } from '#components/atoms/SectionHeader';
+import { Controller, useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { logValidationErrors } from '#/utils/validation/common';
+import {
+  templateDefaults,
+  templateItemDefaults,
+  templateItemSchema,
+  templateSchema,
+  type TemplateFormValues,
+  type TemplateItemFormValues,
+} from './mealTemplateBuilderFormConfig';
 
 const CATEGORY_OPTIONS = [
   TemplateCategory.Weekly,
@@ -81,31 +91,24 @@ export const MealTemplateBuilderScreen: React.FC<
   // being offline blocks editing an existing template's items, and nothing at
   // all about building a new one.
 
-  const { data } = useQuery(GetMealTemplateForEditDocument, {
-    variables: { id: templateId ?? '' },
-    skip: !templateId,
-  });
-  const loaded = data?.mealTemplate;
+  const { template: loaded } = useMealTemplateForEdit(templateId);
 
-  // Metadata form
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState<TemplateCategory>(
-    TemplateCategory.Weekly,
-  );
-  const [description, setDescription] = useState('');
-  const [defaultServings, setDefaultServings] = useState('2');
-  const [tags, setTags] = useState('');
+  // Two forms on one screen: the template's own metadata, and the sub-form that
+  // adds one meal to it.
+  const templateForm = useForm<TemplateFormValues>({
+    resolver: yupResolver(templateSchema),
+    defaultValues: templateDefaults(TemplateCategory.Weekly),
+    mode: 'onTouched',
+  });
 
   // Draft items (create mode). In edit mode the list comes from `loaded.items`.
   const [draftItems, setDraftItems] = useState<DraftItem[]>([]);
 
-  // Item sub-form
-  const [itemDay, setItemDay] = useState('0');
-  const [itemMealType, setItemMealType] = useState<MealType>(
-    MealType.Breakfast,
-  );
-  const [itemName, setItemName] = useState('');
-  const [itemServings, setItemServings] = useState('2');
+  const itemForm = useForm<TemplateItemFormValues>({
+    resolver: yupResolver(templateItemSchema),
+    defaultValues: templateItemDefaults(MealType.Breakfast),
+    mode: 'onTouched',
+  });
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editingServerId, setEditingServerId] = useState<string | null>(null);
 
@@ -114,11 +117,13 @@ export const MealTemplateBuilderScreen: React.FC<
   const [hydratedId, setHydratedId] = useState<string | null>(null);
   if (loaded && hydratedId !== loaded.id) {
     setHydratedId(loaded.id);
-    setName(loaded.name);
-    setCategory(loaded.category ?? TemplateCategory.Weekly);
-    setDescription(loaded.description ?? '');
-    setDefaultServings(String(loaded.defaultServings ?? 2));
-    setTags((loaded.tags ?? []).join(', '));
+    templateForm.reset({
+      name: loaded.name,
+      category: loaded.category ?? TemplateCategory.Weekly,
+      description: loaded.description ?? '',
+      defaultServings: String(loaded.defaultServings ?? 2),
+      tags: (loaded.tags ?? []).join(', '),
+    });
   }
 
   const items: DraftItem[] = isEdit
@@ -133,32 +138,31 @@ export const MealTemplateBuilderScreen: React.FC<
     : draftItems;
 
   const resetItemForm = () => {
-    setItemDay('0');
-    setItemMealType(MealType.Breakfast);
-    setItemName('');
-    setItemServings('2');
+    itemForm.reset(templateItemDefaults(MealType.Breakfast));
     setEditingKey(null);
     setEditingServerId(null);
   };
 
   const loadItemIntoForm = (item: DraftItem) => {
-    setItemDay(String(item.dayOffset));
-    setItemMealType(item.mealType);
-    setItemName(item.customMealName);
-    setItemServings(String(item.servings));
+    itemForm.reset({
+      itemDay: String(item.dayOffset),
+      itemMealType: item.mealType,
+      itemName: item.customMealName,
+      itemServings: String(item.servings),
+    });
     setEditingKey(item.key);
     setEditingServerId(item.serverId ?? null);
   };
 
-  const handleSubmitItem = async () => {
-    if (!itemName.trim()) {
-      alertService.alert(
-        t('mealTemplateBuilder.itemNameRequiredTitle'),
-        t('mealTemplateBuilder.itemNameRequiredMessage'),
-      );
-      return;
-    }
-    const dayOffset = parseInt(itemDay) || 0;
+  // Reaching here means the sub-form's schema passed, so the missing-name rule
+  // has already reported itself on the name field.
+  const onValidItem = async ({
+    itemDay: day,
+    itemMealType,
+    itemName,
+    itemServings,
+  }: TemplateItemFormValues) => {
+    const dayOffset = parseInt(day) || 0;
     const servings = parseInt(itemServings) || 2;
     const customMealName = itemName.trim();
 
@@ -209,20 +213,21 @@ export const MealTemplateBuilderScreen: React.FC<
     if (editingKey === item.key) resetItemForm();
   };
 
-  const parseTags = () =>
+  const parseTags = (tags: string) =>
     tags
       .split(',')
-      .map(tag => tag.trim())
+      .map((tag: string) => tag.trim())
       .filter(Boolean);
 
-  const handleSave = async () => {
-    if (!name.trim()) {
-      alertService.alert(
-        t('mealTemplateBuilder.nameRequiredTitle'),
-        t('mealTemplateBuilder.nameRequiredMessage'),
-      );
-      return;
-    }
+  // Reaching here means the template schema passed, so the missing-name rule
+  // has already reported itself on the name field.
+  const onValidTemplate = async ({
+    name,
+    category,
+    description,
+    defaultServings,
+    tags,
+  }: TemplateFormValues) => {
     const servingsValue = parseInt(defaultServings) || 2;
 
     if (isEdit && templateId) {
@@ -231,7 +236,7 @@ export const MealTemplateBuilderScreen: React.FC<
         category,
         description: description.trim() || null,
         defaultServings: servingsValue,
-        tags: parseTags(),
+        tags: parseTags(tags),
       });
       if (ok) goBack();
       return;
@@ -242,7 +247,7 @@ export const MealTemplateBuilderScreen: React.FC<
       category,
       description: description.trim() || undefined,
       defaultServings: servingsValue,
-      tags: parseTags(),
+      tags: parseTags(tags),
       items: draftItems.map(item => ({
         dayOffset: item.dayOffset,
         mealType: item.mealType,
@@ -254,61 +259,93 @@ export const MealTemplateBuilderScreen: React.FC<
   };
 
   return (
-    <FormModal
+    <FormScreen
       title={isEdit ? t('labels.editTemplate') : t('labels.newTemplate')}
       onClose={goBack}
-      onSave={handleSave}
+      onSave={templateForm.handleSubmit(onValidTemplate, logValidationErrors)}
       loading={creating || updating}
       testID="meal-template-builder-screen"
     >
-      <FormInput
-        label={t('labels.templateName')}
-        value={name}
-        onChangeText={setName}
-        placeholder={t('mealTemplateBuilder.namePlaceholder')}
-        required
-        testID="template-name-input"
+      <Controller
+        control={templateForm.control}
+        name="name"
+        render={({ field, fieldState }) => (
+          <FormInput
+            label={t('labels.templateName')}
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            error={fieldState.error?.message}
+            placeholder={t('mealTemplateBuilder.namePlaceholder')}
+            required
+            testID="template-name-input"
+          />
+        )}
       />
 
-      <FormSelect
-        label={t('labels.category')}
-        value={category}
-        onValueChange={value => setCategory(value as TemplateCategory)}
-        options={CATEGORY_OPTIONS.map(value => ({
-          label: formatEnum(value),
-          value,
-        }))}
+      <Controller
+        control={templateForm.control}
+        name="category"
+        render={({ field }) => (
+          <FormSelect
+            label={t('labels.category')}
+            value={field.value}
+            onValueChange={value => field.onChange(value as TemplateCategory)}
+            options={CATEGORY_OPTIONS.map(value => ({
+              label: formatEnum(value),
+              value,
+            }))}
+          />
+        )}
       />
 
-      <EditableCounter
-        label={t('labels.defaultServings')}
-        value={defaultServings}
-        onChangeText={setDefaultServings}
-        min={1}
-        step={1}
+      <Controller
+        control={templateForm.control}
+        name="defaultServings"
+        render={({ field }) => (
+          <EditableCounter
+            label={t('labels.defaultServings')}
+            value={field.value}
+            onChangeText={field.onChange}
+            min={1}
+            step={1}
+          />
+        )}
       />
 
-      <FormTextArea
-        label={t('mealTemplateBuilder.description')}
-        value={description}
-        onChangeText={setDescription}
-        placeholder={t('mealTemplateBuilder.descriptionPlaceholder')}
+      <Controller
+        control={templateForm.control}
+        name="description"
+        render={({ field }) => (
+          <FormTextArea
+            label={t('mealTemplateBuilder.description')}
+            value={field.value}
+            onChangeText={field.onChange}
+            placeholder={t('mealTemplateBuilder.descriptionPlaceholder')}
+          />
+        )}
       />
 
-      <FormInput
-        label={t('mealTemplateBuilder.tags')}
-        value={tags}
-        onChangeText={setTags}
-        placeholder={t('labels.commaSeparated')}
+      <Controller
+        control={templateForm.control}
+        name="tags"
+        render={({ field }) => (
+          <FormInput
+            label={t('mealTemplateBuilder.tags')}
+            value={field.value}
+            onChangeText={field.onChange}
+            placeholder={t('labels.commaSeparated')}
+          />
+        )}
       />
 
       {/* Meals */}
-      <Text size="md" weight="semibold" style={styles.sectionTitle}>
+      <SectionHeader variant="title" style={styles.sectionTitle}>
         {t('mealTemplateBuilder.mealsSection')}
-      </Text>
+      </SectionHeader>
 
       {items.length === 0 ? (
-        <Text size="sm" tone="secondary" style={styles.emptyMeals}>
+        <Text role="caption" tone="secondary" style={styles.emptyMeals}>
           {t('mealTemplateBuilder.noMeals')}
         </Text>
       ) : (
@@ -321,10 +358,8 @@ export const MealTemplateBuilderScreen: React.FC<
                 style={styles.itemInfo}
                 onPress={() => loadItemIntoForm(item)}
               >
-                <Text size="sm" weight="medium">
-                  {item.customMealName}
-                </Text>
-                <Text size="xs" tone="secondary">
+                <Text role="label">{item.customMealName}</Text>
+                <Text role="caption" tone="secondary">
                   {t('mealTemplateBuilder.itemSummary', {
                     day: item.dayOffset + 1,
                     meal: formatEnum(item.mealType),
@@ -334,6 +369,9 @@ export const MealTemplateBuilderScreen: React.FC<
               </Pressable>
               <Pressable
                 onPress={() => handleRemoveItem(item)}
+                accessibilityLabel={t('a11y.removeNamed', {
+                  name: item.customMealName || formatEnum(item.mealType),
+                })}
                 hitSlop={8}
                 testID={`remove-item-${item.key}`}
               >
@@ -346,59 +384,86 @@ export const MealTemplateBuilderScreen: React.FC<
 
       {/* Add / edit meal sub-form */}
       <View style={styles.itemForm}>
-        <FormInput
-          label={t('mealTemplateBuilder.mealName')}
-          value={itemName}
-          onChangeText={setItemName}
-          placeholder={t('mealTemplateBuilder.mealNamePlaceholder')}
-          testID="item-name-input"
+        <Controller
+          control={itemForm.control}
+          name="itemName"
+          render={({ field, fieldState }) => (
+            <FormInput
+              label={t('mealTemplateBuilder.mealName')}
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              error={fieldState.error?.message}
+              placeholder={t('mealTemplateBuilder.mealNamePlaceholder')}
+              testID="item-name-input"
+            />
+          )}
         />
-        <FormSelect
-          label={t('labels.mealType')}
-          value={itemMealType}
-          onValueChange={value => setItemMealType(value as MealType)}
-          options={MEAL_TYPE_OPTIONS.map(value => ({
-            label: formatEnum(value),
-            value,
-          }))}
+        <Controller
+          control={itemForm.control}
+          name="itemMealType"
+          render={({ field }) => (
+            <FormSelect
+              label={t('labels.mealType')}
+              value={field.value}
+              onValueChange={value => field.onChange(value as MealType)}
+              options={MEAL_TYPE_OPTIONS.map(value => ({
+                label: formatEnum(value),
+                value,
+              }))}
+            />
+          )}
         />
-        <EditableCounter
-          label={t('mealTemplateBuilder.dayNumber')}
-          value={String((parseInt(itemDay) || 0) + 1)}
-          onChangeText={text =>
-            setItemDay(String(Math.max(0, (parseInt(text) || 1) - 1)))
-          }
-          min={1}
-          step={1}
+        <Controller
+          control={itemForm.control}
+          name="itemDay"
+          render={({ field }) => (
+            <EditableCounter
+              label={t('mealTemplateBuilder.dayNumber')}
+              // The field holds a zero-based offset; the control shows day 1.
+              value={String((parseInt(field.value) || 0) + 1)}
+              onChangeText={text =>
+                field.onChange(String(Math.max(0, (parseInt(text) || 1) - 1)))
+              }
+              min={1}
+              step={1}
+            />
+          )}
         />
-        <EditableCounter
-          label={t('labels.servings')}
-          value={itemServings}
-          onChangeText={setItemServings}
-          min={1}
-          step={1}
+        <Controller
+          control={itemForm.control}
+          name="itemServings"
+          render={({ field }) => (
+            <EditableCounter
+              label={t('labels.servings')}
+              value={field.value}
+              onChangeText={field.onChange}
+              min={1}
+              step={1}
+            />
+          )}
         />
         <Pressable
           style={({ pressed }) => [
             styles.addMealButton,
             pressed && styles.pressed,
           ]}
-          onPress={handleSubmitItem}
+          onPress={itemForm.handleSubmit(onValidItem, logValidationErrors)}
           testID="submit-item-button"
         >
           <Icon
             name={editingKey ? 'checkmark' : 'add'}
             size={18}
-            tone="accent"
+            tone="primary"
           />
-          <Text size="md" tone="accent" style={styles.addMealText}>
+          <Text tone="primary" style={styles.addMealText}>
             {editingKey
               ? t('mealTemplateBuilder.updateMeal')
               : t('mealTemplateBuilder.addMeal')}
           </Text>
         </Pressable>
       </View>
-    </FormModal>
+    </FormScreen>
   );
 };
 
@@ -415,7 +480,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   itemInfo: {
@@ -425,7 +490,7 @@ const styles = StyleSheet.create(theme => ({
   itemForm: {
     marginTop: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
   },
   addMealButton: {

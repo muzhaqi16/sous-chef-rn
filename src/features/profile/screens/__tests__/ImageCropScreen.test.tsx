@@ -20,7 +20,7 @@ jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#components/molecules/Header', () => ({
+jest.mock('#components/organisms/Header', () => ({
   Header: ({ title, onBack }: { title?: string; onBack?: () => void }) => {
     const { View, Text, Pressable } = require('react-native');
     return (

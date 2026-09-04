@@ -1,6 +1,6 @@
 import {
   groupNotificationsByDate,
-  createSectionListData,
+  createNotificationFeedRows,
   NotificationGroups,
 } from '../notificationGrouping';
 import {
@@ -88,39 +88,54 @@ describe('groupNotificationsByDate', () => {
   });
 });
 
-describe('createSectionListData', () => {
-  it('creates sections only for non-empty groups', () => {
+describe('createNotificationFeedRows', () => {
+  const headers = (rows: ReturnType<typeof createNotificationFeedRows>) =>
+    rows.filter(row => row.kind === 'header').map(row => row.title);
+
+  it('emits a header only for non-empty groups', () => {
     const groups: NotificationGroups = {
       urgent: [makeNotification({ priority: Priority.Urgent })],
       today: [],
       yesterday: [],
       older: [makeNotification({ sentAt: '2020-01-01T00:00:00Z' })],
     };
-    const sections = createSectionListData(groups);
-    expect(sections).toHaveLength(2);
-    expect(sections[0].title).toContain('Urgent');
-    expect(sections[1].title).toBe('Older');
+    const rows = createNotificationFeedRows(groups);
+    expect(headers(rows)).toHaveLength(2);
+    expect(headers(rows)[0]).toContain('Urgent');
+    expect(headers(rows)[1]).toBe('Older');
   });
 
-  it('returns empty array when all groups are empty', () => {
+  it('puts each notification under its own header', () => {
+    const urgent = makeNotification({ priority: Priority.Urgent });
+    const rows = createNotificationFeedRows({
+      urgent: [urgent],
+      today: [],
+      yesterday: [],
+      older: [],
+    });
+    expect(rows).toHaveLength(2);
+    expect(rows[0].kind).toBe('header');
+    expect(rows[1]).toEqual({ kind: 'item', notification: urgent });
+  });
+
+  it('returns an empty array when every group is empty', () => {
     const groups: NotificationGroups = {
       urgent: [],
       today: [],
       yesterday: [],
       older: [],
     };
-    expect(createSectionListData(groups)).toEqual([]);
+    expect(createNotificationFeedRows(groups)).toEqual([]);
   });
 
-  it('preserves section order', () => {
+  it('preserves group order', () => {
     const groups: NotificationGroups = {
       urgent: [makeNotification()],
       today: [makeNotification()],
       yesterday: [makeNotification()],
       older: [makeNotification()],
     };
-    const sections = createSectionListData(groups);
-    expect(sections.map(s => s.title)).toEqual([
+    expect(headers(createNotificationFeedRows(groups))).toEqual([
       expect.stringContaining('Urgent'),
       'Today',
       'Yesterday',

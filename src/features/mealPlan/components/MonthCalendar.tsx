@@ -5,7 +5,7 @@ import {
   type CalendarProps,
 } from 'react-native-calendars';
 import { withUnistyles } from 'react-native-unistyles';
-import { format } from 'date-fns';
+import { toDateKey } from '#/utils/dateUtils';
 
 const ThemedCalendar = withUnistyles(Calendar, theme => ({
   theme: {
@@ -13,12 +13,12 @@ const ThemedCalendar = withUnistyles(Calendar, theme => ({
     calendarBackground: theme.colors.background,
     textSectionTitleColor: theme.colors.textSecondary,
     selectedDayBackgroundColor: theme.colors.primary,
-    selectedDayTextColor: theme.colors.white,
+    selectedDayTextColor: theme.colors.onPrimary,
     todayTextColor: theme.colors.primary,
     dayTextColor: theme.colors.textPrimary,
     textDisabledColor: theme.colors.textTertiary,
     dotColor: theme.colors.primary,
-    selectedDotColor: theme.colors.white,
+    selectedDotColor: theme.colors.onPrimary,
     arrowColor: theme.colors.primary,
     monthTextColor: theme.colors.textPrimary,
     textMonthFontWeight: 'bold' as 'bold',
@@ -43,9 +43,9 @@ export const MonthCalendar: React.FC<MonthCalendarProps> = ({
   minDate,
   maxDate,
 }) => {
-  const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-  const minDateStr = minDate ? format(minDate, 'yyyy-MM-dd') : undefined;
-  const maxDateStr = maxDate ? format(maxDate, 'yyyy-MM-dd') : undefined;
+  const selectedDateStr = toDateKey(selectedDate);
+  const minDateStr = minDate ? toDateKey(minDate) : undefined;
+  const maxDateStr = maxDate ? toDateKey(maxDate) : undefined;
 
   const handleDayPress = (day: DateData) => {
     onSelectDate(new Date(day.dateString + 'T12:00:00'));
@@ -67,7 +67,7 @@ export const MonthCalendar: React.FC<MonthCalendarProps> = ({
             ...marks[selectedDateStr],
             selected: true,
             selectedColor: t.colors.primary,
-            selectedTextColor: t.colors.white,
+            selectedTextColor: t.colors.onPrimary,
           };
           return marks;
         })(),

@@ -150,3 +150,35 @@ grammatical-role case above.
 
 None of them proves completeness. A string reaching JSX through a variable is
 invisible to all of them — that is the gap pseudolocalization would close.
+
+## Right-to-left: the cost, recorded
+
+The four shipped locales (en, es, it, sq) are all left-to-right, so nothing in
+the app has ever been laid out for RTL. This section records what adding one
+would cost, so the decision is made against a number rather than an impression.
+**No migration is planned; do not treat this as a worklist.**
+
+| what | count | why it matters |
+| --- | --- | --- |
+| `marginLeft` / `marginRight` | 124 | a physical edge; RTL wants `marginStart`/`marginEnd` |
+| `paddingLeft` / `paddingRight` | 14 | same |
+| absolute `left:` / `right:` | 61 | positioned chrome — badges, close buttons, overlay handles |
+| `textAlign: 'left' \| 'right'` | 2 | `'auto'` follows the writing direction |
+| `marginStart` / `marginEnd` etc. | 0 | nothing uses the logical properties today |
+| `I18nManager` references | 0 | the direction is never read, so nothing branches on it |
+
+Two things the numbers do not show, and which dominate the real cost:
+
+- **Icons that encode direction.** A back chevron, a disclosure arrow and a
+  progress indicator all have to mirror; a play button and a logo must not.
+  Nothing in the tree distinguishes them today.
+- **Gestures.** Swipe-to-delete opens from the trailing edge, which flips.
+  `SwipeableItem`'s `leftActions`/`rightActions` are named for physical sides,
+  so the descriptors themselves would need renaming to leading/trailing —
+  and that name reaches `BaseItemCard`, `ItemCard` and `ItemList`.
+
+The honest order if it is ever taken on: rename the swipe descriptors to
+leading/trailing first (it is the one API change), then codemod the 138 margin
+and padding sites to the logical properties, then audit the 61 absolute
+positions by hand, then the icons. The `textAlign` pair and `I18nManager`
+plumbing are an afternoon; the icons are not.

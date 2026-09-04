@@ -6,10 +6,17 @@ export function formatQuantity(value: number): string {
   return value.toFixed(2).replace(/\.?0+$/, '');
 }
 
-/** Primary display, with g→kg / ml→L upscaling: 1500g → "1.5kg". */
+/**
+ * The canonical millilitre symbol is `mL`, and older rows spell it `ml`. The
+ * comparison is case-insensitive because every casing of those two letters
+ * means the same unit; `g` stays exact, since a capital `G` does not.
+ */
+const isMillilitre = (symbol: string): boolean => symbol.toLowerCase() === 'ml';
+
+/** Primary display, with g→kg / mL→L upscaling: 1500g → "1.5kg". */
 export function formatQuantityDisplay(quantity: number, unit?: string): string {
   const unitStr = unit || '';
-  if (quantity >= 1000 && (unitStr === 'g' || unitStr === 'ml')) {
+  if (quantity >= 1000 && (unitStr === 'g' || isMillilitre(unitStr))) {
     return `${(quantity / 1000).toFixed(1)}${unitStr === 'g' ? 'kg' : 'L'}`;
   }
   if (Number.isInteger(quantity)) {

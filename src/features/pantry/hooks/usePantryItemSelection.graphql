@@ -1,0 +1,9 @@
+# Narrow fragment for mapping a pantry's rows back to their catalog ids, so a
+# picker can mark what is already stocked. Reads `id`, `itemId` and `item.id`.
+fragment usePantryItemSelection_pantryItem on PantryItem {
+  id
+  itemId
+  item {
+    id
+  }
+}

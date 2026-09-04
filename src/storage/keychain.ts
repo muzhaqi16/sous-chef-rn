@@ -142,8 +142,10 @@ export async function saveCredentials(
       password,
       {
         service,
-        // Allow either FaceID/TouchID (iOS) or any enrolled biometric (Android)
-        accessControl: ACCESS_CONTROL.BIOMETRY_ANY,
+        // CURRENT_SET, not ANY: the entry is invalidated when a face or finger
+        // is enrolled, so someone who learns the passcode cannot add their own
+        // biometric and unlock the stored credential.
+        accessControl: ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
         // On Android, prefer a hardware-backed keystore; falls back to
         // software-backed when the device has no secure element.
         securityLevel: SECURITY_LEVEL.SECURE_HARDWARE,
@@ -184,14 +186,37 @@ export async function saveCredentials(
 }
 
 /**
- * Retrieve a specific account's stored credentials, prompting the user
- * to authenticate with biometrics / passcode.
+ * Android reports a `BIOMETRY_CURRENT_SET` entry whose enrolment changed as a
+ * permanently invalidated key. iOS removes the item instead, which surfaces as
+ * a resolved-but-empty read. Both mean the same thing: this slot can never be
+ * unlocked again and must be re-enrolled.
+ */
+const INVALIDATED =
+  /KeyPermanentlyInvalidated|E_CRYPTO_FAILED|BiometryCurrentSet|changed or deleted their auth/i;
+
+function isPermanentlyInvalidated(error: unknown): boolean {
+  if (error === null || typeof error !== 'object') {
+    return INVALIDATED.test(String(error));
+  }
+  // The Android bridge splits one rejection across three fields: the library's
+  // code on `code`, the Java class on `name`, and the platform's prose on
+  // `message`. Reading only two of them misses whichever carries the signal.
+  const { code, name, message } = error as Record<string, unknown>;
+  const text = [code, name, message]
+    .filter((part): part is string => typeof part === 'string')
+    .join(' ');
+  return INVALIDATED.test(text);
+}
+
+/**
+ * Retrieve a specific account's stored credentials, prompting for biometrics.
+ * A slot invalidated by a biometric enrolment change is cleared rather than
+ * left behind, so the login screen stops offering a prompt that cannot succeed.
  */
 export async function loadCredentials(
   email: string,
 ): Promise<{ username: string; password: string } | null> {
   try {
-    // This call will now *always* trigger FaceID/TouchID (or device passcode)
     const creds = await getGenericPassword({
       service: credentialsServiceFor(email),
       authenticationPrompt: {
@@ -200,15 +225,31 @@ export async function loadCredentials(
       },
     });
     if (!creds) {
-      // user hit "cancel" or failed the check
+      // A resolved-but-empty read means the entry is gone while its
+      // unprotected indicator may remain. Cancellation rejects instead.
+      await discardInvalidatedCredentials(email);
       return null;
     }
-    const result = { username: creds.username, password: creds.password };
-    return result;
-  } catch {
-    // could also inspect err.code here if you want, but treating
-    // any error as "no creds" is simplest:
+    return { username: creds.username, password: creds.password };
+  } catch (error) {
+    if (isPermanentlyInvalidated(error)) {
+      await discardInvalidatedCredentials(email);
+    }
+    // Cancellation and transient failures keep the slot: the person can retry.
     return null;
+  }
+}
+
+/** Drop a slot the device refuses to unlock. Never throws — the caller is
+ * already on a failure path and falls back to password sign-in. */
+async function discardInvalidatedCredentials(email: string): Promise<void> {
+  try {
+    await clearCredentials(email);
+    logger.info(
+      'Biometric credentials were invalidated; re-enrolment is required.',
+    );
+  } catch {
+    credentialsExistCache.delete(normalizeAccount(email));
   }
 }
 
@@ -350,50 +391,10 @@ export async function getLastBiometricEmail(): Promise<string | null> {
 }
 
 /**
- * Store the registration password temporarily in the keychain during onboarding.
- * No biometric gate — uses WHEN_UNLOCKED_THIS_DEVICE_ONLY for basic protection.
- * The email is stored as the username so we can validate ownership on load.
- */
-export async function saveTempRegistrationPassword(
-  email: string,
-  password: string,
-): Promise<void> {
-  return queueOperation(async () => {
-    await setGenericPassword(email, password, {
-      service: TEMP_REGISTRATION_SERVICE,
-      accessible: ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-    });
-  });
-}
-
-/**
- * Load the temp registration password from the keychain.
- * Returns the password only if the stored username matches the provided email.
- * If there's a mismatch (different user), returns null and clears the stale entry.
- */
-export async function loadTempRegistrationPassword(
-  email: string,
-): Promise<string | null> {
-  try {
-    const creds = await getGenericPassword({
-      service: TEMP_REGISTRATION_SERVICE,
-    });
-    if (!creds) return null;
-
-    if (creds.username !== email) {
-      // Stale entry from a different user — clear it
-      await clearTempRegistrationPassword();
-      return null;
-    }
-
-    return creds.password;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Clear the temp registration password from the keychain.
+ * Purge the plaintext registration password an earlier build stored here while
+ * onboarding ran. Nothing writes this entry any more — enrolment authorises off
+ * the live session — but a keychain item survives app deletion, so the purge
+ * runs at startup and at session end until it can be assumed gone.
  */
 export async function clearTempRegistrationPassword(): Promise<void> {
   try {

@@ -3,64 +3,11 @@ import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { removePantryItemLocally } from '#/apollo/utils/pantryCacheUpdaters';
-import { restoreItemToShoppingListAfterMoveToPantry } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { COUNT_WITHDRAWALS, UNLINK_WITHDRAWALS } from './withdrawalRegistry';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
 import { logger } from '#/utils/environment';
-import type { OperationVariables } from '@apollo/client';
 import type { FailedMutationInfo } from '#/apollo/offlineQueue/types';
-
-/**
- * `safeEvict` withdraws what a write CREATED; an operation that also UNLINKED
- * an existing entity leaves that half standing, and no evict puts it back.
- * Keep every entry IDEMPOTENT — a withdrawal can follow a revert the call site
- * already ran, when the write failed with the screen still open.
- */
-const UNLINK_WITHDRAWALS: Record<
-  string,
-  (variables: OperationVariables) => void
-> = {
-  MoveShoppingItemToPantry: variables => {
-    const input = variables.input as
-      | { shoppingListItemId?: string; removeFromList?: boolean | null }
-      | undefined;
-    if (!input?.shoppingListItemId) return;
-    // `removeFromList: false` never unlinked anything.
-    if (input.removeFromList === false) return;
-    restoreItemToShoppingListAfterMoveToPantry(
-      client.cache,
-      input.shoppingListItemId,
-    );
-  },
-};
-
-/**
- * Aggregates the eager write moved that an evict does not put back: a queued
- * pantry write adjusts `Pantry.stats.totalItems` itself, because the mutation's
- * `update` callback never runs while it is queued. Runs BEFORE the evict, so
- * the paired helper can still see the edge it is uncounting.
- */
-const COUNT_WITHDRAWALS: Record<
-  string,
-  (variables: OperationVariables, entityId: string | null) => void
-> = {
-  CreatePantryItem: (variables, entityId) => {
-    const pantryId = (variables.input as { pantryId?: string } | undefined)
-      ?.pantryId;
-    if (!pantryId || !entityId) return;
-    removePantryItemLocally(client.cache, pantryId, entityId);
-  },
-  MoveShoppingItemToPantry: (variables, entityId) => {
-    const input = variables.input as
-      | { pantryId?: string; pantryItemId?: string }
-      | undefined;
-    const pantryId = input?.pantryId;
-    const rowId = input?.pantryItemId ?? entityId;
-    if (!pantryId || !rowId) return;
-    removePantryItemLocally(client.cache, pantryId, rowId);
-  },
-};
 
 /**
  * Withdraws a locally-applied change the server permanently rejected. An evict
@@ -79,7 +26,7 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
   const withdrawCount = COUNT_WITHDRAWALS[operationName];
   if (withdrawCount) {
     try {
-      withdrawCount(info.variables, entityId);
+      withdrawCount(client.cache, info.variables, entityId);
     } catch (countError) {
       logger.warn(
         `Queue: could not withdraw ${operationName}'s count`,
@@ -100,7 +47,7 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
   const withdrawUnlink = UNLINK_WITHDRAWALS[operationName];
   if (withdrawUnlink) {
     try {
-      withdrawUnlink(info.variables);
+      withdrawUnlink(client.cache, info.variables);
     } catch (withdrawError) {
       logger.warn(
         `Queue: could not withdraw ${operationName}'s unlink`,

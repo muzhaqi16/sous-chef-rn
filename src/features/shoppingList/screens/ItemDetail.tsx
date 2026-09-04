@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useFragment, useQuery } from '@apollo/client/react';
+import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
-import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { ItemDetail_ShoppingListItemFragmentDoc } from './ItemDetail.generated';
+import { useShoppingListItemDetail } from '#features/shoppingList/hooks/useShoppingListItemDetail';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
@@ -14,22 +13,22 @@ import { ClickableInfoPanel } from '#components/molecules/ClickableInfoPanel';
 import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { GalleryHero } from '#features/catalog/ui/GalleryHero';
 import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer';
-import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
+import { FormattedItemSubtitle } from '#components/molecules/FormattedItemSubtitle';
 import { resolveImageUrl, galleryPhotos } from '#utils/imageUtils';
-import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
+import { parseNutritions, hasNutritionData } from '#domain/nutrition';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
 import { DetailSection } from '#components/molecules/DetailSection';
-import { InfoRow } from '#components/molecules/InfoRow';
-import { DetailTitleRow } from '#components/molecules/DetailTitleRow';
+import { InfoRow } from '#components/atoms/InfoRow';
+import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import {
   PRIORITY_OPTION_BY_VALUE,
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
-import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
-import { totalFromUnitPrice } from '#/utils/purchasePrice';
+import { totalFromUnitPrice } from '#features/shoppingList/utils/purchasePrice';
+import { formatMonthDayYear } from '#/utils/formatters/date';
 
 type RouteParams = {
   listId: string;
@@ -58,6 +57,7 @@ export const ShoppingListItemDetail: React.FC<
   StaticScreenProps<RouteParams>
 > = ({ route }) => {
   const { t } = useTranslation();
+  const money = useMoney();
   useScreenTransition('ShoppingListItemDetail');
   const { toEditItem, toPurchaseHistory, goBack } = useAppNavigation();
   const { listId, itemId } = route.params;
@@ -72,28 +72,7 @@ export const ShoppingListItemDetail: React.FC<
   const [failedHeroUri, setFailedHeroUri] = useState<string | null>(null);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
-  // cache-and-network: the detail selects fields the list never caches
-  // (createdAt, priority, source, addedBy, purchase history, nutrition,
-  // displayUnit), so it must hit the network to fill them. cache-first would
-  // skip the fetch whenever a partial entity already looks "complete" and leave
-  // the screen blank. When the API is unavailable, offlineModeLink still serves
-  // this from cache automatically.
-  const { data } = useQuery(GetShoppingListItemDocument, {
-    variables: { id: itemId },
-    fetchPolicy: 'cache-and-network',
-  });
-
-  // The detail screen owns its own narrow fragment. useFragment subscribes
-  // to the entity record so edits made elsewhere (e.g., AddEditItem) refresh
-  // this detail view automatically.
-  const itemRef = data?.shoppingListItem ?? null;
-  const itemFragmentResult = useFragment({
-    fragment: ItemDetail_ShoppingListItemFragmentDoc,
-    fragmentName: 'ItemDetail_shoppingListItem',
-    from: itemRef,
-  });
-  const item =
-    itemRef && itemFragmentResult.complete ? itemFragmentResult.data : null;
+  const { item, hasLoaded } = useShoppingListItemDetail(itemId);
 
   const handleEdit = () => {
     toEditItem({ listId, itemId });
@@ -102,11 +81,7 @@ export const ShoppingListItemDetail: React.FC<
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return t('labels.never');
     const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    return formatMonthDayYear(date);
   };
 
   // Images and nutrition from catalog item
@@ -132,9 +107,9 @@ export const ShoppingListItemDetail: React.FC<
       >
         <View style={styles.centerMessage}>
           <Text style={styles.centerMessageText}>
-            {data === undefined
-              ? t('shoppingListScreens.loading')
-              : t('errors.itemNotFound')}
+            {hasLoaded
+              ? t('errors.itemNotFound')
+              : t('shoppingListScreens.loading')}
           </Text>
         </View>
       </CollapsingHeroDetail>
@@ -217,6 +192,7 @@ export const ShoppingListItemDetail: React.FC<
         actions={[
           {
             icon: 'create-outline',
+            accessibilityLabel: t('labels.edit'),
             onPress: handleEdit,
             testID: 'shopping-item-edit-button',
           },
@@ -258,12 +234,7 @@ export const ShoppingListItemDetail: React.FC<
         {!!item.purchaseInfo?.isPurchased && (
           <View style={styles.statusBadge}>
             <Icon name="checkmark-circle" size={18} tone="success" />
-            <Text
-              size="sm"
-              weight="semibold"
-              tone="success"
-              style={styles.statusBadgeText}
-            >
+            <Text role="label" tone="success" style={styles.statusBadgeText}>
               {t('shoppingListScreens.purchased')}
             </Text>
           </View>
@@ -280,30 +251,22 @@ export const ShoppingListItemDetail: React.FC<
           </DetailRow>
           {!!item.category && (
             <DetailRow label={t('labels.category')}>
-              <Text size="sm" weight="medium">
-                {item.category}
-              </Text>
+              <Text role="label">{item.category}</Text>
             </DetailRow>
           )}
           {!!item.brand?.name && (
             <DetailRow label={t('labels.brand')}>
-              <Text size="sm" weight="medium">
-                {item.brand.name}
-              </Text>
+              <Text role="label">{item.brand.name}</Text>
             </DetailRow>
           )}
           {!!netWeightDisplay && (
             <DetailRow label={t('labels.netWeight')}>
-              <Text size="sm" weight="medium">
-                {netWeightDisplay}
-              </Text>
+              <Text role="label">{netWeightDisplay}</Text>
             </DetailRow>
           )}
           {estimatedPrice != null && (
             <DetailRow label={t('shoppingListScreens.estimatedPrice')}>
-              <Text size="sm" weight="medium">
-                {formatCurrency(estimatedPrice, DEFAULT_CURRENCY)}
-              </Text>
+              <Text role="label">{money(estimatedPrice)}</Text>
             </DetailRow>
           )}
           {!!item.purchaseInfo?.isPurchased &&
@@ -318,17 +281,15 @@ export const ShoppingListItemDetail: React.FC<
           {purchasedTotal != null && (
             <DetailRow label={t('labels.totalPaid')}>
               <View style={styles.paidCell}>
-                <Text size="sm" weight="medium">
-                  {formatCurrency(purchasedTotal, DEFAULT_CURRENCY)}
-                </Text>
+                <Text role="label">{money(purchasedTotal)}</Text>
                 {perUnitSubline != null && (
-                  <Text size="xs" tone="secondary">
+                  <Text role="caption" tone="secondary">
                     {t(
                       unitSymbol
                         ? 'purchaseAmountSheet.perUnitOfHint'
                         : 'purchaseAmountSheet.perUnitHint',
                       {
-                        price: formatCurrency(perUnitSubline, DEFAULT_CURRENCY),
+                        price: money(perUnitSubline),
                         unit: unitSymbol,
                       },
                     )}
@@ -340,7 +301,7 @@ export const ShoppingListItemDetail: React.FC<
           {!!item.purchaseInfo?.isPurchased &&
             !!item.purchaseInfo.purchasedBy && (
               <DetailRow label={t('shoppingListScreens.purchasedBy')}>
-                <Text size="sm" weight="medium">
+                <Text role="label">
                   {item.purchaseInfo.purchasedBy.profile?.displayName ||
                     t('labels.someone')}
                 </Text>
@@ -348,26 +309,20 @@ export const ShoppingListItemDetail: React.FC<
             )}
           {!!priorityLabel && (
             <DetailRow label={t('shoppingListScreens.priority')}>
-              <Text size="sm" weight="medium">
-                {priorityLabel}
-              </Text>
+              <Text role="label">{priorityLabel}</Text>
             </DetailRow>
           )}
           {!!preferredStoreName && (
             <DetailRow label={t('shoppingListScreens.store')}>
-              <Text size="sm" weight="medium">
-                {preferredStoreName}
-              </Text>
+              <Text role="label">{preferredStoreName}</Text>
             </DetailRow>
           )}
           {!!item.notes && (
             <View style={styles.notesRow}>
-              <Text size="sm" tone="secondary">
+              <Text role="caption" tone="secondary">
                 {t('shoppingListScreens.notes')}
               </Text>
-              <Text size="sm" weight="medium">
-                {item.notes}
-              </Text>
+              <Text role="label">{item.notes}</Text>
             </View>
           )}
         </DetailSection>
@@ -394,7 +349,7 @@ export const ShoppingListItemDetail: React.FC<
         <DetailSection title={t('shoppingListScreens.additionalDetails')}>
           {!!item.addedBy && (
             <DetailRow label={t('shoppingListScreens.addedBy')}>
-              <Text size="sm" weight="medium">
+              <Text role="label">
                 {item.addedBy.profile?.displayName ||
                   item.addedBy.email ||
                   t('labels.someone')}
@@ -404,35 +359,29 @@ export const ShoppingListItemDetail: React.FC<
           {!!item.lastEditedBy?.profile?.displayName &&
             item.lastEditedBy.id !== item.addedBy?.id && (
               <DetailRow label={t('shoppingListScreens.lastEditedBy')}>
-                <Text size="sm" weight="medium">
+                <Text role="label">
                   {item.lastEditedBy.profile.displayName}
                 </Text>
               </DetailRow>
             )}
           <DetailRow label={t('shoppingListScreens.addedOn')}>
-            <Text size="sm" weight="medium">
-              {formatDate(item.createdAt)}
-            </Text>
+            <Text role="label">{formatDate(item.createdAt)}</Text>
           </DetailRow>
           {item.updatedAt !== item.createdAt && (
             <DetailRow label={t('shoppingListScreens.lastUpdated')}>
-              <Text size="sm" weight="medium">
-                {formatDate(item.updatedAt)}
-              </Text>
+              <Text role="label">{formatDate(item.updatedAt)}</Text>
             </DetailRow>
           )}
           {!!item.source?.isAutoAdded && (
             <DetailRow label={t('shoppingListScreens.autoAdded')}>
-              <Text size="sm" weight="medium">
+              <Text role="label">
                 {item.source?.autoAddReason || t('labels.yes')}
               </Text>
             </DetailRow>
           )}
           {!!item.source?.isFromMealPlan && (
             <DetailRow label={t('shoppingListScreens.fromMealPlan')}>
-              <Text size="sm" weight="medium">
-                {t('labels.yes')}
-              </Text>
+              <Text role="label">{t('labels.yes')}</Text>
             </DetailRow>
           )}
         </DetailSection>

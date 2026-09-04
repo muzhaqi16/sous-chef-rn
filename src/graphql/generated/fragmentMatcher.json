@@ -754,6 +754,14 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "ExchangeDeviceCredentialResult": [
+      "AuthenticationError",
+      "ConflictError",
+      "DeviceCredentialSessionPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "ForkRecipeResult": [
       "ConflictError",
       "ForbiddenError",
@@ -790,6 +798,13 @@
       "ConflictError",
       "ForbiddenError",
       "InviteToShoppingListPayload",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "IssueDeviceCredentialResult": [
+      "ConflictError",
+      "DeviceCredentialPayload",
+      "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
@@ -1148,6 +1163,13 @@
       "ForbiddenError",
       "NotFoundError",
       "RestoreItemPayload",
+      "ValidationError"
+    ],
+    "RevokeDeviceCredentialResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "RevokeDeviceCredentialPayload",
       "ValidationError"
     ],
     "SendTestNotificationResult": [

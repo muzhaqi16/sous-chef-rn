@@ -18,7 +18,7 @@ import {
   ItemSwipeActionsProvider,
   useItemSwipeActions,
 } from '../itemSwipeActionsContext';
-import type { ItemSwipeActionsFactory } from '#components/molecules/SwipeableItem/types';
+import type { ItemSwipeActionsFactory } from '#components/organisms/SwipeableItem/types';
 
 const Probe = () => {
   const factory = useItemSwipeActions();

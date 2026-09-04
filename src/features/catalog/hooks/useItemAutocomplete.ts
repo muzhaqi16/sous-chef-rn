@@ -6,9 +6,9 @@ import {
   SearchItemsSemanticQuery,
 } from '#operations/item/item.generated';
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
-import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
+import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { useAppStore, useIsOnline } from '#store/useAppStore';
-import { filterByName } from '#/utils/arrayUtils';
+import { filterByName } from '#features/catalog/utils/arrayUtils';
 
 type SemanticItem = NonNullable<
   SearchItemsSemanticQuery['searchItemsSemantic']['edges'][number]

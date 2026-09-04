@@ -1,5 +1,5 @@
 import { createValueContext } from '#hooks/utils/createValueContext';
-import type { ItemSwipeActionsFactory } from '#components/molecules/SwipeableItem/types';
+import type { ItemSwipeActionsFactory } from '#components/organisms/SwipeableItem/types';
 
 /**
  * The per-row swipe-action factory a screen supplies to its list. A context VALUE,

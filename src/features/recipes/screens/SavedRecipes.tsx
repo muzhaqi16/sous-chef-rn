@@ -3,13 +3,12 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
-import { Header } from '#components/molecules/Header';
 import { SearchBar } from '#components/molecules/SearchBar';
-import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
-import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
-import { FolderPicker } from '#components/molecules/FolderPicker';
-import { TagPicker } from '#components/molecules/TagPicker';
-import { DataStateView } from '#components/molecules/DataStateView';
+import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
+import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
+import { FolderPicker } from '#features/recipes/components/FolderPicker';
+import { TagPicker } from '#features/recipes/components/TagPicker';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 import { SavedRecipeCard } from '#features/recipes/components/SavedRecipeCard';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -18,17 +17,17 @@ import {
   useSavedRecipes,
   type SavedRecipeNode,
 } from '#features/recipes/hooks/useSavedRecipes';
+import { filterByTerm } from '#hooks/search/useLocalSearch';
 import { useRecipeFolders } from '#features/recipes/hooks/useRecipeFolders';
 import { useRecipeTags } from '#features/recipes/hooks/useRecipeTags';
 import { useFolderActions } from '#features/recipes/hooks/useFolderActions';
 import { PROTECTED_RECIPE_FOLDERS } from '#features/recipes/utils/folders';
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { RemoveRecipeFromFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
-import { performOptimisticUnfavorite } from '#features/recipes/utils/optimisticUnfavorite';
+import { useUnfavoriteRecipe } from '#features/recipes/hooks/useUnfavoriteRecipe';
 import { alertService } from '#/services/alertService';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
+import { Screen } from '#components/templates/Screen';
 
 const keyExtractor = (item: SavedRecipeNode) => item.id;
 // Every row is the same component, so one recycling pool is correct.
@@ -38,7 +37,7 @@ export const SavedRecipes: React.FC = () => {
   useScreenTransition('SavedRecipes');
   const { t } = useTranslation();
   const { toRecipeDetail, goBack } = useAppNavigation();
-  const client = useApolloClient();
+  const { unfavoriteRecipe } = useUnfavoriteRecipe('removeSavedRecipe');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
@@ -71,15 +70,6 @@ export const SavedRecipes: React.FC = () => {
     loading: folderActionLoading,
   } = useFolderActions();
 
-  // Unfavorite (remove from saved) recipe mutation. The cache work (drop the
-  // MySavedRecipes edge + clear Recipe.savedDetails) runs optimistically BEFORE
-  // the mutation fires in handleRemoveRecipe, so the removal sticks even fully
-  // offline (the queue replays the idempotent unfavorite). A rejected result
-  // reverts from a snapshot — so no update callback here.
-  const [unfavoriteRecipeMutation] = useMutation(
-    RemoveRecipeFromFavoritesDocument,
-  );
-
   // Folder, tags AND search all filter here, never inside the cell: a
   // virtualized list cannot absorb rows that return null — the cell, its
   // layout slot and its fragment subscription all survive. `recipe.name` and
@@ -99,16 +89,10 @@ export const SavedRecipes: React.FC = () => {
       });
     }
 
-    const q = searchQuery.trim().toLowerCase();
-    if (q) {
-      result = result.filter(saved => {
-        const name = (saved.recipe.name ?? '').toLowerCase();
-        const description = (saved.recipe.description ?? '').toLowerCase();
-        return name.includes(q) || description.includes(q);
-      });
-    }
-
-    return result;
+    return filterByTerm(result, searchQuery, [
+      saved => saved.recipe.name,
+      saved => saved.recipe.description,
+    ]);
   })();
 
   // Folder, tags and search can each empty this list while the library is full,
@@ -134,6 +118,7 @@ export const SavedRecipes: React.FC = () => {
   const perfCallbacks = useFlashListPerformance(flashListRef, {
     componentName: 'SavedRecipes',
     hasRealContent: filteredRecipes.length > 0,
+    rowCount: filteredRecipes.length,
   });
   useDataReferenceTracker(
     filteredRecipes,
@@ -153,20 +138,9 @@ export const SavedRecipes: React.FC = () => {
   };
 
   const handleRemoveRecipe = async (recipeId: string) => {
-    await performOptimisticUnfavorite({
-      client,
-      recipeId,
-      mutate: () =>
-        unfavoriteRecipeMutation({
-          variables: { input: { recipeId } },
-          // Local-first: queue + replay (idempotent) when the API is
-          // unreachable instead of surfacing a blocking error.
-          context: { localFirst: true },
-        }),
-      operation: 'removeSavedRecipe',
-      reportFailure: () =>
-        alertService.alert(t('labels.error'), t('recipes.removeRecipeFailed')),
-    });
+    await unfavoriteRecipe(recipeId, () =>
+      alertService.alert(t('labels.error'), t('recipes.removeRecipeFailed')),
+    );
   };
 
   const handleItemPress = (recipeId: string) => {
@@ -263,8 +237,11 @@ export const SavedRecipes: React.FC = () => {
   );
 
   return (
-    <View style={styles.container}>
-      <Header title={t('recipes.savedRecipesTitle')} onBack={goBack} />
+    <Screen
+      header={{ title: t('recipes.savedRecipesTitle'), back: goBack }}
+      scroll="list"
+      gutter="none"
+    >
       <View style={styles.searchBarContainer}>
         <SearchBar
           value={searchQuery}
@@ -337,7 +314,7 @@ export const SavedRecipes: React.FC = () => {
         onSelect={setSelectedTags}
         onCancel={() => setShowTagPicker(false)}
       />
-    </View>
+    </Screen>
   );
 };
 
@@ -350,6 +327,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
   },
   listContent: {
-    paddingTop: theme.spacing['2.5'],
+    paddingTop: theme.spacing.smPlus,
   },
 }));

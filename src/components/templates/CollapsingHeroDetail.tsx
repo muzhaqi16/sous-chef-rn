@@ -17,11 +17,11 @@ import Animated, {
 import { StyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
-import { OfflineStatusPill } from '#components/atoms/OfflineStatusPill';
+import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
 import {
   HeaderActionIcon,
   type HeaderAction,
-} from '#components/atoms/HeaderActionIcon';
+} from '#components/molecules/HeaderActionIcon';
 
 // Visible hero height below the status bar; `heroHeight` grows it by the top
 // inset so it fills edge-to-edge behind it.
@@ -53,16 +53,6 @@ const TITLE_FADE_END = COLLAPSE_POINT + 48;
 // clears after roughly its line box plus the card/row top paddings.
 const NO_HERO_TITLE_FADE_START = 48;
 const NO_HERO_TITLE_FADE_END = 72;
-
-const CIRCLE_SHADOW = [
-  {
-    offsetX: 0,
-    offsetY: 1,
-    blurRadius: 2.22,
-    spreadDistance: 0,
-    color: 'rgba(0, 0, 0, 0.22)',
-  },
-];
 
 /** Circular icon button, legible floating over a photo. Its color/loading/disabled
  *  rules come from `HeaderActionIcon`, shared with the `Header` bars. */
@@ -238,7 +228,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
             style={[styles.titleWrap, titleStyle]}
           >
             {title ? (
-              <Text size="md" weight="semibold" numberOfLines={1}>
+              <Text role="bodyStrong" numberOfLines={1}>
                 {title}
               </Text>
             ) : null}
@@ -279,7 +269,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     borderTopLeftRadius: theme.radii.xl,
     borderTopRightRadius: theme.radii.xl,
-    marginTop: -theme.spacing['5'],
+    marginTop: -theme.spacing.mdPlus,
     paddingTop: theme.spacing.sm,
   },
   contentCardNoHero: {
@@ -299,13 +289,13 @@ const styles = StyleSheet.create(theme => ({
     right: 0,
     bottom: 0,
     backgroundColor: theme.colors.background,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   barRow: {
     position: 'absolute',
-    left: theme.spacing['3'],
-    right: theme.spacing['3'],
+    left: theme.spacing.base,
+    right: theme.spacing.base,
     height: BUTTON_SIZE,
     flexDirection: 'row',
     alignItems: 'center',
@@ -326,6 +316,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.background,
-    boxShadow: CIRCLE_SHADOW,
+    ...theme.shadows.sm,
   },
 }));

@@ -11,7 +11,7 @@ const DEFERRED_KEY = 'apollo-cache-v1-deferred';
 const VERSION_KEY = 'apollo-cache-version';
 // Identifies the shape of a persisted blob, not the app version that wrote it
 // — `CURRENT_CACHE_VERSION` in ApolloCachePersistence. Keep in step with it.
-const CURRENT_VERSION = 'shape-1';
+const CURRENT_VERSION = 'shape-2';
 
 describe('ApolloCachePersistence', () => {
   beforeEach(() => {

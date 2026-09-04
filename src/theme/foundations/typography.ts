@@ -7,8 +7,10 @@ export const typography = {
     mono: 'Courier',
   },
   fontSize: {
+    '3xs': 10,
     '2xs': 11,
     xs: 12,
+    xsPlus: 13,
     sm: 14,
     base: 16,
     md: 16, // Alias for your existing code

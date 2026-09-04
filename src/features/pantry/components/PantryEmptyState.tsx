@@ -1,9 +1,10 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { EmptyState } from '#components/atoms/EmptyState';
+import { EmptyState } from '#components/molecules/EmptyState';
 import { PantryScreenSkeleton } from '#features/pantry/components/skeletons/PantryScreenSkeleton';
 import { EMPTY_STATE_MIN_HEIGHT } from './pantryDisplay/constants';
 import type { PantryEmptyStateProps } from './pantryDisplay/types';
+import { StyleSheet } from 'react-native-unistyles';
 
 export function PantryEmptyState({
   showSkeletons,
@@ -30,7 +31,7 @@ export function PantryEmptyState({
         icon="home-outline"
         title={t('pantryScreen.noHomeTitle')}
         description={t('pantryScreen.noHomeDescription')}
-        style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
+        style={styles.emptyState}
         action={
           onSelectHome
             ? {
@@ -50,7 +51,7 @@ export function PantryEmptyState({
         icon="home-outline"
         title={t('errors.noHomeSelected')}
         description={t('pantryScreen.noHomeSelectedDescription')}
-        style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
+        style={styles.emptyState}
         action={
           onSelectHome
             ? {
@@ -70,7 +71,7 @@ export function PantryEmptyState({
         icon="basket-outline"
         title={t('pantryScreen.noPantriesTitle')}
         description={t('pantryScreen.noPantriesDescription')}
-        style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
+        style={styles.emptyState}
         action={
           onCreatePantry
             ? {
@@ -92,7 +93,7 @@ export function PantryEmptyState({
         icon="search-outline"
         title={t('empty.noResultsFor', { query: displayQuery })}
         description={t('pantryScreen.searchNoResultsDescription')}
-        style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
+        style={styles.emptyState}
         action={
           onAddItem
             ? {
@@ -114,7 +115,7 @@ export function PantryEmptyState({
         icon="basket-outline"
         title={t('pantryScreen.tabEmptyTitle', { tabName })}
         description={t('pantryScreen.tabEmptyDescription')}
-        style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
+        style={styles.emptyState}
       />
     );
   }
@@ -125,7 +126,7 @@ export function PantryEmptyState({
       icon="basket-outline"
       title={t('empty.noPantryItems')}
       description={t('pantryScreen.emptySubtitle')}
-      style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
+      style={styles.emptyState}
       action={
         onAddItem
           ? { label: t('labels.addItems'), onPress: onAddItem }
@@ -134,3 +135,11 @@ export function PantryEmptyState({
     />
   );
 }
+
+// Every branch is the same height, so the list does not jump as the reason for
+// being empty changes.
+const styles = StyleSheet.create({
+  emptyState: {
+    minHeight: EMPTY_STATE_MIN_HEIGHT,
+  },
+});

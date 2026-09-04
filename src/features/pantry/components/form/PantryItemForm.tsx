@@ -6,23 +6,10 @@ import { Text } from '#components/atoms/Text';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
-import { useNavigation } from '@react-navigation/native';
+
 import { commonStyles } from '#/styles/commonStyles';
 import { useSelectedPantryId, useSelectedHomeId } from '#store/useAppStore';
-import { extractNodes } from '#/utils/connectionUtils';
-import { useApolloClient, useQuery } from '@apollo/client/react';
-import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
-import { GetHomeDocument } from '#operations/home/home.generated';
-import {
-  GetPantryDocument,
-  GetPantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
-import {
-  PantryItemForm_PantryItemFragmentDoc,
-  type PantryItemForm_PantryItemFragment,
-  PantryItemForm_HomeFragmentDoc,
-  type PantryItemForm_HomeFragment,
-} from './PantryItemForm.generated';
+import { usePantryItemFormData } from '#features/pantry/hooks/usePantryItemFormData';
 import {
   StorageState,
   ItemCondition,
@@ -39,8 +26,8 @@ import {
   DynamicFormFields,
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
-import { FormInput } from '#components/molecules/FormInput';
-import { Header } from '#components/molecules/Header';
+import { FormInput } from '#components/atoms/FormInput';
+import { Header } from '#components/organisms/Header';
 import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
 import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
 import { ItemInformationSection } from './ItemInformationSection';
@@ -60,6 +47,7 @@ import {
   type PageName,
 } from '#features/catalog/ui/AddItemForm/fields';
 import { formatNumberForInput } from '#/utils/formatters/number';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 
 export interface PantryItemFormData {
   itemName?: string;
@@ -102,7 +90,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   onSuccess,
 }) => {
   const { t } = useTranslation();
-  const { goBack } = useNavigation();
+  const { goBack } = useAppNavigation();
 
   const [trackingUnit, setTrackingUnit] =
     useState<UnitSelection>(emptyUnitSelection);
@@ -127,64 +115,15 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const selectedPantryId = useSelectedPantryId();
   const selectedHomeId = useSelectedHomeId();
 
-  // Inline, to avoid a `useDefaultHome` dependency.
-  const getDefaultPantry = (home: PantryItemForm_HomeFragment | null) => {
-    const pantries = extractNodes(home?.pantriesConnection);
-    if (!pantries.length) return null;
-    return pantries.find(p => p.isDefault) ?? pantries[0] ?? null;
-  };
-
-  const { data: homeData } = useQuery(GetHomeDocument, {
-    variables: { homeId: selectedHomeId ?? '' },
-    skip: !selectedHomeId,
-  });
-
-  const isUnconfirmed = useIsCreateUnconfirmed(itemId);
   const {
-    data: existingItemData,
-    loading: itemLoading,
-    refetch: refetchItem,
-  } = useQuery(GetPantryItemDocument, {
-    variables: { id: itemId ?? '' },
-    // A client-minted id is cached (and edit-swipeable) before the server has
-    // the row; querying in that window can only return RESOURCE_NOT_FOUND,
-    // which renders as the dead-end "item not found" state.
-    skip: !itemId || isUnconfirmed,
-  });
-
-  // Materialized by ENTITY key, not off the query result: a locally created
-  // item is in the cache before any round trip, so chaining off
-  // `existingItemData` would keep the form shut until one completed.
-  const apolloClient = useApolloClient();
-  const existingPantryItem = itemId
-    ? apolloClient.cache.readFragment<PantryItemForm_PantryItemFragment>({
-        fragment: PantryItemForm_PantryItemFragmentDoc,
-        fragmentName: 'PantryItemForm_pantryItem',
-        from: { __typename: 'PantryItem', id: itemId },
-      })
-    : null;
-
-  // Masking hides `pantriesConnection` on the raw query result.
-  const home = homeData?.home
-    ? apolloClient.cache.readFragment<PantryItemForm_HomeFragment>({
-        fragment: PantryItemForm_HomeFragmentDoc,
-        fragmentName: 'PantryItemForm_home',
-        from: homeData.home,
-      })
-    : null;
-  const pantry = getDefaultPantry(home);
-  const currentPantryId =
-    selectedPantryId || pantry?.id || existingPantryItem?.pantryId;
-
-  const { data: pantryData } = useQuery(GetPantryDocument, {
-    variables: { id: currentPantryId ?? '' },
-    skip: !currentPantryId,
-    fetchPolicy: 'cache-first',
-  });
-
-  const storageLocations = extractNodes(
-    pantryData?.pantry?.storageLocationsConnection,
-  ) as StorageLocation[];
+    existingPantryItem,
+    itemQueryData,
+    isUnconfirmed,
+    currentPantryId,
+    storageLocations,
+    itemLoading,
+    refetchItem,
+  } = usePantryItemFormData({ itemId, selectedHomeId, selectedPantryId });
 
   const { updatePantryItemFields } = useUpdatePantryItem({
     onSuccess,
@@ -261,9 +200,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   // "Adjusting state during render" pattern — avoids setState-in-useEffect lint error
   const [prevExistingItemData, setPrevExistingItemData] =
-    useState<typeof existingItemData>();
-  if (existingPantryItem && existingItemData !== prevExistingItemData) {
-    setPrevExistingItemData(existingItemData);
+    useState<typeof itemQueryData>();
+  if (existingPantryItem && itemQueryData !== prevExistingItemData) {
+    setPrevExistingItemData(itemQueryData);
     const item = existingPantryItem;
     const trackingUnitSymbol = item.unit?.symbol || '';
     reset({
@@ -392,7 +331,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   if (!existingPantryItem) {
     return (
       <View style={[commonStyles.container, commonStyles.center]}>
-        <Text style={styles.errorText}>{t('errors.itemNotFound')}</Text>
+        <Text role="heading" style={styles.errorText}>
+          {t('errors.itemNotFound')}
+        </Text>
       </View>
     );
   }
@@ -454,6 +395,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           rightActions={[
             {
               icon: 'checkmark',
+              accessibilityLabel: t('labels.save'),
               onPress: handleSubmit(handleSave, logValidationErrors),
               variant: 'primary',
               testID: 'edit-pantry-item-submit-button',
@@ -554,7 +496,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
   },
   errorText: {
-    fontSize: theme.fonts.size.lg,
     color: theme.colors.error,
   },
   // Generous bottom padding so the last field clears the keyboard.

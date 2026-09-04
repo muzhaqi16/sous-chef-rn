@@ -76,7 +76,9 @@ mutation ToggleReviewHelpful($input: ToggleReviewHelpfulInput!) {
     ... on ToggleReviewHelpfulPayload {
       reviewHelpful {
         id
-        user { id }
+        user {
+          id
+        }
       }
       # NOT selecting the payload's `recipeReview`, deliberately. The hook's
       # `update` callback applies a relative ±1 to `helpful`, and `update` runs

@@ -9,7 +9,7 @@ import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { useLazyQuery } from '@apollo/client/react';
 import { GetUnreadNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
-import { useDeferredCallback } from '#hooks/performance/useDeferredCallback';
+import { useDeferredCallback } from '#features/notifications/hooks/useDeferredCallback';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { onWebSocketReconnected } from '#/apollo/links/wsLink';
 

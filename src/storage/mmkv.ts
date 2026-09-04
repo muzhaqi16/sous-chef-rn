@@ -1,4 +1,4 @@
-import { createMMKV, type MMKV } from 'react-native-mmkv';
+import { createMMKV, existsMMKV, type MMKV } from 'react-native-mmkv';
 import { StateStorage } from 'zustand/middleware';
 import { logger } from '#/utils/environment';
 import {
@@ -35,6 +35,9 @@ let initPromise: Promise<MMKV> | null = null;
 // partialize so plaintext token persistence is skipped in that degraded state.
 let usingRecoveryInstance = false;
 
+// True when the encrypted instance opened with nothing in it.
+let openedEmptyStore = false;
+
 /**
  * Run DeviceKeyManager's full fetch (which retries keychain access
  * internally) up to KEY_FETCH_CYCLES times before giving up, so a brief
@@ -55,6 +58,37 @@ const getEncryptionKeyWithRetry = async (): Promise<DeviceEncryptionKey> => {
     }
   }
   throw lastError;
+};
+
+/**
+ * Erase whatever a quarantined session left in the unencrypted recovery file,
+ * once the encrypted instance opens again. Deferred off the startup path: it is
+ * cleanup, and every launch after the outage would otherwise pay for it.
+ */
+export const purgeRecoveryStorage = (): void => {
+  try {
+    // `createMMKV` creates on open, so probing with it would materialise the
+    // recovery file on every device that never had an outage — and then find
+    // it there on every launch after.
+    if (!existsMMKV(RECOVERY_STORAGE_KEY)) return;
+    const recovery = createMMKV({ id: RECOVERY_STORAGE_KEY });
+    if (recovery.getAllKeys().length === 0) return;
+    recovery.clearAll();
+    logger.info('Cleared data left behind in recovery storage.');
+  } catch (error) {
+    logger.warn('Could not clear recovery storage:', error);
+  }
+};
+
+const scheduleRecoveryPurge = (): void => {
+  const idle = (
+    globalThis as { requestIdleCallback?: (cb: () => void) => void }
+  ).requestIdleCallback;
+  if (typeof idle === 'function') {
+    idle(purgeRecoveryStorage);
+    return;
+  }
+  setTimeout(purgeRecoveryStorage, 0);
 };
 
 /**
@@ -94,7 +128,18 @@ export const initializeSecureStorage = async (): Promise<MMKV> => {
       usingRecoveryInstance = true;
     }
 
+    // An empty encrypted store means no local state stands behind whatever the
+    // keychain still holds — a reinstall, or cleared app data. Recorded here
+    // and read during hydration, which is where the keychain is reachable
+    // without closing an import cycle through i18n and the store.
+    if (!usingRecoveryInstance) {
+      openedEmptyStore = instance.getAllKeys().length === 0;
+    }
+
     secureStorageInstance = instance;
+    if (!usingRecoveryInstance) {
+      scheduleRecoveryPurge();
+    }
     return instance;
   })();
 
@@ -150,6 +195,16 @@ export function isStorageReady(): boolean {
  */
 export function isRecoveryStorage(): boolean {
   return usingRecoveryInstance;
+}
+
+/**
+ * Whether the encrypted store opened empty — a reinstall, or cleared app data.
+ * A keychain item outlives the app on iOS, so session tokens can still be there
+ * with no local state behind them; hydration reads this and refuses to resume
+ * a session the device has no other trace of.
+ */
+export function openedWithEmptyStore(): boolean {
+  return openedEmptyStore;
 }
 
 export const zustandStorage: StateStorage = {

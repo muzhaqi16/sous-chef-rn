@@ -17,7 +17,7 @@ import {
   type FirebaseMessagingTypes,
 } from '@react-native-firebase/messaging';
 import { logger } from '#/utils/environment';
-import { showLocalNotification } from '#/utils/notifications/localNotificationHelper';
+import { showLocalNotification } from '#/services/notifications/localNotificationHelper';
 import { routeNotificationTap } from './pushNotificationRouting';
 
 /**
