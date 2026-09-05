@@ -1172,6 +1172,13 @@
       "RevokeDeviceCredentialPayload",
       "ValidationError"
     ],
+    "RevokeDeviceSessionsResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "RevokeDeviceSessionsPayload",
+      "ValidationError"
+    ],
     "SendTestNotificationResult": [
       "ConflictError",
       "ForbiddenError",

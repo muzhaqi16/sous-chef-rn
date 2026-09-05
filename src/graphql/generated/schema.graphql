@@ -3579,6 +3579,70 @@ input DevicePeripheralsDetailsInput {
   isWiredHeadphonesConnected: Boolean
 }
 
+"""
+One device this account currently holds a live session from.
+
+Live means a refresh token that is neither revoked, nor consumed by a
+rotation, nor expired. A session that has been refreshed many times is still
+ONE entry: the rotation lineage is the session, and the tokens in it are its
+successive forms.
+
+At most one entry carries a null `deviceId`. Sessions established without a
+device header cannot be told apart — there is nothing to tell them apart BY —
+so they are reported as a single aggregate rather than one row each. That is
+what bounds this list by the per-user device cap; one row each would let a
+client that never sends the header grow it with every sign-in.
+"""
+type DeviceSession {
+  """
+  The registered device, when one still exists. Null once the per-user device
+  cap has evicted its telemetry row, which does not end the session.
+  """
+  device: Device
+  """
+  The client-minted device identifier this session is bound to. Null on the
+  single aggregate entry standing for every session established without a
+  device header.
+  """
+  deviceId: String
+  """
+  Name of the registered device, when one is registered under this device id.
+  """
+  deviceName: String
+  """
+  When the session stops working unless refreshed again. On the aggregate
+  entry, the latest expiry among the sessions it stands for.
+  """
+  expiresAt: DateTime!
+  """
+  Whether this is the session the current request is authenticated by, so a
+  client can label it rather than offering to sign itself out unawares. Always
+  false on the aggregate entry, which stands for sessions no device id
+  identifies.
+  """
+  isCurrent: Boolean!
+  """
+  Whether this entry can be passed to `revokeDeviceSessions`. False on the
+  aggregate entry: revocation names a device, and these sessions have none.
+  """
+  isRevocable: Boolean!
+  """
+  When the session's current token was minted, so the last refresh. On the
+  aggregate entry, the most recent one.
+  """
+  lastRefreshedAt: DateTime!
+  """
+  How many live sessions this entry stands for. One for an ordinary device;
+  on the unknown-device entry, how many unbound sessions were folded into it.
+  """
+  sessionCount: Int!
+  """
+  When this session was established — the sign-in, not the most recent
+  refresh. On the aggregate entry, the earliest such moment.
+  """
+  startedAt: DateTime!
+}
+
 type DeviceStat {
   count: Int!
   userAgent: String!
@@ -5812,8 +5876,18 @@ type LoginHistory {
   apiClient: String
   browserName: String
   browserVersion: String
+  """
+  The device id the client claimed, verbatim and unverified. Present on
+  failed attempts too, where there is no Device row to point at — which is
+  what makes a burst of failures attributable to the client that made it.
+  """
+  claimedDeviceId: String
   createdAt: DateTime!
   device: Device
+  """
+  The Device row this attempt resolved to, set only where the presented
+  identifier matched a device of this same user.
+  """
   deviceId: String
   deviceType: DeviceType
   failureReason: LoginFailureReason
@@ -7509,6 +7583,15 @@ type Mutation {
   this ends the ability to sign back in on it, not the session running on it.
   """
   revokeDeviceCredential(input: RevokeDeviceCredentialInput!): RevokeDeviceCredentialResult!
+  """
+  Sign one device out, leaving every other device signed in.
+  
+  Ends every live session bound to that device, including each token in a
+  rotation lineage that started there. Deliberately narrower than a
+  revoke-all: it does not touch other devices' sessions, their access tokens,
+  or their device credentials.
+  """
+  revokeDeviceSessions(input: RevokeDeviceSessionsInput!): RevokeDeviceSessionsResult!
   """Send a test notification of a specific type to the current user."""
   sendTestNotification(input: SendTestNotificationInput!): SendTestNotificationResult!
   """Share a shopping list publicly with an optional share code."""
@@ -9682,6 +9765,15 @@ type Query {
   or internal notes.
   """
   myModeration: MyModerationStatus
+  """
+  The devices this account is currently signed in from, newest first.
+  
+  One entry per device, not per token: a session that has been refreshed many
+  times is one lineage. Sessions established without a device header appear as
+  unknown devices rather than being hidden — a session nobody can see is a
+  session nobody can end.
+  """
+  mySessions: [DeviceSession!]!
   """Fetch a single notification by its ID."""
   notification(id: ID!): Notification
   """Fetch notification statistics with optional filtering."""
@@ -10821,6 +10913,27 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union RevokeDeviceCredentialResult = ConflictError | ForbiddenError | NotFoundError | RevokeDeviceCredentialPayload | ValidationError
+
+input RevokeDeviceSessionsInput {
+  """
+  The device to sign out, as its client-minted identifier — the same value
+  `registerDevice` and `mySessions` use. Scoped to the calling account: an
+  identifier belonging to someone else's device is refused, not silently
+  ignored.
+  """
+  deviceId: String!
+}
+
+type RevokeDeviceSessionsPayload {
+  revokedCount: Int!
+}
+
+"""
+Result of RevokeDeviceSessions. Select on RevokeDeviceSessionsPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union RevokeDeviceSessionsResult = ConflictError | ForbiddenError | NotFoundError | RevokeDeviceSessionsPayload | ValidationError
 
 """Sub-input for risk assessment data"""
 input RiskAssessmentInput {

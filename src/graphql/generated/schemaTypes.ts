@@ -3367,6 +3367,69 @@ export type DevicePeripheralsDetailsInput = {
   isWiredHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+/**
+ * One device this account currently holds a live session from.
+ *
+ * Live means a refresh token that is neither revoked, nor consumed by a
+ * rotation, nor expired. A session that has been refreshed many times is still
+ * ONE entry: the rotation lineage is the session, and the tokens in it are its
+ * successive forms.
+ *
+ * At most one entry carries a null `deviceId`. Sessions established without a
+ * device header cannot be told apart — there is nothing to tell them apart BY —
+ * so they are reported as a single aggregate rather than one row each. That is
+ * what bounds this list by the per-user device cap; one row each would let a
+ * client that never sends the header grow it with every sign-in.
+ */
+export type DeviceSession = {
+  __typename: 'DeviceSession';
+  /**
+   * The registered device, when one still exists. Null once the per-user device
+   * cap has evicted its telemetry row, which does not end the session.
+   */
+  device: Maybe<Device>;
+  /**
+   * The client-minted device identifier this session is bound to. Null on the
+   * single aggregate entry standing for every session established without a
+   * device header.
+   */
+  deviceId: Maybe<Scalars['String']['output']>;
+  /** Name of the registered device, when one is registered under this device id. */
+  deviceName: Maybe<Scalars['String']['output']>;
+  /**
+   * When the session stops working unless refreshed again. On the aggregate
+   * entry, the latest expiry among the sessions it stands for.
+   */
+  expiresAt: Scalars['DateTime']['output'];
+  /**
+   * Whether this is the session the current request is authenticated by, so a
+   * client can label it rather than offering to sign itself out unawares. Always
+   * false on the aggregate entry, which stands for sessions no device id
+   * identifies.
+   */
+  isCurrent: Scalars['Boolean']['output'];
+  /**
+   * Whether this entry can be passed to `revokeDeviceSessions`. False on the
+   * aggregate entry: revocation names a device, and these sessions have none.
+   */
+  isRevocable: Scalars['Boolean']['output'];
+  /**
+   * When the session's current token was minted, so the last refresh. On the
+   * aggregate entry, the most recent one.
+   */
+  lastRefreshedAt: Scalars['DateTime']['output'];
+  /**
+   * How many live sessions this entry stands for. One for an ordinary device;
+   * on the unknown-device entry, how many unbound sessions were folded into it.
+   */
+  sessionCount: Scalars['Int']['output'];
+  /**
+   * When this session was established — the sign-in, not the most recent
+   * refresh. On the aggregate entry, the earliest such moment.
+   */
+  startedAt: Scalars['DateTime']['output'];
+};
+
 export type DeviceStat = {
   __typename: 'DeviceStat';
   count: Scalars['Int']['output'];
@@ -5744,8 +5807,18 @@ export type LoginHistory = {
   apiClient: Maybe<Scalars['String']['output']>;
   browserName: Maybe<Scalars['String']['output']>;
   browserVersion: Maybe<Scalars['String']['output']>;
+  /**
+   * The device id the client claimed, verbatim and unverified. Present on
+   * failed attempts too, where there is no Device row to point at — which is
+   * what makes a burst of failures attributable to the client that made it.
+   */
+  claimedDeviceId: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
   device: Maybe<Device>;
+  /**
+   * The Device row this attempt resolved to, set only where the presented
+   * identifier matched a device of this same user.
+   */
   deviceId: Maybe<Scalars['String']['output']>;
   deviceType: Maybe<DeviceType>;
   failureReason: Maybe<LoginFailureReason>;
@@ -7453,6 +7526,15 @@ export type Mutation = {
    * this ends the ability to sign back in on it, not the session running on it.
    */
   revokeDeviceCredential: RevokeDeviceCredentialResult;
+  /**
+   * Sign one device out, leaving every other device signed in.
+   *
+   * Ends every live session bound to that device, including each token in a
+   * rotation lineage that started there. Deliberately narrower than a
+   * revoke-all: it does not touch other devices' sessions, their access tokens,
+   * or their device credentials.
+   */
+  revokeDeviceSessions: RevokeDeviceSessionsResult;
   /** Send a test notification of a specific type to the current user. */
   sendTestNotification: SendTestNotificationResult;
   /** Share a shopping list publicly with an optional share code. */
@@ -9607,6 +9689,19 @@ export type MutationRestoreItemArgs = {
  */
 export type MutationRevokeDeviceCredentialArgs = {
   input: RevokeDeviceCredentialInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationRevokeDeviceSessionsArgs = {
+  input: RevokeDeviceSessionsInput;
 };
 
 
@@ -12433,6 +12528,15 @@ export type Query = {
    * or internal notes.
    */
   myModeration: Maybe<MyModerationStatus>;
+  /**
+   * The devices this account is currently signed in from, newest first.
+   *
+   * One entry per device, not per token: a session that has been refreshed many
+   * times is one lineage. Sessions established without a device header appear as
+   * unknown devices rather than being hidden — a session nobody can see is a
+   * session nobody can end.
+   */
+  mySessions: Array<DeviceSession>;
   /** Fetch a single notification by its ID. */
   notification: Maybe<Notification>;
   /** Fetch notification statistics with optional filtering. */
@@ -14193,6 +14297,28 @@ export type RevokeDeviceCredentialPayload = {
  * Always include a __typename so the variant can be discriminated.
  */
 export type RevokeDeviceCredentialResult = ConflictError | ForbiddenError | NotFoundError | RevokeDeviceCredentialPayload | ValidationError;
+
+export type RevokeDeviceSessionsInput = {
+  /**
+   * The device to sign out, as its client-minted identifier — the same value
+   * `registerDevice` and `mySessions` use. Scoped to the calling account: an
+   * identifier belonging to someone else's device is refused, not silently
+   * ignored.
+   */
+  deviceId: Scalars['String']['input'];
+};
+
+export type RevokeDeviceSessionsPayload = {
+  __typename: 'RevokeDeviceSessionsPayload';
+  revokedCount: Scalars['Int']['output'];
+};
+
+/**
+ * Result of RevokeDeviceSessions. Select on RevokeDeviceSessionsPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type RevokeDeviceSessionsResult = ConflictError | ForbiddenError | NotFoundError | RevokeDeviceSessionsPayload | ValidationError;
 
 /** Sub-input for risk assessment data */
 export type RiskAssessmentInput = {
