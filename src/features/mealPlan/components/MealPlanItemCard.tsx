@@ -10,6 +10,7 @@ import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import { ListItem } from '#components/molecules/ListItem';
+import { commonStyles } from '#/styles/commonStyles';
 import { type SwipeableRef } from '#components/organisms/SwipeableItem/types';
 import {
   MealPlanItemCard_ItemFragmentDoc,
@@ -121,7 +122,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
     ) : undefined;
 
   return (
-    <View style={styles.rowWrapper}>
+    <View style={commonStyles.rowWrapper}>
       <SwipeableItem
         itemId={item.id}
         onPress={onPress ? () => onPress(item.id) : undefined}
@@ -150,9 +151,6 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
 MealPlanItemCard.displayName = 'MealPlanItemCard';
 
 const styles = StyleSheet.create(theme => ({
-  rowWrapper: {
-    marginBottom: theme.spacing.smPlus,
-  },
   image: {
     width: 48,
     height: 48,

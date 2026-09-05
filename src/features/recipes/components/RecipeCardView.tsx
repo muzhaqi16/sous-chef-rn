@@ -7,7 +7,8 @@ import { CachedImage } from '#components/atoms/CachedImage';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { commonStyles } from '#/styles/commonStyles';
-import { Card } from '#components/atoms/Card';
+import { AppPressable } from '#components/atoms/AppPressable';
+import { rowType } from '#/theme/foundations/type';
 
 /** A trailing icon button on a recipe row. */
 export interface RecipeCardAction {
@@ -44,12 +45,14 @@ export const RecipeCardView: React.FC<RecipeCardViewProps> = ({
   const { t } = useTranslation();
 
   return (
-    <Card
+    <AppPressable
       onPress={onPress}
-      padding="none"
-      radius="xl"
-      style={styles.card}
       accessibilityLabel={name}
+      style={[
+        commonStyles.rowWrapper,
+        commonStyles.rowSurface,
+        commonStyles.rowContent,
+      ]}
     >
       {!!imageUrl && (
         <View style={commonStyles.listItemImageContainerCompact}>
@@ -61,10 +64,15 @@ export const RecipeCardView: React.FC<RecipeCardViewProps> = ({
         </View>
       )}
       <View style={styles.body}>
-        <Text role="bodyStrong" numberOfLines={1}>
+        <Text role={rowType.title} numberOfLines={1}>
           {name}
         </Text>
-        <Text role="caption" tone="secondary" numberOfLines={1}>
+        <Text
+          role={rowType.subtitle}
+          tone="secondary"
+          numberOfLines={1}
+          style={commonStyles.rowTextGap}
+        >
           {t('recipes.servingsCount', { count: servings })}
           {totalMinutes != null
             ? ` • ${t('labels.min', { count: totalMinutes })}`
@@ -86,26 +94,13 @@ export const RecipeCardView: React.FC<RecipeCardViewProps> = ({
           ))}
         </View>
       )}
-    </Card>
+    </AppPressable>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    padding: theme.spacing.base,
-    // Match the search bar inset so rows line up with it instead of going
-    // edge-to-edge — same floating-card treatment as BaseItemCard.
-    marginHorizontal: theme.spacing.base,
-    marginBottom: theme.spacing.smPlus,
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: 'transparent',
-  },
   body: {
     flex: 1,
-    gap: 2,
   },
   actions: {
     flexDirection: 'row',

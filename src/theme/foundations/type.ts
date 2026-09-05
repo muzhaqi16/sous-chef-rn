@@ -1,7 +1,7 @@
 import { fonts } from './typography';
 
 /**
- * The nine type roles. Text is set by naming what it IS, so two screens cannot
+ * The eleven type roles. Text is set by naming what it IS, so two screens cannot
  * pick different sizes for the same kind of text without saying so. A role
  * carries size, weight, leading and tracking together — leading is the ratio
  * the audit found applied five different ways, resolved here once per role.
@@ -44,11 +44,27 @@ export const type = {
   caption: role(size.sm, weight.regular, 1.4),
   /** The name of a control or a field — a caption that labels something. */
   label: role(size.sm, weight.medium, 1.4),
+  /** A row's supporting detail: a status, a unit, a count. */
+  footnote: role(size.xs, weight.regular, 1.4),
+  /** A footnote carrying the emphasis of its row. */
+  footnoteStrong: role(size.xs, weight.semibold, 1.4),
   /** Validation and refusal copy. Its colour comes from the `error` tone. */
   error: role(size.sm, weight.regular, 1.4),
 };
 
 export type TypeRoleName = keyof typeof type;
+
+/** Explicit type so the role names stay `TypeRoleName`, not `string`. */
+interface RowTypeRoles {
+  title: TypeRoleName;
+  subtitle: TypeRoleName;
+}
+
+/**
+ * A list row's two text roles. Every row shell reads them from here, so a row
+ * cannot set its title one size on one screen and another size on the next.
+ */
+export const rowType: RowTypeRoles = { title: 'label', subtitle: 'footnote' };
 
 /**
  * The combined font-scale ceiling. The OS text size and the app's own

@@ -278,7 +278,7 @@ const FilteredEmpty: React.FC<FilteredEmptyProps> = ({
 }) => {
   if (state === 'loading') {
     return (
-      <View style={styles.skeletonContainer}>
+      <View>
         {[1, 2, 3, 4, 5].map(key => (
           <PantryItemSkeleton key={key} />
         ))}
@@ -506,9 +506,6 @@ const styles = StyleSheet.create(theme => ({
   },
   scrollContent: {
     padding: theme.spacing.md,
-  },
-  skeletonContainer: {
-    gap: theme.spacing.sm,
   },
   itemInfo: {
     flex: 1,

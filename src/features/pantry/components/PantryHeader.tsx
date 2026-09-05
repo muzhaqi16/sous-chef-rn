@@ -70,7 +70,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
             without any re-render. */}
         <View style={styles.greetingTextRow} testID="pantry-greeting-row">
           {!!greetingBefore && (
-            <Text role="bodyStrong" style={styles.greeting}>
+            <Text role="heading" style={styles.greeting}>
               {greetingBefore}
             </Text>
           )}
@@ -79,8 +79,10 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
               {userName}
             </Text>
           )}
+          {/* The trailing punctuation belongs to the name, so it takes the
+              name's role rather than the greeting's smaller one. */}
           {!!greetingAfter && (
-            <Text role="bodyStrong" style={styles.greeting}>
+            <Text role="title" style={styles.greeting}>
               {greetingAfter}
             </Text>
           )}
@@ -176,7 +178,6 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
   },
   greetingContent: {
     flex: 1,

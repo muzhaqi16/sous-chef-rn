@@ -7,7 +7,7 @@ import type {
   SwipeableRef,
 } from '#components/organisms/SwipeableItem/types';
 import { ListItem } from '../molecules/ListItem';
-import { StyleSheet } from 'react-native-unistyles';
+import { commonStyles } from '#/styles/commonStyles';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
 import { SLIDE_PRESETS } from '#/constants/animations';
 
@@ -73,7 +73,7 @@ const SwipeableItemCard: React.FC<ItemCardProps> = ({
 
   return (
     <Animated.View
-      style={[styles.container, animatedSlideStyle]}
+      style={[commonStyles.rowWrapper, animatedSlideStyle]}
       testID={testID}
     >
       <SwipeableItem
@@ -114,7 +114,7 @@ const ItemCardComponent: React.FC<ItemCardProps> = props => {
   // and the `Animated.View` wrapper entirely.
   if (!hasSwipeActions) {
     return (
-      <View style={styles.container} testID={testID}>
+      <View style={commonStyles.rowWrapper} testID={testID}>
         <ListItem
           title={title}
           subtitle={subtitle}
@@ -131,15 +131,3 @@ const ItemCardComponent: React.FC<ItemCardProps> = props => {
 };
 
 export const ItemCard = ItemCardComponent;
-
-const styles = StyleSheet.create(theme => ({
-  container: {
-    opacity: 1, // Prevent transparency inheritance
-    marginHorizontal: theme.spacing.base,
-    marginVertical: theme.spacing.xs,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    boxSizing: 'border-box',
-    ...theme.shadows.card,
-  },
-}));

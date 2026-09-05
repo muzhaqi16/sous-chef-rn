@@ -48,6 +48,5 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   rows: {
     paddingTop: theme.spacing.sm,
-    gap: theme.spacing.sm,
   },
 }));

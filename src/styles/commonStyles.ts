@@ -318,10 +318,10 @@ export const commonStyles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     resizeMode: 'cover',
   },
+  // The row's own `gap` spaces this from the text, so it carries no margin.
   listItemImageContainerCompact: {
     width: theme.sizes.itemCard.compact.image,
     height: theme.sizes.itemCard.compact.image,
-    marginRight: theme.spacing.base,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     overflow: 'hidden',
@@ -341,6 +341,42 @@ export const commonStyles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     resizeMode: 'cover',
   },
+  // The list row, defined once for the four shells that compose one:
+  // `rowWrapper` is its place in the list, `rowSurface` the card, `rowContent`
+  // the slots inside it. Its text roles are `rowType` in `theme/foundations`.
+  rowWrapper: {
+    marginHorizontal: theme.layout.rowGutter,
+    marginBottom: theme.layout.rowGap,
+  },
+  rowSurface: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.xl,
+    borderCurve: 'continuous',
+    // A status variant paints this border; the default row relies on the
+    // shadow alone and keeps a transparent one to preserve sizing.
+    borderWidth: theme.borderWidth.hairline,
+    borderColor: 'transparent',
+    ...theme.shadows.card,
+  },
+  rowContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.layout.rowSlotGap,
+    padding: theme.layout.rowInset,
+    // `minHeight`, not a height: a two-line title grows rather than clips.
+    minHeight: theme.sizes.itemCard.compact.height,
+  },
+  rowTextGap: {
+    marginTop: theme.layout.rowTextGap,
+  },
+  // Rounds a press ripple to the row. It sits on the node INSIDE `rowSurface`,
+  // never on the surface itself, which would clip its own shadow away.
+  rowClip: {
+    overflow: 'hidden',
+    borderRadius: theme.radii.xl,
+    borderCurve: 'continuous',
+  },
+
   shadow: theme.shadows.card,
 
   loadingContainer: {

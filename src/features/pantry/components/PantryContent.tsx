@@ -532,7 +532,11 @@ const styles = StyleSheet.create(theme => ({
   },
   header: {
     backgroundColor: theme.colors.background,
-    paddingHorizontal: theme.spacing.md,
+    // Matches the search bar and the rows below, so the whole column shares
+    // one gutter.
+    paddingHorizontal: theme.spacing.base,
+    paddingTop: theme.spacing.base,
+    paddingBottom: theme.spacing.sm,
   },
   // `stickyHeaderActive` applies while pinned, so the row keeps an opaque
   // background and rows scroll cleanly underneath.

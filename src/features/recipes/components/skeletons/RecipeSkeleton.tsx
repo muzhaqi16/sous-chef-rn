@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView } from 'react-native';
+import { ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { RecipeItemSkeleton } from './RecipeItemSkeleton';
 
@@ -16,22 +16,17 @@ export const RecipeSkeleton: React.FC = () => (
     contentContainerStyle={styles.container}
     showsVerticalScrollIndicator={false}
   >
-    <View style={styles.itemList}>
-      {Array.from({ length: ITEM_COUNT }, (_, index) => (
-        <RecipeItemSkeleton key={index} />
-      ))}
-    </View>
+    {Array.from({ length: ITEM_COUNT }, (_, index) => (
+      <RecipeItemSkeleton key={index} />
+    ))}
   </ScrollView>
 );
 
 const styles = StyleSheet.create(theme => ({
+  // No gutter or gap of its own: a skeleton row places itself exactly as the
+  // real row does, so adding either here insets and spaces it twice over.
   container: {
-    paddingHorizontal: theme.spacing.base,
     paddingTop: theme.spacing.xs,
     paddingBottom: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
-  itemList: {
-    gap: theme.spacing.sm,
   },
 }));

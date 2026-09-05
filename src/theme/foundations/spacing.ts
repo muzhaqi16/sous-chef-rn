@@ -25,11 +25,21 @@ export const space = (...values: (keyof typeof spacing)[]) => {
 };
 
 /**
- * Semantic layout steps, named for the job rather than the size. The gutter was
- * split evenly between two values because nothing named it.
+ * Semantic layout steps, named for the job rather than the size. The row steps
+ * are the list row's whole geometry: four shells compose one, so the numbers
+ * live here rather than four times over.
  */
 export const layout = {
   pageGutter: 16,
   sectionGap: 24,
-  rowInset: 12,
+  /** A row's own edge to its content. */
+  rowInset: 8,
+  /** Between a row's slots — thumbnail, text, trailing. */
+  rowSlotGap: 8,
+  /** Between a row's title and its subtitle. */
+  rowTextGap: 4,
+  /** Between one row and the next. */
+  rowGap: 8,
+  /** Screen edge to a row's edge — matches the search bar above the list. */
+  rowGutter: 12,
 };

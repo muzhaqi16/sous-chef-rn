@@ -1,9 +1,6 @@
 import React, { useRef } from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
-import { StyleSheet } from 'react-native-unistyles';
-import { HapticService } from '#services/haptic/HapticService';
-import { Text } from '#components/atoms/Text';
+import { FilterTabsItem } from '#components/organisms/FilterTabs/FilterTabsItem';
 
 interface FilterTabItemProps {
   routeKey: string;
@@ -21,6 +18,10 @@ interface FilterTabItemProps {
   }) => void;
 }
 
+/**
+ * The shared pill, wrapped so a tab bar keyed by ROUTE can render one and the
+ * tutorial can measure it. The look and the press behaviour are the kit's.
+ */
 const FilterTabItemComponent: React.FC<FilterTabItemProps> = ({
   routeKey,
   title,
@@ -30,7 +31,6 @@ const FilterTabItemComponent: React.FC<FilterTabItemProps> = ({
   testID,
   onMeasure,
 }) => {
-  const hasCount = count !== undefined;
   const tabRef = useRef<View>(null);
 
   const handleLayout = () => {
@@ -50,75 +50,19 @@ const FilterTabItemComponent: React.FC<FilterTabItemProps> = ({
       collapsable={false}
       onLayout={onMeasure ? handleLayout : undefined}
     >
-      <Pressable
-        key={routeKey}
-        onPress={() => {
-          HapticService.selection();
-          onPress();
-        }}
+      <FilterTabsItem
+        tab={{ id: routeKey, label: title }}
+        isActive={isActive}
+        isFiltered={false}
+        count={count}
+        showCounts={count !== undefined}
+        isCompact={false}
+        onPress={onPress}
         testID={testID}
-        style={[styles.tab, isActive && styles.tabActive]}
-      >
-        <Text
-          role="bodyStrong"
-          style={[styles.tabLabel, isActive && styles.tabLabelActive]}
-        >
-          {title}
-        </Text>
-        {!!hasCount && (
-          <View
-            style={[styles.countBadge, isActive && styles.countBadgeActive]}
-          >
-            <Text
-              role="bodyStrong"
-              style={[styles.countText, isActive && styles.countTextActive]}
-            >
-              {count}
-            </Text>
-          </View>
-        )}
-      </Pressable>
+      />
     </View>
   );
 };
 
 export const FilterTabItem = FilterTabItemComponent;
 FilterTabItem.displayName = 'FilterTabItem';
-
-const styles = StyleSheet.create(theme => ({
-  tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.basePlus,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.xl,
-    borderCurve: 'continuous',
-    gap: theme.spacing.xsPlus,
-    backgroundColor: theme.colors.filterTab.inactiveBg,
-  },
-  tabActive: {
-    backgroundColor: theme.colors.filterTab.activeBg,
-  },
-  tabLabel: {
-    color: theme.colors.filterTab.inactiveText,
-  },
-  tabLabelActive: {
-    color: theme.colors.filterTab.activeText,
-  },
-  countBadge: {
-    paddingHorizontal: theme.spacing.xsPlus,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.filterTab.countBg,
-  },
-  countBadgeActive: {
-    backgroundColor: theme.colors.filterTab.activeCountBg,
-  },
-  countText: {
-    color: theme.colors.filterTab.countText,
-  },
-  countTextActive: {
-    color: theme.colors.filterTab.activeText,
-  },
-}));

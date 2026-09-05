@@ -57,7 +57,7 @@ const ExpirationText: React.FC<{
   styles.useVariants({ expiryStatus: status });
   return (
     <Text
-      role={bold ? 'bodyStrong' : 'body'}
+      role={bold ? 'footnoteStrong' : 'footnote'}
       style={styles.expiration}
       numberOfLines={1}
     >
@@ -282,14 +282,14 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   const getSubtitle = () => {
     if (isPendingSync) {
       return (
-        <Text role="bodyStrong" tone="secondary" style={styles.pendingSync}>
+        <Text role="footnote" tone="secondary" style={styles.pendingSync}>
           {t('status.syncing')}
         </Text>
       );
     }
     if (isOutOfStock) {
       return (
-        <Text role="bodyStrong" tone="warning" style={styles.outOfStock}>
+        <Text role="footnoteStrong" tone="warning" style={styles.outOfStock}>
           {t('pantryScreen.outOfStock')}
         </Text>
       );
@@ -307,7 +307,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
     // on the right.
     if (locationOnLeft) {
       return (
-        <Text role="caption" tone="secondary" numberOfLines={1}>
+        <Text role="footnote" tone="secondary" numberOfLines={1}>
           {location}
         </Text>
       );

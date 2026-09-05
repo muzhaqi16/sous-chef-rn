@@ -103,6 +103,8 @@ const styles = StyleSheet.create(theme => ({
         bodyStrong: theme.type.bodyStrong,
         caption: theme.type.caption,
         label: theme.type.label,
+        footnote: theme.type.footnote,
+        footnoteStrong: theme.type.footnoteStrong,
         error: theme.type.error,
       },
       tone: {

@@ -352,14 +352,14 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   // An empty cell rather than nothing, so the FlashList slot stays stable while
   // the fragment hydrates (or the recycled cell has no backing row).
   if (!rowItem || (!complete && !data)) {
-    return <View style={styles.container} />;
+    return <View style={commonStyles.rowWrapper} />;
   }
 
   // One Animated.View carries both the entry animation and the slide style.
   return (
     <Animated.View
       entering={entering}
-      style={[styles.container, animatedSlideStyle]}
+      style={[commonStyles.rowWrapper, animatedSlideStyle]}
     >
       {isTutorialItemCardTarget ? (
         <View
@@ -417,15 +417,8 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    marginHorizontal: theme.spacing.base,
-    marginVertical: theme.spacing.xs,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-  },
   moveToPantryButton: {
     padding: theme.spacing.xs,
-    marginLeft: theme.spacing.sm,
   },
   rightElementContainer: {
     flexDirection: 'row',

@@ -5,6 +5,12 @@ import { SkeletonLine } from '#components/atoms/Skeleton/SkeletonLine';
 import { SkeletonRectangle } from '#components/atoms/Skeleton/SkeletonRectangle';
 import { ListItem } from '#components/molecules/ListItem';
 import { commonStyles } from '#/styles/commonStyles';
+import { type, rowType } from '#/theme/foundations/type';
+
+// The bars stand in for the row's own text, so they take their heights from the
+// roles that text uses.
+const TITLE_HEIGHT = type[rowType.title].fontSize;
+const SUBTITLE_HEIGHT = type[rowType.subtitle].fontSize;
 
 interface RecipeItemSkeletonProps {
   /** Whether to show shimmer animation */
@@ -21,7 +27,7 @@ export const RecipeItemSkeleton: React.FC<RecipeItemSkeletonProps> = ({
   animated = true,
 }) => {
   return (
-    <View style={[styles.wrapper, commonStyles.shadow]}>
+    <View style={commonStyles.rowWrapper}>
       <ListItem>
         <SkeletonRectangle
           width={48}
@@ -30,8 +36,12 @@ export const RecipeItemSkeleton: React.FC<RecipeItemSkeletonProps> = ({
           animated={animated}
         />
         <View style={styles.content}>
-          <SkeletonLine width="70%" height={16} animated={animated} />
-          <SkeletonLine width="50%" height={14} animated={animated} />
+          <SkeletonLine width="70%" height={TITLE_HEIGHT} animated={animated} />
+          <SkeletonLine
+            width="50%"
+            height={SUBTITLE_HEIGHT}
+            animated={animated}
+          />
         </View>
       </ListItem>
     </View>
@@ -39,13 +49,9 @@ export const RecipeItemSkeleton: React.FC<RecipeItemSkeletonProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  wrapper: {
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-  },
   content: {
     flex: 1,
     justifyContent: 'center',
-    gap: theme.spacing.xs,
+    gap: theme.layout.rowTextGap,
   },
 }));

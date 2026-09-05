@@ -480,6 +480,7 @@ one nobody has been able to express yet, not one that is optional.
 | Device storage | a persisted slice of the Zustand store | `check-canonical-mechanisms` · `no-restricted-imports` on `#storage/mmkv` |
 | A screen's chrome | `Screen` (`#components/templates/Screen`) | `check-screen-scaffold` |
 | A sheet's shell | `Sheet` (`#components/templates/Sheet`) | `bottomSheetShell.test.ts` |
+| A list row | `commonStyles.rowWrapper` + `rowSurface` + `rowContent`, its text set by `rowType` | — (no gate: a row is composed from views, so nothing tells one from any other row of views) |
 | A loading indicator | `Loading` / `LoadingBranded` (`#components/molecules/Loading`) | `check-canonical-mechanisms` |
 | A toast | `toastService` — in and out of the React tree alike | `no-restricted-syntax` on its arguments |
 | Navigating | `useAppNavigation` | `no-restricted-imports` on `useNavigation` |
@@ -517,6 +518,27 @@ baseline — the same promotion the kit half of `check-layer-purity` already got
   `__tests__/ui/viewSheetScrollableIsBounded.test.ts` holds that.
 - **A full-screen form is `FormScreen`, not a sheet.** It is a screen with a
   form's chrome; the name is the only thing it shares with a modal.
+
+### The list row
+
+Four shells compose one — `BaseItemCard` (pantry), `ListItem` (shopping list,
+meal plan), `ItemCard` and `RecipeCardView` — so the row itself lives in one
+place and they read it.
+
+- **Geometry is `commonStyles.rowWrapper` / `rowSurface` / `rowContent`**: the
+  row's place in the list, its card, and the slot layout inside it. The steps
+  are `theme.layout.row*` (`rowInset`, `rowSlotGap`, `rowTextGap`, `rowGap`,
+  `rowGutter`) — named, so density scales them. Held in four copies they became
+  three paddings, three row gaps and two radii.
+- **Text is `rowType`** (`src/theme/foundations/type.ts`): `title` for the row's
+  name and its trailing value, `subtitle` for everything supporting them. A
+  shell names the role through it, never as a literal, so no screen can pick its
+  own row title size.
+- **A thumbnail carries no margin** — `rowContent`'s `gap` spaces every slot,
+  and a margin on top of it double-spaces the one slot that has it.
+- **A skeleton row uses the same three primitives, and its list container adds
+  NO gutter and NO gap.** The item already places itself, so a container that
+  insets or spaces does it twice and the skeleton lands off the real row.
 
 ### Unistyles
 
@@ -560,9 +582,10 @@ baseline — the same promotion the kit half of `check-layer-purity` already got
 
 ### Typography roles
 
-- **Text is set by a ROLE, never by size and weight.** The nine roles live in
+- **Text is set by a ROLE, never by size and weight.** The eleven roles live in
   `src/theme/foundations/type.ts` (`display`, `title`, `subheading`, `heading`,
-  `body`, `bodyStrong`, `caption`, `label`, `error`) and each carries size,
+  `body`, `bodyStrong`, `caption`, `label`, `footnote`, `footnoteStrong`,
+  `error`) and each carries size,
   weight, leading and tracking together — and only those: **colour is `tone`'s
   job**, so `role="error"` pairs with `tone="error"`. `<Text role="caption">`,
   never `<Text size="sm">`. An element that cannot take the prop (a

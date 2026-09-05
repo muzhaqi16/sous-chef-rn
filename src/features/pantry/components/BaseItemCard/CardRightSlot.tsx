@@ -11,23 +11,24 @@ import { Icon } from '#utils/iconUtils';
 import type { CardRightSlotProps } from './types';
 import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
+import { rowType } from '#/theme/foundations/type';
 
 const MetaSlot: React.FC<
   Pick<CardRightSlotProps, 'primary' | 'secondary' | 'tertiary' | 'testID'>
 > = ({ primary, secondary, tertiary, testID }) => (
   <View style={styles.metaContainer}>
     {primary ? (
-      <Text role="bodyStrong" testID={testID}>
+      <Text role={rowType.title} testID={testID}>
         {primary}
       </Text>
     ) : null}
     {secondary ? (
-      <Text role="caption" tone="tertiary" style={styles.secondary}>
+      <Text role={rowType.subtitle} tone="tertiary">
         {secondary}
       </Text>
     ) : null}
     {tertiary ? (
-      <Text role="caption" tone="tertiary" style={styles.secondary}>
+      <Text role={rowType.subtitle} tone="tertiary">
         {tertiary}
       </Text>
     ) : null}
@@ -46,7 +47,7 @@ const InteractiveSlot: React.FC<CardRightSlotProps> = ({
 }) => {
   const { t } = useTranslation();
   if (type === 'custom' && children) {
-    return <View style={styles.container}>{children}</View>;
+    return <View>{children}</View>;
   }
 
   if (type === 'dragHandle' && onDrag) {
@@ -82,9 +83,13 @@ const InteractiveSlot: React.FC<CardRightSlotProps> = ({
         </Pressable>
       </View>
       <View style={styles.counterValue}>
-        <Text role="bodyStrong">{quantity || 0}</Text>
+        <Text role={rowType.title}>{quantity || 0}</Text>
         {unit ? (
-          <Text role="caption" tone="secondary" style={styles.counterUnit}>
+          <Text
+            role={rowType.subtitle}
+            tone="secondary"
+            style={styles.counterUnit}
+          >
             {unit}
           </Text>
         ) : null}
@@ -127,15 +132,8 @@ export const CardRightSlot: React.FC<CardRightSlotProps> = props => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    marginLeft: theme.spacing.base,
-  },
   metaContainer: {
     alignItems: 'flex-end',
-    marginLeft: theme.spacing.base,
-  },
-  secondary: {
-    marginTop: theme.spacing.xs,
   },
   counterContainer: {
     flexDirection: 'row',

@@ -138,23 +138,21 @@ function FilterTabsItemComponent<T extends string>({
       {!(tab.isAction && !tab.label) &&
         (tab.subLabel ? (
           <View style={styles.labelColumn}>
-            <Text role="bodyStrong" style={styles.tabLabel}>
+            <Text role="label" style={styles.tabLabel}>
               {tab.label}
             </Text>
-            <Text
-              role="bodyStrong"
-              style={styles.tabSubLabel}
-              numberOfLines={1}
-            >
+            <Text role="footnote" style={styles.tabSubLabel} numberOfLines={1}>
               {tab.subLabel}
             </Text>
           </View>
         ) : (
-          <Text style={styles.tabLabel}>{tab.label}</Text>
+          <Text role="label" style={styles.tabLabel}>
+            {tab.label}
+          </Text>
         ))}
       {!!hasCount && (
         <View style={styles.countBadge}>
-          <Text role="bodyStrong" style={styles.countText}>
+          <Text role="footnoteStrong" style={styles.countText}>
             {count}
           </Text>
         </View>

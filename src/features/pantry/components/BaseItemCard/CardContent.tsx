@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CardContentProps } from './types';
 import { Text } from '#components/atoms/Text';
+import { rowType } from '#/theme/foundations/type';
 
 /**
  * Content slot component for BaseItemCard
@@ -18,7 +19,7 @@ export const CardContent: React.FC<CardContentProps> = ({
   return (
     <View style={styles.container}>
       <Text
-        role="bodyStrong"
+        role={rowType.title}
         style={[styles.title, isPurchased && styles.purchasedTitle]}
         numberOfLines={1}
       >
@@ -26,7 +27,7 @@ export const CardContent: React.FC<CardContentProps> = ({
       </Text>
       {!!subtitle &&
         (typeof subtitle === 'string' ? (
-          <Text role="caption" tone="secondary" numberOfLines={1}>
+          <Text role={rowType.subtitle} tone="secondary" numberOfLines={1}>
             {subtitle}
           </Text>
         ) : (
@@ -42,7 +43,7 @@ const styles = StyleSheet.create(theme => ({
     minWidth: 0,
   },
   title: {
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.layout.rowTextGap,
     color: theme.colors.textPrimary,
     variants: {
       purchased: {

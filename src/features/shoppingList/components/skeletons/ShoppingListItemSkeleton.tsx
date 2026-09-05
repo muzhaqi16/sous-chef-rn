@@ -5,6 +5,13 @@ import { SkeletonCircle } from '#components/atoms/Skeleton/SkeletonCircle';
 import { SkeletonLine } from '#components/atoms/Skeleton/SkeletonLine';
 import { SkeletonRectangle } from '#components/atoms/Skeleton/SkeletonRectangle';
 import { ListItem } from '#components/molecules/ListItem';
+import { commonStyles } from '#/styles/commonStyles';
+import { type, rowType } from '#/theme/foundations/type';
+
+// The bars stand in for the row's own text, so they take their heights from the
+// roles that text uses.
+const TITLE_HEIGHT = type[rowType.title].fontSize;
+const SUBTITLE_HEIGHT = type[rowType.subtitle].fontSize;
 
 interface ShoppingListItemSkeletonProps {
   animated?: boolean;
@@ -15,7 +22,7 @@ export const ShoppingListItemSkeleton: React.FC<
   ShoppingListItemSkeletonProps
 > = ({ animated = true }) => {
   return (
-    <View style={styles.wrapper}>
+    <View style={commonStyles.rowWrapper}>
       <ListItem>
         <SkeletonCircle size={24} animated={animated} />
         <SkeletonRectangle
@@ -25,13 +32,13 @@ export const ShoppingListItemSkeleton: React.FC<
           animated={animated}
         />
         <View style={styles.content}>
+          <SkeletonLine width="70%" height={TITLE_HEIGHT} animated={animated} />
           <SkeletonLine
-            width="70%"
-            height={16}
-            style={styles.title}
+            width="40%"
+            height={SUBTITLE_HEIGHT}
+            style={commonStyles.rowTextGap}
             animated={animated}
           />
-          <SkeletonLine width="40%" height={14} animated={animated} />
         </View>
         <SkeletonLine width={40} height={30} animated={animated} />
       </ListItem>
@@ -39,17 +46,9 @@ export const ShoppingListItemSkeleton: React.FC<
   );
 };
 
-const styles = StyleSheet.create(theme => ({
-  wrapper: {
-    marginHorizontal: theme.spacing.base,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-  },
+const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
   },
-  title: {
-    marginBottom: theme.spacing.xs,
-  },
-}));
+});

@@ -109,7 +109,7 @@ function FilterTabsComponent<T extends string = string>({
               />
             )}
             {!!actionButton.label && (
-              <Text role="bodyStrong" style={styles.tabLabel}>
+              <Text role="label" style={styles.tabLabel}>
                 {actionButton.label}
               </Text>
             )}

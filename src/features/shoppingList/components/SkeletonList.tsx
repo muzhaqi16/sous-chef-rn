@@ -31,7 +31,6 @@ const styles = StyleSheet.create(theme => ({
   },
   container: {
     paddingVertical: theme.spacing.base,
-    gap: theme.spacing.sm,
     flexGrow: 1,
   },
 }));

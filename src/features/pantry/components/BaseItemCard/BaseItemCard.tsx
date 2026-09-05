@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import { HapticService } from '#services/haptic/HapticService';
 import { RIPPLE } from '#constants/ripple';
+import { commonStyles } from '#/styles/commonStyles';
 import type { BaseItemCardProps, CardVariant } from './types';
 
 // Slot-based swipeable row; `ItemCard` is the one with the standard
@@ -22,7 +23,15 @@ const CardSurface: React.FC<{
 }> = ({ variant, containerStyle, testID, children }) => {
   styles.useVariants({ variant });
   return (
-    <View style={[styles.container, containerStyle]} testID={testID}>
+    <View
+      style={[
+        commonStyles.rowSurface,
+        commonStyles.rowContent,
+        styles.container,
+        containerStyle,
+      ]}
+      testID={testID}
+    >
       {children}
     </View>
   );
@@ -72,7 +81,7 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
 
   if (hasSwipeActions) {
     return (
-      <View style={styles.swipeableWrapper}>
+      <View style={commonStyles.rowWrapper}>
         <SwipeableItem
           itemId={itemId}
           testIDPrefix={testID}
@@ -96,7 +105,7 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
       onPress();
     };
     return (
-      <View style={styles.swipeableWrapper}>
+      <View style={commonStyles.rowWrapper}>
         <AppPressable
           onPress={handlePress}
           android_ripple={RIPPLE.SUBTLE}
@@ -108,29 +117,11 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
     );
   }
 
-  return <View style={styles.swipeableWrapper}>{cardContent}</View>;
+  return <View style={commonStyles.rowWrapper}>{cardContent}</View>;
 };
 
 const styles = StyleSheet.create(theme => ({
-  swipeableWrapper: {
-    marginBottom: theme.spacing.smPlus,
-    // Match the search bar inset so rows line up with it and the floating
-    // tab bar instead of sitting narrower.
-    marginHorizontal: theme.spacing.base,
-  },
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: theme.sizes.itemCard.compact.height,
-    padding: theme.spacing.base,
-    borderRadius: theme.radii.xl,
-    borderCurve: 'continuous',
-    borderWidth: theme.borderWidth.hairline,
-    // Status variants keep a colored border; the default row relies on the
-    // shadow alone, with a transparent border to preserve sizing.
-    ...theme.shadows.card,
-    backgroundColor: theme.colors.surface,
-    borderColor: 'transparent',
     variants: {
       variant: {
         normal: {
