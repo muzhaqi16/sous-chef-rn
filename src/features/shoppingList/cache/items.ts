@@ -96,7 +96,12 @@ export function reconcileShoppingItemCreateUpdate(
   serverItem: { id: string },
   clientId: string | null | undefined,
 ): void {
-  adoptServerShoppingListItemId(cache, serverItem.id, clientId);
+  if (clientId && serverItem.id !== clientId) {
+    // Catalog merge: the server folded the line into an EXISTING row, so the
+    // optimistic add counted a row that never came to exist. Withdrawing it
+    // takes `totalItems` back with the entity; evicting alone strands the count.
+    revertOptimisticShoppingListItem(cache, listId, clientId);
+  }
   addNewItemToShoppingListCache(cache, listId, serverItem, false);
 }
 
@@ -104,7 +109,12 @@ export function reconcileShoppingItemCreateUpdate(
 // add-to-shopping-list mutation document satisfies the shape.
 interface AddItemsReconcilePayloadLike {
   __typename?: string;
-  results?: readonly ({ item?: { id: string } | null } | null)[] | null;
+  results?:
+    | readonly ({
+        index?: number | null;
+        item?: { id: string } | null;
+      } | null)[]
+    | null;
 }
 
 interface AddItemsReconcileDataLike {
@@ -129,9 +139,9 @@ interface BuildAddItemsReconcileUpdateOptions {
 }
 
 /**
- * The mutation `update` shared by every add-to-shopping-list entry point: guard the
- * payload, take the single created/merged row, adopt the server id, reconcile into
- * the list. List id from `listId`, else `variables.input.shoppingListId`.
+ * The mutation `update` shared by every add-to-shopping-list entry point: EVERY
+ * result is reconciled, each paired back to the id its caller minted by `index`.
+ * List id from `listId`, else `variables.input.shoppingListId`.
  */
 export function buildAddItemsReconcileUpdate({
   listId,
@@ -151,13 +161,16 @@ export function buildAddItemsReconcileUpdate({
     ) {
       return;
     }
-    // Single add via the batch mutation — the created/merged row is the one
-    // entry in `results`. Null when that item failed.
-    const item = payload.results?.[0]?.item;
-    if (!item) return;
-    const clientId = variables.input.items?.[0]?.id;
+    const results = payload.results;
+    if (!results?.length) return;
     const run = () =>
-      reconcileShoppingItemCreateUpdate(cache, targetListId, item, clientId);
+      results.forEach((result, position) => {
+        // Null when that item failed.
+        const item = result?.item;
+        if (!item) return;
+        const clientId = variables.input.items?.[result?.index ?? position]?.id;
+        reconcileShoppingItemCreateUpdate(cache, targetListId, item, clientId);
+      });
     if (wrap) {
       try {
         run();

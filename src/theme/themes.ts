@@ -6,6 +6,13 @@ import {
   darkChartCategorical,
 } from './foundations/colors';
 import { brand } from './foundations/brand';
+
+/**
+ * The brand's foreground, fixed rather than derived: white on the brand orange
+ * is 2.58:1, so `onColor` would pick the near-black. A user-picked brand still
+ * derives its own in `applyAppearance`, where the swatches span light and dark.
+ */
+const onBrand = colors.neutral[0];
 import { onColor } from './derivePalette';
 import { spacing, layout } from './foundations/spacing';
 import { typography, fonts } from './foundations/typography';
@@ -47,7 +54,7 @@ export const lightTheme = {
     primary: brand[500],
     primaryLight: brand[100],
     primaryDark: brand[700],
-    onPrimary: onColor(brand[500], colors.neutral[0], colors.neutral[900]),
+    onPrimary: onBrand,
     onError: onColor(colors.error, colors.neutral[0], colors.neutral[900]),
     onSuccess: onColor(colors.success, colors.neutral[0], colors.neutral[900]),
     onWarning: onColor(colors.warning, colors.neutral[0], colors.neutral[900]),
@@ -117,7 +124,7 @@ export const lightTheme = {
     iconSecondary: colors.neutral[600],
     iconTertiary: colors.neutral[500],
     iconDisabled: colors.neutral[400],
-    iconOnPrimary: onColor(brand[500], colors.neutral[0], colors.neutral[900]),
+    iconOnPrimary: onBrand,
     iconOnSurface: colors.neutral[900],
 
     // Status colors - for invites, tasks, etc.
@@ -173,7 +180,7 @@ export const darkTheme = {
     primary: brand[500],
     primaryLight: brand[400] + '20',
     primaryDark: brand[600],
-    onPrimary: onColor(brand[500], colors.neutral[0], colors.neutral[900]),
+    onPrimary: onBrand,
     onError: onColor(colors.error, colors.neutral[0], colors.neutral[900]),
     onSuccess: onColor(colors.success, colors.neutral[0], colors.neutral[900]),
     onWarning: onColor(colors.warning, colors.neutral[0], colors.neutral[900]),
@@ -241,7 +248,7 @@ export const darkTheme = {
     iconSecondary: colors.neutral[300],
     iconTertiary: colors.neutral[400],
     iconDisabled: colors.neutral[500],
-    iconOnPrimary: onColor(brand[500], colors.neutral[0], colors.neutral[900]),
+    iconOnPrimary: onBrand,
     iconOnSurface: colors.neutral[50],
 
     // Status colors — dark-adapted for visibility on dark surfaces

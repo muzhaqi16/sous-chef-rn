@@ -240,9 +240,13 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
           </ImagePicker>
         )}
       </ScrollView>
+      {/* `push` because this picker only ever opens from inside a sheet;
+          gorhom's default `'switch'` minimizes the host, which reads as the
+          form vanishing. */}
       <ModalPicker
         label={t('imagePicker.selectPerspective')}
         visible={pickerIndex !== null}
+        stackBehavior="push"
         options={perspectiveOptions}
         selected={
           pickerIndex !== null ? images[pickerIndex]?.perspective ?? '' : ''

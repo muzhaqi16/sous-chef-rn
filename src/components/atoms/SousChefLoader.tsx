@@ -35,7 +35,7 @@ const COLORS = {
   leaves: '#66BB6A',
   leavesDark: '#43A047',
   banner: '#FFF3E0',
-  bannerText: '#F97416',
+  bannerText: '#F58234',
 };
 
 // Size configurations

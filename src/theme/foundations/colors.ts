@@ -1,18 +1,25 @@
 // https://uicolors.app/generate/fb923b
+/**
+ * The brand ramp. 500 is the solid mid-point of the design's brand gradient
+ * (`#FA8637` → `#F17F31` at 95.27deg). Hoisted out of `colors` so the tokens
+ * below that copy a brand shade can name it.
+ */
+const jaffa = {
+  '50': '#fff7ed',
+  '100': '#ffedd5',
+  '200': '#fed7aa',
+  '300': '#fdba74',
+  '400': '#fb923b',
+  '500': '#f58234',
+  '600': '#ea590c',
+  '700': '#c2420c',
+  '800': '#9a3412',
+  '900': '#7c2d12',
+  '950': '#431407',
+};
+
 export const colors = {
-  jaffa: {
-    '50': '#fff7ed',
-    '100': '#ffedd5',
-    '200': '#fed7aa',
-    '300': '#fdba74',
-    '400': '#fb923b',
-    '500': '#f97416',
-    '600': '#ea590c',
-    '700': '#c2420c',
-    '800': '#9a3412',
-    '900': '#7c2d12',
-    '950': '#431407',
-  },
+  jaffa,
   charade: {
     '50': '#f5f6f9',
     '100': '#e7e9f2',
@@ -122,29 +129,30 @@ export const colors = {
 
   // Light-mode canonical shape; `darkFilterTab` below mirrors the keys exactly.
   filterTab: {
-    activeBg: '#F97316',
-    // White on this orange is 2.80:1, below AA. `onColor` picks this for the
-    // same fill, so the tab matches a primary button on it.
-    activeText: '#211E18',
+    // Mirrors what `applyAppearance` derives for a custom brand, so the default
+    // theme and an overridden one shade the tab the same way.
+    activeBg: jaffa['500'],
+    // White, matching a primary button. Below AA on this orange; see `onBrand`.
+    activeText: '#FFFFFF',
     inactiveBg: '#F3F4F6',
     inactiveText: '#000000',
-    filteredBg: '#FFF7ED', // Subtle orange tint for filtered state
-    filteredText: '#EA580C', // Orange text for filtered state
+    filteredBg: jaffa['50'],
+    filteredText: jaffa['600'],
     countBg: '#D1D5DB',
     countText: '#000000',
     activeCountBg: 'rgba(255,255,255,0.25)',
   },
 
   avatar: {
-    gradientStart: '#F97316',
-    gradientEnd: '#FB923C',
-    shadow: 'rgba(249, 115, 22, 0.3)',
+    gradientStart: jaffa['500'],
+    gradientEnd: jaffa['400'],
+    shadow: 'rgba(245, 130, 52, 0.3)',
   },
 
   sectionHeader: {
     warningText: '#EA580C',
     defaultText: '#6B7280',
-    actionText: '#F97316',
+    actionText: jaffa['500'],
   },
 
   alertBanner: {
@@ -215,8 +223,8 @@ export const darkFilterTab: typeof colors.filterTab = {
   // reads cool against the warm near-black background.
   inactiveBg: colors.neutral[700],
   inactiveText: colors.neutral[200],
-  filteredBg: 'rgba(249, 115, 22, 0.15)',
-  filteredText: '#FB923C',
+  filteredBg: 'rgba(251, 146, 59, 0.15)',
+  filteredText: jaffa['300'],
   countBg: colors.neutral[600],
   countText: colors.neutral[100],
   activeCountBg: colors.filterTab.activeCountBg,

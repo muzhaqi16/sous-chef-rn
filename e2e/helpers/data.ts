@@ -23,7 +23,12 @@ export async function seedPantryItems(
       .toBeVisible()
       .withTimeout(TIMEOUTS.DEFAULT);
 
-    await tapByID('add-manually-button');
+    // "Add manually" lives in the search results, so search first.
+    await element(by.id('add-pantry-item-search-input')).replaceText('zz');
+    await waitFor(element(by.id('add-pantry-item-add-manually-button')))
+      .toBeVisible()
+      .withTimeout(TIMEOUTS.DEFAULT);
+    await tapByID('add-pantry-item-add-manually-button');
 
     await waitFor(element(by.id('add-pantry-item-details-modal')))
       .toBeVisible()
@@ -76,7 +81,12 @@ export async function seedShoppingListItems(
       .toBeVisible()
       .withTimeout(TIMEOUTS.DEFAULT);
 
-    await tapByID('add-manually-button');
+    // "Add manually" lives in the search results, so search first.
+    await element(by.id('add-shopping-item-search-input')).replaceText('zz');
+    await waitFor(element(by.id('add-shopping-item-add-manually-button')))
+      .toBeVisible()
+      .withTimeout(TIMEOUTS.DEFAULT);
+    await tapByID('add-shopping-item-add-manually-button');
 
     await waitFor(element(by.id('add-item-modal')))
       .toBeVisible()

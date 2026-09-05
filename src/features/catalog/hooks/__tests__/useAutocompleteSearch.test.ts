@@ -371,7 +371,7 @@ describe('useAutocompleteSearch', () => {
     expect(result.current.displayItems).toHaveLength(2);
   });
 
-  it('hides stale API results when user deletes characters', () => {
+  it('holds results through a delete until the new query settles', () => {
     let currentResults: TestItem[] = EMPTY_RESULTS;
     const mockSearch = jest.fn();
 
@@ -401,8 +401,20 @@ describe('useAutocompleteSearch', () => {
     });
     expect(result.current.displayItems).toHaveLength(1);
 
-    // User deletes back to "app" — "app".startsWith("apple") = false
-    // "apple" results are a subset, too restrictive for "app"
+    // User deletes back to "app". The "apple" results still describe the word
+    // being typed, so they stand in rather than leaving the list blank while
+    // the query for "app" is pending.
+    act(() => {
+      result.current.handleSearchTermChange('app');
+    });
+    expect(result.current.displayItems).toHaveLength(1);
+
+    // Once that query fires and answers with nothing, they go.
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+    expect(mockSearch).toHaveBeenCalledWith('app');
+    currentResults = EMPTY_RESULTS;
     act(() => {
       result.current.handleSearchTermChange('app');
     });

@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
+import { BottomSheetView } from '@gorhom/bottom-sheet';
 import {
   BottomSheetModal,
   useStandardBottomSheet,
@@ -20,7 +21,6 @@ import {
   totalFromUnitPrice,
   unitPriceFromTotal,
 } from '#features/shoppingList/utils/purchasePrice';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 
 interface PurchaseAmountSheetItem {
@@ -129,12 +129,12 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      {/* Two inputs and a keyboard can exceed the sheet, and `BottomSheetView`
-          is absolutely positioned with no height — anything past the fold is
-          unreachable. */}
-      <BottomSheetFormScrollView
-        contentContainerStyle={[styles.content, contentContainerStyle]}
-      >
+      {/* NOT a keyboard-aware scrollable: it pads its content by the keyboard's
+          height, and under `enableDynamicSizing` the sheet is sized to that
+          content — so focusing the price field grew the sheet by a keyboard and
+          scrolled the header off the top. Gorhom's own `interactive` lift seats
+          this content-sized sheet on the keyboard already. */}
+      <BottomSheetView style={[styles.content, contentContainerStyle]}>
         <Header
           title={t('purchaseAmountSheet.title')}
           centerTitle
@@ -226,7 +226,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
             ) : null}
           </View>
         </View>
-      </BottomSheetFormScrollView>
+      </BottomSheetView>
     </BottomSheetModal>
   );
 };

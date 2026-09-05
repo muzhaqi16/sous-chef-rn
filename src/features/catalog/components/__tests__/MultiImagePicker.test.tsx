@@ -59,16 +59,18 @@ jest.mock('#components/molecules/ModalPicker', () => ({
     label,
     options,
     onSelect,
+    stackBehavior,
   }: {
     visible: boolean;
     label: string;
     options: { label: string; value: string }[];
     onSelect: (value: string) => void;
+    stackBehavior?: string;
   }) => {
     const { View, Text, Pressable } = require('react-native');
     if (!visible) return null;
     return (
-      <View testID="modal-picker">
+      <View testID="modal-picker" accessibilityValue={{ text: stackBehavior }}>
         <Text>{label}</Text>
         {options.map(opt => (
           <Pressable key={opt.value} onPress={() => onSelect(opt.value)}>
@@ -148,6 +150,22 @@ describe('MultiImagePicker', () => {
     render(<MultiImagePicker {...defaultProps} images={images} />);
     expect(screen.getByText('Front')).toBeTruthy();
     expect(screen.getByText('Back')).toBeTruthy();
+  });
+
+  it('pushes the perspective picker so its host sheet is not minimized', () => {
+    const images: SelectedImage[] = [
+      {
+        uri: 'file://img1.jpg',
+        type: 'image/jpeg',
+        fileName: 'img1.jpg',
+        perspective: 'front',
+      },
+    ];
+    render(<MultiImagePicker {...defaultProps} images={images} />);
+    fireEvent.press(screen.getByLabelText('Change image perspective'));
+    expect(screen.getByTestId('modal-picker')).toHaveAccessibilityValue({
+      text: 'push',
+    });
   });
 
   it('shows Add More button when under max images', () => {

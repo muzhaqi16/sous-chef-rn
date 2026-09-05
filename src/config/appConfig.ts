@@ -76,6 +76,6 @@ export const appConfig: AppConfig = {
     logo: require('../assets/images/logo.png'),
   },
   branding: {
-    primaryColor: '#f97416',
+    primaryColor: '#f58234',
   },
 };

@@ -78,6 +78,34 @@ Re-check:
 grep -n "absoluteY + inputHeight\|bottomOffset = " node_modules/react-native-keyboard-controller/src/components/KeyboardAwareScrollView/index.tsx
 ```
 
+### A keyboard-aware scrollable cannot size a sheet
+
+**Claim:** `KeyboardAwareScrollView` inside an `enableDynamicSizing` sheet grows
+the sheet by the keyboard's height. Focusing a field then opens a band of blank
+sheet and scrolls the header off the top.
+
+**Verified against `react-native-keyboard-controller@1.22.4` +
+`@gorhom/bottom-sheet@5.2.14`.** The scrollable pads its own content to lift the
+focused input clear of the keyboard — `ScrollViewWithBottomPadding` in `insets`
+mode (the default), a spacer view in `layout` mode. Gorhom's dynamic sizing takes
+the sheet's height from the scrollable's reported CONTENT size, so that padding
+is measured as content, and the sheet grows by exactly the padding meant to
+scroll under the keyboard. Gorhom's own `keyboardBehavior: 'interactive'` has
+already lifted the sheet, so the room is being made twice.
+
+Re-check:
+
+```
+grep -n "bottomPadding\|paddingBottom" node_modules/react-native-keyboard-controller/src/components/ScrollViewWithBottomPadding/index.tsx
+grep -n "mode = \"insets\"" node_modules/react-native-keyboard-controller/src/components/KeyboardAwareScrollView/index.tsx
+```
+
+A sheet sized to its own content uses `BottomSheetView` (or gorhom's
+`BottomSheetScrollView`) and lets gorhom do the lifting;
+`BottomSheetFormScrollView` belongs in a sheet with FIXED snap points, where the
+height it reports changes nothing. `PurchaseAmountSheet` and `QuantityEditSheet`
+are the worked pair.
+
 ### RNGH v3 handlers survive a native scroll takeover
 
 **Claim:** a `ReanimatedSwipeable` row inside a plain RN `ScrollView` opens while

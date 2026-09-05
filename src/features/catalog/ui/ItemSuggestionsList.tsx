@@ -17,6 +17,8 @@ interface ItemSuggestionsListProps {
   loading?: boolean;
   /** Position of the "Add manually" option */
   addManuallyPosition: 'top' | 'bottom';
+  /** Sheet's testID prefix; names the "Add manually" row for e2e. */
+  testIDPrefix: string;
   /** Callback when "Add manually" is pressed */
   onAddManually: () => void;
   /** Callback when a suggestion is selected */
@@ -104,6 +106,7 @@ interface AddManuallyOptionProps {
   hasResults: boolean;
   searchQuery: string;
   onPress: () => void;
+  testIDPrefix: string;
 }
 
 const AddManuallyOption = ({
@@ -111,6 +114,7 @@ const AddManuallyOption = ({
   hasResults,
   searchQuery,
   onPress,
+  testIDPrefix,
 }: AddManuallyOptionProps) => {
   const { t } = useTranslation();
   styles.useVariants({ withBorder: !isLast, disabled: false });
@@ -120,6 +124,7 @@ const AddManuallyOption = ({
       key="add-manually"
       style={styles.addManuallyOption}
       onPress={onPress}
+      testID={`${testIDPrefix}-add-manually-button`}
     >
       <Icon name="add-circle-outline" size={20} tone="primary" />
       <Text role="bodyStrong" tone="accent">
@@ -155,6 +160,7 @@ export const ItemSuggestionsList = ({
   searchQuery,
   suggestions,
   addManuallyPosition,
+  testIDPrefix,
   onAddManually,
   onSelectSuggestion,
   quickAddDisabled = false,
@@ -173,6 +179,7 @@ export const ItemSuggestionsList = ({
         hasResults={hasResults}
         searchQuery={searchQuery}
         onPress={onAddManually}
+        testIDPrefix={testIDPrefix}
       />
     );
   };

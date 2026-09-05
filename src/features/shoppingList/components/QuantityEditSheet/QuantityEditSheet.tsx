@@ -17,6 +17,7 @@ import { Icon } from '#utils/iconUtils';
 import {
   formatQuantity,
   formatQuantityAsFraction,
+  formatQuantityForDisplay,
 } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 import { parseFractionalInput } from '#/utils/fractionUtils';
@@ -57,6 +58,15 @@ interface QuantityEditSheetProps {
   ) => void;
   loading?: boolean;
 }
+
+/**
+ * What the field opens on. The same text the row's badge shows, so stepping a
+ * quantity the user never edited cannot read as a change they did not make.
+ */
+const seedText = (item: QuantityEditSheetItem): string =>
+  formatQuantityForDisplay(item.quantity ?? 0, {
+    quantityInput: item.quantityInput,
+  });
 
 export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   visible,
@@ -100,9 +110,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     setPrevVisible(visible);
     setPrevItemId(item?.id);
     if (visible && item) {
-      const initialInput =
-        item.quantityInput || formatQuantity(item.quantity ?? 0);
-      setQuantityInput(initialInput);
+      setQuantityInput(seedText(item));
 
       // Case-insensitive match against the chips, so "Tbsps" displays as "tbsp".
       const storedUnit = item.unitName;
@@ -186,8 +194,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     onSave(quantityInput, unitName, unitId);
   };
 
-  const originalQuantityInput =
-    item?.quantityInput || formatQuantity(item?.quantity ?? 0);
+  const originalQuantityInput = item ? seedText(item) : '';
   const hasChanges =
     item &&
     (quantityInput !== originalQuantityInput || unitName !== item.unitName);

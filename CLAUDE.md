@@ -56,8 +56,8 @@ finding there is a regression to fix:
 | `check-single-consumer` | a module in `components`/`hooks`/`context`/`utils`/`constants` used by exactly one feature belongs to that feature | hard rule |
 | `check-form-state` | a form holds its fields in react-hook-form, not `useState` | 70 |
 | `check-feature-enumeration` | a feature id in a string outside its feature is a place the feature list has to be remembered | 0 |
-| `check-canonical-mechanisms` | one mechanism per concern — the list primitive, the image component, the modal surface, the date formatter, device storage. The full concern table, gates included, is § One mechanism per concern | 0 |
-| `check-design-tokens` | a visual property is a token, not a literal; a kit concept is not restyled in a feature | 0 failing / 9 colour + 162 icon-size tracked |
+| `check-canonical-mechanisms` | one mechanism per concern — the list primitive, the image component, the modal surface, the date formatter, the quantity formatter, device storage. The full concern table, gates included, is § One mechanism per concern | 0 |
+| `check-design-tokens` | a visual property is a token, not a literal; a kit concept is not restyled in a feature | 0 failing / 9 colour + 161 icon-size tracked |
 | `check-typography-roles` | text is set by a named role, not by size and weight | 21 |
 | `check-component-tier` | a kit component sits in the tier its composition puts it in | 0 |
 | `check-screen-scaffold` | a screen's chrome comes from `Screen`, and nobody applies the top inset twice | 4 chrome / 0 double-inset |
@@ -477,6 +477,7 @@ one nobody has been able to express yet, not one that is optional.
 | A remote image | `CachedImage` (`LocalImage` for a file or bundled asset) | `check-canonical-mechanisms` |
 | A modal surface | `BottomSheetModal` via `useStandardBottomSheet`, or `alertService` | `check-canonical-mechanisms` · `no-restricted-syntax` bans `present()`/`dismiss()` |
 | Rendering a date | the shared formatters in `src/utils` (`formatters/date`, `dateUtils`) | `check-canonical-mechanisms` |
+| Rendering a quantity | `formatQuantityForDisplay` (`#/utils/formatQuantity`) | `check-canonical-mechanisms` (on the `fraction.js` import) |
 | Device storage | a persisted slice of the Zustand store | `check-canonical-mechanisms` · `no-restricted-imports` on `#storage/mmkv` |
 | A screen's chrome | `Screen` (`#components/templates/Screen`) | `check-screen-scaffold` |
 | A sheet's shell | `Sheet` (`#components/templates/Sheet`) | `bottomSheetShell.test.ts` |
@@ -711,7 +712,17 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   `BottomSheetAutocompleteInput` do. Verified 2026-08-23 vs
   `@gorhom/bottom-sheet@5.2.14` — mechanism:
   `docs/verified-library-behaviour.md#gorhom-keyboard-handling-requires-bottomsheettextinput`.
-- **Sheets containing inputs use `BottomSheetFormScrollView`** — a
+- **A sheet sized to its own content (`enableDynamicSizing`) does NOT take a
+  keyboard-aware scrollable.** `KeyboardAwareScrollView` pads its content by the
+  keyboard's height, and gorhom sizes the sheet to that content — so focusing a
+  field grows the sheet by a whole keyboard and scrolls its header off the top.
+  Such a sheet uses `BottomSheetView` (`PurchaseAmountSheet`, `QuantityEditSheet`)
+  and lets gorhom's `interactive` lift seat it on the keyboard. Verified
+  2026-09-04 vs `react-native-keyboard-controller@1.22.4` +
+  `@gorhom/bottom-sheet@5.2.14`:
+  `docs/verified-library-behaviour.md#a-keyboard-aware-scrollable-cannot-size-a-sheet`.
+- **Sheets with FIXED snap points containing inputs use
+  `BottomSheetFormScrollView`** — a
   gorhom-registered `KeyboardAwareScrollView` that also supplies the input
   context above. `bottomOffset` defaults to the density-scaled
   `theme.spacing.md`, applied as a `withUnistyles` mapping in
@@ -860,6 +871,24 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
 - **`dirtyFields` OMITS clean fields** — react-hook-form does not set them
   `false`. Read for truthiness (`if (dirtyFields.itemName)`), and assert
   `toBeUndefined()`, not `toBe(false)`.
+
+### Quantities
+
+- **A quantity reaches the screen through `formatQuantityForDisplay`**
+  (`src/utils/formatQuantity.ts`): a cooking fraction where one fits
+  (`1/2`, `1/3`, `1/8`, `1 1/4`), at most two decimals otherwise. `QuantityDisplay`
+  maps the item's `DisplayFormat` and the unit's `displayAsFraction` onto its
+  `notation`; only an explicit `displayAsFraction: false` — a unit nobody halves —
+  opts out of fractions.
+- **`quantityInput` is re-formatted, never trusted verbatim.** It holds the
+  user's own text ("1 1/4"), but the API echoes it back as a stringified float,
+  so a 1/3-cup recipe line comes back carrying `"0.33333334"`. Text no parser can
+  read ("a pinch") is still kept as written.
+- The fraction math lives in that one module — `check-canonical-mechanisms`
+  fails a `fraction.js` import outside `src/utils`. A field the user TYPES into
+  is seeded by the same function, so a badge and its edit sheet cannot disagree;
+  a decimal-only field (`PurchaseAmountSheet`, whose keypad has no `/`) seeds
+  from `formatQuantity` instead.
 
 ### Navigation
 

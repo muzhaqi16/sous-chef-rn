@@ -121,11 +121,6 @@ jest.mock('#components/atoms/BottomSheetFormScrollView', () => ({
   },
 }));
 
-jest.mock('#/utils/formatQuantity', () => ({
-  formatQuantity: jest.fn((v: number) => String(v)),
-  formatQuantityAsFraction: jest.fn((v: number) => String(v)),
-}));
-
 const makeItem = (
   overrides: Partial<QuantityEditSheetItem> = {},
 ): QuantityEditSheetItem => ({

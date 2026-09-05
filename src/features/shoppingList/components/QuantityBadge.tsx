@@ -7,7 +7,7 @@ import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import type { RowThemeColors } from '#components/atoms/rowTheme';
-import { formatQuantity } from '#/utils/formatQuantity';
+import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 
 interface QuantityBadgeProps {
@@ -33,8 +33,9 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
   testID,
 }) => {
   const { t } = useTranslation();
-  // `quantityInput` keeps the user's own text (e.g. "1/4") over the formatted number.
-  const formattedQuantity = quantityInput || formatQuantity(quantity);
+  const formattedQuantity = formatQuantityForDisplay(quantity, {
+    quantityInput,
+  });
   const accessibilityText = unit
     ? `${formattedQuantity} ${unit}`
     : formattedQuantity;

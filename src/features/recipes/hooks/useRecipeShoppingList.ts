@@ -26,7 +26,9 @@ import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import {
   addOptimisticShoppingListItem,
+  buildAddItemsReconcileUpdate,
   createOptimisticShoppingListItem,
+  reconcileShoppingItemCreateUpdate,
   revertOptimisticShoppingListItem,
 } from '#features/shoppingList/cache/items';
 import { logger } from '#/utils/environment';
@@ -308,14 +310,15 @@ export function useRecipeShoppingList({
         )
           return;
         try {
-          const shoppingListId = variables.input.shoppingListId;
-          if (!response.wasUpdated) {
-            addNewItemToShoppingListCache(
-              cache,
-              shoppingListId,
-              response.shoppingListItem,
-            );
-          }
+          // The row was already written and counted optimistically, so this
+          // only re-wires the edge — and withdraws the optimistic row when the
+          // server merged the ingredient into an existing line.
+          reconcileShoppingItemCreateUpdate(
+            cache,
+            variables.input.shoppingListId,
+            response.shoppingListItem,
+            variables.input.id,
+          );
         } catch (cacheError) {
           errorService.reportError(cacheError, {
             operation: 'Cache update failed for addRecipeIngredient:',
@@ -328,29 +331,11 @@ export function useRecipeShoppingList({
   const [addItemsToShoppingListMutation] = useMutation(
     AddItemsToShoppingListFromRecipeDocument,
     {
-      update: (cache, { data }, { variables }) => {
-        const payload = data?.addItemsToShoppingList;
-        if (
-          payload?.__typename !== 'AddItemsToShoppingListPayload' ||
-          !variables
-        )
-          return;
-        const shoppingListId = variables.input.shoppingListId;
-        // Filtered before the try — a `&&` inside a try body makes the React
-        // Compiler bail out of this hook.
-        const addedItems = payload.results.flatMap(result =>
-          result.success && result.item ? [result.item] : [],
-        );
-        try {
-          addedItems.forEach(item =>
-            addNewItemToShoppingListCache(cache, shoppingListId, item),
-          );
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Cache update failed for addItemsToShoppingList:',
-          });
-        }
-      },
+      // Every row here was written and counted by an optimistic add before the
+      // mutation fired, so the reconcile re-wires edges without re-counting.
+      update: buildAddItemsReconcileUpdate({
+        wrap: { message: 'Cache update failed for addItemsToShoppingList:' },
+      }),
       onError: err => {
         logger.error('Batch add items to shopping list error:', err);
         const errorMessage =

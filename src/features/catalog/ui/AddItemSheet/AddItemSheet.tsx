@@ -11,7 +11,6 @@ import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { ItemSuggestionsList } from '#features/catalog/ui/ItemSuggestionsList';
 import { ReportItemForm } from '#features/catalog/ui/ReportItemForm/ReportItemForm';
 import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
-import { ActionCard } from '#features/catalog/components/ActionCard';
 import { SuggestionListItem } from '#features/catalog/components/SuggestionListItem';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#utils/iconUtils';
@@ -290,6 +289,8 @@ export function AddItemSheet<
             <SearchBar
               showSearchIcon
               ref={searchBarRef}
+              containerStyle={styles.searchBar}
+              testID={`${config.testIDPrefix}-search-input`}
               placeholder={t(config.searchPlaceholderKey)}
               onChangeText={handleSearchChange}
               onClear={() => setSearchQuery('')}
@@ -314,6 +315,7 @@ export function AddItemSheet<
                 suggestions={autocomplete.displayItems}
                 loading={autocomplete.isLoading}
                 addManuallyPosition={config.addManuallyPosition}
+                testIDPrefix={config.testIDPrefix}
                 onAddManually={handleAddManually}
                 onSelectSuggestion={handleSelectSearchSuggestion}
                 quickAddDisabled={isMutating}
@@ -322,23 +324,6 @@ export function AddItemSheet<
                 showImages={showImages}
                 onReportItem={() => setStep('report')}
               />
-            )}
-
-            {/* Action Buttons - hidden when showing search results */}
-            {!showSearchResults && (
-              <View style={styles.actionButtons}>
-                <ActionCard
-                  icon="barcode-outline"
-                  label={t('labels.scanBarcode')}
-                  onPress={onScanPress}
-                />
-                <ActionCard
-                  icon="add"
-                  label={t('addItemSheet.addManually')}
-                  onPress={handleAddManually}
-                  testID={`${config.testIDPrefix}-add-manually-button`}
-                />
-              </View>
             )}
 
             {/* Tutorial hint (e.g. "Tap + next to an item to add it") */}
@@ -413,10 +398,9 @@ const styles = StyleSheet.create(theme => ({
   title: {
     marginBottom: theme.spacing.lg,
   },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-    marginBottom: theme.spacing.xl,
+  // The sections and results below carry no top margin of their own.
+  searchBar: {
+    marginBottom: theme.spacing.lg,
   },
   sectionHeader: {
     flexDirection: 'row',

@@ -224,4 +224,66 @@ describe('buildAddItemsReconcileUpdate', () => {
     })(cache, successData, variables);
     expect(cache.modify).toHaveBeenCalled();
   });
+
+  it('reconciles EVERY result, not only the first', () => {
+    const cache = createMockCache();
+    buildAddItemsReconcileUpdate({ listId: 'sl-closure' })(
+      cache,
+      {
+        data: {
+          addItemsToShoppingList: {
+            __typename: 'AddItemsToShoppingListPayload',
+            results: [
+              { index: 0, item: { id: 'sli-a' } },
+              { index: 1, item: { id: 'sli-b' } },
+            ],
+          },
+        },
+      },
+      { variables: { input: { items: [{ id: 'sli-a' }, { id: 'sli-b' }] } } },
+    );
+    expect(cache.modify).toHaveBeenCalledTimes(2);
+  });
+
+  it('pairs each result back to its OWN minted id by index', () => {
+    // Index, not array position: a partially-failed batch answers out of step
+    // with the input, and withdrawing the wrong row loses a line the user added.
+    const cache = createMockCache();
+    buildAddItemsReconcileUpdate({ listId: 'sl-closure' })(
+      cache,
+      {
+        data: {
+          addItemsToShoppingList: {
+            __typename: 'AddItemsToShoppingListPayload',
+            results: [{ index: 1, item: { id: 'sli-server' } }],
+          },
+        },
+      },
+      { variables: { input: { items: [{ id: 'sli-a' }, { id: 'sli-b' }] } } },
+    );
+    expect(cache.evict).toHaveBeenCalledWith({ id: 'ShoppingListItem:sli-b' });
+  });
+
+  it('takes the optimistic count back when the server merged the line', () => {
+    const cache = {
+      ...createMockCache(),
+      readFragment: jest.fn(() => ({ totalItems: 5, completedItems: 2 })),
+    } as MockedCache;
+    buildAddItemsReconcileUpdate({ listId: 'sl-closure' })(
+      cache,
+      {
+        data: {
+          addItemsToShoppingList: {
+            __typename: 'AddItemsToShoppingListPayload',
+            results: [{ index: 0, item: { id: 'sli-existing' } }],
+          },
+        },
+      },
+      variables,
+    );
+    expect(cache.evict).toHaveBeenCalledWith({
+      id: 'ShoppingListItem:sli-client',
+    });
+    expect(invokeFieldModifier(cache, 'totalItems', 5, {})).toBe(4);
+  });
 });

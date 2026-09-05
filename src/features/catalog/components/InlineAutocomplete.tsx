@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View, ScrollView, type LayoutChangeEvent } from 'react-native';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -85,6 +85,7 @@ export function InlineAutocomplete<T>({
   const [dropdownHeight, setDropdownHeight] = useState(
     DROPDOWN_MAX_HEIGHT + DROPDOWN_GAP,
   );
+  const [hasMeasuredDropdown, setHasMeasuredDropdown] = useState(false);
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -99,16 +100,34 @@ export function InlineAutocomplete<T>({
   const isDropdownOpen =
     shouldShowDropdown && (slicedItems.length > 0 || !!footerComponent);
 
-  // Forget the last height on close, or reopening with fewer results reserves the
-  // taller list's space until `onLayout` corrects it. Adjusted during render so
-  // the reset lands in the commit that closed the dropdown.
-  const [wasDropdownOpen, setWasDropdownOpen] = useState(isDropdownOpen);
-  if (isDropdownOpen !== wasDropdownOpen) {
-    setWasDropdownOpen(isDropdownOpen);
-    if (!isDropdownOpen) {
+  // The list goes momentarily empty mid-search — a debounce running, a page in
+  // flight — and the reserved space is held across that. Releasing it would step
+  // a sheet sized to its own content down and back up on every keystroke.
+  const isReservingSpace =
+    isDropdownOpen || (showDropdown && hasSearchQuery && loading);
+
+  // Forget the height when the session ends, or reopening with fewer results
+  // reserves the taller list's space until `onLayout` corrects it. Adjusted
+  // during render so the reset lands in the commit that closed the dropdown.
+  const [wasReservingSpace, setWasReservingSpace] = useState(isReservingSpace);
+  if (isReservingSpace !== wasReservingSpace) {
+    setWasReservingSpace(isReservingSpace);
+    if (!isReservingSpace) {
       setDropdownHeight(DROPDOWN_MAX_HEIGHT + DROPDOWN_GAP);
+      setHasMeasuredDropdown(false);
     }
   }
+
+  // Within one session the reserve only GROWS: a result set that shrinks as the
+  // term narrows must not shrink the host with it. The first measurement is the
+  // exception — it replaces the deliberately-too-tall placeholder outright.
+  const handleDropdownLayout = (event: LayoutChangeEvent) => {
+    const measured = event.nativeEvent.layout.height + DROPDOWN_GAP;
+    setHasMeasuredDropdown(true);
+    setDropdownHeight(prev =>
+      hasMeasuredDropdown ? Math.max(prev, measured) : measured,
+    );
+  };
 
   useEffect(() => {
     return () => {
@@ -207,14 +226,7 @@ export function InlineAutocomplete<T>({
         {!!isDropdownOpen && (
           <View
             style={styles.suggestionsContainer}
-            onLayout={
-              reserveDropdownSpace
-                ? event =>
-                    setDropdownHeight(
-                      event.nativeEvent.layout.height + DROPDOWN_GAP,
-                    )
-                : undefined
-            }
+            onLayout={reserveDropdownSpace ? handleDropdownLayout : undefined}
           >
             <ScrollView
               style={styles.scrollView}
@@ -243,7 +255,7 @@ export function InlineAutocomplete<T>({
           why it needs an explicit zIndex and `collapsable={false}` — it covers
           exactly the dropdown's region, and at the default it swallows every
           suggestion tap. Android-only, invisible to typecheck/lint/jest. */}
-      {!!isDropdownOpen && !!reserveDropdownSpace && (
+      {!!isReservingSpace && !!reserveDropdownSpace && (
         <View
           collapsable={false}
           testID="dropdown-spacer"

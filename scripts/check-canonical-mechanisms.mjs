@@ -136,6 +136,18 @@ export const CONCERNS = [
     owns: [/^src\/utils\//],
   },
   {
+    id: 'quantity-formatting',
+    canonical:
+      'formatQuantityForDisplay / formatQuantityAsFraction (#/utils/formatQuantity)',
+    why: 'A second fraction table decides its own denominators and precision, so the same 1/3 cup reads as "0.33" on one screen and "0.33333334" on the next.',
+    // The fraction MATH, not a quantity mentioned anywhere: a file that
+    // constructs its own `Fraction` is deciding what counts as a cooking
+    // fraction, which is the choice this concern centralizes. Parsing is the
+    // same question read backwards, so `src/utils` owns both ends.
+    detect: /from\s*['"]fraction\.js['"]/,
+    owns: [/^src\/utils\//],
+  },
+  {
     id: 'local-search',
     canonical: 'useLocalSearch / filterByTerm (#hooks/search/useLocalSearch)',
     why: 'A hand-rolled filter re-decides case folding, trimming and which fields are searched, so two lists in one app match differently on the same term.',

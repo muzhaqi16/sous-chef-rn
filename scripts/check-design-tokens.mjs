@@ -121,7 +121,7 @@ export const CONCERNS = [
   },
   {
     id: 'icon-size-literal',
-    // TRACKED, not failing: 335 sites across 162 files, of which 222 already
+    // TRACKED, not failing: 334 sites across 161 files, of which 221 already
     // write a value the scale HAS (16/20/24/32/48/64) and 113 sit between
     // steps. The first group is a codemod, the second a per-site decision; both
     // are larger than one change, and the count is the target for that work.
@@ -214,7 +214,7 @@ const TRACKED_CONCERNS = CONCERNS.filter(c => c.tracked);
  */
 const TRACKED_CEILING = {
   'colour-literal': 9,
-  'icon-size-literal': 162,
+  'icon-size-literal': 161,
 };
 
 const violations = (rel, source) =>

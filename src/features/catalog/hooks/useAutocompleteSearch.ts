@@ -120,11 +120,25 @@ export function useAutocompleteSearch<TItem>(
   // Get current results
   const results = getResults();
 
+  const term = searchTerm.toLowerCase();
+  const fired = lastFiredTerm.toLowerCase();
+
   // Staleness guard: API results are relevant only if the current search term
   // is a progressive refinement of (or identical to) the last fired query.
-  const apiResultsAreRelevant =
-    lastFiredTerm !== '' &&
-    searchTerm.toLowerCase().startsWith(lastFiredTerm.toLowerCase());
+  const apiResultsAreRelevant = lastFiredTerm !== '' && term.startsWith(fired);
+
+  // Whether the results in hand may STAND IN until the query for what is being
+  // typed lands. Forward typing narrows the last query and a backspace widens
+  // it, so either prefix direction still describes the same word; only a change
+  // of direction ("app" → "ba") makes them a different search.
+  const staleResultsUsable =
+    lastFiredTerm !== '' && (term.startsWith(fired) || fired.startsWith(term));
+
+  // No answer for the current term yet: the debounce is still running, or the
+  // request is in flight. Blanking the list through that window is what makes
+  // suggestions collapse and reappear on every keystroke.
+  const searchPending =
+    shouldSearch && (loading || searchTerm !== lastFiredTerm);
 
   // Anti-flicker: track last results using render-time conditional state update
   // (React-recommended pattern for syncing derived state with render values)
@@ -163,8 +177,8 @@ export function useAutocompleteSearch<TItem>(
       return results.slice(0, maxResults);
     }
 
-    // Anti-flicker: show last results while loading, but only if still relevant
-    if (loading && lastResults.length > 0 && apiResultsAreRelevant) {
+    // Anti-flicker: hold the last results until the pending query answers.
+    if (searchPending && lastResults.length > 0 && staleResultsUsable) {
       return lastResults.slice(0, maxResults);
     }
 

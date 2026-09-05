@@ -19,9 +19,26 @@ describe('QuantityDisplay', () => {
     expect(screen.getByText('3')).toBeTruthy();
   });
 
-  it('renders decimal quantity with smart precision', () => {
+  it('renders a fractional quantity as a cooking fraction', () => {
     render(<QuantityDisplay quantity={1.5} />);
-    expect(screen.getByText('1.5')).toBeTruthy();
+    expect(screen.getByText('1 1/2')).toBeTruthy();
+  });
+
+  it('trims a quantity no fraction fits to 2 decimals', () => {
+    render(<QuantityDisplay quantity={2.456} />);
+    expect(screen.getByText('2.46')).toBeTruthy();
+  });
+
+  it('re-formats the float the API echoes back as quantityInput', () => {
+    render(
+      <QuantityDisplay quantity={0.33333334} quantityInput="0.33333334" />,
+    );
+    expect(screen.getByText('1/3')).toBeTruthy();
+  });
+
+  it('keeps decimals for a unit whose displayAsFraction is false', () => {
+    render(<QuantityDisplay quantity={0.5} displayAsFraction={false} />);
+    expect(screen.getByText('0.5')).toBeTruthy();
   });
 
   it('appends unit symbol when showUnit is true', () => {
@@ -34,7 +51,7 @@ describe('QuantityDisplay', () => {
     expect(screen.getByText('2')).toBeTruthy();
   });
 
-  it('uses quantityInput when available', () => {
+  it("keeps the user's own notation", () => {
     render(<QuantityDisplay quantity={0.5} quantityInput="1/2" />);
     expect(screen.getByText('1/2')).toBeTruthy();
   });

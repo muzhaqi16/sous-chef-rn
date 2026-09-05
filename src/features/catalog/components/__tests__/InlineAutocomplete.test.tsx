@@ -138,6 +138,19 @@ describe('InlineAutocomplete', () => {
       expect(screen.getByTestId('dropdown-spacer')).toBeTruthy();
     });
 
+    // The reserve is what a dynamically-sized sheet takes its height from, so
+    // releasing it between keystrokes steps the whole sheet down and back up.
+    it('holds the reserve while the next search is in flight', () => {
+      const { rerender } = render(<Field items={['kg', 'kilogram']} />);
+      search('k');
+      expect(screen.getByTestId('dropdown-spacer')).toBeTruthy();
+
+      // The list is momentarily empty while the query for the new term runs.
+      rerender(<Field items={[]} loading />);
+
+      expect(screen.getByTestId('dropdown-spacer')).toBeTruthy();
+    });
+
     it('reserves nothing when a settled search matched no suggestions', () => {
       render(<Field items={[]} />);
       // A search that has come back empty: the dropdown is "showing" by the

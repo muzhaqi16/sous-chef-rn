@@ -91,10 +91,6 @@ jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#/utils/formatQuantity', () => ({
-  formatQuantity: (v: number) => v.toString(),
-}));
-
 const mockItem = {
   id: 'item-1',
   itemName: 'Chicken Breast',

@@ -167,8 +167,10 @@ const PALETTE_CONTRAST_EXEMPT: Record<string, string> = {
     '4.41 — pre-existing, marginal; expiration chrome is reviewed as a set',
   'colors.expiration.warningBg + .warningText':
     '3.43 — pre-existing; same set as expiredText',
+  'colors.filterTab.activeBg + .activeText':
+    '2.58 — the brand pairing, white on the brand orange by decision',
   'colors.filterTab.filteredBg + .filteredText':
-    '3.35 — pre-existing; the filtered state, not the active fill',
+    '3.33 — pre-existing; the filtered state, not the active fill',
 };
 
 const palettePairs = Object.entries(colors).flatMap(([group, value]) => {
