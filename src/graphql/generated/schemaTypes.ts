@@ -5907,6 +5907,23 @@ export type LoginHistoryPeriod = {
 
 /** Filter input for querying login history. */
 export type LoginHistoryQueryFilters = {
+  /**
+   * Records whose caller PRESENTED this device identifier, matched exactly.
+   *
+   * This is the one that answers "what has this client been doing": it is
+   * recorded on every attempt including failures, where no device row exists to
+   * point at and none may be created. Investigating a burst of failed sign-ins
+   * from one client uses this, not 'deviceId'.
+   */
+  claimedDeviceId?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * Records attributed to one registered device, by its Device id.
+   *
+   * Only a login the account's own device produced carries this, so it matches
+   * successful sign-ins and failures from an already-registered device — never
+   * an attempt from an identifier that resolved to nothing.
+   */
+  deviceId?: InputMaybe<Scalars['ID']['input']>;
   failuresOnly?: InputMaybe<Scalars['Boolean']['input']>;
   fromDate?: InputMaybe<Scalars['DateTime']['input']>;
   /**
