@@ -18,13 +18,13 @@ const DEAD_ACCOUNT_CREDENTIAL_CODES: string[] = [
   ErrorCode.AuthAccountSuspended,
 ];
 
-// The device-bound biometric credential is permanently useless — revoked,
-// expired, or presented with a device id it was not issued for. It says nothing
-// about the ACCOUNT, so it clears the keychain slot and ends no session; a
-// rate-limit refusal on the same exchange leaves the credential good and is
-// deliberately not here.
+// The stored biometric secret is permanently useless. `AUTH_CREDENTIALS_INVALID`
+// is pointedly ABSENT even though it ends a session above: it also stands for
+// "this device's failed-attempt budget is spent", which the server deliberately
+// does not distinguish, so clearing on it un-enrols a device whose credential is
+// fine. Rate-limit codes are absent for the same reason.
 const DEAD_CREDENTIAL_CODES: string[] = [
-  ...DEAD_ACCOUNT_CREDENTIAL_CODES,
+  ErrorCode.AuthAccountSuspended,
   ErrorCode.AuthDeviceCredentialInvalid,
 ];
 

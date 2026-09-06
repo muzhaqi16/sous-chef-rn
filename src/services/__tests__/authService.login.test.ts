@@ -132,7 +132,7 @@ describe('authService.login — LoginResult union', () => {
 });
 
 describe('authService.autoLogin — stored-credential lifecycle', () => {
-  it('clears stored credentials when the password no longer authenticates', async () => {
+  it('keeps the credential when the exchange is refused as credentials-invalid', async () => {
     mockMutate.mockResolvedValueOnce(
       exchangeRejection('AUTH_CREDENTIALS_INVALID', 'Bad credentials'),
     );
@@ -140,9 +140,10 @@ describe('authService.autoLogin — stored-credential lifecycle', () => {
     const ok = await authService.autoLogin();
 
     expect(ok).toBe(false);
-    // Stale credentials must not survive — otherwise auto-login retries the
-    // same rejected password on every cold start.
-    expect(mockClearCredentials).toHaveBeenCalledWith(INPUT.email);
+    // The code also stands for a spent per-device attempt budget, which the
+    // server does not distinguish — so it cannot mean the secret is dead.
+    // AUTH_DEVICE_CREDENTIAL_INVALID is the code that says that, below.
+    expect(mockClearCredentials).not.toHaveBeenCalled();
   });
 
   it('clears stored credentials when the account is suspended', async () => {

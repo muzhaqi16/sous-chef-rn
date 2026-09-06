@@ -44,7 +44,7 @@ import {
 import { t } from '#/i18n';
 import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 import {
-  deregisterDeviceOnLogout,
+  clearDevicePushTokenOnLogout,
   registerDeviceInBackground,
 } from '#/services/auth/deviceRegistration';
 import {
@@ -519,12 +519,12 @@ async function logout(options?: LogoutOptions): Promise<void> {
     }
 
     // Tear down the prior user's push/notification state before clearing auth,
-    // so nothing survives on a shared device. Deregistration dispatches while
-    // the client is still authenticated; the listener unsubscribe stops a
-    // rotated token from being pushed under the logged-out session; and the
+    // so nothing survives on a shared device. The clear dispatches while the
+    // client is still authenticated; the listener unsubscribe stops a rotated
+    // token from being pushed under the logged-out session; and the
     // notification reset clears the persisted inbox/badge (badge follows via
     // badgeSync's post-hydration path).
-    deregisterDeviceOnLogout();
+    clearDevicePushTokenOnLogout();
 
     // The same teardown `endSession` runs. Two exits from a session otherwise
     // leave two different resting states, and the deliberate one was the
@@ -588,10 +588,18 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
       return false;
     }
 
+    // A credential is bound to a device id, so an exchange without one cannot
+    // succeed. Deliberately not cleared: the slot is fine, the device is not.
+    const deviceId = getDeviceId();
+    if (!deviceId) {
+      logger.warn('No device id available; skipping the credential exchange');
+      return false;
+    }
+
     logger.info('Exchanging the stored device credential');
     const result = await client.mutate({
       mutation: ExchangeDeviceCredentialDocument,
-      variables: { input: { credential, deviceId: getDeviceId() } },
+      variables: { input: { credential, deviceId } },
     });
 
     const payload = result.data?.exchangeDeviceCredential;
@@ -710,9 +718,15 @@ async function revokeWithinBudget(): Promise<void> {
  */
 async function enrolDeviceCredential(email: string): Promise<boolean> {
   try {
+    const deviceId = getDeviceId();
+    if (!deviceId) {
+      logger.warn('No device id available; not issuing a device credential');
+      return false;
+    }
+
     const result = await client.mutate({
       mutation: IssueDeviceCredentialDocument,
-      variables: { input: { deviceId: getDeviceId() } },
+      variables: { input: { deviceId } },
     });
 
     const payload = result.data?.issueDeviceCredential;

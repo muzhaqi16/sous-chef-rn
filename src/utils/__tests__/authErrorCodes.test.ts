@@ -7,8 +7,11 @@ import {
   isAuthRefusalCode,
 } from '../authErrorCodes';
 
-// The credentials themselves are gone — both predicates must agree.
+// The account credentials are gone, so the session ends.
 const DEAD_CREDENTIALS = ['AUTH_CREDENTIALS_INVALID', 'AUTH_ACCOUNT_SUSPENDED'];
+
+// The stored biometric secret is dead — a narrower set than DEAD_CREDENTIALS.
+const DEAD_SLOT = ['AUTH_ACCOUNT_SUSPENDED', 'AUTH_DEVICE_CREDENTIAL_INVALID'];
 
 // The session can't be revived, but the stored email/password are still good.
 const TOKEN_ONLY = [
@@ -18,7 +21,7 @@ const TOKEN_ONLY = [
 ];
 
 describe('isDeadCredentialCode', () => {
-  it.each(DEAD_CREDENTIALS)('drops stored credentials on %s', code => {
+  it.each(DEAD_SLOT)('drops stored credentials on %s', code => {
     expect(isDeadCredentialCode(code)).toBe(true);
   });
 
@@ -27,6 +30,20 @@ describe('isDeadCredentialCode', () => {
   it.each(TOKEN_ONLY)('keeps stored credentials on %s', code => {
     expect(isDeadCredentialCode(code)).toBe(false);
   });
+
+  // The code also stands for a spent per-device attempt budget, which the
+  // server does not distinguish, so it cannot mean the stored secret is dead.
+  it('ends the session on AUTH_CREDENTIALS_INVALID without dropping the slot', () => {
+    expect(isSessionEndingAuthCode('AUTH_CREDENTIALS_INVALID')).toBe(true);
+    expect(isDeadCredentialCode('AUTH_CREDENTIALS_INVALID')).toBe(false);
+  });
+
+  it.each(['OPERATION_RATE_LIMITED', 'RATE_LIMIT_EXCEEDED'])(
+    'keeps stored credentials on %s',
+    code => {
+      expect(isDeadCredentialCode(code)).toBe(false);
+    },
+  );
 });
 
 describe('isSessionEndingAuthCode', () => {

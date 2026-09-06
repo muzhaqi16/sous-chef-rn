@@ -43,6 +43,7 @@ const mockStoreState: Record<string, unknown> = {
   resetStore: (...a: unknown[]) => mockResetStore(...a),
   setNavigationState: (...a: unknown[]) => mockSetNavigationState(...a),
   setAuthIsLoading: jest.fn(),
+  setAuthIsLoadingCredentials: jest.fn(),
   getUserNavigationState: jest.fn().mockReturnValue({}),
   setUserNavigationState: jest.fn(),
 };
@@ -68,7 +69,13 @@ jest.mock('#/apollo/offlineQueue/queueStore', () => ({
 const mockClearCredentials = jest.fn().mockResolvedValue(undefined);
 jest.mock('#/storage/keychain', () => ({
   clearCredentials: (...a: unknown[]) => mockClearCredentials(...a),
-  loadCredentials: jest.fn(),
+  // The keychain's own shape; `dc1:` marks a slot holding a device credential
+  // rather than a password. Without a loadable slot the exchange is never
+  // reached and every case below passes without asserting anything.
+  loadCredentials: jest.fn().mockResolvedValue({
+    username: 'chef@example.com',
+    password: 'dc1:secret',
+  }),
   saveCredentials: jest.fn(),
   hasCredentials: jest.fn().mockResolvedValue(true),
   getStoredAccounts: jest.fn().mockResolvedValue([]),
@@ -187,5 +194,61 @@ describe('logout and biometric credentials', () => {
     await authService.autoLogin();
 
     expect(mockClearCredentials).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The code also stands for a spent per-device attempt budget, which the
+   * server deliberately does not distinguish, so it cannot be read as proof the
+   * stored secret is dead.
+   */
+  it('keeps them when the exchange is refused as credentials-invalid', async () => {
+    mockClearCredentials.mockClear();
+    mockMutate.mockResolvedValueOnce({
+      data: {
+        exchangeDeviceCredential: {
+          __typename: 'AuthenticationError',
+          code: 'AUTH_CREDENTIALS_INVALID',
+          message: 'Invalid credentials',
+        },
+      },
+    });
+
+    await authService.autoLogin();
+
+    expect(mockClearCredentials).not.toHaveBeenCalled();
+  });
+
+  it('keeps them when the exchange is rate limited', async () => {
+    mockClearCredentials.mockClear();
+    mockMutate.mockResolvedValueOnce({
+      data: {
+        exchangeDeviceCredential: {
+          __typename: 'ValidationError',
+          code: 'OPERATION_RATE_LIMITED',
+          message: 'Too many attempts',
+        },
+      },
+    });
+
+    await authService.autoLogin();
+
+    expect(mockClearCredentials).not.toHaveBeenCalled();
+  });
+
+  it('drops them when the exchange says the credential itself is dead', async () => {
+    mockClearCredentials.mockClear();
+    mockMutate.mockResolvedValueOnce({
+      data: {
+        exchangeDeviceCredential: {
+          __typename: 'AuthenticationError',
+          code: 'AUTH_DEVICE_CREDENTIAL_INVALID',
+          message: 'Credential is not usable',
+        },
+      },
+    });
+
+    await authService.autoLogin();
+
+    expect(mockClearCredentials).toHaveBeenCalled();
   });
 });

@@ -61,7 +61,6 @@ jest.mock('react-native-device-info', () => ({
 import DeviceInfo from 'react-native-device-info';
 import { DeviceType, MobilePlatform } from '#/graphql/generated/schemaTypes';
 import {
-  generateDeviceFingerprint,
   collectDeviceInformation,
   validateDeviceInformation,
   type DeviceInformation,
@@ -181,9 +180,9 @@ describe('deviceInfo', () => {
       expect(validateDeviceInformation(info as DeviceInformation)).toBe(false);
     });
 
-    it('returns false when deviceId is too short', () => {
+    it('returns false when device storage never opened', () => {
       const info: DeviceInformation = {
-        deviceId: 'abc',
+        deviceId: null,
         deviceType: DeviceType.Mobile,
         platform: MobilePlatform.Ios,
         osName: 'iOS',
@@ -250,104 +249,21 @@ describe('deviceInfo', () => {
   });
 
   // ==========================================================================
-  // generateDeviceFingerprint
-  // ==========================================================================
-  describe('generateDeviceFingerprint', () => {
-    // The fingerprint persists, so a case that varies the device mocks has to
-    // start from an empty keystore or it reads the previous case's value.
-    beforeEach(() => {
-      storage.clearAll();
-    });
-
-    it('generates a fingerprint containing platform prefix', async () => {
-      const fingerprint = await generateDeviceFingerprint();
-      expect(fingerprint).toContain('ios-');
-    });
-
-    /**
-     * The API keys `Device` rows on this value and updates the matching row
-     * rather than inserting, so a fingerprint that varies between calls
-     * registers a new device on every launch — 147 rows for one account.
-     */
-    it('returns the same fingerprint on repeated calls', async () => {
-      const fp1 = await generateDeviceFingerprint();
-      await new Promise(r => setTimeout(r, 5));
-      const fp2 = await generateDeviceFingerprint();
-      expect(fp2).toEqual(fp1);
-    });
-
-    it('reuses the persisted value rather than recomposing it', async () => {
-      storage.set('device_fingerprint', 'ios-persisted');
-      await expect(generateDeviceFingerprint()).resolves.toBe('ios-persisted');
-    });
-
-    it('persists a freshly composed fingerprint', async () => {
-      const fingerprint = await generateDeviceFingerprint();
-      expect(storage.getString('device_fingerprint')).toBe(fingerprint);
-    });
-
-    it('generates fingerprint for android platform', async () => {
-      Object.defineProperty(Platform, 'OS', {
-        value: 'android',
-        configurable: true,
-      });
-      const fingerprint = await generateDeviceFingerprint();
-      expect(fingerprint).toContain('android-');
-    });
-
-    it('returns fallback fingerprint when all identifiers are null', async () => {
-      (DeviceInfo.getUniqueId as jest.Mock).mockResolvedValue(null);
-      (DeviceInfo.getDeviceId as jest.Mock).mockReturnValue(null);
-      (DeviceInfo.getBrand as jest.Mock).mockReturnValue(null);
-      (DeviceInfo.getModel as jest.Mock).mockReturnValue(null);
-      (DeviceInfo.getSystemName as jest.Mock).mockReturnValue(null);
-      (DeviceInfo.getSystemVersion as jest.Mock).mockReturnValue(null);
-      (DeviceInfo.getBuildNumber as jest.Mock).mockReturnValue(null);
-      (DeviceInfo.getSerialNumber as jest.Mock).mockResolvedValue(null);
-      Object.defineProperty(Platform, 'Version', {
-        value: null,
-        configurable: true,
-      });
-
-      const fingerprint = await generateDeviceFingerprint();
-      expect(fingerprint).toContain('ios-');
-    });
-
-    it('returns emergency fallback on complete error', async () => {
-      (DeviceInfo.getUniqueId as jest.Mock).mockImplementation(() => {
-        throw new Error('fail');
-      });
-      (DeviceInfo.getDeviceId as jest.Mock).mockImplementation(() => {
-        throw new Error('fail');
-      });
-      (DeviceInfo.getBrand as jest.Mock).mockImplementation(() => {
-        throw new Error('fail');
-      });
-      (DeviceInfo.getModel as jest.Mock).mockImplementation(() => {
-        throw new Error('fail');
-      });
-      (DeviceInfo.getSystemName as jest.Mock).mockImplementation(() => {
-        throw new Error('fail');
-      });
-      (DeviceInfo.getSystemVersion as jest.Mock).mockImplementation(() => {
-        throw new Error('fail');
-      });
-      (DeviceInfo.getBuildNumber as jest.Mock).mockImplementation(() => {
-        throw new Error('fail');
-      });
-      (DeviceInfo.getSerialNumber as jest.Mock).mockImplementation(() => {
-        throw new Error('fail');
-      });
-
-      const fingerprint = await generateDeviceFingerprint();
-      expect(fingerprint).toContain('ios-emergency-');
-    });
-  });
-
-  // ==========================================================================
   // collectDeviceInformation
   // ==========================================================================
   describe('collectDeviceInformation', () => {
+    // One device identity: the id the server files the device under is the same
+    // value the header and the device credential present, and is not the
+    // hardware fingerprint reported alongside it as an attribute.
+    it('takes deviceId from the canonical accessor, not the hardware fingerprint', async () => {
+      storage.set('device_id', 'device_canonical');
+
+      const info = await collectDeviceInformation();
+
+      expect(info.deviceId).toBe('device_canonical');
+      expect(info.deviceId).not.toBe(info.deviceFingerprint);
+    });
+
     it('collects comprehensive device info on iOS', async () => {
       const info = await collectDeviceInformation();
       expect(info.deviceId).toBeTruthy();

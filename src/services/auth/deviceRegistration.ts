@@ -34,7 +34,9 @@ function resolvePushTokenWrite(
 }
 
 function buildDeviceInput(
-  deviceInfo: Awaited<ReturnType<typeof collectDeviceInformation>>,
+  deviceInfo: Awaited<ReturnType<typeof collectDeviceInformation>> & {
+    deviceId: string;
+  },
   pushToken: string | null | undefined,
 ): RegisterDeviceInput {
   return {
@@ -145,12 +147,11 @@ export async function pushRotatedTokenToServer(
 }
 
 /**
- * Stops the server pushing to a logged-out session on a shared device, via
- * `updateDevice(delete: true)`. Forgets this module's own state too: a rotated
- * token pushed after would carry the dead session, and a stale id would
- * deregister the next account's device.
+ * Stops the server pushing to a logged-out session on a shared device. The
+ * device row itself survives: removing it revokes the device credential that
+ * lets biometric sign-in recover from a deliberate sign-out.
  */
-export function deregisterDeviceOnLogout(): void {
+export function clearDevicePushTokenOnLogout(): void {
   const deviceId = registeredDeviceId;
   pushTokenRefreshUnsubscribe?.();
   pushTokenRefreshUnsubscribe = null;
@@ -159,15 +160,15 @@ export function deregisterDeviceOnLogout(): void {
   void client
     .mutate({
       mutation: UpdateDeviceDocument,
-      variables: { input: { id: deviceId, delete: true } },
+      variables: { input: { id: deviceId, clearPushToken: true } },
       // This lands AFTER `performLogoutCleanup` has cleared the store, so a
       // cache write here outlives the session it is ending.
       fetchPolicy: 'no-cache',
       context: { allowDuringLogout: true },
     })
-    .then(() => logger.info('Device deregistered on logout'))
+    .then(() => logger.info('Device push token cleared on logout'))
     .catch(error =>
-      logger.warn('Failed to deregister device on logout:', error),
+      logger.warn('Failed to clear the device push token on logout:', error),
     );
 }
 

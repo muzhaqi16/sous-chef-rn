@@ -375,10 +375,9 @@ const createWsClient = () => {
     connectionParams: () => {
       const { accessToken: token, refreshToken } = useStore.getState();
       const apiKey = env.API_KEY;
-      // The persisted id, not the nullable sync cache: a stable per-install
-      // deviceId is what lets the server supersede our prior connection and
-      // reclaim its subscriptions. A null or changing one leaves them counting
-      // against the per-user cap until the heartbeat reaps them.
+      // Null until storage opens, and omitted rather than substituted below: a
+      // changing id leaves the prior connection's subscriptions counting against
+      // the per-user cap until the heartbeat reaps them.
       const deviceId = getDeviceId();
 
       const params: Record<string, string | undefined> = {};
@@ -417,9 +416,8 @@ const createWsClient = () => {
       }
 
       if (__DEV__) {
-        // The deviceId here must be non-null and identical across reloads for
-        // the server to supersede the prior connection; a changing/absent value
-        // means orphaned subscriptions accumulate against the per-user cap.
+        // Supersession needs this identical across reloads; a changing or
+        // absent value orphans subscriptions against the per-user cap.
         logger.info('🔌 WebSocket connectionParams', {
           deviceId: deviceId ?? '(none)',
           hasToken: !!token,

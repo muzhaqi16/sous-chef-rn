@@ -64,7 +64,6 @@ jest.mock('#/utils/errorSerialization', () => ({
 // Mock deviceId
 jest.mock('#/storage/deviceId', () => ({
   getDeviceId: jest.fn(() => 'test-device-id'),
-  getDeviceIdSync: jest.fn(() => 'test-device-id'),
 }));
 
 // The socket calls whatever refresh function was registered via

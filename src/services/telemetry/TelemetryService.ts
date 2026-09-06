@@ -14,7 +14,7 @@ import { HttpTransport } from './transports/HttpTransport';
 import { scrubLogExtra, scrubString } from './scrub';
 import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
-import { getDeviceIdSync } from '#/storage/deviceId';
+import { getDeviceId } from '#/storage/deviceId';
 import { generateId } from '#/utils/generateId';
 import { getVersion, isEmulatorSync } from 'react-native-device-info';
 import { env as buildEnv } from '#/config/env';
@@ -216,7 +216,7 @@ export class TelemetryService {
         // BODY fields, not Loki stream labels — a label per device or run would
         // multiply the stream count, while a body field stays searchable with
         // `| json | device_id="..."`.
-        device_id: getDeviceIdSync() ?? 'unknown',
+        device_id: getDeviceId() ?? 'unknown',
         session_id: SESSION_ID,
         // The commit the build came from; a body field, never a label. `-dirty`
         // means uncommitted changes, so the build is not reproducible.

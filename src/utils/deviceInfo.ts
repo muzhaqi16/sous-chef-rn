@@ -1,15 +1,12 @@
 import { Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import { logger } from './environment';
-import {
-  readDeviceFingerprint,
-  writeDeviceFingerprint,
-} from '#/storage/deviceIdentity';
+import { getDeviceId } from '#/storage/deviceId';
 import { DeviceType, MobilePlatform } from '#/graphql/generated/schemaTypes';
 
 export interface DeviceInformation {
   // Basic device info
-  deviceId: string;
+  deviceId: string | null;
   deviceName?: string;
   deviceType: DeviceType;
   platform: MobilePlatform;
@@ -408,92 +405,6 @@ const collectDisplayInfo = async () => {
   return displayInfo;
 };
 
-/** Combines every device identifier the platform will give us into one string. */
-const computeDeviceFingerprint = async (): Promise<string> => {
-  try {
-    const [
-      uniqueId,
-      deviceId,
-      androidId,
-      brand,
-      model,
-      systemName,
-      systemVersion,
-      buildNumber,
-      serialNumber,
-      fingerprint,
-      iosVendorId,
-    ] = await Promise.all([
-      DeviceInfo.getUniqueId().catch(() => null),
-      Promise.resolve(DeviceInfo.getDeviceId()),
-      Platform.OS === 'android'
-        ? DeviceInfo.getAndroidId().catch(() => null)
-        : Promise.resolve(null),
-      Promise.resolve(DeviceInfo.getBrand()),
-      Promise.resolve(DeviceInfo.getModel()),
-      Promise.resolve(DeviceInfo.getSystemName()),
-      Promise.resolve(DeviceInfo.getSystemVersion()),
-      Promise.resolve(DeviceInfo.getBuildNumber()),
-      DeviceInfo.getSerialNumber().catch(() => null),
-      Platform.OS === 'android'
-        ? Promise.resolve(DeviceInfo.getFingerprint())
-        : Promise.resolve(null),
-      Platform.OS === 'ios'
-        ? DeviceInfo.getUniqueId().catch(() => null)
-        : Promise.resolve(null),
-    ]);
-
-    // Combine identifiers with platform info to create comprehensive fingerprint
-    const identifiers = [
-      uniqueId,
-      deviceId,
-      androidId,
-      serialNumber,
-      fingerprint,
-      iosVendorId,
-      brand,
-      model,
-      systemName,
-      systemVersion,
-      buildNumber,
-      Platform.OS,
-      Platform.Version,
-    ].filter(Boolean);
-
-    if (identifiers.length === 0) {
-      // Fallback fingerprint if all device info fails
-      const fallback = `${Platform.OS}-${Date.now()}-${Math.random()
-        .toString(36)
-        .substring(2, 15)}`;
-      logger.warn('Using fallback device fingerprint:', fallback);
-      return fallback;
-    }
-
-    const combined = identifiers.join('-');
-    const base64Hash = btoa(combined).replace(/[^a-zA-Z0-9]/g, '');
-    return `${Platform.OS}-${base64Hash.substring(0, 32)}`;
-  } catch (error) {
-    logger.error('Error generating device fingerprint:', error);
-    // Emergency fallback
-    return `${Platform.OS}-emergency-${Date.now()}`;
-  }
-};
-
-/**
- * The device's stable identity. The API keys `Device` rows on this and updates
- * the matching row rather than inserting, so a value that varies between calls
- * registers a new device on every launch. Persisted so the two non-deterministic
- * fallbacks above survive a restart as well.
- */
-export const generateDeviceFingerprint = async (): Promise<string> => {
-  const stored = readDeviceFingerprint();
-  if (stored) return stored;
-
-  const fingerprint = await computeDeviceFingerprint();
-  writeDeviceFingerprint(fingerprint);
-  return fingerprint;
-};
-
 /**
  * Gets screen resolution information
  */
@@ -558,7 +469,6 @@ export const collectDeviceInformation =
 
       // Collect all information in parallel for maximum performance
       const [
-        deviceFingerprint,
         deviceName,
         deviceType,
         systemName,
@@ -575,7 +485,6 @@ export const collectDeviceInformation =
         localeInfo,
         displayInfo,
       ] = await Promise.all([
-        generateDeviceFingerprint(),
         DeviceInfo.getDeviceName().catch(() => `${Platform.OS} Device`),
         Promise.resolve(DeviceInfo.getDeviceType()),
         Promise.resolve(DeviceInfo.getSystemName()),
@@ -613,7 +522,7 @@ export const collectDeviceInformation =
       // Combine all collected comprehensive information
       const deviceInfo: DeviceInformation = {
         // Basic device info
-        deviceId: deviceFingerprint,
+        deviceId: getDeviceId(),
         deviceName,
         deviceType: mapDeviceType(deviceType),
         platform: mapPlatform(),
@@ -671,9 +580,8 @@ export const collectDeviceInformation =
       logger.error('Error collecting device information:', error);
 
       // Return minimal fallback device info
-      const fallbackFingerprint = await generateDeviceFingerprint();
       return {
-        deviceId: fallbackFingerprint,
+        deviceId: getDeviceId(),
         deviceName: `${Platform.OS} Device`,
         deviceType:
           Platform.OS === 'ios' || Platform.OS === 'android'
@@ -694,7 +602,7 @@ export const collectDeviceInformation =
  */
 export const validateDeviceInformation = (
   deviceInfo: DeviceInformation,
-): boolean => {
+): deviceInfo is DeviceInformation & { deviceId: string } => {
   const required = [
     'deviceId',
     'deviceType',
@@ -711,8 +619,10 @@ export const validateDeviceInformation = (
     }
   }
 
-  if (deviceInfo.deviceId.length < 5) {
-    logger.warn('Device ID too short, may not be unique');
+  // Absent means device storage never opened, so there is no stable identity to
+  // register under. Sending a substitute would file a new device every launch.
+  if (!deviceInfo.deviceId) {
+    logger.warn('No device id: device storage is unavailable');
     return false;
   }
 

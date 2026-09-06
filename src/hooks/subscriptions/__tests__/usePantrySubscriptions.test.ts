@@ -19,7 +19,7 @@ jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
 jest.mock('#/storage/deviceId', () => ({
-  getDeviceIdSync: jest.fn(() => 'device_this'),
+  getDeviceId: jest.fn(() => 'device_this'),
 }));
 
 const mockRegister = jest.fn().mockReturnValue({});

@@ -3,10 +3,10 @@
  * account signed in twice stops updating in real time.
  */
 import { isSelfEcho } from '../isSelfEcho';
-import { getDeviceIdSync } from '#/storage/deviceId';
+import { getDeviceId } from '#/storage/deviceId';
 
 jest.mock('#/storage/deviceId', () => ({
-  getDeviceIdSync: jest.fn(() => 'device_this'),
+  getDeviceId: jest.fn(() => 'device_this'),
 }));
 
 describe('isSelfEcho', () => {
@@ -47,7 +47,7 @@ describe('isSelfEcho', () => {
   });
 
   it('keeps the event when this device has no id yet', () => {
-    (getDeviceIdSync as jest.Mock).mockReturnValueOnce(null);
+    (getDeviceId as jest.Mock).mockReturnValueOnce(null);
     // Applying a redundant update beats dropping a real one.
     expect(
       isSelfEcho(

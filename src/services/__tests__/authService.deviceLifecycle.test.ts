@@ -3,9 +3,9 @@
 //    after acquirePushToken timed out (null) but before the refresh listener
 //    subscribed is re-checked after subscribe and pushed to the server.
 //  - P2-11: logout tears down the prior user's push/notification state —
-//    deregisters the device (updateDevice delete:true), unsubscribes the refresh
-//    listener, and resets notification state; a deregister failure never blocks
-//    the local teardown.
+//    clears the device push token (updateDevice clearPushToken:true) while
+//    leaving the device row intact, unsubscribes the refresh listener, and
+//    resets notification state; a failure never blocks the local teardown.
 //
 // authService uses the singleton Apollo client and reads module boundaries, so
 // each dependency is mocked at its module edge (the pattern in
@@ -240,7 +240,7 @@ describe('logout — session teardown and pacing', () => {
 });
 
 describe('logout — push/notification teardown (P2-11)', () => {
-  it('deregisters the device, unsubscribes the listener, and resets notifications', async () => {
+  it('clears the push token, unsubscribes the listener, and resets notifications', async () => {
     // Register first so the server device id + refresh listener are live.
     mockAcquireToken.mockResolvedValueOnce('apns-1');
     mockGetToken.mockResolvedValueOnce('apns-1');
@@ -254,10 +254,13 @@ describe('logout — push/notification teardown (P2-11)', () => {
 
     await authService.logout();
 
-    // Device soft-deleted server-side (schema's replacement for deleteDevice).
-    expect(updateCallsWith('delete')).toContainEqual(
-      expect.objectContaining({ id: 'srv-1', delete: true }),
+    // Push delivery suppressed server-side.
+    expect(updateCallsWith('clearPushToken')).toContainEqual(
+      expect.objectContaining({ id: 'srv-1', clearPushToken: true }),
     );
+    // The device row survives: deleting it would revoke the device credential
+    // biometric sign-in exchanges after a deliberate sign-out.
+    expect(updateCallsWith('delete')).toEqual([]);
     // Refresh listener unsubscribed and the session-scoped store state reset.
     expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
     expect(mockStoreState.resetStore).toHaveBeenCalledWith(
@@ -265,7 +268,7 @@ describe('logout — push/notification teardown (P2-11)', () => {
     );
   });
 
-  it('completes local teardown even when deregistration rejects', async () => {
+  it('completes local teardown even when the push-token clear rejects', async () => {
     mockAcquireToken.mockResolvedValueOnce('apns-1');
     mockGetToken.mockResolvedValueOnce('apns-1');
     authService.registerDeviceInBackground();
@@ -273,10 +276,11 @@ describe('logout — push/notification teardown (P2-11)', () => {
 
     mockStoreState.user = { id: 'u1', email: 'u1@example.com' };
     mockUnsubscribe.mockClear(); // count only logout's unsubscribe
-    // The deregister (updateDevice delete) rejects.
+    // The push-token clear (updateDevice clearPushToken) rejects.
     mockMutate.mockImplementation(({ variables }) => {
       const input = (variables?.input ?? {}) as Record<string, unknown>;
-      if ('delete' in input) return Promise.reject(new Error('offline'));
+      if ('clearPushToken' in input)
+        return Promise.reject(new Error('offline'));
       return Promise.resolve({ data: {} });
     });
 

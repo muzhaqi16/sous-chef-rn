@@ -5,16 +5,14 @@ const DEVICE_ID_KEY = 'device_id';
 let cachedDeviceId: string | null = null;
 
 /**
- * A per-device id persisted to MMKV, used for subscription self-echo detection.
- * Before storage is ready this returns a TRANSIENT id; `initializeDeviceId()`
- * reconciles with storage once hydration completes.
+ * This install's one device identity: the `x-device-id` header, the socket's
+ * connection params, device registration and the device credential all present
+ * it. Null before storage opens — a caller sends nothing rather than a
+ * substitute, which would register a new device on every launch.
  */
-export function getDeviceId(): string {
+export function getDeviceId(): string | null {
   if (cachedDeviceId) return cachedDeviceId;
-
-  if (!isStorageReady()) {
-    return `device_${generateId()}`;
-  }
+  if (!isStorageReady()) return null;
 
   let deviceId = storage.getString(DEVICE_ID_KEY);
   if (!deviceId) {
@@ -26,15 +24,8 @@ export function getDeviceId(): string {
   return deviceId;
 }
 
-/**
- * For hot paths that must not touch storage; null until `getDeviceId()` has run.
- */
-export function getDeviceIdSync(): string | null {
-  return cachedDeviceId;
-}
-
-/** Call after hydration; drops any transient id in favour of the stored one. */
-export function initializeDeviceId(): string {
+/** Call after hydration, so the first reader is not the one that pays for it. */
+export function initializeDeviceId(): string | null {
   cachedDeviceId = null;
   return getDeviceId();
 }

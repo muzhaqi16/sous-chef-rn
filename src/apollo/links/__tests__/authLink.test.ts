@@ -19,7 +19,7 @@ jest.mock('#/config/env', () => ({
   env: { API_KEY: 'test-api-key' },
 }));
 jest.mock('#/storage/deviceId', () => ({
-  getDeviceIdSync: jest.fn(() => 'test-device-id'),
+  getDeviceId: jest.fn(() => 'test-device-id'),
 }));
 jest.mock('../../logoutCleanup', () => ({
   LogoutCleanup: {
@@ -37,6 +37,7 @@ import { Observable, of } from 'rxjs';
 import { authLink } from '../authLink';
 import { LogoutCleanup } from '../../logoutCleanup';
 import { proactiveTokenRefresh } from '../refreshToken';
+import { getDeviceId } from '#/storage/deviceId';
 
 const shouldSkipOperation = LogoutCleanup.shouldSkipOperation as jest.Mock;
 const mockedProactiveRefresh = proactiveTokenRefresh as jest.Mock;
@@ -147,6 +148,18 @@ describe('authLink', () => {
 
       expect(headers['x-api-key']).toBe('test-api-key');
       expect(headers['x-device-id']).toBe('test-device-id');
+    });
+
+    // Storage has not opened yet. The header is omitted rather than filled with
+    // a freshly generated value, which the server would read as a NEW device on
+    // every launch; absent is not an error, it is an unattributed request.
+    it('omits the device id when storage has not opened', async () => {
+      (getDeviceId as jest.Mock).mockReturnValueOnce(null);
+
+      const headers = await run('GetPantry');
+
+      expect(headers).not.toHaveProperty('x-device-id');
+      expect(headers['x-api-key']).toBe('test-api-key');
     });
 
     it('attaches the bearer token when one is held', async () => {
