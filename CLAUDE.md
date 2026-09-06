@@ -696,6 +696,16 @@ place and they read it.
   `node scripts/probe-withunistyles-prop-passthrough.mjs`; guarded by
   `__tests__/gestures/flashListScrollComponents.test.ts`, which derives its file
   list from the tree so a new list cannot ship the mismatch.
+- **The rule is about the HOST, not about FlashList.** A standalone RNGH
+  scroller offering pull-to-refresh renders `SwipeAwareScrollComponent` too,
+  never a hand-rolled `<ScrollView>` from RNGH: RN forces `nestedScrollEnabled`
+  on under a `refreshControl` (facebook/react-native#55189), which lets RNGH's
+  `SwipeRefreshLayoutHook` fail the handler mid-pull, and androidx ignores the
+  ACTION_CANCEL that follows — so the Android spinner parks where the finger
+  stopped and only a pull past the trigger retracts it. The meal plan shipped
+  that way while every FlashList was fine, because the prop lives in the shared
+  module and a hand-rolled host never reaches it. Verified 2026-09-05 on device;
+  guarded by the same test.
 
 ### Bottom sheets
 

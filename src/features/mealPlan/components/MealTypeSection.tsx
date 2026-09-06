@@ -46,8 +46,7 @@ export const MealTypeSection: React.FC<MealTypeSectionProps> = ({
           <Pressable
             onPress={() => onAddMeal(mealType)}
             accessibilityLabel={t('labels.addNamed', { name: label })}
-            style={styles.addButton}
-            hitSlop={8}
+            hitSlop={12}
           >
             <Icon name="add" size={20} tone="primary" />
           </Pressable>
@@ -80,10 +79,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: theme.spacing.sm,
-  },
-  addButton: {
-    padding: theme.spacing.xs,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.surface,
+    marginHorizontal: theme.layout.rowGutter,
   },
 }));

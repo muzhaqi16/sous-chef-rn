@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 import { useTranslation } from '#/i18n';
-import { ScrollView } from 'react-native-gesture-handler';
+import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { alertService } from '#/services/alertService';
 import { TabView, type Route } from 'react-native-tab-view';
 import { FilterTabBar } from './FilterTabBar';
@@ -415,7 +415,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
         <ShoppingListDataProvider data={tabData}>
           <View style={styles.tabBody}>
             {showEmptyState ? (
-              <ScrollView
+              <SwipeAwareScrollComponent
                 contentContainerStyle={styles.emptyScrollContent}
                 refreshControl={
                   onRefresh ? (
@@ -428,7 +428,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               >
                 {renderTabBar()}
                 <EmptyState {...emptyState} />
-              </ScrollView>
+              </SwipeAwareScrollComponent>
             ) : (
               <TabView
                 navigationState={{ index, routes }}

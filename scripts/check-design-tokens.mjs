@@ -214,7 +214,7 @@ const TRACKED_CONCERNS = CONCERNS.filter(c => c.tracked);
  */
 const TRACKED_CEILING = {
   'colour-literal': 9,
-  'icon-size-literal': 161,
+  'icon-size-literal': 160,
 };
 
 const violations = (rel, source) =>

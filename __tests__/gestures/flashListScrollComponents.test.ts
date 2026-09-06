@@ -155,7 +155,9 @@ describe('scrollables inside BottomSheetView', () => {
     // An entry whose file stopped matching is a stale exemption that will
     // silently cover the next file to take its path.
     const matched = collectTsxFiles(SRC)
-      .filter(file => nestsScrollable(stripComments(readFileSync(file, 'utf8'))))
+      .filter(file =>
+        nestsScrollable(stripComments(readFileSync(file, 'utf8'))),
+      )
       .map(file => relative(process.cwd(), file));
 
     const stale = Object.keys(BOUNDED_ANOTHER_WAY).filter(
@@ -301,10 +303,45 @@ describe('FlashList scroll components', () => {
         /import\s*\{[^}]*\bScrollView\b[^}]*\}\s*from\s*'react-native-gesture-handler'/.test(
           source,
         );
-      return !flashListHost && !rnghScrollViewHost;
+      const sharedHost = source.includes('<SwipeAwareScrollComponent');
+      return !flashListHost && !rnghScrollViewHost && !sharedHost;
     });
 
     expect(wouldThrow).toEqual([]);
+  });
+
+  /**
+   * A standalone RNGH scroller goes through `SwipeAwareScrollComponent` too.
+   *
+   * RN turns `nestedScrollEnabled` on for any Android ScrollView carrying a
+   * `refreshControl` (facebook/react-native#55189), and inside RNGH's scrollable
+   * that lets `SwipeRefreshLayoutHook` fail the refresh handler mid-pull. Its
+   * `onFail` dispatches ACTION_CANCEL, which androidx's `SwipeRefreshLayout`
+   * ignores outright — no `finishSpinner()`, `mIsBeingDragged` left true — so the
+   * spinner parks where the finger stopped and only a pull past the trigger, which
+   * delivers a real ACTION_UP, retracts it. The meal plan shipped that way while
+   * every FlashList was fine, because the prop lives in the shared module and a
+   * hand-rolled `<ScrollView>` never reaches it.
+   */
+  const rawRnghScrollersWithRefresh = collectTsxFiles(SRC)
+    .map(file => relative(process.cwd(), file))
+    .filter(
+      file => file !== 'src/components/atoms/SwipeAwareScrollComponent.tsx',
+    )
+    .filter(file => {
+      const source = stripComments(
+        readFileSync(join(process.cwd(), file), 'utf8'),
+      );
+      return (
+        /import\s*\{[^}]*\bScrollView\b[^}]*\}\s*from\s*'react-native-gesture-handler'/.test(
+          source,
+        ) && source.includes('refreshControl=')
+      );
+    })
+    .sort();
+
+  it('routes every RNGH scroller with pull-to-refresh through the shared host', () => {
+    expect(rawRnghScrollersWithRefresh).toEqual([]);
   });
 
   /**
