@@ -27,7 +27,7 @@ import {
   HIT_SLOP_SM,
   HIT_SLOP_LG,
 } from '#features/shoppingList/constants/touch';
-import { getTabBarBottomPadding } from '../layout';
+import { getTabBarBottomPadding, TAB_BAR_HEIGHT } from '../layout';
 import { motion } from '#/theme/foundations/motion';
 
 describe('animations constants', () => {
@@ -130,6 +130,10 @@ describe('touch constants', () => {
 });
 
 describe('layout', () => {
+  it('declares the tab bar height once', () => {
+    expect(TAB_BAR_HEIGHT).toBe(65);
+  });
+
   describe('getTabBarBottomPadding', () => {
     it('calculates bottom padding from safe area', () => {
       // TAB_BAR_HEIGHT (65) + safeBottom + 16

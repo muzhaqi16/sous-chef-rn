@@ -26,8 +26,7 @@ import { HapticService } from '#services/haptic/HapticService';
 import { SHEET, TAB_BAR } from '#/constants/animations';
 import { GlassSurface, supportsGlass } from '#components/atoms/GlassSurface';
 import { motion } from '#/theme/foundations/motion';
-
-export const TAB_BAR_HEIGHT = 65;
+import { TAB_BAR_HEIGHT } from '#constants/layout';
 
 export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   state,

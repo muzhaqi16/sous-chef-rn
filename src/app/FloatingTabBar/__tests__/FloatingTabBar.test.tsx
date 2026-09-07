@@ -32,7 +32,7 @@ import {
   createBottomTabNavigator,
   type BottomTabBarProps,
 } from '@react-navigation/bottom-tabs';
-import { FloatingTabBar, TAB_BAR_HEIGHT } from '../FloatingTabBar';
+import { FloatingTabBar } from '../FloatingTabBar';
 import type { TabAppearance } from '../types';
 
 // Mock TabBarActionsContext
@@ -369,9 +369,5 @@ describe('FloatingTabBar', () => {
       expect(mockSetActiveTab).toHaveBeenCalledWith('Profile'),
     );
     expect(navigateSpy).not.toHaveBeenCalled();
-  });
-
-  it('exports TAB_BAR_HEIGHT', () => {
-    expect(TAB_BAR_HEIGHT).toBe(65);
   });
 });
