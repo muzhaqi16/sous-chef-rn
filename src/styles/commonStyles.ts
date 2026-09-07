@@ -354,8 +354,9 @@ export const commonStyles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
     // A status variant paints this border; the default row relies on the
-    // shadow alone and keeps a transparent one to preserve sizing.
-    borderWidth: theme.borderWidth.hairline,
+    // shadow alone and keeps a transparent one, so every row is the same
+    // height whether or not it carries a status.
+    borderWidth: theme.borderWidth.medium,
     borderColor: 'transparent',
     ...theme.shadows.card,
   },
