@@ -5,9 +5,7 @@ import {
   BarcodeCreatePantryItemDocument,
   BarcodeRestockPantryItemDocument,
   SearchResults_PantryItemFragmentDoc,
-  SearchResults_ShoppingListItemFragmentDoc,
   type SearchResults_PantryItemFragment,
-  type SearchResults_ShoppingListItemFragment,
   type BarcodeCreatePantryItemMutation,
   type BarcodeRestockPantryItemMutation,
 } from '#features/barcode/components/SearchResults.generated';
@@ -21,10 +19,9 @@ import {
   createAddToParentConnectionUpdater,
   adoptServerEntityId,
 } from '#/apollo/utils/cacheUpdaters';
-import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import {
   addOptimisticShoppingListItem,
-  adoptServerShoppingListItemId,
+  reconcileShoppingItemCreateUpdate,
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
 } from '#features/shoppingList/cache/items';
@@ -127,28 +124,14 @@ export function useAddScannedItem({
         // entry in `results`. Null when that item failed.
         const maskedItem = payload.results[0]?.item;
         if (!maskedItem) return;
-        // Catalog-merge: adopt the server id, evicting the optimistic cuid if
-        // the server merged into an existing row.
-        adoptServerShoppingListItemId(
+        // Catalog-merge: the withdrawal takes `totalItems` back with the row
+        // the server folded away, and the add is counted once.
+        reconcileShoppingItemCreateUpdate(
           cache,
-          maskedItem.id,
+          shoppingListId,
+          maskedItem,
           variables.input.items[0]?.id,
         );
-        const shoppingListItem =
-          cache.readFragment<SearchResults_ShoppingListItemFragment>({
-            fragment: SearchResults_ShoppingListItemFragmentDoc,
-            fragmentName: 'SearchResults_shoppingListItem',
-            from: { __typename: 'ShoppingListItem', id: maskedItem.id },
-          });
-        if (shoppingListItem) {
-          // bumpTotalItems:false — the optimistic add already counted it.
-          addNewItemToShoppingListCache(
-            cache,
-            shoppingListId,
-            shoppingListItem,
-            false,
-          );
-        }
       },
     },
   );

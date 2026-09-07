@@ -1,6 +1,8 @@
 'use no memo';
 
 import { renderHook, act } from '@testing-library/react-native';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import { GraphQLError } from 'graphql';
 import { usePagination } from '../usePagination';
 
 jest.mock('#/services/errorService');
@@ -94,6 +96,39 @@ describe('usePagination', () => {
         itemsCursor: 'cursor-xyz',
       },
     });
+  });
+
+  it('restarts when the server refuses a cursor the connection names its own way', async () => {
+    // The pantry is the one caller that supplies `restart`, and its cursor
+    // argument is `itemsCursor` — so a recogniser keyed on `after`/`cursor`
+    // leaves exactly that list stranded at the page it stopped on.
+    const refusal = new CombinedGraphQLErrors({
+      errors: [
+        new GraphQLError('Invalid cursor.', {
+          extensions: { code: 'VALIDATION_FAILED' },
+        }),
+      ],
+    });
+    const fetchMore = jest.fn().mockRejectedValue(refusal);
+    const restart = jest.fn().mockResolvedValue({});
+
+    const { result } = renderHook(() =>
+      usePagination({
+        pageInfo: { hasNextPage: true, endCursor: 'stale-cursor' },
+        loading: false,
+        itemCount: 10,
+        fetchMore,
+        cursorVariableName: 'itemsCursor',
+        restart,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    expect(restart).toHaveBeenCalledTimes(1);
+    expect(result.current.loadMoreError).toBe(false);
   });
 
   it('loadMore() does nothing when hasMore is false', async () => {

@@ -168,6 +168,10 @@ export function buildAddItemsReconcileUpdate({
         // Null when that item failed.
         const item = result?.item;
         if (!item) return;
+        // Paired by the input INDEX the server echoes, not by `result.clientId`:
+        // that field is a response-matching token a call site picks freely (the
+        // recipe add sends a Spoonacular ingredient id), never this row's
+        // minted cuid. Array position is the fallback.
         const clientId = variables.input.items?.[result?.index ?? position]?.id;
         reconcileShoppingItemCreateUpdate(cache, targetListId, item, clientId);
       });
@@ -322,20 +326,4 @@ export function reconcileShoppingCreate(
     return 'reverted';
   }
   return 'kept';
-}
-
-/**
- * Catalog merge: when the server resolves the create to an EXISTING row, evict the
- * stale client cuid so its dangling edge is dropped by the self-healing read and
- * the server row stands. `clientId` comes off the mutation's own `variables`, never
- * a shared ref. A no-op when the server echoed the same id.
- */
-export function adoptServerShoppingListItemId(
-  cache: ApolloCache,
-  serverId: string,
-  clientId: string | null | undefined,
-): void {
-  if (clientId && serverId !== clientId) {
-    safeEvict(cache, 'ShoppingListItem', clientId);
-  }
 }

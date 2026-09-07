@@ -18,6 +18,7 @@ import { logger } from '#/utils/environment';
 import { isDeadCredentialCode } from '#/utils/authErrorCodes';
 import { isSuccessPayload } from '#/utils/errors/mutationPayload';
 import { incrementLoginCount } from '#/hooks/useFeatureHint';
+import { UpdateAccountDocument } from '#operations/auth/user.generated';
 import {
   ExchangeDeviceCredentialDocument,
   IssueDeviceCredentialDocument,
@@ -27,6 +28,10 @@ import {
   RevokeDeviceCredentialDocument,
 } from '#operations/auth/auth.generated';
 import { ensureDeviceId } from '#/storage/deviceId';
+import {
+  deviceRegionCurrency,
+  isUnchosenCurrency,
+} from '#/domain/regionCurrency';
 import {
   LoginUserFragmentDoc,
   type LoginUserFragment,
@@ -82,6 +87,38 @@ function bootstrapUserStore(user: LoginUserFragment): void {
   if (user.settings) {
     useStore.getState().setShowTutorials(user.settings.showTutorials);
   }
+}
+
+/**
+ * Denominate a new account from the DEVICE REGION, once. The device already
+ * answers this, and a cost keeps whatever currency it was recorded in, so the
+ * answer has to land before the first one rather than being asked for.
+ * Silent by design — a user who disagrees changes it in Profile.
+ */
+function applyRegionCurrencyDefault(user: LoginUserFragment): void {
+  const store = useStore.getState();
+  const navState = store.getUserNavigationState(user.id);
+  if (navState?.currencyDefaultApplied) return;
+
+  // Marked before the write, not after: this is a one-time default, and a
+  // failed write must not queue up a second attempt against a user who has
+  // since chosen for themselves.
+  store.setUserNavigationState(user.id, { currencyDefaultApplied: true });
+
+  if (!isUnchosenCurrency(user.preferredCurrency)) return;
+
+  const inferred = deviceRegionCurrency();
+  if (!inferred || inferred === user.preferredCurrency) return;
+
+  store.setPreferredCurrency(inferred);
+  void client
+    .mutate({
+      mutation: UpdateAccountDocument,
+      variables: { input: { preferredCurrency: inferred } },
+    })
+    .catch(error => {
+      logger.warn('Could not apply the region currency default:', error);
+    });
 }
 
 // --- User preferences helpers (direct Zustand access) ---
@@ -230,6 +267,9 @@ async function handleLogin(
 
   // The no-biometrics fallback: offer to save credentials only when biometrics
   // are unavailable, nothing is stored yet, and the user has not declined.
+  // `showBiometricGate` is false for five separate reasons and cannot stand in
+  // for "unavailable" — one of them is that the user refused biometrics, and
+  // saving credentials enrols them into the biometric-protected slot.
   let showRememberMeGate = false;
   if (
     showRememberPrompt &&
@@ -238,16 +278,32 @@ async function handleLogin(
     user.emailVerified &&
     user.onBoarded
   ) {
-    const hasStoredCreds = await checkStoredCredentials(loginCredentials.email);
-    const prefs = getUserPreferences(user.id);
-    showRememberMeGate =
-      !hasStoredCreds && !!prefs?.shouldShowCredentialPrompt();
+    let biometricAvailable = false;
+    try {
+      const capability = await getBiometricCapability();
+      biometricAvailable = capability.isAvailable;
+    } catch {
+      logger.error('Error checking biometric capability');
+    }
+
+    const navState = store.getUserNavigationState(user.id);
+    const declinedBiometrics = navState?.biometricDeclinedPermanently;
+
+    if (!biometricAvailable && !declinedBiometrics) {
+      const hasStoredCreds = await checkStoredCredentials(
+        loginCredentials.email,
+      );
+      const prefs = getUserPreferences(user.id);
+      showRememberMeGate =
+        !hasStoredCreds && !!prefs?.shouldShowCredentialPrompt();
+    }
   }
 
   // Set auth state
   store.setAuth(user, accessToken, refreshToken);
   queueManager.onUserChange(user.id, previousUserId);
   bootstrapUserStore(user);
+  applyRegionCurrencyDefault(user);
 
   if (shouldRemember !== undefined) {
     store.setRememberMe(shouldRemember);
@@ -383,17 +439,25 @@ async function login(
       const loginCredentials = { email: input.email };
 
       const unmaskedLogin = unmaskAuthPayload(payload);
-      if (unmaskedLogin) {
-        // handleLogin owns all post-login routing — verification, onboarding,
-        // the biometric gate, and the RememberMe gate (driven by
-        // showRememberPrompt) — so navigation is decided in one place.
-        await handleLogin(
-          unmaskedLogin,
-          true,
-          loginCredentials,
-          showRememberPrompt,
-        );
+      if (!unmaskedLogin) {
+        // No session was opened: the 12-field LoginUser read came back
+        // incomplete, so reporting success leaves the user on the form with
+        // nothing said. `userProfileCompleteness.test.ts` pins the shape.
+        logger.error('Login succeeded but the LoginUser read was incomplete');
+        toastService.error(t('errors.codes.genericRetry'));
+        store.setAuthIsLoading(false);
+        return false;
       }
+
+      // handleLogin owns all post-login routing — verification, onboarding,
+      // the biometric gate, and the RememberMe gate (driven by
+      // showRememberPrompt) — so navigation is decided in one place.
+      await handleLogin(
+        unmaskedLogin,
+        true,
+        loginCredentials,
+        showRememberPrompt,
+      );
 
       store.setAuthIsLoading(false);
       return true;
@@ -624,9 +688,18 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
 
     if (isSuccessPayload(payload, 'DeviceCredentialSessionPayload')) {
       const unmaskedLogin = unmaskAuthPayload(payload);
-      if (unmaskedLogin) {
-        await handleLogin(unmaskedLogin, true);
+      if (!unmaskedLogin) {
+        // The exchange spent one of the server's attempts and opened no
+        // session, so the backoff protecting that budget has to stay on.
+        logger.error(
+          'Auto-login succeeded but the LoginUser read was incomplete',
+        );
+        useStore.getState().registerBiometricRefusal();
+        toastService.error(t('errors.codes.genericRetry'));
+        return false;
       }
+
+      await handleLogin(unmaskedLogin, true);
       useStore.getState().clearBiometricBackoff();
       logger.info('Auto-login successful');
       return true;

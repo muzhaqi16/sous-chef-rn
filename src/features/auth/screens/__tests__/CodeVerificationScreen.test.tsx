@@ -50,6 +50,8 @@ type MockAuthFormTemplateProps = {
   footerLinkTestID?: string;
   linkDisabled?: boolean;
   linkCountdown?: number;
+  control?: unknown;
+  fields?: { name: string }[];
 };
 
 jest.mock('#store/useAppStore', () => {
@@ -111,7 +113,8 @@ jest.mock('#features/auth/components/AuthWrapper', () => {
 });
 
 jest.mock('#features/auth/components/AuthFormTemplate', () => {
-  const { View, Text, Pressable } = require('react-native');
+  const { View, Text, Pressable, TextInput } = require('react-native');
+  const { Controller } = require('react-hook-form');
   return {
     AuthFormTemplate: ({
       title,
@@ -130,8 +133,27 @@ jest.mock('#features/auth/components/AuthFormTemplate', () => {
       footerLinkTestID,
       linkDisabled,
       linkCountdown,
+      control,
+      fields,
     }: MockAuthFormTemplateProps) => (
       <View testID="auth-form-template">
+        {(fields ?? []).map(field => (
+          <Controller
+            key={field.name}
+            control={control}
+            name={field.name}
+            render={({
+              field: { onChange },
+            }: {
+              field: { onChange: (v: string) => void };
+            }) => (
+              <TextInput
+                testID={`field-${field.name}`}
+                onChangeText={onChange}
+              />
+            )}
+          />
+        ))}
         {onBackPress ? (
           <Pressable testID="back-button" onPress={onBackPress}>
             <Text>Back</Text>
@@ -283,6 +305,49 @@ describe('CodeVerificationScreen', () => {
       expect(recordedVariables).toContainEqual({
         input: { email: 'test@example.com' },
       });
+    });
+  });
+
+  it('reports a transport failure while verifying instead of doing nothing', async () => {
+    // Neither branch fires for this shape: `getTopLevelGraphQLError` returns
+    // null for anything that is not CombinedGraphQLErrors, and there is no
+    // payload — so without a terminal else the button reads as dead.
+    const user = userEvent.setup();
+    renderWithApollo(<CodeVerificationScreen context="gate" />, {
+      operationMocks: [
+        {
+          request: { query: VerifyEmailDocument, variables: () => true },
+          error: new Error('Network request failed'),
+        },
+      ],
+    });
+
+    await user.type(screen.getByTestId('field-code'), '123456');
+    await user.press(screen.getByTestId('submit-button'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalled();
+    });
+  });
+
+  it('reports a transport failure on resend rather than logging a send', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<CodeVerificationScreen context="gate" />, {
+      operationMocks: [
+        {
+          request: {
+            query: ResendVerificationEmailDocument,
+            variables: () => true,
+          },
+          error: new Error('Network request failed'),
+        },
+      ],
+    });
+
+    await user.press(screen.getByTestId('resend-code'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalled();
     });
   });
 

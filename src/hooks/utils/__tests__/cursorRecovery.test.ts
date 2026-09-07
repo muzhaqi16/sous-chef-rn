@@ -11,11 +11,18 @@ function refusal(code: string, message = 'Invalid cursor.') {
 
 describe('isDeadCursorError', () => {
   it('reads a VALIDATION_FAILED on a cursor-bearing request as a dead cursor', () => {
+    expect(isDeadCursorError(refusal('VALIDATION_FAILED'), 'abc')).toBe(true);
+  });
+
+  it('recognises a cursor whatever the connection calls its argument', () => {
+    // The pantry's is `itemsCursor`. Keyed on a fixed pair of argument names,
+    // the one caller wired up for restart was the one it could never fire for.
+    const variables: Record<string, unknown> = {
+      itemsCursor: 'abc',
+      itemsFirst: 20,
+    };
     expect(
-      isDeadCursorError(refusal('VALIDATION_FAILED'), { after: 'abc' }),
-    ).toBe(true);
-    expect(
-      isDeadCursorError(refusal('VALIDATION_FAILED'), { cursor: 'abc' }),
+      isDeadCursorError(refusal('VALIDATION_FAILED'), variables.itemsCursor),
     ).toBe(true);
   });
 
@@ -24,31 +31,23 @@ describe('isDeadCursorError', () => {
     // other validation refusal, and branching on server prose is what the
     // localization rules exist to stop. Same code, different sentence.
     expect(
-      isDeadCursorError(refusal('VALIDATION_FAILED', 'anything at all'), {
-        after: 'abc',
-      }),
+      isDeadCursorError(refusal('VALIDATION_FAILED', 'anything at all'), 'abc'),
     ).toBe(true);
   });
 
   it('is not a dead cursor when the request carried none', () => {
     // A first page cannot have a bad cursor, so the same code means something
     // else entirely and must not restart anything.
-    expect(isDeadCursorError(refusal('VALIDATION_FAILED'), {})).toBe(false);
-    expect(
-      isDeadCursorError(refusal('VALIDATION_FAILED'), { after: null }),
-    ).toBe(false);
     expect(isDeadCursorError(refusal('VALIDATION_FAILED'), undefined)).toBe(
       false,
     );
+    expect(isDeadCursorError(refusal('VALIDATION_FAILED'), null)).toBe(false);
+    expect(isDeadCursorError(refusal('VALIDATION_FAILED'), '')).toBe(false);
   });
 
   it('is not a dead cursor for another refusal, or for a transport failure', () => {
-    expect(isDeadCursorError(refusal('FORBIDDEN'), { after: 'abc' })).toBe(
-      false,
-    );
-    expect(isDeadCursorError(new Error('offline'), { after: 'abc' })).toBe(
-      false,
-    );
+    expect(isDeadCursorError(refusal('FORBIDDEN'), 'abc')).toBe(false);
+    expect(isDeadCursorError(new Error('offline'), 'abc')).toBe(false);
   });
 });
 

@@ -24,7 +24,7 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   safeEvict: jest.fn(),
 }));
-// Keep the REAL adoptServerShoppingListItemId / revertOptimisticShoppingListItem
+// Keep the REAL reconcileShoppingItemCreateUpdate / revertOptimisticShoppingListItem
 // so the catalog-merge eviction path runs through to the (mocked) safeEvict that
 // these assertions watch; stub only the writers.
 jest.mock('#features/shoppingList/cache/connections', () => ({

@@ -7,6 +7,8 @@ interface LoadPageArgs {
   /** Re-reads the collection from its first page. */
   refetch: () => Promise<unknown>;
   variables: OperationVariables;
+  /** The cursor argument this connection uses; every current caller sends `after`. */
+  cursorVariableName?: string;
   /** Names this call site in the diagnostic channel. */
   operation: string;
 }
@@ -21,6 +23,7 @@ export async function loadPageWithCursorRecovery({
   fetchMore,
   refetch,
   variables,
+  cursorVariableName = 'after',
   operation,
 }: LoadPageArgs): Promise<void> {
   let deadCursor = false;
@@ -28,7 +31,7 @@ export async function loadPageWithCursorRecovery({
     await fetchMore({ variables });
     return;
   } catch (error) {
-    deadCursor = isDeadCursorError(error, variables);
+    deadCursor = isDeadCursorError(error, variables[cursorVariableName]);
     errorService.reportError(error, { operation });
   }
 

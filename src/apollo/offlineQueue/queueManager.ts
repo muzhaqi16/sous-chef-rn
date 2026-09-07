@@ -304,6 +304,10 @@ export class QueueManager {
           __typename?: string;
           code?: string;
           message?: string;
+          // `NotFoundError.resource` — which row the server could not find.
+          // Without it a refusal over a merged-away Unit is indistinguishable
+          // from one over the record itself, and cannot be re-resolved.
+          resource?: string;
           conflict?: { message?: string };
         }
       | null
@@ -327,6 +331,7 @@ export class QueueManager {
         payload?.message ??
           `${mutation.operationName} was rejected by the server on replay`,
         payload?.code ?? null,
+        payload?.resource ?? null,
       );
     }
 

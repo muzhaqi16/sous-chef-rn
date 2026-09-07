@@ -242,8 +242,16 @@ export function LoginScreen(): React.JSX.Element {
 
   // Rendered in place, as SignUpScreen does: `verifyEmail` is public and needs
   // no session, and there is no signed-out verification ROUTE to navigate to.
+  // `onExit` is what takes it away again — navigating to Login from here lands
+  // on the route already focused and changes nothing.
   if (unverifiedEmail !== null) {
-    return <CodeVerificationScreen context="signup" email={unverifiedEmail} />;
+    return (
+      <CodeVerificationScreen
+        context="signup"
+        email={unverifiedEmail}
+        onExit={() => setUnverifiedEmail(null)}
+      />
+    );
   }
 
   return (

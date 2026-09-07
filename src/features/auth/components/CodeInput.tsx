@@ -73,9 +73,10 @@ export const CodeInput: React.FC<{
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
-          {/* Single Text per cell — a nested Text span would carry the atom's
-              default body lineHeight, shrinking the line box and pinning the
-              placeholder to the top of the cell instead of centering it. */}
+          {/* One Text per cell, centred by the cell rather than by a line
+              height: a nested Text span carries the atom's default body
+              leading, which shrinks the line box and pins the glyph to the
+              top. */}
           {Array.from({ length: CODE_LENGTH }).map((_, idx) => {
             const char = value[idx];
             const isActive = isFocused && idx === activeIndex;
@@ -85,10 +86,6 @@ export const CodeInput: React.FC<{
                   align="center"
                   role={char ? 'bodyStrong' : 'body'}
                   tone={char ? 'primary' : 'tertiary'}
-                  style={[
-                    styles.formInputChar,
-                    !char && styles.formInputPlaceholderChar,
-                  ]}
                 >
                   {char ?? '-'}
                 </Text>
@@ -132,11 +129,8 @@ const styles = StyleSheet.create(theme => ({
   },
   formInputCell: {
     flex: 1,
+    justifyContent: 'center',
   },
-  formInputChar: {},
-  // Placeholder dash keeps the cell's centering lineHeight but renders at
-  // body size, matching the look of the old nested-Text placeholder.
-  formInputPlaceholderChar: {},
   formInputCellIndicator: {
     position: 'absolute',
     bottom: theme.spacing.sm,

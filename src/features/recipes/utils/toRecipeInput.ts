@@ -177,8 +177,3 @@ export const toRecipeInput = (
       }) || [],
   } satisfies CreateRecipeInput;
 };
-
-/**
- * Fire-and-forget find-or-create when the user views an external recipe.
- * Attempts once per recipe.
- */

@@ -165,7 +165,8 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   const [upsertRecipe] = useMutation(UpsertExternalRecipeDocument);
 
   /**
-   * Transform Spoonacular recipe data to CreateRecipeInput format
+   * Find-or-create the app's own recipe behind an external one. Fire-and-forget
+   * on a view; a deliberate save re-ingests to attach per-ingredient cost.
    */
   const preloadRecipe = async (
     spoonacularRecipe: RecipeInformation,

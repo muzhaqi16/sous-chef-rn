@@ -213,7 +213,9 @@ export function AuthFormTemplate<T extends FieldValues>({
 
 const styles = StyleSheet.create(theme => ({
   formContainer: {
-    flex: 1,
+    // See AuthWrapper.inner — this must grow, not claim a fixed viewport box, or
+    // its own content overflows past whatever a following sibling occupies.
+    flexGrow: 1,
   },
   fieldsGroup: {
     variants: {
@@ -258,6 +260,10 @@ const styles = StyleSheet.create(theme => ({
   },
   linkRow: {
     alignItems: 'flex-end',
+    // The field above reserves no space beneath it when it has no error to
+    // show, so without this the link sits flush against the input and reads as
+    // part of it — the code field, which renders no error slot, worst of all.
+    marginTop: theme.spacing.sm,
   },
   action: {
     // Paired with the same auto margin on `fieldsGroup`, splitting the leftover

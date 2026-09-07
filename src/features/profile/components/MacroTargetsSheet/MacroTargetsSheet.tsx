@@ -3,12 +3,12 @@ import { View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useTranslation } from '#/i18n';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { FormInput } from '#components/atoms/FormInput';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { Text } from '#components/atoms/Text';
@@ -101,7 +101,10 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
 
   return (
     <BottomSheetModal ref={bottomSheetRef} {...modalProps}>
-      <BottomSheetScrollView
+      {/* `BottomSheetFormScrollView`, not the raw gorhom scrollable: it also
+          supplies the input context, so the four `FormInput`s below resolve to
+          gorhom's `BottomSheetTextInput` and the sheet sees the keyboard. */}
+      <BottomSheetFormScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.contentContainer,
@@ -198,7 +201,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
             )}
           />
         </View>
-      </BottomSheetScrollView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 };

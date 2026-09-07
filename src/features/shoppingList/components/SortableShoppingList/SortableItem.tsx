@@ -283,8 +283,14 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           quantity={quantity}
           quantityInput={quantityInput}
           unit={unitDisplay}
-          onPress={() => onQuantityPress?.(itemId)}
-          disabled={isPurchased}
+          // `canEditItems`, like the swipe actions below: the sheet this opens
+          // is fully interactive, so a viewer who may not edit must not reach
+          // it — its Save arms as soon as the value changes.
+          onPress={() => {
+            if (!canEditItems) return;
+            onQuantityPress?.(itemId);
+          }}
+          disabled={isPurchased || !canEditItems}
           isPurchased={isPurchased}
           themeColors={themeColors}
         />

@@ -164,3 +164,42 @@ describe('formatQuantityForDisplay', () => {
     expect(formatQuantityForDisplay(0.5, { notation: 'decimal' })).toBe('0.5');
   });
 });
+
+// The set measured on device when the fraction stopped being seeded from a
+// float. Every value renders exactly as it did — the fraction-vs-decimal choice
+// included — which is what makes the change safe to take for the speed.
+describe('the value set the fraction seeding was verified against', () => {
+  it.each([
+    [0.33333334, '1/3'],
+    [0.66666667, '2/3'],
+    [1 / 3, '1/3'],
+    [0.5, '1/2'],
+    [0.25, '1/4'],
+    [1.25, '1 1/4'],
+    [1.5, '1 1/2'],
+    [0.125, '1/8'],
+    [0.75, '3/4'],
+    [0.16666667, '1/6'],
+    [0.375, '3/8'],
+    [3.33333334, '3 1/3'],
+  ])('renders %p as a cooking fraction', (value, expected) => {
+    expect(formatQuantityAsFraction(value)).toBe(expected);
+  });
+
+  it.each([
+    [4.6, '4.6'],
+    [1.1, '1.1'],
+    [2.7, '2.7'],
+    [0.2, '0.2'],
+    [0.7, '0.7'],
+    [0.93, '0.93'],
+  ])('falls back to a decimal for %p', (value, expected) => {
+    expect(formatQuantityAsFraction(value)).toBe(expected);
+  });
+
+  it('falls back to a decimal for a quantity too large to scale', () => {
+    expect(formatQuantityAsFraction(1e12 + 0.5)).toBe(
+      formatQuantity(1e12 + 0.5),
+    );
+  });
+});

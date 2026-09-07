@@ -4,7 +4,11 @@ import { useUser, useNavigationUtils } from '#store/useAppStore';
 import { OnBoardingSteps } from '#store/slices/navigationSlice';
 import { logger } from '#/utils/environment';
 
-const ONBOARDING_STEPS = [
+// The one definition of the flow, exported so nothing else declares a second.
+// Currency is NOT a step: it is inferred from the device region on first
+// sign-in (`deviceRegionCurrency`) and corrected in Profile, because asking it
+// here costs a step to answer a question the device already answers.
+export const ONBOARDING_STEPS = [
   'CreateHome',
   'CreateShoppingList',
   'SelectPantryItems',
@@ -42,6 +46,10 @@ export function useOnboardingNavigation() {
 
   const navigateToNextStep = (currentScreen: string) => {
     const currentIndex = getCurrentStepIndex(currentScreen);
+    if (currentIndex < 0) {
+      logger.warn(`Onboarding step not in the flow: ${currentScreen}`);
+      return;
+    }
     if (currentIndex < ONBOARDING_STEPS.length - 1) {
       const nextScreen = ONBOARDING_STEPS[currentIndex + 1];
 
@@ -67,6 +75,10 @@ export function useOnboardingNavigation() {
 
   const navigateToPreviousStep = (currentScreen: string) => {
     const currentIndex = getCurrentStepIndex(currentScreen);
+    if (currentIndex < 0) {
+      logger.warn(`Onboarding step not in the flow: ${currentScreen}`);
+      return;
+    }
     if (currentIndex > 0) {
       const previousScreen = ONBOARDING_STEPS[currentIndex - 1];
       navigation.dispatch(CommonActions.navigate(previousScreen));

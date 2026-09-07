@@ -41,7 +41,6 @@ jest.mock('#features/shoppingList/cache/items', () => {
     // hand-copied reconciler drifts from the operation names it hard-codes.
     ...actual,
     // Leaf cache writers are stubbed so the hook runs without a live cache.
-    adoptServerShoppingListItemId: jest.fn(),
     revertOptimisticShoppingListItem: jest.fn(),
     addOptimisticShoppingListItem: jest.fn(),
     // Signature: (id, fields) => entity (the cuid is baked straight in).

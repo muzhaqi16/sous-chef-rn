@@ -73,7 +73,19 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               onRestock: () => {
                 executeWithLoadingState(
                   async () => {
-                    await restockDuplicate(outcome.existingPantryItemId);
+                    const restockResult = await restockDuplicate(
+                      outcome.existingPantryItemId,
+                    );
+                    // A refusal RESOLVES, so an unread outcome flips the button
+                    // to "Added" over a restock the server never made.
+                    if (
+                      alertIfRejected(
+                        restockResult,
+                        t('errors.restockFailedRetry'),
+                      )
+                    ) {
+                      return;
+                    }
                     onPantryAdded();
                   },
                   setIsLoading,

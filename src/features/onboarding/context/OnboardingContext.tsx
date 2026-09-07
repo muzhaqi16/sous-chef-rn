@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState } from 'react';
 import { useSharedValue } from 'react-native-reanimated';
-import { useOnboardingNavigation } from '#features/onboarding/hooks/useOnboardingNavigation';
+import {
+  ONBOARDING_STEPS as FLOW_STEPS,
+  useOnboardingNavigation,
+} from '#features/onboarding/hooks/useOnboardingNavigation';
 import type { OnboardingStep } from '#features/onboarding/components/OnboardingSteps/types';
 import type { SharedValue } from 'react-native-reanimated';
 
@@ -45,50 +48,44 @@ interface OnboardingProviderProps {
   initialStepIndex?: number;
 }
 
-const ONBOARDING_STEPS: OnboardingStep[] = [
-  {
-    id: 'CreateHome',
+// Copy metadata only: the ORDER comes from the flow's single definition, so a
+// step added there cannot be missing here.
+const STEP_COPY: Record<string, { titleKey: string; subtitleKey: string }> = {
+  CreateHome: {
     titleKey: 'onboardingSteps.CreateHome.title',
     subtitleKey: 'onboardingSteps.CreateHome.subtitle',
   },
-  {
-    // Before CreateShoppingList and SelectPantryItems, both of which can record
-    // a cost — and a cost keeps the currency it was recorded in.
-    id: 'CurrencySetup',
-    titleKey: 'labels.currency',
-    subtitleKey: 'onboardingSteps.CurrencySetup.subtitle',
-  },
-  {
-    id: 'CreateShoppingList',
+  CreateShoppingList: {
     titleKey: 'labels.shoppingList',
     subtitleKey: 'onboardingSteps.CreateShoppingList.subtitle',
   },
-  {
-    id: 'SelectPantryItems',
+  SelectPantryItems: {
     titleKey: 'onboardingSteps.SelectPantryItems.title',
     subtitleKey: 'onboardingSteps.SelectPantryItems.subtitle',
   },
-  {
-    id: 'ProfilePictureUpload',
+  ProfilePictureUpload: {
     titleKey: 'labels.profilePicture',
     subtitleKey: 'onboardingSteps.ProfilePictureUpload.subtitle',
   },
-  {
-    id: 'InviteMembers',
+  InviteMembers: {
     titleKey: 'labels.inviteMembers',
     subtitleKey: 'onboardingSteps.InviteMembers.subtitle',
   },
-  {
-    id: 'BiometricSetup',
+  BiometricSetup: {
     titleKey: 'labels.security',
     subtitleKey: 'onboardingSteps.BiometricSetup.subtitle',
   },
-  {
-    id: 'OnboardingComplete',
+  OnboardingComplete: {
     titleKey: 'onboardingSteps.OnboardingComplete.title',
     subtitleKey: 'labels.youReAllSet',
   },
-];
+};
+
+const ONBOARDING_STEPS: OnboardingStep[] = FLOW_STEPS.map(id => ({
+  id,
+  titleKey: STEP_COPY[id]?.titleKey ?? '',
+  subtitleKey: STEP_COPY[id]?.subtitleKey ?? '',
+}));
 
 export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   children,

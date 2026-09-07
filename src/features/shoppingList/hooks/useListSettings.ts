@@ -101,10 +101,13 @@ export const useListSettings = (listId: string | undefined) => {
       }
     : null;
 
-  const isOwner =
-    listId && ownershipSnapshot
-      ? isShoppingListOwner(ownershipSnapshot, user?.id)
-      : true; // For new lists, user is always the owner
+  // Creating a list: nobody else's ownership to respect, so the owner-only
+  // controls are the author's. Opening an EXISTING one whose ownership has not
+  // resolved is a different state, and defaulting it to owner offers Save,
+  // budget, recurring, template, archive and delete to a non-owner.
+  const isOwner = !listId
+    ? true
+    : !!ownershipSnapshot && isShoppingListOwner(ownershipSnapshot, user?.id);
   const role = ownershipSnapshot
     ? getShoppingListRole(
         ownershipSnapshot,
