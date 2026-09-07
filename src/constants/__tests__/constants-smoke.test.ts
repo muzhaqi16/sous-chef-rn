@@ -136,10 +136,10 @@ describe('layout', () => {
 
   describe('getTabBarBottomPadding', () => {
     it('calculates bottom padding from safe area', () => {
-      // TAB_BAR_HEIGHT (65) + safeBottom + 16
-      expect(getTabBarBottomPadding(0)).toBe(81);
-      expect(getTabBarBottomPadding(34)).toBe(115);
-      expect(getTabBarBottomPadding(20)).toBe(101);
+      // TAB_BAR_HEIGHT (65) + safeBottom + 16 + the floating button's 68
+      expect(getTabBarBottomPadding(0)).toBe(149);
+      expect(getTabBarBottomPadding(34)).toBe(183);
+      expect(getTabBarBottomPadding(20)).toBe(169);
     });
   });
 });

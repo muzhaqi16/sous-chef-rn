@@ -5,8 +5,12 @@
 export const TAB_BAR_HEIGHT = 65;
 
 /**
- * Calculate bottom padding that accounts for the floating tab bar + safe area.
- * Replaces the repeated `TAB_BAR_HEIGHT + safeBottom + 16` pattern.
+ * The action button floats above the bar's right edge, so a list has to scroll
+ * clear of the button, not just the bar. This is trailing slack after the last
+ * row — it adds scroll distance at the end and takes no visible space.
  */
+const FLOATING_ACTION_CLEARANCE = 68;
+
+/** Bottom padding that clears the floating tab bar, its button, and the safe area. */
 export const getTabBarBottomPadding = (safeBottom: number): number =>
-  TAB_BAR_HEIGHT + safeBottom + 16;
+  TAB_BAR_HEIGHT + safeBottom + 16 + FLOATING_ACTION_CLEARANCE;
