@@ -28,6 +28,9 @@ import { GlassSurface, supportsGlass } from '#components/atoms/GlassSurface';
 import { motion } from '#/theme/foundations/motion';
 import { TAB_BAR_HEIGHT } from '#constants/layout';
 
+/** Between the bar's top edge and the floating action button above it. */
+const FLOATING_BUTTON_GAP = 12;
+
 export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   state,
   descriptors,
@@ -114,15 +117,19 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     };
   });
 
-  const containerStyle = {
-    width: tabBarWidth,
-    bottom:
-      Platform.OS === 'ios'
-        ? Math.max(safeBottom * 0.5, 16)
-        : Math.max(safeBottom, 16),
-  };
+  const barBottom =
+    Platform.OS === 'ios'
+      ? Math.max(safeBottom * 0.5, 16)
+      : Math.max(safeBottom, 16);
 
-  const middleIndex = Math.floor(state.routes.length / 2);
+  const containerStyle = { width: tabBarWidth, bottom: barBottom };
+
+  // Sits above the bar, flush with its right edge — the bar is centred at 95%
+  // of the screen, so that edge is half the remainder in from the right.
+  const floatingButtonStyle = {
+    bottom: barBottom + TAB_BAR_HEIGHT + FLOATING_BUTTON_GAP,
+    right: (screenWidth - tabBarWidth) / 2,
+  };
 
   const handleTabPress = (
     route: { key: string; name: string; params?: object },
@@ -157,7 +164,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     }
   };
 
-  return (
+  const bar = (
     <Animated.View
       style={[
         containerStyle,
@@ -169,7 +176,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     >
       <GlassSurface style={styles.glassFill} />
       <View style={styles.tabsRow}>
-        {state.routes.slice(0, middleIndex).map((route, index) => {
+        {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const isFocused = state.index === index;
           return (
@@ -186,58 +193,39 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
             />
           );
         })}
-
-        {showAddButton ? (
-          <View
-            ref={addButtonRef}
-            collapsable={false}
-            style={styles.addButtonContainer}
-            onLayout={() => {
-              requestAnimationFrame(() => {
-                addButtonRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-                  if (w > 0 && h > 0) {
-                    setAddButtonRect({
-                      x: pageX,
-                      y: pageY,
-                      width: w,
-                      height: h,
-                    });
-                  }
-                });
-              });
-            }}
-          >
-            <AddButton
-              onPress={handleAddPress}
-              icon={addButtonConfig.icon}
-              iconLibrary={addButtonConfig.iconLibrary}
-              disabled={isAddButtonDisabled}
-            />
-          </View>
-        ) : (
-          <View style={styles.addButtonPlaceholder} />
-        )}
-
-        {state.routes.slice(middleIndex).map((route, index) => {
-          const actualIndex = middleIndex + index;
-          const { options } = descriptors[route.key];
-          const isFocused = state.index === actualIndex;
-          return (
-            <TabItem
-              key={route.key}
-              route={route}
-              isFocused={isFocused}
-              options={options}
-              onPress={() => handleTabPress(route, isFocused, actualIndex)}
-              icon={tabs[route.name]?.icon}
-              showLabel={showNavigationLabels}
-              activeTabIndex={activeTabIndex}
-              tabIndex={actualIndex}
-            />
-          );
-        })}
       </View>
     </Animated.View>
+  );
+
+  const floatingAddButton = showAddButton ? (
+    <Animated.View
+      ref={addButtonRef}
+      collapsable={false}
+      style={[floatingButtonStyle, styles.floatingAddButton, animatedStyle]}
+      onLayout={() => {
+        requestAnimationFrame(() => {
+          addButtonRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+            if (w > 0 && h > 0) {
+              setAddButtonRect({ x: pageX, y: pageY, width: w, height: h });
+            }
+          });
+        });
+      }}
+    >
+      <AddButton
+        onPress={handleAddPress}
+        icon={addButtonConfig.icon}
+        iconLibrary={addButtonConfig.iconLibrary}
+        disabled={isAddButtonDisabled}
+      />
+    </Animated.View>
+  ) : null;
+
+  return (
+    <>
+      {bar}
+      {floatingAddButton}
+    </>
   );
 };
 
@@ -271,12 +259,8 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     flexDirection: 'row',
   },
-  addButtonContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.sm,
-  },
-  addButtonPlaceholder: {
-    width: theme.sizes.fab.md + theme.spacing.md, // Same width as addButtonContainer to maintain layout
+  floatingAddButton: {
+    position: 'absolute',
+    zIndex: theme.zIndex.overlay,
   },
 }));
