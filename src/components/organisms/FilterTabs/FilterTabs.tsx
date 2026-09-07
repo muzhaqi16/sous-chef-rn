@@ -136,7 +136,7 @@ const styles = StyleSheet.create(theme => ({
   },
   scrollContent: {
     gap: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.base,
+    paddingHorizontal: theme.layout.pageGutter,
   },
   tab: {
     flexDirection: 'row',

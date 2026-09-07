@@ -108,7 +108,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.base,
+    paddingHorizontal: theme.layout.pageGutter,
   },
   scrollView: {
     flexShrink: 1,

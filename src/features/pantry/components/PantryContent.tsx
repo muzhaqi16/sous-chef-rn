@@ -534,7 +534,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     // Matches the search bar and the rows below, so the whole column shares
     // one gutter.
-    paddingHorizontal: theme.spacing.base,
+    paddingHorizontal: theme.layout.pageGutter,
     paddingTop: theme.spacing.base,
     paddingBottom: theme.spacing.sm,
   },
@@ -549,10 +549,10 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
   },
   searchContainer: {
-    paddingHorizontal: theme.spacing.base,
+    paddingHorizontal: theme.layout.pageGutter,
   },
   statsContainer: {
-    paddingHorizontal: theme.spacing.base,
+    paddingHorizontal: theme.layout.pageGutter,
   },
   listContentEmpty: {
     paddingHorizontal: 0,

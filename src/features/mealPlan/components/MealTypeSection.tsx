@@ -79,6 +79,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: theme.spacing.sm,
-    marginHorizontal: theme.layout.rowGutter,
+    marginHorizontal: theme.layout.pageGutter,
   },
 }));

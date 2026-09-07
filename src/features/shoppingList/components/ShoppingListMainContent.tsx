@@ -596,6 +596,6 @@ export const ShoppingListMainContent: React.FC<
 
 const styles = StyleSheet.create(theme => ({
   searchBarContainer: {
-    paddingHorizontal: theme.spacing.base,
+    paddingHorizontal: theme.layout.pageGutter,
   },
 }));

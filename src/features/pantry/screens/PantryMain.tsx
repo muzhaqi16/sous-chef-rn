@@ -515,6 +515,6 @@ export const PantryMain: React.FC = () => (
 );
 const styles = StyleSheet.create(theme => ({
   searchContainer: {
-    paddingHorizontal: theme.spacing.base,
+    paddingHorizontal: theme.layout.pageGutter,
   },
 }));

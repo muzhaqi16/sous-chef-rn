@@ -773,6 +773,6 @@ const styles = StyleSheet.create(theme => ({
   },
   nutritionContainer: {
     marginBottom: theme.spacing.sm,
-    marginHorizontal: theme.layout.rowGutter,
+    marginHorizontal: theme.layout.pageGutter,
   },
 }));

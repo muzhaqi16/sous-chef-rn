@@ -345,7 +345,7 @@ export const commonStyles = StyleSheet.create(theme => ({
   // `rowWrapper` is its place in the list, `rowSurface` the card, `rowContent`
   // the slots inside it. Its text roles are `rowType` in `theme/foundations`.
   rowWrapper: {
-    marginHorizontal: theme.layout.rowGutter,
+    marginHorizontal: theme.layout.pageGutter,
     marginBottom: theme.layout.rowGap,
   },
   rowSurface: {
