@@ -344,8 +344,9 @@ export const commonStyles = StyleSheet.create(theme => ({
   // The list row, defined once for the four shells that compose one:
   // `rowWrapper` is its place in the list, `rowSurface` the card, `rowContent`
   // the slots inside it. Its text roles are `rowType` in `theme/foundations`.
+  // No horizontal inset: the list that renders the row owns the page gutter,
+  // so a row placing itself would be the second author of one edge.
   rowWrapper: {
-    marginHorizontal: theme.layout.pageGutter,
     marginBottom: theme.layout.rowGap,
   },
   rowSurface: {

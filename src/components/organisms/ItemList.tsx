@@ -26,6 +26,7 @@ import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { CachedImage, preloadImages } from '#components/atoms/CachedImage';
 import { commonStyles } from '#/styles/commonStyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
@@ -264,7 +265,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   if (items.length === 0 && emptyState) {
     return (
       <ScrollView
-        contentContainerStyle={emptyContentStyle}
+        contentContainerStyle={[styles.listContent, emptyContentStyle]}
         onScroll={onScroll}
         onScrollBeginDrag={onScrollBeginDrag}
         onScrollEndDrag={onScrollEndDrag}
@@ -305,7 +306,7 @@ export const ItemList: React.FC<ItemListProps> = ({
           keyExtractor={keyExtractor}
           getItemType={getItemType}
           CellRendererComponent={perfCallbacks.CellRendererComponent}
-          contentContainerStyle={contentStyle}
+          contentContainerStyle={[styles.listContent, contentStyle]}
           showsVerticalScrollIndicator={false}
           onScroll={onScroll}
           onScrollBeginDrag={onScrollBeginDrag}
@@ -356,3 +357,9 @@ export const ItemList: React.FC<ItemListProps> = ({
     </ItemListActionsProvider>
   );
 };
+
+const styles = StyleSheet.create(theme => ({
+  listContent: {
+    paddingHorizontal: theme.layout.pageGutter,
+  },
+}));

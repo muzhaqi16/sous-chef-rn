@@ -23,9 +23,10 @@ export const RecipeSkeleton: React.FC = () => (
 );
 
 const styles = StyleSheet.create(theme => ({
-  // No gutter or gap of its own: a skeleton row places itself exactly as the
-  // real row does, so adding either here insets and spaces it twice over.
+  // Mirrors the real list's own content inset, so a skeleton row lands exactly
+  // where the row it stands in for will.
   container: {
+    paddingHorizontal: theme.layout.pageGutter,
     paddingTop: theme.spacing.xs,
     paddingBottom: theme.spacing.md,
   },

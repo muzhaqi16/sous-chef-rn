@@ -47,6 +47,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     backgroundColor: theme.colors.background,
   },
   rows: {
+    paddingHorizontal: theme.layout.pageGutter,
     paddingTop: theme.spacing.sm,
   },
 }));

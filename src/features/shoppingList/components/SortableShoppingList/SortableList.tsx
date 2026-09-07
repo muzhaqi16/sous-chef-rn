@@ -175,7 +175,10 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
                 getItemType={getItemType}
                 renderItem={renderItem}
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={contentContainerStyle}
+                contentContainerStyle={[
+                  styles.listContent,
+                  contentContainerStyle,
+                ]}
                 ListHeaderComponent={ListHeaderComponent ?? undefined}
                 ListFooterComponent={ListFooterComponent ?? undefined}
                 ListEmptyComponent={ListEmptyComponent ?? undefined}
@@ -216,6 +219,9 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  listContent: {
+    paddingHorizontal: theme.layout.pageGutter,
+  },
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

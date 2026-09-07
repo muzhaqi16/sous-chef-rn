@@ -183,6 +183,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
   },
   listContent: {
+    paddingHorizontal: theme.layout.pageGutter,
     paddingTop: theme.spacing.smPlus,
   },
 }));

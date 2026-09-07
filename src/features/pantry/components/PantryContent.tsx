@@ -344,10 +344,10 @@ export const PantryContent = React.forwardRef<
 
     const listContentStyle = isEmpty
       ? styles.listContentEmpty
-      : {
-          paddingHorizontal: 0,
-          paddingBottom: getTabBarBottomPadding(safeBottom),
-        };
+      : [
+          styles.listContent,
+          { paddingBottom: getTabBarBottomPadding(safeBottom) },
+        ];
 
     // Read from context, not from `renderItem`'s closure — see
     // `PantryStickyTabs` for why that matters to every other cell.
@@ -532,9 +532,6 @@ const styles = StyleSheet.create(theme => ({
   },
   header: {
     backgroundColor: theme.colors.background,
-    // Matches the search bar and the rows below, so the whole column shares
-    // one gutter.
-    paddingHorizontal: theme.layout.pageGutter,
     paddingTop: theme.spacing.base,
     paddingBottom: theme.spacing.sm,
   },
@@ -548,10 +545,9 @@ const styles = StyleSheet.create(theme => ({
   stickyHeaderActive: {
     backgroundColor: theme.colors.background,
   },
-  searchContainer: {
-    paddingHorizontal: theme.layout.pageGutter,
-  },
-  statsContainer: {
+  searchContainer: {},
+  statsContainer: {},
+  listContent: {
     paddingHorizontal: theme.layout.pageGutter,
   },
   listContentEmpty: {

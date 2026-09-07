@@ -81,16 +81,16 @@ export const DayMealList: React.FC<DayMealListProps> = ({
 
 DayMealList.displayName = 'DayMealList';
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
   },
   content: {
-    // No horizontal gutter: a row places itself via `commonStyles.rowWrapper`,
-    // so one here insets it twice. Everything that is NOT a row carries its own.
+    // The list owns the gutter for everything it renders, rows included.
+    paddingHorizontal: theme.layout.pageGutter,
     paddingBottom: 120, // Account for tab bar
   },
   contentEmpty: {
     flexGrow: 1,
   },
-});
+}));

@@ -505,7 +505,8 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   scrollContent: {
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.layout.pageGutter,
+    paddingVertical: theme.spacing.md,
   },
   itemInfo: {
     flex: 1,
