@@ -175,7 +175,7 @@ export const Screen: React.FC<ScreenProps> = ({
 
   return (
     <View style={[styles.container, style]} testID={testID}>
-      {chrome}
+      <View style={styles.chromeInset}>{chrome}</View>
       {content}
     </View>
   );
@@ -196,6 +196,16 @@ const styles = StyleSheet.create(theme => ({
   },
   body: {
     flex: 1,
+  },
+  // Chrome sits outside the body, so the body's gutter never reaches it. A tab
+  // header is page content and takes one; a pushed screen's header insets itself.
+  chromeInset: {
+    variants: {
+      chrome: {
+        tab: { paddingHorizontal: theme.layout.pageGutter },
+        other: {},
+      },
+    },
   },
   fixed: {
     flex: 1,

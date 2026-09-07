@@ -41,10 +41,9 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
     : formattedQuantity;
 
   const isDisabled = disabled || isPurchased;
-  const isInlineUnit = unit ? unit.length <= 3 : false;
 
   styles.useVariants({
-    inline: isInlineUnit,
+    inline: true,
     disabled: isDisabled,
     purchased: isPurchased,
   });
@@ -101,6 +100,9 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     minWidth: 40,
+    // A unit never stacks under its quantity: the badge's height would then
+    // depend on how the unit is spelled, and the row's with it.
+    maxWidth: 120,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.surfaceVariant,
