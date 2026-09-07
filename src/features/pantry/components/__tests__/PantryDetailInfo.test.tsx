@@ -70,6 +70,7 @@ describe('PantryDetailInfo', () => {
     netWeightText: null as string | null,
     remainingNetWeightText: null as string | null,
     quantityBreakdownText: null as string | null,
+    portionsLeftText: null as string | null,
     packageBreakdownText: null as string | null,
     shelfLifeDays: null as number | null | undefined,
     shelfLifeOpenedDays: null as number | null | undefined,

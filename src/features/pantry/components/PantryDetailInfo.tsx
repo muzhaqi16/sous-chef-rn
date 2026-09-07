@@ -32,6 +32,7 @@ interface PantryDetailInfoProps {
   netWeightText: string | null;
   remainingNetWeightText: string | null;
   quantityBreakdownText: string | null;
+  portionsLeftText: string | null;
   packageBreakdownText: string | null;
   shelfLifeDays: number | null | undefined;
   shelfLifeOpenedDays: number | null | undefined;
@@ -49,6 +50,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   netWeightText,
   remainingNetWeightText,
   quantityBreakdownText,
+  portionsLeftText,
   packageBreakdownText,
   shelfLifeDays,
   shelfLifeOpenedDays,
@@ -149,6 +151,17 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           label={t('labels.inventory')}
           value={quantityBreakdownText}
           icon="layers-outline"
+          showColon={false}
+          labelStyle={styles.labelText}
+          valueStyle={styles.valueText}
+          containerStyle={styles.rowContainer}
+        />
+      )}
+      {!!portionsLeftText && (
+        <InfoRow
+          label={t('labels.portions')}
+          value={portionsLeftText}
+          icon="pie-chart-outline"
           showColon={false}
           labelStyle={styles.labelText}
           valueStyle={styles.valueText}

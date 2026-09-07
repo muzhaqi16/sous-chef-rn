@@ -24,12 +24,7 @@ import { usePantryActions } from './PantryActionsContext';
 import { Text } from '#components/atoms/Text';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { useIsPendingSync } from '#features/pantry/hooks/useIsPendingSync';
-import {
-  getExpirationStatus,
-  formatPackageBreakdown,
-  formatNetWeightDisplay,
-  formatQuantityBreakdown,
-} from '#features/pantry/hooks/usePantryItemTransformation';
+import { getExpirationStatus } from '#features/pantry/hooks/usePantryItemTransformation';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated';
 import { motion } from '#/theme/foundations/motion';
@@ -131,22 +126,6 @@ const SlideAnimatedWrapper: React.FC<{
   );
 };
 
-/** Returns true when at least one usage has been recorded for the item. */
-function hasConsumptionStarted(item: {
-  lastUsedAt: string | null;
-  netWeight: number | null;
-  remainingNetWeight: number | null;
-}): boolean {
-  if (item.lastUsedAt != null) return true;
-  if (
-    item.netWeight != null &&
-    item.remainingNetWeight != null &&
-    item.remainingNetWeight !== item.netWeight
-  )
-    return true;
-  return false;
-}
-
 interface PantryItemCardProps {
   pantryItemRef: FragmentType<typeof PantryItemCard_PantryItemFragmentDoc>;
 }
@@ -211,51 +190,10 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   // Custom names only; the default locations are the filter tabs.
   const location = pantryItem.storageLocation?.name ?? null;
   const isOutOfStock = pantryItem.quantity === 0;
-  const packageBreakdownText = formatPackageBreakdown(
-    pantryItem.packageBreakdown,
-    pantryItem.quantityBreakdown?.totalContentUnits,
-  );
-  const remainingAmount = hasConsumptionStarted(pantryItem)
-    ? formatNetWeightDisplay(
-        pantryItem.remainingNetWeight,
-        pantryItem.netWeightUnit,
-      )
-    : null;
-  const remainingNetWeightText = remainingAmount
-    ? t('pantryItemCard.remainingAmount', { amount: remainingAmount })
-    : null;
-  // The stack's own portion definition ("1 bulb = 10 cloves"), which the server
-  // seeds from the catalog and the stack then owns.
-  const portionsLeftText =
-    pantryItem.remainingPortions != null && pantryItem.portionUnit
-      ? t('pantryItemCard.portionsLeft', {
-          count: pantryItem.remainingPortions,
-          unit: pantryItem.portionUnit.symbol || pantryItem.portionUnit.name,
-        })
-      : null;
-  const quantityBreakdownText = formatQuantityBreakdown(
-    pantryItem.quantityBreakdown,
-  );
-  const activeBatchCount = pantryItem.activeBatchCount;
-
-  // The single "detail" line shown under the quantity on the right — quantity
-  // breakdown, remaining net weight, or batch count (at most one).
-  const detailText =
-    quantityBreakdownText ||
-    packageBreakdownText ||
-    portionsLeftText ||
-    remainingNetWeightText ||
-    (activeBatchCount && activeBatchCount > 1
-      ? t('pantryItemDetail.batch.historyTotal', { count: activeBatchCount })
-      : undefined) ||
-    undefined;
-
-  // Location fills the empty left line-2 slot when there's no expiry, else
-  // rides the right side if the detail line is free. With both present it is
-  // dropped to keep the row at two lines — the filter tabs already convey it.
-  const locationOnLeft = !isOutOfStock && !expirationText && !!location;
-  const rightSecondary =
-    detailText || (locationOnLeft ? undefined : location || undefined);
+  // Each of the row's four text slots has ONE owner, and an absent value leaves
+  // its slot empty rather than letting another value move in. Amounts and
+  // breakdowns belong to the detail screen.
+  const rightSecondary = location || undefined;
 
   const itemActions = {
     onPress: () => actions.onItemPress(id),
@@ -301,15 +239,6 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
           status={expiryStatusKey}
           bold={expirationBold}
         />
-      );
-    }
-    // No expiry — surface the storage location here instead of as a third row
-    // on the right.
-    if (locationOnLeft) {
-      return (
-        <Text role="footnote" tone="secondary" numberOfLines={1}>
-          {location}
-        </Text>
       );
     }
     return undefined;
