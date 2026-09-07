@@ -229,6 +229,10 @@ const PERSISTED_KEYS = classifyKeys(
   'rememberMe',
   'hasStoredCredentials',
   'showBiometricSetup',
+  // Device-scoped, and deliberately NOT session-scoped: the server's per-device
+  // attempt budget does not reset because somebody signed out.
+  'biometricRetryAt',
+  'biometricAttempts',
 
   // User preferences
   'theme',

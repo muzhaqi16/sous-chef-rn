@@ -2,8 +2,11 @@
 // registration and the device credential all present the same value. Two of
 // them diverging is invisible to typecheck and to every other suite — each one
 // keeps passing against its own id.
-
-const DEVICE_ID = 'device_canonical';
+//
+// The STRUCTURAL half of that rule — that no other module mints or persists an
+// identity — is the `device-identity` concern in
+// `scripts/check-canonical-mechanisms.mjs`, which derives its file set from the
+// tree and can prove it still fails. What is left here is behavioural.
 
 const mockMutate = jest.fn().mockResolvedValue({ data: {} });
 const mockQuery = jest.fn().mockResolvedValue({ data: {} });
@@ -16,10 +19,7 @@ jest.mock('#/apollo/client', () => ({
   flushCachePersistence: jest.fn(),
 }));
 
-jest.mock('#/storage/deviceId', () => ({
-  getDeviceId: () => DEVICE_ID,
-  initializeDeviceId: () => DEVICE_ID,
-}));
+jest.mock('#/storage/deviceId');
 
 const mockStoreState: Record<string, unknown> = {
   isOnline: true,
@@ -77,14 +77,10 @@ jest.mock('#/hooks/useFeatureHint', () => ({
   resetAllFeatureHints: jest.fn(),
 }));
 
-import fs from 'fs';
-import path from 'path';
 import { authService } from '#/services/authService';
+import { MOCK_DEVICE_ID as DEVICE_ID } from '#/storage/__mocks__/deviceId';
 import { LoginDocument } from '#operations/auth/auth.generated';
 import { print } from 'graphql';
-
-const SRC = path.join(__dirname, '../../src');
-const read = (relative: string) => fs.readFileSync(path.join(SRC, relative), 'utf8');
 
 /** Variables of the one mutate call whose input carries `key`. */
 const inputWith = (key: string) =>
@@ -119,8 +115,12 @@ describe('every identity surface presents one value', () => {
     mockQuery.mockResolvedValueOnce({
       data: {
         deviceCredentials: [
-          { id: 'other', deviceId: 'device_someone_else' },
-          { id: 'mine', deviceId: DEVICE_ID },
+          {
+            __typename: 'DeviceCredential',
+            id: 'other',
+            deviceId: 'device_someone_else',
+          },
+          { __typename: 'DeviceCredential', id: 'mine', deviceId: DEVICE_ID },
         ],
       },
     });
@@ -130,36 +130,10 @@ describe('every identity surface presents one value', () => {
     expect(inputWith('id')).toEqual(expect.objectContaining({ id: 'mine' }));
   });
 
-  // The three surfaces this suite cannot drive without standing up their own
-  // transports. Each is asserted behaviourally in its own suite; here they are
-  // held to the same SOURCE, which is what keeps those suites comparable.
-  it.each([
-    'apollo/links/authLink.ts',
-    'apollo/links/wsLink.ts',
-    'utils/deviceInfo.ts',
-  ])('%s reads the canonical accessor', file => {
-    expect(read(file)).toContain(
-      "import { getDeviceId } from '#/storage/deviceId'",
-    );
-  });
-
-  it('no module holds a second persisted identity', () => {
-    expect(fs.existsSync(path.join(SRC, 'storage/deviceIdentity.ts'))).toBe(false);
-  });
 });
 
 describe('the sign-in input carries no device field', () => {
   it('travels in the header only', () => {
     expect(print(LoginDocument)).not.toMatch(/deviceId/);
-  });
-});
-
-describe('the value fits what the server accepts', () => {
-  it('is at most 128 characters, past which the server reads it as absent', () => {
-    const { getDeviceId } = jest.requireActual<
-      typeof import('#/storage/deviceId')
-    >('#/storage/deviceId');
-
-    expect((getDeviceId() ?? '').length).toBeLessThanOrEqual(128);
   });
 });

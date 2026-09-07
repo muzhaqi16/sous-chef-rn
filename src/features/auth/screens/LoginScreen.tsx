@@ -19,6 +19,7 @@ import { type LoginInput } from '#/graphql/generated/schemaTypes';
 import { useRememberMe } from '#features/auth/hooks/useRememberMe';
 import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
 import { useAppStore } from '#store/useAppStore';
+import { useBiometricBackoff } from '../hooks/useBiometricBackoff';
 import { authService } from '#/services/authService';
 import { CodeVerificationScreen } from '#features/auth/screens/CodeVerificationScreen';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -117,6 +118,7 @@ export function LoginScreen(): React.JSX.Element {
   const [shouldShowBiometricButton, setShouldShowBiometricButton] =
     useState(false);
   const [isBiometricLoading, setIsBiometricLoading] = useState(false);
+  const biometricBackoff = useBiometricBackoff();
   // The address a refused-as-unverified sign-in was for. Null until the server
   // says so; set, this screen becomes the code entry for that account.
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
@@ -171,7 +173,7 @@ export function LoginScreen(): React.JSX.Element {
 
   // Biometric authentication handler
   const handleBiometricLogin = () => {
-    if (isBiometricLoading) return;
+    if (isBiometricLoading || !biometricBackoff.canAttempt) return;
 
     Telemetry.trackEvent('login_attempt', {
       method: 'biometric',
@@ -228,6 +230,9 @@ export function LoginScreen(): React.JSX.Element {
   const getBiometricButtonText = () => {
     if (isBiometricLoading) return t('labels.authenticating');
     if (isLoggingIn) return t('auth.loggingIn');
+    if (!biometricBackoff.canAttempt) {
+      return t('auth.biometricRetryIn', { count: biometricBackoff.countdown });
+    }
 
     const named = authoritativeBiometryName(biometricInfo.biometryType);
     if (named) return t('auth.useBiometryType', { type: named });
@@ -293,12 +298,17 @@ export function LoginScreen(): React.JSX.Element {
           <AppPressable
             style={styles.biometricButton}
             onPress={() => handleBiometricLogin()}
-            disabled={isBiometricLoading || isLoggingIn}
+            disabled={
+              isBiometricLoading || isLoggingIn || !biometricBackoff.canAttempt
+            }
             accessibilityRole="button"
             accessibilityLabel={getBiometricButtonText()}
             accessibilityHint={t('auth.biometricLoginHint')}
             accessibilityState={{
-              disabled: isBiometricLoading || isLoggingIn,
+              disabled:
+                isBiometricLoading ||
+                isLoggingIn ||
+                !biometricBackoff.canAttempt,
               busy: isBiometricLoading,
             }}
           >

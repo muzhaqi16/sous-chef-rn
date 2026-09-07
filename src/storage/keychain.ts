@@ -26,6 +26,7 @@ export const DEFAULT_SERVICE = `${NAMESPACE}.credentials`;
 export const CREDENTIALS_INDICATOR_SERVICE = `${NAMESPACE}.credentials.indicator`;
 export const TEMP_REGISTRATION_SERVICE = `${NAMESPACE}.temp.registration`;
 export const SESSION_TOKENS_SERVICE = `${NAMESPACE}.session.tokens`;
+export const DEVICE_ID_SERVICE = `${NAMESPACE}.device.id`;
 export const LAST_BIOMETRIC_EMAIL_KEY =
   appConfig.identity.lastBiometricEmailKey;
 
@@ -552,6 +553,44 @@ export async function clearSessionTokens(): Promise<boolean> {
         error,
       );
       return false;
+    }
+  });
+}
+
+/**
+ * This install's device identifier, kept beside the credentials it binds. On
+ * iOS a keychain entry outlives an app deletion while MMKV does not, so an
+ * identifier held only in MMKV lets a surviving credential name a device the
+ * server has never seen.
+ */
+export async function saveDeviceId(deviceId: string): Promise<boolean> {
+  return queueOperation(async () => {
+    try {
+      const stored = await setGenericPassword('device', deviceId, {
+        service: DEVICE_ID_SERVICE,
+        accessible: ACCESSIBLE.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+      });
+      if (!stored) {
+        logger.warn('Keychain rejected the device id write');
+        return false;
+      }
+      return true;
+    } catch (error) {
+      logger.warn('Failed to persist the device id to the keychain:', error);
+      return false;
+    }
+  });
+}
+
+/** The stored identifier; null when there is none and when the read fails. */
+export async function loadDeviceId(): Promise<string | null> {
+  return queueOperation(async () => {
+    try {
+      const entry = await getGenericPassword({ service: DEVICE_ID_SERVICE });
+      return entry ? entry.password : null;
+    } catch (error) {
+      logger.warn('Failed to read the device id from the keychain:', error);
+      return null;
     }
   });
 }

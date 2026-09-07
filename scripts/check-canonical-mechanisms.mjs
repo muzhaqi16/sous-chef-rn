@@ -70,6 +70,10 @@ const importsName = (module, name) =>
  * like, and which files are allowed to hold the alternative because they ARE
  * the canonical mechanism.
  */
+/** Strips block and line comments so prose about a rule is not a finding. */
+const withoutComments = source =>
+  source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+
 export const CONCERNS = [
   {
     id: 'list-primitive',
@@ -189,6 +193,20 @@ export const CONCERNS = [
     detect: importsName('#\\/?storage\\/mmkv', 'storage'),
     owns: [/^src\/storage\//, /^src\/store\//, /^src\/apollo\//],
   },
+  {
+    id: 'device-identity',
+    canonical: 'getDeviceId / ensureDeviceId (#/storage/deviceId)',
+    why: 'A second identifier files a second Device row, and the credential bound to the first is then refused as naming an unknown device.',
+    // The MINT and the KEY, not the read: a camelCase `deviceId` is an operation
+    // field or a header value, so this matches the quoted storage key and the
+    // minting template. Comments are stripped first — a detector that flags the
+    // prose about a rule teaches people to stop writing the prose.
+    detect: source => {
+      const code = withoutComments(source);
+      return /['"`]device_id['"`]/.test(code) || /`device_\$\{/.test(code);
+    },
+    owns: [/^src\/storage\/deviceId\.ts$/],
+  },
 ];
 
 const violations = (rel, source) =>
@@ -248,6 +266,29 @@ if (process.argv.includes('--self-test')) {
     [
       'src/features/x/Carousel.tsx',
       "import { FlatList } from 'react-native';\nconst a = <FlatList horizontal pagingEnabled />;",
+      [],
+    ],
+    [
+      'src/features/x/OwnIdentity.ts',
+      "const KEY = 'device_id';\nstorage.set(KEY, id);",
+      ['device-identity'],
+    ],
+    [
+      'src/services/x/Mints.ts',
+      'const id = `device_${generateId()}`;',
+      ['device-identity'],
+    ],
+    // Prose about the key is not a second identity.
+    [
+      'src/services/telemetry/TelemetryService.ts',
+      '// searchable with `| json | device_id="..."`, and `device_id` is\n// stamped at flush.\nconst a = 1;',
+      [],
+    ],
+    // The canonical accessor itself, and the ordinary camelCase field name.
+    ['src/storage/deviceId.ts', "const DEVICE_ID_KEY = 'device_id';", []],
+    [
+      'src/apollo/links/authLink.ts',
+      "const deviceId = getDeviceId();\nheaders['x-device-id'] = deviceId;",
       [],
     ],
     [

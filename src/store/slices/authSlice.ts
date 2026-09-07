@@ -96,6 +96,12 @@ export interface AuthState {
   // NOTE: rememberMe is owned by preferencesSlice — do NOT duplicate here
   hasStoredCredentials: boolean | null;
 
+  // Wall-clock deadline before another device-credential exchange may be sent,
+  // and the count behind it. A DEADLINE, not a countdown, so a backgrounded JS
+  // thread cannot stretch it, and persisted so a relaunch cannot skip it.
+  biometricRetryAt: number;
+  biometricAttempts: number;
+
   // Auto-login state
   isAutoLoggingIn: boolean;
 
@@ -123,17 +129,32 @@ export interface AuthState {
   setOnboarded: (onboarded: boolean) => void;
   clearAuth: () => void;
   setHasStoredCredentials: (has: boolean | null) => void;
+  registerBiometricRefusal: (retryAfterMs?: number) => void;
+  clearBiometricBackoff: () => void;
   setIsAutoLoggingIn: (loading: boolean) => void;
   setAuthIsLoading: (v: boolean) => void;
   setAuthIsLoadingCredentials: (v: boolean) => void;
   setSessionTokensInKeychain: (inKeychain: boolean) => void;
 }
 
+/**
+ * Seconds between device-credential exchanges after a refusal. Index 0 is the
+ * never-refused state, so counting from 1 always lands on a real delay.
+ */
+const BIOMETRIC_BACKOFF_SECONDS = [0, 30, 60, 180, 300];
+
+const backoffForAttempt = (attempt: number): number =>
+  BIOMETRIC_BACKOFF_SECONDS[
+    Math.min(attempt, BIOMETRIC_BACKOFF_SECONDS.length - 1)
+  ] * 1000;
+
 const initialAuthState = {
   user: null,
   accessToken: null,
   refreshToken: null,
   hasStoredCredentials: null,
+  biometricRetryAt: 0,
+  biometricAttempts: 0,
   isAutoLoggingIn: false,
   authIsLoading: false,
   authIsLoadingCredentials: false,
@@ -285,6 +306,22 @@ export const createAuthSlice: StateCreator<
     setHasStoredCredentials: has => {
       set(state => {
         state.hasStoredCredentials = has;
+      });
+    },
+
+    registerBiometricRefusal: retryAfterMs => {
+      set(state => {
+        state.biometricAttempts += 1;
+        // The server's own deadline wins: it knows what budget is left.
+        const wait = retryAfterMs ?? backoffForAttempt(state.biometricAttempts);
+        state.biometricRetryAt = Date.now() + wait;
+      });
+    },
+
+    clearBiometricBackoff: () => {
+      set(state => {
+        state.biometricAttempts = 0;
+        state.biometricRetryAt = 0;
       });
     },
 

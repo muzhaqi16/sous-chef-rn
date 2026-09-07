@@ -33,6 +33,8 @@ const mockClearCredentials = jest.fn().mockResolvedValue(undefined);
 const mockHasCredentials = jest.fn().mockResolvedValue(true);
 const mockLoadCredentials = jest.fn();
 const mockGetLastBiometricEmail = jest.fn();
+jest.mock('#/storage/deviceId');
+
 jest.mock('#/storage/keychain', () => ({
   clearCredentials: (...args: unknown[]) => mockClearCredentials(...args),
   hasCredentials: (...args: unknown[]) => mockHasCredentials(...args),
@@ -140,9 +142,8 @@ describe('authService.autoLogin — stored-credential lifecycle', () => {
     const ok = await authService.autoLogin();
 
     expect(ok).toBe(false);
-    // The code also stands for a spent per-device attempt budget, which the
-    // server does not distinguish — so it cannot mean the secret is dead.
-    // AUTH_DEVICE_CREDENTIAL_INVALID is the code that says that, below.
+    // AUTH_DEVICE_CREDENTIAL_INVALID, below, is the one clear-the-slot signal
+    // `exchangeDeviceCredential` names, so this code is not proof of a dead secret.
     expect(mockClearCredentials).not.toHaveBeenCalled();
   });
 

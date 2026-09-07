@@ -57,22 +57,47 @@ deliberately excluded from `PERMANENT_REJECTION_CODES` in
 `src/utils/subscriptionErrorHandler.ts`, which is the list that permanently
 disables a stream.
 
-## Two device ids, and the open question
+## The device identity
 
-They are different values for the same phone:
+One value identifies this install to the server, and every surface presents it:
+the `x-device-id` header, the socket's `connectionParams.deviceId`,
+`registerDevice(input.deviceId)`, and the issue, exchange and revoke of a device
+credential. `scripts/check-canonical-mechanisms.mjs`'s `device-identity` concern
+fails any other module that mints or persists one.
 
-| | Value | Used for |
-| --- | --- | --- |
-| `getDeviceId()` (`src/utils/deviceId.ts`) | `device_` + uuid v4, minted once and persisted to MMKV | `x-device-id` header, WS `connectionParams.deviceId` — echo attribution and connection supersession |
-| `deviceInfo.deviceId` (`src/utils/deviceInfo.ts`) | `generateDeviceFingerprint()` — a hash over hardware identifiers | `registerDevice(input.deviceId)` — the persisted `Device` row behind push |
+| | |
+| --- | --- |
+| Value | `device_` + uuid v4, minted once |
+| Owner | `src/storage/deviceId.ts` |
+| Durable copy | the keychain (`DEVICE_ID_SERVICE`), `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY` |
+| Fast copy | the MMKV `device_id` key, read synchronously |
 
-Nothing forces them to match and today they don't. Using one id for both would
-line push/device management up with echo suppression, and the persisted uuid is
-the better candidate of the two: it is synchronous (the header is set in
-`authLink`'s hot path, where the fingerprint's `await` cannot go) and it is not
-a hardware fingerprint.
+**Two accessors, picked by whether the caller can wait.** `getDeviceId()` is
+synchronous and read-only — it answers from the memo or the MMKV mirror and
+never mints, so `authLink` and `wsLink` can call it inside the request path and
+get `null` rather than an identity no later launch agrees with.
+`ensureDeviceId()` is the async, single-flight resolver: mirror, then keychain,
+then mint. Registration and the three device-credential operations use it,
+because none of them can proceed without an identity.
 
-**Not changed, deliberately.** `registerDevice` keys push delivery, so switching
-its id re-registers every existing install as a new device and strands the old
-row's push token. That is an outward-facing migration, not a refactor — it needs
-a deliberate decision and probably a backfill.
+**The keychain is authoritative, and a mint reaches it first.** The device
+credential lives in the keychain and is BOUND to this value; on iOS a keychain
+entry outlives an app deletion while MMKV does not, so an identity held only in
+MMKV would let a surviving credential name a device the server has never seen —
+refused as `AUTH_DEVICE_CREDENTIAL_INVALID`, and the enrolment silently dropped.
+Android removes both together on uninstall, so there the two stay in step by
+construction.
+
+**Neither accessor touches the recovery store.** When the device key is
+unavailable `initializeSecureStorage` opens the unencrypted recovery instance,
+which `purgeRecoveryStorage` erases on the next healthy launch. `isStorageReady()`
+is true for it, so the mirror is gated on `isRecoveryStorage()` as well:
+`ensureDeviceId()` still serves the keychain's value during an outage, and
+nothing is minted into a file that is about to be discarded.
+
+**A superseded identifier's row is retired once.** An install carrying the
+`device_fingerprint` key has a second server `Device` row whose push token no
+other client path reaches. After a confirmed registration,
+`retireLegacyDeviceRow` looks it up with `deviceByDeviceId` and soft-deletes it,
+dropping the key only once the server confirms; any failure leaves the key so
+the next launch retries.

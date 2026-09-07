@@ -215,8 +215,8 @@ export class TelemetryService {
         // Attribution, applied last so a caller's `extra` cannot shadow it.
         // BODY fields, not Loki stream labels — a label per device or run would
         // multiply the stream count, while a body field stays searchable with
-        // `| json | device_id="..."`.
-        device_id: getDeviceId() ?? 'unknown',
+        // `| json | device_id="..."`. `device_id` is stamped at FLUSH, by which
+        // time it has resolved.
         session_id: SESSION_ID,
         // The commit the build came from; a body field, never a label. `-dirty`
         // means uncommitted changes, so the build is not reproducible.
@@ -520,7 +520,14 @@ export class TelemetryService {
       return;
     }
 
-    const logs = [...this.logBuffer];
+    // Stamped here rather than per entry: before hydration the accessor answers
+    // null, and a literal substitute would pool every launch's earliest logs
+    // into one cross-device bucket that the `device_id=` filter cannot separate.
+    const deviceId = getDeviceId();
+    const logs = this.logBuffer.map(entry => ({
+      ...entry,
+      extra: { ...entry.extra, ...(deviceId ? { device_id: deviceId } : {}) },
+    }));
     this.logBuffer = [];
     this.logFlushInFlight = true;
 

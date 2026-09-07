@@ -19,7 +19,7 @@ import {
   getLastBiometricEmail,
   clearTempRegistrationPassword,
 } from '#storage/keychain';
-import { initializeDeviceId } from '#/storage/deviceId';
+import { ensureDeviceId } from '#/storage/deviceId';
 import { authService } from '#services/authService';
 import { registerQueueFailureHandler } from '#/apollo/offlineQueue/queueFailureHandler';
 
@@ -131,7 +131,7 @@ export function useStartupInit(): void {
       const detoxDisabled = detoxBackgroundServicesDisabledRef.current;
 
       // Early — WebSocket self-echo filtering needs it.
-      initializeDeviceId();
+      void ensureDeviceId();
 
       // Withdraws local-first cache writes the server refuses. Must be in place
       // before any queue drain can run.

@@ -598,32 +598,27 @@ export const collectDeviceInformation =
   };
 
 /**
- * Helper function to validate device information before sending to API
+ * The collected facts a registration input cannot be built without. The device
+ * IDENTITY is not among them: no amount of collecting produces one, so the
+ * caller resolves it first. `satisfies` is what makes a renamed field a compile
+ * error rather than a check that quietly refuses every device.
  */
 export const validateDeviceInformation = (
   deviceInfo: DeviceInformation,
-): deviceInfo is DeviceInformation & { deviceId: string } => {
+): boolean => {
   const required = [
-    'deviceId',
     'deviceType',
     'platform',
     'osName',
     'osVersion',
     'appVersion',
-  ];
+  ] satisfies (keyof DeviceInformation)[];
 
   for (const field of required) {
-    if (!deviceInfo[field as keyof DeviceInformation]) {
+    if (!deviceInfo[field]) {
       logger.warn(`Missing required device field: ${field}`);
       return false;
     }
-  }
-
-  // Absent means device storage never opened, so there is no stable identity to
-  // register under. Sending a substitute would file a new device every launch.
-  if (!deviceInfo.deviceId) {
-    logger.warn('No device id: device storage is unavailable');
-    return false;
   }
 
   return true;

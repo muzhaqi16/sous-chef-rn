@@ -429,6 +429,12 @@
       "body": "mutation DeleteStorageLocation($input: DeleteStorageLocationInput!) {\n  deleteStorageLocation(input: $input) {\n    __typename\n    ... on DeleteStorageLocationPayload {\n      storageLocation {\n        id\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
+      "id": "1e5816561cfdcd946c9451246251468972b1b593955b0c3812d9d653d2c61acf",
+      "name": "DeviceByDeviceId",
+      "type": "query",
+      "body": "query DeviceByDeviceId($deviceId: String!) {\n  deviceByDeviceId(deviceId: $deviceId) {\n    id\n    deviceId\n    __typename\n  }\n}"
+    },
+    {
       "id": "d57e33325fff8d53cfb13952fbe9d1afd7f4788adc47e55ec06a71606350bb1f",
       "name": "DuplicateMealPlan",
       "type": "mutation",

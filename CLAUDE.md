@@ -56,7 +56,7 @@ finding there is a regression to fix:
 | `check-single-consumer` | a module in `components`/`hooks`/`context`/`utils`/`constants` used by exactly one feature belongs to that feature | hard rule |
 | `check-form-state` | a form holds its fields in react-hook-form, not `useState` | 70 |
 | `check-feature-enumeration` | a feature id in a string outside its feature is a place the feature list has to be remembered | 0 |
-| `check-canonical-mechanisms` | one mechanism per concern — the list primitive, the image component, the modal surface, the date formatter, the quantity formatter, device storage. The full concern table, gates included, is § One mechanism per concern | 0 |
+| `check-canonical-mechanisms` | one mechanism per concern — the list primitive, the image component, the modal surface, the date formatter, the quantity formatter, device storage, the device identity. The full concern table, gates included, is § One mechanism per concern | 0 |
 | `check-design-tokens` | a visual property is a token, not a literal; a kit concept is not restyled in a feature | 0 failing / 9 colour + 161 icon-size tracked |
 | `check-typography-roles` | text is set by a named role, not by size and weight | 21 |
 | `check-component-tier` | a kit component sits in the tier its composition puts it in | 0 |
@@ -418,6 +418,20 @@ independent parallel queries; rationale and decision trees:
 
 Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
 
+- **One device identity, and two accessors picked by whether the caller can
+  wait.** `getDeviceId()` is synchronous and NEVER mints — `authLink` and
+  `wsLink` call it in the request path and take `null` over an identity no later
+  launch agrees with. `ensureDeviceId()` is the async single-flight resolver
+  (MMKV mirror → keychain → mint) and is what registration and the device-credential
+  issue/exchange/revoke use, since none can proceed without one. The keychain is
+  authoritative because the credential bound to the identity lives there and
+  outlives an app deletion on iOS; neither accessor reads or writes the recovery
+  MMKV instance. Detail: `docs/subscriptions-echo-and-budget.md` § The device
+  identity.
+- **Every session-end path clears the device push token**, not just
+  `logout()` — it is a `registerSessionTeardown` step for that reason. And
+  `updateDevice` is errors-as-data: discriminate `UpdateDeviceResult` on
+  `__typename`; the absence of a throw is not a success.
 - **`authService.logout()` is the only sign-out.** `SESSION_SCOPED_STATE`
   (`src/store/resetManager.ts`) is the single list of what a session end
   removes; `src/store/__tests__/sessionEndLeavesNoData.test.ts` makes every
@@ -479,6 +493,7 @@ one nobody has been able to express yet, not one that is optional.
 | Rendering a date | the shared formatters in `src/utils` (`formatters/date`, `dateUtils`) | `check-canonical-mechanisms` |
 | Rendering a quantity | `formatQuantityForDisplay` (`#/utils/formatQuantity`) | `check-canonical-mechanisms` (on the `fraction.js` import) |
 | Device storage | a persisted slice of the Zustand store | `check-canonical-mechanisms` · `no-restricted-imports` on `#storage/mmkv` |
+| This device's identity | `getDeviceId()` sync, `ensureDeviceId()` async (`#/storage/deviceId`) | `check-canonical-mechanisms` |
 | A screen's chrome | `Screen` (`#components/templates/Screen`) | `check-screen-scaffold` |
 | A sheet's shell | `Sheet` (`#components/templates/Sheet`) | `bottomSheetShell.test.ts` |
 | A list row | `commonStyles.rowWrapper` + `rowSurface` + `rowContent`, its text set by `rowType` | — (no gate: a row is composed from views, so nothing tells one from any other row of views) |

@@ -1,4 +1,6 @@
 import {
+  CREDENTIAL_KEPT_ON_CODES,
+  DEAD_ACCOUNT_CREDENTIAL_CODES,
   isDeadCredentialCode,
   isSessionEndingAuthCode,
   isRefreshableAuthCode,
@@ -31,8 +33,8 @@ describe('isDeadCredentialCode', () => {
     expect(isDeadCredentialCode(code)).toBe(false);
   });
 
-  // The code also stands for a spent per-device attempt budget, which the
-  // server does not distinguish, so it cannot mean the stored secret is dead.
+  // `exchangeDeviceCredential` names AUTH_DEVICE_CREDENTIAL_INVALID as its one
+  // clear-the-slot signal, so this code cannot mean the stored secret is dead.
   it('ends the session on AUTH_CREDENTIALS_INVALID without dropping the slot', () => {
     expect(isSessionEndingAuthCode('AUTH_CREDENTIALS_INVALID')).toBe(true);
     expect(isDeadCredentialCode('AUTH_CREDENTIALS_INVALID')).toBe(false);
@@ -194,5 +196,30 @@ describe('isDeadRefreshTokenCode', () => {
   it('never overlaps with isRefreshableAuthCode', () => {
     const overlap = REFRESHABLE.filter(isDeadRefreshTokenCode);
     expect(overlap).toEqual([]);
+  });
+});
+
+// The two lists were independent literals, so a code added to the account list
+// reached `isSessionEndingAuthCode` and not `isDeadCredentialCode` — the session
+// ended while the biometric slot stayed, offering a sign-in against an account
+// that is gone.
+describe('the dead-credential list derives from the dead-account list', () => {
+  it.each(DEAD_ACCOUNT_CREDENTIAL_CODES)(
+    'agrees with the account list on %s unless it is deliberately kept',
+    code => {
+      expect(isDeadCredentialCode(code)).toBe(
+        !CREDENTIAL_KEPT_ON_CODES.includes(code),
+      );
+    },
+  );
+
+  it('ends the session on every code in the account list', () => {
+    for (const code of DEAD_ACCOUNT_CREDENTIAL_CODES) {
+      expect(isSessionEndingAuthCode(code)).toBe(true);
+    }
+  });
+
+  it('subtracts only the login rejection', () => {
+    expect(CREDENTIAL_KEPT_ON_CODES).toEqual(['AUTH_CREDENTIALS_INVALID']);
   });
 });

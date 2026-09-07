@@ -50,7 +50,7 @@ jest.mock('#storage/keychain', () => ({
 }));
 
 jest.mock('#/storage/deviceId', () => ({
-  initializeDeviceId: jest.fn(),
+  ensureDeviceId: jest.fn().mockResolvedValue('device_test'),
 }));
 
 jest.mock('react-native-launch-arguments', () => ({

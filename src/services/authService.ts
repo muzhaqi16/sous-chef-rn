@@ -11,6 +11,7 @@ import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { errorService } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
+import { getRateLimitDetails } from '#/utils/errors/rateLimit';
 import { useStore } from '#store';
 import { runSessionTeardown } from '#store/sessionTeardown';
 import { logger } from '#/utils/environment';
@@ -25,7 +26,7 @@ import {
   RegisterDocument,
   RevokeDeviceCredentialDocument,
 } from '#operations/auth/auth.generated';
-import { getDeviceId } from '#/storage/deviceId';
+import { ensureDeviceId } from '#/storage/deviceId';
 import {
   LoginUserFragmentDoc,
   type LoginUserFragment,
@@ -43,10 +44,7 @@ import {
 } from '#/storage/keychain';
 import { t } from '#/i18n';
 import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
-import {
-  clearDevicePushTokenOnLogout,
-  registerDeviceInBackground,
-} from '#/services/auth/deviceRegistration';
+import { registerDeviceInBackground } from '#/services/auth/deviceRegistration';
 import {
   checkStoredCredentials,
   getAvailableAccounts,
@@ -518,17 +516,10 @@ async function logout(options?: LogoutOptions): Promise<void> {
       }
     }
 
-    // Tear down the prior user's push/notification state before clearing auth,
-    // so nothing survives on a shared device. The clear dispatches while the
-    // client is still authenticated; the listener unsubscribe stops a rotated
-    // token from being pushed under the logged-out session; and the
-    // notification reset clears the persisted inbox/badge (badge follows via
-    // badgeSync's post-hydration path).
-    clearDevicePushTokenOnLogout();
-
-    // The same teardown `endSession` runs. Two exits from a session otherwise
-    // leave two different resting states, and the deliberate one was the
-    // exit that skipped it.
+    // The same teardown `endSession` runs, and it is where the prior user's
+    // push state is torn down: two exits from a session otherwise leave two
+    // different resting states, and the deliberate one was the exit that
+    // skipped it.
     await runSessionTeardown();
 
     await LogoutCleanup.performLogoutCleanup();
@@ -557,6 +548,15 @@ async function logout(options?: LogoutOptions): Promise<void> {
 }
 
 /**
+ * Take the biometric affordance down with the slot it offers: the login screen
+ * renders it from `hasStoredCredentials`, which no clear path writes, so the
+ * button outlives its own credential and every tap is a dead end.
+ */
+function forgetBiometricSlot(): void {
+  useStore.getState().setHasStoredCredentials(false);
+}
+
+/**
  * Sign in by exchanging the account's stored device credential. The one path
  * for biometric sign-in — the login screen's button and the cold-start
  * auto-login both come through here, so the dead-versus-transient rule below
@@ -564,15 +564,31 @@ async function logout(options?: LogoutOptions): Promise<void> {
  */
 async function signInWithDeviceCredential(email: string): Promise<boolean> {
   try {
+    // Every attempt spends the server's per-device budget, so a refused one is
+    // held off rather than re-offered. A DEADLINE, so a relaunch cannot skip it.
+    const heldUntil = useStore.getState().biometricRetryAt;
+    const waitMs = heldUntil - Date.now();
+    if (waitMs > 0) {
+      toastService.error(
+        t('auth.biometricRetryIn', { count: Math.ceil(waitMs / 1000) }),
+      );
+      return false;
+    }
+
     const hasStoredCreds = await checkStoredCredentials(email);
     if (!hasStoredCreds) {
       logger.info('No stored credentials found for auto-login');
+      // The affordance outlives the slot: it is rendered from a flag the clear
+      // below does not reach, so say why and take the button away.
+      forgetBiometricSlot();
+      toastService.error(t('auth.biometricNeedsSetupAgain'));
       return false;
     }
 
     const stored = await loadStoredCredentials(email);
     if (!stored) {
       logger.info('Failed to load stored credentials');
+      toastService.error(t('auth.biometricUnavailableOnDevice'));
       return false;
     }
 
@@ -585,14 +601,17 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
     if (!stored.email || !credential) {
       logger.warn('Biometric slot predates the device credential; clearing it');
       await removeCredentials(email);
+      forgetBiometricSlot();
+      toastService.error(t('auth.biometricNeedsSetupAgain'));
       return false;
     }
 
     // A credential is bound to a device id, so an exchange without one cannot
     // succeed. Deliberately not cleared: the slot is fine, the device is not.
-    const deviceId = getDeviceId();
+    const deviceId = await ensureDeviceId();
     if (!deviceId) {
       logger.warn('No device id available; skipping the credential exchange');
+      toastService.error(t('auth.biometricUnavailableOnDevice'));
       return false;
     }
 
@@ -609,6 +628,7 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
       if (unmaskedLogin) {
         await handleLogin(unmaskedLogin, true);
       }
+      useStore.getState().clearBiometricBackoff();
       logger.info('Auto-login successful');
       return true;
     }
@@ -624,6 +644,11 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
           `Auto-login rejected (${payload.code}), clearing stored credentials`,
         );
         await removeCredentials(email);
+        forgetBiometricSlot();
+      } else {
+        // The slot survives, so the button is offered again — hold it off, or
+        // every tap spends another of the server's attempts for nothing.
+        useStore.getState().registerBiometricRefusal();
       }
       handleRejectedAuthPayload(payload, 'Auto-login');
       return false;
@@ -643,8 +668,17 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
           `Auto-login rejected (${code}), clearing stored credentials`,
         );
         await removeCredentials(email);
+        forgetBiometricSlot();
       } else {
         logger.warn('Auto-login failed; stored credentials kept');
+        // A throttle carries the server's own deadline, and it knows what
+        // budget is left better than the local schedule does.
+        const rateLimit = getRateLimitDetails(result.error);
+        useStore
+          .getState()
+          .registerBiometricRefusal(
+            rateLimit?.retryAfter ? rateLimit.retryAfter * 1000 : undefined,
+          );
       }
       handleAuthError(result.error, 'Auto-login');
     }
@@ -675,13 +709,20 @@ async function autoLogin(): Promise<boolean> {
  * that KEEPS the slot. Best effort: the slot is gone either way, so a failure
  * costs the server a stale row, not the person a working sign-in.
  */
-async function revokeDeviceCredentialForThisDevice(): Promise<void> {
+async function revokeDeviceCredentialForThisDevice(): Promise<boolean> {
   // Offline there is nothing to revoke against, and httpLink's abort plus
   // retryLink's attempts would otherwise hold the sign-out for ~30s on the one
   // path where the person is trying to leave the device.
-  if (useStore.getState().isOnline === false) return;
+  if (useStore.getState().isOnline === false) return false;
   try {
-    const deviceId = getDeviceId();
+    // `DeviceCredential.deviceId` is non-null, so a null here matches nothing
+    // and the revoke would resolve having done nothing at all.
+    const deviceId = await ensureDeviceId();
+    if (!deviceId) {
+      logger.warn('No device id available; cannot revoke this device');
+      return false;
+    }
+
     const listed = await client.query({
       query: MyDeviceCredentialsDocument,
       fetchPolicy: 'network-only',
@@ -689,25 +730,35 @@ async function revokeDeviceCredentialForThisDevice(): Promise<void> {
     const mine = listed.data?.deviceCredentials?.find(
       credential => credential.deviceId === deviceId,
     );
-    if (!mine) return;
+    if (!mine) return true;
 
     await client.mutate({
       mutation: RevokeDeviceCredentialDocument,
       variables: { input: { id: mine.id } },
     });
+    return true;
   } catch (error) {
     logger.warn('Could not revoke the device credential server-side', error);
+    return false;
   }
 }
 
 /** The revoke, bounded. A slow network must not hold the local sign-out. */
 async function revokeWithinBudget(): Promise<void> {
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const budget = new Promise<void>(resolve => {
-    timer = setTimeout(resolve, REVOKE_BUDGET_MS);
+  const budget = new Promise<boolean>(resolve => {
+    timer = setTimeout(() => resolve(false), REVOKE_BUDGET_MS);
   });
-  await Promise.race([revokeDeviceCredentialForThisDevice(), budget]);
+  const revoked = await Promise.race([
+    revokeDeviceCredentialForThisDevice(),
+    budget,
+  ]);
   if (timer) clearTimeout(timer);
+  // The local slot goes either way, so this is a stale server row rather than a
+  // sign-in the person loses — but it is a secret still exchangeable.
+  if (!revoked) {
+    logger.warn('The device credential may still be live server-side');
+  }
 }
 
 /**
@@ -718,7 +769,7 @@ async function revokeWithinBudget(): Promise<void> {
  */
 async function enrolDeviceCredential(email: string): Promise<boolean> {
   try {
-    const deviceId = getDeviceId();
+    const deviceId = await ensureDeviceId();
     if (!deviceId) {
       logger.warn('No device id available; not issuing a device credential');
       return false;

@@ -13,18 +13,25 @@ import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 // `AUTH_ACCOUNT_LOCKED` and `AUTH_EMAIL_NOT_VERIFIED` are in NO list below, on
 // purpose: the first is a self-clearing window, the second leaves the token
 // valid, so neither may end a session or spend a refresh.
-const DEAD_ACCOUNT_CREDENTIAL_CODES: string[] = [
+export const DEAD_ACCOUNT_CREDENTIAL_CODES: string[] = [
   ErrorCode.AuthCredentialsInvalid,
   ErrorCode.AuthAccountSuspended,
 ];
 
-// The stored biometric secret is permanently useless. `AUTH_CREDENTIALS_INVALID`
-// is pointedly ABSENT even though it ends a session above: it also stands for
-// "this device's failed-attempt budget is spent", which the server deliberately
-// does not distinguish, so clearing on it un-enrols a device whose credential is
-// fine. Rate-limit codes are absent for the same reason.
+// The stored biometric secret is permanently useless. Derived by SUBTRACTION so
+// a code added above reaches here unless it is deliberately removed.
+// `AUTH_CREDENTIALS_INVALID` is the one removed: `exchangeDeviceCredential`
+// names `AUTH_DEVICE_CREDENTIAL_INVALID` as its single clear-the-slot signal.
+// The failed-attempt lockout is `AUTH_ACCOUNT_LOCKED`, and a rate limit is a
+// top-level `OPERATION_RATE_LIMITED` that cannot populate this enum at all.
+export const CREDENTIAL_KEPT_ON_CODES: string[] = [
+  ErrorCode.AuthCredentialsInvalid,
+];
+
 const DEAD_CREDENTIAL_CODES: string[] = [
-  ErrorCode.AuthAccountSuspended,
+  ...DEAD_ACCOUNT_CREDENTIAL_CODES.filter(
+    code => !CREDENTIAL_KEPT_ON_CODES.includes(code),
+  ),
   ErrorCode.AuthDeviceCredentialInvalid,
 ];
 

@@ -180,7 +180,9 @@ describe('deviceInfo', () => {
       expect(validateDeviceInformation(info as DeviceInformation)).toBe(false);
     });
 
-    it('returns false when device storage never opened', () => {
+    // The identity is resolved by the caller before the collection runs, so a
+    // missing one is not something this function can or should discover.
+    it('does not judge the device identity', () => {
       const info: DeviceInformation = {
         deviceId: null,
         deviceType: DeviceType.Mobile,
@@ -191,21 +193,7 @@ describe('deviceInfo', () => {
         timezone: 'UTC',
         language: 'en-US',
       };
-      expect(validateDeviceInformation(info)).toBe(false);
-    });
-
-    it('returns false for empty deviceId', () => {
-      const info: DeviceInformation = {
-        deviceId: '',
-        deviceType: DeviceType.Mobile,
-        platform: MobilePlatform.Ios,
-        osName: 'iOS',
-        osVersion: '17.0',
-        appVersion: '1.0.0',
-        timezone: 'UTC',
-        language: 'en-US',
-      };
-      expect(validateDeviceInformation(info)).toBe(false);
+      expect(validateDeviceInformation(info)).toBe(true);
     });
 
     it('returns false when appVersion is missing', () => {
@@ -235,7 +223,6 @@ describe('deviceInfo', () => {
       };
       // Each case empties one required field; validation must then fail.
       const emptyRequiredFieldCases: Partial<DeviceInformation>[] = [
-        { deviceId: '' },
         { deviceType: '' as DeviceType },
         { platform: '' as MobilePlatform },
         { osName: '' },
