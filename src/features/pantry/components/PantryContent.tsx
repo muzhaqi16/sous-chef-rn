@@ -551,7 +551,9 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.layout.pageGutter,
   },
   listContentEmpty: {
-    paddingHorizontal: 0,
+    // The same gutter as the populated list: this container owns it, so zeroing
+    // it here puts the header and the empty state flush against the screen edge.
+    paddingHorizontal: theme.layout.pageGutter,
     flexGrow: 1,
   },
 }));

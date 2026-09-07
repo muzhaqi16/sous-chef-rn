@@ -485,7 +485,7 @@ const PantryMainFallback: React.FC = () => {
       scroll="list"
       gutter="none"
     >
-      <View style={styles.searchContainer}>
+      <View style={styles.gutter}>
         <SearchBar
           value=""
           onChangeText={noop}
@@ -494,12 +494,16 @@ const PantryMainFallback: React.FC = () => {
           editable={false}
         />
       </View>
-      <FilterTabs<LocationFilter>
-        tabs={skeletonTabs}
-        activeTabId="all"
-        onTabChange={noop}
-      />
-      <PantryScreenSkeleton />
+      <View style={styles.gutter}>
+        <FilterTabs<LocationFilter>
+          tabs={skeletonTabs}
+          activeTabId="all"
+          onTabChange={noop}
+        />
+      </View>
+      <View style={styles.gutter}>
+        <PantryScreenSkeleton />
+      </View>
     </Screen>
   );
 };
@@ -514,7 +518,9 @@ export const PantryMain: React.FC = () => (
   </PantryErrorBoundary>
 );
 const styles = StyleSheet.create(theme => ({
-  searchContainer: {
+  // This screen renders its children bare under `gutter="none"`, so it supplies
+  // the page gutter they do not carry themselves.
+  gutter: {
     paddingHorizontal: theme.layout.pageGutter,
   },
 }));

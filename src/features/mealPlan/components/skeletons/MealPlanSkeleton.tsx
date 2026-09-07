@@ -88,6 +88,9 @@ export const MealPlanSkeleton: React.FC = () => (
 
 const styles = StyleSheet.create(theme => ({
   container: {
+    // Its host renders it bare under `gutter="none"`, and a skeleton stands in
+    // for rows that are inset — so it carries the gutter for everything inside.
+    paddingHorizontal: theme.layout.pageGutter,
     paddingBottom: 120,
   },
 
@@ -165,7 +168,6 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
   },
 }));

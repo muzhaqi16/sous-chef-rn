@@ -131,16 +131,14 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.sm,
   },
-  // Negates the page gutter its host applies, then re-applies it to the CONTENT.
-  // A chip row scrolls out under the screen edge; inheriting the gutter would
-  // stop it short of one and inset the first chip twice.
   scrollView: {
     flexShrink: 1,
-    marginHorizontal: -theme.layout.pageGutter,
   },
+  // No inset of its own in either direction: this row renders both inside a
+  // gutter-padded list and as a bare child of a screen, and only the host knows
+  // which.
   scrollContent: {
     gap: theme.spacing.sm,
-    paddingHorizontal: theme.layout.pageGutter,
   },
   tab: {
     flexDirection: 'row',

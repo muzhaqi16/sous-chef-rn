@@ -17,7 +17,6 @@ export const PantryScreenSkeleton: React.FC = () => (
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    paddingHorizontal: theme.layout.pageGutter,
     paddingTop: theme.spacing.sm,
   },
 }));

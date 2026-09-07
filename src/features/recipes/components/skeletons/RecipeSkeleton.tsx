@@ -26,7 +26,6 @@ const styles = StyleSheet.create(theme => ({
   // Mirrors the real list's own content inset, so a skeleton row lands exactly
   // where the row it stands in for will.
   container: {
-    paddingHorizontal: theme.layout.pageGutter,
     paddingTop: theme.spacing.xs,
     paddingBottom: theme.spacing.md,
   },

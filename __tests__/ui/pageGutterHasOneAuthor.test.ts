@@ -25,28 +25,22 @@ const AUTHORS: Record<string, string> = {
   'src/components/templates/Screen.tsx': 'the gutter prop itself',
   'src/components/templates/Sheet.tsx': 'the gutter prop itself',
 
-  // Chrome rendered OUTSIDE a list, so its screen insets it rather than
-  // inheriting one.
-  'src/features/mealPlan/screens/MealPlanMain.tsx': 'chrome outside the list',
-  'src/features/pantry/screens/PantryMain.tsx': 'chrome outside the list',
-  'src/features/shoppingList/screens/ShoppingListMain.tsx': 'chrome outside the list',
+  // A screen whose loading or skeleton branch renders its children bare under
+  // `gutter="none"`, where no list content container exists to inset them.
+  'src/features/pantry/screens/PantryMain.tsx': 'insets its bare children',
+  'src/features/recipes/screens/RecipeMain.tsx': 'insets its bare children',
+  'src/features/mealPlan/screens/MealPlanMain.tsx': 'insets its bare children',
+  'src/features/shoppingList/screens/ShoppingListMain.tsx': 'insets its bare children',
   'src/features/shoppingList/components/ShoppingListMainContent.tsx':
-    'chrome outside the list',
+    'insets its bare children',
+
+  // One host, which does not inset it.
   'src/features/shoppingList/components/ShoppingListTabs/FilterTabBar.tsx':
-    'chrome outside the list',
-
-  // A skeleton stands in for a row, so it mirrors the inset of the list whose
-  // rows it replaces — it is not rendered inside that list's content container.
-  'src/features/pantry/components/PantryListSkeletonOverlay.tsx': 'stands in for rows',
-  'src/features/pantry/components/skeletons/PantryScreenSkeleton.tsx':
-    'stands in for rows',
-  'src/features/recipes/components/skeletons/RecipeSkeleton.tsx': 'stands in for rows',
+    'single host, self-inset',
   'src/features/shoppingList/components/skeletons/ShoppingListSkeleton.tsx':
-    'stands in for rows',
-
-  // NEGATES the gutter its host applies, then re-applies it to the content: a
-  // chip row scrolls out under the screen edge instead of stopping short of one.
-  'src/components/organisms/FilterTabs/FilterTabs.tsx': 'negates it deliberately',
+    'single host, self-inset',
+  'src/features/mealPlan/components/skeletons/MealPlanSkeleton.tsx':
+    'single host, self-inset',
 };
 
 const sources = glob('src/**/*.{ts,tsx}', { ignore: ['**/*.generated.ts'] });
@@ -75,6 +69,17 @@ describe('the page gutter has one author per page', () => {
       .sort();
 
     expect(stale).toEqual([]);
+  });
+
+  it('is not zeroed again by a file that owns it', () => {
+    // A page container writing `paddingHorizontal: 0` opts out of the gutter it
+    // is responsible for. An empty-list variant is the easy place to do it by
+    // accident, and the whole header goes flush to the screen edge with it.
+    const optedOut = Object.keys(AUTHORS)
+      .filter(f => /\b(padding|margin)Horizontal:\s*0\b/.test(readFileSync(f, 'utf8')))
+      .sort();
+
+    expect(optedOut).toEqual([]);
   });
 
   it('is not applied by the shared row shell', () => {

@@ -494,10 +494,10 @@ const RecipeMainInner: React.FC = () => {
       (screen.discovery.loading &&
         !screen.showSearchResults &&
         screen.items.length === 0) ? (
-        <>
+        <View style={styles.loadingGutter}>
           {recipeListHeader}
           <RecipeSkeleton />
-        </>
+        </View>
       ) : (
         <ItemList
           items={screen.items}
@@ -621,6 +621,11 @@ export const RecipeMain: React.FC = () => (
 
 const styles = StyleSheet.create(theme => ({
   searchBarContainer: {},
+  // The loading branch renders chrome and skeleton bare under `gutter="none"`,
+  // unlike the loaded branch where the list's content container insets them.
+  loadingGutter: {
+    paddingHorizontal: theme.layout.pageGutter,
+  },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
