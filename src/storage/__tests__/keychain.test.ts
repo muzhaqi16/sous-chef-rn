@@ -7,6 +7,7 @@ import {
   getInternetCredentials,
   resetInternetCredentials,
   SECURITY_LEVEL,
+  getAllGenericPasswordServices,
 } from 'react-native-keychain';
 import {
   saveCredentials,
@@ -38,6 +39,7 @@ const mockGetSupportedBiometryType = getSupportedBiometryType as jest.Mock;
 const mockSetInternetCredentials = setInternetCredentials as jest.Mock;
 const mockGetInternetCredentials = getInternetCredentials as jest.Mock;
 const mockResetInternetCredentials = resetInternetCredentials as jest.Mock;
+const mockGetAllServices = getAllGenericPasswordServices as jest.Mock;
 
 describe('keychain storage', () => {
   beforeEach(() => {
@@ -327,6 +329,64 @@ describe('keychain storage', () => {
   });
 
   describe('claimBiometricSlot', () => {
+    it('clears EVERY other enrolled account, including ones no hint names', () => {
+      // The account enrolled before the hint was being written is invisible to
+      // the hint, so the keychain itself is what has to be read.
+      mockGetAllServices.mockResolvedValue([
+        `${DEFAULT_SERVICE}.old@test.com`,
+        `${CREDENTIALS_INDICATOR_SERVICE}.old@test.com`,
+        `${DEFAULT_SERVICE}.forgotten@test.com`,
+        `${DEFAULT_SERVICE}.new@test.com`,
+        'souschefrn.session.tokens',
+      ]);
+      mockGetInternetCredentials.mockResolvedValue(false);
+      mockResetGenericPassword.mockResolvedValue(true);
+      mockSetInternetCredentials.mockResolvedValue(true);
+
+      return claimBiometricSlot('new@test.com').then(() => {
+        expect(mockResetGenericPassword).toHaveBeenCalledWith({
+          service: `${DEFAULT_SERVICE}.old@test.com`,
+        });
+        expect(mockResetGenericPassword).toHaveBeenCalledWith({
+          service: `${DEFAULT_SERVICE}.forgotten@test.com`,
+        });
+        // The account being claimed keeps its slots.
+        expect(mockResetGenericPassword).not.toHaveBeenCalledWith({
+          service: `${DEFAULT_SERVICE}.new@test.com`,
+        });
+      });
+    });
+
+    it('does not read an indicator service as an account of its own', async () => {
+      // `credentials.` also prefixes `credentials.indicator.`, so a naive
+      // filter yields an account called `indicator.<email>`.
+      mockGetAllServices.mockResolvedValue([
+        `${CREDENTIALS_INDICATOR_SERVICE}.only@test.com`,
+      ]);
+      mockGetInternetCredentials.mockResolvedValue(false);
+      mockSetInternetCredentials.mockResolvedValue(true);
+
+      await claimBiometricSlot('someone@test.com');
+
+      expect(mockResetGenericPassword).not.toHaveBeenCalled();
+    });
+
+    it('still clears the hinted account when the keychain cannot be listed', async () => {
+      mockGetAllServices.mockRejectedValue(new Error('unsupported'));
+      mockGetInternetCredentials.mockResolvedValue({
+        username: 'old@test.com',
+      });
+      mockResetGenericPassword.mockResolvedValue(true);
+      mockResetInternetCredentials.mockResolvedValue(true);
+      mockSetInternetCredentials.mockResolvedValue(true);
+
+      await claimBiometricSlot('new@test.com');
+
+      expect(mockResetGenericPassword).toHaveBeenCalledWith({
+        service: `${DEFAULT_SERVICE}.old@test.com`,
+      });
+    });
+
     it('clears the previously enrolled account and points at the new one', async () => {
       mockGetInternetCredentials.mockResolvedValue({
         username: 'old@test.com',

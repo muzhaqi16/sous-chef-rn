@@ -9,6 +9,7 @@ import {
   setInternetCredentials,
   getInternetCredentials,
   resetInternetCredentials,
+  getAllGenericPasswordServices,
   type SetOptions,
 } from 'react-native-keychain';
 import { jwtDecode } from 'jwt-decode';
@@ -360,15 +361,51 @@ export async function getBiometricCapability(): Promise<{
 }
 
 /**
+ * Every account holding a credential slot, read from the keychain itself rather
+ * than from anything this app remembers — an enrolment made before the identity
+ * hint was being written is invisible to every other route.
+ */
+export async function listEnrolledAccounts(): Promise<string[]> {
+  const credentialPrefix = `${DEFAULT_SERVICE}.`;
+  // The indicator service extends the credential one, so `credentials.` also
+  // prefixes `credentials.indicator.`; without this the indicator's suffix
+  // parses as an account named `indicator.<email>`.
+  const indicatorPrefix = `${CREDENTIALS_INDICATOR_SERVICE}.`;
+  try {
+    const services = await getAllGenericPasswordServices();
+    return services
+      .filter(
+        service =>
+          service.startsWith(credentialPrefix) &&
+          !service.startsWith(indicatorPrefix),
+      )
+      .map(service => service.slice(credentialPrefix.length));
+  } catch (error) {
+    logger.error('Failed to list enrolled accounts:', error);
+    return [];
+  }
+}
+
+/**
  * Make `email` the only account holding biometric credentials on this device.
  * The login screen offers the most recently enrolled account and has no way to
- * reach any other, so an earlier account's slots are data nothing can read —
- * and a credential no UI can reach is one nobody can revoke either.
+ * reach any other, so every other slot is data nothing can read — and a
+ * credential no UI can reach is one nobody can revoke either.
  */
 export async function claimBiometricSlot(email: string): Promise<void> {
+  const account = normalizeAccount(email);
+  const stale = new Set<string>();
+
+  for (const enrolled of await listEnrolledAccounts()) {
+    if (normalizeAccount(enrolled) !== account) stale.add(enrolled);
+  }
+  // The hint names the one account a platform that cannot enumerate still
+  // knows about, so it is cleared even when the listing came back empty.
   const previous = await getLastBiometricEmail();
-  if (previous && normalizeAccount(previous) !== normalizeAccount(email)) {
-    await clearCredentials(previous);
+  if (previous && normalizeAccount(previous) !== account) stale.add(previous);
+
+  for (const other of stale) {
+    await clearCredentials(other);
   }
   await saveLastBiometricEmail(email);
 }
