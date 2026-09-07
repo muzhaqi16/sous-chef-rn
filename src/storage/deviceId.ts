@@ -48,7 +48,11 @@ async function hydrate(): Promise<string | null> {
   }
 
   const durable = await loadDeviceId();
-  if (durable) return commit(durable);
+  if (durable.status === 'ok') return commit(durable.deviceId);
+  // A read that failed says nothing about what the keychain holds. Minting here
+  // would write over a surviving identifier and orphan the credential bound to
+  // it, so this launch reports the identifier absent instead.
+  if (durable.status === 'error') return null;
 
   const minted = `device_${generateId()}`;
   const persisted = await saveDeviceId(minted);

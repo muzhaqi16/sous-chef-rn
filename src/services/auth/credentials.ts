@@ -5,6 +5,7 @@ import {
   saveCredentials,
   hasCredentials,
   clearCredentials,
+  claimBiometricSlot,
   getStoredAccounts,
   getBiometricCapability,
 } from '#/storage/keychain';
@@ -80,6 +81,9 @@ export async function storeCredentials(
 ): Promise<boolean> {
   try {
     await saveCredentials(email, credential);
+    // Claimed AFTER the write, so a failed save leaves the previous account's
+    // working enrolment alone rather than clearing it for nothing.
+    await claimBiometricSlot(email);
     return true;
   } catch (error) {
     logger.error('Error storing credentials:', error);

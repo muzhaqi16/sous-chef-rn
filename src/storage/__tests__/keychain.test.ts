@@ -16,6 +16,9 @@ import {
   getBiometricCapability,
   saveLastBiometricEmail,
   getLastBiometricEmail,
+  claimBiometricSlot,
+  DEFAULT_SERVICE,
+  CREDENTIALS_INDICATOR_SERVICE,
   clearTempRegistrationPassword,
   saveSessionTokens,
   loadSessionTokens,
@@ -323,6 +326,57 @@ describe('keychain storage', () => {
     });
   });
 
+  describe('claimBiometricSlot', () => {
+    it('clears the previously enrolled account and points at the new one', async () => {
+      mockGetInternetCredentials.mockResolvedValue({
+        username: 'old@test.com',
+      });
+      mockResetGenericPassword.mockResolvedValue(true);
+      mockResetInternetCredentials.mockResolvedValue(true);
+      mockSetInternetCredentials.mockResolvedValue(true);
+
+      await claimBiometricSlot('new@test.com');
+
+      // The login screen can only offer one account, so the old slots are
+      // unreachable data — both of its services go.
+      expect(mockResetGenericPassword).toHaveBeenCalledWith({
+        service: `${DEFAULT_SERVICE}.old@test.com`,
+      });
+      expect(mockResetGenericPassword).toHaveBeenCalledWith({
+        service: `${CREDENTIALS_INDICATOR_SERVICE}.old@test.com`,
+      });
+      expect(mockSetInternetCredentials).toHaveBeenCalledWith(
+        'souschefrn-email',
+        'new@test.com',
+        'new@test.com',
+        expect.any(Object),
+      );
+    });
+
+    it('keeps the slots when the same account re-enrols, however it is cased', async () => {
+      mockGetInternetCredentials.mockResolvedValue({
+        username: 'User@Test.com',
+      });
+      mockResetGenericPassword.mockResolvedValue(true);
+      mockSetInternetCredentials.mockResolvedValue(true);
+
+      await claimBiometricSlot('  user@test.com ');
+
+      expect(mockResetGenericPassword).not.toHaveBeenCalled();
+      expect(mockSetInternetCredentials).toHaveBeenCalled();
+    });
+
+    it('just claims the pointer when nothing was enrolled', async () => {
+      mockGetInternetCredentials.mockResolvedValue(false);
+      mockSetInternetCredentials.mockResolvedValue(true);
+
+      await claimBiometricSlot('first@test.com');
+
+      expect(mockResetGenericPassword).not.toHaveBeenCalled();
+      expect(mockSetInternetCredentials).toHaveBeenCalled();
+    });
+  });
+
   describe('saveLastBiometricEmail', () => {
     it('saves email using internet credentials', async () => {
       mockSetInternetCredentials.mockResolvedValue(true);
@@ -462,6 +516,56 @@ describe('keychain storage', () => {
 
       expect(result).toBeNull();
       expect(mockResetGenericPassword).not.toHaveBeenCalled();
+    });
+
+    /**
+     * The shape a cancel actually produces. Captured on an SM-S908U1 by tapping
+     * the prompt's "Use manual login":
+     *   { code: 'E_CRYPTO_FAILED',
+     *     name: 'com.oblador.keychain.exceptions.CryptoFailedException',
+     *     message: 'code: 13, msg: Use manual login' }
+     * `E_CRYPTO_FAILED` is also what an unusable key rejects with, so the
+     * prompt's own `code: <n>` marker is the only thing telling them apart.
+     */
+    const androidPromptOutcome = (errorCode: number, msg: string) =>
+      Object.assign(new Error(`code: ${errorCode}, msg: ${msg}`), {
+        code: 'E_CRYPTO_FAILED',
+        name: 'com.oblador.keychain.exceptions.CryptoFailedException',
+      });
+
+    it.each([
+      [10, 'Authentication canceled by user'],
+      [13, 'Use manual login'],
+      [5, 'Authentication canceled'],
+      [3, 'Authentication timed out'],
+      [7, 'Too many attempts. Try again later.'],
+      [9, 'Too many attempts. Biometric authentication disabled.'],
+    ])(
+      'keeps the slot when the Android prompt ends with code %i',
+      async (errorCode, msg) => {
+        mockGetGenericPassword.mockRejectedValue(
+          androidPromptOutcome(errorCode, msg),
+        );
+
+        const result = await loadCredentials('user@test.com');
+
+        expect(result).toBeNull();
+        expect(mockResetGenericPassword).not.toHaveBeenCalled();
+      },
+    );
+
+    it('clears the slot when the platform names the invalidated key', async () => {
+      mockGetGenericPassword.mockRejectedValue(
+        Object.assign(new Error('Wrapped error: Key permanently invalidated'), {
+          code: 'E_CRYPTO_FAILED',
+          name: 'com.oblador.keychain.exceptions.CryptoFailedException',
+        }),
+      );
+      mockResetGenericPassword.mockResolvedValue(true);
+
+      await loadCredentials('user@test.com');
+
+      expect(mockResetGenericPassword).toHaveBeenCalled();
     });
   });
 

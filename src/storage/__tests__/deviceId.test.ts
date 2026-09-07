@@ -28,7 +28,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   (isStorageReady as jest.Mock).mockReturnValue(true);
   (isRecoveryStorage as jest.Mock).mockReturnValue(false);
-  mockLoad.mockResolvedValue(null);
+  mockLoad.mockResolvedValue({ status: 'absent' });
   mockSave.mockResolvedValue(true);
 });
 
@@ -109,7 +109,7 @@ describe('ensureDeviceId', () => {
   });
 
   it('restores the identifier the keychain holds when the mirror is empty', async () => {
-    mockLoad.mockResolvedValue('device_durable');
+    mockLoad.mockResolvedValue({ status: 'ok', deviceId: 'device_durable' });
 
     const id = await loadModule().ensureDeviceId();
 
@@ -130,12 +130,33 @@ describe('ensureDeviceId', () => {
 
   it('serves the durable identifier during a storage outage without mirroring it', async () => {
     (isRecoveryStorage as jest.Mock).mockReturnValue(true);
-    mockLoad.mockResolvedValue('device_durable');
+    mockLoad.mockResolvedValue({ status: 'ok', deviceId: 'device_durable' });
 
     const id = await loadModule().ensureDeviceId();
 
     expect(id).toBe('device_durable');
     expect(storage.set).not.toHaveBeenCalled();
+  });
+
+  it('does not mint when the durable read fails', async () => {
+    mockLoad.mockResolvedValue({ status: 'error' });
+
+    expect(await loadModule().ensureDeviceId()).toBeNull();
+    expect(mockSave).not.toHaveBeenCalled();
+    expect(storage.set).not.toHaveBeenCalled();
+    expect(__mockStore.size).toBe(0);
+  });
+
+  it('presents the identifier the device already had once the read recovers', async () => {
+    mockLoad.mockResolvedValueOnce({ status: 'error' });
+    const { ensureDeviceId } = loadModule();
+
+    expect(await ensureDeviceId()).toBeNull();
+
+    mockLoad.mockResolvedValue({ status: 'ok', deviceId: 'device_durable' });
+
+    expect(await ensureDeviceId()).toBe('device_durable');
+    expect(mockSave).not.toHaveBeenCalled();
   });
 
   it('does not mint when neither store would hold the value', async () => {

@@ -193,19 +193,28 @@ export async function saveCredentials(
  * unlocked again and must be re-enrolled.
  */
 const INVALIDATED =
-  /KeyPermanentlyInvalidated|E_CRYPTO_FAILED|BiometryCurrentSet|changed or deleted their auth/i;
+  /Key\s*Permanently\s*Invalidated|BiometryCurrentSet|changed or deleted their auth/i;
 
-function isPermanentlyInvalidated(error: unknown): boolean {
-  if (error === null || typeof error !== 'object') {
-    return INVALIDATED.test(String(error));
-  }
-  // The Android bridge splits one rejection across three fields: the library's
-  // code on `code`, the Java class on `name`, and the platform's prose on
-  // `message`. Reading only two of them misses whichever carries the signal.
+// react-native-keychain rejects every `CryptoFailedException` as
+// `E_CRYPTO_FAILED`, and its biometric handler builds one for EVERY androidx
+// outcome — a cancel included — formatted `code: <n>, msg: …`. Only the prompt
+// callback writes that marker, so it means authentication ended without
+// succeeding, which is never the same thing as an unusable key.
+const PROMPT_OUTCOME = /(?:^|\s)code:\s*\d+/;
+
+// The Android bridge spreads one rejection across `code`, `name` and
+// `message`; join them so the signal is read wherever it landed.
+function rejectionText(error: unknown): string {
+  if (error === null || typeof error !== 'object') return String(error);
   const { code, name, message } = error as Record<string, unknown>;
-  const text = [code, name, message]
+  return [code, name, message]
     .filter((part): part is string => typeof part === 'string')
     .join(' ');
+}
+
+function isPermanentlyInvalidated(error: unknown): boolean {
+  const text = rejectionText(error);
+  if (PROMPT_OUTCOME.test(text)) return false;
   return INVALIDATED.test(text);
 }
 
@@ -348,6 +357,20 @@ export async function getBiometricCapability(): Promise<{
     logger.error('Failed to get biometric capability:', error);
     return { isAvailable: false, biometryType: null };
   }
+}
+
+/**
+ * Make `email` the only account holding biometric credentials on this device.
+ * The login screen offers the most recently enrolled account and has no way to
+ * reach any other, so an earlier account's slots are data nothing can read —
+ * and a credential no UI can reach is one nobody can revoke either.
+ */
+export async function claimBiometricSlot(email: string): Promise<void> {
+  const previous = await getLastBiometricEmail();
+  if (previous && normalizeAccount(previous) !== normalizeAccount(email)) {
+    await clearCredentials(previous);
+  }
+  await saveLastBiometricEmail(email);
 }
 
 /**
@@ -582,16 +605,36 @@ export async function saveDeviceId(deviceId: string): Promise<boolean> {
   });
 }
 
-/** The stored identifier; null when there is none and when the read fails. */
-export async function loadDeviceId(): Promise<string | null> {
-  return queueOperation(async () => {
-    try {
-      const entry = await getGenericPassword({ service: DEVICE_ID_SERVICE });
-      return entry ? entry.password : null;
-    } catch (error) {
-      logger.warn('Failed to read the device id from the keychain:', error);
-      return null;
+/**
+ * A read that FAILED is not a read that found nothing: only `absent` may lead to
+ * minting, because minting over a durable entry the device still holds strands
+ * the credential bound to it.
+ */
+export type DeviceIdLoadResult =
+  | { status: 'ok'; deviceId: string }
+  | { status: 'absent' }
+  | { status: 'error' };
+
+export async function loadDeviceId(): Promise<DeviceIdLoadResult> {
+  return queueOperation<DeviceIdLoadResult>(async () => {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= SESSION_LOAD_ATTEMPTS; attempt++) {
+      try {
+        const entry = await getGenericPassword({ service: DEVICE_ID_SERVICE });
+        return entry
+          ? { status: 'ok', deviceId: entry.password }
+          : { status: 'absent' };
+      } catch (error) {
+        lastError = error;
+        if (attempt < SESSION_LOAD_ATTEMPTS) {
+          await new Promise(resolve =>
+            setTimeout(resolve, SESSION_LOAD_RETRY_BASE_MS * attempt),
+          );
+        }
+      }
     }
+    logger.error('Device id read failed after retries:', lastError);
+    return { status: 'error' };
   });
 }
 
