@@ -112,6 +112,9 @@ export function homeNode(home: HomeFixture) {
           __typename: 'User' as const,
           id: m.userId ?? `user-${m.id}`,
           email: `${m.userId ?? `user-${m.id}`}@example.com`,
+          // The sharing-gated name a housemate reads; null here so a caller
+          // that wants one sets it deliberately.
+          displayName: null,
         },
       })),
     ),

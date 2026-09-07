@@ -25,6 +25,8 @@ export type Member = {
   user?: {
     id: string;
     email?: string | null;
+    /** Readable by anyone sharing a home or list, whatever the profile says. */
+    displayName?: string | null;
     profile?: {
       displayName?: string | null;
     } | null;
@@ -42,6 +44,7 @@ export function getMemberDisplayName(
 
   return (
     member.displayName ||
+    member.user?.displayName ||
     member.user?.profile?.displayName ||
     member.user?.email?.split('@')[0] ||
     member.user?.email ||
@@ -56,8 +59,10 @@ export type CollaboratorDisplayShape = Pick<
 >;
 
 /**
- * Unlike `getMemberDisplayName` this reads the `collaborator` sub-object and
- * only its `displayName` — firstName/lastName are not queried for collaborators.
+ * `User.displayName` first: it follows the SHARING relationship, so a
+ * collaborator on this list resolves a name even when their profile is private
+ * and `profile` comes back null. The profile read stays as the path for a
+ * viewer who can see it; the email's local part is the last resort.
  */
 export function getCollaboratorDisplayName(
   collaborator: CollaboratorDisplayShape,
@@ -70,6 +75,7 @@ export function getCollaboratorDisplayName(
   const email = collaborator.collaborator?.email ?? collaborator.email ?? null;
 
   return (
+    collaborator.collaborator?.displayName ||
     collaborator.collaborator?.profile?.displayName ||
     email?.split('@')[0] ||
     email ||
