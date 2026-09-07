@@ -35,9 +35,8 @@ export const AddButton: React.FC<AddButtonProps> = ({
 const styles = StyleSheet.create(theme => ({
   addButton: {
     width: theme.sizes.fab.md,
-    height: theme.sizes.button.md,
-    borderRadius: theme.radii.lg,
-    borderCurve: 'continuous',
+    height: theme.sizes.fab.md,
+    borderRadius: theme.radii.full,
     // Primary CTA — follows the user's selected App Color so the + button
     // matches the active tab icon highlight and other primary-tinted surfaces.
     backgroundColor: theme.colors.primary,
