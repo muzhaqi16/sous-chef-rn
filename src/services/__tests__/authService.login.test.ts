@@ -41,7 +41,6 @@ jest.mock('#/storage/keychain', () => ({
   loadCredentials: (...args: unknown[]) => mockLoadCredentials(...args),
   getLastBiometricEmail: () => mockGetLastBiometricEmail(),
   saveCredentials: jest.fn(),
-  getStoredAccounts: jest.fn(),
   getBiometricCapability: jest.fn(),
   clearTempRegistrationPassword: jest.fn(),
 }));

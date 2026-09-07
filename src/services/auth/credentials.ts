@@ -6,7 +6,6 @@ import {
   hasCredentials,
   clearCredentials,
   claimBiometricSlot,
-  getStoredAccounts,
   getBiometricCapability,
 } from '#/storage/keychain';
 
@@ -51,15 +50,6 @@ export async function checkStoredCredentials(
   } catch (error) {
     logger.error('Error checking credentials:', error);
     return false;
-  }
-}
-
-export async function getAvailableAccounts() {
-  try {
-    return await getStoredAccounts();
-  } catch (error) {
-    logger.error('Error getting available accounts:', error);
-    return [];
   }
 }
 

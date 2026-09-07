@@ -47,7 +47,6 @@ import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 import { registerDeviceInBackground } from '#/services/auth/deviceRegistration';
 import {
   checkStoredCredentials,
-  getAvailableAccounts,
   getBiometricInfo,
   loadStoredCredentials,
   markDeviceCredential,
@@ -815,7 +814,6 @@ export const authService = {
   loadStoredCredentials,
   storeCredentials,
   removeCredentials,
-  getAvailableAccounts,
   getBiometricInfo,
   getLastBiometricEmail,
 

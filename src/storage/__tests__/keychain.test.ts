@@ -24,9 +24,6 @@ import {
   saveSessionTokens,
   loadSessionTokens,
   clearSessionTokens,
-  hasCredentialsForAccount,
-  loadCredentialsForAccount,
-  getStoredAccounts,
   pickFresherSessionTokens,
 } from '../keychain';
 import { logger } from '#/utils/environment';
@@ -784,24 +781,6 @@ describe('keychain storage', () => {
 
       mockResetGenericPassword.mockRejectedValue(new Error('Error'));
       await expect(clearSessionTokens()).resolves.toBe(false);
-    });
-  });
-
-  describe('account-scoped aliases', () => {
-    it('hasCredentialsForAccount delegates to hasCredentials', async () => {
-      const result = await hasCredentialsForAccount('alias-has@test.com');
-      expect(typeof result).toBe('boolean');
-    });
-
-    it('loadCredentialsForAccount delegates to loadCredentials', async () => {
-      mockGetGenericPassword.mockResolvedValue(false);
-      const result = await loadCredentialsForAccount('alias-load@test.com');
-      expect(result).toBeNull();
-    });
-
-    it('getStoredAccounts returns empty array', async () => {
-      const result = await getStoredAccounts();
-      expect(result).toEqual([]);
     });
   });
 

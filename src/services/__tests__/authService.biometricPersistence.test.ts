@@ -90,7 +90,6 @@ jest.mock('#/storage/keychain', () => ({
   }),
   saveCredentials: jest.fn(),
   hasCredentials: (...a: unknown[]) => mockHasCredentials(...a),
-  getStoredAccounts: jest.fn().mockResolvedValue([]),
   getBiometricCapability: jest
     .fn()
     .mockResolvedValue({ isAvailable: true, biometryType: 'Fingerprint' }),

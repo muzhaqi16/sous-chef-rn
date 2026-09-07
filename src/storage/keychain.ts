@@ -674,25 +674,3 @@ export async function loadDeviceId(): Promise<DeviceIdLoadResult> {
     return { status: 'error' };
   });
 }
-
-// Account-scoped aliases kept for the existing call sites.
-export async function hasCredentialsForAccount(
-  email: string,
-): Promise<boolean> {
-  return hasCredentials(email);
-}
-
-export async function loadCredentialsForAccount(email: string): Promise<{
-  username: string;
-  password: string;
-} | null> {
-  return loadCredentials(email);
-}
-
-export async function getStoredAccounts(): Promise<
-  Array<{ email: string; lastUsed: number; biometricMethod: string }>
-> {
-  // For the new simplified implementation, return empty array
-  // This can be enhanced later if multi-account support is needed
-  return [];
-}
