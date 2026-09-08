@@ -7,6 +7,7 @@ import { EmptyDayState } from './EmptyDayState';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import type { MealTypeGroup } from '#features/mealPlan/hooks/useDailyMeals';
 import { type MealType } from '#/graphql/generated/schemaTypes';
+import { getScrollClearancePadding } from '#constants/layout';
 
 interface DayMealListProps {
   selectedDate: Date;
@@ -81,14 +82,14 @@ export const DayMealList: React.FC<DayMealListProps> = ({
 
 DayMealList.displayName = 'DayMealList';
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create((theme, rt) => ({
   container: {
     flex: 1,
   },
   content: {
     // The list owns the gutter for everything it renders, rows included.
     paddingHorizontal: theme.layout.pageGutter,
-    paddingBottom: 120, // Account for tab bar
+    paddingBottom: getScrollClearancePadding(rt.insets.bottom),
   },
   contentEmpty: {
     flexGrow: 1,

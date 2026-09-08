@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { ItemCard } from './ItemCard';
 import { IconName } from '#/utils/iconUtils';
-import { getTabBarBottomPadding } from '#constants/layout';
+import { getScrollClearancePadding } from '#constants/layout';
 import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
@@ -222,7 +222,7 @@ export const ItemList: React.FC<ItemListProps> = ({
 
   // Dynamic content style with proper bottom padding for tab bar
   const contentStyle = {
-    paddingBottom: getTabBarBottomPadding(safeBottom),
+    paddingBottom: getScrollClearancePadding(safeBottom),
   };
 
   // `flexGrow` lets the empty state fill the viewport rather than sit at the top.

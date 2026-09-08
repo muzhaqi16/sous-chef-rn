@@ -61,6 +61,7 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
   addedBy {
     id
     email
+    displayName
     profile {
       id
       displayName

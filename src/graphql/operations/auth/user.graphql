@@ -77,6 +77,7 @@ mutation UpdateAccount($input: UpdateAccountInput!) {
       user {
         id
         email
+        displayName
         emailVerified
         role
         onBoarded
@@ -151,6 +152,7 @@ mutation UpdateUserPreferences($input: UpdateSettingsInput!) {
         user {
           id
           email
+          displayName
         }
         theme
         compactMode
@@ -213,6 +215,7 @@ mutation CompleteOnboarding {
       user {
         id
         email
+        displayName
         emailVerified
         role
         canAccessDevTools
@@ -264,6 +267,7 @@ subscription UserEvents($userId: ID!) {
       ... on User {
         id
         email
+        displayName
         emailVerified
         role
         onBoarded

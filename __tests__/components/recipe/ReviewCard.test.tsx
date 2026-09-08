@@ -27,6 +27,7 @@ const makeReview = (
     __typename: 'User',
     id: 'u1',
     email: 'test@test.com',
+    displayName: null,
     profile: {
       __typename: 'UserProfile',
       id: 'p1',
@@ -67,6 +68,7 @@ describe('ReviewCard', () => {
         __typename: 'User',
         id: 'u1',
         email: 'fallback@test.com',
+        displayName: null,
         profile: null,
       },
     });

@@ -80,7 +80,12 @@ export const RecipeFormScreen: React.FC<
       }
 
       const createdBy: RecipeCreatedBy = user
-        ? { __typename: 'User', id: user.id, email: user.email }
+        ? {
+            __typename: 'User',
+            id: user.id,
+            email: user.email,
+            displayName: user.displayName ?? null,
+          }
         : null;
       const outcome = await createRecipe(form.buildCreateInput(), createdBy);
       if (outcome.status === 'ok') {

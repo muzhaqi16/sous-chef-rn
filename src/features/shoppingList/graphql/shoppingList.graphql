@@ -110,6 +110,7 @@ query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
           user {
             id
             email
+            displayName
             profile {
               id
               displayName
@@ -260,6 +261,7 @@ query GetItemPurchaseHistory($itemId: ID!, $first: Int, $after: String) {
           user {
             id
             email
+            displayName
             profile {
               id
               displayName

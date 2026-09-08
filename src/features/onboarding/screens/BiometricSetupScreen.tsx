@@ -54,11 +54,7 @@ export const BiometricSetupScreen = () => {
 
   if (bio.checking) {
     return (
-      <OnBoardingWrapper
-        subtitle={t('onBoarding.settingUpSecurity')}
-        step={7}
-        totalSteps={8}
-      >
+      <OnBoardingWrapper subtitle={t('onBoarding.settingUpSecurity')}>
         <View style={commonStyles.loadingContainer}>
           <Text tone="secondary" align="center">
             {t('onBoarding.checkingBiometricAvailability')}
@@ -73,8 +69,6 @@ export const BiometricSetupScreen = () => {
   return (
     <OnBoardingWrapper
       subtitle={t('onBoarding.secureYourAccount')}
-      step={7}
-      totalSteps={8}
       testID="biometric-setup-screen"
     >
       <View style={styles.container}>

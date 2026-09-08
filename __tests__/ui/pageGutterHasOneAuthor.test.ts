@@ -41,7 +41,35 @@ const AUTHORS: Record<string, string> = {
     'single host, self-inset',
   'src/features/mealPlan/components/skeletons/MealPlanSkeleton.tsx':
     'single host, self-inset',
+  'src/features/notifications/components/NotificationFilters.tsx':
+    'single host, self-inset',
 };
+
+/**
+ * Shared components that carry NO inset of their own, and the render sites that
+ * therefore have to supply one. Derived from the tree rather than listed, so a
+ * new host cannot ship flush to the screen edge — which is what
+ * `NotificationFilters` and `SavedRecipes` did when `FilterTabs` gave its own
+ * inset up.
+ */
+const GUTTERLESS = ['FilterTabs'];
+
+/**
+ * Hosts that supply the inset by POSITION rather than by a style of their own:
+ * they render inside a container that is already padded, so adding one here
+ * would double it.
+ */
+const INHERITS_AN_INSET: Record<string, string> = {
+  'src/features/pantry/components/pantryDisplay/PantryStickyTabs.tsx':
+    "row 0 of PantryContent's list, whose content container carries the gutter",
+};
+
+/**
+ * A host supplies an inset when the render site sits inside something padded:
+ * a wrapper reading the gutter token, a list content container, or a screen
+ * that is not `gutter="none"`.
+ */
+const SUPPLIES_AN_INSET = /layout\.pageGutter|gutter="page"|styles\.gutter/;
 
 const sources = glob('src/**/*.{ts,tsx}', { ignore: ['**/*.generated.ts'] });
 
@@ -80,6 +108,25 @@ describe('the page gutter has one author per page', () => {
       .sort();
 
     expect(optedOut).toEqual([]);
+  });
+
+  it.each(GUTTERLESS)('every host of %s supplies the inset it does not', name => {
+    // `<Name` followed by a tag character, so `<FilterTabsProps>` in a generic
+    // is not read as a render site.
+    const rendersIt = new RegExp(`<${name}[\\s<>/]`);
+    const hosts = sources.filter(f => {
+      if (f.includes('__tests__')) return false;
+      if (f in INHERITS_AN_INSET) return false;
+      return rendersIt.test(readFileSync(f, 'utf8')) && !f.includes(`/${name}/`);
+    });
+
+    expect(hosts.length).toBeGreaterThan(0);
+
+    const bare = hosts
+      .filter(f => !SUPPLIES_AN_INSET.test(readFileSync(f, 'utf8')))
+      .sort();
+
+    expect(bare).toEqual([]);
   });
 
   it('is not applied by the shared row shell', () => {

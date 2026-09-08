@@ -9,7 +9,6 @@ import {
   setInternetCredentials,
   getInternetCredentials,
   resetInternetCredentials,
-  getAllGenericPasswordServices,
   type SetOptions,
 } from 'react-native-keychain';
 import { jwtDecode } from 'jwt-decode';
@@ -361,59 +360,9 @@ export async function getBiometricCapability(): Promise<{
 }
 
 /**
- * Every account holding a credential slot, read from the keychain itself rather
- * than from anything this app remembers — an enrolment made before the identity
- * hint was being written is invisible to every other route.
- */
-export async function listEnrolledAccounts(): Promise<string[]> {
-  const credentialPrefix = `${DEFAULT_SERVICE}.`;
-  // The indicator service extends the credential one, so `credentials.` also
-  // prefixes `credentials.indicator.`; without this the indicator's suffix
-  // parses as an account named `indicator.<email>`.
-  const indicatorPrefix = `${CREDENTIALS_INDICATOR_SERVICE}.`;
-  try {
-    const services = await getAllGenericPasswordServices();
-    return services
-      .filter(
-        service =>
-          service.startsWith(credentialPrefix) &&
-          !service.startsWith(indicatorPrefix),
-      )
-      .map(service => service.slice(credentialPrefix.length));
-  } catch (error) {
-    logger.error('Failed to list enrolled accounts:', error);
-    return [];
-  }
-}
-
-/**
- * Make `email` the only account holding biometric credentials on this device.
- * The login screen offers the most recently enrolled account and has no way to
- * reach any other, so every other slot is data nothing can read — and a
- * credential no UI can reach is one nobody can revoke either.
- */
-export async function claimBiometricSlot(email: string): Promise<void> {
-  const account = normalizeAccount(email);
-  const stale = new Set<string>();
-
-  for (const enrolled of await listEnrolledAccounts()) {
-    if (normalizeAccount(enrolled) !== account) stale.add(enrolled);
-  }
-  // The hint names the one account a platform that cannot enumerate still
-  // knows about, so it is cleared even when the listing came back empty.
-  const previous = await getLastBiometricEmail();
-  if (previous && normalizeAccount(previous) !== account) stale.add(previous);
-
-  for (const other of stale) {
-    await clearCredentials(other);
-  }
-  await saveLastBiometricEmail(email);
-}
-
-/**
- * Remember which account most recently enrolled biometric login. The login
- * screen has no logged-in user, so it reads this to decide which account's
- * credentials the biometric button should unlock.
+ * Record which account the biometric prompt offers — the login screen has no
+ * logged-in user to ask. The accounts it does not name keep their slots:
+ * deleting a local credential revokes nothing server-side.
  */
 export async function saveLastBiometricEmail(email: string): Promise<void> {
   try {
@@ -546,54 +495,64 @@ export async function saveSessionTokens(
   });
 }
 
+/** An attempt that failed in a way a later one might not. */
+type RetryableRead<T> = T | { status: 'retry'; error: unknown };
+
+/** Sleep BETWEEN attempts, never inside one: the queue's lock is not held here. */
+const backoff = (attempt: number): Promise<void> =>
+  new Promise(resolve =>
+    setTimeout(resolve, SESSION_LOAD_RETRY_BASE_MS * attempt),
+  );
+
+async function readSessionTokensOnce(): Promise<
+  RetryableRead<SessionTokenLoadResult>
+> {
+  return queueOperation<RetryableRead<SessionTokenLoadResult>>(async () => {
+    let creds;
+    try {
+      creds = await getGenericPassword({ service: SESSION_TOKENS_SERVICE });
+    } catch (error) {
+      return { status: 'retry', error };
+    }
+    if (!creds) return { status: 'absent' };
+
+    let parsed: Partial<SessionTokens>;
+    try {
+      parsed = JSON.parse(creds.password) as Partial<SessionTokens>;
+    } catch {
+      // Corrupted entry — retrying can't fix it; treat as no session.
+      logger.error('Stored session tokens are unparseable; ignoring them');
+      return { status: 'absent' };
+    }
+    if (!parsed.accessToken || !parsed.refreshToken) {
+      return { status: 'absent' };
+    }
+    const tokens = {
+      accessToken: parsed.accessToken,
+      refreshToken: parsed.refreshToken,
+    };
+    confirmedSessionPair = JSON.stringify(tokens);
+    return { status: 'ok', tokens };
+  });
+}
+
 /**
- * Load the session tokens, distinguishing a confirmed absence ('absent' —
- * the user must log in) from a keychain read failure ('error' — retried
- * with backoff first; callers should fall back to any MMKV copy rather
- * than treating the session as gone).
+ * 'absent' is a confirmed absence — the user must log in. 'error' is a read
+ * that failed after its retries, and a caller should fall back to any MMKV
+ * copy rather than treat the session as gone.
  */
 export async function loadSessionTokens(): Promise<SessionTokenLoadResult> {
-  return queueOperation<SessionTokenLoadResult>(
-    async (): Promise<SessionTokenLoadResult> => {
-      let lastError: unknown;
-      for (let attempt = 1; attempt <= SESSION_LOAD_ATTEMPTS; attempt++) {
-        try {
-          const creds = await getGenericPassword({
-            service: SESSION_TOKENS_SERVICE,
-          });
-          if (!creds) return { status: 'absent' };
-          let parsed: Partial<SessionTokens>;
-          try {
-            parsed = JSON.parse(creds.password) as Partial<SessionTokens>;
-          } catch {
-            // Corrupted entry — retrying can't fix it; treat as no session.
-            logger.error(
-              'Stored session tokens are unparseable; ignoring them',
-            );
-            return { status: 'absent' };
-          }
-          if (!parsed.accessToken || !parsed.refreshToken) {
-            return { status: 'absent' };
-          }
-          const tokens = {
-            accessToken: parsed.accessToken,
-            refreshToken: parsed.refreshToken,
-          };
-          confirmedSessionPair = JSON.stringify(tokens);
-          return { status: 'ok', tokens };
-        } catch (error) {
-          lastError = error;
-          if (attempt < SESSION_LOAD_ATTEMPTS) {
-            await new Promise(resolve =>
-              setTimeout(resolve, SESSION_LOAD_RETRY_BASE_MS * attempt),
-            );
-          }
-        }
-      }
-      logger.error('Session token read failed after retries:', lastError);
-      return { status: 'error' };
-    },
-  );
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= SESSION_LOAD_ATTEMPTS; attempt++) {
+    const result = await readSessionTokensOnce();
+    if (result.status !== 'retry') return result;
+    lastError = result.error;
+    // Each attempt is its own queued operation, so this wait releases the lock
+    // instead of holding every other keychain caller behind a sleeping one.
+    if (attempt < SESSION_LOAD_ATTEMPTS) await backoff(attempt);
+  }
+  logger.error('Session token read failed after retries:', lastError);
+  return { status: 'error' };
 }
 
 /**
@@ -652,25 +611,28 @@ export type DeviceIdLoadResult =
   | { status: 'absent' }
   | { status: 'error' };
 
-export async function loadDeviceId(): Promise<DeviceIdLoadResult> {
-  return queueOperation<DeviceIdLoadResult>(async () => {
-    let lastError: unknown;
-    for (let attempt = 1; attempt <= SESSION_LOAD_ATTEMPTS; attempt++) {
-      try {
-        const entry = await getGenericPassword({ service: DEVICE_ID_SERVICE });
-        return entry
-          ? { status: 'ok', deviceId: entry.password }
-          : { status: 'absent' };
-      } catch (error) {
-        lastError = error;
-        if (attempt < SESSION_LOAD_ATTEMPTS) {
-          await new Promise(resolve =>
-            setTimeout(resolve, SESSION_LOAD_RETRY_BASE_MS * attempt),
-          );
-        }
-      }
+async function readDeviceIdOnce(): Promise<RetryableRead<DeviceIdLoadResult>> {
+  return queueOperation<RetryableRead<DeviceIdLoadResult>>(async () => {
+    let entry;
+    try {
+      entry = await getGenericPassword({ service: DEVICE_ID_SERVICE });
+    } catch (error) {
+      return { status: 'retry', error };
     }
-    logger.error('Device id read failed after retries:', lastError);
-    return { status: 'error' };
+    return entry
+      ? { status: 'ok', deviceId: entry.password }
+      : { status: 'absent' };
   });
+}
+
+export async function loadDeviceId(): Promise<DeviceIdLoadResult> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= SESSION_LOAD_ATTEMPTS; attempt++) {
+    const result = await readDeviceIdOnce();
+    if (result.status !== 'retry') return result;
+    lastError = result.error;
+    if (attempt < SESSION_LOAD_ATTEMPTS) await backoff(attempt);
+  }
+  logger.error('Device id read failed after retries:', lastError);
+  return { status: 'error' };
 }

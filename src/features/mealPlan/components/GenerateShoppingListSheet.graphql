@@ -27,6 +27,7 @@ query GetShoppingListsLiteForMealPlan(
           user {
             id
             email
+            displayName
             profile {
               id
               displayName

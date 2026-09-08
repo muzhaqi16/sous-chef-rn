@@ -27,7 +27,11 @@ import {
   HIT_SLOP_SM,
   HIT_SLOP_LG,
 } from '#features/shoppingList/constants/touch';
-import { getTabBarBottomPadding, TAB_BAR_HEIGHT } from '../layout';
+import {
+  getTabBarBottomPadding,
+  getScrollClearancePadding,
+  TAB_BAR_HEIGHT,
+} from '../layout';
 import { motion } from '#/theme/foundations/motion';
 
 describe('animations constants', () => {
@@ -135,11 +139,28 @@ describe('layout', () => {
   });
 
   describe('getTabBarBottomPadding', () => {
-    it('calculates bottom padding from safe area', () => {
-      // TAB_BAR_HEIGHT (65) + safeBottom + 16 + the floating button's 68
-      expect(getTabBarBottomPadding(0)).toBe(149);
-      expect(getTabBarBottomPadding(34)).toBe(183);
-      expect(getTabBarBottomPadding(20)).toBe(169);
+    it('clears the bar and the safe area', () => {
+      // TAB_BAR_HEIGHT (65) + safeBottom + 16
+      expect(getTabBarBottomPadding(0)).toBe(81);
+      expect(getTabBarBottomPadding(34)).toBe(115);
+      expect(getTabBarBottomPadding(20)).toBe(101);
+    });
+  });
+
+  describe('getScrollClearancePadding', () => {
+    // Trailing slack for a scrolling list, which also has to pass under the
+    // action button; a centred surface takes the bar padding instead, so the
+    // two are separate functions rather than one with a flag.
+    it('adds the floating button on top of the bar padding', () => {
+      const button = 56 + 12;
+      expect(getScrollClearancePadding(0)).toBe(81 + button);
+      expect(getScrollClearancePadding(34)).toBe(115 + button);
+    });
+
+    it('is always the larger of the two', () => {
+      expect(getScrollClearancePadding(20)).toBeGreaterThan(
+        getTabBarBottomPadding(20),
+      );
     });
   });
 });

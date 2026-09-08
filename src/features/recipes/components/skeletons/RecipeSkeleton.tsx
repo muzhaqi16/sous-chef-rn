@@ -23,8 +23,8 @@ export const RecipeSkeleton: React.FC = () => (
 );
 
 const styles = StyleSheet.create(theme => ({
-  // Mirrors the real list's own content inset, so a skeleton row lands exactly
-  // where the row it stands in for will.
+  // No horizontal inset: of its three hosts two already sit inside a
+  // gutter-padded container, so carrying one here double-insets them.
   container: {
     paddingTop: theme.spacing.xs,
     paddingBottom: theme.spacing.md,

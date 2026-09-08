@@ -68,6 +68,12 @@ export interface User {
   lastName?: string;
   profilePicture?: string;
   name?: string;
+  /**
+   * The name a HOUSEMATE or collaborator reads this account by — gated by the
+   * sharing relationship, unlike `profile.displayName` which profile visibility
+   * can withhold. `name` above is the profile one, flattened for the greeting.
+   */
+  displayName?: string | null;
   /** ISO code; null until the person states one. See `src/domain/money.ts`. */
   preferredCurrency?: string | null;
 }

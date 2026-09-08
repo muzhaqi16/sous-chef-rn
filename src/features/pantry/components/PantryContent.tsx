@@ -9,7 +9,7 @@ import {
   Pressable,
   ThemedRefreshControl,
 } from '#components/atoms/themedComponents';
-import { getTabBarBottomPadding } from '#constants/layout';
+import { getScrollClearancePadding } from '#constants/layout';
 import { Icon } from '#utils/iconUtils';
 import { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import {
@@ -346,7 +346,7 @@ export const PantryContent = React.forwardRef<
       ? styles.listContentEmpty
       : [
           styles.listContent,
-          { paddingBottom: getTabBarBottomPadding(safeBottom) },
+          { paddingBottom: getScrollClearancePadding(safeBottom) },
         ];
 
     // Read from context, not from `renderItem`'s closure — see

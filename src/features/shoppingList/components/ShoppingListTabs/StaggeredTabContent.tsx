@@ -32,16 +32,14 @@ interface StaggeredTabContentProps {
   hasMore?: boolean;
   /** True while a next-page fetch is in flight — gates the footer skeleton. */
   isLoadingMore?: boolean;
-  canRemoveItems: boolean;
-  canEditItems: boolean;
-  canMarkPurchased: boolean;
+  /** Whether this tab offers drag-to-reorder; the permission half is context. */
+  reorderable: boolean;
   // Optional props that differ between tabs
   onSortOrderUpdate?: (
     itemId: string,
     afterItemId: string | null,
     beforeItemId: string | null,
   ) => void;
-  canReorderItems?: boolean;
   onMoveToPantry?: (id: string) => void;
   listEmptyComponent?: FlashListProps<ShoppingListRowItem>['ListEmptyComponent'];
   // Scroll direction tracking
@@ -71,11 +69,8 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
   onEndReached,
   hasMore,
   isLoadingMore,
-  canRemoveItems,
-  canEditItems,
-  canMarkPurchased,
+  reorderable,
   onSortOrderUpdate,
-  canReorderItems,
   onMoveToPantry,
   listEmptyComponent,
   onScroll,
@@ -115,10 +110,7 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
         onEndReached={onEndReached}
         ListFooterComponent={footerComponent}
         ListEmptyComponent={listEmptyComponent}
-        canRemoveItems={canRemoveItems}
-        canEditItems={canEditItems}
-        canMarkPurchased={canMarkPurchased}
-        canReorderItems={canReorderItems}
+        reorderable={reorderable}
         onScroll={onScroll}
         onScrollBeginDrag={onScrollBeginDrag}
         onScrollEndDrag={onScrollEndDrag}

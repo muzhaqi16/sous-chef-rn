@@ -3,6 +3,12 @@ import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
 import { OnBoardingWrapper } from '../OnBoardingWrapper';
+import { ONBOARDING_STEPS } from '#features/onboarding/hooks/useOnboardingNavigation';
+
+let mockRouteName = 'CreateHome';
+jest.mock('@react-navigation/native', () => ({
+  useRoute: () => ({ name: mockRouteName }),
+}));
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -142,22 +148,30 @@ describe('OnBoardingWrapper', () => {
     expect(onSkip).toHaveBeenCalled();
   });
 
-  it('renders progress bar in legacy mode when step and totalSteps are provided', () => {
-    const { toJSON } = render(
-      <OnBoardingWrapper step={2} totalSteps={5}>
+  it('reports the position of the route it is rendering, out of the flow length', () => {
+    mockRouteName = 'CreateShoppingList';
+    render(
+      <OnBoardingWrapper>
         <Text>Content</Text>
       </OnBoardingWrapper>,
     );
-    expect(toJSON()).toBeTruthy();
+
+    // Second of seven: the numbers come from ONBOARDING_STEPS, so removing a
+    // step moves them without any screen being edited.
+    expect(
+      screen.getByLabelText(`Step 2 of ${ONBOARDING_STEPS.length}`),
+    ).toBeTruthy();
   });
 
-  it('does not render progress bar when step is not provided', () => {
+  it('reports no progress on a screen the flow does not contain', () => {
+    mockRouteName = 'SomewhereElse';
     const { toJSON } = render(
       <OnBoardingWrapper>
         <Text>Content</Text>
       </OnBoardingWrapper>,
     );
     expect(toJSON()).toBeTruthy();
+    expect(screen.queryByLabelText(/^Step /)).toBeNull();
   });
 
   it('renders OnboardingNavigation when context is available', () => {

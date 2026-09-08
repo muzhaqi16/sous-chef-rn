@@ -78,13 +78,15 @@ describe('deviceRegionCurrency', () => {
 });
 
 describe('isUnchosenCurrency', () => {
-  it('treats the server default and an absent value as unchosen', () => {
-    expect(isUnchosenCurrency('USD')).toBe(true);
+  it('treats an absent value as unchosen', () => {
     expect(isUnchosenCurrency(null)).toBe(true);
     expect(isUnchosenCurrency(undefined)).toBe(true);
   });
 
-  it('treats anything else as the user having chosen', () => {
+  it('treats a stored code as a choice, the app default included', () => {
+    // A US account living in Germany deliberately holds USD; a value equal to
+    // the default cannot be told apart from one that was picked.
+    expect(isUnchosenCurrency('USD')).toBe(false);
     expect(isUnchosenCurrency('EUR')).toBe(false);
     expect(isUnchosenCurrency('LEK')).toBe(false);
   });

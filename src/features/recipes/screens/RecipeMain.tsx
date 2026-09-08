@@ -598,7 +598,7 @@ const RecipeMainFallback: React.FC = () => {
       scroll="list"
       gutter="none"
     >
-      <View style={styles.searchBarContainer}>
+      <View style={styles.loadingGutter}>
         <SearchBar
           value=""
           onChangeText={noop}
@@ -606,8 +606,8 @@ const RecipeMainFallback: React.FC = () => {
           showSearchIcon
           editable={false}
         />
+        <RecipeSkeleton />
       </View>
-      <RecipeSkeleton />
     </Screen>
   );
 };
@@ -620,6 +620,8 @@ export const RecipeMain: React.FC = () => (
 );
 
 const styles = StyleSheet.create(theme => ({
+  // No inset: this one renders INSIDE the list's content container, which
+  // already carries the gutter for everything it holds.
   searchBarContainer: {},
   // The loading branch renders chrome and skeleton bare under `gutter="none"`,
   // unlike the loaded branch where the list's content container insets them.

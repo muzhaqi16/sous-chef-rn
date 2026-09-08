@@ -250,7 +250,7 @@ export const SavedRecipes: React.FC = () => {
           showSearchIcon
         />
       </View>
-      {FilterHeader}
+      <View style={styles.gutter}>{FilterHeader}</View>
       {dataState !== 'ready' || filteredRecipes.length === 0 ? (
         <DataStateView
           state={dataState === 'ready' ? 'empty' : dataState}
@@ -319,6 +319,11 @@ export const SavedRecipes: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
+  // The screen is `gutter="none"` and the list content container carries the
+  // inset for the rows; the filter strip renders outside it and takes its own.
+  gutter: {
+    paddingHorizontal: theme.layout.pageGutter,
+  },
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

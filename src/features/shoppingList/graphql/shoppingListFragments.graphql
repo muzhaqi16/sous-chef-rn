@@ -58,6 +58,7 @@ fragment ShoppingListOwnershipFragment on ShoppingListOwnership {
   user {
     id
     email
+    displayName
     profile {
       id
       displayName

@@ -17,12 +17,13 @@ import {
   getBiometricCapability,
   saveLastBiometricEmail,
   getLastBiometricEmail,
-  claimBiometricSlot,
   DEFAULT_SERVICE,
   CREDENTIALS_INDICATOR_SERVICE,
   clearTempRegistrationPassword,
   saveSessionTokens,
   loadSessionTokens,
+  loadDeviceId,
+  saveDeviceId,
   clearSessionTokens,
   pickFresherSessionTokens,
 } from '../keychain';
@@ -325,83 +326,42 @@ describe('keychain storage', () => {
     });
   });
 
-  describe('claimBiometricSlot', () => {
-    it('clears EVERY other enrolled account, including ones no hint names', () => {
-      // The account enrolled before the hint was being written is invisible to
-      // the hint, so the keychain itself is what has to be read.
+  describe('enrolling one account beside another', () => {
+    // Which account the prompt offers is a preference. A local credential is
+    // not a revocation handle for the server-side one it stands for, so
+    // clearing another account's slot removes their only record of it.
+    it('leaves every other account enrolled', async () => {
       mockGetAllServices.mockResolvedValue([
         `${DEFAULT_SERVICE}.old@test.com`,
         `${CREDENTIALS_INDICATOR_SERVICE}.old@test.com`,
-        `${DEFAULT_SERVICE}.forgotten@test.com`,
-        `${DEFAULT_SERVICE}.new@test.com`,
-        'souschefrn.session.tokens',
       ]);
-      mockGetInternetCredentials.mockResolvedValue(false);
-      mockResetGenericPassword.mockResolvedValue(true);
-      mockSetInternetCredentials.mockResolvedValue(true);
-
-      return claimBiometricSlot('new@test.com').then(() => {
-        expect(mockResetGenericPassword).toHaveBeenCalledWith({
-          service: `${DEFAULT_SERVICE}.old@test.com`,
-        });
-        expect(mockResetGenericPassword).toHaveBeenCalledWith({
-          service: `${DEFAULT_SERVICE}.forgotten@test.com`,
-        });
-        // The account being claimed keeps its slots.
-        expect(mockResetGenericPassword).not.toHaveBeenCalledWith({
-          service: `${DEFAULT_SERVICE}.new@test.com`,
-        });
-      });
-    });
-
-    it('does not read an indicator service as an account of its own', async () => {
-      // `credentials.` also prefixes `credentials.indicator.`, so a naive
-      // filter yields an account called `indicator.<email>`.
-      mockGetAllServices.mockResolvedValue([
-        `${CREDENTIALS_INDICATOR_SERVICE}.only@test.com`,
-      ]);
-      mockGetInternetCredentials.mockResolvedValue(false);
-      mockSetInternetCredentials.mockResolvedValue(true);
-
-      await claimBiometricSlot('someone@test.com');
-
-      expect(mockResetGenericPassword).not.toHaveBeenCalled();
-    });
-
-    it('still clears the hinted account when the keychain cannot be listed', async () => {
-      mockGetAllServices.mockRejectedValue(new Error('unsupported'));
       mockGetInternetCredentials.mockResolvedValue({
         username: 'old@test.com',
       });
+      mockSetGenericPassword.mockResolvedValue(true);
       mockResetGenericPassword.mockResolvedValue(true);
-      mockResetInternetCredentials.mockResolvedValue(true);
       mockSetInternetCredentials.mockResolvedValue(true);
 
-      await claimBiometricSlot('new@test.com');
+      await saveCredentials('new@test.com', 'device-credential');
 
-      expect(mockResetGenericPassword).toHaveBeenCalledWith({
+      expect(mockResetGenericPassword).not.toHaveBeenCalledWith({
         service: `${DEFAULT_SERVICE}.old@test.com`,
       });
-    });
-
-    it('clears the previously enrolled account and points at the new one', async () => {
-      mockGetInternetCredentials.mockResolvedValue({
-        username: 'old@test.com',
-      });
-      mockResetGenericPassword.mockResolvedValue(true);
-      mockResetInternetCredentials.mockResolvedValue(true);
-      mockSetInternetCredentials.mockResolvedValue(true);
-
-      await claimBiometricSlot('new@test.com');
-
-      // The login screen can only offer one account, so the old slots are
-      // unreachable data — both of its services go.
-      expect(mockResetGenericPassword).toHaveBeenCalledWith({
-        service: `${DEFAULT_SERVICE}.old@test.com`,
-      });
-      expect(mockResetGenericPassword).toHaveBeenCalledWith({
+      expect(mockResetGenericPassword).not.toHaveBeenCalledWith({
         service: `${CREDENTIALS_INDICATOR_SERVICE}.old@test.com`,
       });
+    });
+
+    it('offers the account that just enrolled', async () => {
+      mockGetInternetCredentials.mockResolvedValue({
+        username: 'old@test.com',
+      });
+      mockSetGenericPassword.mockResolvedValue(true);
+      mockResetGenericPassword.mockResolvedValue(true);
+      mockSetInternetCredentials.mockResolvedValue(true);
+
+      await saveCredentials('new@test.com', 'device-credential');
+
       expect(mockSetInternetCredentials).toHaveBeenCalledWith(
         'souschefrn-email',
         'new@test.com',
@@ -410,27 +370,25 @@ describe('keychain storage', () => {
       );
     });
 
-    it('keeps the slots when the same account re-enrols, however it is cased', async () => {
-      mockGetInternetCredentials.mockResolvedValue({
-        username: 'User@Test.com',
+    it('leaves a previously enrolled account able to sign in again', async () => {
+      // Its slot survived another account's enrolment, so signing in re-offers
+      // it without a fresh enrolment.
+      mockGetGenericPassword.mockResolvedValue({
+        username: 'old@test.com',
+        password: 'device-credential',
       });
-      mockResetGenericPassword.mockResolvedValue(true);
-      mockSetInternetCredentials.mockResolvedValue(true);
 
-      await claimBiometricSlot('  user@test.com ');
-
-      expect(mockResetGenericPassword).not.toHaveBeenCalled();
-      expect(mockSetInternetCredentials).toHaveBeenCalled();
+      await expect(hasCredentials('old@test.com')).resolves.toBe(true);
     });
 
-    it('just claims the pointer when nothing was enrolled', async () => {
-      mockGetInternetCredentials.mockResolvedValue(false);
-      mockSetInternetCredentials.mockResolvedValue(true);
+    it('reports success when only the offered-account record fails', async () => {
+      mockSetGenericPassword.mockResolvedValue(true);
+      mockResetGenericPassword.mockResolvedValue(true);
+      mockSetInternetCredentials.mockRejectedValue(new Error('unsupported'));
 
-      await claimBiometricSlot('first@test.com');
-
-      expect(mockResetGenericPassword).not.toHaveBeenCalled();
-      expect(mockSetInternetCredentials).toHaveBeenCalled();
+      await expect(
+        saveCredentials('new@test.com', 'device-credential'),
+      ).resolves.toBeUndefined();
     });
   });
 
@@ -727,6 +685,30 @@ describe('keychain storage', () => {
       await jest.runAllTimersAsync();
       await expect(resultPromise).resolves.toEqual({ status: 'error' });
       expect(mockGetGenericPassword).toHaveBeenCalledTimes(3);
+      jest.useRealTimers();
+    });
+
+    it('does not hold the keychain lock while a retry waits', async () => {
+      // The backoff is 200ms + 400ms. Held inside the queued operation it would
+      // block every other keychain caller for the whole 600ms — on the launch
+      // path, where the device id and the credentials are read behind it.
+      jest.useFakeTimers();
+      mockGetGenericPassword.mockRejectedValue(new Error('keystore asleep'));
+      mockSetGenericPassword.mockResolvedValue(true);
+
+      const reading = loadDeviceId();
+      const writing = saveDeviceId('device-1');
+
+      // No timer advanced: the write must get the lock while the read is
+      // between attempts. Held inside the operation, the 200ms backoff would
+      // still be running here and the write would not have started.
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(mockSetGenericPassword).toHaveBeenCalled();
+
+      await jest.runAllTimersAsync();
+      await expect(writing).resolves.toBe(true);
+      await expect(reading).resolves.toEqual({ status: 'error' });
       jest.useRealTimers();
     });
 

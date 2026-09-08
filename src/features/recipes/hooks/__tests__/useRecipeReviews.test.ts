@@ -59,6 +59,7 @@ function buildReviewNode(
       __typename: 'User' as const,
       id: user.id,
       email: `${user.id}@test.com`,
+      displayName: null,
       profile: {
         __typename: 'UserProfile' as const,
         id: `${user.id}-profile`,
@@ -214,6 +215,7 @@ const makeBackendRecipe = (
     __typename: 'User' as const,
     id: 'other-user',
     email: 'other@test.com',
+    displayName: null,
   },
   ...overrides,
 });
@@ -283,6 +285,7 @@ describe('useRecipeReviews', () => {
               __typename: 'User' as const,
               id: 'user-1',
               email: 'user-1@test.com',
+              displayName: null,
             },
           }),
         }),

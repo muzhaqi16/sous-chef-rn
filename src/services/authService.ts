@@ -95,30 +95,51 @@ function bootstrapUserStore(user: LoginUserFragment): void {
  * answer has to land before the first one rather than being asked for.
  * Silent by design — a user who disagrees changes it in Profile.
  */
-function applyRegionCurrencyDefault(user: LoginUserFragment): void {
+async function applyRegionCurrencyDefault(
+  user: LoginUserFragment,
+): Promise<void> {
   const store = useStore.getState();
   const navState = store.getUserNavigationState(user.id);
   if (navState?.currencyDefaultApplied) return;
 
-  // Marked before the write, not after: this is a one-time default, and a
-  // failed write must not queue up a second attempt against a user who has
-  // since chosen for themselves.
-  store.setUserNavigationState(user.id, { currencyDefaultApplied: true });
-
+  // An account that HAS a currency has been denominated — by its holder or by
+  // this write on another device — so the server's own value is what stops
+  // this running twice, and the flag below only stops it running twice here.
   if (!isUnchosenCurrency(user.preferredCurrency)) return;
 
   const inferred = deviceRegionCurrency();
   if (!inferred || inferred === user.preferredCurrency) return;
 
+  const previous = store.preferredCurrency;
+  // Ahead of the round trip so the money on screen is denominated at once;
+  // reverted below if the server refuses.
   store.setPreferredCurrency(inferred);
-  void client
-    .mutate({
+
+  // Two ways to fail, and both have to revert. `errorPolicy: 'all'` makes a
+  // REFUSAL resolve, so the outcome has to be read; a transport failure still
+  // THROWS, which is the offline case this runs in most often.
+  let result;
+  try {
+    result = await client.mutate({
       mutation: UpdateAccountDocument,
       variables: { input: { preferredCurrency: inferred } },
-    })
-    .catch(error => {
-      logger.warn('Could not apply the region currency default:', error);
     });
+  } catch (error) {
+    useStore.getState().setPreferredCurrency(previous);
+    logger.warn('Could not apply the region currency default:', error);
+    return;
+  }
+
+  if (result.data?.updateAccount?.__typename === 'UpdateAccountPayload') {
+    store.setUserNavigationState(user.id, { currencyDefaultApplied: true });
+    return;
+  }
+
+  useStore.getState().setPreferredCurrency(previous);
+  logger.warn(
+    'Could not apply the region currency default:',
+    result.error ?? result.data?.updateAccount,
+  );
 }
 
 // --- User preferences helpers (direct Zustand access) ---
@@ -303,7 +324,7 @@ async function handleLogin(
   store.setAuth(user, accessToken, refreshToken);
   queueManager.onUserChange(user.id, previousUserId);
   bootstrapUserStore(user);
-  applyRegionCurrencyDefault(user);
+  void applyRegionCurrencyDefault(user);
 
   if (shouldRemember !== undefined) {
     store.setRememberMe(shouldRemember);

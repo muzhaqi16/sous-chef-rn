@@ -489,12 +489,22 @@ describe('SwipeableListItem (SortableItem)', () => {
       canMarkPurchased: boolean;
     }) => {
       const onQuantityPress = jest.fn();
+      // The real hook withholds a handler the permissions forbid, so the double
+      // withholds it too — a double that hands one over tests a path the row
+      // cannot reach.
       (useSortableListActions as jest.Mock).mockReturnValue({
         actions: {
           onItemPress: jest.fn(),
-          onTogglePurchase: jest.fn(),
-          onMoveToPantry: jest.fn(),
-          onQuantityPress,
+          onTogglePurchase: permissions.canMarkPurchased
+            ? jest.fn()
+            : undefined,
+          onMoveToPantry:
+            permissions.canEditItems && permissions.canRemoveItems
+              ? jest.fn()
+              : undefined,
+          onQuantityPress: permissions.canEditItems
+            ? onQuantityPress
+            : undefined,
           onSwipeableWillOpen: jest.fn(),
           onSwipeableClose: jest.fn(),
         },

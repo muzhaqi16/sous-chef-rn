@@ -50,6 +50,7 @@ import { discardOptimisticShoppingItems } from '#features/shoppingList/utils/opt
 import { Telemetry } from '#/services/telemetry';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { DataStateView } from '#components/organisms/DataStateView';
+import { ShoppingListPermissionsProvider } from '#features/shoppingList/context/ShoppingListPermissionsContext';
 import { useDataState } from '#hooks/data/useDataState';
 import { Screen } from '#components/templates/Screen';
 
@@ -80,6 +81,8 @@ export const ShoppingListMainContent: React.FC<
       rawUnpurchasedItems,
       rawPurchasedItems,
       isLoadingInitial,
+      loading,
+      detailsLoading,
       listsLoading,
       listsError,
       listsHasResult,
@@ -321,12 +324,10 @@ export const ShoppingListMainContent: React.FC<
     onEndReachedPurchased: loadMorePurchased,
     hasMorePurchased,
     isLoadingMorePurchased,
-    // Permissions
-    canAddItems: permissions.canAddItems,
-    canRemoveItems: permissions.canRemoveItems,
-    canEditItems: permissions.canEditItems,
-    canMarkPurchased: permissions.canMarkPurchased,
-    canReorderItems: permissions.canEditItems,
+    // Permissions do NOT travel here: `customListProps` is
+    // `Record<string, unknown>`, so they would arrive as `boolean | undefined`
+    // and every layer below would declare what the `undefined` means. They come
+    // from `ShoppingListPermissionsProvider` instead.
     // Search query for search-aware empty states
     searchQuery,
     // Scroll direction tracking — threaded to FlashList via data context
@@ -367,9 +368,12 @@ export const ShoppingListMainContent: React.FC<
       openAddItemSheet();
     },
     !permissions.canAddItems,
-    permissions.canAddItems
-      ? undefined
-      : t('shoppingListScreen.noAddPermission'),
+    // Only a KNOWN refusal names one. While the answer is unresolved the button
+    // is disabled with no copy, because "you have no permission" is a claim the
+    // app cannot make yet — and would make to the list's own owner.
+    permissions.resolved && !permissions.canAddItems
+      ? t('shoppingListScreen.noAddPermission')
+      : undefined,
   );
 
   // No lists on screen. Only a fetch that actually succeeded and returned
@@ -404,6 +408,35 @@ export const ShoppingListMainContent: React.FC<
     );
   }
 
+  // A list is on screen but the app cannot say what this person may do with it:
+  // the detail request failed, or the cache never held it. Rendering the list
+  // read-only claims a refusal the app has not been told about, and shows the
+  // owner their own list as a viewer's, so this offers the retry instead.
+  // Gated on the DETAIL query's own loading flag — the item flags settle first,
+  // and reading them instead puts this screen up for a frame on every visit.
+  if (
+    !detailsLoading &&
+    !isLoadingInitial &&
+    !loading &&
+    !permissions.resolved
+  ) {
+    return (
+      <Screen
+        testID="shopping-list-screen"
+        header={{
+          variant: 'tab',
+          label: t('shoppingListScreen.label'),
+          title: currentList?.name || t('labels.shoppingList'),
+          headerRight: headerRight,
+        }}
+        scroll="list"
+        gutter="none"
+      >
+        <DataStateView state="error" onRetry={handleRefresh} />
+      </Screen>
+    );
+  }
+
   const emptyStateConfig = {
     icon: 'cart-outline',
     title: t('shoppingListScreen.emptyTitle'),
@@ -427,28 +460,32 @@ export const ShoppingListMainContent: React.FC<
       gutter="none"
     >
       {searchBarHeader}
-      <ListTemplate
-        items={[]}
-        loading={isLoadingInitial}
-        onItemPress={id =>
-          toShoppingListItemDetail({ listId: currentListId, itemId: id })
-        }
-        itemSwipeActions={id => ({
-          left: [
-            editAction(() => toEditItem({ listId: currentListId, itemId: id })),
-          ],
-          right: [
-            { ...deleteAction(() => handleDeleteItem(id)), removesRow: true },
-          ],
-        })}
-        onRefresh={handleRefresh}
-        testIDPrefix="shopping-list-item"
-        emptyState={emptyStateConfig}
-        customListComponent={ShoppingListTabs}
-        customListProps={{
-          ...customListProps,
-        }}
-      />
+      <ShoppingListPermissionsProvider permissions={permissions}>
+        <ListTemplate
+          items={[]}
+          loading={isLoadingInitial}
+          onItemPress={id =>
+            toShoppingListItemDetail({ listId: currentListId, itemId: id })
+          }
+          itemSwipeActions={id => ({
+            left: [
+              editAction(() =>
+                toEditItem({ listId: currentListId, itemId: id }),
+              ),
+            ],
+            right: [
+              { ...deleteAction(() => handleDeleteItem(id)), removesRow: true },
+            ],
+          })}
+          onRefresh={handleRefresh}
+          testIDPrefix="shopping-list-item"
+          emptyState={emptyStateConfig}
+          customListComponent={ShoppingListTabs}
+          customListProps={{
+            ...customListProps,
+          }}
+        />
+      </ShoppingListPermissionsProvider>
 
       <AnimatedItemSelector
         ref={selectorRef}

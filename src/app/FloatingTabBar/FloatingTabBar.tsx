@@ -26,10 +26,9 @@ import { HapticService } from '#services/haptic/HapticService';
 import { SHEET, TAB_BAR } from '#/constants/animations';
 import { GlassSurface, supportsGlass } from '#components/atoms/GlassSurface';
 import { motion } from '#/theme/foundations/motion';
-import { TAB_BAR_HEIGHT } from '#constants/layout';
+import { TAB_BAR_HEIGHT, FLOATING_BUTTON_GAP } from '#constants/layout';
 
 /** Between the bar's top edge and the floating action button above it. */
-const FLOATING_BUTTON_GAP = 12;
 
 export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   state,

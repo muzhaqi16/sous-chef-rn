@@ -1,5 +1,3 @@
-import { DEFAULT_CURRENCY } from '#/utils/formatters/number';
-
 /**
  * Region → currency, for the currencies the API offers. Keyed on REGION, never
  * on language: the app ships four languages against eleven currencies and the
@@ -103,9 +101,11 @@ export function deviceRegionCurrency(): string | null {
 }
 
 /**
- * True when `code` is the server's own default rather than a choice the user
- * made. Only such an account may be re-denominated from the device region.
+ * True when the account has never been denominated. Absence is the only signal:
+ * `User.preferredCurrency` is nullable, and a stored code cannot say whether it
+ * was chosen or defaulted — reading the app's own default as "unchosen" moves
+ * an account whose holder deliberately picked it.
  */
 export function isUnchosenCurrency(code: string | null | undefined): boolean {
-  return !code || code === DEFAULT_CURRENCY;
+  return !code;
 }

@@ -149,8 +149,6 @@ export const InviteMemberScreen = () => {
       <OnBoardingWrapper
         title={t('inviteMembers.title')}
         subtitle={getSubtitle()}
-        step={6}
-        totalSteps={8}
         onSkip={() => navigateToNextStep('InviteMembers')}
       >
         <View style={styles.container}>
@@ -173,8 +171,6 @@ export const InviteMemberScreen = () => {
     <OnBoardingWrapper
       title={t('inviteMembers.title')}
       subtitle={getSubtitle()}
-      step={6}
-      totalSteps={8}
       onSkip={() => navigateToNextStep('InviteMembers')}
     >
       <View style={styles.container}>

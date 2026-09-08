@@ -3,6 +3,7 @@ import { View, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SkeletonBase } from '#components/atoms/Skeleton/SkeletonBase';
 import { MealPlanItemCardSkeleton } from '#features/mealPlan/components/skeletons/MealPlanItemCardSkeleton';
+import { getScrollClearancePadding } from '#constants/layout';
 
 /** Mirrors MealPlanMain's loaded layout, section for section. */
 export const MealPlanSkeleton: React.FC = () => (
@@ -86,12 +87,12 @@ export const MealPlanSkeleton: React.FC = () => (
   </ScrollView>
 );
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create((theme, rt) => ({
   container: {
     // Its host renders it bare under `gutter="none"`, and a skeleton stands in
     // for rows that are inset — so it carries the gutter for everything inside.
     paddingHorizontal: theme.layout.pageGutter,
-    paddingBottom: 120,
+    paddingBottom: getScrollClearancePadding(rt.insets.bottom),
   },
 
   // WeekStrip

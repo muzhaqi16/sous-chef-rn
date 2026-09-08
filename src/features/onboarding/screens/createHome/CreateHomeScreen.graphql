@@ -8,6 +8,7 @@ fragment InviteCard_invite on HomeInvite {
   inviter {
     id
     email
+    displayName
     profile {
       id
       displayName

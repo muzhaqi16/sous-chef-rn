@@ -196,12 +196,6 @@ export const NotificationActionHandler: React.FC<
   };
 
   const closeInvitationModal = () => {
-    // An invite with no token can only be told where to open it — there is no
-    // control to press. Dropping it on close is the one in-app path that clears
-    // it; left in the feed it returns on every cold start and holds the badge.
-    if (currentNotificationId && !currentInvitation?.token) {
-      removeNotification(currentNotificationId);
-    }
     setInvitationModalVisible(false);
     setCurrentInvitation(null);
     setCurrentNotificationId(null);

@@ -1,9 +1,7 @@
 'use no memo';
-// An invite notification whose token is gone has no control to press: the modal
-// can only say where the invite can be opened. Left in the feed it returns on
-// every cold start and, unread, holds the badge with no in-app way to clear it —
-// `removeNotification` is called only from accept and reject, both of which run
-// after a server write this invite cannot make.
+// `removeNotification` reaches the server, so closing the modal must never call
+// it: an invite the user only read stays in their feed on every device. An
+// invite whose token is gone is shown as un-actionable instead of removed.
 
 import React from 'react';
 import { act } from '@testing-library/react-native';
@@ -105,8 +103,10 @@ beforeEach(() => {
   capturedClose = null;
 });
 
-describe('an invite notification that can no longer be acted on', () => {
-  it('leaves the feed when the dead-end surface is closed', async () => {
+describe('closing the invitation modal', () => {
+  // The close control and the Android back button are the same `onClose` prop,
+  // so one case covers both affordances.
+  it('leaves an un-actionable invite in the feed', async () => {
     const getActions = renderHandler();
 
     await act(async () => {
@@ -118,10 +118,10 @@ describe('an invite notification that can no longer be acted on', () => {
       capturedClose?.();
     });
 
-    expect(mockRemoveNotification).toHaveBeenCalledWith('n-invite');
+    expect(mockRemoveNotification).not.toHaveBeenCalled();
   });
 
-  it('stays in the feed while it can still be accepted', async () => {
+  it('leaves an invite that can still be accepted in the feed', async () => {
     const getActions = renderHandler();
 
     await act(async () => {
@@ -138,5 +138,39 @@ describe('an invite notification that can no longer be acted on', () => {
     });
 
     expect(mockRemoveNotification).not.toHaveBeenCalled();
+  });
+
+  it('deletes nothing when there is no invitation at all', async () => {
+    const getActions = renderHandler();
+
+    await act(async () => {
+      getActions().handleNotificationAction(inviteNotification({}));
+    });
+    await act(async () => {
+      capturedClose?.();
+    });
+
+    expect(mockRemoveNotification).not.toHaveBeenCalled();
+  });
+
+  it('reopens the same invite after it was closed', async () => {
+    const getActions = renderHandler();
+    const invite = inviteNotification({
+      homeName: 'Smith',
+      inviterName: 'Ada',
+    });
+
+    await act(async () => {
+      getActions().handleNotificationAction(invite);
+    });
+    await act(async () => {
+      capturedClose?.();
+    });
+    await act(async () => {
+      getActions().handleNotificationAction(invite);
+    });
+
+    expect(mockRemoveNotification).not.toHaveBeenCalled();
+    expect(capturedClose).not.toBeNull();
   });
 });

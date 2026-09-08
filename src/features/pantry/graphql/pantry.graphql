@@ -821,6 +821,7 @@ mutation CreatePantryItemUsage($input: CreatePantryItemUsageInput!) {
         usedBy {
           id
           email
+          displayName
         }
       }
     }

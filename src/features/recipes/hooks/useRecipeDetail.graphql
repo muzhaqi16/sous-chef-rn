@@ -62,6 +62,7 @@ query GetShoppingListsLiteForRecipe($homeId: ID, $first: Int, $after: String) {
           user {
             id
             email
+            displayName
             profile {
               id
               displayName

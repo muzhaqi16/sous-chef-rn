@@ -27,6 +27,7 @@ fragment InvitationAcceptanceModal_collaborator on ShoppingListCollaborator {
   collaborator {
     id
     email
+    displayName
     profile {
       id
       displayName
