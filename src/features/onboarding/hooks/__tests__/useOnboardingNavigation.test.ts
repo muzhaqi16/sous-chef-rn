@@ -124,6 +124,20 @@ describe('useOnboardingNavigation', () => {
       );
     });
 
+    // `indexOf` returns -1, and `-1 < length - 1` is true — so the bounds check
+    // alone sends an unlisted step to index 0 and persists that as the resume
+    // point, moving the reader BACKWARDS through the flow.
+    it('does not send an unlisted step backwards to the first one', () => {
+      const { result } = renderHook(() => useOnboardingNavigation());
+
+      act(() => {
+        result.current.navigateToNextStep('NotInTheFlow');
+      });
+
+      expect(mockDispatch).not.toHaveBeenCalled();
+      expect(mockSetOnBoardingStep).not.toHaveBeenCalled();
+    });
+
     it('resets navigation stack when navigating to OnboardingComplete', () => {
       const { result } = renderHook(() => useOnboardingNavigation());
 

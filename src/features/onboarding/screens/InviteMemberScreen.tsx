@@ -17,12 +17,7 @@ import {
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
-import { useInviteToHome } from '#features/onboarding/hooks/useInviteToHome';
-import { useAddCollaborator } from '#features/shoppingList/hooks/useAddCollaborator';
-import {
-  CollaboratorRole,
-  MembershipRole,
-} from '#/graphql/generated/schemaTypes';
+import { useSendOnboardingInvites } from '#features/onboarding/hooks/useSendOnboardingInvites';
 import { useAppStore, useSelectedHomeId } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#features/onboarding/hooks/useOnboardingNavigation';
 import { useUser } from '#store/useAppStore';
@@ -72,13 +67,11 @@ export const InviteMemberScreen = () => {
   const email = useWatch({ control, name: 'email' });
 
   const { requireVerifiedEmail } = useVerifiedEmailGate();
-  const { inviteToHome } = useInviteToHome(error => {
-    handleMutationError(error, { operation: 'Invite to Home' });
-  });
-
-  const { addCollaborator } = useAddCollaborator(error => {
-    handleMutationError(error, { operation: 'Add Collaborator' });
-  });
+  const { sendInvites: sendOnboardingInvites } = useSendOnboardingInvites(
+    error => {
+      handleMutationError(error, { operation: 'Onboarding invites' });
+    },
+  );
 
   // Reaching here means the address is well-formed, new, and not the person's
   // own; each refusal renders under the input instead of in an alert the reader
@@ -95,55 +88,47 @@ export const InviteMemberScreen = () => {
     setInvites(invites.filter(invite => invite.id !== id));
   };
 
+  const reportPartialSuccess = () => {
+    alertService.alert(
+      t('inviteMembers.partialSuccessTitle'),
+      t('inviteMembers.partialSuccessMessage'),
+      [
+        {
+          text: t('labels.continue'),
+          onPress: () => navigateToNextStep('InviteMembers'),
+        },
+      ],
+    );
+  };
+
   const sendInvites = () => {
     if (!requireVerifiedEmail()) return;
 
     if (invites.length > 0) {
       executeWithLoadingState(
         async () => {
-          const invitePromises = [];
+          const { refusedCount } = await sendOnboardingInvites(
+            invites.map(invite => invite.email),
+            {
+              homeId: selectedHomeId,
+              shoppingListId: selectedShoppingListId,
+              message: t('inviteMembers.inviteHomeMessage', {
+                name: user?.email || t('labels.someone'),
+              }),
+            },
+          );
 
-          for (const invite of invites) {
-            if (selectedHomeId) {
-              // Home membership covers home-linked shopping lists
-              invitePromises.push(
-                inviteToHome({
-                  homeId: selectedHomeId,
-                  email: invite.email,
-                  role: MembershipRole.Member,
-                  message: t('inviteMembers.inviteHomeMessage', {
-                    name: user?.email || t('labels.someone'),
-                  }),
-                }),
-              );
-            } else if (selectedShoppingListId) {
-              // Standalone shopping list (not home-linked)
-              invitePromises.push(
-                addCollaborator({
-                  shoppingListId: selectedShoppingListId,
-                  email: invite.email,
-                  role: CollaboratorRole.Contributor,
-                }),
-              );
-            }
+          if (refusedCount > 0) {
+            reportPartialSuccess();
+            return;
           }
 
-          await Promise.all(invitePromises);
           navigateToNextStep('InviteMembers');
         },
         setIsInviting,
         error => {
           errorService.reportError(error, { operation: 'sendInvites' });
-          alertService.alert(
-            t('inviteMembers.partialSuccessTitle'),
-            t('inviteMembers.partialSuccessMessage'),
-            [
-              {
-                text: t('labels.continue'),
-                onPress: () => navigateToNextStep('InviteMembers'),
-              },
-            ],
-          );
+          reportPartialSuccess();
         },
       );
       return;
@@ -164,8 +149,6 @@ export const InviteMemberScreen = () => {
       <OnBoardingWrapper
         title={t('inviteMembers.title')}
         subtitle={getSubtitle()}
-        step={6}
-        totalSteps={8}
         onSkip={() => navigateToNextStep('InviteMembers')}
       >
         <View style={styles.container}>
@@ -188,8 +171,6 @@ export const InviteMemberScreen = () => {
     <OnBoardingWrapper
       title={t('inviteMembers.title')}
       subtitle={getSubtitle()}
-      step={6}
-      totalSteps={8}
       onSkip={() => navigateToNextStep('InviteMembers')}
     >
       <View style={styles.container}>

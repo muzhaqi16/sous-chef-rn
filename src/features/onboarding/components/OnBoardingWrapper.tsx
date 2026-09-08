@@ -12,6 +12,8 @@ import { useOnboardingContextSafe } from '#features/onboarding/context/Onboardin
 import type { NavigationAction } from '#features/onboarding/components/OnboardingNavigation/types';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { ProgressBar } from '#components/atoms/ProgressBar';
+import { useRoute } from '@react-navigation/native';
+import { ONBOARDING_STEPS } from '#features/onboarding/hooks/useOnboardingNavigation';
 
 const ThemedOnboardingNavigation = withUnistyles(OnboardingNavigation);
 
@@ -19,9 +21,6 @@ interface OnboardingWrapperProps {
   children: ReactNode;
   title?: string;
   subtitle?: string;
-  // Legacy props - deprecated but kept for backward compatibility
-  step?: number;
-  totalSteps?: number;
   onBack?: () => void;
   onSkip?: () => void;
   // New props for enhanced navigation
@@ -37,8 +36,6 @@ export const OnBoardingWrapper = ({
   children,
   title,
   subtitle,
-  step,
-  totalSteps,
   onBack,
   onSkip,
   showSteps = true,
@@ -49,7 +46,13 @@ export const OnBoardingWrapper = ({
   testID,
 }: OnboardingWrapperProps) => {
   const { t } = useTranslation();
-  const progress = step && totalSteps ? (step / totalSteps) * 100 : 0;
+  // Read off the route, so the flow's one sequence answers both numbers. A
+  // screen stating its own position is a second definition, and it is the one
+  // that goes stale when a step is added or removed.
+  const route = useRoute();
+  const stepIndex = ONBOARDING_STEPS.indexOf(route.name);
+  const step = stepIndex >= 0 ? stepIndex + 1 : null;
+  const totalSteps = ONBOARDING_STEPS.length;
 
   // Always call the hook, but handle if context is not provided
   const onboardingContext = useOnboardingContextSafe();
@@ -146,9 +149,9 @@ export const OnBoardingWrapper = ({
               </Text>
             </AppPressable>
           )}
-          {step != null && totalSteps != null && (
+          {step != null && (
             <ProgressBar
-              value={progress / 100}
+              value={step / totalSteps}
               style={styles.progressBar}
               accessibilityLabel={t('onboarding.progress', {
                 step,

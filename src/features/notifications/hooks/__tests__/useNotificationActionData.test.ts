@@ -8,8 +8,7 @@ jest.mock('#features/notifications/hooks/useNotificationSync', () => ({
 
 /**
  * Removing a notification only from the cache is not a terminal state: the
- * server still has it, so it returns on the next cold start — and an invite
- * notification that returns without its token can never be actioned again.
+ * server still has it, so it returns on the next cold start.
  */
 describe('useNotificationActionData', () => {
   beforeEach(() => jest.clearAllMocks());

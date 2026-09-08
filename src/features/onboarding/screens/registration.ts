@@ -1,7 +1,6 @@
 import { createNativeStackScreen } from '@react-navigation/native-stack';
 import { ImageCropScreen } from '#features/profile/screens/ImageCropScreen';
 import { CreateHomeScreen } from './createHome/CreateHomeScreen';
-import { CurrencySetupScreen } from './CurrencySetupScreen';
 import { CreateShoppingListScreen } from './CreateShoppingListScreen';
 import { SelectPantryItems } from './SelectPantryItems';
 import { ProfilePictureUploadScreen } from './ProfilePictureUploadScreen';
@@ -19,10 +18,6 @@ export const onboardingScreens = {
   CreateHome: createNativeStackScreen({
     screen: CreateHomeScreen,
     linking: 'onboarding/home',
-  }),
-  CurrencySetup: createNativeStackScreen({
-    screen: CurrencySetupScreen,
-    linking: 'onboarding/currency',
   }),
   CreateShoppingList: createNativeStackScreen({
     screen: CreateShoppingListScreen,

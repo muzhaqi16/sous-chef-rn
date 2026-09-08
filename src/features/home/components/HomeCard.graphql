@@ -11,6 +11,9 @@ fragment HomeCard_home on Home {
         user {
           id
           email
+          # Every reader of this User record selects it — `HomeMemberCard_member`
+          # among them — and one missing field makes the whole read incomplete.
+          displayName
         }
       }
     }

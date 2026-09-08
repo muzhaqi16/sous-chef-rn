@@ -209,6 +209,65 @@ describe('SortableListActionsContext', () => {
     }).not.toThrow();
   });
 
+  describe('withholding the handlers a permission refuses', () => {
+    // A row renders a control when it is handed a handler for it. Gating here
+    // rather than at each control is what keeps a control added later from
+    // shipping ungated — which is how move-to-pantry came to be the one write
+    // a viewer could still perform.
+    const viewer: SortableListPermissions = {
+      canRemoveItems: false,
+      canEditItems: false,
+      canMarkPurchased: false,
+      canReorderItems: false,
+      disabled: false,
+    };
+
+    it('hands a viewer no write handler at all', () => {
+      const { result } = renderHook(() => useSortableListActions(), {
+        wrapper: wrapper(defaultActions, viewer),
+      });
+
+      expect(result.current.actions.onQuantityPress).toBeUndefined();
+      expect(result.current.actions.onTogglePurchase).toBeUndefined();
+      expect(result.current.actions.onMoveToPantry).toBeUndefined();
+      expect(result.current.actions.onSortOrderUpdate).toBeUndefined();
+    });
+
+    it('still hands over the read-only handlers', () => {
+      const { result } = renderHook(() => useSortableListActions(), {
+        wrapper: wrapper(defaultActions, viewer),
+      });
+
+      expect(result.current.actions.onItemPress).toBeDefined();
+      expect(result.current.actions.onSwipeableClose).toBeDefined();
+    });
+
+    it('withholds move-to-pantry from someone who may edit but not remove', () => {
+      // It removes the row AND writes a pantry item, so either permission
+      // alone is not enough.
+      const { result } = renderHook(() => useSortableListActions(), {
+        wrapper: wrapper(defaultActions, {
+          ...viewer,
+          canEditItems: true,
+        }),
+      });
+
+      expect(result.current.actions.onMoveToPantry).toBeUndefined();
+      expect(result.current.actions.onQuantityPress).toBeDefined();
+    });
+
+    it('hands every handler to someone with full permissions', () => {
+      const { result } = renderHook(() => useSortableListActions(), {
+        wrapper: wrapper(),
+      });
+
+      expect(result.current.actions.onQuantityPress).toBeDefined();
+      expect(result.current.actions.onTogglePurchase).toBeDefined();
+      expect(result.current.actions.onMoveToPantry).toBeDefined();
+      expect(result.current.actions.onSortOrderUpdate).toBeDefined();
+    });
+  });
+
   it('publishes a handler that only arrives on a later render', () => {
     // A tree rather than `renderHook`: the bag is a PROVIDER prop, and
     // `initialProps` reach the hook callback, not the wrapper.

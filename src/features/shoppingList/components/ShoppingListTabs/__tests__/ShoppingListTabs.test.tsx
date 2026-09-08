@@ -1,7 +1,12 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import {
+  render as rtlRender,
+  screen,
+  fireEvent,
+} from '@testing-library/react-native';
 import { ShoppingListTabs } from '../ShoppingListTabs';
+import { ShoppingListPermissionsProvider } from '#features/shoppingList/context/ShoppingListPermissionsContext';
 
 type ShoppingListTabsProps = React.ComponentProps<typeof ShoppingListTabs>;
 
@@ -176,6 +181,26 @@ const defaultProps: ShoppingListTabsProps = {
   ],
   onItemPress: jest.fn(),
 };
+
+/**
+ * The tabs read what the user may do from context and throw without it — there
+ * is no prop for it, so no test can render them with an answer the resolver
+ * never gave.
+ */
+const render = (ui: React.ReactElement) =>
+  rtlRender(
+    <ShoppingListPermissionsProvider
+      permissions={{
+        canAddItems: true,
+        canRemoveItems: true,
+        canEditItems: true,
+        canMarkPurchased: true,
+        resolved: true,
+      }}
+    >
+      {ui}
+    </ShoppingListPermissionsProvider>,
+  );
 
 describe('ShoppingListTabs', () => {
   beforeEach(() => {

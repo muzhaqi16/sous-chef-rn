@@ -58,8 +58,6 @@ export const OnboardingCompleteScreen = () => {
     <OnBoardingWrapper
       title={t('onBoarding.completeTitle')}
       subtitle={t('onBoarding.completeSubtitle')}
-      step={8}
-      totalSteps={8}
       testID="onboarding-complete-screen"
     >
       <View style={styles.container}>

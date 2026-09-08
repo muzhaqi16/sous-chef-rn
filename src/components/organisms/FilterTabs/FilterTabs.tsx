@@ -134,9 +134,11 @@ const styles = StyleSheet.create(theme => ({
   scrollView: {
     flexShrink: 1,
   },
+  // No inset of its own in either direction: this row renders both inside a
+  // gutter-padded list and as a bare child of a screen, and only the host knows
+  // which.
   scrollContent: {
     gap: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.base,
   },
   tab: {
     flexDirection: 'row',

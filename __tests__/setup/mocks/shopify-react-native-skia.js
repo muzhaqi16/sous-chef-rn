@@ -11,17 +11,22 @@ jest.mock('@shopify/react-native-skia', () => ({
   useFont: jest.fn(() => null),
   useValue: jest.fn(() => ({ current: 0 })),
   Skia: {
-    Path: {
-      Make: () => ({
-        moveTo: jest.fn().mockReturnThis(),
-        lineTo: jest.fn().mockReturnThis(),
-        quadTo: jest.fn().mockReturnThis(),
-        cubicTo: jest.fn().mockReturnThis(),
-        close: jest.fn().mockReturnThis(),
-        addCircle: jest.fn().mockReturnThis(),
-        addRRect: jest.fn().mockReturnThis(),
-        reset: jest.fn().mockReturnThis(),
-      }),
+    PathBuilder: {
+      Make: () => {
+        const path = { __skPath: true };
+        return {
+          moveTo: jest.fn().mockReturnThis(),
+          lineTo: jest.fn().mockReturnThis(),
+          quadTo: jest.fn().mockReturnThis(),
+          cubicTo: jest.fn().mockReturnThis(),
+          close: jest.fn().mockReturnThis(),
+          addCircle: jest.fn().mockReturnThis(),
+          addRRect: jest.fn().mockReturnThis(),
+          reset: jest.fn().mockReturnThis(),
+          build: jest.fn(() => path),
+          detach: jest.fn(() => path),
+        };
+      },
     },
     Color: jest.fn(c => c),
     RRectXY: jest.fn((rect, rx, ry) => ({ rect, rx, ry })),

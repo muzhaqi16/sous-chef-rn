@@ -136,18 +136,21 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
 
     // 'queued' (null payload, no error) counts as success — the edit replays on
     // reconnect.
-    const ok =
-      classifyCreateResult(updateResult) !== 'rejected' &&
-      classifyCreateResult(ingredientsResult) !== 'rejected';
-    if (ok) return { status: 'ok', payload: null };
+    const recipeRejected = classifyCreateResult(updateResult) === 'rejected';
+    const ingredientsRejected =
+      classifyCreateResult(ingredientsResult) === 'rejected';
+    if (!recipeRejected && !ingredientsRejected) {
+      return { status: 'ok', payload: null };
+    }
 
-    // The recipe's own refusal names the field; the ingredients' one is the
-    // fallback when only that leg was refused.
+    // The payload of the leg that was REFUSED. Preferring the recipe's by
+    // presence hands back its SUCCESS payload whenever only the ingredients
+    // were refused, and a success resolves to no localized message.
     return {
       status: 'rejected',
-      payload:
-        updateResult.data?.updateRecipe ??
-        ingredientsResult.data?.updateRecipeIngredients,
+      payload: recipeRejected
+        ? updateResult.data?.updateRecipe
+        : ingredientsResult.data?.updateRecipeIngredients,
     };
   };
 

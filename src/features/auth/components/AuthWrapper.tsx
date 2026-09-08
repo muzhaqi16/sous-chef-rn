@@ -35,7 +35,12 @@ const styles = StyleSheet.create(theme => ({
     flexGrow: 1,
   },
   inner: {
-    flex: 1,
+    // `flexGrow`, NOT `flex`: `flex: 1` sets a zero basis and pins this to the
+    // viewport, so content taller than the screen overflows its own box instead
+    // of scrolling — and a sibling laid out after a `flex: 1` child is drawn
+    // over by that overflow, which is how the biometric button landed on top of
+    // the submit button.
+    flexGrow: 1,
     paddingHorizontal: theme.spacing.lg,
   },
 }));

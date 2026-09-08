@@ -203,8 +203,6 @@ export const ProfilePictureUploadScreen = () => {
     <OnBoardingWrapper
       title={t('labels.profilePicture')}
       subtitle={t('onBoarding.profilePictureSubtitle')}
-      step={5}
-      totalSteps={8}
       onBack={() => navigateToPreviousStep('ProfilePictureUpload')}
       onSkip={() => skipToStep('InviteMembers')}
     >

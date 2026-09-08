@@ -67,6 +67,9 @@ const styles = StyleSheet.create(theme => ({
   // Hairline separator below the filter strip so it reads as a distinct band
   // above the list, consistent with the warm background showing through.
   container: {
+    // FilterTabs carries no inset of its own, so its host owns the gutter —
+    // and this one renders it bare inside a screen with none.
+    paddingHorizontal: theme.layout.pageGutter,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: theme.colors.border,
   },

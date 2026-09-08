@@ -58,6 +58,7 @@ fragment ShoppingListOwnershipFragment on ShoppingListOwnership {
   user {
     id
     email
+    displayName
     profile {
       id
       displayName
@@ -86,6 +87,10 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
   collaborator {
     id
     email
+    # Gated by the SHARING relationship, not by profileVisibility, so a
+    # collaborator on this list reads it even with a private profile — which
+    # `profile` below does not survive.
+    displayName
     profile {
       id
       displayName

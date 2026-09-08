@@ -20,10 +20,12 @@ export interface ShoppingListTabData {
   onEndReached?: () => void;
   hasMore?: boolean;
   isLoadingMore?: boolean;
-  canRemoveItems: boolean;
-  canEditItems: boolean;
-  canMarkPurchased: boolean;
-  canReorderItems: boolean;
+  /**
+   * Whether THIS tab offers drag-to-reorder — a tab affordance, not a
+   * permission: the purchased tab offers none whatever the user may do. The
+   * permission half is read from `ShoppingListPermissionsProvider`.
+   */
+  reorderable: boolean;
   isTransitioning: boolean;
   // Scroll direction tracking — threaded from screen to FlashList
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;

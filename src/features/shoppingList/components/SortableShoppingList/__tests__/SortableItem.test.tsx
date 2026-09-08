@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { screen } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 
 /**
@@ -82,19 +82,31 @@ jest.mock('#features/shoppingList/components/AnimatedCheckbox', () => ({
   },
 }));
 
+// Carries `testID`, `onPress` and `disabled` through, so a test can assert what
+// the row wires to the chip rather than only what it displays on it.
 jest.mock('#features/shoppingList/components/QuantityBadge', () => ({
   QuantityBadge: ({
     quantity,
     unit,
+    testID,
+    onPress,
+    disabled,
   }: {
     quantity?: number;
     unit?: string | null;
+    testID?: string;
+    onPress?: () => void;
+    disabled?: boolean;
   }) => {
-    const { Text, View } = require('react-native');
+    const { Text, Pressable } = require('react-native');
     return (
-      <View testID="quantity-badge">
+      <Pressable
+        testID={testID ?? 'quantity-badge'}
+        onPress={onPress}
+        disabled={disabled}
+      >
         <Text>{`${quantity} ${unit || ''}`}</Text>
-      </View>
+      </Pressable>
     );
   },
 }));
@@ -348,7 +360,9 @@ describe('SwipeableListItem (SortableItem)', () => {
         cache: seedRow(entry),
       },
     );
-    expect(screen.getByTestId('quantity-badge')).toBeTruthy();
+    expect(
+      screen.getByTestId(`shopping-list-item-${entry.id}-quantity`),
+    ).toBeTruthy();
     expect(screen.getByText('3 pcs')).toBeTruthy();
   });
 
@@ -462,6 +476,82 @@ describe('SwipeableListItem (SortableItem)', () => {
       const last = swipeableProps[swipeableProps.length - 1];
       expect(last.leftActions).toBeUndefined();
       expect(last.rightActions).toBeUndefined();
+    });
+  });
+
+  describe('the quantity chip', () => {
+    // The sheet it opens is fully interactive and its Save arms as soon as the
+    // value changes, so a viewer reaching it can edit somebody else's list. The
+    // swipe actions were gated on `canEditItems`; this control was not.
+    const setPermissions = (permissions: {
+      canRemoveItems: boolean;
+      canEditItems: boolean;
+      canMarkPurchased: boolean;
+    }) => {
+      const onQuantityPress = jest.fn();
+      // The real hook withholds a handler the permissions forbid, so the double
+      // withholds it too — a double that hands one over tests a path the row
+      // cannot reach.
+      (useSortableListActions as jest.Mock).mockReturnValue({
+        actions: {
+          onItemPress: jest.fn(),
+          onTogglePurchase: permissions.canMarkPurchased
+            ? jest.fn()
+            : undefined,
+          onMoveToPantry:
+            permissions.canEditItems && permissions.canRemoveItems
+              ? jest.fn()
+              : undefined,
+          onQuantityPress: permissions.canEditItems
+            ? onQuantityPress
+            : undefined,
+          onSwipeableWillOpen: jest.fn(),
+          onSwipeableClose: jest.fn(),
+        },
+        permissions,
+        permissionsRef: { current: permissions },
+      });
+      return onQuantityPress;
+    };
+
+    it('does not open the editor for someone who may not edit', () => {
+      const onQuantityPress = setPermissions({
+        canRemoveItems: false,
+        canEditItems: false,
+        canMarkPurchased: true,
+      });
+
+      const entry = seedItem();
+      renderWithApollo(
+        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+        { cache: seedRow(entry) },
+      );
+
+      fireEvent.press(
+        screen.getByTestId(`shopping-list-item-${entry.id}-quantity`),
+      );
+
+      expect(onQuantityPress).not.toHaveBeenCalled();
+    });
+
+    it('opens the editor for someone who may', () => {
+      const onQuantityPress = setPermissions({
+        canRemoveItems: true,
+        canEditItems: true,
+        canMarkPurchased: true,
+      });
+
+      const entry = seedItem();
+      renderWithApollo(
+        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+        { cache: seedRow(entry) },
+      );
+
+      fireEvent.press(
+        screen.getByTestId(`shopping-list-item-${entry.id}-quantity`),
+      );
+
+      expect(onQuantityPress).toHaveBeenCalledWith(entry.id);
     });
   });
 

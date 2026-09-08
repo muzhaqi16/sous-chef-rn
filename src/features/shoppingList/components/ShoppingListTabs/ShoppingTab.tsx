@@ -36,10 +36,7 @@ const ShoppingTabComponent: React.FC = () => {
     onEndReached,
     hasMore,
     isLoadingMore,
-    canRemoveItems,
-    canEditItems,
-    canMarkPurchased,
-    canReorderItems,
+    reorderable,
     isTransitioning,
     onScroll,
     onScrollBeginDrag,
@@ -129,10 +126,7 @@ const ShoppingTabComponent: React.FC = () => {
           onEndReached={onEndReached}
           hasMore={hasMore}
           isLoadingMore={isLoadingMore}
-          canRemoveItems={canRemoveItems}
-          canEditItems={canEditItems}
-          canMarkPurchased={canMarkPurchased}
-          canReorderItems={canReorderItems}
+          reorderable={reorderable}
           listEmptyComponent={emptyComponent}
           onScroll={onScroll}
           onScrollBeginDrag={onScrollBeginDrag}

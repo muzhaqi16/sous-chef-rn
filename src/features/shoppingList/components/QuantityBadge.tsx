@@ -41,10 +41,9 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
     : formattedQuantity;
 
   const isDisabled = disabled || isPurchased;
-  const isInlineUnit = unit ? unit.length <= 3 : false;
 
   styles.useVariants({
-    inline: isInlineUnit,
+    inline: true,
     disabled: isDisabled,
     purchased: isPurchased,
   });
@@ -84,6 +83,10 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
           <Text
             role="label"
             align="center"
+            // One line, so `maxWidth` bounds the badge's HEIGHT and not only its
+            // width: a long unit at the font-scale ceiling would otherwise wrap
+            // inside the row-direction box and grow the row with it.
+            numberOfLines={1}
             style={[styles.unitText, unitOverride]}
           >
             {unit}
@@ -101,6 +104,9 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     minWidth: 40,
+    // A unit never stacks under its quantity: the badge's height would then
+    // depend on how the unit is spelled, and the row's with it.
+    maxWidth: 120,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.surfaceVariant,

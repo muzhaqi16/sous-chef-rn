@@ -5,7 +5,6 @@ import {
   saveCredentials,
   hasCredentials,
   clearCredentials,
-  getStoredAccounts,
   getBiometricCapability,
 } from '#/storage/keychain';
 
@@ -53,15 +52,6 @@ export async function checkStoredCredentials(
   }
 }
 
-export async function getAvailableAccounts() {
-  try {
-    return await getStoredAccounts();
-  } catch (error) {
-    logger.error('Error getting available accounts:', error);
-    return [];
-  }
-}
-
 export async function getBiometricInfo(): Promise<{
   isAvailable: boolean;
   biometryType: string | null;
@@ -79,6 +69,8 @@ export async function storeCredentials(
   credential: string,
 ): Promise<boolean> {
   try {
+    // `saveCredentials` records the offered account as its last step, so a
+    // failed write leaves the previous account's enrolment offered.
     await saveCredentials(email, credential);
     return true;
   } catch (error) {

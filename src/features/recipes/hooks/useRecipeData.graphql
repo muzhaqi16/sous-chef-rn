@@ -45,6 +45,7 @@ fragment useRecipeData_recipe on Recipe {
   createdBy {
     id
     email
+    displayName
   }
   ingredientsConnection {
     edges {

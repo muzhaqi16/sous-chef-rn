@@ -1402,6 +1402,37 @@ describe('QueueManager', () => {
       });
     });
 
+    // The construction site, not a hand-built error: the classifier reads
+    // `payloadResource`, and only the replay path can prove the refusal the
+    // server actually sends carries it that far.
+    it('classifies the refusal the server actually sends', async () => {
+      const processMutation = manager['processMutation'].bind(manager);
+      mockClient.mutate
+        .mockResolvedValueOnce({
+          data: {
+            syncPantryItem: {
+              __typename: 'NotFoundError',
+              code: 'NOT_FOUND',
+              message: 'Unit not found',
+              resource: 'Unit',
+            },
+          },
+        })
+        .mockResolvedValue({
+          data: { syncPantryItem: { item: {}, converged: false } },
+        });
+
+      jest.useRealTimers();
+      const result = await processMutation(
+        makeMutation({ id: 'stale-unit-2' }),
+      );
+      jest.useFakeTimers();
+
+      expect(refreshUnitVocabulary).toHaveBeenCalledTimes(1);
+      expect(result.success).toBe(true);
+      expect(queueStore.markMutationFailed).not.toHaveBeenCalled();
+    });
+
     it('refreshes the vocabulary and re-sends rather than reverting', async () => {
       mockClient.mutate.mockResolvedValue({
         data: { syncPantryItem: { item: {}, converged: false } },

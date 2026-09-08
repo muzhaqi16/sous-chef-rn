@@ -7,6 +7,7 @@ import {
   getInternetCredentials,
   resetInternetCredentials,
   SECURITY_LEVEL,
+  getAllGenericPasswordServices,
 } from 'react-native-keychain';
 import {
   saveCredentials,
@@ -16,13 +17,14 @@ import {
   getBiometricCapability,
   saveLastBiometricEmail,
   getLastBiometricEmail,
+  DEFAULT_SERVICE,
+  CREDENTIALS_INDICATOR_SERVICE,
   clearTempRegistrationPassword,
   saveSessionTokens,
   loadSessionTokens,
+  loadDeviceId,
+  saveDeviceId,
   clearSessionTokens,
-  hasCredentialsForAccount,
-  loadCredentialsForAccount,
-  getStoredAccounts,
   pickFresherSessionTokens,
 } from '../keychain';
 import { logger } from '#/utils/environment';
@@ -35,6 +37,7 @@ const mockGetSupportedBiometryType = getSupportedBiometryType as jest.Mock;
 const mockSetInternetCredentials = setInternetCredentials as jest.Mock;
 const mockGetInternetCredentials = getInternetCredentials as jest.Mock;
 const mockResetInternetCredentials = resetInternetCredentials as jest.Mock;
+const mockGetAllServices = getAllGenericPasswordServices as jest.Mock;
 
 describe('keychain storage', () => {
   beforeEach(() => {
@@ -323,6 +326,72 @@ describe('keychain storage', () => {
     });
   });
 
+  describe('enrolling one account beside another', () => {
+    // Which account the prompt offers is a preference. A local credential is
+    // not a revocation handle for the server-side one it stands for, so
+    // clearing another account's slot removes their only record of it.
+    it('leaves every other account enrolled', async () => {
+      mockGetAllServices.mockResolvedValue([
+        `${DEFAULT_SERVICE}.old@test.com`,
+        `${CREDENTIALS_INDICATOR_SERVICE}.old@test.com`,
+      ]);
+      mockGetInternetCredentials.mockResolvedValue({
+        username: 'old@test.com',
+      });
+      mockSetGenericPassword.mockResolvedValue(true);
+      mockResetGenericPassword.mockResolvedValue(true);
+      mockSetInternetCredentials.mockResolvedValue(true);
+
+      await saveCredentials('new@test.com', 'device-credential');
+
+      expect(mockResetGenericPassword).not.toHaveBeenCalledWith({
+        service: `${DEFAULT_SERVICE}.old@test.com`,
+      });
+      expect(mockResetGenericPassword).not.toHaveBeenCalledWith({
+        service: `${CREDENTIALS_INDICATOR_SERVICE}.old@test.com`,
+      });
+    });
+
+    it('offers the account that just enrolled', async () => {
+      mockGetInternetCredentials.mockResolvedValue({
+        username: 'old@test.com',
+      });
+      mockSetGenericPassword.mockResolvedValue(true);
+      mockResetGenericPassword.mockResolvedValue(true);
+      mockSetInternetCredentials.mockResolvedValue(true);
+
+      await saveCredentials('new@test.com', 'device-credential');
+
+      expect(mockSetInternetCredentials).toHaveBeenCalledWith(
+        'souschefrn-email',
+        'new@test.com',
+        'new@test.com',
+        expect.any(Object),
+      );
+    });
+
+    it('leaves a previously enrolled account able to sign in again', async () => {
+      // Its slot survived another account's enrolment, so signing in re-offers
+      // it without a fresh enrolment.
+      mockGetGenericPassword.mockResolvedValue({
+        username: 'old@test.com',
+        password: 'device-credential',
+      });
+
+      await expect(hasCredentials('old@test.com')).resolves.toBe(true);
+    });
+
+    it('reports success when only the offered-account record fails', async () => {
+      mockSetGenericPassword.mockResolvedValue(true);
+      mockResetGenericPassword.mockResolvedValue(true);
+      mockSetInternetCredentials.mockRejectedValue(new Error('unsupported'));
+
+      await expect(
+        saveCredentials('new@test.com', 'device-credential'),
+      ).resolves.toBeUndefined();
+    });
+  });
+
   describe('saveLastBiometricEmail', () => {
     it('saves email using internet credentials', async () => {
       mockSetInternetCredentials.mockResolvedValue(true);
@@ -463,6 +532,56 @@ describe('keychain storage', () => {
       expect(result).toBeNull();
       expect(mockResetGenericPassword).not.toHaveBeenCalled();
     });
+
+    /**
+     * The shape a cancel actually produces. Captured on an SM-S908U1 by tapping
+     * the prompt's "Use manual login":
+     *   { code: 'E_CRYPTO_FAILED',
+     *     name: 'com.oblador.keychain.exceptions.CryptoFailedException',
+     *     message: 'code: 13, msg: Use manual login' }
+     * `E_CRYPTO_FAILED` is also what an unusable key rejects with, so the
+     * prompt's own `code: <n>` marker is the only thing telling them apart.
+     */
+    const androidPromptOutcome = (errorCode: number, msg: string) =>
+      Object.assign(new Error(`code: ${errorCode}, msg: ${msg}`), {
+        code: 'E_CRYPTO_FAILED',
+        name: 'com.oblador.keychain.exceptions.CryptoFailedException',
+      });
+
+    it.each([
+      [10, 'Authentication canceled by user'],
+      [13, 'Use manual login'],
+      [5, 'Authentication canceled'],
+      [3, 'Authentication timed out'],
+      [7, 'Too many attempts. Try again later.'],
+      [9, 'Too many attempts. Biometric authentication disabled.'],
+    ])(
+      'keeps the slot when the Android prompt ends with code %i',
+      async (errorCode, msg) => {
+        mockGetGenericPassword.mockRejectedValue(
+          androidPromptOutcome(errorCode, msg),
+        );
+
+        const result = await loadCredentials('user@test.com');
+
+        expect(result).toBeNull();
+        expect(mockResetGenericPassword).not.toHaveBeenCalled();
+      },
+    );
+
+    it('clears the slot when the platform names the invalidated key', async () => {
+      mockGetGenericPassword.mockRejectedValue(
+        Object.assign(new Error('Wrapped error: Key permanently invalidated'), {
+          code: 'E_CRYPTO_FAILED',
+          name: 'com.oblador.keychain.exceptions.CryptoFailedException',
+        }),
+      );
+      mockResetGenericPassword.mockResolvedValue(true);
+
+      await loadCredentials('user@test.com');
+
+      expect(mockResetGenericPassword).toHaveBeenCalled();
+    });
   });
 
   describe('clearTempRegistrationPassword', () => {
@@ -569,6 +688,30 @@ describe('keychain storage', () => {
       jest.useRealTimers();
     });
 
+    it('does not hold the keychain lock while a retry waits', async () => {
+      // The backoff is 200ms + 400ms. Held inside the queued operation it would
+      // block every other keychain caller for the whole 600ms — on the launch
+      // path, where the device id and the credentials are read behind it.
+      jest.useFakeTimers();
+      mockGetGenericPassword.mockRejectedValue(new Error('keystore asleep'));
+      mockSetGenericPassword.mockResolvedValue(true);
+
+      const reading = loadDeviceId();
+      const writing = saveDeviceId('device-1');
+
+      // No timer advanced: the write must get the lock while the read is
+      // between attempts. Held inside the operation, the 200ms backoff would
+      // still be running here and the write would not have started.
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(mockSetGenericPassword).toHaveBeenCalled();
+
+      await jest.runAllTimersAsync();
+      await expect(writing).resolves.toBe(true);
+      await expect(reading).resolves.toEqual({ status: 'error' });
+      jest.useRealTimers();
+    });
+
     it('loadSessionTokens recovers when a retry succeeds', async () => {
       jest.useFakeTimers();
       mockGetGenericPassword
@@ -620,24 +763,6 @@ describe('keychain storage', () => {
 
       mockResetGenericPassword.mockRejectedValue(new Error('Error'));
       await expect(clearSessionTokens()).resolves.toBe(false);
-    });
-  });
-
-  describe('account-scoped aliases', () => {
-    it('hasCredentialsForAccount delegates to hasCredentials', async () => {
-      const result = await hasCredentialsForAccount('alias-has@test.com');
-      expect(typeof result).toBe('boolean');
-    });
-
-    it('loadCredentialsForAccount delegates to loadCredentials', async () => {
-      mockGetGenericPassword.mockResolvedValue(false);
-      const result = await loadCredentialsForAccount('alias-load@test.com');
-      expect(result).toBeNull();
-    });
-
-    it('getStoredAccounts returns empty array', async () => {
-      const result = await getStoredAccounts();
-      expect(result).toEqual([]);
     });
   });
 

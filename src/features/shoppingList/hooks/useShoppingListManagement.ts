@@ -14,6 +14,7 @@ export function useShoppingListManagement(currentListId: string | undefined) {
     shoppingList,
     notFound: listNotFound,
     error: listError,
+    loading: detailsLoading,
   } = useShoppingListItemsQuery(currentListId);
 
   const {
@@ -72,6 +73,7 @@ export function useShoppingListManagement(currentListId: string | undefined) {
     shoppingList,
     listNotFound, // Server returned null for the list (deleted/unshared)
     loading,
+    detailsLoading,
     error,
     isTransitioning,
 

@@ -34,9 +34,7 @@ const PurchasedTabComponent: React.FC = () => {
     onEndReached,
     hasMore,
     isLoadingMore,
-    canRemoveItems,
-    canEditItems,
-    canMarkPurchased,
+    reorderable,
     isTransitioning,
     onScroll,
     onScrollBeginDrag,
@@ -124,9 +122,7 @@ const PurchasedTabComponent: React.FC = () => {
           onEndReached={onEndReached}
           hasMore={hasMore}
           isLoadingMore={isLoadingMore}
-          canRemoveItems={canRemoveItems}
-          canEditItems={canEditItems}
-          canMarkPurchased={canMarkPurchased}
+          reorderable={reorderable}
           listEmptyComponent={emptyComponent}
           onScroll={onScroll}
           onScrollBeginDrag={onScrollBeginDrag}

@@ -32,7 +32,7 @@ import {
   createBottomTabNavigator,
   type BottomTabBarProps,
 } from '@react-navigation/bottom-tabs';
-import { FloatingTabBar, TAB_BAR_HEIGHT } from '../FloatingTabBar';
+import { FloatingTabBar } from '../FloatingTabBar';
 import type { TabAppearance } from '../types';
 
 // Mock TabBarActionsContext
@@ -229,7 +229,7 @@ describe('FloatingTabBar', () => {
     expect(screen.getByTestId('add-button')).toBeTruthy();
   });
 
-  it('renders placeholder when showAddButton is false', () => {
+  it('renders no add button when showAddButton is false', () => {
     mockTabBarState.showAddButton = false;
     renderTabBar();
     expect(screen.queryByTestId('add-button')).toBeNull();
@@ -324,9 +324,10 @@ describe('FloatingTabBar', () => {
     expect(mockSetActiveTab).toHaveBeenCalledWith('Pantry');
   });
 
-  it('splits tabs around center add button', () => {
+  it('renders every route, plus the floating add button', () => {
     renderTabBar();
-    // All 4 tabs flank the center add button.
+    // One row holds every tab; the button is a sibling of the bar, not a
+    // member of the row, so the tab count cannot shift it.
     expect(screen.getByTestId('tab-Pantry')).toBeTruthy();
     expect(screen.getByTestId('tab-ShoppingList')).toBeTruthy();
     expect(screen.getByTestId('tab-Recipe')).toBeTruthy();
@@ -369,9 +370,5 @@ describe('FloatingTabBar', () => {
       expect(mockSetActiveTab).toHaveBeenCalledWith('Profile'),
     );
     expect(navigateSpy).not.toHaveBeenCalled();
-  });
-
-  it('exports TAB_BAR_HEIGHT', () => {
-    expect(TAB_BAR_HEIGHT).toBe(65);
   });
 });

@@ -70,14 +70,10 @@ export function isResourceAccessLostError(error: unknown): boolean {
 
 /**
  * True when the server refused a page request's CURSOR. Keyed on the code plus
- * a cursor variable, never the message: the refusal is a bare `ValidationError`
- * told apart only by English prose, and `after` can be wrong about nothing else.
+ * the cursor the caller SENT — never the message, and never a guess at the
+ * argument's name: a connection calls it what it likes (`itemsCursor` here).
  */
-export function isDeadCursorError(
-  error: unknown,
-  variables: Record<string, unknown> | undefined,
-): boolean {
-  const cursor = variables?.after ?? variables?.cursor;
+export function isDeadCursorError(error: unknown, cursor: unknown): boolean {
   if (cursor == null || cursor === '') return false;
   const top = getTopLevelGraphQLError(error);
   return top?.code === TopLevelErrorCode.ValidationFailed;

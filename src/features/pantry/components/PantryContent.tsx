@@ -9,7 +9,7 @@ import {
   Pressable,
   ThemedRefreshControl,
 } from '#components/atoms/themedComponents';
-import { getTabBarBottomPadding } from '#constants/layout';
+import { getScrollClearancePadding } from '#constants/layout';
 import { Icon } from '#utils/iconUtils';
 import { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import {
@@ -344,10 +344,10 @@ export const PantryContent = React.forwardRef<
 
     const listContentStyle = isEmpty
       ? styles.listContentEmpty
-      : {
-          paddingHorizontal: 0,
-          paddingBottom: getTabBarBottomPadding(safeBottom),
-        };
+      : [
+          styles.listContent,
+          { paddingBottom: getScrollClearancePadding(safeBottom) },
+        ];
 
     // Read from context, not from `renderItem`'s closure — see
     // `PantryStickyTabs` for why that matters to every other cell.
@@ -532,9 +532,6 @@ const styles = StyleSheet.create(theme => ({
   },
   header: {
     backgroundColor: theme.colors.background,
-    // Matches the search bar and the rows below, so the whole column shares
-    // one gutter.
-    paddingHorizontal: theme.spacing.base,
     paddingTop: theme.spacing.base,
     paddingBottom: theme.spacing.sm,
   },
@@ -548,14 +545,15 @@ const styles = StyleSheet.create(theme => ({
   stickyHeaderActive: {
     backgroundColor: theme.colors.background,
   },
-  searchContainer: {
-    paddingHorizontal: theme.spacing.base,
-  },
-  statsContainer: {
-    paddingHorizontal: theme.spacing.base,
+  searchContainer: {},
+  statsContainer: {},
+  listContent: {
+    paddingHorizontal: theme.layout.pageGutter,
   },
   listContentEmpty: {
-    paddingHorizontal: 0,
+    // The same gutter as the populated list: this container owns it, so zeroing
+    // it here puts the header and the empty state flush against the screen edge.
+    paddingHorizontal: theme.layout.pageGutter,
     flexGrow: 1,
   },
 }));

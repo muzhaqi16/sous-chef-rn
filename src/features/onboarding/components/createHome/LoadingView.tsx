@@ -10,8 +10,6 @@ export const LoadingView = ({ onSkip }: { onSkip: () => void }) => {
     <OnBoardingWrapper
       title={t('onBoarding.welcomeTitle')}
       subtitle={t('onBoarding.checkingExistingSetup')}
-      step={1}
-      totalSteps={8}
       onSkip={onSkip}
     >
       <LoadingBranded

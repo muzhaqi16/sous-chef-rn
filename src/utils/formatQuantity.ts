@@ -12,6 +12,11 @@ const COOKING_DENOMINATORS = new Set([2, 3, 4, 6, 8]);
 // 0.33333334, which is 3e-9 off the nearest third.
 const TOLERANCE = 0.02;
 
+// Seeds the fraction as an integer PAIR: fraction.js's float constructor
+// searches for an exact rational, and that search costs 273 ms for 0.33333334
+// on device. Six digits is four orders past what this file displays.
+const SCALE = 1e6;
+
 /** At most 2 decimals, trailing zeros stripped: 3 → "3", 0.333 → "0.33". */
 export function formatQuantity(value: number): string {
   if (Number.isInteger(value)) return value.toString();
@@ -38,7 +43,11 @@ export function formatQuantityAsFraction(
   if (Number.isInteger(qty)) return qty.toString();
   if (notation === 'decimal') return formatQuantity(qty);
 
-  const simplified = new Fraction(qty).simplify(TOLERANCE);
+  const scaled = Math.round(qty * SCALE);
+  // A quantity this large has no cooking fraction to find anyway.
+  if (!Number.isSafeInteger(scaled)) return formatQuantity(qty);
+
+  const simplified = new Fraction(scaled, SCALE).simplify(TOLERANCE);
   if (COOKING_DENOMINATORS.has(Number(simplified.d))) {
     return simplified.toFraction(notation === 'mixed');
   }

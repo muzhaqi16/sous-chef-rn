@@ -1,5 +1,6 @@
 import React, { useLayoutEffect } from 'react';
 import { View } from 'react-native';
+import type { SkPath } from '@shopify/react-native-skia';
 import { Canvas, Group, Path, Circle, Skia } from '@shopify/react-native-skia';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import {
@@ -28,32 +29,38 @@ const SIZES = {
 
 /** Build all Skia path objects for the shopping cart illustration. */
 function buildCartPaths(cx: number, cy: number, scale: number) {
-  const cartBodyPath = Skia.Path.Make();
-  cartBodyPath.moveTo(cx - 35 * scale, cy - 15 * scale);
-  cartBodyPath.lineTo(cx - 30 * scale, cy + 25 * scale);
-  cartBodyPath.lineTo(cx + 30 * scale, cy + 25 * scale);
-  cartBodyPath.lineTo(cx + 35 * scale, cy - 15 * scale);
+  const cartBodyPath = Skia.PathBuilder.Make()
+    .moveTo(cx - 35 * scale, cy - 15 * scale)
+    .lineTo(cx - 30 * scale, cy + 25 * scale)
+    .lineTo(cx + 30 * scale, cy + 25 * scale)
+    .lineTo(cx + 35 * scale, cy - 15 * scale)
+    .detach();
 
-  const cartHandlePath = Skia.Path.Make();
-  cartHandlePath.moveTo(cx - 35 * scale, cy - 15 * scale);
-  cartHandlePath.lineTo(cx - 50 * scale, cy - 15 * scale);
-  cartHandlePath.lineTo(cx - 55 * scale, cy - 25 * scale);
+  const cartHandlePath = Skia.PathBuilder.Make()
+    .moveTo(cx - 35 * scale, cy - 15 * scale)
+    .lineTo(cx - 50 * scale, cy - 15 * scale)
+    .lineTo(cx - 55 * scale, cy - 25 * scale)
+    .detach();
 
-  const cartGridLines: ReturnType<typeof Skia.Path.Make>[] = [];
+  const cartGridLines: SkPath[] = [];
   for (let i = -1; i <= 1; i++) {
-    const line = Skia.Path.Make();
     const xOffset = i * 18 * scale;
-    line.moveTo(cx + xOffset, cy - 15 * scale);
-    line.lineTo(cx + xOffset - 2 * scale, cy + 25 * scale);
-    cartGridLines.push(line);
+    cartGridLines.push(
+      Skia.PathBuilder.Make()
+        .moveTo(cx + xOffset, cy - 15 * scale)
+        .lineTo(cx + xOffset - 2 * scale, cy + 25 * scale)
+        .detach(),
+    );
   }
   for (let i = 0; i <= 1; i++) {
-    const line = Skia.Path.Make();
     const yOffset = cy + i * 20 * scale - 5 * scale;
     const topWidth = 35 - i * 5;
-    line.moveTo(cx - topWidth * scale, yOffset);
-    line.lineTo(cx + topWidth * scale, yOffset);
-    cartGridLines.push(line);
+    cartGridLines.push(
+      Skia.PathBuilder.Make()
+        .moveTo(cx - topWidth * scale, yOffset)
+        .lineTo(cx + topWidth * scale, yOffset)
+        .detach(),
+    );
   }
 
   return { cartBodyPath, cartHandlePath, cartGridLines };

@@ -4,7 +4,7 @@
  */
 
 import {
-  adoptServerShoppingListItemId,
+  reconcileShoppingItemCreateUpdate,
   buildAddItemsReconcileUpdate,
   createOptimisticShoppingListItem,
   revertOptimisticShoppingListItem,
@@ -80,28 +80,6 @@ describe('createOptimisticShoppingListItem', () => {
   });
 });
 
-describe('adoptServerShoppingListItemId', () => {
-  it('evicts the client cuid when the server returned a different id', () => {
-    const cache = createMockCache();
-    adoptServerShoppingListItemId(cache, 'server-id', 'client-cuid');
-    expect(cache.evict).toHaveBeenCalledWith({
-      id: 'ShoppingListItem:client-cuid',
-    });
-  });
-
-  it('is a no-op when the server echoed the same id (no merge)', () => {
-    const cache = createMockCache();
-    adoptServerShoppingListItemId(cache, 'same-id', 'same-id');
-    expect(cache.evict).not.toHaveBeenCalled();
-  });
-
-  it('is a no-op when there is no client id', () => {
-    const cache = createMockCache();
-    adoptServerShoppingListItemId(cache, 'server-id', undefined);
-    expect(cache.evict).not.toHaveBeenCalled();
-  });
-});
-
 describe('revertOptimisticShoppingListItem', () => {
   function createCacheWithStats(stats: {
     totalItems: number;
@@ -131,6 +109,63 @@ describe('revertOptimisticShoppingListItem', () => {
     revertOptimisticShoppingListItem(cache, 'list-1', 'cuid-1');
     expect(invokeFieldModifier(cache, 'totalItems', 0, {})).toBe(0);
     expect(invokeFieldModifier(cache, 'completionRate', 0, {})).toBe(0);
+  });
+});
+
+describe('reconcileShoppingItemCreateUpdate', () => {
+  function createCacheWithStats(stats: {
+    totalItems: number;
+    completedItems: number;
+  }): MockedCache {
+    return {
+      ...createMockCache(),
+      readFragment: jest.fn(() => stats),
+    } as MockedCache & { readFragment: jest.Mock };
+  }
+
+  // The barcode add reaches here too. Evicting the folded-away row without
+  // taking its count back leaves `totalItems` one high permanently: nothing on
+  // the screen reads the count back, so only a full refetch can correct it.
+  it('takes the count back with the row the server folded away', () => {
+    const cache = createCacheWithStats({ totalItems: 5, completedItems: 2 });
+
+    reconcileShoppingItemCreateUpdate(
+      cache,
+      'list-1',
+      { id: 'server-id' },
+      'client-cuid',
+    );
+
+    expect(cache.evict).toHaveBeenCalledWith({
+      id: 'ShoppingListItem:client-cuid',
+    });
+    expect(invokeFieldModifier(cache, 'totalItems', 5, {})).toBe(4);
+  });
+
+  it('leaves the count alone when the server kept the optimistic id', () => {
+    const cache = createCacheWithStats({ totalItems: 5, completedItems: 2 });
+
+    reconcileShoppingItemCreateUpdate(
+      cache,
+      'list-1',
+      { id: 'same-id' },
+      'same-id',
+    );
+
+    expect(cache.evict).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op on the eviction path when there is no client id', () => {
+    const cache = createCacheWithStats({ totalItems: 5, completedItems: 2 });
+
+    reconcileShoppingItemCreateUpdate(
+      cache,
+      'list-1',
+      { id: 'server-id' },
+      undefined,
+    );
+
+    expect(cache.evict).not.toHaveBeenCalled();
   });
 });
 

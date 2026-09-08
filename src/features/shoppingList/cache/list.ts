@@ -45,6 +45,7 @@ type OptimisticShoppingListUser = {
   // record. Populated here (the row is always the creator's), but the shape must
   // match what the server write-through carries or the entity type-mismatches.
   email: string | null;
+  displayName: string | null;
   profile: {
     __typename: 'UserProfile';
     id: string;
@@ -76,6 +77,7 @@ const OptimisticShoppingListFragment = gql`
       user {
         id
         email
+        displayName
         profile {
           id
           displayName
@@ -91,6 +93,7 @@ const OptimisticListOwnerUserFragment = gql`
   fragment _OptimisticListOwnerUser on User {
     id
     email
+    displayName
     profile {
       id
       displayName
@@ -168,7 +171,7 @@ export function buildOptimisticShoppingList(
   cache: ApolloCache,
   id: string,
   input: { name: string; isDefault?: boolean | null; homeId?: string | null },
-  owner: { id: string; email?: string | null },
+  owner: { id: string; email?: string | null; displayName?: string | null },
 ): OptimisticShoppingList {
   const userCacheId = cache.identify({ __typename: 'User', id: owner.id });
   const cachedUser = userCacheId
@@ -182,6 +185,7 @@ export function buildOptimisticShoppingList(
     __typename: 'User',
     id: owner.id,
     email: owner.email ?? null,
+    displayName: owner.displayName ?? null,
     profile: null,
   };
 

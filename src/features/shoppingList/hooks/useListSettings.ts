@@ -33,6 +33,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { formatNumberForInput } from '#/utils/formatters/number';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 
+/** Whose list this is, with "not yet known" kept distinct from "not yours". */
+export type OwnershipAnswer = 'owner' | 'other' | 'unknown';
+
 function syncListFormState(
   shoppingList:
     | { name: string; isDefault: boolean; budgetAmount?: number | null }
@@ -78,8 +81,13 @@ export const useListSettings = (listId: string | undefined) => {
   );
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
 
-  const { shoppingList, isShared, collaborators, ownerships } =
-    useShoppingListDetails(listId);
+  const {
+    shoppingList,
+    isShared,
+    collaborators,
+    ownerships,
+    refetch: refetchDetails,
+  } = useShoppingListDetails(listId);
   // Only the create screen offers "start from template"; an existing list's
   // settings shouldn't pay for the request.
   const { templates } = useShoppingListTemplates({ skip: !!listId });
@@ -101,10 +109,19 @@ export const useListSettings = (listId: string | undefined) => {
       }
     : null;
 
-  const isOwner =
-    listId && ownershipSnapshot
-      ? isShoppingListOwner(ownershipSnapshot, user?.id)
-      : true; // For new lists, user is always the owner
+  // Three answers, not two. Creating a list: nobody else's ownership to
+  // respect, so the owner-only controls are the author's. For an EXISTING one,
+  // `unknown` is neither — defaulting it to owner offers Save, budget,
+  // recurring, template, archive and delete to a non-owner, and defaulting it
+  // to `other` hides them from the owner with no way to tell why.
+  const ownership: OwnershipAnswer = !listId
+    ? 'owner'
+    : !ownershipSnapshot
+    ? 'unknown'
+    : isShoppingListOwner(ownershipSnapshot, user?.id)
+    ? 'owner'
+    : 'other';
+  const isOwner = ownership === 'owner';
   const role = ownershipSnapshot
     ? getShoppingListRole(
         ownershipSnapshot,
@@ -545,6 +562,10 @@ export const useListSettings = (listId: string | undefined) => {
     isDefault,
     isHomeMember,
     isOwner,
+    ownership,
+    retryOwnership: () => {
+      void refetchDetails();
+    },
     isRecurring,
     isShared,
     isTemplate,

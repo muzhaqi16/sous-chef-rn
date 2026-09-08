@@ -82,7 +82,8 @@ export const NotificationActionHandler: React.FC<
   };
 
   // Resolves the ExpirationNotification behind a tapped EXPIRY_REMINDER
-  // notification when the live subscription never linked it (e.g. loaded from
+  // notification when the live subscription never linked it — one restored from
+  // the persisted feed carries no link.
   const showExpirationActionSheet = async (notification: NotificationItem) => {
     if (notification.expirationNotificationId) {
       // State-driven: setting this triggers ExpirationActionSheet visible prop
@@ -194,6 +195,12 @@ export const NotificationActionHandler: React.FC<
     }
   };
 
+  const closeInvitationModal = () => {
+    setInvitationModalVisible(false);
+    setCurrentInvitation(null);
+    setCurrentNotificationId(null);
+  };
+
   return (
     <>
       {children({
@@ -205,11 +212,7 @@ export const NotificationActionHandler: React.FC<
       <InvitationAcceptanceModal
         visible={invitationModalVisible}
         invitation={currentInvitation}
-        onClose={() => {
-          setInvitationModalVisible(false);
-          setCurrentInvitation(null);
-          setCurrentNotificationId(null);
-        }}
+        onClose={closeInvitationModal}
         onAccept={handleInvitationAccept}
         onReject={handleInvitationReject}
       />

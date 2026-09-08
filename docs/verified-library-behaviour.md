@@ -948,3 +948,96 @@ Re-check: connect the debugger (`argent-metro-debugger`) and evaluate
 ```
 
 Guarded by `src/utils/__tests__/imageValidation.test.ts` (`sniffImageMimeType`).
+
+### fraction.js's float constructor costs a quarter-second on device
+
+**Claim:** `new Fraction(<float>)` runs a continued-fraction search whose cost
+depends on how near the value is to a rational it cannot represent exactly. A
+value that is a float32 echo of a repeating fraction drives it to its
+denominator bound. Seeding from an integer numerator/denominator pair is exact
+rational arithmetic instead, and produces identical output.
+
+**Verified 2026-09-07 against `fraction.js@5.3.4`, in the app's own Hermes
+runtime on an SM-S908U1** (Android 16, 96 Hz panel → 10.4 ms frame budget),
+debug bundle with the CDP debugger attached. Microseconds per call:
+
+| value | `new Fraction(v).simplify(0.02)` | `new Fraction(Math.round(v*1e6), 1e6).simplify(0.02)` |
+| --- | --- | --- |
+| `0.33333334` | **273,534** | 36 |
+| `0.66666667` | **290,297** | 70 |
+| `4.6` | **17,843** | 53 |
+| `1.1` | **9,051** | 17 |
+| `0.93` | 263 | 99 |
+| `2.7` | 73 | 62 |
+| `1/3` exact, `0.5`, `1.25` | 15–19 | 15–35 |
+
+The control rules out a debugger tax: 5,000,000 iterations of `s += i % 7` on
+the same runtime took 351 ms — 70 ns per iteration, ordinary Hermes-on-device
+speed. Both columns come from the same build, so the ratio holds; the absolute
+figures are an upper bound for a release bundle.
+
+`0.33333334` is not a contrived value: `src/utils/formatQuantity.ts` names it,
+because the API stores `1/3` and echoes back the float32. `4.6` and `1.1` are
+ordinary typed quantities, and each exceeds a whole frame in one call. The path
+is per-row — `QuantityBadge`, `QuantityDisplay`, `PantryItemCard` — and FlashList
+rebinds cells continuously while scrolling.
+
+Output is unchanged across the verified set, the fraction-vs-decimal choice
+included; `src/utils/__tests__/formatQuantity.test.ts` pins every value.
+
+Re-check: connect the debugger (`argent-metro-debugger`), serve
+`node_modules/fraction.js/dist/fraction.js` over a reverse-forwarded port, then
+evaluate
+
+```js
+fetch('http://localhost:8099/fraction.js').then(r => r.text()).then(src => {
+  const mod = { exports: {} };
+  new Function('module', 'exports', src)(mod, mod.exports);
+  globalThis.__Frac = mod.exports;
+});
+// then, in a second evaluate:
+(() => {
+  const F = globalThis.__Frac, now = () => performance.now();
+  const t0 = now();
+  for (let i = 0; i < 2; i++) new F(0.33333334).simplify(0.02);
+  return Math.round((now() - t0) * 1000 / 2); // microseconds per call
+})()
+```
+
+### An Android biometric cancel is indistinguishable from an invalidated key by code
+
+**Claim:** react-native-keychain rejects a user CANCEL and a permanently
+invalidated key with the same `code`. Only the message tells them apart, and
+treating the code as proof of invalidation deletes a user's stored credentials
+when they tap the prompt's negative button.
+
+**Verified 2026-09-07 against `react-native-keychain@10.0.0`, on an SM-S908U1**
+with three fingerprints enrolled. Enrolled biometric sign-in, then called
+`loadCredentials()` and tapped the prompt's "Use manual login". The rejection:
+
+```json
+{
+  "code": "E_CRYPTO_FAILED",
+  "name": "com.oblador.keychain.exceptions.CryptoFailedException",
+  "message": "code: 13, msg: Use manual login"
+}
+```
+
+`13` is androidx `BiometricPrompt.ERROR_NEGATIVE_BUTTON`.
+`ResultHandlerInteractiveBiometric.onAuthenticationError` formats EVERY androidx
+outcome as `CryptoFailedException("code: $errorCode, msg: $errString")`, and
+`KeychainModule` rejects all of them as `E_CRYPTO_FAILED` — so cancel, lockout,
+timeout and a genuinely unusable key are one code. A key invalidated by an
+enrolment change is thrown from the cipher path instead and reaches JS through
+`CryptoFailedException.reThrowOnError`'s `"Wrapped error: …"`, with no `code: <n>`.
+
+`src/storage/keychain.ts` therefore treats the `code: <n>` marker as proof the
+failure came from the prompt, and keeps the credentials. After the cancel above,
+`hasCredentials()` returned `true` and `getLastBiometricEmail()` still returned
+the account — the slot, its indicator and the remembered address all survived.
+
+Re-check: the format string is pinned by
+`src/storage/__tests__/keychainAndroidErrors.library.test.ts` against the
+installed Kotlin. On device, connect the debugger and call
+`getGenericPassword({ service, authenticationPrompt })`, tap the negative
+button, and read the rejection's `code`/`name`/`message`.

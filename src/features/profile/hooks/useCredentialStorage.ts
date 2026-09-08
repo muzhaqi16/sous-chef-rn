@@ -4,7 +4,6 @@ import {
   saveCredentials,
   hasCredentials,
   clearCredentials,
-  getStoredAccounts,
   getBiometricCapability,
 } from '#/storage/keychain';
 import { errorService } from '#/services/errorService';
@@ -27,15 +26,6 @@ const checkStoredCredentials = async (
   } catch (error) {
     errorService.reportError(error, { operation: 'checkCredentials' });
     return false;
-  }
-};
-
-const getAvailableAccounts = async () => {
-  try {
-    return await getStoredAccounts();
-  } catch (error) {
-    logger.error('Error getting available accounts:', error);
-    return [];
   }
 };
 
@@ -111,7 +101,6 @@ export const useCredentialStorage = () => {
     isLoadingCredentials,
     checkStoredCredentials,
     loadStoredCredentials,
-    getAvailableAccounts,
     getBiometricInfo,
     storeCredentials,
     removeCredentials,

@@ -14306,6 +14306,20 @@ type User {
   devicesConnection(after: String, before: String, first: Int, last: Int, orderBy: DeviceOrderBy): DeviceConnection!
   dietaryProfile: DietaryProfile
   """
+  The name to put on a row that names this user — a member list, a
+  collaborator list, an activity entry.
+  
+  Follows the SHARING RELATIONSHIP, not profile.profileVisibility: a caller
+  who shares a home or a shopping list with this user reads it whatever the
+  visibility flag says, because a person invited onto that row is not a
+  stranger and already sees the email on it. The profile field stays gated
+  by the flag; this is the one identity crumb that escapes it.
+  
+  Falls back to the profile's first name, and is null when neither is set or
+  the caller has no relationship that entitles them to it.
+  """
+  displayName: String
+  """
   Null unless the caller is this user or an admin.
   
   A User node is reachable cross-user (Recipe.createdBy, Membership.user, …),

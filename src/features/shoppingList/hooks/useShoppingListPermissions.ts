@@ -13,13 +13,20 @@ export interface ShoppingListPermissions {
   canRemoveItems: boolean;
   canEditItems: boolean;
   canMarkPurchased: boolean;
+  /**
+   * False while the answer is unknown. Absence is not temporary — the detail
+   * query can fail, or the list can come from a cache that never held it — so
+   * the flags above stay false rather than falling back to allowed.
+   */
+  resolved: boolean;
 }
 
-const ALL_ALLOWED: ShoppingListPermissions = {
-  canAddItems: true,
-  canRemoveItems: true,
-  canEditItems: true,
-  canMarkPurchased: true,
+const NOTHING_ALLOWED: ShoppingListPermissions = {
+  canAddItems: false,
+  canRemoveItems: false,
+  canEditItems: false,
+  canMarkPurchased: false,
+  resolved: false,
 };
 
 /** The membership shape the permission resolver accepts, without re-declaring it. */
@@ -43,7 +50,7 @@ export function useShoppingListPermissions(
   userId: string | undefined,
 ): ShoppingListPermissions {
   const client = useApolloClient();
-  if (!listDetails) return ALL_ALLOWED;
+  if (!listDetails) return NOTHING_ALLOWED;
 
   const collaboratorNodes =
     listDetails.collaboratorsConnection?.edges.map(e =>
@@ -63,7 +70,7 @@ export function useShoppingListPermissions(
       })
     : null;
 
-  return getShoppingListPermissionsWithOwner(
+  const permissions = getShoppingListPermissionsWithOwner(
     {
       homeId: listDetails.homeId,
       collaboratorsConnection: {
@@ -74,4 +81,6 @@ export function useShoppingListPermissions(
     userId,
     listDetails.home?.myMembership ?? null,
   );
+
+  return { ...permissions, resolved: true };
 }

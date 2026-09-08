@@ -100,6 +100,7 @@ describe('buildOptimisticShoppingList', () => {
         fragment TestUser on User {
           id
           email
+          displayName
           profile {
             id
             displayName
@@ -111,6 +112,7 @@ describe('buildOptimisticShoppingList', () => {
         __typename: 'User',
         id: OWNER.id,
         email: OWNER.email,
+        displayName: 'Tani',
         profile: {
           __typename: 'UserProfile',
           id: 'profile-1',
@@ -134,6 +136,7 @@ describe('buildOptimisticShoppingList', () => {
       __typename: 'User',
       id: OWNER.id,
       email: OWNER.email,
+      displayName: null,
       profile: null,
     });
   });

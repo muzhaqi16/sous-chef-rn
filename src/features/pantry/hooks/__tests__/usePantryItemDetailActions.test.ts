@@ -46,7 +46,6 @@ jest.mock('#features/shoppingList/cache/items', () => {
   );
   const revertOptimisticShoppingListItem = jest.fn();
   return {
-    adoptServerShoppingListItemId: jest.fn(),
     revertOptimisticShoppingListItem,
     addOptimisticShoppingListItem: jest.fn(),
     buildAddItemsReconcileUpdate: jest.fn(() => jest.fn()),

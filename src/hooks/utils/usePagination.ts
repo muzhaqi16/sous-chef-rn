@@ -130,7 +130,7 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     try {
       result = await fetchMore({ variables });
     } catch (error) {
-      deadCursor = isDeadCursorError(error, variables);
+      deadCursor = isDeadCursorError(error, endCursor);
       errorService.reportError(error, { operation: 'Pagination.loadMore' });
     }
 

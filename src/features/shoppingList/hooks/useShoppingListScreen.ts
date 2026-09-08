@@ -49,6 +49,7 @@ export function useShoppingListScreen() {
     rawPurchasedItems,
     shoppingList: currentListDetails,
     listNotFound,
+    detailsLoading,
     loading: itemsLoading,
     error,
     isTransitioning,
@@ -165,6 +166,7 @@ export function useShoppingListScreen() {
       rawPurchasedItems,
 
       loading,
+      detailsLoading,
       isLoadingInitial,
       isTransitioning,
       error,

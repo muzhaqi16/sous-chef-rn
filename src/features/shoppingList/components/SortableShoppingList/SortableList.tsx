@@ -24,7 +24,8 @@ import {
   type SortableListThemeColors,
   type ShoppingListRowOptions,
 } from './SortableListThemeContext';
-import { getTabBarBottomPadding } from '#constants/layout';
+import { getScrollClearancePadding } from '#constants/layout';
+import { useShoppingListItemPermissions } from '#features/shoppingList/context/ShoppingListPermissionsContext';
 import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
@@ -60,10 +61,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   onSwipeableClose: externalOnSwipeableClose,
   onRefresh,
   refreshing = false,
-  canRemoveItems = true,
-  canEditItems = true,
-  canMarkPurchased = true,
-  canReorderItems = false,
+  reorderable,
   onEndReached,
   onEndReachedThreshold = FLASHLIST_DEFAULTS.fullScreen.onEndReachedThreshold,
   ListEmptyComponent,
@@ -75,6 +73,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   scrollEventThrottle,
   onFirstContentLayout,
 }) => {
+  const listPermissions = useShoppingListItemPermissions();
   useCommitTracking('SortableShoppingList');
   const flashListRef = useRef<FlashListRef<ShoppingListRowItem>>(null);
 
@@ -139,17 +138,19 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
     onSortOrderUpdate,
   };
 
+  // Reordering takes BOTH: the tab has to offer it and the user has to be
+  // allowed to edit. Everything else is the account's answer, unchanged.
   const permissions: SortableListPermissions = {
-    canRemoveItems,
-    canEditItems,
-    canMarkPurchased,
-    canReorderItems,
+    canRemoveItems: listPermissions.canRemoveItems,
+    canEditItems: listPermissions.canEditItems,
+    canMarkPurchased: listPermissions.canMarkPurchased,
+    canReorderItems: reorderable && listPermissions.canEditItems,
     disabled,
   };
 
   const contentContainerStyle = {
     paddingTop: 8,
-    paddingBottom: getTabBarBottomPadding(insets.bottom),
+    paddingBottom: getScrollClearancePadding(insets.bottom),
     flexGrow: 1,
   };
 
@@ -170,12 +171,15 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
                 ref={flashListRef}
                 CellRendererComponent={perfCallbacks.CellRendererComponent}
                 data={items}
-                extraData={`${disabled}-${canRemoveItems}-${canEditItems}-${canMarkPurchased}-${canReorderItems}`}
+                extraData={`${disabled}-${permissions.canRemoveItems}-${permissions.canEditItems}-${permissions.canMarkPurchased}-${permissions.canReorderItems}`}
                 keyExtractor={keyExtractor}
                 getItemType={getItemType}
                 renderItem={renderItem}
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={contentContainerStyle}
+                contentContainerStyle={[
+                  styles.listContent,
+                  contentContainerStyle,
+                ]}
                 ListHeaderComponent={ListHeaderComponent ?? undefined}
                 ListFooterComponent={ListFooterComponent ?? undefined}
                 ListEmptyComponent={ListEmptyComponent ?? undefined}
@@ -216,6 +220,9 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  listContent: {
+    paddingHorizontal: theme.layout.pageGutter,
+  },
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

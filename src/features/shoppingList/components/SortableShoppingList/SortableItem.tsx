@@ -94,11 +94,10 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     onBeforeRowRemoved,
   } = actions;
 
-  const {
-    canRemoveItems = true,
-    canEditItems = true,
-    canMarkPurchased = true,
-  } = permissions;
+  // Both are required, so there is no absent answer to have an opinion about.
+  // The swipe descriptors come from the screen rather than the actions bag, so
+  // these two are gated here; every handler is withheld upstream instead.
+  const { canRemoveItems, canEditItems } = permissions;
 
   // Interactive tutorial — only the first row, and only on its steps.
   const tutorial = useShoppingListTutorialState();
@@ -283,8 +282,11 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           quantity={quantity}
           quantityInput={quantityInput}
           unit={unitDisplay}
+          // The handler is withheld from a viewer who may not edit, so its
+          // absence is the gate — the sheet it opens is fully interactive and
+          // its Save arms as soon as the value changes.
           onPress={() => onQuantityPress?.(itemId)}
-          disabled={isPurchased}
+          disabled={isPurchased || !onQuantityPress}
           isPurchased={isPurchased}
           themeColors={themeColors}
         />
@@ -313,7 +315,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   })();
 
   const checkboxElement = (() => {
-    if (!onTogglePurchase || !canMarkPurchased) return null;
+    if (!onTogglePurchase) return null;
 
     const checkbox = (
       <AnimatedCheckbox
@@ -380,7 +382,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
         // details otherwise. The tutorial advances when that sheet CLOSES
         // (ShoppingListModalsContext), not here where it has only just opened.
         onLongPress={
-          !isPurchased && canMarkPurchased && onTogglePurchase
+          !isPurchased && onTogglePurchase
             ? () => onTogglePurchase(itemId, { withDetails: true })
             : onItemPress
             ? () => onItemPress(itemId)

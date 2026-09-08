@@ -160,6 +160,9 @@ export function useConversionPreview({
       clearTimeout(debounceTimer.current);
     }
 
+    // Clearing the timer does not recall a request already in flight, so a
+    // superseded conversion would land after the current one and overwrite it.
+    let cancelled = false;
     debounceTimer.current = setTimeout(async () => {
       let result: Awaited<ReturnType<typeof convertQuantity>> | undefined;
       try {
@@ -179,6 +182,8 @@ export function useConversionPreview({
         });
       }
 
+      if (cancelled) return;
+
       const converted = result?.data?.convertQuantity;
       if (converted) {
         const formattedValue = Number.isInteger(converted.value)
@@ -196,6 +201,7 @@ export function useConversionPreview({
     }, DEBOUNCE_MS);
 
     return () => {
+      cancelled = true;
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
       }

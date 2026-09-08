@@ -253,6 +253,7 @@ mutation GenerateShoppingListFromMealPlan(
           user {
             id
             email
+            displayName
             profile {
               id
               displayName

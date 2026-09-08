@@ -494,10 +494,10 @@ const RecipeMainInner: React.FC = () => {
       (screen.discovery.loading &&
         !screen.showSearchResults &&
         screen.items.length === 0) ? (
-        <>
+        <View style={styles.loadingGutter}>
           {recipeListHeader}
           <RecipeSkeleton />
-        </>
+        </View>
       ) : (
         <ItemList
           items={screen.items}
@@ -598,7 +598,7 @@ const RecipeMainFallback: React.FC = () => {
       scroll="list"
       gutter="none"
     >
-      <View style={styles.searchBarContainer}>
+      <View style={styles.loadingGutter}>
         <SearchBar
           value=""
           onChangeText={noop}
@@ -606,8 +606,8 @@ const RecipeMainFallback: React.FC = () => {
           showSearchIcon
           editable={false}
         />
+        <RecipeSkeleton />
       </View>
-      <RecipeSkeleton />
     </Screen>
   );
 };
@@ -620,7 +620,14 @@ export const RecipeMain: React.FC = () => (
 );
 
 const styles = StyleSheet.create(theme => ({
-  searchBarContainer: { paddingHorizontal: theme.spacing.base },
+  // No inset: this one renders INSIDE the list's content container, which
+  // already carries the gutter for everything it holds.
+  searchBarContainer: {},
+  // The loading branch renders chrome and skeleton bare under `gutter="none"`,
+  // unlike the loaded branch where the list's content container insets them.
+  loadingGutter: {
+    paddingHorizontal: theme.layout.pageGutter,
+  },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -633,8 +640,9 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
-    marginHorizontal: theme.spacing.base,
-    marginVertical: theme.spacing.xs,
+    // The row rhythm, so this header sits in the list's spacing rather than a
+    // tighter one of its own.
+    marginVertical: theme.layout.rowGap,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
   },
@@ -653,8 +661,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
-    marginHorizontal: theme.spacing.base,
-    marginTop: theme.spacing.sm,
+    marginVertical: theme.layout.rowGap,
   },
   filterIconWrapper: {
     // Anchors the absolutely-positioned count badge to the icon bounds

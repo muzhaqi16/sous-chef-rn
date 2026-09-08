@@ -71,11 +71,12 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  // No horizontal inset: this header renders inside its screen's list content
+  // container, which owns the page gutter.
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
   },
   leftContent: {

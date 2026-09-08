@@ -8,22 +8,6 @@ import {
   ShoppingEmptyIllustrationLarge,
 } from '#features/shoppingList/components/ShoppingEmptyIllustration';
 
-jest.mock('@shopify/react-native-skia', () => ({
-  Canvas: 'Canvas',
-  Group: 'Group',
-  Path: 'Path',
-  Circle: 'Circle',
-  Skia: {
-    Path: {
-      Make: () => ({
-        moveTo: jest.fn().mockReturnThis(),
-        lineTo: jest.fn().mockReturnThis(),
-        close: jest.fn().mockReturnThis(),
-      }),
-    },
-  },
-}));
-
 describe('ShoppingEmptyIllustration', () => {
   it('renders without crashing with default size', () => {
     const { toJSON } = render(<ShoppingEmptyIllustration />);

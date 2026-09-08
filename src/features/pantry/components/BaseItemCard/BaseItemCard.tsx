@@ -128,12 +128,15 @@ const styles = StyleSheet.create(theme => ({
           backgroundColor: theme.colors.surface,
           borderColor: 'transparent',
         },
+        // Status rides the row's EDGE, not its fill: several expired items
+        // sort together, and a full-bleed tint on each makes the screen read
+        // as one block of colour. The status text carries the same colour.
         warning: {
-          backgroundColor: theme.colors.expiration.warningBg,
+          backgroundColor: theme.colors.surface,
           borderColor: theme.colors.expiration.warningBorder,
         },
         expired: {
-          backgroundColor: theme.colors.expiration.expiredBg,
+          backgroundColor: theme.colors.surface,
           borderColor: theme.colors.expiration.expiredBorder,
         },
         success: {

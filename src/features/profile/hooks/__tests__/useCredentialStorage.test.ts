@@ -13,12 +13,9 @@ jest.mock('#/utils/finallyHelpers');
 
 // Mock keychain module
 const mockLoadCredentials = jest.fn();
-const mockLoadCredentialsForAccount = jest.fn();
 const mockSaveCredentials = jest.fn();
 const mockHasCredentials = jest.fn();
-const mockHasCredentialsForAccount = jest.fn();
 const mockClearCredentials = jest.fn();
-const mockGetStoredAccounts = jest.fn();
 const mockGetBiometricCapability = jest.fn();
 
 type KeychainModule = typeof import('#/storage/keychain');
@@ -29,21 +26,12 @@ jest.mock('#/storage/keychain', () => ({
   clearSessionTokens: jest.fn(() => Promise.resolve()),
   loadCredentials: (...args: Parameters<KeychainModule['loadCredentials']>) =>
     mockLoadCredentials(...args),
-  loadCredentialsForAccount: (
-    ...args: Parameters<KeychainModule['loadCredentialsForAccount']>
-  ) => mockLoadCredentialsForAccount(...args),
   saveCredentials: (...args: Parameters<KeychainModule['saveCredentials']>) =>
     mockSaveCredentials(...args),
   hasCredentials: (...args: Parameters<KeychainModule['hasCredentials']>) =>
     mockHasCredentials(...args),
-  hasCredentialsForAccount: (
-    ...args: Parameters<KeychainModule['hasCredentialsForAccount']>
-  ) => mockHasCredentialsForAccount(...args),
   clearCredentials: (...args: Parameters<KeychainModule['clearCredentials']>) =>
     mockClearCredentials(...args),
-  getStoredAccounts: (
-    ...args: Parameters<KeychainModule['getStoredAccounts']>
-  ) => mockGetStoredAccounts(...args),
   getBiometricCapability: (
     ...args: Parameters<KeychainModule['getBiometricCapability']>
   ) => mockGetBiometricCapability(...args),
@@ -53,12 +41,9 @@ jest.mock('#/storage/keychain', () => ({
 beforeEach(() => {
   jest.clearAllMocks();
   mockHasCredentials.mockResolvedValue(false);
-  mockHasCredentialsForAccount.mockResolvedValue(false);
   mockLoadCredentials.mockResolvedValue(null);
-  mockLoadCredentialsForAccount.mockResolvedValue(null);
   mockSaveCredentials.mockResolvedValue(undefined);
   mockClearCredentials.mockResolvedValue(undefined);
-  mockGetStoredAccounts.mockResolvedValue([]);
   mockGetBiometricCapability.mockResolvedValue({
     isAvailable: false,
     biometryType: null,
@@ -77,7 +62,6 @@ describe('useCredentialStorage', () => {
 
     expect(typeof result.current.checkStoredCredentials).toBe('function');
     expect(typeof result.current.loadStoredCredentials).toBe('function');
-    expect(typeof result.current.getAvailableAccounts).toBe('function');
     expect(typeof result.current.getBiometricInfo).toBe('function');
     expect(typeof result.current.storeCredentials).toBe('function');
     expect(typeof result.current.removeCredentials).toBe('function');

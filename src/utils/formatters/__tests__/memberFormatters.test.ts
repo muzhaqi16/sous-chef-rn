@@ -38,6 +38,24 @@ describe('getMemberDisplayName', () => {
     expect(getMemberDisplayName(member, 'different-user')).toBe('Custom Name');
   });
 
+  // `User.displayName` follows the SHARING relationship, so it survives a
+  // private profile where `profile` comes back null. Without reading it, a
+  // housemate who keeps their profile private is rendered as their email's
+  // local part — an account id where a person's name belongs.
+  it('prefers the sharing-gated user displayName over the email', () => {
+    const member = makeMember({
+      displayName: null,
+      user: {
+        id: 'u1',
+        email: 'artanmuzhaqi@gmail.com',
+        displayName: 'Tani',
+        profile: null,
+      },
+    });
+
+    expect(getMemberDisplayName(member)).toBe('Tani');
+  });
+
   it('falls back to profile displayName', () => {
     const member = makeMember({
       user: {
@@ -115,6 +133,7 @@ function makeUser(overrides: Partial<CollaboratorUser> = {}): CollaboratorUser {
     __typename: 'User',
     id: 'u1',
     email: 'user@example.com',
+    displayName: null,
     profile: null,
     ...overrides,
   };
@@ -141,6 +160,19 @@ describe('getCollaboratorDisplayName', () => {
       }),
     });
     expect(getCollaboratorDisplayName(collab, 'u1')).toBe('You');
+  });
+
+  // The reported defect: the API withholds `profile` for a private user, so the
+  // name fell through to the invite email's local part ("artanmuzhaqi" where
+  // "Tani" belonged). `User.displayName` is the field that crosses.
+  it('reads the sharing-gated name when the private profile is withheld', () => {
+    const collaborator = makeCollaborator({
+      email: 'artanmuzhaqi@gmail.com',
+      collaboratorId: 'u1',
+      collaborator: makeUser({ email: null, displayName: 'Tani' }),
+    });
+
+    expect(getCollaboratorDisplayName(collaborator)).toBe('Tani');
   });
 
   it('prefers collaborator.profile.displayName', () => {

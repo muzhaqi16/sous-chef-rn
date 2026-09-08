@@ -28,11 +28,15 @@ jest.mock('#features/auth/hooks/useRememberMe', () => ({
 
 const mockNavigateToForgotPassword = jest.fn();
 const mockNavigateToSignUp = jest.fn();
+const mockNavigateToLogin = jest.fn();
 
 jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
   useAuthNavigation: () => ({
     navigateToForgotPassword: mockNavigateToForgotPassword,
     navigateToSignUp: mockNavigateToSignUp,
+    // Reached from the verification screen this one swaps in. It resolves to
+    // the route already focused, which is why the exit needs the host too.
+    navigateToLogin: mockNavigateToLogin,
   }),
 }));
 
@@ -210,6 +214,34 @@ describe('LoginScreen', () => {
     });
     // Not a sign-out: nothing cleared the stored credentials on the way here.
     expect(loginSpy).toHaveBeenCalledTimes(1);
+    loginSpy.mockRestore();
+  });
+
+  // Every exit from the in-place verification screen navigates to Login, which
+  // is the route already focused — so nothing re-renders and the state that put
+  // the screen there survives. Without a host dismissal there is no way off it.
+  it('lets the reader back out of the verification screen it swaps in', async () => {
+    const loginSpy = jest
+      .spyOn(authService, 'login')
+      .mockImplementation(async (_input, options) => {
+        options?.onRefusal?.('AUTH_EMAIL_NOT_VERIFIED');
+        return false;
+      });
+    const user = userEvent.setup();
+    renderWithApollo(<LoginScreen />);
+
+    await user.press(screen.getByTestId('login-submit-button'));
+    await waitFor(() => {
+      expect(screen.getByTestId('code-verification-screen')).toBeTruthy();
+    });
+
+    // The footer sign-in link is this context's documented way out.
+    await user.press(screen.getByTestId('code-verification-sign-in'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('login-screen')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('code-verification-screen')).toBeNull();
     loginSpy.mockRestore();
   });
 

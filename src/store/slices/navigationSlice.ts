@@ -35,6 +35,8 @@ interface UserNavigationState {
   lastLoginTimestamp?: number;
   rememberMeChoice?: boolean;
   hasCompletedOnboarding?: boolean;
+  /** The device-region currency default has been applied once for this account. */
+  currencyDefaultApplied?: boolean;
   onboardingStartedAt?: number;
   onboardingCompletedAt?: number;
   skippedOnboardingSteps?: string[];

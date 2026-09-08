@@ -164,6 +164,13 @@ export const PantryItemDetail: React.FC<
   const quantityBreakdownText = formatQuantityBreakdown(
     item?.quantityBreakdown,
   );
+  const portionsLeftText =
+    item?.remainingPortions != null && item?.portionUnit
+      ? t('pantryItemCard.portionsLeft', {
+          count: item.remainingPortions,
+          unit: item.portionUnit.symbol || item.portionUnit.name,
+        })
+      : null;
 
   // Classified so an offline cache miss reports itself instead of spinning
   // forever on a bare loader.
@@ -353,6 +360,7 @@ export const PantryItemDetail: React.FC<
             netWeightText={netWeightText}
             remainingNetWeightText={remainingNetWeightText}
             quantityBreakdownText={quantityBreakdownText}
+            portionsLeftText={portionsLeftText}
             packageBreakdownText={packageBreakdownText}
             shelfLifeDays={item.item?.shelfLifeDays}
             shelfLifeOpenedDays={item.item?.shelfLifeOpenedDays}

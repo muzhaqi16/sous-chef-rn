@@ -757,6 +757,9 @@ const styles = StyleSheet.create(theme => ({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    // Chrome, outside the list — so this screen owns its gutter rather than
+    // inheriting the list's.
+    paddingHorizontal: theme.layout.pageGutter,
   },
   headerContent: {
     flex: 1,
@@ -773,6 +776,5 @@ const styles = StyleSheet.create(theme => ({
   },
   nutritionContainer: {
     marginBottom: theme.spacing.sm,
-    marginHorizontal: theme.layout.rowGutter,
   },
 }));

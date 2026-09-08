@@ -528,4 +528,38 @@ describe('ListSettings', () => {
       useIsOnline.mockReturnValue(true);
     });
   });
+
+  describe('while ownership has not resolved', () => {
+    // The detail query is `errorPolicy: 'ignore'`, so a failure and a cache
+    // that never held the list both arrive as no list at all. Reading that as
+    // "not the owner" shows the owner the viewer's screen, with budget,
+    // reminder, recurring, template, archive and delete simply absent.
+    const withoutDetails = () => {
+      const detailsModule = require('#features/shoppingList/hooks/useShoppingListDetails');
+      detailsModule.useShoppingListDetails = jest.fn(() => ({
+        shoppingList: null,
+        isShared: false,
+        collaborators: [],
+        ownerships: [],
+        refetch: jest.fn(),
+      }));
+    };
+
+    it('waits rather than rendering the viewer screen', () => {
+      withoutDetails();
+
+      render(<ListSettings route={editRoute} />);
+
+      expect(screen.queryByText('List Information')).toBeNull();
+      expect(screen.queryByText('List Info')).toBeNull();
+    });
+
+    it('offers no Save it cannot know the user may use', () => {
+      withoutDetails();
+
+      render(<ListSettings route={editRoute} />);
+
+      expect(screen.queryByText('Save')).toBeNull();
+    });
+  });
 });

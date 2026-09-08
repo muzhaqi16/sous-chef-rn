@@ -11,6 +11,7 @@ import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollCom
 import { alertService } from '#/services/alertService';
 import { TabView, type Route } from 'react-native-tab-view';
 import { FilterTabBar } from './FilterTabBar';
+import { useShoppingListItemPermissions } from '#features/shoppingList/context/ShoppingListPermissionsContext';
 import type { FilterTabActionButton } from '#components/organisms/FilterTabs/types';
 import { ShoppingTab } from './ShoppingTab';
 import { PurchasedTab } from './PurchasedTab';
@@ -79,11 +80,6 @@ interface ShoppingListTabsProps {
   onEndReachedPurchased?: () => void;
   hasMorePurchased?: boolean;
   isLoadingMorePurchased?: boolean;
-  canAddItems?: boolean;
-  canRemoveItems?: boolean;
-  canEditItems?: boolean;
-  canMarkPurchased?: boolean;
-  canReorderItems?: boolean;
   /** Drives the skeletons shown while switching lists. */
   isTransitioning?: boolean;
   onBatchMoveToPantry?: () => void;
@@ -143,10 +139,6 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   onEndReachedPurchased,
   hasMorePurchased,
   isLoadingMorePurchased,
-  canRemoveItems = true,
-  canEditItems = true,
-  canMarkPurchased = true,
-  canReorderItems = false,
   isTransitioning = false,
   onBatchMoveToPantry,
   batchMoveToPantryLoading = false,
@@ -160,6 +152,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   showImages,
 }) => {
   const { t } = useTranslation();
+  const permissions = useShoppingListItemPermissions();
   const tabBarRef = useRef<View>(null);
   const layout = useWindowDimensions();
   const tutorial = useShoppingListTutorial();
@@ -294,7 +287,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       : handleClearAllWithConfirmation;
 
   const currentItems = index === 0 ? unpurchasedItems : purchasedItems;
-  const showClear = canRemoveItems && currentItems.length > 0;
+  const showClear = permissions.canRemoveItems && currentItems.length > 0;
 
   const counts = {
     shopping: unpurchasedCount,
@@ -352,10 +345,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     onEndReached: onEndReachedUnpurchased,
     hasMore: hasMoreUnpurchased,
     isLoadingMore: isLoadingMoreUnpurchased,
-    canRemoveItems,
-    canEditItems,
-    canMarkPurchased,
-    canReorderItems,
+    reorderable: true,
     isTransitioning,
     // Only the visible tab drives the tab bar. `lazy` keeps both scenes mounted
     // once visited, so a hidden list's layout or restore scroll would otherwise
@@ -378,10 +368,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     onEndReached: onEndReachedPurchased,
     hasMore: hasMorePurchased,
     isLoadingMore: isLoadingMorePurchased,
-    canRemoveItems,
-    canEditItems,
-    canMarkPurchased,
-    canReorderItems: false,
+    // The purchased tab is not reorderable, whatever the user may do.
+    reorderable: false,
     isTransitioning,
     onScroll: shoppingTabActive ? undefined : onScroll,
     onScrollBeginDrag: shoppingTabActive ? undefined : onScrollBeginDrag,

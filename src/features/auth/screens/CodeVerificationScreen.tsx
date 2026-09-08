@@ -39,6 +39,12 @@ interface CodeVerificationScreenProps {
   context: VerificationContext;
   /** Address being verified. Falls back to the signed-in user's. */
   email?: string;
+  /**
+   * Dismisses this screen when a HOST renders it in place of its own content.
+   * Navigating to the host's own route is a no-op, so without this the reader
+   * has no way off the screen.
+   */
+  onExit?: () => void;
 }
 
 /**
@@ -87,6 +93,11 @@ function interpretVerifyEmailResponse(
         ? t('auth.codeInvalidOrExpired')
         : localizedRefusalMessage(payload, t('auth.codeInvalidOrExpired')),
     );
+  } else {
+    // A transport failure resolves with neither a payload nor a top-level
+    // error, so without this the submit button does nothing at all — on every
+    // retry, with no way to tell it apart from a dead control.
+    toastService.error(t('errors.codes.genericRetry'));
   }
 }
 
@@ -95,8 +106,18 @@ function interpretResendResponse(
   { onVerified, t }: VerificationResponseDeps,
 ): void {
   const error = response.error;
-  if (!error || !(typeof error === 'object' && 'errors' in error)) {
+  if (!error) {
     logger.debug('Verification email resent');
+    return;
+  }
+
+  if (!(typeof error === 'object' && 'errors' in error)) {
+    // A transport failure carries no `errors` array, so its absence does not
+    // mean the email went out — and the cooldown is already running.
+    errorService.reportError(error, {
+      operation: 'CodeVerification.resendEmail.transport',
+    });
+    toastService.error(t('auth.resendVerificationFailed'));
     return;
   }
 
@@ -119,6 +140,7 @@ function interpretResendResponse(
 export function CodeVerificationScreen({
   context,
   email,
+  onExit,
 }: CodeVerificationScreenProps): React.JSX.Element | null {
   const { t } = useTranslation();
   const user = useUser();
@@ -165,12 +187,19 @@ export function CodeVerificationScreen({
     return null;
   }
 
+  // The host's dismissal first, because navigating to the route the host is
+  // already on changes nothing and leaves this screen mounted.
+  const leaveToSignIn = () => {
+    onExit?.();
+    navigateToLogin();
+  };
+
   const onVerified = () => {
     if (context === 'signup') {
       // `verifyEmail` returns the user but no tokens, so the sign-up path is left
       // with no session and signing in is the next step.
       toastService.success(t('auth.emailVerifiedToast'));
-      navigateToLogin();
+      leaveToSignIn();
       return;
     }
 
@@ -272,14 +301,14 @@ export function CodeVerificationScreen({
     }
   };
 
-  // Back means nothing on the sign-up path: the account exists, so the filled
-  // form would only offer a submit now guaranteed to be refused.
+  // Straight after registering there is nothing behind this screen, so the
+  // sign-up path has back only where a HOST rendered it in place and can take
+  // it away again.
   const onBackPress =
-    context === 'gate' ? onSignOut : context === 'inApp' ? goBack : undefined;
+    context === 'gate' ? onSignOut : context === 'inApp' ? goBack : onExit;
 
-  // Sign-up has no back and no skip — skipping writes a per-user flag that no-ops
-  // without a session — so "Already verified? Sign In" is the only way off this
-  // screen for someone who followed the mail link, and it takes the footer.
+  // Sign-up has no skip — skipping writes a per-user flag that no-ops without a
+  // session — so "Already verified? Sign In" takes the footer.
   const isSignup = context === 'signup';
 
   const canResendNow = !!targetEmail;
@@ -352,7 +381,7 @@ export function CodeVerificationScreen({
           isSignup ? 'code-verification-sign-in' : 'resend-code'
         }
         onFooterLinkPress={
-          isSignup ? navigateToLogin : targetEmail ? onResend : undefined
+          isSignup ? leaveToSignIn : targetEmail ? onResend : undefined
         }
         footerLinkDisabled={isSignup ? false : !canResend}
         footerLinkCountdown={isSignup ? 0 : countdown}

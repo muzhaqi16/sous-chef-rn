@@ -344,8 +344,9 @@ export const commonStyles = StyleSheet.create(theme => ({
   // The list row, defined once for the four shells that compose one:
   // `rowWrapper` is its place in the list, `rowSurface` the card, `rowContent`
   // the slots inside it. Its text roles are `rowType` in `theme/foundations`.
+  // No horizontal inset: the list that renders the row owns the page gutter,
+  // so a row placing itself would be the second author of one edge.
   rowWrapper: {
-    marginHorizontal: theme.layout.rowGutter,
     marginBottom: theme.layout.rowGap,
   },
   rowSurface: {
@@ -353,8 +354,9 @@ export const commonStyles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
     // A status variant paints this border; the default row relies on the
-    // shadow alone and keeps a transparent one to preserve sizing.
-    borderWidth: theme.borderWidth.hairline,
+    // shadow alone and keeps a transparent one, so every row is the same
+    // height whether or not it carries a status.
+    borderWidth: theme.borderWidth.medium,
     borderColor: 'transparent',
     ...theme.shadows.card,
   },

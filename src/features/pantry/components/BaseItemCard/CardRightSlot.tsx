@@ -18,17 +18,17 @@ const MetaSlot: React.FC<
 > = ({ primary, secondary, tertiary, testID }) => (
   <View style={styles.metaContainer}>
     {primary ? (
-      <Text role={rowType.title} testID={testID}>
+      <Text role={rowType.title} testID={testID} numberOfLines={1}>
         {primary}
       </Text>
     ) : null}
     {secondary ? (
-      <Text role={rowType.subtitle} tone="tertiary">
+      <Text role={rowType.subtitle} tone="tertiary" numberOfLines={1}>
         {secondary}
       </Text>
     ) : null}
     {tertiary ? (
-      <Text role={rowType.subtitle} tone="tertiary">
+      <Text role={rowType.subtitle} tone="tertiary" numberOfLines={1}>
         {tertiary}
       </Text>
     ) : null}
@@ -133,7 +133,14 @@ export const CardRightSlot: React.FC<CardRightSlotProps> = props => {
 
 const styles = StyleSheet.create(theme => ({
   metaContainer: {
+    // Stretches to the row's height and stacks from its top, so `primary` lands
+    // on the title's line and `secondary` on the subtitle's. Only this slot
+    // leaves the row's centre; every non-text slot keeps it.
+    alignSelf: 'stretch',
     alignItems: 'flex-end',
+    // Bounded so a long secondary cannot squeeze the title, and single-line so
+    // a wrapped one is ellipsized rather than clipped by the row's height.
+    maxWidth: '40%',
   },
   counterContainer: {
     flexDirection: 'row',

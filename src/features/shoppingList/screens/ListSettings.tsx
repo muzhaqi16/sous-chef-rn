@@ -80,12 +80,14 @@ export const ListSettings: React.FC<
     name,
     nextRecurringDate,
     ownerInfo,
+    ownership,
     patternLabel,
     priceTracking,
     reactivating,
     recurringPattern,
     reminderDate,
     reminderEnabled,
+    retryOwnership,
     roleDisplay,
     saving,
     selectedHomeId,
@@ -107,6 +109,23 @@ export const ListSettings: React.FC<
     templates,
     totalCost,
   } = useListSettings(route.params?.listId);
+
+  // Ownership decides the whole screen — its title, its Save action and six
+  // sections — so an unresolved answer waits rather than rendering the viewer's
+  // read-only version at the list's owner.
+  if (listId && ownership === 'unknown') {
+    return (
+      <Screen
+        header={{
+          title: t('shoppingListScreens.listSettings'),
+          back: goBack,
+        }}
+        state={{ value: 'loading', onRetry: retryOwnership }}
+      >
+        <></>
+      </Screen>
+    );
+  }
 
   return (
     <Screen

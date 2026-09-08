@@ -23,8 +23,8 @@ export const RecipeSkeleton: React.FC = () => (
 );
 
 const styles = StyleSheet.create(theme => ({
-  // No gutter or gap of its own: a skeleton row places itself exactly as the
-  // real row does, so adding either here insets and spaces it twice over.
+  // No horizontal inset: of its three hosts two already sit inside a
+  // gutter-padded container, so carrying one here double-insets them.
   container: {
     paddingTop: theme.spacing.xs,
     paddingBottom: theme.spacing.md,

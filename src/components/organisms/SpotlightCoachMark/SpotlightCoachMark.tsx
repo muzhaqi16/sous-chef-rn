@@ -244,22 +244,22 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   const overlayColor = theme.colors.overlays.heavy;
   const primaryColor = theme.colors.primary;
 
-  const holePath = useDerivedValue(() => {
-    const path = Skia.Path.Make();
-    path.addRRect(
-      Skia.RRectXY(
-        Skia.XYWHRect(
-          animHoleLeft.get(),
-          animHoleTop.get(),
-          animHoleWidth.get(),
-          animHoleHeight.get(),
+  const holePath = useDerivedValue(() =>
+    Skia.PathBuilder.Make()
+      .addRRect(
+        Skia.RRectXY(
+          Skia.XYWHRect(
+            animHoleLeft.get(),
+            animHoleTop.get(),
+            animHoleWidth.get(),
+            animHoleHeight.get(),
+          ),
+          borderRadius,
+          borderRadius,
         ),
-        borderRadius,
-        borderRadius,
-      ),
-    );
-    return path;
-  });
+      )
+      .detach(),
+  );
 
   // Swipe-to-advance gesture (left swipe → next step)
   // Pre-defined RN-scope callback for scheduleOnRN (CLAUDE.md convention)

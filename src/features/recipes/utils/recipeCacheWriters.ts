@@ -54,6 +54,7 @@ export type RecipeCreatedBy = {
   __typename: 'User';
   id: string;
   email: string | null;
+  displayName: string | null;
 } | null;
 
 function totalTime(prep: number | null, cook: number | null): number | null {

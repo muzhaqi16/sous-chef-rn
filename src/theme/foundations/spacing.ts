@@ -30,6 +30,7 @@ export const space = (...values: (keyof typeof spacing)[]) => {
  * live here rather than four times over.
  */
 export const layout = {
+  /** Screen edge to any screen-level content — chrome, controls and rows alike. */
   pageGutter: 16,
   sectionGap: 24,
   /** A row's own edge to its content. */
@@ -40,6 +41,4 @@ export const layout = {
   rowTextGap: 4,
   /** Between one row and the next. */
   rowGap: 8,
-  /** Screen edge to a row's edge — matches the search bar above the list. */
-  rowGutter: 12,
 };

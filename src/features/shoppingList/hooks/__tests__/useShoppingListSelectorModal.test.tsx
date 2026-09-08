@@ -55,6 +55,7 @@ const makeOwnership = (
     __typename: 'User',
     id: 'user-1',
     email,
+    displayName: null,
     profile:
       displayName === null
         ? null

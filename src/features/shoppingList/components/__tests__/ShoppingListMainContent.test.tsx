@@ -11,6 +11,8 @@ import {
   ShoppingListTutorialStep,
 } from '#features/shoppingList/context/ShoppingListTutorialContext';
 import { useAnyShoppingListSheetVisible } from '#features/shoppingList/context/ShoppingListModalsContext';
+import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
+import { getShoppingListPermissionsWithOwner } from '#features/shoppingList/utils/shoppingListPermissions';
 
 type ScreenData = ShoppingListMainContentProps['screenData'];
 
@@ -192,7 +194,9 @@ const makeScreenData = (overrides: ScreenDataOverrides = {}): ScreenData => {
         { id: 'list-1', name: 'Groceries', _isOwner: true },
       ],
       currentList: { id: 'list-1', name: 'Groceries' },
-      currentListDetails: null,
+      // A list on screen always has a detail record; without one the screen
+      // cannot say what this person may do and offers a retry instead.
+      currentListDetails: { id: 'list-1', homeId: null, ownerships: [] },
       currentListId: 'list-1',
       selectedShoppingListId: 'list-1',
       unpurchasedItems: [],
@@ -200,6 +204,7 @@ const makeScreenData = (overrides: ScreenDataOverrides = {}): ScreenData => {
       rawUnpurchasedItems: [],
       rawPurchasedItems: [],
       isLoadingInitial: false,
+      detailsLoading: false,
       searchQuery: '',
       totalCountUnpurchased: 0,
       totalCountPurchased: 0,
@@ -384,6 +389,61 @@ describe('ShoppingListMainContent', () => {
         />,
       );
       expect(queryByTestId('spotlight-coach-mark')).toBeNull();
+    });
+  });
+
+  describe('when the app cannot say what this person may do', () => {
+    // The detail query is `errorPolicy: 'ignore'`, so a failure and a cache
+    // that never held the list both arrive as no details at all. Rendering the
+    // list anyway shows its OWNER a viewer's version of their own list.
+    const withoutDetails = () =>
+      makeScreenData({
+        state: { currentListDetails: null, detailsLoading: false },
+      });
+
+    it('offers a retry instead of a list nobody is allowed to touch', () => {
+      const { getByTestId } = render(
+        <ShoppingListMainContent screenData={withoutDetails()} />,
+      );
+
+      expect(getByTestId('state-error')).toBeTruthy();
+    });
+
+    it('does not tell the person they lack permission', () => {
+      render(<ShoppingListMainContent screenData={withoutDetails()} />);
+
+      const [, , disabledCopy] = (useTabBarAddButton as jest.Mock).mock
+        .calls[0];
+      expect(disabledCopy).toBeUndefined();
+    });
+
+    it('waits rather than offering a retry while the answer is still coming', () => {
+      const { queryByTestId } = render(
+        <ShoppingListMainContent
+          screenData={makeScreenData({
+            state: { currentListDetails: null, detailsLoading: true },
+          })}
+        />,
+      );
+
+      // The item queries settle before the detail one, so reading their flags
+      // instead put this screen up for a frame on every visit to the tab.
+      expect(queryByTestId('state-error')).toBeNull();
+    });
+
+    it('names the refusal once the answer is a known one', () => {
+      (getShoppingListPermissionsWithOwner as jest.Mock).mockReturnValueOnce({
+        canAddItems: false,
+        canRemoveItems: false,
+        canEditItems: false,
+        canMarkPurchased: false,
+      });
+
+      render(<ShoppingListMainContent screenData={makeScreenData()} />);
+
+      const [, , disabledCopy] = (useTabBarAddButton as jest.Mock).mock
+        .calls[0];
+      expect(disabledCopy).toBeTruthy();
     });
   });
 });
