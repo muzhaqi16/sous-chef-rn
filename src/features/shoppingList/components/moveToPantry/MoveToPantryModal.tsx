@@ -75,7 +75,12 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     purchasedUnit,
   } = useMoveToPantryItem({ shoppingListItemId, skip: !visible });
 
-  const { control, handleSubmit, setValue } = useForm<MoveToPantryFormValues>({
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm<MoveToPantryFormValues>({
     resolver: yupResolver(moveToPantrySchema),
     defaultValues: moveToPantryDefaults(StorageState.Ambient),
     mode: 'onTouched',
@@ -358,6 +363,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             pantries={pantries}
             selectedPantryId={pantryId}
             onSelect={id => setValue('pantryId', id, { shouldValidate: true })}
+            error={errors.pantryId?.message}
           />
 
           {/* Quantity and Unit Input */}
@@ -372,6 +378,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                     placeholder={t('labels.eG1114')}
                     keyboardType="numeric"
                     required
+                    error={errors.quantityInput?.message}
                   />
                 </View>
                 <View style={styles.unitField}>
@@ -384,6 +391,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                     }
                     placeholder={t('moveToPantry.unitPlaceholder')}
                     required
+                    error={errors.unitValue?.message}
                     onUnitSelected={id => {
                       setValue('unitId', id);
                     }}

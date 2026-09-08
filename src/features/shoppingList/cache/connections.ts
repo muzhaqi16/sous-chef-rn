@@ -65,15 +65,34 @@ function clearItemsFromCache(
           !existing
         )
           return existing;
+        // Remove exactly the ids the mutation was given, NOT the whole
+        // connection. The list is paginated, so `itemIds` is what was loaded
+        // at tap time and the server clears only those — emptying the
+        // connection hides every row past the loaded page until something
+        // else refetches.
+        const cleared = new Set(
+          itemIds.map(id =>
+            cache.identify({ __typename: 'ShoppingListItem', id }),
+          ),
+        );
+        const edges = (existing.edges ?? []).filter(
+          edge => !cleared.has(edge?.node?.__ref),
+        );
         return {
           ...existing,
-          edges: [],
-          totalCount: 0,
+          edges,
+          totalCount: Math.max(
+            0,
+            (existing.totalCount ?? 0) -
+              ((existing.edges?.length ?? 0) - edges.length),
+          ),
         };
       },
       ...(isPurchased && {
-        completedItems() {
-          return 0;
+        // Subtracted, not zeroed, for the same reason as the edges above: only
+        // the ids that were sent are gone.
+        completedItems(existing: number = 0) {
+          return Math.max(0, existing - itemIds.length);
         },
       }),
       totalItems(existing: number = 0) {

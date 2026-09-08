@@ -19,7 +19,9 @@ jest.mock('#/apollo/client', () => ({
   flushCachePersistence: jest.fn(),
 }));
 
+const mockRegisterBiometricRefusal = jest.fn();
 const mockStoreSpies = {
+  registerBiometricRefusal: mockRegisterBiometricRefusal,
   setAuthIsLoading: jest.fn(),
   setAuthIsLoadingCredentials: jest.fn(),
   setAuth: jest.fn(),
@@ -181,6 +183,33 @@ describe('authService.autoLogin — stored-credential lifecycle', () => {
 
     expect(ok).toBe(false);
     expect(mockClearCredentials).not.toHaveBeenCalled();
+  });
+
+  it('records no biometric penalty when the request never reached the server', async () => {
+    // `biometricRetryAt` and `biometricAttempts` are PERSISTED and deliberately
+    // not session-scoped, so a lockout recorded for an outage outlasts it.
+    mockMutate.mockResolvedValueOnce({
+      data: { exchangeDeviceCredential: null },
+      error: new Error('Network request failed'),
+    });
+
+    const ok = await authService.autoLogin();
+
+    expect(ok).toBe(false);
+    expect(mockClearCredentials).not.toHaveBeenCalled();
+    expect(mockRegisterBiometricRefusal).not.toHaveBeenCalled();
+  });
+
+  it('still records the penalty when the SERVER refuses', async () => {
+    // The counterpart: a real refusal must still hold the button off, or every
+    // tap spends another of the server's attempts.
+    mockMutate.mockResolvedValueOnce(
+      exchangeRejection('AUTH_CREDENTIALS_INVALID', 'Wrong'),
+    );
+
+    await authService.autoLogin();
+
+    expect(mockRegisterBiometricRefusal).toHaveBeenCalled();
   });
 
   it('clears the slot when the credential is revoked or expired', async () => {

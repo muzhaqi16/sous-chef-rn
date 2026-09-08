@@ -72,6 +72,10 @@ query GetPantry(
           # cache read and render blank.
           id
           itemName
+          # The CATALOG item's id, which is what a shopping-list add sends —
+          # the row's own `id` is the PantryItem and the server cannot resolve
+          # it as an Item.
+          itemId
           quantity
           expiresAt
           storageState

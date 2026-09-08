@@ -22,6 +22,35 @@ describe('handleStoreRehydration', () => {
     });
   });
 
+  describe('the currency mirror and the account record', () => {
+    // Both come back from the same blob. The record is authoritative: the
+    // mirror can be stale if the currency changed on another device since this
+    // one last ran `setAuth`.
+    it('prefers the record when they disagree', () => {
+      const state = {
+        user: { id: 'u1', preferredCurrency: 'EUR' },
+        preferredCurrency: 'USD',
+        setHydrated: jest.fn(),
+      } as unknown as Parameters<typeof handleStoreRehydration>[0];
+
+      handleStoreRehydration(state, undefined);
+
+      expect(state!.preferredCurrency).toBe('EUR');
+    });
+
+    it('leaves the mirror alone when the record names no currency', () => {
+      const state = {
+        user: { id: 'u1', preferredCurrency: null },
+        preferredCurrency: 'EUR',
+        setHydrated: jest.fn(),
+      } as unknown as Parameters<typeof handleStoreRehydration>[0];
+
+      handleStoreRehydration(state, undefined);
+
+      expect(state!.preferredCurrency).toBe('EUR');
+    });
+  });
+
   it('does not report to telemetry on successful rehydration', () => {
     (errorService.reportError as jest.Mock).mockClear();
 

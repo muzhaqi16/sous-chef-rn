@@ -671,8 +671,14 @@ const wsClientFacade: Client = {
   iterate: (...args: Parameters<Client['iterate']>) =>
     getOrCreateClient().iterate(...args),
   // Returns a promise that never rejects, so a caller that awaits it still
-  // gets orderly shutdown and one that drops it leaks nothing.
-  dispose: () => (currentClient ? disposeSafely(currentClient) : undefined),
+  // gets orderly shutdown and one that drops it leaks nothing. The reference
+  // goes FIRST, as in `disposeWebSocket`: a disposed client refuses every
+  // retry, so keeping it here is what the facade exists to prevent.
+  dispose: () => {
+    const client = currentClient;
+    currentClient = null;
+    return client ? disposeSafely(client) : undefined;
+  },
   terminate: () => currentClient?.terminate(),
 };
 

@@ -361,6 +361,39 @@ describe('QuantityEditSheet', () => {
     expect(screen.queryByTestId('chip-cups')).toBeNull();
   });
 
+  describe('a quantity the user did not touch', () => {
+    // The display formatter snaps within a 0.02 tolerance, so the seeded text
+    // is an APPROXIMATION of the stored value. Writing it back would store the
+    // approximation, and repeating that drifts the quantity a little each time
+    // — on a value the user never edited.
+    it('cannot be saved, so the display approximation never reaches the server', async () => {
+      const user = userEvent.setup();
+      // 0.34 is inside the tolerance of 1/3, so it seeds the field as "1/3".
+      renderWithInit({
+        ...defaultProps,
+        item: makeItem({ quantity: 0.34 }),
+      });
+
+      await user.press(screen.getByTestId('header-action-0'));
+
+      expect(defaultProps.onSave).not.toHaveBeenCalled();
+    });
+
+    it('becomes saveable once the user changes it, and sends what they typed', async () => {
+      const user = userEvent.setup();
+      renderWithInit({
+        ...defaultProps,
+        item: makeItem({ quantity: 0.34 }),
+      });
+
+      await user.press(screen.getByTestId('quantity-edit-value'));
+      fireEvent.changeText(screen.getByTestId('quantity-edit-input'), '0.5');
+      await user.press(screen.getByTestId('header-action-0'));
+
+      expect(defaultProps.onSave).toHaveBeenCalledWith('0.5', 'cups', 'unit-1');
+    });
+  });
+
   it('handles save call via header action', async () => {
     const user = userEvent.setup();
     renderWithInit();

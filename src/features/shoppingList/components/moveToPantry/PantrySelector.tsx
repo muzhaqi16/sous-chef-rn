@@ -11,6 +11,8 @@ interface PantrySelectorProps {
   pantries: Array<{ id: string; name: string; isDefault: boolean }>;
   selectedPantryId: string | null;
   onSelect: (pantryId: string) => void;
+  /** Rendered under the options — the field the user has to fix is this one. */
+  error?: string;
 }
 
 /**
@@ -21,6 +23,7 @@ export const PantrySelector: React.FC<PantrySelectorProps> = ({
   pantries,
   selectedPantryId,
   onSelect,
+  error,
 }) => {
   const { t } = useTranslation();
 
@@ -81,11 +84,19 @@ export const PantrySelector: React.FC<PantrySelectorProps> = ({
           </AppPressable>
         ))}
       </View>
+      {!!error && (
+        <Text role="error" tone="error" style={styles.error}>
+          {error}
+        </Text>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
+  error: {
+    marginTop: theme.spacing.xs,
+  },
   section: {
     marginBottom: theme.spacing.lg,
   },

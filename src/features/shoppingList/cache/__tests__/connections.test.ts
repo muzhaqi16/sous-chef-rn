@@ -132,6 +132,50 @@ describe('clearAllPurchasedItemsFromCache', () => {
     expect(result.totalCount).toBe(0);
   });
 
+  it('removes only the ids it was given, not the whole connection', () => {
+    // The list is PAGINATED: `itemIds` is what was loaded at tap time, and the
+    // mutation clears exactly those. Emptying the connection hides every row
+    // past the loaded page, and only a later refetch brings them back.
+    const cache = createMockCache();
+
+    clearAllPurchasedItemsFromCache(cache, 'sl-1', ['sli-1', 'sli-2']);
+
+    const helpers = createFieldHelpers({
+      storeFieldName: 'itemsConnection:{"isPurchased":true}',
+    });
+    const existing = {
+      edges: [
+        { node: { __ref: 'ShoppingListItem:sli-1' } },
+        { node: { __ref: 'ShoppingListItem:sli-2' } },
+        // Loaded by a later page, and NOT sent to the mutation.
+        { node: { __ref: 'ShoppingListItem:sli-9' } },
+      ],
+      totalCount: 3,
+    };
+    const result = invokeFieldModifier(
+      cache,
+      'itemsConnection',
+      existing,
+      helpers,
+    );
+
+    expect(result.edges).toEqual([
+      { node: { __ref: 'ShoppingListItem:sli-9' } },
+    ]);
+    expect(result.totalCount).toBe(1);
+  });
+
+  it('subtracts the cleared count from completedItems rather than zeroing it', () => {
+    const cache = createMockCache();
+
+    clearAllPurchasedItemsFromCache(cache, 'sl-1', ['sli-1']);
+
+    const helpers = createFieldHelpers({ storeFieldName: 'completedItems' });
+    const result = invokeFieldModifier(cache, 'completedItems', 5, helpers);
+
+    expect(result).toBe(4);
+  });
+
   it('does not clear unpurchased connection variant', () => {
     const cache = createMockCache();
 

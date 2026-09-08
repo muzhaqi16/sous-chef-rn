@@ -60,6 +60,52 @@ describe('authSlice', () => {
       expect(store.getState().user?.email).toBe('test@example.com');
     });
 
+    describe('the tutorials setting', () => {
+      // A session end resets it to `true` so a shared device does not inherit
+      // the previous account's answer, and `useAppSettings` — the only other
+      // seeder — mounts on the App Settings screen alone. Login is therefore
+      // the moment the real answer has to land, or a coach mark fires at
+      // someone who turned tutorials off and is then marked seen.
+      it('seeds a disabled setting from the login payload', () => {
+        const store = createTestStore();
+        store.getState().setShowTutorials(true);
+
+        store
+          .getState()
+          .setAuth(
+            { ...testUser, settings: { showTutorials: false } },
+            'a',
+            'r',
+          );
+
+        expect(store.getState().showTutorials).toBe(false);
+      });
+
+      it('seeds an enabled setting too', () => {
+        const store = createTestStore();
+        store.getState().setShowTutorials(false);
+
+        store
+          .getState()
+          .setAuth(
+            { ...testUser, settings: { showTutorials: true } },
+            'a',
+            'r',
+          );
+
+        expect(store.getState().showTutorials).toBe(true);
+      });
+
+      it('leaves the current value alone when the payload carries none', () => {
+        const store = createTestStore();
+        store.getState().setShowTutorials(false);
+
+        store.getState().setAuth(testUser, 'a', 'r');
+
+        expect(store.getState().showTutorials).toBe(false);
+      });
+    });
+
     it('flattens profile fields from GraphQL response', () => {
       const store = createTestStore();
       const userWithProfile = {

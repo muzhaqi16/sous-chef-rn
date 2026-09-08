@@ -60,6 +60,33 @@ describe('store persist options', () => {
       expect(keys).toContain('cachedItemSuggestions');
     });
 
+    it('persists the currency mirror alongside the user it belongs to', () => {
+      // `user` is persisted, so a relaunch restores the session WITHOUT going
+      // back through `setAuth`. Leaving the mirror out reset it to the USD
+      // default and rendered a EUR account's costs in dollars.
+      const keys = partializedKeys();
+      expect(keys).toContain('user');
+      expect(keys).toContain('preferredCurrency');
+    });
+
+    // A key LIST cannot show that a value survives the trip — only serializing
+    // it and reading it back can, which is what a relaunch actually does.
+    it.each([
+      ['preferredCurrency', 'EUR'],
+      // An opt-out whose default is the OPPOSITE of the user's choice: losing
+      // it turns every tutorial back on for someone who switched them off.
+      ['showTutorials', false],
+    ])('round-trips %s through persist and rehydrate', (key, value) => {
+      const { partialize } = useStore.persist.getOptions();
+      const source = { ...useStore.getState(), [key]: value };
+
+      const written = JSON.parse(
+        JSON.stringify(partialize!(source) as Record<string, unknown>),
+      );
+
+      expect(written).toHaveProperty(key, value);
+    });
+
     it('emits no functions (the old spread serialized every store action per write)', () => {
       const { partialize } = useStore.persist.getOptions();
       const persisted = partialize!(useStore.getState()) as Record<

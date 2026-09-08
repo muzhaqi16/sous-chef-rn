@@ -90,6 +90,9 @@ export type AuthUserInput = User & {
     firstName?: string | null;
     lastName?: string | null;
   } | null;
+  settings?: {
+    showTutorials?: boolean | null;
+  } | null;
 };
 
 export interface AuthState {
@@ -233,6 +236,13 @@ export const createAuthSlice: StateCreator<
         // without a query of its own; the reset manager clears it on sign-out.
         if (user.preferredCurrency) {
           state.preferredCurrency = user.preferredCurrency;
+        }
+        // Seeded here, not from `useAppSettings` — that hook mounts only on the
+        // App Settings screen, while a session end resets this to `true`. The
+        // gap between the two showed a never-seen coach mark to someone who
+        // had turned tutorials off, and marked it seen.
+        if (typeof user.settings?.showTutorials === 'boolean') {
+          state.showTutorials = user.settings.showTutorials;
         }
       });
 

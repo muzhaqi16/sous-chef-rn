@@ -6,7 +6,7 @@ import {
   PrimaryActivityIndicator,
   OnPrimaryActivityIndicator,
 } from '#components/atoms/themedComponents';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -91,7 +91,12 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
 
   return (
     <BottomSheetModal ref={bottomSheetRef} {...modalProps}>
-      <BottomSheetScrollView
+      {/* Not `BottomSheetScrollView`: this sheet holds inputs, and only the
+          form scrollable supplies gorhom's input context — without it they
+          resolve to a plain RN TextInput and the sheet is blind to the
+          keyboard covering the field being typed into. Fixed snap points, so
+          a keyboard-aware scrollable is safe here. */}
+      <BottomSheetFormScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.contentContainer,
@@ -235,7 +240,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
             </Text>
           </Pressable>
         )}
-      </BottomSheetScrollView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 };

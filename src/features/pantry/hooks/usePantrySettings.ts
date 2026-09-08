@@ -1,4 +1,5 @@
 import { useApolloClient, useQuery, useMutation } from '@apollo/client/react';
+import { isSuccessPayload } from '#/utils/errors/mutationPayload';
 import type { ApolloCache } from '@apollo/client';
 import {
   GetPantryDocument,
@@ -140,7 +141,16 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
         operation: 'PantrySettings.setDefaultPantry',
       });
     }
-    return !threw && !!result && !result.error;
+    // `errorPolicy: 'all'` puts a GraphQL error on `result.error`, but a REFUSAL
+    // arrives as a union member in `data` and sets no error at all — so the
+    // payload has to be discriminated or a refused write reports as saved.
+    return (
+      !threw &&
+      isSuccessPayload(
+        result?.data?.markPantryAsDefault,
+        'MarkPantryAsDefaultPayload',
+      )
+    );
   };
 
   /**

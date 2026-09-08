@@ -501,6 +501,17 @@ export const errorService = new ErrorService();
  */
 const TRANSPORT_CODES = new Set(['NETWORK_ERROR', 'CIRCUIT_OPEN']);
 
+/**
+ * True unless the SERVER issued this verdict — an unclassified failure cannot
+ * be shown to have arrived, so it earns no persisted penalty either. A new
+ * unrecognised shape reads as "no verdict" rather than as a lockout.
+ */
+export const isTransportFailure = (error: unknown): boolean => {
+  const code = errorService.parseApolloError(error, { logError: false }).error
+    ?.code;
+  return !code || code === 'UNKNOWN_ERROR' || TRANSPORT_CODES.has(code);
+};
+
 export const localizedErrorMessage = (
   error: unknown,
   fallback?: string,

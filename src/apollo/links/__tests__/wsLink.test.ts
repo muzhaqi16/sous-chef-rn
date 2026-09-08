@@ -73,6 +73,7 @@ jest.mock('#/storage/deviceId', () => ({
 import { AppState } from 'react-native';
 import { Telemetry } from '#/services/telemetry';
 import { isLibraryFatalCloseCode } from '../wsCloseCodes';
+import { wsLink } from '../wsLink';
 import {
   reconnectWebSocket,
   disableAutoReconnect,
@@ -90,6 +91,29 @@ describe('wsLink', () => {
     jest.clearAllMocks();
     // Re-enable auto reconnect for each test
     enableAutoReconnect();
+  });
+
+  describe('disposing through the link facade', () => {
+    // The facade exists so the real client can be REPLACED after a dispose
+    // latches it shut — a disposed graphql-ws client silently refuses every
+    // retry. Disposing without dropping the reference defeats that: the next
+    // `getOrCreateClient()` hands the latched client back forever, and every
+    // subscription stays dead for the life of the process.
+    it('drops the client so the next connect builds a fresh one', async () => {
+      const { createClient } = require('graphql-ws');
+      expect(getWebSocketState().hasClient).toBe(true);
+
+      await wsLink.client.dispose?.();
+
+      expect(getWebSocketState().hasClient).toBe(false);
+
+      const before = createClient.mock.calls.length;
+      wsLink.client.subscribe(
+        { query: 'subscription { x }' },
+        { next: jest.fn(), error: jest.fn(), complete: jest.fn() },
+      );
+      expect(createClient.mock.calls.length).toBe(before + 1);
+    });
   });
 
   describe('onWebSocketReconnected', () => {

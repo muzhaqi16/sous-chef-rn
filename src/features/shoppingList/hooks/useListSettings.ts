@@ -31,6 +31,7 @@ import {
 
 import { useFocusEffect } from '@react-navigation/native';
 import { formatNumberForInput } from '#/utils/formatters/number';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 
 /** Whose list this is, with "not yet known" kept distinct from "not yours". */
@@ -303,8 +304,11 @@ export const useListSettings = (listId: string | undefined) => {
               ? String(shoppingList.budgetAmount)
               : '';
           if (budgetInput.trim() !== savedBudget) {
+            // `Number` reads the DEVICE keypad's comma as NaN, and the guard
+            // below then skips the write while the screen closes as if saved —
+            // so a fractional budget never saved on a comma-decimal locale.
             const parsed =
-              budgetInput.trim() === '' ? null : Number(budgetInput);
+              budgetInput.trim() === '' ? null : parseDecimalInput(budgetInput);
             if (parsed === null || !Number.isNaN(parsed)) {
               await setBudget(listId!, parsed, currency ?? undefined);
             }

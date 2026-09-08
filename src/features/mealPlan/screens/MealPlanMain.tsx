@@ -199,6 +199,11 @@ const MealPlanMainInner: React.FC = () => {
   // Permissions for the active plan
   const permissions = useMealPlanPermissions(activeMealPlan);
 
+  // The active plan in the list's own shape: `activeMealPlan` is the masked
+  // detail read, which is not a `MealPlanDisplayFragment`.
+  const activePlanForDisplay =
+    mealPlans.find(plan => plan.id === activePlanId) ?? null;
+
   // Compute plan date boundaries
   const planStartDate = activeMealPlan?.startDate
     ? parseISO(activeMealPlan.startDate)
@@ -670,7 +675,11 @@ const MealPlanMainInner: React.FC = () => {
       <SaveAsTemplateSheet
         visible={saveTemplateVisible}
         mealPlanId={activePlanId}
-        mealPlanName={currentPlan?.name}
+        // Both from the ACTIVE plan. `currentPlan` is the SELECTED one, and
+        // `useActiveMealPlan` falls back when that is deleted or unshared — so
+        // naming from it builds one plan's template under another's name. The
+        // header already shows `activeMealPlan?.name`.
+        mealPlanName={activeMealPlan?.name}
         homeName={activeMealPlan?.home?.name}
         onClose={() => setSaveTemplateVisible(false)}
         onSave={handleSaveTemplate}
@@ -723,7 +732,11 @@ const MealPlanMainInner: React.FC = () => {
       {/* Duplicate Plan Sheet */}
       <DuplicatePlanSheet
         visible={duplicateVisible}
-        mealPlan={currentPlan ?? null}
+        // The ACTIVE plan — the one whose settings opened this sheet, and whose
+        // name the header shows. `currentPlan` is the SELECTED one, which is a
+        // different plan whenever the active-plan fallback has fired, so
+        // duplicating it copies a plan the user is not looking at.
+        mealPlan={activePlanForDisplay}
         onClose={() => setDuplicateVisible(false)}
         onDuplicate={handleDuplicatePlan}
         loading={duplicatingPlan}

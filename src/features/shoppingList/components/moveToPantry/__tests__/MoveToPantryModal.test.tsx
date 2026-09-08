@@ -207,6 +207,26 @@ describe('MoveToPantryModal', () => {
     jest.clearAllMocks();
   });
 
+  describe('a confirm the schema refuses', () => {
+    // `logValidationErrors` only writes to the log, and none of the three
+    // fixable fields rendered `fieldState.error` — so a refused confirm was a
+    // button that did nothing, with nothing on screen saying which field.
+    it('names the field on the field rather than doing nothing', async () => {
+      renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
+        cache: makeCache(),
+      });
+
+      // The form's own `pantryId` starts null whatever the screen preselected,
+      // so a bare confirm is refused on a field the user can fix.
+      fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+      await waitFor(() =>
+        expect(screen.getByText('Please select a pantry')).toBeTruthy(),
+      );
+      expect(defaultProps.onConfirm).not.toHaveBeenCalled();
+    });
+  });
+
   it('renders Move to Pantry title', () => {
     renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
       cache: makeCache(),

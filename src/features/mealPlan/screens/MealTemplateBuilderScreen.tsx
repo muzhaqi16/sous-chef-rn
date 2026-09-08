@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
@@ -112,11 +112,13 @@ export const MealTemplateBuilderScreen: React.FC<
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editingServerId, setEditingServerId] = useState<string | null>(null);
 
-  // Hydrate the metadata form from the loaded template once, adjusting state
-  // during render (not an effect) when the loaded template first arrives.
-  const [hydratedId, setHydratedId] = useState<string | null>(null);
-  if (loaded && hydratedId !== loaded.id) {
-    setHydratedId(loaded.id);
+  // Hydrate the metadata form from the loaded template once. `reset` notifies
+  // every mounted `Controller` synchronously, so it is an effect rather than a
+  // render-body adjustment: writing to the form store while React renders
+  // updates other components mid-render, and a torn-up concurrent render can
+  // drop the reset entirely. The id is the key, so a second template rehydrates.
+  useEffect(() => {
+    if (!loaded) return;
     templateForm.reset({
       name: loaded.name,
       category: loaded.category ?? TemplateCategory.Weekly,
@@ -124,7 +126,7 @@ export const MealTemplateBuilderScreen: React.FC<
       defaultServings: String(loaded.defaultServings ?? 2),
       tags: (loaded.tags ?? []).join(', '),
     });
-  }
+  }, [loaded, templateForm]);
 
   const items: DraftItem[] = isEdit
     ? (loaded?.items ?? []).map(item => ({

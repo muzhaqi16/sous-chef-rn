@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { screen } from '@testing-library/react-native';
+import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { FilteredPantryItems } from '../FilteredPantryItems';
@@ -9,6 +9,8 @@ import { FilteredPantryItems } from '../FilteredPantryItems';
 // Structural shape consumed by the screen via the mocked `usePantryManagement`.
 type MockPantryItem = {
   id: string;
+  /** The CATALOG item id — deliberately unlike `id`, which is the PantryItem. */
+  itemId: string;
   itemName: string;
   quantity: number;
   unit: { symbol: string } | null;
@@ -41,7 +43,38 @@ jest.mock(
   }),
 );
 
-jest.mock('#features/pantry/hooks/usePantryPermissions');
+// The cart is gated on the SELECTED SHOPPING LIST's permission, not the
+// pantry's — it writes to that list.
+jest.mock('#features/shoppingList/hooks/useShoppingListDetails', () => ({
+  useShoppingListDetails: () => ({ shoppingList: { id: 'list-1' } }),
+}));
+let mockListCanAddItems = true;
+jest.mock('#features/shoppingList/hooks/useShoppingListPermissions', () => ({
+  useShoppingListPermissions: () => ({
+    canAddItems: mockListCanAddItems,
+    canRemoveItems: true,
+    canEditItems: true,
+    canMarkPurchased: true,
+    resolved: true,
+  }),
+}));
+
+// The screen returns early without a selected list, so the cart can't fire.
+jest.mock('#store/useAppStore', () => {
+  const actual = jest.requireActual('#store/useAppStore');
+  return { ...actual, useSelectedShoppingListId: () => 'list-1' };
+});
+
+type AddToList = (
+  itemId: string,
+  display: { itemName: string; unitId?: string },
+) => Promise<string>;
+const mockAddToList = jest.fn<ReturnType<AddToList>, Parameters<AddToList>>(
+  () => Promise.resolve('ok'),
+);
+jest.mock('#features/pantry/hooks/useAddPantryItemToShoppingList', () => ({
+  useAddPantryItemToShoppingList: () => ({ addToList: mockAddToList }),
+}));
 
 jest.mock('#features/pantry/hooks/useCurrentPantry', () => ({
   useCurrentPantry: () => ({
@@ -60,6 +93,7 @@ jest.mock('#features/pantry/hooks/useAddLowStockToShoppingList', () => ({
 const mockLowStockItems = [
   {
     id: 'ls1',
+    itemId: 'catalog-ls1',
     itemName: 'Eggs',
     quantity: 2,
     unit: { symbol: 'pcs' },
@@ -67,6 +101,7 @@ const mockLowStockItems = [
   },
   {
     id: 'ls2',
+    itemId: 'catalog-ls2',
     itemName: 'Butter',
     quantity: 1,
     unit: { symbol: 'stk' },
@@ -86,6 +121,7 @@ sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
 const mockExpiringItems = [
   {
     id: 'ex1',
+    itemId: 'catalog-ex1',
     itemName: 'Milk',
     quantity: 1,
     unit: { symbol: 'gal' },
@@ -94,6 +130,7 @@ const mockExpiringItems = [
   },
   {
     id: 'ex2',
+    itemId: 'catalog-ex2',
     itemName: 'Yogurt',
     quantity: 2,
     unit: { symbol: 'cups' },
@@ -105,6 +142,7 @@ const mockExpiringItems = [
 const mockExpiredItems = [
   {
     id: 'exp1',
+    itemId: 'catalog-exp1',
     itemName: 'Salmon',
     quantity: 1,
     unit: { symbol: 'steak' },
@@ -210,6 +248,35 @@ describe('FilteredPantryItems', () => {
     it('shows add-all button in header', () => {
       renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
       expect(screen.getByTestId('add-all-low-stock')).toBeTruthy();
+    });
+
+    it('offers no cart when the user may not add to the selected list', () => {
+      // Gating on the PANTRY's permission offered a viewer of the list a
+      // control the server refuses every time.
+      mockListCanAddItems = false;
+      try {
+        renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+        expect(screen.queryAllByLabelText('Add to Shopping List')).toEqual([]);
+      } finally {
+        mockListCanAddItems = true;
+      }
+    });
+
+    it('sends the CATALOG item id to the shopping list, not the row id', async () => {
+      // `item: { itemId }` is an @oneOf ItemRefInput the server resolves as a
+      // catalog Item. Sending the PantryItem's own id is refused every time,
+      // for every user — a control that never works rather than one that
+      // sometimes fails.
+      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+
+      fireEvent.press(screen.getAllByLabelText('Add to Shopping List')[0]);
+
+      await waitFor(() => expect(mockAddToList).toHaveBeenCalled());
+      // The fixtures give every row a catalog id unlike its own, so passing
+      // the row id through is visible rather than coincidentally equal.
+      const [sentId] = mockAddToList.mock.calls[0];
+      expect(sentId).toBe(`catalog-${mockLowStockItems[0].id}`);
+      expect(sentId).not.toBe(mockLowStockItems[0].id);
     });
 
     it('renders low stock item names', () => {

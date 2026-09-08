@@ -2,8 +2,8 @@ import { createActionsContext } from '#hooks/utils/createActionsContext';
 
 export interface FilteredItemsActions {
   navigateTo: (params: { itemId: string }) => void;
-  // `display` carries the fields needed to write the optimistic shopping-list
-  // item (the row only has these; the catalog item id isn't in the minimal shape).
+  // `itemId` is the CATALOG item's, which the mutation resolves; `display`
+  // carries what the optimistic shopping-list row renders before it lands.
   handleAddToList?: (
     itemId: string,
     display: { itemName: string; unitId?: string },

@@ -130,6 +130,15 @@ export const handleStoreRehydration = (
     applyThemePreferenceToRuntime(state.theme);
   }
 
+  // The account record wins over the mirror. Both are restored from the same
+  // blob, so a mirror that drifted — the currency changed on another device
+  // since this one last ran `setAuth` — would otherwise denominate every
+  // figure on screen in a currency the account does not hold.
+  const recordCurrency = state?.user?.preferredCurrency;
+  if (recordCurrency && recordCurrency !== state?.preferredCurrency) {
+    state.preferredCurrency = recordCurrency;
+  }
+
   // Before `isHydrated`, so the first paint is in the user's language. Lazy —
   // `#/i18n` pulls in `i18n/config`, which has load-time side effects.
   const language = state?.language;
@@ -247,6 +256,10 @@ const PERSISTED_KEYS = classifyKeys(
   'pantrySortOption',
   'pantrySortDirection',
   'userPreferences',
+  // Mirrored off the account record for every money surface to read. Persisted
+  // WITH `user`: restoring the session without it renders a EUR account's costs
+  // under the USD default until something re-reads the account.
+  'preferredCurrency',
 
   // Entity selections + navigation memory
   'selectedHomeId',

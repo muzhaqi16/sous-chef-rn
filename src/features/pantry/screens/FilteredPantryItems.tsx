@@ -25,7 +25,9 @@ import type { PantryItemFilters } from '#/graphql/generated/schemaTypes';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { useAddLowStockToShoppingList } from '#features/pantry/hooks/useAddLowStockToShoppingList';
-import { useSelectedShoppingListId } from '#store/useAppStore';
+import { useSelectedShoppingListId, useUser } from '#store/useAppStore';
+import { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';
+import { useShoppingListPermissions } from '#features/shoppingList/hooks/useShoppingListPermissions';
 import { toastService } from '#/services/toastService';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { useAddPantryItemToShoppingList } from '#features/pantry/hooks/useAddPantryItemToShoppingList';
@@ -42,7 +44,6 @@ import {
   FilteredItemsActionsProvider,
   useFilteredItemsActions,
 } from '#features/pantry/context/FilteredItemsActionsContext';
-import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { Text } from '#components/atoms/Text';
 import type { Translate } from '#/i18n/types';
 import { EmptyState } from '#components/molecules/EmptyState';
@@ -58,6 +59,8 @@ type FilteredPantryItemsParams = {
 // items flow through without casts.
 interface FilteredItem {
   id: string;
+  /** The CATALOG item, which is what a shopping-list add sends. Not `id`. */
+  itemId: string;
   itemName: string;
   quantity: number;
   unit: { id: string; symbol: string } | null;
@@ -211,7 +214,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
     showCart && handleAddToList ? (
       <Pressable
         onPress={() =>
-          handleAddToList(item.id, {
+          handleAddToList(item.itemId, {
             itemName: item.itemName,
             unitId: item.unit?.id,
           })
@@ -317,8 +320,19 @@ export const FilteredPantryItems: React.FC<
   const { addLowStockToShoppingList, loading: addAllLoading } =
     useAddLowStockToShoppingList({ homeId: selectedHomeId ?? undefined });
 
-  const permissions = usePantryPermissions();
   const selectedShoppingListId = useSelectedShoppingListId();
+  // The cart writes to a SHOPPING LIST, so the list's permission decides
+  // whether to offer it — the pantry's says only what may be done here. A
+  // viewer of the selected list was offered a control the server always
+  // refused.
+  const user = useUser();
+  const { shoppingList: selectedListDetails } = useShoppingListDetails(
+    selectedShoppingListId ?? undefined,
+  );
+  const listPermissions = useShoppingListPermissions(
+    selectedListDetails,
+    user?.id,
+  );
   const { addToList } = useAddPantryItemToShoppingList(selectedShoppingListId);
 
   const {
@@ -409,7 +423,7 @@ export const FilteredPantryItems: React.FC<
     }
   };
 
-  const showCart = config.showCartAction && permissions.canAddItems;
+  const showCart = config.showCartAction && listPermissions.canAddItems;
 
   const actions = {
     navigateTo: (params: { itemId: string }) => toPantryItemDetail(params),

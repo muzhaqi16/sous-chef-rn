@@ -9,7 +9,7 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { LogoutCleanup } from '#/apollo/logoutCleanup';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { errorService } from '#/services/errorService';
+import { errorService, isTransportFailure } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
 import { getRateLimitDetails } from '#/utils/errors/rateLimit';
 import { useStore } from '#store';
@@ -762,6 +762,11 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
         );
         await removeCredentials(email);
         forgetBiometricSlot();
+      } else if (isTransportFailure(result.error)) {
+        // The request never arrived, so the server refused nothing. A lockout
+        // recorded here is PERSISTED and not session-scoped, so one launch
+        // without connectivity would outlast the outage that caused it.
+        logger.warn('Auto-login could not reach the server; nothing recorded');
       } else {
         logger.warn('Auto-login failed; stored credentials kept');
         // A throttle carries the server's own deadline, and it knows what

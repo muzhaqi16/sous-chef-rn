@@ -4,6 +4,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 
 import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
+import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
@@ -162,11 +163,13 @@ export const CreateMealPlanScreen: React.FC = () => {
     if (result?.__typename === 'CreateMealPlanPayload') {
       goBack();
     } else {
-      const message =
-        result && 'message' in result
-          ? result.message
-          : t('mealPlan.failedToCreate');
-      alertService.alert(t('labels.error'), message);
+      // Resolved from the refusal's CODE, never `result.message` — that is
+      // unlocalizable English by construction, so a Spanish user read the
+      // server's own wording.
+      alertService.alert(
+        t('labels.error'),
+        localizedRefusalMessage(result, t('mealPlan.failedToCreate')),
+      );
     }
   };
 
