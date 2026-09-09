@@ -82,7 +82,11 @@
     "newNameLabel": "Nombre del nuevo plan",
     "newNamePlaceholder": "Introduce el nombre del plan",
     "infoText": "Todas las comidas se copiarán al nuevo rango de fechas con la misma estructura.",
-    "endDateSubtext": "hasta {{date}}"
+    "endDateSubtext": "hasta {{date}}",
+    "needsThePlan": "Abre primero el plan para tener sus comidas.",
+    "durationDiffers": "Elige un rango con la misma duración que el original.",
+    "someSkipped_one": "Se omitió {{count}} comida porque no indica ni receta ni nombre.",
+    "someSkipped_other": "Se omitieron {{count}} comidas porque no indican ni receta ni nombre."
   },
   "generateShoppingList": {
     "generating": "Generando...",

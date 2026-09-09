@@ -82,7 +82,11 @@
     "newNameLabel": "New Plan Name",
     "newNamePlaceholder": "Enter plan name",
     "infoText": "All meals will be copied to the new date range with the same structure.",
-    "endDateSubtext": "to {{date}}"
+    "endDateSubtext": "to {{date}}",
+    "needsThePlan": "Open the plan first so its meals are available.",
+    "durationDiffers": "Pick a range the same length as the original.",
+    "someSkipped_one": "{{count}} meal was left out because it names neither a recipe nor itself.",
+    "someSkipped_other": "{{count}} meals were left out because they name neither a recipe nor themselves."
   },
   "generateShoppingList": {
     "generating": "Generating...",

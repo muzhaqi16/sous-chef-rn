@@ -82,7 +82,11 @@
     "newNameLabel": "Nome nuovo piano",
     "newNamePlaceholder": "Inserisci il nome del piano",
     "infoText": "Tutti i pasti verranno copiati nel nuovo intervallo di date con la stessa struttura.",
-    "endDateSubtext": "al {{date}}"
+    "endDateSubtext": "al {{date}}",
+    "needsThePlan": "Apri prima il piano, così i suoi pasti sono disponibili.",
+    "durationDiffers": "Scegli un intervallo della stessa durata dell’originale.",
+    "someSkipped_one": "{{count}} pasto è stato escluso perché non indica né una ricetta né un nome.",
+    "someSkipped_other": "{{count}} pasti sono stati esclusi perché non indicano né una ricetta né un nome."
   },
   "generateShoppingList": {
     "generating": "Generazione in corso...",

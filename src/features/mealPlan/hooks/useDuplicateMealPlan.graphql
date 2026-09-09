@@ -1,0 +1,28 @@
+# What a duplicate copies, read out of the cache so it works offline. The plan
+# fields are the ones the server carries over; the item fields are what
+# `CreateMealPlanItemInput` needs to recreate a meal.
+#
+# Spread by GetMealPlan only, for the reason in
+# `useGenerateShoppingList.graphql`: `MealPlanMain_mealPlan` is also spread by a
+# mutation payload two levels deeper, where added depth is refused.
+fragment useDuplicateMealPlan_mealPlan on MealPlan {
+  id
+  description
+  planType
+  servings
+  budgetAmount
+  homeId
+  startDate
+  endDate
+  mealPlanItems {
+    id
+    date
+    mealType
+    servings
+    notes
+    customMealName
+    recipe {
+      id
+    }
+  }
+}

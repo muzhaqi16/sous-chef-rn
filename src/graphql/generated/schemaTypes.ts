@@ -288,6 +288,17 @@ export type AddUserAddressPayload = {
  */
 export type AddUserAddressResult = AddUserAddressPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
+export enum AddedContext {
+  Expiring = 'EXPIRING',
+  FromMealPlan = 'FROM_MEAL_PLAN',
+  FromRecipe = 'FROM_RECIPE',
+  LowStock = 'LOW_STOCK',
+  Manual = 'MANUAL',
+  PantryMissing = 'PANTRY_MISSING',
+  Recurring = 'RECURRING',
+  Suggested = 'SUGGESTED'
+}
+
 /** Item that was added to the shopping list from low stock detection */
 export type AddedLowStockItem = {
   __typename: 'AddedLowStockItem';
@@ -13465,7 +13476,8 @@ export type RecipeConnection = Connection & {
 
 /** Sub-input for recipe context */
 export type RecipeContextInput = {
-  addedContext?: InputMaybe<Scalars['String']['input']>;
+  /** How the item came to be on the list. */
+  addedContext?: InputMaybe<AddedContext>;
   /**
    * Meal plan this item was generated from. When set, the server flags the
    * item as meal-plan-sourced (isFromMealPlan).

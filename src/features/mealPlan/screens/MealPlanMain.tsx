@@ -230,11 +230,7 @@ const MealPlanMainInner: React.FC = () => {
     useGenerateShoppingList(activePlanId);
 
   // Duplicate meal plan
-  const {
-    duplicatePlan,
-    loading: duplicatingPlan,
-    isApiUnavailable: duplicatePlanUnavailable,
-  } = useDuplicateMealPlan();
+  const { duplicatePlan, loading: duplicatingPlan } = useDuplicateMealPlan();
 
   // Delete meal plan
   const { deleteMealPlan, deleting: deletingPlan } = useMealPlanActions();
@@ -422,9 +418,7 @@ const MealPlanMainInner: React.FC = () => {
     newEndDate: string;
   }) => {
     const result = await duplicatePlan(input);
-    if (result?.__typename === 'DuplicateMealPlanPayload') {
-      setDuplicateVisible(false);
-    }
+    if (result) setDuplicateVisible(false);
   };
 
   const handleDeletePlan = async (id: string) => {
@@ -725,7 +719,6 @@ const MealPlanMainInner: React.FC = () => {
         onClose={() => setDuplicateVisible(false)}
         onDuplicate={handleDuplicatePlan}
         loading={duplicatingPlan}
-        disabled={duplicatePlanUnavailable}
       />
 
       {/* Mark Cooked Modal */}

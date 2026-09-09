@@ -82,7 +82,11 @@
     "newNameLabel": "Emri i ri i planit",
     "newNamePlaceholder": "Fut emrin e planit",
     "infoText": "Të gjitha vaktet do të kopjohen në intervalin e ri të datave me të njëjtën strukturë.",
-    "endDateSubtext": "deri më {{date}}"
+    "endDateSubtext": "deri më {{date}}",
+    "needsThePlan": "Hap fillimisht planin, që vaktet e tij të jenë të disponueshme.",
+    "durationDiffers": "Zgjidh një interval me të njëjtën kohëzgjatje si origjinali.",
+    "someSkipped_one": "{{count}} vakt u la jashtë sepse nuk emërton as recetë as veten.",
+    "someSkipped_other": "{{count}} vakte u lanë jashtë sepse nuk emërtojnë as recetë as veten."
   },
   "generateShoppingList": {
     "generating": "Po gjenerohet...",

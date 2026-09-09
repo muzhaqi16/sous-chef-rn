@@ -593,6 +593,17 @@ Always include a __typename so the variant can be discriminated.
 """
 union AddUserAddressResult = AddUserAddressPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
+enum AddedContext {
+  EXPIRING
+  FROM_MEAL_PLAN
+  FROM_RECIPE
+  LOW_STOCK
+  MANUAL
+  PANTRY_MISSING
+  RECURRING
+  SUGGESTED
+}
+
 """Item that was added to the shopping list from low stock detection"""
 type AddedLowStockItem {
   itemName: String!
@@ -10098,7 +10109,8 @@ type RecipeConnection implements Connection {
 
 """Sub-input for recipe context"""
 input RecipeContextInput {
-  addedContext: String
+  """How the item came to be on the list."""
+  addedContext: AddedContext
   """
   Meal plan this item was generated from. When set, the server flags the
   item as meal-plan-sourced (isFromMealPlan).

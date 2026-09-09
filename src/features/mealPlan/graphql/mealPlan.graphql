@@ -38,6 +38,7 @@ query GetMealPlan($id: ID!) {
     ...MealPlanMain_mealPlan
     ...MealPlanSettingsSheet_mealPlan
     ...useGenerateShoppingList_mealPlan
+    ...useDuplicateMealPlan_mealPlan
   }
 }
 

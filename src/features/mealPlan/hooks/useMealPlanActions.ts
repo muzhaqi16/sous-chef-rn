@@ -213,8 +213,9 @@ export function useMealPlanActions() {
 
   const createMealPlan = async (input: CreateMealPlanInput) => {
     // Local-first: mint the permanent cuid (the row's real PK) and write the
-    // plan into the cache before firing, so creation works fully offline.
-    const id = generateEntityId();
+    // plan into the cache before firing, so creation works fully offline. A
+    // caller deriving a plan mints it first, since its items name it as parent.
+    const id = input.id ?? generateEntityId();
     // The cache write below publishes this id to every consumer, including the
     // detail query on MealPlanMain. Hold that query off until the server has a
     // row to answer with — see `unconfirmedCreates`.
