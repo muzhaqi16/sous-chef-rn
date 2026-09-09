@@ -1,0 +1,39 @@
+# The ingredient lines a shopping list is derived from, read out of the cache
+# after `GetMealPlan` has run so the derive works with the API unreachable.
+#
+# Spread by GetMealPlan ONLY, deliberately NOT by `MealPlanMain_mealPlan`. That
+# fragment is also spread by `CreateMealPlanFromTemplate`, which starts two
+# levels deeper inside a mutation payload — carrying the ingredients there takes
+# it to depth 14 against the server's HTTP limit of 12, and armor refuses the
+# whole mutation. Here it costs GetMealPlan two levels: depth 8 → 10, cost
+# 194 → 292. `documentLimits.test.ts` holds both numbers.
+fragment useGenerateShoppingList_mealPlan on MealPlan {
+  id
+  mealPlanItems {
+    id
+    servings
+    recipe {
+      id
+      servings
+      ingredientsConnection {
+        edges {
+          node {
+            id
+            name
+            quantity
+            isOptional
+            unit {
+              id
+              name
+              symbol
+            }
+            item {
+              id
+              name
+            }
+          }
+        }
+      }
+    }
+  }
+}
