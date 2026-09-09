@@ -45,9 +45,9 @@ describe('useRecipeForm', () => {
     });
 
     expect(result.current.state.ingredients).toHaveLength(1);
-    expect(result.current.state.ingredients[0].name).toBe('Eggs');
-    expect(result.current.state.ingredients[0].quantity).toBe(3);
-    expect(result.current.state.ingredients[0].sortOrder).toBe(0);
+    expect(result.current.state.ingredients[0]!.name).toBe('Eggs');
+    expect(result.current.state.ingredients[0]!.quantity).toBe(3);
+    expect(result.current.state.ingredients[0]!.sortOrder).toBe(0);
   });
 
   it('updateIngredient updates existing ingredient', () => {
@@ -57,13 +57,13 @@ describe('useRecipeForm', () => {
       result.current.addIngredient({ name: 'Eggs' });
     });
 
-    const ingredientId = result.current.state.ingredients[0].id;
+    const ingredientId = result.current.state.ingredients[0]!.id;
 
     act(() => {
       result.current.updateIngredient(ingredientId, { name: 'Large Eggs' });
     });
 
-    expect(result.current.state.ingredients[0].name).toBe('Large Eggs');
+    expect(result.current.state.ingredients[0]!.name).toBe('Large Eggs');
   });
 
   it('removeIngredient removes an ingredient', () => {
@@ -74,14 +74,14 @@ describe('useRecipeForm', () => {
       result.current.addIngredient({ name: 'Bacon' });
     });
 
-    const firstIngredientId = result.current.state.ingredients[0].id;
+    const firstIngredientId = result.current.state.ingredients[0]!.id;
 
     act(() => {
       result.current.removeIngredient(firstIngredientId);
     });
 
     expect(result.current.state.ingredients).toHaveLength(1);
-    expect(result.current.state.ingredients[0].name).toBe('Bacon');
+    expect(result.current.state.ingredients[0]!.name).toBe('Bacon');
   });
 
   it('addStep adds a new step', () => {
@@ -92,7 +92,7 @@ describe('useRecipeForm', () => {
     });
 
     expect(result.current.state.steps).toHaveLength(1);
-    expect(result.current.state.steps[0].instruction).toBe('Boil water');
+    expect(result.current.state.steps[0]!.instruction).toBe('Boil water');
   });
 
   it('updateStep modifies instruction', () => {
@@ -102,13 +102,15 @@ describe('useRecipeForm', () => {
       result.current.addStep('Boil water');
     });
 
-    const stepId = result.current.state.steps[0].id;
+    const stepId = result.current.state.steps[0]!.id;
 
     act(() => {
       result.current.updateStep(stepId, 'Boil salted water');
     });
 
-    expect(result.current.state.steps[0].instruction).toBe('Boil salted water');
+    expect(result.current.state.steps[0]!.instruction).toBe(
+      'Boil salted water',
+    );
   });
 
   it('removeStep removes a step', () => {
@@ -119,7 +121,7 @@ describe('useRecipeForm', () => {
       result.current.addStep('Step 2');
     });
 
-    const firstStepId = result.current.state.steps[0].id;
+    const firstStepId = result.current.state.steps[0]!.id;
 
     act(() => {
       result.current.removeStep(firstStepId);
@@ -141,9 +143,9 @@ describe('useRecipeForm', () => {
       result.current.moveStep(2, 0);
     });
 
-    expect(result.current.state.steps[0].instruction).toBe('Step C');
-    expect(result.current.state.steps[0].sortOrder).toBe(0);
-    expect(result.current.state.steps[1].sortOrder).toBe(1);
+    expect(result.current.state.steps[0]!.instruction).toBe('Step C');
+    expect(result.current.state.steps[0]!.sortOrder).toBe(0);
+    expect(result.current.state.steps[1]!.sortOrder).toBe(1);
   });
 
   // Each refusal has to reach the FIELD it is about — the screen renders the
@@ -354,7 +356,7 @@ describe('useRecipeForm', () => {
     expect(result.current.state.servings).toBe('2');
     expect(result.current.state.ingredients).toHaveLength(1);
     expect(result.current.state.steps).toHaveLength(1);
-    expect(result.current.state.steps[0].instruction).toBe('Add salt');
+    expect(result.current.state.steps[0]!.instruction).toBe('Add salt');
     // Pins: editing a recipe preserves its dietary classification. Hardcoding
     // [] on populate wipes the tags on the next save.
     expect(result.current.state.diets).toEqual([Diet.Keto]);
@@ -401,8 +403,8 @@ describe('useRecipeForm', () => {
     });
 
     expect(result.current.state.steps).toHaveLength(2);
-    expect(result.current.state.steps[0].instruction).toBe('Boil the water');
-    expect(result.current.state.steps[1].instruction).toBe('Cook the pasta');
+    expect(result.current.state.steps[0]!.instruction).toBe('Boil the water');
+    expect(result.current.state.steps[1]!.instruction).toBe('Cook the pasta');
   });
 
   it('setDiets, setHealthGoals, setIntolerances update tags', () => {

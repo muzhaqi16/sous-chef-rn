@@ -49,6 +49,7 @@ export function getTopLevelGraphQLError(
     return null;
   }
   const first = error.errors[0];
+  if (!first) return null;
   return {
     code: String(first.extensions?.code ?? ''),
     message: String(first.message ?? ''),

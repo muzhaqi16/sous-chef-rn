@@ -357,7 +357,7 @@ describe('RecipeMain', () => {
 
     render(<RecipeMain />);
     expect(capturedItems!.length).toBe(1);
-    expect(capturedItems![0].title).toBe('Soup');
+    expect(capturedItems![0]!.title).toBe('Soup');
   });
 
   it('shows pantry discovery header', () => {

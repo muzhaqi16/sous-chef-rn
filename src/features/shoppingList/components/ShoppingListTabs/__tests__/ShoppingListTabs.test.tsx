@@ -152,7 +152,7 @@ jest.mock('react-native-tab-view', () => {
     }) => {
       const tabBar = renderTabBar({ navigationState });
       const activeRoute = navigationState.routes[navigationState.index];
-      const scene = renderScene({ route: activeRoute });
+      const scene = renderScene({ route: activeRoute! });
       return (
         <View testID="tab-view">
           {tabBar}

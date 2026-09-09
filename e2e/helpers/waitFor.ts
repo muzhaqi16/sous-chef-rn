@@ -37,8 +37,12 @@ export async function waitForElementRemoval(
   timeout: number = DEFAULT_TIMEOUT,
 ) {
   try {
-    await waitFor(element).not.toBeVisible().withTimeout(timeout / 2);
-    await waitFor(element).not.toExist().withTimeout(timeout / 2);
+    await waitFor(element)
+      .not.toBeVisible()
+      .withTimeout(timeout / 2);
+    await waitFor(element)
+      .not.toExist()
+      .withTimeout(timeout / 2);
   } catch (error) {
     console.warn('Element removal wait failed, continuing...', error);
   }
@@ -51,15 +55,22 @@ export async function waitForElementToExist(
   await waitFor(element).toExist().withTimeout(timeout);
 }
 
-export async function waitForText(text: string, timeout: number = DEFAULT_TIMEOUT) {
-  await waitFor(element(by.text(text))).toBeVisible().withTimeout(timeout);
+export async function waitForText(
+  text: string,
+  timeout: number = DEFAULT_TIMEOUT,
+) {
+  await waitFor(element(by.text(text)))
+    .toBeVisible()
+    .withTimeout(timeout);
 }
 
 export async function waitForElementById(
   testID: string,
   timeout: number = DEFAULT_TIMEOUT,
 ) {
-  await waitFor(element(by.id(testID))).toBeVisible().withTimeout(timeout);
+  await waitFor(element(by.id(testID)))
+    .toBeVisible()
+    .withTimeout(timeout);
 }
 
 export async function waitForScreen(
@@ -217,8 +228,12 @@ export async function waitForModalReady(
   modalTestID: string,
   timeout: number = DEFAULT_TIMEOUT,
 ) {
-  await waitFor(element(by.id(modalTestID))).toExist().withTimeout(timeout / 3);
-  await waitFor(element(by.id(modalTestID))).toBeVisible().withTimeout(timeout / 3);
+  await waitFor(element(by.id(modalTestID)))
+    .toExist()
+    .withTimeout(timeout / 3);
+  await waitFor(element(by.id(modalTestID)))
+    .toBeVisible()
+    .withTimeout(timeout / 3);
   await delay(300);
 }
 
@@ -284,7 +299,7 @@ export async function waitForAnyElement(
   while (Date.now() - startTime < timeout) {
     for (let i = 0; i < elements.length; i++) {
       try {
-        await waitFor(elements[i]).toBeVisible().withTimeout(500);
+        await waitFor(elements[i]!).toBeVisible().withTimeout(500);
         return i; // Return index of visible element
       } catch {
         // Try the next one.
@@ -302,7 +317,7 @@ export async function tapFirstAvailable(
   timeout: number = DEFAULT_TIMEOUT,
 ): Promise<number> {
   const index = await waitForAnyElement(elements, timeout);
-  await elements[index].tap();
+  await elements[index]!.tap();
   return index;
 }
 

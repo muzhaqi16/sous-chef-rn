@@ -38,7 +38,7 @@ const STORAGE_STATES = Object.values(StorageState);
 const ITEM_TYPES = Object.values(ItemType);
 
 export type PageName = 'Basics' | 'Product' | 'Storage' | 'Inventory';
-export const PAGES: readonly PageName[] = [
+export const PAGES: readonly [PageName, ...PageName[]] = [
   'Basics',
   'Product',
   'Storage',

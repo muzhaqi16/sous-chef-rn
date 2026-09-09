@@ -25,8 +25,7 @@ function scaleTypeRoles<T extends Record<string, TypeRole>>(
   multiplier: number,
 ): T {
   const scaled = {} as Record<string, TypeRole>;
-  for (const name in roles) {
-    const role = roles[name];
+  for (const [name, role] of Object.entries(roles)) {
     scaled[name] = {
       ...role,
       fontSize: Math.round(role.fontSize * multiplier),
@@ -41,8 +40,8 @@ function scaleObject<T extends Record<string, number>>(
   multiplier: number,
 ): T {
   const scaled = {} as Record<string, number>;
-  for (const key in obj) {
-    scaled[key] = Math.round(obj[key] * multiplier);
+  for (const [key, value] of Object.entries(obj)) {
+    scaled[key] = Math.round(value * multiplier);
   }
   return scaled as T;
 }

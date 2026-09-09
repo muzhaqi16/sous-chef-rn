@@ -20,7 +20,9 @@ const OPERATION_FILES = globSync('src/**/*.graphql').map(f =>
 const POLICY_FILES = globSync('src/features/*/cache/typePolicies.ts');
 
 const mergedConnectionFields = (): string[] => {
-  const declarations = POLICY_FILES.map(f => readFileSync(f, 'utf8')).join('\n');
+  const declarations = POLICY_FILES.map(f => readFileSync(f, 'utf8')).join(
+    '\n',
+  );
   return [
     ...new Set(
       [
@@ -28,7 +30,7 @@ const mergedConnectionFields = (): string[] => {
           /^\s*(\w+):\s*(?:\.\.\.)?mergeConnectionByNodeId\(/gm,
         ),
       ]
-        .map(m => m[1])
+        .map(m => m[1]!)
         .filter(name => name !== 'homes'),
     ),
   ];

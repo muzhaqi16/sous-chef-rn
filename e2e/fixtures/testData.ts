@@ -165,11 +165,11 @@ export function generateTestEmail() {
 export function generateFutureDate(daysFromNow: number): string {
   const date = new Date();
   date.setDate(date.getDate() + daysFromNow);
-  return date.toISOString().split('T')[0];
+  return date.toISOString().split('T')[0]!;
 }
 
 export function generatePastDate(daysAgo: number): string {
   const date = new Date();
   date.setDate(date.getDate() - daysAgo);
-  return date.toISOString().split('T')[0];
+  return date.toISOString().split('T')[0]!;
 }

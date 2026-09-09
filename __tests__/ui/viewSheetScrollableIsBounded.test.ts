@@ -34,7 +34,8 @@ const styleKeysOnScrollables = (src: string): string[] => {
       }
     }
     const tag = src.slice(m.index, end);
-    for (const s of tag.matchAll(/\bstyle=\{styles\.(\w+)\}/g)) keys.push(s[1]);
+    for (const s of tag.matchAll(/\bstyle=\{styles\.(\w+)\}/g))
+      keys.push(s[1]!);
   }
   return keys;
 };

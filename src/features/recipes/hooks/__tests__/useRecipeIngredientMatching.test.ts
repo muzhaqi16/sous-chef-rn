@@ -208,7 +208,7 @@ describe('useRecipeIngredientMatching', () => {
 
     expect(success).toBe(true);
     await waitFor(() => expect(result.current.editableMatches).toHaveLength(1));
-    expect(result.current.editableMatches[0].adjustedQuantity).toBe(2);
+    expect(result.current.editableMatches[0]!.adjustedQuantity).toBe(2);
     expect(result.current.isSheetVisible).toBe(true);
   });
 
@@ -298,7 +298,7 @@ describe('useRecipeIngredientMatching', () => {
       result.current.updateMatch(0, { adjustedQuantity: 10 });
     });
 
-    expect(result.current.editableMatches[0].adjustedQuantity).toBe(10);
+    expect(result.current.editableMatches[0]!.adjustedQuantity).toBe(10);
   });
 
   it('closeSheet hides the sheet', async () => {

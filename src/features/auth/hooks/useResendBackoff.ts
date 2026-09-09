@@ -7,7 +7,9 @@ import { useEffect, useState } from 'react';
 const RESEND_BACKOFF_DELAYS = [0, 30, 60, 180, 300];
 
 const delayForAttempt = (attempt: number): number =>
-  RESEND_BACKOFF_DELAYS[Math.min(attempt, RESEND_BACKOFF_DELAYS.length - 1)];
+  RESEND_BACKOFF_DELAYS[
+    Math.min(Math.max(attempt, 0), RESEND_BACKOFF_DELAYS.length - 1)
+  ] ?? 0;
 
 export interface ResendBackoff {
   /** Seconds left before another attempt is allowed; 0 when one is. */

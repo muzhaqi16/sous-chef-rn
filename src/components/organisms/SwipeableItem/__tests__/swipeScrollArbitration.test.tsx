@@ -57,13 +57,13 @@ describe('SwipeableItem scroll arbitration', () => {
 
   it('needs more horizontal travel than RNGH asks for by default', () => {
     renderItem();
-    expect(swipeableProps[0].dragOffsetFromLeft).toBe(16);
-    expect(swipeableProps[0].dragOffsetFromRight).toBe(-16);
+    expect(swipeableProps[0]!.dragOffsetFromLeft).toBe(16);
+    expect(swipeableProps[0]!.dragOffsetFromRight).toBe(-16);
   });
 
   it('lets a call site retune it, keeping the right offset non-positive', () => {
     renderItem({ dragOffset: 32 });
-    expect(swipeableProps[0].dragOffsetFromLeft).toBe(32);
-    expect(swipeableProps[0].dragOffsetFromRight).toBe(-32);
+    expect(swipeableProps[0]!.dragOffsetFromLeft).toBe(32);
+    expect(swipeableProps[0]!.dragOffsetFromRight).toBe(-32);
   });
 });

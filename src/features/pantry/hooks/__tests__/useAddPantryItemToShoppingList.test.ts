@@ -42,7 +42,7 @@ describe('useAddPantryItemToShoppingList', () => {
     expect(input.shoppingListId).toBe(LIST_ID);
     // The catalog id travels in `item.itemId`, and the row's own client id is a
     // SEPARATE field — conflating them is the defect this pins.
-    expect(input.items[0].item).toEqual({ itemId: CATALOG_ITEM_ID });
-    expect(input.items[0].id).not.toBe(CATALOG_ITEM_ID);
+    expect(input.items[0]!.item).toEqual({ itemId: CATALOG_ITEM_ID });
+    expect(input.items[0]!.id).not.toBe(CATALOG_ITEM_ID);
   });
 });

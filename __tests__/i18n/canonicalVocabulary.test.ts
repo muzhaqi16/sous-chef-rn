@@ -834,7 +834,7 @@ const flatten = (obj: unknown, prefix = ''): Record<string, string> => {
 const en = flatten(mergedLocale('en'));
 
 const isCanonical = (key: string) =>
-  CANONICAL_NAMESPACES.includes(key.split('.')[0]);
+  CANONICAL_NAMESPACES.includes(key.split('.')[0]!);
 
 /**
  * A string worth having one home.

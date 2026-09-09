@@ -33,7 +33,8 @@ const ALIASES: Record<string, string> = {
   '#': SRC,
 };
 
-const IMPORT_SOURCE = /(?:from\s*|import\s*\(\s*|require\s*\(\s*)['"]([^'"]+)['"]/g;
+const IMPORT_SOURCE =
+  /(?:from\s*|import\s*\(\s*|require\s*\(\s*)['"]([^'"]+)['"]/g;
 
 /** Resolve a specifier to a file under `src/`, or null when it leaves the tree. */
 const resolve = (spec: string, fromFile: string): string | null => {
@@ -45,7 +46,7 @@ const resolve = (spec: string, fromFile: string): string | null => {
       .sort((a, b) => b.length - a.length)
       .find(a => spec === a || spec.startsWith(`${a}/`));
     if (!alias) return null;
-    base = path.join(ALIASES[alias], spec.slice(alias.length));
+    base = path.join(ALIASES[alias]!, spec.slice(alias.length));
   }
   for (const candidate of [
     base,
@@ -72,7 +73,7 @@ const reachableFrom = (entry: string): string[] => {
     seen.add(file);
     const source = fs.readFileSync(file, 'utf8');
     for (const [, spec] of source.matchAll(IMPORT_SOURCE)) {
-      const next = resolve(spec, file);
+      const next = resolve(spec!, file);
       if (next && !seen.has(next)) queue.push(next);
     }
   }

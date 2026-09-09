@@ -109,8 +109,8 @@ describe('useDailyMeals', () => {
     const { result } = renderHook(() => useDailyMeals(items, today));
 
     // [1] is now the empty Lunch core slot; Snack moves to [2].
-    expect(result.current.dailyMeals[0].label).toBe('Breakfast');
-    expect(result.current.dailyMeals[2].label).toBe('Snack');
+    expect(result.current.dailyMeals[0]!.label).toBe('Breakfast');
+    expect(result.current.dailyMeals[2]!.label).toBe('Snack');
   });
 
   it('sorts items within a group by recipe name', () => {
@@ -129,8 +129,8 @@ describe('useDailyMeals', () => {
 
     const { result } = renderHook(() => useDailyMeals(items, today));
 
-    expect(result.current.dailyMeals[0].items[0].id).toBe('i2'); // Eggs before Waffles
-    expect(result.current.dailyMeals[0].items[1].id).toBe('i1');
+    expect(result.current.dailyMeals[0]!.items[0]!.id).toBe('i2'); // Eggs before Waffles
+    expect(result.current.dailyMeals[0]!.items[1]!.id).toBe('i1');
   });
 
   it('computes totalMeals and totalCalories', () => {

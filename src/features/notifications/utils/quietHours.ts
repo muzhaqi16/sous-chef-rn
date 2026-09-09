@@ -79,6 +79,16 @@ export function computeIsQuietTime(
 
   const [startHour, startMin] = config.quietHoursStart.split(':').map(Number);
   const [endHour, endMin] = config.quietHoursEnd.split(':').map(Number);
+  // A stored value that is not `HH:MM` cannot place the window, so no hour is
+  // quiet — the same answer the arithmetic gave, without going through NaN.
+  if (
+    startHour === undefined ||
+    startMin === undefined ||
+    endHour === undefined ||
+    endMin === undefined
+  ) {
+    return false;
+  }
   const startTime = startHour * 60 + startMin;
   const endTime = endHour * 60 + endMin;
 

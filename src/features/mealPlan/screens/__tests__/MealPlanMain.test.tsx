@@ -495,15 +495,15 @@ describe('MealPlanMain', () => {
       renderWithFallback();
 
       const last = saveTemplateProps[saveTemplateProps.length - 1];
-      expect(last.mealPlanId).toBe('plan-2');
-      expect(last.mealPlanName).not.toBe('Current Plan');
+      expect(last!.mealPlanId).toBe('plan-2');
+      expect(last!.mealPlanName).not.toBe('Current Plan');
     });
 
     it('duplicates the plan on screen', () => {
       renderWithFallback();
 
       const last = duplicateProps[duplicateProps.length - 1];
-      expect((last.mealPlan as { id: string } | null)?.id).toBe('plan-2');
+      expect((last!.mealPlan as { id: string } | null)?.id).toBe('plan-2');
     });
   });
 

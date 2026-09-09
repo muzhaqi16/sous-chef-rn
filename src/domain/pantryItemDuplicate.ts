@@ -110,8 +110,9 @@ export function getPantryItemDuplicateInfoFromPayload(
     | undefined,
 ): PantryItemDuplicateInfo | null {
   const ids = payload?.existingPantryItemIds;
-  if (ids && ids.length > 0) {
-    return { existingPantryItemId: ids[0], existingPantryItemIds: [...ids] };
+  const [firstId] = ids ?? [];
+  if (ids && firstId) {
+    return { existingPantryItemId: firstId, existingPantryItemIds: [...ids] };
   }
   return null;
 }

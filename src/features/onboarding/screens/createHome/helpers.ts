@@ -19,12 +19,12 @@ export const checkExistingResources = async (
     setSelectedPantryId: (id: string) => void;
   },
 ) => {
-  if (homes.length > 0) {
-    const existingHome = homes[0];
-    callbacks.setSelectedHomeId(existingHome.id);
+  const [firstHome] = homes;
+  if (firstHome) {
+    callbacks.setSelectedHomeId(firstHome.id);
 
-    if (pantries.length > 0) {
-      const existingPantry = pantries.find(p => p.isDefault) || pantries[0];
+    const existingPantry = pantries.find(p => p.isDefault) ?? pantries[0];
+    if (existingPantry) {
       callbacks.setSelectedPantryId(existingPantry.id);
 
       // Both exist - skip to next step

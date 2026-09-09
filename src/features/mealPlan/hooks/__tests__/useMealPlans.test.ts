@@ -128,7 +128,7 @@ describe('useMealPlans', () => {
       cache: seedPlanCache([plan]),
     });
     await waitFor(() => expect(result.current.state.mealPlans).toHaveLength(1));
-    expect(result.current.state.mealPlans[0].id).toBe('1');
+    expect(result.current.state.mealPlans[0]!.id).toBe('1');
     expect(result.current.state.totalCount).toBe(1);
   });
 

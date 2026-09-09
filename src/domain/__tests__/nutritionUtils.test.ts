@@ -236,7 +236,7 @@ describe('getNutrientEntries', () => {
     expect(entries.length).toBeGreaterThan(0);
 
     // First entry should be a macro
-    expect(entries[0].category).toBe('macro');
+    expect(entries[0]!.category).toBe('macro');
 
     // Macros should come before vitamins/minerals
     const firstVitaminIdx = entries.findIndex(e => e.category === 'vitamin');

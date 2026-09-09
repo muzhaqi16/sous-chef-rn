@@ -163,8 +163,7 @@ export const OverlayBackdropProvider: React.FC<
   const isVisible = slots.length > 0;
 
   // Latest claim owns the backdrop-tap handler.
-  const onPress =
-    slots.length > 0 ? slots[slots.length - 1].onPress ?? null : null;
+  const onPress = slots[slots.length - 1]?.onPress ?? null;
 
   // Reanimated recurses into `slots` to track every `.sv`, so this re-runs as a
   // contributor animates and on any add/remove.

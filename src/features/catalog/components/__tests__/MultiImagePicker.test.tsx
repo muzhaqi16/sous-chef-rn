@@ -305,11 +305,11 @@ describe('MultiImagePicker', () => {
         />,
       );
 
-      fireEvent.press(screen.getAllByLabelText('Remove image')[0]);
+      fireEvent.press(screen.getAllByLabelText('Remove image')[0]!);
 
       const updated = onImagesChanged.mock.calls[0][0] as SelectedImage[];
       expect(updated).toHaveLength(1);
-      expect(updated[0].isPrimary).toBe(true);
+      expect(updated[0]!.isPrimary).toBe(true);
     });
   });
 });

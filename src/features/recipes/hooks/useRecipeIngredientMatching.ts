@@ -151,7 +151,9 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
   ) => {
     setEditableMatches(prev => {
       const next = [...prev];
-      next[index] = { ...next[index], ...updates };
+      const existing = next[index];
+      if (!existing) return prev;
+      next[index] = { ...existing, ...updates };
       return next;
     });
   };

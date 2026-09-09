@@ -85,7 +85,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
 
   useEffect(() => {
     const activeRoute = state.routes[state.index];
-    setActiveTab(activeRoute.name);
+    if (activeRoute) setActiveTab(activeRoute.name);
   }, [state.index, state.routes, setActiveTab]);
 
   // Clear scroll-hidden state on overlay open, so the bar returns visible.
@@ -176,7 +176,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
       <GlassSurface style={styles.glassFill} />
       <View style={styles.tabsRow}>
         {state.routes.map((route, index) => {
-          const { options } = descriptors[route.key];
+          const options = descriptors[route.key]?.options ?? {};
           const isFocused = state.index === index;
           return (
             <TabItem

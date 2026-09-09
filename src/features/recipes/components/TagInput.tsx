@@ -74,8 +74,9 @@ export const TagInput: React.FC<TagInputProps> = ({
 
   const handleKeyPress = (e: { nativeEvent: { key: string } }) => {
     // Handle backspace to remove last tag when input is empty
-    if (e.nativeEvent.key === 'Backspace' && !inputValue && tags.length > 0) {
-      handleRemoveTag(tags[tags.length - 1]);
+    const lastTag = tags[tags.length - 1];
+    if (e.nativeEvent.key === 'Backspace' && !inputValue && lastTag) {
+      handleRemoveTag(lastTag);
     }
   };
 

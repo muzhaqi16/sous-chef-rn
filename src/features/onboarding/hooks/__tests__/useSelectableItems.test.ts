@@ -49,7 +49,7 @@ describe('useSelectableItems', () => {
         result.current.toggleItem('item-2');
       });
 
-      expect(result.current.items[1].selected).toBe(true);
+      expect(result.current.items[1]!.selected).toBe(true);
       expect(result.current.selectedItems).toHaveLength(1);
     });
 
@@ -63,7 +63,7 @@ describe('useSelectableItems', () => {
         result.current.toggleItem('item-2');
       });
 
-      expect(result.current.items[1].selected).toBe(false);
+      expect(result.current.items[1]!.selected).toBe(false);
       expect(result.current.selectedItems).toHaveLength(0);
     });
 
@@ -95,7 +95,7 @@ describe('useSelectableItems', () => {
       });
 
       // item-3 should remain unselected
-      expect(result.current.items[2].selected).toBe(false);
+      expect(result.current.items[2]!.selected).toBe(false);
       expect(result.current.selectedItems).toHaveLength(2);
       expect(logger.warn).toHaveBeenCalledWith(
         'Maximum selection of 2 items reached',

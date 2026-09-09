@@ -25,10 +25,15 @@ interface IngredientMatchRowProps {
 type BadgeColor = 'success' | 'warning' | 'error';
 
 /** Key paths — module-level table, resolved by the row that renders it. */
+const MISSING_BADGE: { labelKey: string; color: BadgeColor } = {
+  labelKey: 'labels.missing',
+  color: 'error',
+};
+
 const BADGE_CONFIG: Record<string, { labelKey: string; color: BadgeColor }> = {
   available: { labelKey: 'labels.available', color: 'success' },
   partial: { labelKey: 'labels.partial', color: 'warning' },
-  missing: { labelKey: 'labels.missing', color: 'error' },
+  missing: MISSING_BADGE,
 };
 
 /**
@@ -58,7 +63,7 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
   const { t } = useTranslation();
   const { match, ingredient, adjustedQuantity, isIncluded } = editableMatch;
   const status = getAvailabilityStatus(match);
-  const badge = BADGE_CONFIG[status];
+  const badge = BADGE_CONFIG[status] ?? MISSING_BADGE;
   const isOptional = ingredient.isOptional;
 
   return (

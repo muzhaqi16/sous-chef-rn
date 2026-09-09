@@ -41,7 +41,7 @@ function stringsInSection(xml: string, key: string): string[] {
   if (xml.startsWith('<array/>', arrayStart)) return [];
   const arrayEnd = xml.indexOf('</array>', arrayStart);
   const body = xml.slice(arrayStart, arrayEnd);
-  return [...body.matchAll(/<string>([^<]+)<\/string>/g)].map(m => m[1]);
+  return [...body.matchAll(/<string>([^<]+)<\/string>/g)].map(m => m[1]!);
 }
 
 describe('iOS privacy manifest', () => {

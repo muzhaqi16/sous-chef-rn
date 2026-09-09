@@ -85,7 +85,7 @@ const SuggestionRow = ({
             style={styles.suggestionBrands}
             numberOfLines={1}
           >
-            {item.brands[0].name}
+            {item.brands[0]?.name}
           </Text>
         )}
       </View>

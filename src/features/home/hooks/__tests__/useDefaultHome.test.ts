@@ -295,7 +295,7 @@ describe('useDefaultHome', () => {
     });
 
     await waitFor(() => expect(result.current.state.homes).toHaveLength(1));
-    expect(result.current.state.homes[0].id).toBe('home-1');
+    expect(result.current.state.homes[0]!.id).toBe('home-1');
   });
 
   it('does not keep refetching when the account genuinely has no homes', async () => {
@@ -602,7 +602,7 @@ describe('useDefaultHome', () => {
           mockStoreState.setIsHomeSelectionReady.mock.invocationCallOrder[
             readyCallIndex
           ],
-        ).toBeGreaterThan(repointCallOrder);
+        ).toBeGreaterThan(repointCallOrder!);
       }
     });
   });

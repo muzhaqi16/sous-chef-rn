@@ -45,7 +45,7 @@ describe('ReportItemForm', () => {
   });
 
   it('skips the picker when only one item could be meant', () => {
-    renderForm({ candidates: [CANDIDATES[0]] });
+    renderForm({ candidates: [CANDIDATES[0]!] });
 
     expect(screen.queryByText('Which item has wrong details?')).toBeNull();
     expect(screen.getByTestId('report-item-reason-input')).toBeTruthy();
@@ -68,7 +68,7 @@ describe('ReportItemForm', () => {
         },
       },
     });
-    const { onClose } = renderForm({ candidates: [CANDIDATES[0]] }, [mock]);
+    const { onClose } = renderForm({ candidates: [CANDIDATES[0]!] }, [mock]);
 
     await userEvent.type(
       screen.getByTestId('report-item-reason-input'),
@@ -94,7 +94,7 @@ describe('ReportItemForm', () => {
         },
       },
     });
-    const { onClose } = renderForm({ candidates: [CANDIDATES[0]] }, [mock]);
+    const { onClose } = renderForm({ candidates: [CANDIDATES[0]!] }, [mock]);
 
     await userEvent.type(
       screen.getByTestId('report-item-reason-input'),
@@ -111,7 +111,7 @@ describe('ReportItemForm', () => {
   // Submit is disabled below MIN_EDIT_REASON_LENGTH, so no mock is needed —
   // firing one would surface as an unmatched-operation failure.
   it('does not submit a reason shorter than the minimum', async () => {
-    const { onClose } = renderForm({ candidates: [CANDIDATES[0]] });
+    const { onClose } = renderForm({ candidates: [CANDIDATES[0]!] });
 
     await userEvent.type(screen.getByTestId('report-item-reason-input'), 'bad');
     await userEvent.press(screen.getByTestId('report-item-submit-button'));
@@ -122,7 +122,7 @@ describe('ReportItemForm', () => {
   // RN's TextInput defaults to dark text, so an input style without an explicit
   // color renders what the user typed nearly invisible on the dark theme.
   it('gives the reason input a themed text color', () => {
-    renderForm({ candidates: [CANDIDATES[0]] });
+    renderForm({ candidates: [CANDIDATES[0]!] });
 
     const input = screen.getByTestId('report-item-reason-input');
     const color = [input.props.style]

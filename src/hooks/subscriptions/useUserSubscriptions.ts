@@ -53,11 +53,8 @@ function handleRemovedFromHome(
     );
 
     const store = useStore.getState();
-    if (remaining.length > 0) {
-      store.setSelectedHomeId(remaining[0].id);
-    } else {
-      store.setSelectedHomeId(null);
-    }
+    const [firstRemaining] = remaining;
+    store.setSelectedHomeId(firstRemaining?.id ?? null);
     store.setSelectedPantryId(null);
     store.setSelectedShoppingListId(null);
     // The meal plan pick is persisted like the other two. Left set, it keeps

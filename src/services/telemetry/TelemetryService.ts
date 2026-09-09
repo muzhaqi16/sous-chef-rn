@@ -541,14 +541,15 @@ export class TelemetryService {
       const failures = results
         .map((result, index) => ({
           result,
-          name: availableTransports[index].getName(),
+          name: availableTransports[index]?.getName() ?? 'unknown',
         }))
         .filter(
           (entry): entry is { result: PromiseRejectedResult; name: string } =>
             entry.result.status === 'rejected',
         );
 
-      if (failures.length === 0) {
+      const [firstFailure] = failures;
+      if (!firstFailure) {
         this.noteFlushSuccess(this.logsBackoff, 'logs');
         return;
       }
@@ -566,7 +567,7 @@ export class TelemetryService {
         this.logsBackoff,
         'logs',
         failures.map(f => f.name).join(', '),
-        failures[0].result.reason,
+        firstFailure.result.reason,
         retryable
           ? undefined
           : `dropped ${logs.length} entries (non-retryable)`,
@@ -604,14 +605,15 @@ export class TelemetryService {
       const failures = results
         .map((result, index) => ({
           result,
-          name: availableTransports[index].getName(),
+          name: availableTransports[index]?.getName() ?? 'unknown',
         }))
         .filter(
           (entry): entry is { result: PromiseRejectedResult; name: string } =>
             entry.result.status === 'rejected',
         );
 
-      if (failures.length === 0) {
+      const [firstFailure] = failures;
+      if (!firstFailure) {
         this.metricsRetryPending = false;
         this.noteFlushSuccess(this.metricsBackoff, 'metrics');
         return;
@@ -628,7 +630,7 @@ export class TelemetryService {
         this.metricsBackoff,
         'metrics',
         failures.map(f => f.name).join(', '),
-        failures[0].result.reason,
+        firstFailure.result.reason,
       );
     } finally {
       this.metricFlushInFlight = false;

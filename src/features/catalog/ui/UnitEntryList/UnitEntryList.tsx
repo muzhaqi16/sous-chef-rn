@@ -49,8 +49,9 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
   const handleRemoveEntry = (index: number) => {
     const updated = entries.filter((_, i) => i !== index);
     // If we removed the default entry, make the first one default
-    if (updated.length > 0 && !updated.some(e => e.isDefault)) {
-      updated[0] = { ...updated[0], isDefault: true };
+    const [firstEntry] = updated;
+    if (firstEntry && !updated.some(e => e.isDefault)) {
+      updated[0] = { ...firstEntry, isDefault: true };
     }
     onEntriesChanged(updated);
   };

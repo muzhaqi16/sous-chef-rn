@@ -259,7 +259,7 @@ describe('PantryActionModal', () => {
     renderWithApollo(<PantryActionModal {...defaultProps} />, {
       cache: makeCache(),
     });
-    const shared = mockRenderActionFields.mock.calls[0][0];
+    const shared = mockRenderActionFields.mock.calls[0]![0];
     expect(shared.trackingQuantity).toBe(5);
     expect(shared.activeUnitSymbol).toBe('lbs');
   });
@@ -268,7 +268,7 @@ describe('PantryActionModal', () => {
     renderWithApollo(<PantryActionModal {...defaultProps} />, {
       cache: makeCache(),
     });
-    const shared = mockRenderActionFields.mock.calls[0][0];
+    const shared = mockRenderActionFields.mock.calls[0]![0];
     expect(shared.trackingUnitId).toBe('u1');
   });
 
@@ -303,7 +303,7 @@ describe('PantryActionModal', () => {
     const shared =
       mockRenderActionFields.mock.calls[
         mockRenderActionFields.mock.calls.length - 1
-      ][0];
+      ]![0];
     expect(shared.notes).toBe('');
   });
 

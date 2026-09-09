@@ -51,7 +51,7 @@ const scheduleOnRNMock = scheduleOnRN as unknown as jest.Mock;
 // latest result carries the gesture's props + callbacks (onUpdate/onDeactivate).
 const getLatestPanGesture = () => {
   const results = usePanGestureMock.mock.results;
-  return results[results.length - 1].value;
+  return results[results.length - 1]!.value;
 };
 
 // Helper component that triggers a toast once on mount

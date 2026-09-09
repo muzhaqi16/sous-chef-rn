@@ -50,6 +50,11 @@ const dateOfBirthRule = string()
     if (!value) return true;
 
     const [year, month, day] = value.split('-').map(Number);
+    // yup runs every test whatever `matches` decided, so a value that is not
+    // yyyy-mm-dd still reaches here.
+    if (year === undefined || month === undefined || day === undefined) {
+      return false;
+    }
 
     // Basic bounds checking
     if (year < 1900 || year > 2100) return false;
@@ -67,7 +72,7 @@ const dateOfBirthRule = string()
   .test('reasonable-age', msg('dateUnreasonable'), value => {
     if (!value) return true;
 
-    const birthYear = parseInt(value.split('-')[0]);
+    const birthYear = Number(value.split('-')[0]);
     const currentYear = new Date().getFullYear();
     const age = currentYear - birthYear;
 

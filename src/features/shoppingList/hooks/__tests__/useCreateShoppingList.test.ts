@@ -106,7 +106,7 @@ describe('useCreateShoppingList', () => {
     // from the create input and the auth identity.
     expect(buildOptimisticShoppingList).toHaveBeenCalledTimes(1);
     const [, mintedId, input, owner] = jest.mocked(buildOptimisticShoppingList)
-      .mock.calls[0];
+      .mock.calls[0]!;
     // Matches the server id validator (cuid2 or legacy cuid v1 / 24-char hex).
     expect(mintedId).toMatch(/^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/);
     expect(input).toEqual({ name: 'Weekly' });

@@ -471,9 +471,7 @@ export const useImageUpload = () => {
     const results: Array<{ imageUrl: string; perspective: string }> = [];
     let fatal: UserFacingUploadError | null = null;
 
-    for (let i = 0; i < files.length; i += 1) {
-      const file = files[i];
-      const index = i;
+    for (const [index, file] of files.entries()) {
       const imageUrl = await uploadItemImage(file, itemId, {
         onProgress: p => options?.onProgress?.((index + p) / files.length),
         perspective: file.perspective,

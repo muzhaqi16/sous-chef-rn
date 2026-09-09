@@ -47,7 +47,7 @@ function writerFields(): string[] {
   const [, block] = match;
   const names: string[] = [];
   let depth = 0;
-  for (const rawLine of block.split('\n')) {
+  for (const rawLine of block!.split('\n')) {
     const line = rawLine.trim();
     if (!line) continue;
     if (line === '}') {

@@ -273,9 +273,15 @@ export class FlashListDiagnostics {
     // Factor: coverage declining (last 3 entries monotonically decreasing AND latest < 0.9)
     if (this.coverageTrend.length >= 3) {
       const len = this.coverageTrend.length;
-      const last3 = this.coverageTrend.slice(len - 3);
-      const declining = last3[0] > last3[1] && last3[1] > last3[2];
-      if (declining && last3[2] < 0.9) {
+      const [first, second, third] = this.coverageTrend.slice(len - 3);
+      if (
+        first !== undefined &&
+        second !== undefined &&
+        third !== undefined &&
+        first > second &&
+        second > third &&
+        third < 0.9
+      ) {
         factors.push('coverage declining');
       }
     }
@@ -318,9 +324,7 @@ export class FlashListDiagnostics {
     }
 
     const latestCoverage =
-      this.coverageTrend.length > 0
-        ? this.coverageTrend[this.coverageTrend.length - 1]
-        : 1;
+      this.coverageTrend[this.coverageTrend.length - 1] ?? 1;
 
     return {
       level,

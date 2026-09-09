@@ -328,7 +328,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     onSubmit(processedData);
   };
 
-  const activePage = PAGES[currentPage];
+  const activePage = PAGES[currentPage] ?? PAGES[0];
   const activeTab = TAB_FIELDS[activePage];
   const toggleAdvanced = (page: PageName) =>
     setAdvancedExpanded(prev => ({ ...prev, [page]: !prev[page] }));

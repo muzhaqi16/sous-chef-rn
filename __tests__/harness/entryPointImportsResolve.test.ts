@@ -35,7 +35,7 @@ const relativeImports = (source: string): { spec: string; line: number }[] => {
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(source))) {
     found.push({
-      spec: match[1],
+      spec: match[1]!,
       line: source.slice(0, match.index).split('\n').length,
     });
   }
@@ -65,9 +65,9 @@ describe("the app's entry point", () => {
 
   // The check is only worth anything if a moved module actually breaks it.
   it('would fail on a module that moved away', () => {
-    expect(resolves(entry, './src/utils/notifications/localNotificationHelper')).toBe(
-      false,
-    );
+    expect(
+      resolves(entry, './src/utils/notifications/localNotificationHelper'),
+    ).toBe(false);
     expect(
       resolves(entry, './src/services/notifications/localNotificationHelper'),
     ).toBe(true);

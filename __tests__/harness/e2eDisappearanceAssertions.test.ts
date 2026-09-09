@@ -98,7 +98,8 @@ const itBlocks = (source: string): { start: number; body: string }[] => {
  */
 const unprovenTargets = (block: string, file: string): string[] => {
   const negation = /\.not\s*\.\s*(?:toBeVisible|toExist)\s*\(/g;
-  const elementCall = /element\(\s*by\.(?:id|text|label)\(\s*([^)]*?)\s*\)\s*\)/g;
+  const elementCall =
+    /element\(\s*by\.(?:id|text|label)\(\s*([^)]*?)\s*\)\s*\)/g;
   const unproven: string[] = [];
 
   let match: RegExpExecArray | null;
@@ -110,7 +111,7 @@ const unprovenTargets = (block: string, file: string): string[] => {
     const own = calls[calls.length - 1];
     if (!own) continue;
 
-    const target = own[1].replace(/\s+/g, '');
+    const target = own[1]!.replace(/\s+/g, '');
 
     // Compares the matcher's ARGUMENT (`'Cheese'`, `itemName`, `NAME_INPUT`),
     // not the whole `by.text(...)` expression. Presence is usually established

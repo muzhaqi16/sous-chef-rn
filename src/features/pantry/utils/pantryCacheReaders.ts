@@ -94,7 +94,11 @@ function scanCachedPantryItems(
         itemName: (node.itemName as string | null) ?? null,
         quantity: (node.quantity as number | null) ?? null,
         item: (node.item as { __ref?: string } | null)?.__ref
-          ? { id: String((node.item as { __ref: string }).__ref).split(':')[1] }
+          ? {
+              id:
+                String((node.item as { __ref: string }).__ref).split(':')[1] ??
+                '',
+            }
           : null,
       });
     }

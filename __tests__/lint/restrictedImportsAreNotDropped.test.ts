@@ -98,22 +98,22 @@ const activeOverrides = config.overrides.filter(
 describe('no-restricted-imports overrides', () => {
   it('finds the rule and the overrides that redeclare it', () => {
     // A config that stopped declaring the rule would pass every check below.
-    expect(bannedPairs(base).length).toBeGreaterThan(10);
+    expect(bannedPairs(base!).length).toBeGreaterThan(10);
     expect(activeOverrides.length).toBeGreaterThan(1);
   });
 
   it('reads both halves of the rule, so neither can be dropped unseen', () => {
     // Each half alone is a scan that passes identically whether its contract
     // holds or its array was emptied.
-    expect(base[1].paths.length).toBeGreaterThan(0);
-    expect(base[1].patterns.length).toBeGreaterThan(0);
+    expect(base![1].paths.length).toBeGreaterThan(0);
+    expect(base![1].patterns.length).toBeGreaterThan(0);
     expect(
-      bannedPairs(base).some(p => p.includes('*Fragments.generated')),
+      bannedPairs(base!).some(p => p.includes('*Fragments.generated')),
     ).toBe(true);
   });
 
   it('bans a raw TextInput, which is what makes an input themed by default', () => {
-    expect(bannedPairs(base)).toEqual(
+    expect(bannedPairs(base!)).toEqual(
       expect.arrayContaining([
         'react-native#TextInput',
         '@gorhom/bottom-sheet#BottomSheetTextInput',
@@ -122,12 +122,12 @@ describe('no-restricted-imports overrides', () => {
   });
 
   it('keeps every base ban in every override that redeclares the rule', () => {
-    const baseBans = bannedPairs(base);
+    const baseBans = bannedPairs(base!);
 
     const dropped = activeOverrides.flatMap(override => {
       const files = [override.files].flat();
       const allowed = files.flatMap(f => ALLOWED_DROPS[f] ?? []);
-      const kept = new Set(bannedPairs(override.rules[RULE]));
+      const kept = new Set(bannedPairs(override.rules[RULE]!));
 
       return baseBans
         .filter(ban => !kept.has(ban) && !allowed.includes(ban))

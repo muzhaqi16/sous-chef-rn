@@ -57,7 +57,7 @@ describe('cuisines constants', () => {
     it('popular cuisines come first', () => {
       const all = getAllCuisineOptions();
       for (let i = 0; i < POPULAR_CUISINES.length; i++) {
-        expect(all[i].value).toBe(POPULAR_CUISINES[i].value);
+        expect(all[i]!.value).toBe(POPULAR_CUISINES[i]!.value);
       }
     });
 

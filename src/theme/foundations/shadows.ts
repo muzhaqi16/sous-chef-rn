@@ -11,7 +11,15 @@ type ShadowLayer = {
  * opacity stays low so surfaces float rather than sit on a hard line. The
  * opacities come from the theme, since what reads as depth differs by ground.
  */
-const ramp = (alpha: Record<string, number>, ink: string) => ({
+type ShadowAlpha = {
+  sm: number;
+  md: number;
+  lg: number;
+  xl: number;
+  card: number;
+};
+
+const ramp = (alpha: ShadowAlpha, ink: string) => ({
   none: {},
   sm: layer(0, 1, 3, 0, ink, alpha.sm),
   md: layer(0, 2, 8, 0, ink, alpha.md),

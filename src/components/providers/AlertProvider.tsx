@@ -160,13 +160,13 @@ function dismissTopAlert(
   alerts: AlertEntry[],
   onDismiss: (id: number) => void,
 ) {
-  if (alerts.length === 0) return;
   const topAlert = alerts[alerts.length - 1];
+  if (!topAlert) return;
   const cancelButton = topAlert.buttons.find(b => b.style === 'cancel');
   if (cancelButton) {
     cancelButton.onPress?.();
   } else if (topAlert.buttons.length === 1) {
-    topAlert.buttons[0].onPress?.();
+    topAlert.buttons[0]?.onPress?.();
   }
   onDismiss(topAlert.id);
 }

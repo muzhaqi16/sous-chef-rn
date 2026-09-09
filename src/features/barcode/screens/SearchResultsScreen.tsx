@@ -166,10 +166,11 @@ export const SearchResultsScreen: React.FC<
       );
     }
 
-    if (searchResults.length > 0) {
+    const [firstResult] = searchResults;
+    if (firstResult) {
       return (
         <SearchResults
-          item={searchResults[0]}
+          item={firstResult}
           format={format}
           onScanAnother={handleScanAnother}
           onEditItem={isReadOnly ? undefined : handleEditItem}

@@ -22,7 +22,7 @@ const targetRect = { x: 100, y: 200, width: 50, height: 50 };
 // onDeactivate callback.
 const getLatestPanGesture = () => {
   const results = usePanGestureMock.mock.results;
-  return results[results.length - 1].value;
+  return results[results.length - 1]!.value;
 };
 
 describe('SpotlightCoachMark swipe-to-advance gesture', () => {

@@ -133,8 +133,8 @@ export const useTutorialSequence = ({
   }, [userId]);
 
   const advance = () => {
-    if (activeStepIndex === -1) return;
     const step = stepsRef.current[activeStepIndex];
+    if (!step) return;
     storeApi
       .getState()
       .markFeatureHintShown(buildStorageKey(userIdRef.current, step.featureId));
@@ -148,8 +148,8 @@ export const useTutorialSequence = ({
   };
 
   const advanceInPlace = () => {
-    if (activeStepIndex === -1) return;
     const step = stepsRef.current[activeStepIndex];
+    if (!step) return;
     storeApi
       .getState()
       .markFeatureHintShown(buildStorageKey(userIdRef.current, step.featureId));
@@ -175,12 +175,13 @@ export const useTutorialSequence = ({
     !isTransitioning &&
     activeStepIndex !== -1;
 
+  const activeStep = steps[activeStepIndex];
   const currentStep: TutorialStepConfig | null =
-    isActive && activeStepIndex !== -1
+    isActive && activeStep
       ? {
-          targetRect: targetRects[steps[activeStepIndex].rectKey]!,
-          title: steps[activeStepIndex].title,
-          subtitle: steps[activeStepIndex].subtitle,
+          targetRect: targetRects[activeStep.rectKey]!,
+          title: activeStep.title,
+          subtitle: activeStep.subtitle,
           stepIndex: activeStepIndex,
           totalSteps: steps.length,
         }

@@ -69,7 +69,8 @@ interface PersistedField {
  * checkable here, and would be a worse idea than the bug this guards — so the
  * assertion below also requires that every call site be in this literal form.
  */
-const CALL = /optimisticDataPersistence\s*\.\s*(?:save|track)\s*\(([^;]*?)\)\s*;/gs;
+const CALL =
+  /optimisticDataPersistence\s*\.\s*(?:save|track)\s*\(([^;]*?)\)\s*;/gs;
 
 const collectPersistedFields = (): {
   fields: PersistedField[];
@@ -85,18 +86,18 @@ const collectPersistedFields = (): {
       // First two string literals are entityType and (usually) the id; the
       // third is the field. Ids are variables, so the literals we get back are
       // [entityType, field].
-      const literals = [...args.matchAll(/'([^']*)'|"([^"]*)"/g)].map(
+      const literals = [...args!.matchAll(/'([^']*)'|"([^"]*)"/g)].map(
         m => m[1] ?? m[2],
       );
       const relPath = relative(ROOT, file);
       if (literals.length < 2) {
-        unparsed.push(`${relPath}: ${args.replace(/\s+/g, ' ').trim()}`);
+        unparsed.push(`${relPath}: ${args!.replace(/\s+/g, ' ').trim()}`);
         continue;
       }
       fields.push({
         file: relPath,
-        entityType: literals[0],
-        field: literals[1],
+        entityType: literals[0]!,
+        field: literals[1]!,
       });
     }
   }

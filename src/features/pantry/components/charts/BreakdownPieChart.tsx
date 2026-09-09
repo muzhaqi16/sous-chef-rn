@@ -42,7 +42,7 @@ export const BreakdownPieChart: React.FC<BreakdownPieChartProps> = ({
     return data.map((item, index) => ({
       label: item.label,
       value: item.value,
-      color: colors[index % colors.length],
+      color: colors[index % colors.length] ?? theme.colors.primary,
     }));
   })();
 

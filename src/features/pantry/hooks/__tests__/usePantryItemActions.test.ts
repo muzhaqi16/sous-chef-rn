@@ -503,7 +503,7 @@ describe('usePantryItemActions', () => {
         );
       });
 
-      const input = m.fired[0].input as Record<string, unknown>;
+      const input = m.fired[0]!.input as Record<string, unknown>;
       expect(input.unitId).toBe('unit-kg');
       expect(input.costPerUnit).toBe(2.5);
       expect(input.totalCost).toBe(12.5);

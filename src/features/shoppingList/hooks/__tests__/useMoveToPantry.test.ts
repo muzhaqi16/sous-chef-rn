@@ -482,7 +482,7 @@ describe('useMoveToPantry pantry item count', () => {
       });
     });
 
-    const mintedId = (move.fired[0].input as { pantryItemId: string })
+    const mintedId = (move.fired[0]!.input as { pantryItemId: string })
       .pantryItemId;
     const DETAIL_FRAGMENT = gql`
       fragment PantryDetailProbe on PantryItem {

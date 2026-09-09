@@ -45,10 +45,8 @@ function interpretNumericRun(run: string): string {
   const distinctChars = new Set(separators.map(match => match[0])).size;
   const everyGroupIsThreeDigits = separators.every((match, index) => {
     const start = match.index + 1;
-    const end =
-      index === separators.length - 1
-        ? run.length
-        : separators[index + 1].index;
+    const next = separators[index + 1];
+    const end = next ? next.index : run.length;
     return end - start === 3;
   });
 
@@ -58,6 +56,7 @@ function interpretNumericRun(run: string): string {
   if (groupingOnly) return run.replace(/[.,]/g, '');
 
   const lastSeparator = separators[separators.length - 1];
+  if (!lastSeparator) return run;
   const decimalIndex = lastSeparator.index;
   const whole = run.slice(0, decimalIndex).replace(/[.,]/g, '');
   const fraction = run.slice(decimalIndex + 1);

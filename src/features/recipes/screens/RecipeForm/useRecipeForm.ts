@@ -132,6 +132,7 @@ export function useRecipeForm() {
   const moveStep = (fromIndex: number, toIndex: number) => {
     const newSteps = [...getValues('steps')];
     const [moved] = newSteps.splice(fromIndex, 1);
+    if (!moved) return;
     newSteps.splice(toIndex, 0, moved);
     setSteps(newSteps.map((step, i) => ({ ...step, sortOrder: i })));
   };

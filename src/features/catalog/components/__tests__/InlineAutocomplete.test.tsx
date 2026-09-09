@@ -30,7 +30,7 @@ const EntryListHarness: React.FC<{ onRows: (rows: Row[]) => void }> = ({
     <>
       <InlineAutocomplete<string>
         label="Unit"
-        value={rows[0].unitName ?? ''}
+        value={rows[0]!.unitName ?? ''}
         onChangeText={text =>
           commit(rows.map((r, i) => (i === 0 ? { ...r, unitName: text } : r)))
         }
@@ -79,7 +79,7 @@ describe('InlineAutocomplete', () => {
     const finalRows = onRows.mock.calls.at(-1)?.[0] as Row[];
     // The added row must survive, and the typed text must still land.
     expect(finalRows).toHaveLength(2);
-    expect(finalRows[0].unitName).toBe('oz');
+    expect(finalRows[0]!.unitName).toBe('oz');
   });
 
   it('forwards typed text to the parent after the debounce elapses', () => {
@@ -94,7 +94,7 @@ describe('InlineAutocomplete', () => {
     });
 
     expect(onRows).toHaveBeenCalledTimes(1);
-    expect((onRows.mock.calls[0][0] as Row[])[0].unitName).toBe('kg');
+    expect((onRows.mock.calls[0][0] as Row[])[0]!.unitName).toBe('kg');
   });
 
   // `reserveDropdownSpace` renders an in-flow spacer so a sheet sized to its own

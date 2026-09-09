@@ -66,7 +66,7 @@ export function useHomeMutations({
 
           // Only set as default if this is truly the first/only home
           const isFirstHome =
-            freshHomes.length === 1 && freshHomes[0].id === newHome.id;
+            freshHomes.length === 1 && freshHomes[0]?.id === newHome.id;
 
           if (isFirstHome) {
             setSelectedHomeId(newHome.id);
@@ -131,9 +131,9 @@ export function useHomeMutations({
             });
             const remainingHomes = extractNodes(cachedData?.homes);
 
-            if (remainingHomes.length > 0) {
+            const [newDefaultHome] = remainingHomes;
+            if (newDefaultHome) {
               // Set first remaining home as default
-              const newDefaultHome = remainingHomes[0];
               setSelectedHomeId(newDefaultHome.id);
               // Clear orphaned pantry selection - useDefaultHome will auto-select new home's default
               setSelectedPantryId(null);

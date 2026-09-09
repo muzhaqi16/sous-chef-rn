@@ -209,7 +209,7 @@ export function getInitials(displayName?: string | null): string {
   if (!displayName) return '?';
 
   // Remove email domain if present
-  const name = displayName.split('@')[0];
+  const name = displayName.split('@')[0] ?? displayName;
 
   // Get first character and uppercase
   const initial = name.trim().charAt(0).toUpperCase();

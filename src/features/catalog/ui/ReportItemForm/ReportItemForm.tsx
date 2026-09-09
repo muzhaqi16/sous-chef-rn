@@ -45,7 +45,8 @@ export const ReportItemForm: React.FC<ReportItemFormProps> = ({
   const trimmedReason = reason.trim();
   const reasonTooShort = trimmedReason.length < MIN_EDIT_REASON_LENGTH;
 
-  const onlyCandidateId = candidates.length === 1 ? candidates[0].id : null;
+  const onlyCandidateId =
+    candidates.length === 1 ? candidates[0]?.id ?? null : null;
   const targetId = selectedId ?? onlyCandidateId;
   const target = candidates.find(item => item.id === targetId);
 

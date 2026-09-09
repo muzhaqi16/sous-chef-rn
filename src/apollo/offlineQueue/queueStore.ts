@@ -248,10 +248,11 @@ export class QueueStore {
     const queue = this.loadQueue();
     const index = queue.findIndex(m => m.id === mutationId);
 
-    if (index === -1) return false;
+    const existing = queue[index];
+    if (!existing) return false;
 
     queue[index] = {
-      ...queue[index],
+      ...existing,
       ...updates,
       updatedAt: Date.now(),
     };

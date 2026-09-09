@@ -53,17 +53,22 @@ describe('feature locale registration', () => {
       const entry = FEATURE_LOCALES[feature];
 
       for (const locale of LOCALES) {
-        expect(entry[locale]).toBeDefined();
+        expect(entry![locale]).toBeDefined();
         // A registered tree that resolved to `{}` would merge nothing and look
         // exactly like a working one.
-        expect(Object.keys(entry[locale]).length).toBeGreaterThan(0);
+        expect(Object.keys(entry![locale]).length).toBeGreaterThan(0);
       }
     },
   );
 
   it.each(onDisk.map(name => [name]))('%s ships all four locales', feature => {
     for (const locale of LOCALES) {
-      const file = path.join(FEATURES_DIR, feature, 'locales', `${locale}.json`);
+      const file = path.join(
+        FEATURES_DIR,
+        feature,
+        'locales',
+        `${locale}.json`,
+      );
       expect(fs.existsSync(file)).toBe(true);
     }
   });

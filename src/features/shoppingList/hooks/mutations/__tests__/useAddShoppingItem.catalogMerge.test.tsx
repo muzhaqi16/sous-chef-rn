@@ -97,7 +97,7 @@ const echoMock = (): MockedResponse => ({
   result: (vars: { input: { items: { id: string }[] } }) => ({
     data: {
       addItemsToShoppingList: batchPayload(
-        payloadItem(vars.input.items[0].id),
+        payloadItem(vars.input.items[0]!.id),
         false,
       ),
     },

@@ -21,4 +21,6 @@ export const PRIORITY_OPTION_BY_VALUE: Record<number, string> = {
 
 /** `'low'` → `'shoppingListScreens.priorityLow'`. */
 export const priorityLabelKey = (option: string): string =>
-  `shoppingListScreens.priority${option[0].toUpperCase()}${option.slice(1)}`;
+  `shoppingListScreens.priority${option[0]?.toUpperCase() ?? ''}${option.slice(
+    1,
+  )}`;

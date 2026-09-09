@@ -49,20 +49,24 @@ jest.mock('#features/shoppingList/hooks/useShoppingListDetails', () => ({
   useShoppingListDetails: () => ({ shoppingList: { id: 'list-1' } }),
 }));
 let mockListCanAddItems = true;
+let mockListResolved = true;
 jest.mock('#features/shoppingList/hooks/useShoppingListPermissions', () => ({
   useShoppingListPermissions: () => ({
     canAddItems: mockListCanAddItems,
     canRemoveItems: true,
     canEditItems: true,
     canMarkPurchased: true,
-    resolved: true,
+    resolved: mockListResolved,
   }),
 }));
 
-// The screen returns early without a selected list, so the cart can't fire.
+let mockSelectedListId: string | null = 'list-1';
 jest.mock('#store/useAppStore', () => {
   const actual = jest.requireActual('#store/useAppStore');
-  return { ...actual, useSelectedShoppingListId: () => 'list-1' };
+  return {
+    ...actual,
+    useSelectedShoppingListId: () => mockSelectedListId,
+  };
 });
 
 type AddToList = (
@@ -262,6 +266,26 @@ describe('FilteredPantryItems', () => {
       }
     });
 
+    // No list chosen is not a refusal — it is not an answer. Withholding the
+    // cart there removes the only affordance that can say which list to pick,
+    // and the screen's own prompt for that becomes unreachable.
+    it('still offers the cart when no shopping list has been chosen', () => {
+      mockSelectedListId = null;
+      mockListResolved = false;
+      mockListCanAddItems = false;
+      try {
+        renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+
+        expect(
+          screen.queryAllByLabelText('Add to Shopping List').length,
+        ).toBeGreaterThan(0);
+      } finally {
+        mockSelectedListId = 'list-1';
+        mockListResolved = true;
+        mockListCanAddItems = true;
+      }
+    });
+
     it('sends the CATALOG item id to the shopping list, not the row id', async () => {
       // `item: { itemId }` is an @oneOf ItemRefInput the server resolves as a
       // catalog Item. Sending the PantryItem's own id is refused every time,
@@ -269,14 +293,14 @@ describe('FilteredPantryItems', () => {
       // sometimes fails.
       renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
 
-      fireEvent.press(screen.getAllByLabelText('Add to Shopping List')[0]);
+      fireEvent.press(screen.getAllByLabelText('Add to Shopping List')[0]!);
 
       await waitFor(() => expect(mockAddToList).toHaveBeenCalled());
       // The fixtures give every row a catalog id unlike its own, so passing
       // the row id through is visible rather than coincidentally equal.
-      const [sentId] = mockAddToList.mock.calls[0];
-      expect(sentId).toBe(`catalog-${mockLowStockItems[0].id}`);
-      expect(sentId).not.toBe(mockLowStockItems[0].id);
+      const [sentId] = mockAddToList.mock.calls[0]!;
+      expect(sentId).toBe(`catalog-${mockLowStockItems[0]!.id}`);
+      expect(sentId).not.toBe(mockLowStockItems[0]!.id);
     });
 
     it('renders low stock item names', () => {

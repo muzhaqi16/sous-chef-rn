@@ -464,7 +464,7 @@ describe('cache', () => {
       });
       // sl-2 should be gone since all items fit in one page now
       expect(result?.home.shoppingListsConnection.edges).toHaveLength(1);
-      expect(result?.home.shoppingListsConnection.edges[0].node.id).toBe(
+      expect(result?.home.shoppingListsConnection.edges[0]!.node.id).toBe(
         'sl-1',
       );
     });
@@ -918,7 +918,7 @@ describe('cache', () => {
         variables: { homeId: 'h1' },
       });
       expect(result?.pantries).toHaveLength(1);
-      expect(result?.pantries?.[0].name).toBe('Garage');
+      expect(result?.pantries?.[0]!.name).toBe('Garage');
     });
   });
 
@@ -1014,7 +1014,7 @@ describe('cache', () => {
         variables: { pantryId: 'p1' },
       });
       expect(result?.pantryItemSuggestions).toHaveLength(1);
-      expect(result?.pantryItemSuggestions?.[0].name).toBe('Eggs');
+      expect(result?.pantryItemSuggestions?.[0]!.name).toBe('Eggs');
     });
   });
 
@@ -1284,7 +1284,7 @@ describe('cache', () => {
         variables: { id: 'p1' },
       });
       expect(result?.pantry.itemsConnection.edges).toHaveLength(1);
-      expect(result?.pantry.itemsConnection.edges[0].node.id).toBe('pi-1');
+      expect(result?.pantry.itemsConnection.edges[0]!.node.id).toBe('pi-1');
     });
   });
 
@@ -1828,7 +1828,7 @@ describe('cache', () => {
         variables: { id: 'list-1' },
       });
       expect(result?.shoppingList.itemsConnection.edges).toHaveLength(1);
-      expect(result?.shoppingList.itemsConnection.edges[0].node.id).toBe(
+      expect(result?.shoppingList.itemsConnection.edges[0]!.node.id).toBe(
         'si-1',
       );
     });

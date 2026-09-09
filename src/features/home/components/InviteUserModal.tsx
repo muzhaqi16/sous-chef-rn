@@ -142,10 +142,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
   });
 
   // Use first available role as default
-  const defaultRole =
-    availableRoleOptions.length > 0
-      ? availableRoleOptions[0].value
-      : MembershipRole.Member;
+  const defaultRole = availableRoleOptions[0]?.value ?? MembershipRole.Member;
 
   // `error` is the SUBMISSION failure (a server refusal, an offline attempt) —
   // the field's own message lives on the field, where it can be corrected.

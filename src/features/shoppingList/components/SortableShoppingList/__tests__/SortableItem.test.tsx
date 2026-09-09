@@ -431,14 +431,14 @@ describe('SwipeableListItem (SortableItem)', () => {
       );
 
       const last = swipeableProps[swipeableProps.length - 1];
-      expect(last.leftActions).toHaveLength(1);
-      expect(last.rightActions).toHaveLength(1);
+      expect(last!.leftActions).toHaveLength(1);
+      expect(last!.rightActions).toHaveLength(1);
 
       // The descriptor must carry the screen's handler, not a wrapper that
       // silently no-ops — that is the shape the dead buttons had.
-      (last.leftActions as { onPress: () => void }[])[0].onPress();
+      (last!.leftActions as { onPress: () => void }[])[0]!.onPress();
       expect(onEdit).toHaveBeenCalledWith(entry.id);
-      (last.rightActions as { onPress: () => void }[])[0].onPress();
+      (last!.rightActions as { onPress: () => void }[])[0]!.onPress();
       expect(onDelete).toHaveBeenCalledWith(entry.id);
     });
 
@@ -452,8 +452,8 @@ describe('SwipeableListItem (SortableItem)', () => {
       );
 
       const last = swipeableProps[swipeableProps.length - 1];
-      expect(last.leftActions).toBeUndefined();
-      expect(last.rightActions).toBeUndefined();
+      expect(last!.leftActions).toBeUndefined();
+      expect(last!.rightActions).toBeUndefined();
     });
 
     it('withholds edit and delete that the permissions forbid', () => {
@@ -474,8 +474,8 @@ describe('SwipeableListItem (SortableItem)', () => {
       );
 
       const last = swipeableProps[swipeableProps.length - 1];
-      expect(last.leftActions).toBeUndefined();
-      expect(last.rightActions).toBeUndefined();
+      expect(last!.leftActions).toBeUndefined();
+      expect(last!.rightActions).toBeUndefined();
     });
   });
 

@@ -47,7 +47,7 @@ const resolve = (spec: string, from: string): string | null => {
       .sort((a, b) => b.length - a.length)
       .find(a => spec === a || spec.startsWith(`${a}/`));
     if (!alias) return null;
-    base = path.join(ROOT, ALIASES[alias], spec.slice(alias.length));
+    base = path.join(ROOT, ALIASES[alias]!, spec.slice(alias.length));
   }
   for (const candidate of [
     base,
@@ -69,8 +69,10 @@ const reachable = (entry: string): Set<string> => {
   while (queue.length) {
     const file = queue.pop()!;
     if (file.endsWith('.json')) continue;
-    for (const [, spec] of fs.readFileSync(file, 'utf8').matchAll(IMPORT_SOURCE)) {
-      const next = resolve(spec, file);
+    for (const [, spec] of fs
+      .readFileSync(file, 'utf8')
+      .matchAll(IMPORT_SOURCE)) {
+      const next = resolve(spec!, file);
       if (next && !seen.has(next)) {
         seen.add(next);
         queue.push(next);

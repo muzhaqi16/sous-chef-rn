@@ -153,9 +153,9 @@ export interface AuthState {
 const BIOMETRIC_BACKOFF_SECONDS = [0, 30, 60, 180, 300];
 
 const backoffForAttempt = (attempt: number): number =>
-  BIOMETRIC_BACKOFF_SECONDS[
-    Math.min(attempt, BIOMETRIC_BACKOFF_SECONDS.length - 1)
-  ] * 1000;
+  (BIOMETRIC_BACKOFF_SECONDS[
+    Math.min(Math.max(attempt, 0), BIOMETRIC_BACKOFF_SECONDS.length - 1)
+  ] ?? 0) * 1000;
 
 const initialAuthState = {
   user: null,

@@ -44,8 +44,8 @@ describe('useShoppingListTransformMulti', () => {
 
     expect(result.current.unpurchasedItems).toHaveLength(1);
     expect(result.current.purchasedItems).toHaveLength(1);
-    expect(result.current.unpurchasedItems[0].id).toBe('1');
-    expect(result.current.purchasedItems[0].id).toBe('2');
+    expect(result.current.unpurchasedItems[0]!.id).toBe('1');
+    expect(result.current.purchasedItems[0]!.id).toBe('2');
   });
 
   it('pins isPurchased to the unpurchased tab regardless of server value', () => {
@@ -65,7 +65,7 @@ describe('useShoppingListTransformMulti', () => {
       }),
     );
 
-    expect(result.current.unpurchasedItems[0].isPurchased).toBe(false);
+    expect(result.current.unpurchasedItems[0]!.isPurchased).toBe(false);
   });
 
   it('pins isPurchased to the purchased tab regardless of server value', () => {
@@ -85,7 +85,7 @@ describe('useShoppingListTransformMulti', () => {
       }),
     );
 
-    expect(result.current.purchasedItems[0].isPurchased).toBe(true);
+    expect(result.current.purchasedItems[0]!.isPurchased).toBe(true);
   });
 
   it('skips invalid items (missing id or itemName)', () => {
@@ -101,7 +101,7 @@ describe('useShoppingListTransformMulti', () => {
     );
 
     expect(result.current.unpurchasedItems).toHaveLength(1);
-    expect(result.current.unpurchasedItems[0].id).toBe('3');
+    expect(result.current.unpurchasedItems[0]!.id).toBe('3');
   });
 
   it('preserves sortOrder on the row wrapper', () => {
@@ -112,7 +112,7 @@ describe('useShoppingListTransformMulti', () => {
       }),
     );
 
-    expect(result.current.unpurchasedItems[0].sortOrder).toBe('zzz');
+    expect(result.current.unpurchasedItems[0]!.sortOrder).toBe('zzz');
   });
 
   it('exposes the node as a fragment ref on `itemRef`', () => {
@@ -124,7 +124,7 @@ describe('useShoppingListTransformMulti', () => {
       }),
     );
 
-    expect(result.current.unpurchasedItems[0].itemRef).toBe(n);
+    expect(result.current.unpurchasedItems[0]!.itemRef).toBe(n);
   });
 
   it('returns stable arrays when input arrays are stable', () => {
@@ -168,7 +168,7 @@ describe('useShoppingListTransformMulti', () => {
 
     expect(result.current.unpurchasedItems).toHaveLength(2);
     expect(result.current.unpurchasedItems[0]).toBe(rowBefore);
-    expect(result.current.unpurchasedItems[1].id).toBe('2');
+    expect(result.current.unpurchasedItems[1]!.id).toBe('2');
   });
 
   it('produces a new row when the node object itself changes', () => {
@@ -191,7 +191,7 @@ describe('useShoppingListTransformMulti', () => {
     rerender({ u: [after] });
 
     expect(result.current.unpurchasedItems[0]).not.toBe(rowBefore);
-    expect(result.current.unpurchasedItems[0].sortOrder).toBe('bbb');
+    expect(result.current.unpurchasedItems[0]!.sortOrder).toBe('bbb');
   });
 
   it('keeps separate rows per tab for the same node', () => {
@@ -209,8 +209,8 @@ describe('useShoppingListTransformMulti', () => {
     expect(result.current.unpurchasedItems[0]).not.toBe(
       result.current.purchasedItems[0],
     );
-    expect(result.current.unpurchasedItems[0].isPurchased).toBe(false);
-    expect(result.current.purchasedItems[0].isPurchased).toBe(true);
+    expect(result.current.unpurchasedItems[0]!.isPurchased).toBe(false);
+    expect(result.current.purchasedItems[0]!.isPurchased).toBe(true);
   });
 
   it('returns empty arrays for empty inputs', () => {

@@ -255,8 +255,8 @@ describe('useRecipeReviews', () => {
     await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
 
     // rev-1 has helpful=3, rev-2 has helpful=1
-    expect(result.current.state.reviews[0].id).toBe('rev-1');
-    expect(result.current.state.reviews[1].id).toBe('rev-2');
+    expect(result.current.state.reviews[0]!.id).toBe('rev-1');
+    expect(result.current.state.reviews[1]!.id).toBe('rev-2');
   });
 
   it('identifies current user review', async () => {
@@ -324,11 +324,11 @@ describe('useRecipeReviews', () => {
 
     // rev-1 comes back with viewerHasVotedHelpful: true …
     expect(
-      result.current.actions.hasVotedHelpful(result.current.state.reviews[0]),
+      result.current.actions.hasVotedHelpful(result.current.state.reviews[0]!),
     ).toBe(true);
     // … rev-2 with false.
     expect(
-      result.current.actions.hasVotedHelpful(result.current.state.reviews[1]),
+      result.current.actions.hasVotedHelpful(result.current.state.reviews[1]!),
     ).toBe(false);
   });
 

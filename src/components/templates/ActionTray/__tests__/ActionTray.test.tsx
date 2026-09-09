@@ -148,7 +148,7 @@ describe('ActionTray', () => {
         if (!listeners[event]) listeners[event] = [];
         listeners[event].push(cb);
         return () => {
-          listeners[event] = listeners[event].filter(l => l !== cb);
+          listeners[event] = listeners[event]!.filter(l => l !== cb);
         };
       }),
     } as MockNavigation;

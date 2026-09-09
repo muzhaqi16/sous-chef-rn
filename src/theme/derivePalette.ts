@@ -43,8 +43,9 @@ export function derivePalette(hex: string): DerivedPalette {
     .colors(SHADE_KEYS.length);
 
   const palette = {} as DerivedPalette;
-  SHADE_KEYS.forEach((key, i) => {
-    palette[key] = scale[i];
+  scale.forEach((color, i) => {
+    const key = SHADE_KEYS[i];
+    if (key) palette[key] = color;
   });
 
   return palette;

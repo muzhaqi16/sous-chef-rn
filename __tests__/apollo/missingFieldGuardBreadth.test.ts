@@ -77,7 +77,7 @@ describe('the missing-field guard exempts nothing', () => {
 
     const [entry, ...rest] = drain();
     expect(rest).toEqual([]);
-    expect(entry.message).toContain("Missing field 'quantity'");
+    expect(entry!.message).toContain("Missing field 'quantity'");
   });
 
   it('reports every field of the purchase record, exempting none', () => {

@@ -176,9 +176,9 @@ describe('useSavedRecipes', () => {
     });
 
     await waitFor(() => expect(result.current.state.recipes).toHaveLength(2));
-    expect(result.current.state.recipes[0].id).toBe('sr-1');
-    expect(result.current.state.recipes[0].folder).toBe('Weeknight');
-    expect(result.current.state.recipes[0].tags).toEqual(['Quick']);
+    expect(result.current.state.recipes[0]!.id).toBe('sr-1');
+    expect(result.current.state.recipes[0]!.folder).toBe('Weeknight');
+    expect(result.current.state.recipes[0]!.tags).toEqual(['Quick']);
     expect(readName(result, 'sr-1')).toBe('Pasta');
   });
 
@@ -194,7 +194,7 @@ describe('useSavedRecipes', () => {
     });
 
     await waitFor(() => expect(result.current.state.recipes).toHaveLength(2));
-    expect(result.current.state.recipes[1].tags).toEqual([]);
+    expect(result.current.state.recipes[1]!.tags).toEqual([]);
   });
 
   it('returns totalCount and hasNextPage', async () => {
@@ -238,7 +238,7 @@ describe('useSavedRecipes', () => {
 
     const weeknight = result.current.actions.getRecipesByFolder('Weeknight');
     expect(weeknight).toHaveLength(1);
-    expect(readName(result, weeknight[0].id)).toBe('Pasta');
+    expect(readName(result, weeknight[0]!.id)).toBe('Pasta');
   });
 
   it('getRecipesByTag filters by tag', async () => {
@@ -252,7 +252,7 @@ describe('useSavedRecipes', () => {
 
     const quick = result.current.actions.getRecipesByTag('Quick');
     expect(quick).toHaveLength(1);
-    expect(readName(result, quick[0].id)).toBe('Pasta');
+    expect(readName(result, quick[0]!.id)).toBe('Pasta');
   });
 
   it('returns empty recipes when data is undefined (skipped via logged-out flag)', () => {

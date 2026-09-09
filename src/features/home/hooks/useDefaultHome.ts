@@ -451,7 +451,7 @@ export const useDefaultHome = () => {
   // account default, which is what accepting a first invitation leaves behind.
   useEffect(() => {
     if (!homesList || homesList.length !== 1) return;
-    if (!selectedHomeId || selectedHomeId !== homesList[0].id) return;
+    if (!selectedHomeId || selectedHomeId !== homesList[0]?.id) return;
     if (remoteDefaultHomeId && !isDefaultHomeSyncPending(remoteDefaultHomeId)) {
       return;
     }

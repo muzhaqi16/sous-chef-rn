@@ -225,8 +225,8 @@ export function useHomeDetailManagement(homeId: string) {
           });
           const remainingHomes = extractNodes(cachedData?.homes);
 
-          if (remainingHomes.length > 0) {
-            const newDefaultHome = remainingHomes[0];
+          const [newDefaultHome] = remainingHomes;
+          if (newDefaultHome) {
             setSelectedHomeId(newDefaultHome.id);
             setSelectedPantryId(null);
             void markAsDefault(newDefaultHome.id).then(({ status }) => {

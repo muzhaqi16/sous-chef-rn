@@ -59,9 +59,9 @@ function riskyBlocks(file: string): Block[] {
   for (const match of src.matchAll(/^[ \t]*fontSize:[ \t]*(.+?),[ \t]*$/gm)) {
     const value = match[1];
     const token = RISKY_TOKENS.find(t =>
-      new RegExp(`\\['${t}'\\]|\\.${t}\\b`).test(value),
+      new RegExp(`\\['${t}'\\]|\\.${t}\\b`).test(value!),
     );
-    const trimmed = value.trim();
+    const trimmed = value!.trim();
     const literal = /^\d+$/.test(trimmed) ? Number(trimmed) : undefined;
     if (!token && !(literal !== undefined && literal >= RISK_PX)) continue;
 

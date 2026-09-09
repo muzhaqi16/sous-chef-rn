@@ -63,7 +63,7 @@ function emittedMetrics(): Set<string> {
   const names = new Set<string>();
   for (const file of sourceFiles(SRC)) {
     const src = fs.readFileSync(file, 'utf8');
-    for (const match of src.matchAll(METRIC_CALL)) names.add(match[1]);
+    for (const match of src.matchAll(METRIC_CALL)) names.add(match[1]!);
   }
   return names;
 }
@@ -73,7 +73,7 @@ function documentedMetrics(): Set<string> {
   const doc = fs.readFileSync(CONTRACT_DOC, 'utf8');
   const names = new Set<string>();
   for (const match of doc.matchAll(/^\|\s*`([a-z0-9_]+)`\s*\|/gm)) {
-    names.add(match[1]);
+    names.add(match[1]!);
   }
   return names;
 }

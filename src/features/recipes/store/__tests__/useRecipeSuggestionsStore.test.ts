@@ -73,7 +73,7 @@ describe('useRecipeSuggestionsStore', () => {
         .setCachedSuggestions('item', recipes);
       useRecipeSuggestionsStore.setState(state => {
         state.cache.item = {
-          ...state.cache.item,
+          ...state.cache.item!,
           cachedAt: Date.now() - 8 * 24 * 60 * 60 * 1000,
         };
         return state;
@@ -97,7 +97,7 @@ describe('useRecipeSuggestionsStore', () => {
       // Expire 'old' entry
       useRecipeSuggestionsStore.setState(state => {
         state.cache.old = {
-          ...state.cache.old,
+          ...state.cache.old!,
           cachedAt: Date.now() - 8 * 24 * 60 * 60 * 1000,
         };
         return state;

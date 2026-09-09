@@ -214,9 +214,7 @@ class MemoryMonitorService {
    * @returns Latest memory snapshot or null
    */
   getLatestSnapshot(): MemorySnapshot | null {
-    return this.snapshots.length > 0
-      ? this.snapshots[this.snapshots.length - 1]
-      : null;
+    return this.snapshots[this.snapshots.length - 1] ?? null;
   }
 
   /**

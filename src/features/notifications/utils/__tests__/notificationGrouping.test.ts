@@ -114,7 +114,7 @@ describe('createNotificationFeedRows', () => {
       older: [],
     });
     expect(rows).toHaveLength(2);
-    expect(rows[0].kind).toBe('header');
+    expect(rows[0]!.kind).toBe('header');
     expect(rows[1]).toEqual({ kind: 'item', notification: urgent });
   });
 

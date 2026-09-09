@@ -128,7 +128,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   // FlashList slot during initial restore.
   const itemName = data?.itemName ?? '';
   const category = data?.category ?? null;
-  const subtitle = category?.split(',')[0].trim() || undefined;
+  const subtitle = category?.split(',')[0]?.trim() || undefined;
   const quantity = data?.quantity ?? 0;
   const quantityInput = data?.quantityInput ?? null;
   const unitDisplay = data?.unitName || data?.unit?.symbol || undefined;

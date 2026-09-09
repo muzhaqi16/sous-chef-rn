@@ -55,7 +55,7 @@ export const ItemAutocompleteField: React.FC<ItemAutocompleteFieldProps> = ({
           image={resolveImageUrl(i) ?? null}
           title={i.name}
           subtitle={
-            showBrand && i.brands?.length === 1 ? i.brands[0].name : undefined
+            showBrand && i.brands?.length === 1 ? i.brands[0]?.name : undefined
           }
         />
       )}

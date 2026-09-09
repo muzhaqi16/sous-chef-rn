@@ -87,7 +87,7 @@ export const RecipeInstructions: React.FC<RecipeInstructionsProps> = ({
           return <Step key={index} num={stepNum} text={stepText} />;
         })}
       {!!hasAnalyzedInstructions &&
-        (instructions as AnalyzedInstruction[])[0].steps.map((step, index) => (
+        (instructions as AnalyzedInstruction[])[0]?.steps.map((step, index) => (
           <Step key={index} num={step.number} text={step.step} />
         ))}
       {!hasBackendInstructions &&

@@ -84,15 +84,15 @@ describe('NativePerformanceService', () => {
       expect(observers).toHaveLength(3);
 
       // Verify each observer was told to observe a specific type
-      expect(observers[0].observe).toHaveBeenCalledWith({
+      expect(observers[0]!.observe).toHaveBeenCalledWith({
         type: 'react-native-mark',
         buffered: true,
       });
-      expect(observers[1].observe).toHaveBeenCalledWith({
+      expect(observers[1]!.observe).toHaveBeenCalledWith({
         type: 'measure',
         buffered: true,
       });
-      expect(observers[2].observe).toHaveBeenCalledWith({
+      expect(observers[2]!.observe).toHaveBeenCalledWith({
         type: 'resource',
         buffered: true,
       });
@@ -159,7 +159,7 @@ describe('NativePerformanceService', () => {
       NativePerformanceService.initialize();
       const nativeMarkObserver = observers[0];
 
-      nativeMarkObserver._callback({
+      nativeMarkObserver!._callback({
         getEntries: () => [
           { name: 'nativeLaunchStart', startTime: 100 },
           { name: 'nativeLaunchEnd', startTime: 350 },
@@ -177,7 +177,7 @@ describe('NativePerformanceService', () => {
       NativePerformanceService.initialize();
       const nativeMarkObserver = observers[0];
 
-      nativeMarkObserver._callback({
+      nativeMarkObserver!._callback({
         getEntries: () => [
           { name: 'runJsBundleStart', startTime: 400 },
           { name: 'runJsBundleEnd', startTime: 600 },
@@ -196,7 +196,7 @@ describe('NativePerformanceService', () => {
       // begins at JS-bundle entry, so none of them can see a frame at all.
       NativePerformanceService.initialize();
 
-      observers[0]._callback({
+      observers[0]!._callback({
         getEntries: () => [
           { name: 'nativeLaunchStart', startTime: 100 },
           { name: 'contentAppeared', startTime: 950 },
@@ -221,8 +221,8 @@ describe('NativePerformanceService', () => {
         ],
       };
 
-      observers[0]._callback(entries);
-      observers[0]._callback(entries);
+      observers[0]!._callback(entries);
+      observers[0]!._callback(entries);
 
       const reports = (Telemetry.histogram as jest.Mock).mock.calls.filter(
         ([name]) => name === 'app_content_appeared_ms',
@@ -238,7 +238,7 @@ describe('NativePerformanceService', () => {
       // mark flush, so it is the one that arrives alone.
       NativePerformanceService.initialize();
 
-      observers[0]._callback({
+      observers[0]!._callback({
         getEntries: () => [{ name: 'nativeLaunchStart', startTime: 100 }],
       });
       expect(Telemetry.histogram).not.toHaveBeenCalledWith(
@@ -246,7 +246,7 @@ describe('NativePerformanceService', () => {
         expect.anything(),
       );
 
-      observers[0]._callback({
+      observers[0]!._callback({
         getEntries: () => [{ name: 'contentAppeared', startTime: 950 }],
       });
 
@@ -259,10 +259,10 @@ describe('NativePerformanceService', () => {
     it('derives a metric when the marks arrive in the reverse order', () => {
       NativePerformanceService.initialize();
 
-      observers[0]._callback({
+      observers[0]!._callback({
         getEntries: () => [{ name: 'contentAppeared', startTime: 950 }],
       });
-      observers[0]._callback({
+      observers[0]!._callback({
         getEntries: () => [{ name: 'nativeLaunchStart', startTime: 100 }],
       });
 
@@ -277,13 +277,13 @@ describe('NativePerformanceService', () => {
       // marks happen to be flushed together.
       NativePerformanceService.initialize();
 
-      observers[0]._callback({
+      observers[0]!._callback({
         getEntries: () => [
           { name: 'nativeLaunchStart', startTime: 100 },
           { name: 'runJsBundleStart', startTime: 300 },
         ],
       });
-      observers[0]._callback({
+      observers[0]!._callback({
         getEntries: () => [
           { name: 'nativeLaunchEnd', startTime: 250 },
           { name: 'runJsBundleEnd', startTime: 700 },
@@ -311,10 +311,10 @@ describe('NativePerformanceService', () => {
       const second = {
         getEntries: () => [{ name: 'contentAppeared', startTime: 950 }],
       };
-      observers[0]._callback(first);
-      observers[0]._callback(second);
-      observers[0]._callback(second);
-      observers[0]._callback(first);
+      observers[0]!._callback(first);
+      observers[0]!._callback(second);
+      observers[0]!._callback(second);
+      observers[0]!._callback(first);
 
       const reports = (Telemetry.histogram as jest.Mock).mock.calls.filter(
         ([name]) => name === 'app_content_appeared_ms',
@@ -325,7 +325,7 @@ describe('NativePerformanceService', () => {
     it('waits for both marks rather than reporting a partial launch', () => {
       NativePerformanceService.initialize();
 
-      observers[0]._callback({
+      observers[0]!._callback({
         getEntries: () => [{ name: 'contentAppeared', startTime: 950 }],
       });
 
@@ -341,7 +341,7 @@ describe('NativePerformanceService', () => {
       NativePerformanceService.initialize();
       const measObserver = observers[1];
 
-      measObserver._callback({
+      measObserver!._callback({
         getEntries: () => [{ name: 'screen:Home:interactive', duration: 120 }],
       });
 
@@ -356,7 +356,7 @@ describe('NativePerformanceService', () => {
       NativePerformanceService.initialize();
       const measObserver = observers[1];
 
-      measObserver._callback({
+      measObserver!._callback({
         getEntries: () => [
           { name: 'screen:Home:mount', duration: 120 },
           { name: 'screen:Home:transition', duration: 120 },
@@ -372,7 +372,7 @@ describe('NativePerformanceService', () => {
       NativePerformanceService.initialize();
       const measObserver = observers[1];
 
-      measObserver._callback({
+      measObserver!._callback({
         getEntries: () => [{ name: 'component:MyList:render', duration: 15 }],
       });
 
@@ -670,7 +670,7 @@ describe('NativePerformanceService', () => {
       NativePerformanceService.initialize();
       const resObserver = observers[2];
 
-      resObserver._callback({
+      resObserver!._callback({
         getEntries: () => [
           { name: 'https://api.example.com/graphql', duration: 200 },
         ],
@@ -684,7 +684,7 @@ describe('NativePerformanceService', () => {
       NativePerformanceService.initialize();
       const resObserver = observers[2];
 
-      resObserver._callback({
+      resObserver!._callback({
         getEntries: () => [
           { name: 'https://cdn.example.com/image.png', duration: 150 },
         ],

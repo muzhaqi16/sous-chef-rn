@@ -364,7 +364,7 @@ describe('cache pagination integration', () => {
       });
 
       expect(readEdges(cache)).toHaveLength(1);
-      expect(readEdges(cache)[0].node.id).toBe('m-1');
+      expect(readEdges(cache)[0]!.node.id).toBe('m-1');
     });
   });
 
@@ -535,7 +535,7 @@ describe('cache pagination integration', () => {
       });
 
       expect(readEdges(cache)).toHaveLength(1);
-      expect(readEdges(cache)[0].node.id).toBe('si-1');
+      expect(readEdges(cache)[0]!.node.id).toBe('si-1');
     });
 
     it('filter separation: different filters create independent cache entries', () => {
@@ -567,7 +567,7 @@ describe('cache pagination integration', () => {
       // Read default — should only have si-1
       const defaultEdges = readEdges(cache);
       expect(defaultEdges).toHaveLength(1);
-      expect(defaultEdges[0].node.id).toBe('si-1');
+      expect(defaultEdges[0]!.node.id).toBe('si-1');
 
       // Read filtered — should only have si-2
       const filteredResult = cache.readQuery<ShoppingListItemsResult>({
@@ -577,7 +577,7 @@ describe('cache pagination integration', () => {
       const filteredEdges =
         filteredResult?.shoppingList?.itemsConnection?.edges ?? [];
       expect(filteredEdges).toHaveLength(1);
-      expect(filteredEdges[0].node.id).toBe('si-2');
+      expect(filteredEdges[0]!.node.id).toBe('si-2');
     });
 
     it('cursor-based fetchMore with all-duplicate edges preserves existing pageInfo', () => {
@@ -914,7 +914,7 @@ describe('cache pagination integration', () => {
       });
 
       expect(readEdges(cache)).toHaveLength(1);
-      expect(readEdges(cache)[0].node.id).toBe('pi-1');
+      expect(readEdges(cache)[0]!.node.id).toBe('pi-1');
     });
 
     it('orderBy separation: different orderBy create separate cache entries', () => {
@@ -1075,7 +1075,7 @@ describe('cache pagination integration', () => {
       });
 
       expect(readEdges(cache)).toHaveLength(1);
-      expect(readEdges(cache)[0].node.id).toBe('r-1');
+      expect(readEdges(cache)[0]!.node.id).toBe('r-1');
     });
 
     it('keeps different filter sets in distinct cache entries', () => {

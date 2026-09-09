@@ -85,7 +85,7 @@ export function deviceRegion(): string | null {
   // "en-US" / "sq-AL" / "zh-Hans-CN" — the region is the 2-letter subtag.
   const match = /(?:^|-)([A-Z]{2})(?:-|$)/.exec(locale);
   if (!match) return null;
-  return match[1];
+  return match[1] ?? null;
 }
 
 /**

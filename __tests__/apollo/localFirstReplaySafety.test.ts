@@ -52,36 +52,38 @@ const IDEMPOTENCY_KEYS = ['id', 'clientId', 'idempotencyKey'];
  * Nothing may be ADDED here without the same argument being written down. A new
  * local-first operation that is neither sync-mapped nor idempotent fails.
  */
-const REPLAY_SAFETY_BASELINE: Record<string, 'absolute-update' | 'bulk-create'> =
-  {
-    AddDietaryRestriction: 'absolute-update',
-    AddItemsToShoppingListFromRecipe: 'bulk-create',
-    CreateFromTemplate: 'bulk-create',
-    CreateMealPlanFromTemplate: 'bulk-create',
-    CreateShoppingListItemsFromRecipe: 'bulk-create',
-    CreateTemplateFromMealPlan: 'bulk-create',
-    DeleteMultipleNotifications: 'absolute-update',
-    DeleteRecipeFolder: 'absolute-update',
-    MarkAllNotificationsAsRead: 'absolute-update',
-    MarkExpirationAction: 'absolute-update',
-    MarkExpirationNotificationAsRead: 'absolute-update',
-    // Sets `UserSettings.defaultHomeId` to one existing home id. There is one
-    // such field per user and the input names the home outright, so a replay
-    // writes the value already there — and a replay that lands AFTER the user
-    // picked a different home is the only real hazard, which the queue's own
-    // ordering (FIFO per user) settles in favour of the later pick.
-    MarkHomeAsDefault: 'absolute-update',
-    MovePurchasedItemsToPantry: 'bulk-create',
-    RemoveItemsFromShoppingList: 'absolute-update',
-    RemoveRecipeFromFavorites: 'absolute-update',
-    SendTestNotification: 'absolute-update',
-    UpdateDietaryProfile: 'absolute-update',
-    UpdateFavoriteRecipe: 'absolute-update',
-    UpdateNotificationPreferences: 'absolute-update',
-    UpdateRecipeIngredients: 'absolute-update',
-    UpdateUserPreferences: 'absolute-update',
-    UpdateUserProfile: 'absolute-update',
-  };
+const REPLAY_SAFETY_BASELINE: Record<
+  string,
+  'absolute-update' | 'bulk-create'
+> = {
+  AddDietaryRestriction: 'absolute-update',
+  AddItemsToShoppingListFromRecipe: 'bulk-create',
+  CreateFromTemplate: 'bulk-create',
+  CreateMealPlanFromTemplate: 'bulk-create',
+  CreateShoppingListItemsFromRecipe: 'bulk-create',
+  CreateTemplateFromMealPlan: 'bulk-create',
+  DeleteMultipleNotifications: 'absolute-update',
+  DeleteRecipeFolder: 'absolute-update',
+  MarkAllNotificationsAsRead: 'absolute-update',
+  MarkExpirationAction: 'absolute-update',
+  MarkExpirationNotificationAsRead: 'absolute-update',
+  // Sets `UserSettings.defaultHomeId` to one existing home id. There is one
+  // such field per user and the input names the home outright, so a replay
+  // writes the value already there — and a replay that lands AFTER the user
+  // picked a different home is the only real hazard, which the queue's own
+  // ordering (FIFO per user) settles in favour of the later pick.
+  MarkHomeAsDefault: 'absolute-update',
+  MovePurchasedItemsToPantry: 'bulk-create',
+  RemoveItemsFromShoppingList: 'absolute-update',
+  RemoveRecipeFromFavorites: 'absolute-update',
+  SendTestNotification: 'absolute-update',
+  UpdateDietaryProfile: 'absolute-update',
+  UpdateFavoriteRecipe: 'absolute-update',
+  UpdateNotificationPreferences: 'absolute-update',
+  UpdateRecipeIngredients: 'absolute-update',
+  UpdateUserPreferences: 'absolute-update',
+  UpdateUserProfile: 'absolute-update',
+};
 
 function walk(dir: string, test: (name: string) => boolean): string[] {
   const out: string[] = [];
@@ -135,11 +137,13 @@ function localFirstOperationNames(): Set<string> {
     const source = fs.readFileSync(file, 'utf8');
     if (!/localFirst:\s*true/.test(source)) continue;
     for (const match of source.matchAll(/\b([A-Z][A-Za-z0-9_]*)Document\b/g)) {
-      names.add(match[1]);
+      names.add(match[1]!);
     }
     // `useXMutation()` codegen hooks name the operation the same way.
-    for (const match of source.matchAll(/\buse([A-Z][A-Za-z0-9_]*)Mutation\b/g)) {
-      names.add(match[1]);
+    for (const match of source.matchAll(
+      /\buse([A-Z][A-Za-z0-9_]*)Mutation\b/g,
+    )) {
+      names.add(match[1]!);
     }
   }
   return names;
@@ -214,7 +218,9 @@ describe('local-first writes are replay-safe', () => {
     const stale = Object.keys(REPLAY_SAFETY_BASELINE).filter(name => {
       const operation = mutations.get(name);
       if (!operation || !candidates.includes(name)) return true;
-      return syncMapped.has(name) || hasIdempotentInput(schema, name, operation);
+      return (
+        syncMapped.has(name) || hasIdempotentInput(schema, name, operation)
+      );
     });
 
     expect(stale).toEqual([]);

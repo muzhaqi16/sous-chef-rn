@@ -46,8 +46,10 @@ function parseNutrition(data: unknown): NutrientRow[] {
       typeof rec.amount === 'number' ? rec.amount : Number(rec.amount);
     if (Number.isNaN(amount)) continue;
     const unit = typeof rec.unit === 'string' ? rec.unit : '';
+    const labelKey = MACRO_LABEL_KEYS[name];
+    if (!labelKey) continue;
     rows.push({
-      labelKey: MACRO_LABEL_KEYS[name],
+      labelKey,
       value: `${Math.round(amount)}${unit ? ` ${unit}` : ''}`,
     });
   }

@@ -350,13 +350,13 @@ describe('useOperationUnits', () => {
       await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(result.current.groups).toHaveLength(3);
-      expect(result.current.groups[0].type).toBe(UnitType.Weight);
-      expect(result.current.groups[0].label).toBe('Weight');
-      expect(result.current.groups[0].units).toHaveLength(2);
-      expect(result.current.groups[1].type).toBe(UnitType.Volume);
-      expect(result.current.groups[1].units).toHaveLength(1);
-      expect(result.current.groups[2].type).toBe(UnitType.Count);
-      expect(result.current.groups[2].units).toHaveLength(1);
+      expect(result.current.groups[0]!.type).toBe(UnitType.Weight);
+      expect(result.current.groups[0]!.label).toBe('Weight');
+      expect(result.current.groups[0]!.units).toHaveLength(2);
+      expect(result.current.groups[1]!.type).toBe(UnitType.Volume);
+      expect(result.current.groups[1]!.units).toHaveLength(1);
+      expect(result.current.groups[2]!.type).toBe(UnitType.Count);
+      expect(result.current.groups[2]!.units).toHaveLength(1);
       expect(result.current.allUnits).toHaveLength(4);
     });
   });

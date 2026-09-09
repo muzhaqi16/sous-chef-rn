@@ -49,21 +49,21 @@ Each of the thirteen boundary gates takes `--list` (every finding), `--update`
 is a debt list that may only shrink; an EMPTY one is an invariant, and any
 finding there is a regression to fix:
 
-| Gate | Holds | Baseline |
-| --- | --- | --- |
-| `check-data-layer-boundary` | a screen, sheet or cell may not run an operation, hold the client, or write the cache | 0 |
-| `check-hook-return-types` | a feature hook's return type may not name the data library — its companion, since the screen imports nothing | 0 |
-| `check-import-cycles` | no new LOAD-TIME import cycle; `import type` and `await import()` edges do not count | 0 |
-| `check-single-consumer` | a module in `components`/`hooks`/`context`/`utils`/`constants` used by exactly one feature belongs to that feature | hard rule |
-| `check-form-state` | a form holds its fields in react-hook-form, not `useState` | 70 |
-| `check-feature-enumeration` | a feature id in a string outside its feature is a place the feature list has to be remembered | 0 |
-| `check-canonical-mechanisms` | one mechanism per concern — the list primitive, the image component, the modal surface, the date formatter, the quantity formatter, device storage, the device identity. The full concern table, gates included, is § One mechanism per concern | 0 |
-| `check-design-tokens` | a visual property is a token, not a literal; a kit concept is not restyled in a feature | 0 failing / 9 colour + 161 icon-size tracked |
-| `check-typography-roles` | text is set by a named role, not by size and weight | 21 |
-| `check-component-tier` | a kit component sits in the tier its composition puts it in | 0 |
-| `check-screen-scaffold` | a screen's chrome comes from `Screen`, and nobody applies the top inset twice | 4 chrome / 0 double-inset |
-| `check-a11y-names` | a control with an `onPress` and no text child carries an `accessibilityLabel` | 0 |
-| `check-unnecessary-condition` | a condition the types say cannot matter — chiefly a function read without calling it | 240 files |
+| Gate                          | Holds                                                                                                                                                                                                                                           | Baseline                                     |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| `check-data-layer-boundary`   | a screen, sheet or cell may not run an operation, hold the client, or write the cache                                                                                                                                                           | 0                                            |
+| `check-hook-return-types`     | a feature hook's return type may not name the data library — its companion, since the screen imports nothing                                                                                                                                    | 0                                            |
+| `check-import-cycles`         | no new LOAD-TIME import cycle; `import type` and `await import()` edges do not count                                                                                                                                                            | 0                                            |
+| `check-single-consumer`       | a module in `components`/`hooks`/`context`/`utils`/`constants` used by exactly one feature belongs to that feature                                                                                                                              | hard rule                                    |
+| `check-form-state`            | a form holds its fields in react-hook-form, not `useState`                                                                                                                                                                                      | 70                                           |
+| `check-feature-enumeration`   | a feature id in a string outside its feature is a place the feature list has to be remembered                                                                                                                                                   | 0                                            |
+| `check-canonical-mechanisms`  | one mechanism per concern — the list primitive, the image component, the modal surface, the date formatter, the quantity formatter, device storage, the device identity. The full concern table, gates included, is § One mechanism per concern | 0                                            |
+| `check-design-tokens`         | a visual property is a token, not a literal; a kit concept is not restyled in a feature                                                                                                                                                         | 0 failing / 9 colour + 161 icon-size tracked |
+| `check-typography-roles`      | text is set by a named role, not by size and weight                                                                                                                                                                                             | 21                                           |
+| `check-component-tier`        | a kit component sits in the tier its composition puts it in                                                                                                                                                                                     | 0                                            |
+| `check-screen-scaffold`       | a screen's chrome comes from `Screen`, and nobody applies the top inset twice                                                                                                                                                                   | 4 chrome / 0 double-inset                    |
+| `check-a11y-names`            | a control with an `onPress` and no text child carries an `accessibilityLabel`                                                                                                                                                                   | 0                                            |
+| `check-unnecessary-condition` | a condition the types say cannot matter — chiefly a function read without calling it                                                                                                                                                            | 208 files                                    |
 
 When one reaches zero, promote it to a hard `import/no-restricted-paths` zone
 and delete the baseline — the same promotion the kit half of
@@ -219,13 +219,18 @@ scoping.
   emitted from an `if` condition, a ternary condition and the left operand of
   `&&`/`||` only, and `!fn` types as `boolean`, which has no call signatures.
 - **Never delete a runtime guard to satisfy that rule.** Three quarters of the
-  720 baselined findings are `?.` and null guards on data codegen types as
-  non-nullable and the server does not guarantee; most of the rest are index
-  reads, which `noUncheckedIndexedAccess` would make necessary again (it is off,
-  and turning it on is 409 errors). Delete a branch that is genuinely dead, or
-  widen the over-promising type where it is DECLARED — never with a cast, and
+  633 baselined findings are `?.` and null guards on data codegen types as
+  non-nullable and the server does not guarantee. Delete a branch that is dead,
+  or widen the over-promising type where it is DECLARED — never with a cast, and
   never at the call site. A guard that is neither stays, and its file stays in
   the baseline.
+- **`noUncheckedIndexedAccess` is on**, so `arr[0]`, `record[key]` and a regex
+  capture group each read as `T | undefined` and a guard on one is necessary
+  rather than noise. Prefer a binding and a guard —
+  `const [first] = xs; if (!first) return;` — over `!`, which is for tests. A
+  constant lookup table read only by literal keys belongs behind
+  `satisfies Record<…>`: a `Record<string, …>` ANNOTATION erases the key set and
+  makes every read optional.
 
 ## Comments
 
@@ -251,7 +256,7 @@ belongs in git.
   don't write `@param`/`@returns` that repeat the TypeScript signature. No
   `@example` blocks for internal helpers.
 - **Attach a doc to the thing it documents.** Eleven orphaned JSDoc blocks were
-  found stacked above a *different* declaration than the one they described,
+  found stacked above a _different_ declaration than the one they described,
   one of them 350 lines away. Use `{@link other}` instead of "the function
   above/below", which goes stale on a reorder.
 
@@ -326,7 +331,7 @@ Pick the cache-update pattern by what the mutation changes
 | `updateEntityFieldsLocalFirst`                | Settings-shaped entity whose field names ARE the setting names      | `useAppSettings`, `useNotificationSettings`                                |
 | `cache.modify` on connection edges + counts   | Entity moves between filtered connections                           | `moveShoppingListItemTo*` helpers                                          |
 | `writeFragment`                               | Subscription push written through                                   | `usePantrySubscriptions`, `useShoppingListSubscriptions`                   |
-| `refetchQueries` (last resort)                | Query shape underivable from the response                           | `useHomeSubscriptions`, `usePantryItemDetailActions`                      |
+| `refetchQueries` (last resort)                | Query shape underivable from the response                           | `useHomeSubscriptions`, `usePantryItemDetailActions`                       |
 
 Defaults:
 
@@ -503,31 +508,31 @@ container that arbitrates gestures, a key the session reset can find). The
 "Held by" column is what fails when you reach past it; a rule with no gate is
 one nobody has been able to express yet, not one that is optional.
 
-| Concern | Mechanism | Held by |
-| --- | --- | --- |
-| A list that can grow | `FlashList`, with an explicit `renderScrollComponent` | `check-canonical-mechanisms` · `flashListScrollComponents.test.ts` |
-| A remote image | `CachedImage` (`LocalImage` for a file or bundled asset) | `check-canonical-mechanisms` |
-| A modal surface | `BottomSheetModal` via `useStandardBottomSheet`, or `alertService` | `check-canonical-mechanisms` · `no-restricted-syntax` bans `present()`/`dismiss()` |
-| Rendering a date | the shared formatters in `src/utils` (`formatters/date`, `dateUtils`) | `check-canonical-mechanisms` |
-| Rendering a quantity | `formatQuantityForDisplay` (`#/utils/formatQuantity`) | `check-canonical-mechanisms` (on the `fraction.js` import) |
-| Device storage | a persisted slice of the Zustand store | `check-canonical-mechanisms` · `no-restricted-imports` on `#storage/mmkv` |
-| This device's identity | `getDeviceId()` sync, `ensureDeviceId()` async (`#/storage/deviceId`) | `check-canonical-mechanisms` |
-| A screen's chrome | `Screen` (`#components/templates/Screen`) | `check-screen-scaffold` |
-| A sheet's shell | `Sheet` (`#components/templates/Sheet`) | `bottomSheetShell.test.ts` |
-| A list row | `commonStyles.rowWrapper` + `rowSurface` + `rowContent`, its text set by `rowType` | — (no gate: a row is composed from views, so nothing tells one from any other row of views) |
-| A loading indicator | `Loading` / `LoadingBranded` (`#components/molecules/Loading`) | `check-canonical-mechanisms` |
-| A toast | `toastService` — in and out of the React tree alike | `no-restricted-syntax` on its arguments |
-| Navigating | `useAppNavigation` | `no-restricted-imports` on `useNavigation` |
-| Setting text | a typography ROLE (`<Text role="body">`) | `check-typography-roles` |
-| A colour, radius, z-index or spacing step | a `theme.*` token | `check-design-tokens` |
-| Elevation | a step of `theme.shadows` | `check-design-tokens` |
-| A duration, spring or curve | `theme.motion` | `check-design-tokens` (at or below the 300 ms scale ceiling; above it is a loop's own period) |
-| A form's fields | react-hook-form + a yup schema beside the form | `check-form-state` |
-| Searching a loaded list | `filterByTerm` / `useLocalSearch` (`#hooks/search/useLocalSearch`) | `check-canonical-mechanisms` |
-| Reduce motion | nothing — Reanimated applies it itself | `no-restricted-imports` on `useReducedMotion` · `probe-reanimated-reduce-motion.mjs` |
-| Memoization | nothing — the React Compiler does it | `check-compiler-bailouts` |
-| A shared actions bag | `createActionsContext` | — (no gate: a context holding callbacks is not distinguishable from any other context by shape) |
-| Where a value lives | Apollo if the server owns it, else a Zustand slice; a context only for what a subtree passes down | — (no gate: the choice is not visible at any one call site — `check-single-consumer` catches a context only one feature reaches, which is a different question) |
+| Concern                                   | Mechanism                                                                                         | Held by                                                                                                                                                         |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A list that can grow                      | `FlashList`, with an explicit `renderScrollComponent`                                             | `check-canonical-mechanisms` · `flashListScrollComponents.test.ts`                                                                                              |
+| A remote image                            | `CachedImage` (`LocalImage` for a file or bundled asset)                                          | `check-canonical-mechanisms`                                                                                                                                    |
+| A modal surface                           | `BottomSheetModal` via `useStandardBottomSheet`, or `alertService`                                | `check-canonical-mechanisms` · `no-restricted-syntax` bans `present()`/`dismiss()`                                                                              |
+| Rendering a date                          | the shared formatters in `src/utils` (`formatters/date`, `dateUtils`)                             | `check-canonical-mechanisms`                                                                                                                                    |
+| Rendering a quantity                      | `formatQuantityForDisplay` (`#/utils/formatQuantity`)                                             | `check-canonical-mechanisms` (on the `fraction.js` import)                                                                                                      |
+| Device storage                            | a persisted slice of the Zustand store                                                            | `check-canonical-mechanisms` · `no-restricted-imports` on `#storage/mmkv`                                                                                       |
+| This device's identity                    | `getDeviceId()` sync, `ensureDeviceId()` async (`#/storage/deviceId`)                             | `check-canonical-mechanisms`                                                                                                                                    |
+| A screen's chrome                         | `Screen` (`#components/templates/Screen`)                                                         | `check-screen-scaffold`                                                                                                                                         |
+| A sheet's shell                           | `Sheet` (`#components/templates/Sheet`)                                                           | `bottomSheetShell.test.ts`                                                                                                                                      |
+| A list row                                | `commonStyles.rowWrapper` + `rowSurface` + `rowContent`, its text set by `rowType`                | — (no gate: a row is composed from views, so nothing tells one from any other row of views)                                                                     |
+| A loading indicator                       | `Loading` / `LoadingBranded` (`#components/molecules/Loading`)                                    | `check-canonical-mechanisms`                                                                                                                                    |
+| A toast                                   | `toastService` — in and out of the React tree alike                                               | `no-restricted-syntax` on its arguments                                                                                                                         |
+| Navigating                                | `useAppNavigation`                                                                                | `no-restricted-imports` on `useNavigation`                                                                                                                      |
+| Setting text                              | a typography ROLE (`<Text role="body">`)                                                          | `check-typography-roles`                                                                                                                                        |
+| A colour, radius, z-index or spacing step | a `theme.*` token                                                                                 | `check-design-tokens`                                                                                                                                           |
+| Elevation                                 | a step of `theme.shadows`                                                                         | `check-design-tokens`                                                                                                                                           |
+| A duration, spring or curve               | `theme.motion`                                                                                    | `check-design-tokens` (at or below the 300 ms scale ceiling; above it is a loop's own period)                                                                   |
+| A form's fields                           | react-hook-form + a yup schema beside the form                                                    | `check-form-state`                                                                                                                                              |
+| Searching a loaded list                   | `filterByTerm` / `useLocalSearch` (`#hooks/search/useLocalSearch`)                                | `check-canonical-mechanisms`                                                                                                                                    |
+| Reduce motion                             | nothing — Reanimated applies it itself                                                            | `no-restricted-imports` on `useReducedMotion` · `probe-reanimated-reduce-motion.mjs`                                                                            |
+| Memoization                               | nothing — the React Compiler does it                                                              | `check-compiler-bailouts`                                                                                                                                       |
+| A shared actions bag                      | `createActionsContext`                                                                            | — (no gate: a context holding callbacks is not distinguishable from any other context by shape)                                                                 |
+| Where a value lives                       | Apollo if the server owns it, else a Zustand slice; a context only for what a subtree passes down | — (no gate: the choice is not visible at any one call site — `check-single-consumer` catches a context only one feature reaches, which is a different question) |
 
 When a gate's baseline reaches zero, promote it to an
 `import/no-restricted-paths` or `no-restricted-imports` zone and delete the
@@ -904,7 +909,7 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   English string. Pattern: `src/utils/validation/common.ts`.
 - **A cross-field rule needs an explicit `trigger()`.**
   `setValue(field, v, { shouldValidate: true })` re-validates THAT field only.
-  The all-or-nothing net-weight rule lives on the *unit* while its inputs are
+  The all-or-nothing net-weight rule lives on the _unit_ while its inputs are
   the weight and the unit id, so without
   `trigger('netWeightUnit')` typing a weight never raised the message and
   picking a unit never cleared it. Verified on device 2026-08-26.
@@ -1128,7 +1133,7 @@ infrastructure credential never qualifies. Decisions:
 
 **Launch-argument auth is gated on the ARTIFACT, not the environment.**
 `ALLOW_LAUNCH_ARG_AUTH` lets a build take a session from launch arguments, and
-`MODE=release npm run android` resolves to a development `NODE_ENV` *and* signs
+`MODE=release npm run android` resolves to a development `NODE_ENV` _and_ signs
 with the distribution key — so an environment test passes while the APK is one
 you could hand to someone. `scripts/check-launch-arg-auth.mjs --platform
 android --variant <name>` reads the variant's `signingConfig` out of

@@ -119,7 +119,7 @@ describe('barcodeScannerStore', () => {
       store.getState().addToRecentlyScanned(mockItem);
       store.getState().addToRecentlyScanned({ ...mockItem, name: 'Updated' });
       expect(store.getState().recentlyScanned).toHaveLength(1);
-      expect(store.getState().recentlyScanned[0].name).toBe('Updated');
+      expect(store.getState().recentlyScanned[0]!.name).toBe('Updated');
     });
 
     it('keeps only 10 items', () => {

@@ -464,14 +464,18 @@ export const ShoppingListMainContent: React.FC<
         <ListTemplate
           items={[]}
           loading={isLoadingInitial}
-          onItemPress={id =>
-            toShoppingListItemDetail({ listId: currentListId, itemId: id })
-          }
+          onItemPress={id => {
+            if (currentListId) {
+              toShoppingListItemDetail({ listId: currentListId, itemId: id });
+            }
+          }}
           itemSwipeActions={id => ({
             left: [
-              editAction(() =>
-                toEditItem({ listId: currentListId, itemId: id }),
-              ),
+              editAction(() => {
+                if (currentListId) {
+                  toEditItem({ listId: currentListId, itemId: id });
+                }
+              }),
             ],
             right: [
               { ...deleteAction(() => handleDeleteItem(id)), removesRow: true },

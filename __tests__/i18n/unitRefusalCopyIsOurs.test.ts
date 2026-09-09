@@ -32,7 +32,7 @@ it('every unit-refusal alert takes its body from the translator', () => {
     const source = read(file);
     const alerts = [
       ...source.matchAll(/errors\.invalidUnitTitle'\),\s*([^\n]+)/g),
-    ].map(m => m[1].trim());
+    ].map(m => m[1]!.trim());
 
     // Guards against the scan silently matching nothing.
     expect(alerts.length).toBeGreaterThan(0);

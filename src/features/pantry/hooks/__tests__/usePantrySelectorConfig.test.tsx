@@ -54,9 +54,9 @@ describe('usePantrySelectorConfig', () => {
       usePantrySelectorConfig(defaultOptions),
     );
     expect(result.current.actions).toHaveLength(3);
-    expect(result.current.actions[0].label).toBe('Create');
-    expect(result.current.actions[1].label).toBe('Edit');
-    expect(result.current.actions[2].label).toBe('Analytics');
+    expect(result.current.actions[0]!.label).toBe('Create');
+    expect(result.current.actions[1]!.label).toBe('Edit');
+    expect(result.current.actions[2]!.label).toBe('Analytics');
   });
 
   it('disables edit/analytics when no pantry selected', () => {
@@ -66,7 +66,7 @@ describe('usePantrySelectorConfig', () => {
         selectedPantryId: undefined,
       }),
     );
-    expect(result.current.actions[1].disabled).toBe(true);
-    expect(result.current.actions[2].disabled).toBe(true);
+    expect(result.current.actions[1]!.disabled).toBe(true);
+    expect(result.current.actions[2]!.disabled).toBe(true);
   });
 });

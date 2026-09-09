@@ -125,14 +125,14 @@ describe('buildOptimisticShoppingList', () => {
     const list = buildList(cache);
 
     expect(list.ownerships).toHaveLength(1);
-    expect(list.ownerships[0].userId).toBe(OWNER.id);
-    expect(list.ownerships[0].user.profile?.displayName).toBe('Tani');
+    expect(list.ownerships[0]!.userId).toBe(OWNER.id);
+    expect(list.ownerships[0]!.user.profile?.displayName).toBe('Tani');
   });
 
   it('falls back to the auth identity with a null profile when the User entity is not cached', () => {
     const list = buildList(makeCache());
 
-    expect(list.ownerships[0].user).toEqual({
+    expect(list.ownerships[0]!.user).toEqual({
       __typename: 'User',
       id: OWNER.id,
       email: OWNER.email,
@@ -227,7 +227,7 @@ describe('addOptimisticShoppingList', () => {
       };
     }>({ query: LISTS_OVERVIEW_QUERY, variables: { homeId: null } });
     expect(overview?.shoppingLists.totalCount).toBe(1);
-    expect(overview?.shoppingLists.edges[0].node).toMatchObject({
+    expect(overview?.shoppingLists.edges[0]!.node).toMatchObject({
       id: LIST_ID,
       name: 'Groceries',
     });

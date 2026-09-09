@@ -117,7 +117,7 @@ describe('usePantryItemSuggestions', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.suggestions).toHaveLength(1);
-    expect(result.current.suggestions[0].imageUrl).toBe(
+    expect(result.current.suggestions[0]!.imageUrl).toBe(
       'https://cdn.test/milk.jpg',
     );
     expect(result.current.hasSuggestions).toBe(true);
@@ -131,7 +131,7 @@ describe('usePantryItemSuggestions', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(result.current.suggestions[0].imageUrl).toBeNull();
+    expect(result.current.suggestions[0]!.imageUrl).toBeNull();
   });
 
   describe('grouping by source', () => {

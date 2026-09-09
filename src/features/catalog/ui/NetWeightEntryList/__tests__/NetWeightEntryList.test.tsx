@@ -169,8 +169,8 @@ describe('NetWeightEntryList', () => {
     const finalEntries = defaultProps.onEntriesChanged.mock.calls.at(
       -1,
     )?.[0] as NetWeightEntry[];
-    expect(finalEntries[0].unitName).toBe('oz');
+    expect(finalEntries[0]!.unitName).toBe('oz');
     // Typing invalidates the unit selected before the keystroke.
-    expect(finalEntries[0].unitId).toBeUndefined();
+    expect(finalEntries[0]!.unitId).toBeUndefined();
   });
 });

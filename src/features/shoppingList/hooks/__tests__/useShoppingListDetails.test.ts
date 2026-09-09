@@ -152,7 +152,7 @@ describe('useShoppingListDetails', () => {
     expect(result.current.name).toBe('Groceries');
     expect(result.current.isDefault).toBe(true);
     expect(result.current.collaborators).toHaveLength(1);
-    expect(result.current.collaborators[0].email).toBe('alice@test.com');
+    expect(result.current.collaborators[0]!.email).toBe('alice@test.com');
     expect(result.current.isShared).toBe(true);
   });
 

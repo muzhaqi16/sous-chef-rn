@@ -88,7 +88,7 @@ export const getExpirationStatus = (
 };
 
 // Default category emojis
-const CATEGORY_EMOJIS: Record<string, string> = {
+const CATEGORY_EMOJIS: Record<string, string> & { default: string } = {
   vegetables: '🥬',
   fruits: '🍎',
   meat: '🥩',

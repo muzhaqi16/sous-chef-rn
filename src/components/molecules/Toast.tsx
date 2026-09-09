@@ -305,6 +305,7 @@ export const ToastProvider: React.FC<{ children?: ReactNode }> = ({
       setQueue(prev => {
         if (prev.current || prev.queue.length === 0) return prev;
         const [next, ...rest] = prev.queue;
+        if (!next) return prev;
         return { current: next, queue: rest, generation: prev.generation + 1 };
       });
     }, TOAST.QUEUE_DELAY);

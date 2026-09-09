@@ -62,7 +62,7 @@ export function useTranslation(options?: UseTranslationOptions<undefined>) {
  */
 export function getResolvedLanguage(): string {
   const i18n = getI18n();
-  return (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0];
+  return (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0] ?? 'en';
 }
 
 /**

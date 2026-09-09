@@ -32,7 +32,7 @@ const styleBlocks = (source: string): Map<string, string> => {
   ];
   for (const re of shapes) {
     let m: RegExpExecArray | null;
-    while ((m = re.exec(source))) blocks.set(m[1], m[2]);
+    while ((m = re.exec(source))) blocks.set(m[1]!, m[2]!);
   }
   return blocks;
 };
@@ -96,8 +96,8 @@ const overriddenSharedFills = FILES.flatMap(file => {
   const localBlocks = styleBlocks(source);
 
   return [...source.matchAll(COMPOSED_FILL)].flatMap(([, shared, local]) => {
-    const sharedFill = FILLS.exec(sharedBlocks.get(shared) ?? '')?.[1];
-    const localFill = FILLS.exec(localBlocks.get(local) ?? '')?.[1];
+    const sharedFill = FILLS.exec(sharedBlocks.get(shared!) ?? '')?.[1];
+    const localFill = FILLS.exec(localBlocks.get(local!) ?? '')?.[1];
     if (!sharedFill || !localFill || sharedFill === localFill) return [];
 
     // The foreground travels with the shared fill under the `<name>Text`
@@ -133,7 +133,7 @@ const ON_FILL_COMPONENT = /<On([A-Z]\w+?)(ActivityIndicator)\b/g;
 const strandedOnFillComponents = FILES.flatMap(file => {
   const source = readFileSync(file, 'utf8');
   const rendered = new Set(
-    [...source.matchAll(ON_FILL_COMPONENT)].map(m => m[1].toLowerCase()),
+    [...source.matchAll(ON_FILL_COMPONENT)].map(m => m[1]!.toLowerCase()),
   );
   if (rendered.size === 0) return [];
 
@@ -202,7 +202,12 @@ describe('text on a primary or danger fill', () => {
   it('still recognises a hardcoded white', () => {
     // `suspects` is empty across the tree, so an inert pattern would pass here
     // for the wrong reason.
-    for (const literal of ["'#fff'", '"#FFFFFF"', "'white'", "'rgba(255, 255, 255, 0.8)'"]) {
+    for (const literal of [
+      "'#fff'",
+      '"#FFFFFF"',
+      "'white'",
+      "'rgba(255, 255, 255, 0.8)'",
+    ]) {
       expect(WHITE.test(`color: ${literal},`)).toBe(true);
     }
     expect(WHITE.test('color: theme.colors.onPrimary,')).toBe(false);
@@ -313,14 +318,14 @@ const crossFileOnTokenPairs = FILES.flatMap(file => {
   }
 
   const grounds = [...styleSource.matchAll(RAMP_FILL)].map(m =>
-    rampStep(m[1], m[2]),
+    rampStep(m[1]!, m[2]!),
   );
   const ground = grounds.find(g => typeof g === 'string' && chroma.valid(g));
   if (!ground) return [];
 
   const source = readFileSync(file, 'utf8');
   return [...source.matchAll(ON_TOKEN_COLOR)].flatMap(m => {
-    const fg = resolveOnToken(m[1]);
+    const fg = resolveOnToken(m[1]!);
     if (!fg) return [];
     return [
       {

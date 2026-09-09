@@ -56,9 +56,9 @@ describe('errorSerialization', () => {
       };
       const result = serializeError(error);
       expect(result.graphQLErrors).toHaveLength(1);
-      expect(result.graphQLErrors?.[0].message).toBe('Not found');
-      expect(result.graphQLErrors?.[0].path).toEqual(['query', 'user']);
-      expect(result.graphQLErrors?.[0].extensions).toEqual({
+      expect(result.graphQLErrors?.[0]!.message).toBe('Not found');
+      expect(result.graphQLErrors?.[0]!.path).toEqual(['query', 'user']);
+      expect(result.graphQLErrors?.[0]!.extensions).toEqual({
         code: 'NOT_FOUND',
       });
     });

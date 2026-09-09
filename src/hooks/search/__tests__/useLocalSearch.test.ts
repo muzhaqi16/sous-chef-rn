@@ -61,11 +61,11 @@ describe('filterByTerm', () => {
 
 describe('matchesTerm', () => {
   it('is true for an empty term, so a compound filter falls through', () => {
-    expect(matchesTerm(rows[0], '', ['name'])).toBe(true);
+    expect(matchesTerm(rows[0]!, '', ['name'])).toBe(true);
   });
 
   it('answers for one item', () => {
-    expect(matchesTerm(rows[0], 'tom', ['name'])).toBe(true);
-    expect(matchesTerm(rows[1], 'tom', ['name'])).toBe(false);
+    expect(matchesTerm(rows[0]!, 'tom', ['name'])).toBe(true);
+    expect(matchesTerm(rows[1]!, 'tom', ['name'])).toBe(false);
   });
 });
