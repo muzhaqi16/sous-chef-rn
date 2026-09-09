@@ -538,28 +538,37 @@ module.exports = {
       },
     },
     {
-      // `no-unnecessary-condition` catches a whole class of silent defect: a
-      // METHOD read without calling it sits in a boolean position and is always
-      // truthy. `!Environment.isProduction` (missing parens) shipped exactly
-      // that — it disabled Detox launch-arg injection in every build, and
-      // typecheck, lint and 643 test suites all stayed green.
+      // A METHOD read without calling it sits in a boolean position and is
+      // always truthy. TypeScript's own TS2774 cannot see it: it is emitted from
+      // an `if` condition, a ternary condition and the left operand of `&&`/`||`
+      // only, and `!fn` types as `boolean`, which has no call signatures. So
+      // `!Environment.isProduction` disabled Detox launch-arg injection in every
+      // build with typecheck, lint and the full suite green. This rule is what
+      // sees that shape.
       //
-      // Scoped, not global, on a measurement: across `src/` the rule reports
-      // 793 violations, nearly all deliberate guards against runtime shapes the
-      // types do not model (`typeof list.computeVisibleIndices !== 'function'`
-      // for FlashList test doubles). Turning those into 793 disable comments
-      // would destroy the signal. These files are clean under it today; adding
-      // a file here is cheap, the repo-wide cleanup is its own change.
+      // The baseline is the exclusion list, and it is a debt list that may only
+      // shrink: three quarters of what it records are `?.` and null guards on
+      // GraphQL data that codegen types as non-nullable and the server does not
+      // guarantee. A guard is never deleted to satisfy the rule — an entry
+      // leaves when the branch is dead or the over-promising type is widened
+      // where it is declared. `eslint-comments/no-use` bans disable comments, so
+      // the file list is the only exemption there is.
       //
-      // NOT `useFlashListPerformance.ts` — it carries two such intentional
-      // defensive checks that predate this rule.
-      files: [
-        'src/hooks/app/useStartupInit.ts',
-        'src/services/performance/NativePerformanceService.ts',
-        'src/services/performance/startupProfiling.ts',
-        'src/services/performance/viewManagerProbe.ts',
-        'src/native/StartupMark.ts',
-        'src/services/telemetry/TelemetryService.ts',
+      // `node scripts/check-unnecessary-condition.mjs` counts PER FILE, which
+      // this cannot: an excluded file is excluded whole, so nothing here would
+      // notice a baselined file getting worse.
+      //
+      // Nothing else may declare this rule — an `overrides` block replaces a
+      // rule's config rather than merging it, so a second block silently wins.
+      files: ['src/**/*.{ts,tsx}'],
+      excludedFiles: [
+        ...Object.keys(
+          require('./scripts/check-unnecessary-condition.baseline.json').counts,
+        ),
+        '**/__tests__/**',
+        '**/__mocks__/**',
+        '**/__perf__/**',
+        '**/*.test.{ts,tsx}',
       ],
       parserOptions: {
         project: './tsconfig.json',

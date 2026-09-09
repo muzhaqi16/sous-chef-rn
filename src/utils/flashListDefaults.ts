@@ -50,7 +50,7 @@ export const isStickyHeaderSentinel = (
   typeof item === 'object' &&
   item !== null &&
   '__sentinel' in item &&
-  (item as StickyHeaderSentinel).__sentinel === 'stickyHeader';
+  item.__sentinel === 'stickyHeader';
 
 /** Stable stickyHeaderIndices array — data[0] is always the sticky sentinel. */
 export const STICKY_HEADER_INDICES = [0];

@@ -61,7 +61,7 @@ export const GenerateShoppingListSheet: React.FC<
     });
   };
 
-  const canGenerate = mode === 'new' || (mode === 'existing' && selectedListId);
+  const canGenerate = mode === 'new' || selectedListId != null;
 
   return (
     <Sheet

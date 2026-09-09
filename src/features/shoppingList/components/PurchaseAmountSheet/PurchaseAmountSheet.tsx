@@ -123,7 +123,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
     : t('purchaseAmountSheet.quantityRequired');
 
   const handleConfirm = () => {
-    if (!quantityIsUsable || parsedQty == null) return;
+    if (!quantityIsUsable) return;
     onConfirm(parsedQty, parsedTotal);
   };
 

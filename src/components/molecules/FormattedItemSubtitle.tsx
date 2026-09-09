@@ -53,8 +53,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
     // Skip "1 ×" when quantity is 1 - just show weight (industry standard)
     // Use tolerance for floating point comparison
     // This also applies to partial single items (initialQuantity=1, quantity<1)
-    const isQuantityOne =
-      displayQuantity != null && Math.abs(displayQuantity - 1) < 0.001;
+    const isQuantityOne = Math.abs(displayQuantity - 1) < 0.001;
     if (isQuantityOne) {
       return (
         <View style={styles.container}>

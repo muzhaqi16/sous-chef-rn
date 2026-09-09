@@ -38,7 +38,7 @@ jobs:
   lint:
     name: ESLint
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     # Type-aware linting (@typescript-eslint/no-deprecated + the import/resolver
     # TS program) holds the full TypeScript program(s) in memory. A fresh,
     # cacheless `eslint .` over the whole repo peaks at ~3.5GB RSS, which
@@ -62,6 +62,17 @@ jobs:
 
       - name: Run ESLint
         run: npm run lint
+
+      # The rule's exclusions are file-level and live in
+      # scripts/check-unnecessary-condition.baseline.json, which .eslintrc.js
+      # reads as excludedFiles — so lint alone cannot see a baselined file
+      # getting worse. This counts per file. It sits in the lint job because it
+      # needs the same heap bump and builds the same TypeScript program.
+      - name: Unnecessary conditions (self-test)
+        run: node scripts/check-unnecessary-condition.mjs --self-test
+
+      - name: Unnecessary conditions
+        run: node scripts/check-unnecessary-condition.mjs
 
   # i18n key parity
   i18n-check:

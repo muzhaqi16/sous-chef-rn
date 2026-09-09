@@ -524,9 +524,7 @@ async function register(
       // Registration is verification-first and existence-blind: the API sends
       // an activation email and issues NO tokens. Do NOT set auth here — the
       // user activates via the emailed link, then logs in.
-      if (shouldRemember !== undefined) {
-        store.setRememberMe(shouldRemember);
-      }
+      store.setRememberMe(shouldRemember);
 
       logger.info('Registration successful: verification email sent');
       store.setAuthIsLoading(false);

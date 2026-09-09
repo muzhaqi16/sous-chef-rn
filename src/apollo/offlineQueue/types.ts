@@ -29,12 +29,18 @@ export class QueueCapacityError extends Error {
 
 export interface QueueError {
   /**
-   * `stale-reference`: the write names a reference row the server merged away,
-   * so the client can fix and re-send it. Its own type, not `server`, because
-   * recovery is a side effect (refresh the vocabulary) before a retry — a
-   * deferral would replay the same dead id until the entry ages out.
+   * `stale-reference` is its own type, not `server`: recovery is a side effect
+   * (refresh the vocabulary) before a retry, and a deferral replays the same
+   * dead id until the entry ages out. `conflict` re-sends once WITHOUT the
+   * captured `version` — an optimistic lock on a stale value can only fail.
    */
-  type: 'network' | 'auth' | 'server' | 'stale-reference' | 'unknown';
+  type:
+    | 'network'
+    | 'auth'
+    | 'server'
+    | 'stale-reference'
+    | 'conflict'
+    | 'unknown';
   message: string;
   code?: string;
   timestamp: number;
@@ -58,6 +64,9 @@ export interface QueuedMutation {
   retryCount: number;
   maxRetries: number;
   lastError?: QueueError;
+
+  /** Version conflicts survived. Absent on entries queued before it existed. */
+  conflictCount?: number;
 
   requiresAuth: boolean;
 }
@@ -102,6 +111,20 @@ export interface FailedMutationInfo {
 }
 
 export type FailureHandler = (info: FailedMutationInfo) => void;
+
+/**
+ * A replay the server ACCEPTED while keeping its own value for a field the
+ * write set. Not a failure — nothing is withdrawn and the entry dequeues as
+ * success — but the user's change is gone, so they are told.
+ */
+export interface OverwrittenMutationInfo {
+  mutationId: string;
+  operationName: string;
+  entityType: string | null;
+  entityId: string | null;
+}
+
+export type OverwriteReporter = (info: OverwrittenMutationInfo) => void;
 
 /**
  * Withdraws the aggregate a queued write moved that an evict does not put back

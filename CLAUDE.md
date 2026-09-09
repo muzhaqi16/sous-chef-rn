@@ -39,11 +39,12 @@ node scripts/check-typography-roles.mjs          # also in pre-commit
 node scripts/check-component-tier.mjs            # also in pre-commit
 node scripts/check-screen-scaffold.mjs           # also in pre-commit
 node scripts/check-a11y-names.mjs                # also in pre-commit
+node scripts/check-unnecessary-condition.mjs     # also in PR checks
 node scripts/check-dependency-audit.mjs          # also in PR checks + weekly
 node scripts/check-bundled-secrets.mjs --self-test
 ```
 
-Each of the twelve boundary gates takes `--list` (every finding), `--update`
+Each of the thirteen boundary gates takes `--list` (every finding), `--update`
 (re-baseline) and `--self-test` (prove it can still fail). A NON-EMPTY baseline
 is a debt list that may only shrink; an EMPTY one is an invariant, and any
 finding there is a regression to fix:
@@ -62,6 +63,7 @@ finding there is a regression to fix:
 | `check-component-tier` | a kit component sits in the tier its composition puts it in | 0 |
 | `check-screen-scaffold` | a screen's chrome comes from `Screen`, and nobody applies the top inset twice | 4 chrome / 0 double-inset |
 | `check-a11y-names` | a control with an `onPress` and no text child carries an `accessibilityLabel` | 0 |
+| `check-unnecessary-condition` | a condition the types say cannot matter — chiefly a function read without calling it | 240 files |
 
 When one reaches zero, promote it to a hard `import/no-restricted-paths` zone
 and delete the baseline — the same promotion the kit half of
@@ -208,6 +210,22 @@ scoping.
 - `__typename: 'Mutation' as any` is never needed.
 - `Unmasked<>` appears ONLY as an `optimisticResponse` callback return type;
   never `@unmask`. HKT registration: `src/types/apollo-masking.d.ts`.
+- **A condition the types say cannot matter is a lint error**
+  (`@typescript-eslint/no-unnecessary-condition`, on for `src/**` minus
+  `scripts/check-unnecessary-condition.baseline.json`). It earns its place on one
+  shape nothing else catches: a method read without calling it.
+  `!Environment.isProduction` disabled Detox launch-arg injection in every build
+  with typecheck, lint and the full suite green — TypeScript's own TS2774 is
+  emitted from an `if` condition, a ternary condition and the left operand of
+  `&&`/`||` only, and `!fn` types as `boolean`, which has no call signatures.
+- **Never delete a runtime guard to satisfy that rule.** Three quarters of the
+  720 baselined findings are `?.` and null guards on data codegen types as
+  non-nullable and the server does not guarantee; most of the rest are index
+  reads, which `noUncheckedIndexedAccess` would make necessary again (it is off,
+  and turning it on is 409 errors). Delete a branch that is genuinely dead, or
+  widen the over-promising type where it is DECLARED — never with a cast, and
+  never at the call site. A guard that is neither stays, and its file stays in
+  the baseline.
 
 ## Comments
 
@@ -1043,6 +1061,11 @@ arguments).
 - **Never inflect copy for the reader's gender** — use a construction with no
   gendered slot (`addresseeGender.test.ts`). Noun agreement belongs in
   per-context keys, never in a runtime parameter.
+- **An interpolated entity noun (`{{resource}}`, `{{entity}}`) takes a frame
+  with nothing agreeing with it**, written per locale: es/it/sq labels carry
+  their own article, English labels are bare. Lead with the label and a colon
+  where a participle is unavoidable. `entityLabelAgreement.test.ts` holds it and
+  gates every new interpolation site on a review note.
 - None of the guards proves completeness — a string reaching JSX through a
   variable is invisible to all of them. Rules' history, guard inventory, and
   the pseudolocalization plan: `docs/i18n-architecture.md`.
@@ -1227,6 +1250,7 @@ npm run check:canonical-mechanisms && npm run check:design-tokens
 npm run check:typography-roles
 npm run check:component-tier && npm run check:screen-scaffold
 npm run check:a11y-names
+npm run check:unnecessary-condition
 npm run check:dependency-audit
 ```
 

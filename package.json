@@ -43,6 +43,7 @@
     "check:launch-arg-auth": "node scripts/check-launch-arg-auth.mjs",
     "check:unistyles-variants": "node scripts/check-unistyles-variant-staleness.mjs",
     "check:compiler-bailouts": "node scripts/check-compiler-bailouts.mjs",
+    "check:unnecessary-condition": "node scripts/check-unnecessary-condition.mjs",
     "check:layer-purity": "node scripts/check-layer-purity.mjs",
     "check:feature-shape": "node scripts/check-feature-shape.mjs",
     "check:dead-modules": "node scripts/check-dead-modules.mjs",
