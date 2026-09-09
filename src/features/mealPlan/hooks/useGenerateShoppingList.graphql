@@ -9,6 +9,10 @@
 # 194 → 292. `documentLimits.test.ts` holds both numbers.
 fragment useGenerateShoppingList_mealPlan on MealPlan {
   id
+  # The derived list takes its default name from the plan and inherits its home,
+  # which is what the server's fan-out does.
+  name
+  homeId
   mealPlanItems {
     id
     servings
@@ -34,6 +38,39 @@ fragment useGenerateShoppingList_mealPlan on MealPlan {
           }
         }
       }
+    }
+  }
+}
+
+# The derived lines, added in one batch. Mirrors the pantry screen's add so both
+# reconcile through `buildAddItemsReconcileUpdate`, which pairs a result back to
+# the client-minted id by its index into `input.items`.
+mutation AddDerivedItemsToShoppingList($input: AddItemsToShoppingListInput!) {
+  addItemsToShoppingList(input: $input) {
+    __typename
+    ... on AddItemsToShoppingListPayload {
+      results {
+        index
+        clientId
+        success
+        quantityIncremented
+        error
+        item {
+          id
+          ...AddedShoppingListItemFields
+        }
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

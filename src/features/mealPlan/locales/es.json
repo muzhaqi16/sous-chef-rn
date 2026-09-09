@@ -102,7 +102,13 @@
     "createdSuccess_one": "Lista de la compra \"{{name}}\" creada con {{count}} artículo{{shared}}",
     "createdSuccess_other": "Lista de la compra \"{{name}}\" creada con {{count}} artículos{{shared}}",
     "sharedSuffix": " (compartida con {{homeName}})",
-    "generateFailed": "No se pudo generar la lista de la compra"
+    "generateFailed": "No se pudo generar la lista de la compra",
+    "planNotLoaded": "Abre primero el plan de comidas para tener sus recetas.",
+    "nothingToAdd": "Nada que añadir: este plan aún no tiene ingredientes de recetas.",
+    "defaultName": "Lista de la compra para {{name}}",
+    "someSkipped_one": "Se omitió {{count}} entrada porque su receta no está descargada.",
+    "someSkipped_other": "Se omitieron {{count}} entradas porque sus recetas no están descargadas.",
+    "pantryNotChecked": "No se descontó tu despensa: abre la despensa una vez para tenerla disponible."
   },
   "saveAsTemplate": {
     "sharedWithHome": "Esta plantilla se compartirá con {{name}}",

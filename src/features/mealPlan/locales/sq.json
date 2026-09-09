@@ -102,7 +102,13 @@
     "createdSuccess_one": "Lista e blerjeve \"{{name}}\" u krijua me {{count}} artikull{{shared}}",
     "createdSuccess_other": "Lista e blerjeve \"{{name}}\" u krijua me {{count}} artikuj{{shared}}",
     "sharedSuffix": " (e ndarë me {{homeName}})",
-    "generateFailed": "Krijimi i listës së blerjeve dështoi"
+    "generateFailed": "Krijimi i listës së blerjeve dështoi",
+    "planNotLoaded": "Hap fillimisht planin e vakteve, që recetat e tij të jenë të disponueshme.",
+    "nothingToAdd": "Asgjë për të shtuar — ky plan ende nuk ka përbërës recetash.",
+    "defaultName": "Listë blerjesh për {{name}}",
+    "someSkipped_one": "{{count}} zë u la jashtë sepse receta e tij nuk është shkarkuar.",
+    "someSkipped_other": "{{count}} zëra u lanë jashtë sepse recetat e tyre nuk janë shkarkuar.",
+    "pantryNotChecked": "Qilari yt nuk u zbrit — hap qilarin një herë që të jetë i disponueshëm."
   },
   "saveAsTemplate": {
     "sharedWithHome": "Ky model do të ndahet me {{name}}",

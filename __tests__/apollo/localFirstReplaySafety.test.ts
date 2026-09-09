@@ -5,6 +5,7 @@ import {
   parse,
   Kind,
   isInputObjectType,
+  type GraphQLInputObjectType,
   type GraphQLSchema,
   type OperationDefinitionNode,
 } from 'graphql';
@@ -57,7 +58,6 @@ const REPLAY_SAFETY_BASELINE: Record<
   'absolute-update' | 'bulk-create'
 > = {
   AddDietaryRestriction: 'absolute-update',
-  AddItemsToShoppingListFromRecipe: 'bulk-create',
   CreateFromTemplate: 'bulk-create',
   CreateMealPlanFromTemplate: 'bulk-create',
   CreateShoppingListItemsFromRecipe: 'bulk-create',
@@ -73,7 +73,6 @@ const REPLAY_SAFETY_BASELINE: Record<
   // picked a different home is the only real hazard, which the queue's own
   // ordering (FIFO per user) settles in favour of the later pick.
   MarkHomeAsDefault: 'absolute-update',
-  MovePurchasedItemsToPantry: 'bulk-create',
   RemoveItemsFromShoppingList: 'absolute-update',
   RemoveRecipeFromFavorites: 'absolute-update',
   SendTestNotification: 'absolute-update',
@@ -149,6 +148,27 @@ function localFirstOperationNames(): Set<string> {
   return names;
 }
 
+/**
+ * A batch input names its rows on the ELEMENT, not on itself: the wrapper holds
+ * only the parent id and the array, so a check that reads the top level alone
+ * calls an idempotent batch a blind bulk create. One level down is enough —
+ * no input nests a second array of rows.
+ */
+function declaresIdempotencyKey(type: GraphQLInputObjectType): boolean {
+  const fields = Object.values(type.getFields());
+  if (fields.some(field => IDEMPOTENCY_KEYS.includes(field.name))) return true;
+
+  return fields.some(field => {
+    let inner = field.type;
+    while ('ofType' in inner && inner.ofType)
+      inner = inner.ofType as typeof inner;
+    if (!isInputObjectType(inner)) return false;
+    return Object.keys(inner.getFields()).some(name =>
+      IDEMPOTENCY_KEYS.includes(name),
+    );
+  });
+}
+
 /** Whether the mutation's input declares a field the server can dedupe on. */
 function hasIdempotentInput(
   schema: GraphQLSchema,
@@ -167,8 +187,7 @@ function hasIdempotentInput(
       let type = arg.type;
       while ('ofType' in type && type.ofType) type = type.ofType as typeof type;
       if (!isInputObjectType(type)) continue;
-      const fields = Object.keys(type.getFields());
-      if (IDEMPOTENCY_KEYS.some(key => fields.includes(key))) return true;
+      if (declaresIdempotencyKey(type)) return true;
     }
   }
   void operationName;

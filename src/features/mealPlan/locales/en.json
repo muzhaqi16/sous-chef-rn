@@ -102,7 +102,13 @@
     "createdSuccess_one": "Shopping list \"{{name}}\" created with {{count}} item{{shared}}",
     "createdSuccess_other": "Shopping list \"{{name}}\" created with {{count}} items{{shared}}",
     "sharedSuffix": " (shared with {{homeName}})",
-    "generateFailed": "Failed to generate shopping list"
+    "generateFailed": "Failed to generate shopping list",
+    "planNotLoaded": "Open the meal plan first so its recipes are available.",
+    "nothingToAdd": "Nothing to add — this plan has no recipe ingredients yet.",
+    "defaultName": "Shopping list for {{name}}",
+    "someSkipped_one": "{{count}} entry was left out because its recipe is not downloaded.",
+    "someSkipped_other": "{{count}} entries were left out because their recipes are not downloaded.",
+    "pantryNotChecked": "Your pantry was not deducted — open the pantry once so it is available."
   },
   "saveAsTemplate": {
     "sharedWithHome": "This template will be shared with {{name}}",

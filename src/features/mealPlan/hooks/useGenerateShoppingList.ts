@@ -1,124 +1,207 @@
-import { useMutation } from '@apollo/client/react';
-import { GenerateShoppingListFromMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
-import { type GenerateShoppingListFromMealPlanInput } from '#/graphql/generated/schemaTypes';
-import { handleMutationError } from '#/utils/errorHandlers';
+import {
+  useApolloClient,
+  useFragment,
+  useMutation,
+} from '@apollo/client/react';
+import {
+  AddDerivedItemsToShoppingListDocument,
+  UseGenerateShoppingList_MealPlanFragmentDoc,
+} from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
+import {
+  deriveShoppingListFromMealPlan,
+  type PlannedMeal,
+  type PantryStock,
+} from '#features/mealPlan/utils/deriveShoppingListFromMealPlan';
+import {
+  addOptimisticShoppingListItem,
+  buildAddItemsReconcileUpdate,
+  createOptimisticShoppingListItem,
+} from '#features/shoppingList/cache/items';
+import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
+import { usePantryQuery } from '#features/pantry/hooks/usePantryQuery';
+import { useSelectedPantryId } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
-import {
-  createAddToQueryConnectionUpdater,
-  createAddToParentArrayUpdater,
-} from '#/apollo/utils/cacheUpdaters';
-import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { t } from '#/i18n';
 import { errorService } from '#/services/errorService';
-import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
+import { t } from '#/i18n';
 
-const addToShoppingLists = createAddToQueryConnectionUpdater(
-  'shoppingLists',
-  'ShoppingList',
-);
-const addToMealPlanGeneratedLists = createAddToParentArrayUpdater(
-  'MealPlan',
-  'generatedShoppingLists',
-);
+/** What the caller may choose; the plan and its lines come from the cache. */
+export interface GenerateShoppingListOptions {
+  checkPantry?: boolean;
+  name?: string;
+  shoppingListId?: string;
+}
 
+/**
+ * Builds the list from the cached plan instead of asking the server to fan out,
+ * so it works offline. The LIST cannot record which plan produced it — no
+ * client-reachable input carries `ShoppingList.mealPlanId`
+ * (`docs/api-requests.md`) — but each line names it through `recipeContext`.
+ */
 export function useGenerateShoppingList(mealPlanId: string | null) {
-  const [generateMutation, { loading }] = useMutation(
-    GenerateShoppingListFromMealPlanDocument,
-    {
-      update: (cache, { data }, { variables }) => {
-        const payload = data?.generateShoppingListFromMealPlan;
-        if (payload?.__typename !== 'GenerateShoppingListFromMealPlanPayload') {
-          return;
-        }
-        const list = payload.shoppingList;
-        addToShoppingLists(cache, list, { position: 'start' });
-        const linkedMealPlanId = variables?.input?.mealPlanId;
-        if (linkedMealPlanId) {
-          addToMealPlanGeneratedLists(cache, linkedMealPlanId, list, {
-            position: 'end',
-          });
-        }
-      },
-      onError: error => {
-        handleMutationError(error, { operation: 'Generate Shopping List' });
-      },
-    },
+  const client = useApolloClient();
+  const pantryId = useSelectedPantryId();
+
+  const { data: plan, complete } = useFragment({
+    fragment: UseGenerateShoppingList_MealPlanFragmentDoc,
+    fragmentName: 'useGenerateShoppingList_mealPlan',
+    from: mealPlanId ? { __typename: 'MealPlan', id: mealPlanId } : null,
+  });
+
+  // Cache-only: the pantry tab mounts at cold start, so its rows are already
+  // there — and a miss must read as "not checked", never as an empty pantry.
+  const pantry = usePantryQuery(pantryId ?? undefined, null, null, undefined, {
+    fetchPolicy: 'cache-only',
+  });
+
+  const { createShoppingList, loading: creating } = useCreateShoppingList(
+    t('generateShoppingList.generateFailed'),
   );
 
-  const isApiUnavailable = useIsApiUnavailable();
+  const [addItems, { loading: adding }] = useMutation(
+    AddDerivedItemsToShoppingListDocument,
+    { update: buildAddItemsReconcileUpdate({}) },
+  );
 
   const generateShoppingList = async (
-    input: Omit<GenerateShoppingListFromMealPlanInput, 'mealPlanId'>,
+    options: GenerateShoppingListOptions = {},
   ) => {
-    if (isApiUnavailable) {
-      toastService.error(t('errors.notAvailableOffline'));
+    if (!mealPlanId || !complete) {
+      toastService.error(t('generateShoppingList.planNotLoaded'));
       return null;
     }
-    if (!mealPlanId) return null;
-    let result;
+
+    const meals: PlannedMeal[] = plan.mealPlanItems.map(item => ({
+      id: item.id,
+      servings: item.servings,
+      recipe: item.recipe
+        ? {
+            id: item.recipe.id,
+            servings: item.recipe.servings,
+            ingredients: item.recipe.ingredientsConnection.edges.map(edge => ({
+              id: edge.node.id,
+              name: edge.node.name,
+              quantity: edge.node.quantity,
+              unitId: edge.node.unit?.id,
+              itemId: edge.node.item?.id,
+            })),
+          }
+        : null,
+    }));
+
+    const pantryRows: PantryStock[] | null = pantry.state.hasResult
+      ? pantry.state.pantryItems.map(row => ({
+          itemId: row.itemId,
+          unitId: row.unit?.id,
+          quantity: row.quantity,
+        }))
+      : null;
+
+    const { inputs, displayNames, skipped, pantryChecked } =
+      deriveShoppingListFromMealPlan(meals, {
+        mealPlanId,
+        mealPlanName: plan.name ?? '',
+        checkPantry: options.checkPantry ?? true,
+        pantryRows,
+      });
+
+    if (inputs.length === 0) {
+      toastService.info(t('generateShoppingList.nothingToAdd'));
+      return null;
+    }
+
+    const listName = options.name?.trim() || defaultListName(plan.name);
+    let listId = options.shoppingListId ?? null;
+    if (!listId) {
+      const created = await createShoppingList({
+        name: listName,
+        homeId: plan.homeId,
+      });
+      listId = created?.id ?? null;
+    }
+    if (!listId) return null;
+
+    for (const line of inputs) {
+      writeLineToCache(listId, line, displayNames);
+    }
+
     try {
-      result = await generateMutation({
-        variables: {
-          input: {
-            mealPlanId,
-            ...input,
-          },
-        },
+      await addItems({
+        variables: { input: { shoppingListId: listId, items: inputs } },
+        context: { localFirst: true },
       });
     } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Generate shopping list error:',
-      });
+      errorService.reportError(error, { operation: 'Generate shopping list' });
     }
-    if (!result) return null;
-    const data = result.data?.generateShoppingListFromMealPlan;
-    if (data?.__typename === 'GenerateShoppingListFromMealPlanPayload') {
-      const { shoppingList } = data;
-      const itemCount = shoppingList.totalItems ?? 0;
-      if (itemCount === 0) {
-        // Plan generated but nothing to buy — pantry already covers it, or the
-        // recipes have no linked catalog items. Surface it instead of a
-        // misleading "created with 0 items" success.
-        toastService.info(
-          t('generateShoppingList.readyNothingToAdd', {
-            name: shoppingList.name,
-          }),
-        );
-      } else {
-        const homeName = shoppingList.home?.name;
-        const shared = homeName
-          ? t('generateShoppingList.sharedSuffix', { homeName })
-          : '';
-        toastService.success(
-          t('generateShoppingList.createdSuccess', {
-            name: shoppingList.name,
-            count: itemCount,
-            shared,
-          }),
-        );
-      }
-      Telemetry.trackEvent('shopping_list_generated_from_meal_plan', {
-        meal_plan_id: mealPlanId,
-        check_pantry: input.checkPantry ?? true,
-        added_to_existing: !!input.shoppingListId,
-      });
-    } else if (data && 'message' in data) {
-      // Result-union error member (ValidationError for an empty plan,
-      // Forbidden/NotFound/Conflict). `message` comes from the `Error`
-      // interface selected in the mutation document.
-      // The member's `message` is the server's English by construction; the
-      // field it names (or its code) is what the app has copy for.
-      toastService.error(
-        localizedRefusalMessage(data, t('generateShoppingList.generateFailed')),
-      );
-    }
-    return data ?? null;
+
+    report({
+      name: listName,
+      added: inputs.length,
+      skipped: skipped.length,
+      pantryChecked,
+      checkPantry: options.checkPantry,
+    });
+    Telemetry.trackEvent('shopping_list_generated_from_meal_plan', {
+      meal_plan_id: mealPlanId,
+      check_pantry: options.checkPantry ?? true,
+      added_to_existing: !!options.shoppingListId,
+      derived_lines: inputs.length,
+      skipped_sources: skipped.length,
+    });
+    return { shoppingListId: listId, lineCount: inputs.length };
   };
+
+  function writeLineToCache(
+    listId: string,
+    line: { id?: string | null; item: { itemId?: string | null } },
+    names: Map<string, string>,
+  ) {
+    if (!line.id) return;
+    // Built before the try: a value block inside one bails the whole function
+    // out of the React Compiler.
+    const row = createOptimisticShoppingListItem(line.id, {
+      shoppingListId: listId,
+      itemName: names.get(line.id) ?? t('labels.item'),
+      itemId: line.item.itemId,
+    });
+    try {
+      addOptimisticShoppingListItem(client.cache, listId, row);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Generate shopping list (optimistic)',
+      });
+    }
+  }
 
   return {
     generateShoppingList,
-    loading,
-    isApiUnavailable,
+    loading: creating || adding,
   };
+}
+
+const defaultListName = (planName: string | null | undefined) =>
+  t('generateShoppingList.defaultName', { name: planName ?? '' });
+
+function report(outcome: {
+  name: string;
+  added: number;
+  skipped: number;
+  pantryChecked: boolean;
+  checkPantry: boolean | undefined;
+}) {
+  toastService.success(
+    t('generateShoppingList.createdSuccess', {
+      name: outcome.name,
+      count: outcome.added,
+      shared: '',
+    }),
+  );
+  if (outcome.skipped > 0) {
+    toastService.info(
+      t('generateShoppingList.someSkipped', { count: outcome.skipped }),
+    );
+  }
+  if ((outcome.checkPantry ?? true) && !outcome.pantryChecked) {
+    toastService.info(t('generateShoppingList.pantryNotChecked'));
+  }
 }

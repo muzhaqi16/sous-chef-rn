@@ -226,11 +226,8 @@ const MealPlanMainInner: React.FC = () => {
     useMealPlanItemActions(activePlanId);
 
   // Shopping list generation
-  const {
-    generateShoppingList,
-    loading: generatingShoppingList,
-    isApiUnavailable: generateShoppingListUnavailable,
-  } = useGenerateShoppingList(activePlanId);
+  const { generateShoppingList, loading: generatingShoppingList } =
+    useGenerateShoppingList(activePlanId);
 
   // Duplicate meal plan
   const {
@@ -448,9 +445,7 @@ const MealPlanMainInner: React.FC = () => {
     shoppingListId?: string;
   }) => {
     const result = await generateShoppingList(options);
-    if (result?.__typename === 'GenerateShoppingListFromMealPlanPayload') {
-      setShoppingListSheetVisible(false);
-    }
+    if (result) setShoppingListSheetVisible(false);
   };
 
   // Cold start with nothing cached: stay on the skeleton until the plan list
@@ -554,22 +549,13 @@ const MealPlanMainInner: React.FC = () => {
                 {permissions.canGenerateShoppingList ? (
                   <Pressable
                     onPress={() => setShoppingListSheetVisible(true)}
-                    disabled={generateShoppingListUnavailable}
                     hitSlop={8}
                     style={styles.headerActionButton}
                     accessibilityLabel={t(
                       'mealPlanMain.generateShoppingListLabel',
                     )}
                   >
-                    <Icon
-                      name="cart-outline"
-                      size={22}
-                      tone={
-                        generateShoppingListUnavailable
-                          ? 'textSecondary'
-                          : 'primary'
-                      }
-                    />
+                    <Icon name="cart-outline" size={22} tone="primary" />
                   </Pressable>
                 ) : null}
                 {permissions.canSaveAsTemplate ? (
@@ -714,7 +700,6 @@ const MealPlanMainInner: React.FC = () => {
         onGenerate={handleGenerateShoppingList}
         loading={generatingShoppingList}
         homeName={activeMealPlan?.home?.name}
-        disabled={generateShoppingListUnavailable}
       />
 
       {/* Settings Sheet */}

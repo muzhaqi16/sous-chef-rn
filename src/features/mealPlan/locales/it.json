@@ -102,7 +102,13 @@
     "createdSuccess_one": "Lista della spesa \"{{name}}\" creata con {{count}} articolo{{shared}}",
     "createdSuccess_other": "Lista della spesa \"{{name}}\" creata con {{count}} articoli{{shared}}",
     "sharedSuffix": " (condivisa con {{homeName}})",
-    "generateFailed": "Impossibile generare la lista della spesa"
+    "generateFailed": "Impossibile generare la lista della spesa",
+    "planNotLoaded": "Apri prima il piano dei pasti, così le sue ricette sono disponibili.",
+    "nothingToAdd": "Niente da aggiungere: questo piano non ha ancora ingredienti di ricette.",
+    "defaultName": "Lista della spesa per {{name}}",
+    "someSkipped_one": "{{count}} voce è stata esclusa perché la sua ricetta non è scaricata.",
+    "someSkipped_other": "{{count}} voci sono state escluse perché le loro ricette non sono scaricate.",
+    "pantryNotChecked": "La dispensa non è stata sottratta: aprila una volta per renderla disponibile."
   },
   "saveAsTemplate": {
     "sharedWithHome": "Questo modello sarà condiviso con {{name}}",
