@@ -1,4 +1,5 @@
 import { generateEntityId } from '#/utils/generateEntityId';
+import { mealReferenceOf } from '#features/mealPlan/utils/mealReference';
 import type {
   CreateMealPlanInput,
   CreateMealPlanItemInput,
@@ -81,15 +82,9 @@ export function duplicatePlan(
   const skipped: DuplicatedPlan['skipped'] = [];
 
   for (const meal of source.mealPlanItems) {
-    // `MealRefInput` is @oneOf and non-null, so a meal naming neither a recipe
-    // nor a name has nothing to recreate. The server's own copy drops the name
-    // and keeps the row; the input cannot express that, and a nameless meal is
-    // not worth one.
-    const reference = meal.recipe?.id
-      ? { recipeId: meal.recipe.id }
-      : meal.customMealName
-      ? { customMealName: meal.customMealName }
-      : null;
+    // The server's own copy maps only the recipe id, so a custom meal loses its
+    // name and keeps a nameless row. The input cannot express that.
+    const reference = mealReferenceOf(meal);
     if (!reference) {
       skipped.push({ sourceId: meal.id, reason: 'meal-has-no-reference' });
       continue;

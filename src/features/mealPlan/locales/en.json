@@ -16,7 +16,9 @@
     "nameRequiredMessage": "Please enter a name for your meal plan.",
     "startDateRequiredTitle": "Start Date Required",
     "startDateRequiredMessage": "Please select a start date.",
-    "failedToCreate": "Failed to create meal plan."
+    "failedToCreate": "Failed to create meal plan.",
+    "needsThePlan": "Open the plan first so its meals are available.",
+    "needsTheTemplate": "Open the template first so its meals are available."
   },
   "addMealSheet": {
     "searchPlaceholder": "Search recipes or add a custom meal...",
@@ -83,7 +85,6 @@
     "newNamePlaceholder": "Enter plan name",
     "infoText": "All meals will be copied to the new date range with the same structure.",
     "endDateSubtext": "to {{date}}",
-    "needsThePlan": "Open the plan first so its meals are available.",
     "durationDiffers": "Pick a range the same length as the original.",
     "someSkipped_one": "{{count}} meal was left out because it names neither a recipe nor itself.",
     "someSkipped_other": "{{count}} meals were left out because they name neither a recipe nor themselves."

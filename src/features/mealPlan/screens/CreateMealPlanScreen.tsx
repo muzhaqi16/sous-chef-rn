@@ -63,11 +63,8 @@ export const CreateMealPlanScreen: React.FC = () => {
   const { t } = useTranslation();
   const { goBack } = useAppNavigation();
   const { createMealPlan, creating } = useMealPlanActions();
-  const {
-    createPlanFromTemplate,
-    creatingFromTemplate,
-    isApiUnavailable: templateActionsUnavailable,
-  } = useMealTemplateActions();
+  const { createPlanFromTemplate, creatingFromTemplate } =
+    useMealTemplateActions();
   const { homes } = useHomeQuery();
   const { profile: dietaryProfile } = useDietaryProfile();
   const selectedHomeId = useSelectedHomeId();
@@ -109,7 +106,7 @@ export const CreateMealPlanScreen: React.FC = () => {
     servings?: number;
   }) => {
     const result = await createPlanFromTemplate(config);
-    if (result?.__typename === 'CreateMealPlanPayload') {
+    if (result) {
       setTemplatePreviewVisible(false);
       setSelectedTemplate(null);
       goBack();
@@ -162,7 +159,7 @@ export const CreateMealPlanScreen: React.FC = () => {
     // `false` means the mutation threw — the onError above already alerted.
     if (!result) return;
 
-    if (result?.__typename === 'CreateMealPlanPayload') {
+    if (result) {
       goBack();
     } else {
       // Resolved from the refusal's CODE, never `result.message` — that is
@@ -338,7 +335,6 @@ export const CreateMealPlanScreen: React.FC = () => {
         }}
         onConfirm={handleCreateFromTemplate}
         confirmLoading={creatingFromTemplate}
-        disabled={templateActionsUnavailable}
       />
     </FormScreen>
   );

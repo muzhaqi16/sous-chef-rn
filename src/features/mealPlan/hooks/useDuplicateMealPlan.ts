@@ -49,7 +49,7 @@ export function useDuplicateMealPlan() {
   const duplicate = async (options: DuplicateMealPlanOptions) => {
     const source = readSource(options.mealPlanId);
     if (!source) {
-      toastService.error(t('duplicatePlan.needsThePlan'));
+      toastService.error(t('mealPlan.needsThePlan'));
       return null;
     }
 

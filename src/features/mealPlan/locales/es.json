@@ -16,7 +16,9 @@
     "nameRequiredMessage": "Introduce un nombre para tu plan de comidas.",
     "startDateRequiredTitle": "Fecha de inicio requerida",
     "startDateRequiredMessage": "Selecciona una fecha de inicio.",
-    "failedToCreate": "No se pudo crear el plan de comidas."
+    "failedToCreate": "No se pudo crear el plan de comidas.",
+    "needsThePlan": "Abre primero el plan para tener sus comidas.",
+    "needsTheTemplate": "Abre primero la plantilla para tener sus comidas."
   },
   "addMealSheet": {
     "searchPlaceholder": "Busca recetas o añade una comida personalizada...",
@@ -83,7 +85,6 @@
     "newNamePlaceholder": "Introduce el nombre del plan",
     "infoText": "Todas las comidas se copiarán al nuevo rango de fechas con la misma estructura.",
     "endDateSubtext": "hasta {{date}}",
-    "needsThePlan": "Abre primero el plan para tener sus comidas.",
     "durationDiffers": "Elige un rango con la misma duración que el original.",
     "someSkipped_one": "Se omitió {{count}} comida porque no indica ni receta ni nombre.",
     "someSkipped_other": "Se omitieron {{count}} comidas porque no indican ni receta ni nombre."

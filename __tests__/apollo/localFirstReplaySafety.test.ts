@@ -59,9 +59,7 @@ const REPLAY_SAFETY_BASELINE: Record<
 > = {
   AddDietaryRestriction: 'absolute-update',
   CreateFromTemplate: 'bulk-create',
-  CreateMealPlanFromTemplate: 'bulk-create',
   CreateShoppingListItemsFromRecipe: 'bulk-create',
-  CreateTemplateFromMealPlan: 'bulk-create',
   DeleteMultipleNotifications: 'absolute-update',
   DeleteRecipeFolder: 'absolute-update',
   MarkAllNotificationsAsRead: 'absolute-update',

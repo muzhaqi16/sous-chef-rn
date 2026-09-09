@@ -1,16 +1,34 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
-  CreateMealPlanFromTemplateDocument,
-  CreateTemplateFromMealPlanDocument,
+  CreateMealTemplateDocument,
   DeleteMealTemplateDocument,
-  DuplicateTemplateDocument,
 } from '#features/mealPlan/graphql/mealTemplate.generated';
+import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import {
+  UseMealTemplateActions_TemplateFragmentDoc,
+  type UseMealTemplateActions_TemplateFragment,
+} from '#features/mealPlan/hooks/useMealTemplateActions.generated';
+import {
+  UseDuplicateMealPlan_MealPlanFragmentDoc,
+  type UseDuplicateMealPlan_MealPlanFragment,
+} from '#features/mealPlan/hooks/useDuplicateMealPlan.generated';
+import { planFromTemplate } from '#features/mealPlan/utils/planFromTemplate';
+import { templateFromPlan } from '#features/mealPlan/utils/templateFromPlan';
+import { duplicateTemplate as deriveTemplateCopy } from '#features/mealPlan/utils/duplicateTemplate';
+import {
+  buildOptimisticTemplate,
+  writeOptimisticTemplate,
+} from '#features/mealPlan/utils/buildOptimisticTemplate';
+import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
+import { useUser } from '#store/useAppStore';
 import {
   MealTemplateDisplayFragmentDoc,
   type MealTemplateDisplayFragment,
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import {
+  MealPlanType,
   type CreateMealPlanFromTemplateInput,
+  type CreateMealTemplateInput,
   type CreateTemplateFromMealPlanInput,
 } from '#/graphql/generated/schemaTypes';
 import { handleMutationError } from '#/utils/errorHandlers';
@@ -22,14 +40,9 @@ import {
   createRemoveFromQueryConnectionUpdater,
   skipUnmatchedFilterVariants,
 } from '#/apollo/utils/cacheUpdaters';
-import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { t } from '#/i18n';
 import { errorService } from '#/services/errorService';
 
-const addToMealPlans = createAddToQueryConnectionUpdater(
-  'mealPlans',
-  'MealPlan',
-);
 const addToMealTemplates = createAddToQueryConnectionUpdater(
   'mealTemplates',
   'MealTemplate',
@@ -41,32 +54,20 @@ const removeFromMealTemplates = createRemoveFromQueryConnectionUpdater(
 
 export function useMealTemplateActions() {
   const client = useApolloClient();
-  const isApiUnavailable = useIsApiUnavailable();
-
-  const [createFromTemplateMutation, { loading: creatingFromTemplate }] =
-    useMutation(CreateMealPlanFromTemplateDocument, {
-      update: (cache, { data }) => {
-        const result = data?.createMealPlanFromTemplate;
-        if (result?.__typename === 'CreateMealPlanPayload') {
-          addToMealPlans(cache, result.mealPlan, { position: 'start' });
-        }
-      },
-      onError: error => {
-        handleMutationError(error, { operation: 'Create Plan from Template' });
-      },
-    });
+  const user = useUser();
+  const { createMealPlan, creating: creatingPlan } = useMealPlanActions();
 
   const [createTemplateMutation, { loading: creatingTemplate }] = useMutation(
-    CreateTemplateFromMealPlanDocument,
+    CreateMealTemplateDocument,
     {
       update: (cache, { data }) => {
-        const payload = data?.createTemplateFromMealPlan;
-        if (payload?.__typename === 'CreateTemplateFromMealPlanPayload') {
+        const payload = data?.createMealTemplate;
+        if (payload?.__typename === 'CreateMealTemplatePayload') {
           addToMealTemplates(cache, payload.mealTemplate, {
             position: 'start',
-            // Scope the write to variants this template belongs to: the
-            // browser sheet caches one `mealTemplates` entry per category/search
-            // the user has visited, and cache.modify fans out across all of them.
+            // Scope the write to variants this template belongs to: the browser
+            // sheet caches one `mealTemplates` entry per category/search the
+            // user has visited, and cache.modify fans out across all of them.
             skipStoreField: skipUnmatchedFilterVariants({
               category: payload.mealTemplate.category,
             }),
@@ -74,9 +75,13 @@ export function useMealTemplateActions() {
         }
       },
       onError: error => {
-        handleMutationError(error, { operation: 'Save as Template' });
+        handleMutationError(error, { operation: 'Create Meal Template' });
       },
     },
+  );
+
+  const [createPlanItem, { loading: addingMeals }] = useMutation(
+    CreateMealPlanItemDocument,
   );
 
   // The optimistic remove + revert live in deleteTemplate (local-first), so this
@@ -90,76 +95,126 @@ export function useMealTemplateActions() {
     },
   );
 
-  const [duplicateTemplateMutation, { loading: duplicating }] = useMutation(
-    DuplicateTemplateDocument,
-    {
-      update: (cache, { data }) => {
-        const payload = data?.duplicateTemplate;
-        if (payload?.__typename === 'DuplicateTemplatePayload') {
-          addToMealTemplates(cache, payload.mealTemplate, {
-            position: 'start',
-            skipStoreField: skipUnmatchedFilterVariants({
-              category: payload.mealTemplate.category,
-            }),
-          });
-        }
-      },
-      onError: error => {
-        handleMutationError(error, { operation: 'Duplicate Template' });
-      },
-    },
-  );
+  const reportSkipped = (count: number) => {
+    if (count === 0) return;
+    toastService.info(t('duplicatePlan.someSkipped', { count }));
+  };
+
+  const readTemplate = (id: string) => {
+    const cacheId = client.cache.identify({ __typename: 'MealTemplate', id });
+    if (!cacheId) return null;
+    return client.cache.readFragment<UseMealTemplateActions_TemplateFragment>({
+      id: cacheId,
+      fragment: UseMealTemplateActions_TemplateFragmentDoc,
+      fragmentName: 'useMealTemplateActions_template',
+    });
+  };
+
+  const createTemplate = async (input: CreateMealTemplateInput) => {
+    const optimistic = user ? buildOptimisticTemplate(input, user.id) : null;
+    if (optimistic) {
+      try {
+        writeOptimisticTemplate(client.cache, optimistic);
+        addToMealTemplates(client.cache, optimistic, {
+          position: 'start',
+          skipStoreField: skipUnmatchedFilterVariants({
+            category: optimistic.category,
+          }),
+        });
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Create Meal Template (optimistic)',
+        });
+      }
+    }
+    try {
+      await createTemplateMutation({
+        variables: { input },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, { operation: 'Create Meal Template' });
+    }
+    return input.id ?? null;
+  };
 
   const createPlanFromTemplate = async (
     input: CreateMealPlanFromTemplateInput,
   ) => {
-    if (isApiUnavailable) {
-      toastService.error(t('errors.notAvailableOffline'));
+    const template = readTemplate(input.templateId);
+    if (!template) {
+      toastService.error(t('mealPlan.needsTheTemplate'));
       return null;
     }
-    let result;
-    try {
-      result = await createFromTemplateMutation({ variables: { input } });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Create meal plan from template error:',
-      });
+
+    const derived = planFromTemplate(template, {
+      startDate: input.startDate,
+      name: input.name,
+      servings: input.servings,
+      budgetAmount: input.budgetAmount,
+      dietaryProfileId: input.dietaryProfileId,
+      planType: MealPlanType.Weekly,
+    });
+
+    const created = await createMealPlan(derived.plan);
+    if (created?.__typename === 'ValidationError') return null;
+
+    for (const meal of derived.items) {
+      try {
+        await createPlanItem({
+          variables: { input: meal },
+          context: { localFirst: true },
+        });
+      } catch (error) {
+        errorService.reportError(error, {
+          operation: 'Create plan from template',
+        });
+      }
     }
-    if (!result) return null;
-    const data = result.data?.createMealPlanFromTemplate;
-    if (data?.__typename === 'CreateMealPlanPayload') {
-      toastService.success(t('mealTemplateActions.planCreated'));
-      Telemetry.trackEvent('meal_plan_created_from_template', {
-        template_id: input.templateId,
-      });
-    }
-    return data ?? null;
+
+    toastService.success(t('mealTemplateActions.planCreated'));
+    reportSkipped(derived.skipped.length);
+    Telemetry.trackEvent('meal_plan_created_from_template', {
+      template_id: input.templateId,
+      copied_meals: derived.items.length,
+    });
+    return { mealPlanId: derived.plan.id ?? null };
   };
 
   const createTemplateFromPlan = async (
     input: CreateTemplateFromMealPlanInput,
   ) => {
-    if (isApiUnavailable) {
-      toastService.error(t('errors.notAvailableOffline'));
+    const cacheId = client.cache.identify({
+      __typename: 'MealPlan',
+      id: input.mealPlanId,
+    });
+    const plan = cacheId
+      ? client.cache.readFragment<UseDuplicateMealPlan_MealPlanFragment>({
+          id: cacheId,
+          fragment: UseDuplicateMealPlan_MealPlanFragmentDoc,
+          fragmentName: 'useDuplicateMealPlan_mealPlan',
+        })
+      : null;
+    if (!plan) {
+      toastService.error(t('mealPlan.needsThePlan'));
       return null;
     }
-    let result;
-    try {
-      result = await createTemplateMutation({ variables: { input } });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Create template from meal plan error:',
-      });
-    }
-    if (!result) return null;
-    const data = result.data?.createTemplateFromMealPlan;
-    if (data?.__typename === 'CreateTemplateFromMealPlanPayload') {
-      toastService.success(t('mealTemplateActions.savedAsTemplate'));
-      Telemetry.trackEvent('template_created_from_meal_plan', {
-        meal_plan_id: input.mealPlanId,
-      });
-    }
-    return data ?? null;
+
+    const derived = templateFromPlan(plan, {
+      name: input.name,
+      description: input.description,
+      category: input.category,
+      tags: input.tags,
+    });
+
+    const templateId = await createTemplate(derived.template);
+    toastService.success(t('mealTemplateActions.savedAsTemplate'));
+    reportSkipped(derived.skipped.length);
+    Telemetry.trackEvent('template_created_from_meal_plan', {
+      meal_plan_id: input.mealPlanId,
+      copied_meals: derived.template.items?.length ?? 0,
+    });
+    return { mealTemplateId: templateId };
   };
 
   const deleteTemplate = async (id: string) => {
@@ -230,26 +285,17 @@ export function useMealTemplateActions() {
   };
 
   const duplicateTemplate = async (id: string, newName: string) => {
-    if (isApiUnavailable) {
-      toastService.error(t('errors.notAvailableOffline'));
+    const template = readTemplate(id);
+    if (!template) {
+      toastService.error(t('mealPlan.needsTheTemplate'));
       return null;
     }
-    let result;
-    try {
-      result = await duplicateTemplateMutation({
-        variables: { input: { id, newName } },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Duplicate template error:',
-      });
-    }
-    if (!result) return null;
-    const data = result.data?.duplicateTemplate;
-    if (data?.__typename === 'DuplicateTemplatePayload') {
-      toastService.success(t('mealTemplateActions.templateDuplicated'));
-    }
-    return data ?? null;
+
+    const derived = deriveTemplateCopy(template, { newName });
+    const templateId = await createTemplate(derived.template);
+    toastService.success(t('mealTemplateActions.templateDuplicated'));
+    reportSkipped(derived.skipped.length);
+    return { mealTemplateId: templateId };
   };
 
   return {
@@ -257,12 +303,10 @@ export function useMealTemplateActions() {
     createTemplateFromPlan,
     deleteTemplate,
     duplicateTemplate,
-    loading:
-      creatingFromTemplate || creatingTemplate || deleting || duplicating,
-    creatingFromTemplate,
+    loading: creatingPlan || creatingTemplate || deleting || addingMeals,
+    creatingFromTemplate: creatingPlan || addingMeals,
     creatingTemplate,
     deleting,
-    duplicating,
-    isApiUnavailable,
+    duplicating: creatingTemplate,
   };
 }

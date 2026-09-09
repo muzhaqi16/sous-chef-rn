@@ -16,7 +16,9 @@
     "nameRequiredMessage": "Shkruaj një emër për planin e vakteve.",
     "startDateRequiredTitle": "Kërkohet data e fillimit",
     "startDateRequiredMessage": "Zgjidh një datë fillimi.",
-    "failedToCreate": "Nuk u krijua dot plani i vakteve."
+    "failedToCreate": "Nuk u krijua dot plani i vakteve.",
+    "needsThePlan": "Hap fillimisht planin, që vaktet e tij të jenë të disponueshme.",
+    "needsTheTemplate": "Hap fillimisht modelin, që vaktet e tij të jenë të disponueshme."
   },
   "addMealSheet": {
     "searchPlaceholder": "Kërko receta ose shto një vakt të personalizuar...",
@@ -83,7 +85,6 @@
     "newNamePlaceholder": "Fut emrin e planit",
     "infoText": "Të gjitha vaktet do të kopjohen në intervalin e ri të datave me të njëjtën strukturë.",
     "endDateSubtext": "deri më {{date}}",
-    "needsThePlan": "Hap fillimisht planin, që vaktet e tij të jenë të disponueshme.",
     "durationDiffers": "Zgjidh një interval me të njëjtën kohëzgjatje si origjinali.",
     "someSkipped_one": "{{count}} vakt u la jashtë sepse nuk emërton as recetë as veten.",
     "someSkipped_other": "{{count}} vakte u lanë jashtë sepse nuk emërtojnë as recetë as veten."

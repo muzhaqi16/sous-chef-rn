@@ -138,7 +138,6 @@ const MealPlanMainInner: React.FC = () => {
     createTemplateFromPlan,
     creatingFromTemplate,
     creatingTemplate,
-    isApiUnavailable: templateActionsUnavailable,
   } = useMealTemplateActions();
 
   // Fetch meal plans and resolve active plan
@@ -360,7 +359,7 @@ const MealPlanMainInner: React.FC = () => {
     tags?: string[];
   }) => {
     const result = await createTemplateFromPlan(input);
-    if (result?.__typename === 'CreateTemplateFromMealPlanPayload') {
+    if (result) {
       setSaveTemplateVisible(false);
     }
   };
@@ -405,7 +404,7 @@ const MealPlanMainInner: React.FC = () => {
     servings?: number;
   }) => {
     const result = await createPlanFromTemplate(config);
-    if (result?.__typename === 'CreateMealPlanPayload') {
+    if (result) {
       setTemplatePreviewVisible(false);
       setSelectedTemplate(null);
     }
@@ -505,7 +504,6 @@ const MealPlanMainInner: React.FC = () => {
           }}
           onConfirm={handleCreateFromTemplate}
           confirmLoading={creatingFromTemplate}
-          disabled={templateActionsUnavailable}
           onEdit={id => {
             setTemplatePreviewVisible(false);
             setSelectedTemplate(null);
@@ -555,18 +553,11 @@ const MealPlanMainInner: React.FC = () => {
                 {permissions.canSaveAsTemplate ? (
                   <Pressable
                     onPress={handleSaveAsTemplate}
-                    disabled={templateActionsUnavailable}
                     hitSlop={8}
                     style={styles.headerActionButton}
                     accessibilityLabel={t('mealPlanMain.saveAsTemplateLabel')}
                   >
-                    <Icon
-                      name="bookmark-outline"
-                      size={22}
-                      tone={
-                        templateActionsUnavailable ? 'textSecondary' : 'primary'
-                      }
-                    />
+                    <Icon name="bookmark-outline" size={22} tone="primary" />
                   </Pressable>
                 ) : null}
                 <Pressable
@@ -664,7 +655,6 @@ const MealPlanMainInner: React.FC = () => {
         onClose={() => setSaveTemplateVisible(false)}
         onSave={handleSaveTemplate}
         saving={creatingTemplate}
-        disabled={templateActionsUnavailable}
       />
 
       {/* Template Browser Sheet */}
@@ -684,7 +674,6 @@ const MealPlanMainInner: React.FC = () => {
         }}
         onConfirm={handleCreateFromTemplate}
         confirmLoading={creatingFromTemplate}
-        disabled={templateActionsUnavailable}
       />
 
       {/* Generate Shopping List Sheet */}
