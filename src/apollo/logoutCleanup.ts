@@ -179,13 +179,13 @@ export class LogoutCleanup {
       // Clear optimistic data persistence
       optimisticDataPersistence.clearAll();
 
-      // Clear storage keys (legacy cleanup)
+      // The offline queue is NOT cleared here. A server-ended session is not the
+      // user choosing to discard unsynced work, so only `queueManager.onLogout()`
+      // — which fires on a deliberate sign-out — may delete queued entries.
       storage.remove('apollo-cache');
       storage.remove('navigation_state');
       storage.remove('apollo-client-cache');
       storage.remove('persisted-queries');
-      storage.remove('apollo-mutation-queue'); // Clear offline mutation queue
-      storage.remove('apollo-queue-current-user'); // Clear queue user ID
 
       // Get secure storage and clear auth-related data
       try {
@@ -194,15 +194,11 @@ export class LogoutCleanup {
         secureStorage.remove('apollo-cache');
         secureStorage.remove('navigation_state');
         secureStorage.remove('apollo-client-cache');
-        secureStorage.remove('apollo-mutation-queue');
-        secureStorage.remove('apollo-queue-current-user');
       } catch (storageError) {
         logger.warn('Failed to clear secure storage:', storageError);
       }
 
-      logger.info(
-        '🗑️ Apollo cache, navigation state, and mutation queue cleared',
-      );
+      logger.info('🗑️ Apollo cache and navigation state cleared');
     } catch (error) {
       logger.warn('Failed to clear Apollo cache:', error);
     }

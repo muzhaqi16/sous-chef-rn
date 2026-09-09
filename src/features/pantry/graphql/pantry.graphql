@@ -2,20 +2,6 @@
 # QUERIES
 # ============================================
 
-query GetPantries($homeId: ID!, $first: Int, $after: String) {
-  pantries(homeId: $homeId, first: $first, after: $after) {
-    edges {
-      node {
-        id
-        homeId
-        name
-        isDefault
-        createdAt
-      }
-    }
-  }
-}
-
 query GetPantry(
   $id: ID!
   $itemsCursor: String
@@ -932,44 +918,6 @@ mutation AdjustPantryItemWeight($input: AdjustPantryItemWeightInput!) {
       pantryItem {
         id
         ...useCorrectPantryItemWeight_pantryItem
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation AddLowStockItemsToShoppingList(
-  $input: AddLowStockItemsToShoppingListInput!
-) {
-  addLowStockItemsToShoppingList(input: $input) {
-    __typename
-    ... on AddLowStockItemsToShoppingListPayload {
-      addedItems {
-        pantryItemId
-        shoppingListItemId
-        itemName
-        quantity
-      }
-      skippedItems {
-        pantryItemId
-        itemName
-        reason
-      }
-      summary {
-        succeeded
-        skipped
-        total
-        failed
       }
     }
     ... on Error {

@@ -147,7 +147,7 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
     {
       keys: [
         'labels.default',
-        'recipes.defaultBadge',
+        'shoppingListPicker.defaultBadge',
         'appearance.colorDefault',
         'appearance.fontDefault',
         'moveToPantry.defaultLabel',
@@ -279,34 +279,6 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
       reason:
         'The English is one word for two roles: es "Todas" vs "Todos"; ' +
         'it "Tutte" vs "Tutti". One form would be wrong in the other ' +
-        'context, so the distinction belongs in the key rather than in ' +
-        'a runtime parameter.',
-    },
-    {
-      keys: [
-        'recipes.listItemCount_one',
-        'storageLocations.itemSingular',
-        'pantryScreen.itemCount_one',
-        'storageLocationCard.itemCount_one',
-      ],
-      reason:
-        'The English is one word for two roles: it "{{count}} elemento" ' +
-        'vs "{{count}} articolo". One form would be wrong in the other ' +
-        'context, so the distinction belongs in the key rather than in ' +
-        'a runtime parameter.',
-    },
-    {
-      keys: [
-        'recipes.listItemCount_other',
-        'pantrySettings.itemsCount',
-        'storageLocations.itemPlural',
-        'generateShoppingList.itemsCount',
-        'pantryScreen.itemCount_other',
-        'storageLocationCard.itemCount_other',
-      ],
-      reason:
-        'The English is one word for two roles: it "{{count}} elementi" ' +
-        'vs "{{count}} articoli". One form would be wrong in the other ' +
         'context, so the distinction belongs in the key rather than in ' +
         'a runtime parameter.',
     },

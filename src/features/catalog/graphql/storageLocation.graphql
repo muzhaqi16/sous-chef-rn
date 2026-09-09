@@ -34,61 +34,6 @@ query GetStorageLocations($homeId: ID!) {
   }
 }
 
-query GetStorageLocationTree($homeId: ID!) {
-  storageLocationTree(homeId: $homeId) {
-    id
-    name
-    type
-    icon
-    color
-    sortOrder
-    currentItemCount
-    isDefault
-    childLocations {
-      id
-      name
-      type
-      icon
-      color
-      sortOrder
-      currentItemCount
-      childLocations {
-        id
-        name
-        type
-        currentItemCount
-      }
-    }
-  }
-}
-
-query GetStorageLocation($id: ID!) {
-  storageLocation(id: $id) {
-    id
-    name
-    type
-    icon
-    color
-    temperature
-    description
-    isClimateControlled
-    capacity
-    capacityUnit
-    sortOrder
-    isDefault
-    currentItemCount
-    parentLocation {
-      id
-      name
-    }
-    childLocations {
-      id
-      name
-      type
-    }
-  }
-}
-
 # ============================================
 # MUTATIONS
 # ============================================

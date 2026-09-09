@@ -51,7 +51,7 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
         <View style={styles.statLink}>
           <ThemedGroceryBasket width={16} height={16} />
           <Text role="label" tone="secondary">
-            {t('pantryScreen.itemCount', { count: stats.totalItems })}
+            {t('labels.itemCount', { count: stats.totalItems })}
           </Text>
         </View>
 
@@ -81,8 +81,8 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
               count: stats.expiringCount,
             })}
           >
-            <Icon name="time-outline" size={14} tone="warning" />
-            <Text role="label" tone="warning">
+            <Icon name="time-outline" size={14} tone="expiring" />
+            <Text role="label" style={styles.expiringText}>
               {stats.expiringCount}
             </Text>
           </AppPressable>
@@ -165,5 +165,10 @@ const styles = StyleSheet.create(theme => ({
   },
   expiredText: {
     color: theme.colors.expiration.expiredText,
+  },
+  // The same token the row's expiry text uses, so a chip and the rows it
+  // counts cannot read as different states.
+  expiringText: {
+    color: theme.colors.expiration.warningText,
   },
 }));

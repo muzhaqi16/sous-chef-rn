@@ -5,6 +5,12 @@
 # Both fragments must mirror exactly what the subscription server pushes.
 fragment useShoppingListSubscriptions_item on ShoppingListItem {
   id
+  # The parent back-reference the list query selects on every node. Without it
+  # the written row reads incomplete and the whole list blanks, which no
+  # refetch repairs while the screen stays mounted.
+  shoppingList {
+    id
+  }
   itemName
   quantity
   quantityInput

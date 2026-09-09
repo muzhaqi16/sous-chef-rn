@@ -25,6 +25,7 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
   itemName
   quantity
   version
+  createdAt
   updatedAt
   storageState
   expiresAt
@@ -55,6 +56,8 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
     id
     name
     symbol
+    type
+    displayAsFraction
   }
   netWeightUnit {
     id

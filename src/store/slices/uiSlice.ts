@@ -7,35 +7,6 @@ import type { RootState } from '../index';
 import type { ImageFile } from '#/types/media';
 
 export interface UIState {
-  // Modal and overlay states
-  isLoading: boolean;
-  isError: boolean;
-  isFetching: boolean;
-
-  // Global loading overlay state
-  globalLoading: {
-    isLoading: boolean;
-    message?: string;
-    context?: string;
-    cancelable?: boolean;
-  };
-
-  // Bottom sheet states
-  bottomSheetVisible: boolean;
-  bottomSheetIndex: number;
-
-  // Form states
-  activeFormId: string | null;
-  formData: Record<string, Record<string, unknown>>;
-
-  // Search and filter states
-  globalSearchQuery: string;
-  activeFilters: Record<string, unknown>;
-
-  // Toast and notification states
-  toastMessage: string | null;
-  toastType: 'success' | 'error' | 'info' | 'warning' | null;
-
   // Cross-navigation scroll flags
   pendingPantryScrollToTop: boolean;
 
@@ -52,30 +23,6 @@ export interface UIState {
   pendingItemImages: Array<ImageFile & { perspective?: string }> | null;
 
   // Actions
-  setLoading: (loading: boolean) => void;
-  setError: (error: boolean) => void;
-  setFetching: (fetching: boolean) => void;
-
-  // Global loading actions
-  setGlobalLoading: (state: {
-    isLoading: boolean;
-    message?: string;
-    context?: string;
-    cancelable?: boolean;
-  }) => void;
-  clearGlobalLoading: () => void;
-
-  setBottomSheetVisible: (visible: boolean) => void;
-  setBottomSheetIndex: (index: number) => void;
-
-  setActiveForm: (
-    formId: string | null,
-    data?: Record<string, unknown>,
-  ) => void;
-  updateFormData: (formId: string, data: Record<string, unknown>) => void;
-  clearFormData: (formId: string) => void;
-  setGlobalSearchQuery: (query: string) => void;
-  setActiveFilters: (filters: Record<string, unknown>) => void;
   setPendingPantryScrollToTop: (pending: boolean) => void;
   setPendingCroppedImage: (image: ImageFile | null) => void;
   /** Reads and clears in one step, so two screens cannot both collect it. */
@@ -84,32 +31,9 @@ export interface UIState {
     images: Array<ImageFile & { perspective?: string }> | null,
   ) => void;
   bumpTutorialResetGeneration: () => void;
-  showToast: (
-    message: string,
-    type: 'success' | 'error' | 'info' | 'warning',
-  ) => void;
-  hideToast: () => void;
-  resetUI: () => void;
 }
 
 const initialUIState = {
-  isLoading: false,
-  isError: false,
-  isFetching: false,
-  globalLoading: {
-    isLoading: false,
-    message: undefined,
-    context: undefined,
-    cancelable: false,
-  },
-  bottomSheetVisible: false,
-  bottomSheetIndex: 0,
-  activeFormId: null,
-  formData: {},
-  globalSearchQuery: '',
-  activeFilters: {},
-  toastMessage: null,
-  toastType: null,
   pendingPantryScrollToTop: false,
   tutorialResetGeneration: 0,
   pendingCroppedImage: null,
@@ -123,89 +47,6 @@ export const createUISlice: StateCreator<
   UIState
 > = (set, get) => ({
   ...initialUIState,
-
-  setLoading: loading => {
-    set(state => {
-      state.isLoading = loading;
-    });
-  },
-
-  setError: error => {
-    set(state => {
-      state.isError = error;
-    });
-  },
-
-  setFetching: fetching => {
-    set(state => {
-      state.isFetching = fetching;
-    });
-  },
-
-  setGlobalLoading: loadingState => {
-    set(state => {
-      state.globalLoading = loadingState;
-    });
-  },
-
-  clearGlobalLoading: () => {
-    set(state => {
-      state.globalLoading = {
-        isLoading: false,
-        message: undefined,
-        context: undefined,
-        cancelable: false,
-      };
-    });
-  },
-
-  setBottomSheetVisible: visible => {
-    set(state => {
-      state.bottomSheetVisible = visible;
-    });
-  },
-
-  setBottomSheetIndex: index => {
-    set(state => {
-      state.bottomSheetIndex = index;
-    });
-  },
-
-  setActiveForm: (formId, data = {}) => {
-    set(state => {
-      state.activeFormId = formId;
-      if (formId && data) {
-        state.formData[formId] = data;
-      }
-    });
-  },
-
-  updateFormData: (formId, data) => {
-    set(state => {
-      if (!state.formData[formId]) {
-        state.formData[formId] = {};
-      }
-      Object.assign(state.formData[formId], data);
-    });
-  },
-
-  clearFormData: formId => {
-    set(state => {
-      delete state.formData[formId];
-    });
-  },
-
-  setGlobalSearchQuery: query => {
-    set(state => {
-      state.globalSearchQuery = query;
-    });
-  },
-
-  setActiveFilters: filters => {
-    set(state => {
-      state.activeFilters = filters;
-    });
-  },
 
   setPendingPantryScrollToTop: pending => {
     set(state => {
@@ -240,24 +81,16 @@ export const createUISlice: StateCreator<
       state.tutorialResetGeneration += 1;
     });
   },
-
-  showToast: (message, type) => {
-    set(state => {
-      state.toastMessage = message;
-      state.toastType = type;
-    });
-  },
-
-  hideToast: () => {
-    set(state => {
-      state.toastMessage = null;
-      state.toastType = null;
-    });
-  },
-
-  resetUI: () => {
-    set(state => {
-      Object.assign(state, initialUIState);
-    });
-  },
 });
+
+/**
+ * What a session end drops: the cross-screen hand-offs, which name a row or hold
+ * an image the next account must not receive. `tutorialResetGeneration` is
+ * deliberately absent — it is a bump counter, and resetting it reads to
+ * {@link useTutorialResetSignal} as a reset somebody asked for.
+ */
+export const TRANSIENT_UI_STATE = {
+  pendingPantryScrollToTop: false,
+  pendingCroppedImage: null,
+  pendingItemImages: null,
+} satisfies Partial<UIState>;

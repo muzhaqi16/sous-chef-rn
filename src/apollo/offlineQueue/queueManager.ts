@@ -11,6 +11,7 @@ import {
   QueueError,
   type FailedMutationInfo,
   type FailureHandler,
+  type OverwriteReporter,
 } from './types';
 import { convertToSyncMutation } from './convertToSyncMutation';
 import { reconcileReplaySuccess } from './queueReplayReconcilers';
@@ -46,6 +47,32 @@ const DEFAULT_CONFIG: QueueConfig = {
   processingTimeoutMs: 30000,
 };
 
+/** One version-free re-send. A second conflict is a race, not a stale read. */
+const MAX_CONFLICT_RESENDS = 1;
+
+/**
+ * Drops the `version` a write captured when the user acted. Covers the batch
+ * shape too: single-add shopping ops send `input.items[]`, each line carrying
+ * its own version.
+ */
+const withoutVersion = (variables: OperationVariables): OperationVariables => {
+  const input = variables.input as Record<string, unknown> | undefined;
+  if (!input || typeof input !== 'object') return variables;
+
+  const { version: _version, ...rest } = input;
+  const items = rest.items;
+  if (Array.isArray(items)) {
+    rest.items = items.map(line =>
+      line && typeof line === 'object'
+        ? (({ version: _lineVersion, ...lineRest }) => lineRest)(
+            line as Record<string, unknown>,
+          )
+        : line,
+    );
+  }
+  return { ...variables, input: rest };
+};
+
 /**
  * Replays offline-queued mutations for the signed-in user: auth-aware,
  * user-scoped, strict FIFO, with bounded retries.
@@ -55,6 +82,7 @@ export class QueueManager {
   private isProcessing = false;
   private processingPromise: Promise<void> | null = null;
   private failureHandler: FailureHandler | null = null;
+  private overwriteReporter: OverwriteReporter | null = null;
   private drainTimer: ReturnType<typeof setTimeout> | null = null;
   /** Whether this drain has already re-fetched the unit vocabulary. */
   private hasRefreshedUnits = false;
@@ -68,6 +96,11 @@ export class QueueManager {
   /** Invoked when a mutation permanently fails after exhausting retries. */
   setFailureHandler(handler: FailureHandler): void {
     this.failureHandler = handler;
+  }
+
+  /** Invoked when the server accepted a replay but kept its own value. */
+  setOverwriteReporter(reporter: OverwriteReporter): void {
+    this.overwriteReporter = reporter;
   }
 
   async processQueue(): Promise<void> {
@@ -335,8 +368,9 @@ export class QueueManager {
       );
     }
 
-    // Server wins on conflict, and its version already rides back in the
-    // response; this is diagnostics only.
+    // The server accepted the replay and kept its own value. The entry dequeues
+    // as success — nothing to withdraw — but the user's change is gone, so
+    // saying nothing would leave them believing it stuck.
     if (payload?.conflict) {
       logger.warn(
         `⚠️ Queue: Conflict detected for ${mutation.operationName}:`,
@@ -345,6 +379,7 @@ export class QueueManager {
       Telemetry.increment('offline_queue_conflicts_total', 1, {
         operation: mutation.operationName,
       });
+      this.reportOverwrite(mutation);
     }
 
     // The replay ran with no `update` callback, so it got normalization and
@@ -404,6 +439,35 @@ export class QueueManager {
         logger.info(
           `♻️ Queue: ${mutation.id} names a retired unit, re-resolving and retrying`,
         );
+      }
+    }
+
+    // The entity changed since the write was made. The captured `version` is
+    // knowingly stale, so re-checking it can only fail again: strip it and
+    // re-send the value the user actually entered, once. `version` is optional
+    // on every input that carries it, and omitting it means "apply against the
+    // current row" — the last-write-wins the API implements. A second conflict
+    // is a race the client cannot win; it falls through to revert-and-inform.
+    if (queueError.type === 'conflict') {
+      const conflictCount = (mutation.conflictCount ?? 0) + 1;
+      queueStore.updateMutation(mutation.id, { conflictCount });
+
+      if (conflictCount > MAX_CONFLICT_RESENDS) {
+        logger.warn(
+          `❌ Queue: ${mutation.id} still conflicts after a version-free re-send`,
+        );
+        queueError.retryable = false;
+      } else {
+        const variables = withoutVersion(mutation.variables);
+        queueStore.updateMutation(mutation.id, { variables });
+        logger.info(
+          `♻️ Queue: ${mutation.id} conflicted, re-sending without the captured version`,
+        );
+        return await this.processMutation({
+          ...mutation,
+          variables,
+          conflictCount,
+        });
       }
     }
 
@@ -629,6 +693,21 @@ export class QueueManager {
    */
   withdrawUnqueueableWrite(mutation: QueuedMutation, error: QueueError): void {
     this.invokeFailureHandler(mutation, error);
+  }
+
+  private reportOverwrite(mutation: QueuedMutation): void {
+    if (!this.overwriteReporter) return;
+    const { entityType, entityId } = this.extractEntityInfo(mutation);
+    try {
+      this.overwriteReporter({
+        mutationId: mutation.id,
+        operationName: mutation.operationName,
+        entityType,
+        entityId,
+      });
+    } catch (reporterError) {
+      logger.error('Queue: Overwrite reporter threw an error:', reporterError);
+    }
   }
 
   private invokeFailureHandler(

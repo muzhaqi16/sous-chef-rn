@@ -49,10 +49,9 @@ export const PaginationFooter: React.FC<PaginationFooterProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  skeletonContainer: {
-    marginTop: theme.spacing.xs,
-    gap: theme.spacing.sm,
-  },
+  // No gap and no top margin: every skeleton row carries `commonStyles.rowWrapper`,
+  // whose `rowGap` already spaces it from the row above — the last real one included.
+  skeletonContainer: {},
   footerLoader: {
     justifyContent: 'center',
     alignItems: 'center',

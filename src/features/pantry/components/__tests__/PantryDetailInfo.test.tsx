@@ -21,10 +21,15 @@ jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
       .map((w: string) => w.charAt(0) + w.slice(1).toLowerCase())
       .join(' ');
   }),
-  formatCostOrNull: jest.fn((a: number | null | undefined) => {
-    if (a == null || a <= 0) return null;
-    return `$${a.toFixed(2)}`;
-  }),
+  // Honours the currency it is given: a double that always prints `$` makes
+  // the denomination invisible to every assertion.
+  formatCostOrNull: jest.fn(
+    (a: number | null | undefined, currency?: string) => {
+      if (a == null || a <= 0) return null;
+      const symbol = currency === 'EUR' ? '€' : '$';
+      return `${symbol}${a.toFixed(2)}`;
+    },
+  ),
   formatDate: jest.fn((d: string | null | undefined) => {
     if (!d) return null;
     return 'Jan 1, 2024';
@@ -247,7 +252,11 @@ describe('PantryDetailInfo', () => {
           pricing={{
             isAveraged: true,
             isRateDiluted: false,
-            lastPurchase: { date: '2026-08-31T00:00:00Z', totalCost: 3 },
+            lastPurchase: {
+              date: '2026-08-31T00:00:00Z',
+              totalCost: 3,
+              currency: { __typename: 'Currency', id: 'usd', code: 'USD' },
+            },
           }}
         />,
       );
@@ -257,6 +266,55 @@ describe('PantryDetailInfo', () => {
       expect(screen.getByText('Stock value')).toBeTruthy();
       expect(screen.getByText('$5.95')).toBeTruthy();
       expect(screen.getByText('Last purchase')).toBeTruthy();
+    });
+
+    // The item-level currency is null exactly when the costed batches disagree,
+    // so labelling a batch total with it denominates a foreign purchase in the
+    // account's own currency.
+    it('denominates the last purchase in the currency that batch was bought in', () => {
+      const item = { ...baseItem, costPerUnit: null, totalCost: null };
+      render(
+        <PantryDetailInfo
+          {...defaultProps}
+          itemRef={item}
+          pricing={{
+            isAveraged: true,
+            isRateDiluted: false,
+            lastPurchase: {
+              date: '2026-08-31T00:00:00Z',
+              totalCost: 12,
+              currency: { __typename: 'Currency', id: 'eur', code: 'EUR' },
+            },
+          }}
+        />,
+      );
+
+      expect(screen.getByText(/€12\.00/)).toBeTruthy();
+      expect(screen.queryByText(/\$12\.00/)).toBeNull();
+    });
+
+    // An amount whose denomination cannot be established is withheld: shown
+    // under an assumed currency it is a wrong number, not a partial one.
+    it('withholds a batch total whose currency cannot be established', () => {
+      const item = { ...baseItem, costPerUnit: null, totalCost: null };
+      render(
+        <PantryDetailInfo
+          {...defaultProps}
+          itemRef={item}
+          pricing={{
+            isAveraged: true,
+            isRateDiluted: false,
+            lastPurchase: {
+              date: '2026-08-31T00:00:00Z',
+              totalCost: 12,
+              currency: null,
+            },
+          }}
+        />,
+      );
+
+      expect(screen.getByText('Last purchase')).toBeTruthy();
+      expect(screen.queryByText(/12\.00/)).toBeNull();
     });
 
     it('keeps the plain labels for a stack with one purchase behind it', () => {

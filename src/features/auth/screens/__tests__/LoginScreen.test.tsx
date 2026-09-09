@@ -8,6 +8,7 @@ import {
 import { authService } from '#/services/authService';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { LoginScreen } from '../LoginScreen';
+import { useStore } from '#store';
 
 // --- Mocks ---
 
@@ -145,6 +146,37 @@ jest.mock('#/utils/validation/auth', () => {
 describe('LoginScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  // The mount check cannot answer for a slot proven unusable AFTER it, and the
+  // affordance is the only thing offering a credential that is already dead.
+  it('takes the biometric affordance down when the slot is forgotten', async () => {
+    jest
+      .spyOn(authService, 'getLastBiometricEmail')
+      .mockResolvedValue('chef@example.com');
+    jest.spyOn(authService, 'checkStoredCredentials').mockResolvedValue(true);
+    jest.spyOn(authService, 'getBiometricInfo').mockResolvedValue({
+      isAvailable: true,
+      biometryType: 'Fingerprint',
+    });
+    useStore.getState().setHasStoredCredentials(true);
+
+    render(<LoginScreen />);
+    const button = await waitFor(() =>
+      screen.getByLabelText(/fingerprint|biometric|touch id|face id/i),
+    );
+    expect(button).toBeTruthy();
+
+    // What `forgetBiometricSlot` writes when a slot is proven unusable. That
+    // it writes it is covered in authService.biometricPersistence; this is the
+    // half that decides whether the affordance is still offered.
+    useStore.getState().setHasStoredCredentials(false);
+
+    await waitFor(() =>
+      expect(
+        screen.queryByLabelText(/fingerprint|biometric|touch id|face id/i),
+      ).toBeNull(),
+    );
   });
 
   it('renders the login screen container', () => {

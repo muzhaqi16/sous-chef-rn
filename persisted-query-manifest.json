@@ -45,22 +45,10 @@
       "body": "mutation AddItemToShoppingListFromPantryItem($input: AddItemsToShoppingListInput!) {\n  addItemsToShoppingList(input: $input) {\n    __typename\n    ... on AddItemsToShoppingListPayload {\n      results {\n        index\n        clientId\n        success\n        quantityIncremented\n        error\n        item {\n          id\n          ...AddedShoppingListItemFields\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment AddedShoppingListItemFields on ShoppingListItem {\n  id\n  itemName\n  quantity\n  quantityInput\n  displayFormat\n  purchaseInfo {\n    isPurchased\n    movedToPantryAt\n    __typename\n  }\n  version\n  updatedAt\n  category\n  notes\n  unitName\n  unit {\n    id\n    name\n    symbol\n    __typename\n  }\n  sortOrder\n  item {\n    id\n    imageUrl\n    images {\n      url\n      kind\n      __typename\n    }\n    __typename\n  }\n  shoppingList {\n    id\n    totalItems\n    completedItems\n    remainingItems\n    completionRate\n    __typename\n  }\n  __typename\n}"
     },
     {
-      "id": "97ad7c783f9baa748c6fc406920f59e1d5a29cb0fb362fefe01ac184f75bf0c2",
-      "name": "AddItemsToShoppingList",
-      "type": "mutation",
-      "body": "mutation AddItemsToShoppingList($input: AddItemsToShoppingListInput!) {\n  addItemsToShoppingList(input: $input) {\n    __typename\n    ... on AddItemsToShoppingListPayload {\n      results {\n        index\n        clientId\n        success\n        item {\n          id\n          ...useRecipeShoppingList_addedItem\n          __typename\n        }\n        quantityIncremented\n        error\n        __typename\n      }\n      summary {\n        succeeded\n        failed\n        skipped\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment AddedShoppingListItemFields on ShoppingListItem {\n  id\n  itemName\n  quantity\n  quantityInput\n  displayFormat\n  purchaseInfo {\n    isPurchased\n    movedToPantryAt\n    __typename\n  }\n  version\n  updatedAt\n  category\n  notes\n  unitName\n  unit {\n    id\n    name\n    symbol\n    __typename\n  }\n  sortOrder\n  item {\n    id\n    imageUrl\n    images {\n      url\n      kind\n      __typename\n    }\n    __typename\n  }\n  shoppingList {\n    id\n    totalItems\n    completedItems\n    remainingItems\n    completionRate\n    __typename\n  }\n  __typename\n}\n\nfragment useRecipeShoppingList_addedItem on ShoppingListItem {\n  ...AddedShoppingListItemFields\n  __typename\n}"
-    },
-    {
       "id": "c87be7340fc4e4fb8b193c8720faabddfc19712cc3d8385373a451365472fd8f",
       "name": "AddItemsToShoppingListFromRecipe",
       "type": "mutation",
       "body": "mutation AddItemsToShoppingListFromRecipe($input: AddItemsToShoppingListInput!) {\n  addItemsToShoppingList(input: $input) {\n    __typename\n    ... on AddItemsToShoppingListPayload {\n      results {\n        index\n        clientId\n        success\n        item {\n          id\n          ...useRecipeShoppingList_addedItem\n          __typename\n        }\n        quantityIncremented\n        error\n        __typename\n      }\n      summary {\n        succeeded\n        failed\n        skipped\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment AddedShoppingListItemFields on ShoppingListItem {\n  id\n  itemName\n  quantity\n  quantityInput\n  displayFormat\n  purchaseInfo {\n    isPurchased\n    movedToPantryAt\n    __typename\n  }\n  version\n  updatedAt\n  category\n  notes\n  unitName\n  unit {\n    id\n    name\n    symbol\n    __typename\n  }\n  sortOrder\n  item {\n    id\n    imageUrl\n    images {\n      url\n      kind\n      __typename\n    }\n    __typename\n  }\n  shoppingList {\n    id\n    totalItems\n    completedItems\n    remainingItems\n    completionRate\n    __typename\n  }\n  __typename\n}\n\nfragment useRecipeShoppingList_addedItem on ShoppingListItem {\n  ...AddedShoppingListItemFields\n  __typename\n}"
-    },
-    {
-      "id": "3674646770075de75df14b8e719194490e3f6b2514cbc4c00846350d38dceb4a",
-      "name": "AddLowStockItemsToShoppingList",
-      "type": "mutation",
-      "body": "mutation AddLowStockItemsToShoppingList($input: AddLowStockItemsToShoppingListInput!) {\n  addLowStockItemsToShoppingList(input: $input) {\n    __typename\n    ... on AddLowStockItemsToShoppingListPayload {\n      addedItems {\n        pantryItemId\n        shoppingListItemId\n        itemName\n        quantity\n        __typename\n      }\n      skippedItems {\n        pantryItemId\n        itemName\n        reason\n        __typename\n      }\n      summary {\n        succeeded\n        skipped\n        total\n        failed\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
       "id": "6dc8dd4b445a56abe28bbc3771361fbb36bcf18df83d6280498634eea6555328",
@@ -597,12 +585,6 @@
       "body": "query GetNotificationPreferences {\n  me {\n    id\n    notificationPreferences {\n      id\n      userId\n      emailEnabled\n      pushEnabled\n      smsEnabled\n      expirationNotifications\n      expirationNotificationFrequency\n      expirationDaysThreshold\n      lowStockAlerts\n      shoppingListUpdates\n      pantryChanges\n      recipeRecommendations\n      mealPlanReminders\n      cookingReminders\n      collaborationInvites\n      homeInvites\n      sharedListUpdates\n      weeklyDigest\n      monthlyReport\n      quietHoursEnabled\n      quietHoursStart\n      quietHoursEnd\n      quietHoursTimezone\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
-      "id": "292bfe8a95216499c0dcada071619b2c7fa310ccafcfbe9de209d58dce4b9341",
-      "name": "GetNotificationStats",
-      "type": "query",
-      "body": "query GetNotificationStats($filters: NotificationFilters) {\n  notificationStats(filters: $filters) {\n    total\n    unread\n    read\n    dismissed\n    expired\n    byCategory {\n      category\n      count\n      unreadCount\n      __typename\n    }\n    byPriority {\n      priority\n      count\n      unreadCount\n      __typename\n    }\n    byType {\n      type\n      count\n      unreadCount\n      __typename\n    }\n    __typename\n  }\n}"
-    },
-    {
       "id": "830ae198e9dae6557b7834dd83a1d4d74b3448421fb61a93c80120234a033a22",
       "name": "GetNotifications",
       "type": "query",
@@ -613,12 +595,6 @@
       "name": "GetOnboardingItems",
       "type": "query",
       "body": "query GetOnboardingItems($filters: ItemFilters, $orderBy: ItemOrderBy, $first: Int, $after: String) {\n  items(filters: $filters, orderBy: $orderBy, first: $first, after: $after) {\n    edges {\n      cursor\n      node {\n        id\n        name\n        imageUrl\n        storageState\n        displayUnit {\n          id\n          name\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n      __typename\n    }\n    totalCount\n    __typename\n  }\n}"
-    },
-    {
-      "id": "938b798232994c12de5154faae916df28caff824935a03647c9f1ea02cbb93c1",
-      "name": "GetPantries",
-      "type": "query",
-      "body": "query GetPantries($homeId: ID!, $first: Int, $after: String) {\n  pantries(homeId: $homeId, first: $first, after: $after) {\n    edges {\n      node {\n        id\n        homeId\n        name\n        isDefault\n        createdAt\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "d45acc6f1410867a281da1a85c87ee9e03b400f14f55e77533da60e41d8f123e",
@@ -679,12 +655,6 @@
       "name": "GetPantryWasteAnalytics",
       "type": "query",
       "body": "query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {\n  pantry(id: $pantryId) {\n    id\n    wasteAnalytics(filters: $filter) {\n      totalWasteCount\n      totalWasteQuantity\n      totalWasteValue\n      averageWastePerDay\n      wasteRate\n      composted\n      recycled\n      periodStart\n      periodEnd\n      wasteByReason {\n        reason\n        count\n        totalQuantity\n        percentage\n        estimatedValue\n        __typename\n      }\n      topWastedItems {\n        itemId\n        itemName\n        imageUrl\n        count\n        totalQuantity\n        unitName\n        estimatedValue\n        __typename\n      }\n      wasteTrend {\n        date\n        value\n        count\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
-    },
-    {
-      "id": "2431e2c7fa03e59b54f7338fd58d33edaa527ed5b2e05ba5f71fd8e14b1c025f",
-      "name": "GetPopularItems",
-      "type": "query",
-      "body": "query GetPopularItems($first: Int = 10) {\n  items(orderBy: {popularity: DESC}, first: $first) {\n    edges {\n      node {\n        id\n        name\n        imageUrl\n        popularity\n        displayUnit {\n          id\n          name\n          symbol\n          type\n          __typename\n        }\n        brands {\n          brand {\n            id\n            name\n            __typename\n          }\n          __typename\n        }\n        categories {\n          isPrimary\n          category {\n            id\n            name\n            type\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    totalCount\n    __typename\n  }\n}"
     },
     {
       "id": "ccd5a395c64b09ef7dfb58541c64d91b870ec8c3a5fa8209dd8b3a43ca0c918d",
@@ -751,18 +721,6 @@
       "name": "GetShoppingListsLiteForRecipe",
       "type": "query",
       "body": "query GetShoppingListsLiteForRecipe($homeId: ID, $first: Int, $after: String) {\n  shoppingLists(filters: {homeId: $homeId}, first: $first, after: $after) {\n    edges {\n      cursor\n      node {\n        id\n        name\n        isDefault\n        totalItems\n        completedItems\n        homeId\n        home {\n          id\n          name\n          __typename\n        }\n        ownerships {\n          id\n          userId\n          user {\n            id\n            email\n            displayName\n            profile {\n              id\n              displayName\n              avatar\n              __typename\n            }\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n      __typename\n    }\n    totalCount\n    __typename\n  }\n}"
-    },
-    {
-      "id": "9cd88f951b02b9b2fad8a8a15120ce579c88b7e9da8f9c18fc44f6c58311cfc1",
-      "name": "GetStorageLocation",
-      "type": "query",
-      "body": "query GetStorageLocation($id: ID!) {\n  storageLocation(id: $id) {\n    id\n    name\n    type\n    icon\n    color\n    temperature\n    description\n    isClimateControlled\n    capacity\n    capacityUnit\n    sortOrder\n    isDefault\n    currentItemCount\n    parentLocation {\n      id\n      name\n      __typename\n    }\n    childLocations {\n      id\n      name\n      type\n      __typename\n    }\n    __typename\n  }\n}"
-    },
-    {
-      "id": "862c8d0f5772b36272aadf3f2ddd0805c358b3693230c4c9246f77a9fd5846c7",
-      "name": "GetStorageLocationTree",
-      "type": "query",
-      "body": "query GetStorageLocationTree($homeId: ID!) {\n  storageLocationTree(homeId: $homeId) {\n    id\n    name\n    type\n    icon\n    color\n    sortOrder\n    currentItemCount\n    isDefault\n    childLocations {\n      id\n      name\n      type\n      icon\n      color\n      sortOrder\n      currentItemCount\n      childLocations {\n        id\n        name\n        type\n        currentItemCount\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "003d8a64dcf27d947ea8fbe45295e38c98e2fab65213508ca261aed21408e0c9",
@@ -993,10 +951,10 @@
       "body": "mutation MovePurchasedItemsToPantry($input: MovePurchasedItemsToPantryInput!) {\n  movePurchasedItemsToPantry(input: $input) {\n    __typename\n    ... on MovePurchasedItemsToPantryPayload {\n      movedItems {\n        shoppingListItemId\n        __typename\n      }\n      failedItems {\n        itemName\n        code\n        errorId\n        __typename\n      }\n      summary {\n        total\n        succeeded\n        failed\n        skipped\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
-      "id": "02c326ef41f9ceb77dccca69d6aef333d9009e5a6c73610b4f7652b3f7ee5fc7",
+      "id": "a80c6fede7932869c5993c525232ac1b5ddfab3a5e5ff14e2404dbfd4c34dbba",
       "name": "MoveShoppingItemToPantry",
       "type": "mutation",
-      "body": "mutation MoveShoppingItemToPantry($input: MoveShoppingItemToPantryInput!) {\n  moveShoppingItemToPantry(input: $input) {\n    __typename\n    ... on MoveShoppingItemToPantryPayload {\n      pantryItem {\n        id\n        ...useMoveToPantry_pantryItem\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment useMoveToPantry_pantryItem on PantryItem {\n  id\n  pantryId\n  itemId\n  itemName\n  quantity\n  costPerUnit\n  totalCost\n  costCurrency {\n    id\n    code\n    __typename\n  }\n  version\n  updatedAt\n  storageState\n  expiresAt\n  lowStockAlert\n  isLowStock\n  minQuantity\n  lastUsedAt\n  netWeight\n  remainingNetWeight\n  activeBatchCount\n  earliestBatchExpiration\n  item {\n    id\n    imageUrl\n    images {\n      url\n      kind\n      __typename\n    }\n    __typename\n  }\n  unit {\n    id\n    name\n    symbol\n    __typename\n  }\n  netWeightUnit {\n    id\n    name\n    symbol\n    __typename\n  }\n  storageLocation {\n    id\n    name\n    type\n    __typename\n  }\n  __typename\n}"
+      "body": "mutation MoveShoppingItemToPantry($input: MoveShoppingItemToPantryInput!) {\n  moveShoppingItemToPantry(input: $input) {\n    __typename\n    ... on MoveShoppingItemToPantryPayload {\n      pantryItem {\n        id\n        ...useMoveToPantry_pantryItem\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment useMoveToPantry_pantryItem on PantryItem {\n  id\n  pantryId\n  itemId\n  itemName\n  quantity\n  costPerUnit\n  totalCost\n  costCurrency {\n    id\n    code\n    __typename\n  }\n  version\n  createdAt\n  updatedAt\n  storageState\n  expiresAt\n  lowStockAlert\n  isLowStock\n  minQuantity\n  lastUsedAt\n  netWeight\n  remainingNetWeight\n  portionUnitId\n  portionUnit {\n    id\n    name\n    symbol\n    __typename\n  }\n  remainingPortions\n  activeBatchCount\n  earliestBatchExpiration\n  item {\n    id\n    imageUrl\n    images {\n      url\n      kind\n      __typename\n    }\n    __typename\n  }\n  unit {\n    id\n    name\n    symbol\n    type\n    displayAsFraction\n    __typename\n  }\n  netWeightUnit {\n    id\n    name\n    symbol\n    __typename\n  }\n  storageLocation {\n    id\n    name\n    type\n    __typename\n  }\n  packageBreakdown {\n    count\n    contentUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    perUnitNetWeight\n    perUnitNetWeightUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    totalNetWeight\n    __typename\n  }\n  quantityBreakdown {\n    fullPackages\n    looseContentUnits\n    contentUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    totalContentUnits\n    remainingWeight\n    remainingWeightUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
     },
     {
       "id": "2e481d59d8a3e12644d6bf9270391345dc192398b50fc57c05637149dfd44a95",
@@ -1053,10 +1011,10 @@
       "body": "subscription PantryEvents($pantryId: ID!) {\n  pantryEvents(pantryId: $pantryId) {\n    originatorClientId\n    actorUserId\n    mutation\n    subtype\n    pantryId\n    timestamp\n    node {\n      __typename\n      ... on PantryItem {\n        id\n        __typename\n      }\n      ... on Pantry {\n        id\n        __typename\n      }\n      ... on PantryItemUsage {\n        id\n        __typename\n      }\n      ... on ExpirationNotification {\n        id\n        __typename\n      }\n    }\n    __typename\n  }\n}"
     },
     {
-      "id": "848e8619468ea76ec7d9de95ec85977184f26c13264d5d73aa65f5940c214d75",
+      "id": "f4c56634d2dcd85bb1e5f9a97b6311e44ed2b1a3d0e409fc50d74c452aabbfc9",
       "name": "PantryItemForEvent",
       "type": "query",
-      "body": "query PantryItemForEvent($id: ID!) {\n  pantryItem(id: $id) {\n    id\n    ...usePantrySubscriptions_pantryItem\n    __typename\n  }\n}\n\nfragment usePantrySubscriptions_pantryItem on PantryItem {\n  id\n  pantryId\n  itemId\n  itemName\n  quantity\n  version\n  updatedAt\n  storageState\n  expiresAt\n  lowStockAlert\n  isLowStock\n  minQuantity\n  lastUsedAt\n  netWeight\n  remainingNetWeight\n  portionUnitId\n  portionUnit {\n    id\n    name\n    symbol\n    __typename\n  }\n  remainingPortions\n  activeBatchCount\n  earliestBatchExpiration\n  item {\n    id\n    imageUrl\n    images {\n      url\n      kind\n      __typename\n    }\n    __typename\n  }\n  unit {\n    id\n    name\n    symbol\n    __typename\n  }\n  netWeightUnit {\n    id\n    name\n    symbol\n    __typename\n  }\n  storageLocation {\n    id\n    name\n    type\n    __typename\n  }\n  packageBreakdown {\n    count\n    contentUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    perUnitNetWeight\n    perUnitNetWeightUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    totalNetWeight\n    __typename\n  }\n  quantityBreakdown {\n    fullPackages\n    looseContentUnits\n    contentUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    totalContentUnits\n    remainingWeight\n    remainingWeightUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
+      "body": "query PantryItemForEvent($id: ID!) {\n  pantryItem(id: $id) {\n    id\n    ...usePantrySubscriptions_pantryItem\n    __typename\n  }\n}\n\nfragment usePantrySubscriptions_pantryItem on PantryItem {\n  id\n  pantryId\n  itemId\n  itemName\n  quantity\n  version\n  createdAt\n  updatedAt\n  storageState\n  expiresAt\n  lowStockAlert\n  isLowStock\n  minQuantity\n  lastUsedAt\n  netWeight\n  remainingNetWeight\n  portionUnitId\n  portionUnit {\n    id\n    name\n    symbol\n    __typename\n  }\n  remainingPortions\n  activeBatchCount\n  earliestBatchExpiration\n  item {\n    id\n    imageUrl\n    images {\n      url\n      kind\n      __typename\n    }\n    __typename\n  }\n  unit {\n    id\n    name\n    symbol\n    type\n    displayAsFraction\n    __typename\n  }\n  netWeightUnit {\n    id\n    name\n    symbol\n    __typename\n  }\n  storageLocation {\n    id\n    name\n    type\n    __typename\n  }\n  packageBreakdown {\n    count\n    contentUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    perUnitNetWeight\n    perUnitNetWeightUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    totalNetWeight\n    __typename\n  }\n  quantityBreakdown {\n    fullPackages\n    looseContentUnits\n    contentUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    totalContentUnits\n    remainingWeight\n    remainingWeightUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
     },
     {
       "id": "b4edf171332bf3829940b0cf82052864b39c0b668ada658c6ec2296189f660c3",
@@ -1215,10 +1173,10 @@
       "body": "mutation ShareShoppingList($input: ShareShoppingListInput!) {\n  shareShoppingList(input: $input) {\n    __typename\n    ... on ShareShoppingListPayload {\n      shoppingList {\n        id\n        shareCode\n        isPublic\n        shareLink {\n          universal\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
-      "id": "879f71e4d37e92cca48e70faa563ed97e2f81987abd500be3fe414e11731fa4b",
+      "id": "5437bf39a4dac3efd224fe345d36a68af509fec7f5f9c8c682aeec31e56ebf64",
       "name": "ShoppingListItemForEvent",
       "type": "query",
-      "body": "query ShoppingListItemForEvent($id: ID!) {\n  shoppingListItem(id: $id) {\n    id\n    ...useShoppingListSubscriptions_item\n    __typename\n  }\n}\n\nfragment ShoppingListItemPurchaseInfoFragment on ShoppingListItemPurchaseInfo {\n  isPurchased\n  movedToPantryAt\n  purchasedQuantity\n  purchasedPrice\n  purchaseDate\n  purchasedBy {\n    id\n    profile {\n      id\n      displayName\n      avatar\n      __typename\n    }\n    __typename\n  }\n  __typename\n}\n\nfragment useShoppingListSubscriptions_item on ShoppingListItem {\n  id\n  itemName\n  quantity\n  quantityInput\n  displayFormat\n  purchaseInfo {\n    ...ShoppingListItemPurchaseInfoFragment\n    __typename\n  }\n  version\n  updatedAt\n  category\n  notes\n  unitName\n  unit {\n    id\n    name\n    symbol\n    __typename\n  }\n  sortOrder\n  item {\n    id\n    imageUrl\n    images {\n      url\n      kind\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
+      "body": "query ShoppingListItemForEvent($id: ID!) {\n  shoppingListItem(id: $id) {\n    id\n    ...useShoppingListSubscriptions_item\n    __typename\n  }\n}\n\nfragment ShoppingListItemPurchaseInfoFragment on ShoppingListItemPurchaseInfo {\n  isPurchased\n  movedToPantryAt\n  purchasedQuantity\n  purchasedPrice\n  purchaseDate\n  purchasedBy {\n    id\n    profile {\n      id\n      displayName\n      avatar\n      __typename\n    }\n    __typename\n  }\n  __typename\n}\n\nfragment useShoppingListSubscriptions_item on ShoppingListItem {\n  id\n  shoppingList {\n    id\n    __typename\n  }\n  itemName\n  quantity\n  quantityInput\n  displayFormat\n  purchaseInfo {\n    ...ShoppingListItemPurchaseInfoFragment\n    __typename\n  }\n  version\n  updatedAt\n  category\n  notes\n  unitName\n  unit {\n    id\n    name\n    symbol\n    __typename\n  }\n  sortOrder\n  item {\n    id\n    imageUrl\n    images {\n      url\n      kind\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
     },
     {
       "id": "863a52cca98f21879e891e165f27f5443a78befec9764c0dd3629f6b0baff934",

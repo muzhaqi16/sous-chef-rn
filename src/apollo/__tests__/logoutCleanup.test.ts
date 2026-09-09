@@ -139,8 +139,17 @@ describe('LogoutCleanup', () => {
       expect(storage.remove).toHaveBeenCalledWith('navigation_state');
       expect(storage.remove).toHaveBeenCalledWith('apollo-client-cache');
       expect(storage.remove).toHaveBeenCalledWith('persisted-queries');
-      expect(storage.remove).toHaveBeenCalledWith('apollo-mutation-queue');
-      expect(storage.remove).toHaveBeenCalledWith('apollo-queue-current-user');
+    });
+
+    // This cleanup runs on EVERY session end, a rejected refresh token
+    // included. Deleting the queue here discards work the user never chose to
+    // discard; only `queueManager.onLogout()` may do that.
+    it('leaves the offline queue on disk', async () => {
+      await LogoutCleanup.performLogoutCleanup();
+      expect(storage.remove).not.toHaveBeenCalledWith('apollo-mutation-queue');
+      expect(storage.remove).not.toHaveBeenCalledWith(
+        'apollo-queue-current-user',
+      );
     });
 
     it('skips cache clearing when clearCache is false', async () => {

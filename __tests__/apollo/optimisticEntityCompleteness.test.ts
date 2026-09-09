@@ -31,6 +31,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { graphql, print, Kind, type DocumentNode } from 'graphql';
+import type { SelectionSetNode, FragmentDefinitionNode } from 'graphql';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { addMocksToSchema } from '@graphql-tools/mock';
 import { gql } from '@apollo/client';
@@ -50,10 +51,22 @@ import {
   SyncPantryItemDocument,
   type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
+import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { PantryItemForEventDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
+import { InviteToHomeDocument, GetHomeDocument } from '#operations/home/home.generated';
+import {
+  CreateStorageLocationDocument,
+  GetStorageLocationsDocument,
+} from '#features/catalog/graphql/storageLocation.generated';
+import {
+  ShoppingListItemForEventDocument,
+  UseShoppingListSubscriptions_ItemFragmentDoc,
+} from '#features/shoppingList/hooks/useShoppingListSubscriptions.generated';
 import {
   GetShoppingListItemsFilteredDocument,
   GetShoppingListDetailsDocument,
   GetShoppingListsLiteDocument,
+  AddCollaboratorDocument,
   type GetShoppingListItemsFilteredQuery,
   type GetShoppingListsLiteQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -102,6 +115,9 @@ const mockedSchema = addMocksToSchema({
     // leave the success inline fragment unmatched and the payload undefined.
     CreatePantryItemResult: () => ({ __typename: 'CreatePantryItemPayload' }),
     SyncPantryItemResult: () => ({ __typename: 'SyncPantryItemPayload' }),
+    MoveShoppingItemToPantryResult: () => ({
+      __typename: 'MoveShoppingItemToPantryPayload',
+    }),
   },
 });
 
@@ -175,6 +191,183 @@ function expectCompletePantry(
     throw new Error('pantry diff was incomplete');
   }
   return diff.result.pantry;
+}
+
+/** Flattens a selection set to dotted leaf paths, resolving fragment spreads. */
+function flattenSelection(
+  selectionSet: SelectionSetNode,
+  fragmentsByName: Map<string, FragmentDefinitionNode>,
+  prefix = '',
+  out = new Set<string>(),
+  seen = new Set<string>(),
+): Set<string> {
+  for (const selection of selectionSet.selections) {
+    if (selection.kind === Kind.FIELD) {
+      if (selection.name.value === '__typename') continue;
+      const key = prefix
+        ? `${prefix}.${selection.name.value}`
+        : selection.name.value;
+      if (selection.selectionSet) {
+        flattenSelection(
+          selection.selectionSet,
+          fragmentsByName,
+          key,
+          out,
+          seen,
+        );
+      } else {
+        out.add(key);
+      }
+    } else if (selection.kind === Kind.FRAGMENT_SPREAD) {
+      const fragment = fragmentsByName.get(selection.name.value);
+      if (!fragment) throw new Error(`unresolved spread ${selection.name.value}`);
+      const guard = `${prefix}|${selection.name.value}`;
+      if (seen.has(guard)) continue;
+      seen.add(guard);
+      flattenSelection(
+        fragment.selectionSet,
+        fragmentsByName,
+        prefix,
+        out,
+        seen,
+      );
+    } else if (selection.kind === Kind.INLINE_FRAGMENT) {
+      flattenSelection(selection.selectionSet, fragmentsByName, prefix, out, seen);
+    }
+  }
+  return out;
+}
+
+const fragmentsOf = (document: DocumentNode) =>
+  new Map(
+    document.definitions
+      .filter(
+        (definition): definition is FragmentDefinitionNode =>
+          definition.kind === Kind.FRAGMENT_DEFINITION,
+      )
+      .map(definition => [definition.name.value, definition]),
+  );
+
+/** Finds the first field named `name` anywhere in a document. */
+function findFieldSelection(
+  document: DocumentNode,
+  name: string,
+): SelectionSetNode {
+  let found: SelectionSetNode | undefined;
+  const walk = (selectionSet: SelectionSetNode) => {
+    for (const selection of selectionSet.selections) {
+      if (!('selectionSet' in selection) || !selection.selectionSet) continue;
+      if (selection.kind === Kind.FIELD && selection.name.value === name) {
+        found ??= selection.selectionSet;
+      }
+      walk(selection.selectionSet);
+    }
+  };
+  for (const definition of document.definitions) {
+    if ('selectionSet' in definition) walk(definition.selectionSet);
+  }
+  if (!found) throw new Error(`no field ${name} in document`);
+  return found;
+}
+
+/** The `edges { node { … } }` selection under a named connection field. */
+function findConnectionNode(
+  document: DocumentNode,
+  connectionField?: string,
+): SelectionSetNode {
+  if (!connectionField) return findFieldSelection(document, 'node');
+  const fragmentsByName = fragmentsOf(document);
+  let found: SelectionSetNode | undefined;
+  const walk = (selectionSet: SelectionSetNode, seen: Set<string>) => {
+    for (const selection of selectionSet.selections) {
+      if (selection.kind === Kind.FRAGMENT_SPREAD) {
+        const fragment = fragmentsByName.get(selection.name.value);
+        if (fragment && !seen.has(selection.name.value)) {
+          seen.add(selection.name.value);
+          walk(fragment.selectionSet, seen);
+        }
+        continue;
+      }
+      if (!('selectionSet' in selection) || !selection.selectionSet) continue;
+      if (
+        selection.kind === Kind.FIELD &&
+        selection.name.value === connectionField
+      ) {
+        found ??= findFieldSelection(
+          { kind: Kind.DOCUMENT, definitions: [
+            { ...document.definitions[0]!, selectionSet: selection.selectionSet },
+          ] } as DocumentNode,
+          'node',
+        );
+      }
+      walk(selection.selectionSet, seen);
+    }
+  };
+  for (const definition of document.definitions) {
+    if ('selectionSet' in definition) walk(definition.selectionSet, new Set());
+  }
+  if (!found) throw new Error(`no connection ${connectionField} in document`);
+  return found;
+}
+
+/**
+ * Asserts a writing document selects everything the reading query reads off a
+ * connection node. A path the writer omits is a field the cache will not hold,
+ * which under `returnPartialData: false` empties the reader entirely.
+ */
+function expectWriterCoversReader(
+  writerDocument: DocumentNode,
+  writerField: string,
+  readerDocument: DocumentNode,
+  label: string,
+  connectionField?: string,
+): void {
+  const required = flattenSelection(
+    findConnectionNode(readerDocument, connectionField),
+    fragmentsOf(readerDocument),
+  );
+  const written = flattenSelection(
+    findFieldSelection(writerDocument, writerField),
+    fragmentsOf(writerDocument),
+  );
+  expect(required.size).toBeGreaterThan(5);
+  expect({
+    label,
+    missing: [...required].filter(field => !written.has(field)).sort(),
+  }).toEqual({ label, missing: [] });
+}
+
+/** Asserts one fragment file's field list is a superset of another's. */
+function expectWriterCovers(writerFragment: string, readerFragment: string) {
+  const fieldsOf = (fragmentName: string): string[] => {
+    const sources = [
+      'src/features/notifications/hooks/useNotifications.graphql',
+      'src/features/notifications/hooks/useNotificationsOnLaunch.graphql',
+    ];
+    for (const relative of sources) {
+      const source = fs.readFileSync(
+        path.join(__dirname, '..', '..', relative),
+        'utf8',
+      );
+      const marker = `fragment ${fragmentName} on Notification {`;
+      if (!source.includes(marker)) continue;
+      return source
+        .slice(source.indexOf(marker))
+        .split('}')[0]!
+        .split('\n')
+        .slice(1)
+        .map(line => line.replace(/#.*$/, '').trim())
+        .filter(Boolean)
+        .sort();
+    }
+    throw new Error(`fragment ${fragmentName} not found`);
+  };
+  const readerFields = fieldsOf(readerFragment);
+  const writerFields = fieldsOf(writerFragment);
+  expect(readerFields.length).toBeGreaterThan(5);
+  expect(readerFields.filter(field => !writerFields.includes(field))).toEqual(
+    [],
+  );
 }
 
 describe('optimistic entity completeness', () => {
@@ -295,6 +488,49 @@ describe('optimistic entity completeness', () => {
       });
       const item = synced.syncPantryItem.item;
       item.id = 'client-cuid-5';
+      item.pantryId = 'pantry-1';
+
+      addToPantryItemsCache(cache, 'pantry-1', item);
+
+      expectCompletePantry(readPantry(cache));
+    });
+
+    it('keeps GetPantry complete after a MoveShoppingItemToPantry response lands', async () => {
+      // A move that RESTOCKS an existing stack returns that stack's id, and
+      // this response is the only field source for the row linked into the
+      // connection — on the online update and on the offline replay alike.
+      const cache = await seedPantryCache();
+      const moved = await runAgainstSchema<{
+        moveShoppingItemToPantry: {
+          pantryItem: { id: string; pantryId: string };
+        };
+      }>(MoveShoppingItemToPantryDocument, {
+        input: {
+          shoppingListItemId: 'list-item-1',
+          pantryId: 'pantry-1',
+          actualQuantity: 1,
+        },
+      });
+      const pantryItem = moved.moveShoppingItemToPantry.pantryItem;
+      pantryItem.id = 'server-item-restocked';
+      pantryItem.pantryId = 'pantry-1';
+
+      addToPantryItemsCache(cache, 'pantry-1', pantryItem);
+
+      expectCompletePantry(readPantry(cache));
+    });
+
+    it('keeps GetPantry complete after a pantry event read-back lands', async () => {
+      // A housemate's add arrives as an envelope plus an id; the handler reads
+      // the values back with PantryItemForEvent and links the row. A cache
+      // write triggers no fetch on a mounted watcher, so a field this misses
+      // blanks the viewer's list until the screen is remounted.
+      const cache = await seedPantryCache();
+      const event = await runAgainstSchema<{
+        pantryItem: { id: string; pantryId: string };
+      }>(PantryItemForEventDocument, { id: 'server-item-from-event' });
+      const item = event.pantryItem;
+      item.id = 'server-item-from-event';
       item.pantryId = 'pantry-1';
 
       addToPantryItemsCache(cache, 'pantry-1', item);
@@ -640,6 +876,36 @@ describe('optimistic entity completeness', () => {
       expect(diff.complete).toBe(true);
     });
 
+    it('keeps GetShoppingListItemsFiltered complete after a list event read-back lands', async () => {
+      // The pantry's sibling writer. A collaborator's change arrives as an
+      // envelope plus an id, is read back over HTTP and written to the entity;
+      // the list query selects `shoppingList { id }` on every node, so a
+      // fragment that omits the parent back-reference blanks the list.
+      const cache = await seedListCache();
+      const event = await runAgainstSchema<{
+        shoppingListItem: { id: string };
+      }>(ShoppingListItemForEventDocument, { id: 'item-from-event' });
+      const item = event.shoppingListItem;
+      item.id = 'item-from-event';
+
+      cache.writeFragment({
+        id: 'ShoppingListItem:item-from-event',
+        fragment: UseShoppingListSubscriptions_ItemFragmentDoc,
+        fragmentName: 'useShoppingListSubscriptions_item',
+        data: item as never,
+      });
+      addNewItemToShoppingListCache(cache, 'list-1', { id: 'item-from-event' });
+
+      const diff = cache.diff({
+        query: GetShoppingListItemsFilteredDocument,
+        variables: LIST_VARS,
+        optimistic: true,
+        returnPartialData: true,
+      });
+      expect(describeMissing(diff.missing)).toBe('none');
+      expect(diff.complete).toBe(true);
+    });
+
     it('keeps GetShoppingListItemsFiltered complete after an optimistic add', async () => {
       const cache = await seedListCache();
 
@@ -839,34 +1105,106 @@ describe('optimistic entity completeness', () => {
     // The two fragments are identical today; nothing but this holds them that
     // way.
     it('the subscription writes every field the feed reads off a node', () => {
-      const fieldsOf = (fragmentName: string, file: string): string[] => {
-        const source = fs.readFileSync(
-          path.join(__dirname, '..', '..', file),
-          'utf8',
-        );
-        const body = source
-          .slice(source.indexOf(`fragment ${fragmentName} on Notification {`))
-          .split('}')[0];
-        return body
-          .split('\n')
-          .slice(1)
-          .map(line => line.replace(/#.*$/, '').trim())
-          .filter(Boolean)
-          .sort();
-      };
-
-      const feedFields = fieldsOf(
-        'useNotificationsOnLaunch_notification',
-        'src/features/notifications/hooks/useNotificationsOnLaunch.graphql',
-      );
-      const eventFields = fieldsOf(
+      expectWriterCovers(
         'useNotifications_notification',
-        'src/features/notifications/hooks/useNotifications.graphql',
+        'useNotificationsOnLaunch_notification',
       );
+    });
+  });
 
-      expect(feedFields.length).toBeGreaterThan(5);
-      expect(feedFields.filter(field => !eventFields.includes(field))).toEqual(
-        [],
+  /**
+   * The cases above each name their writer. This block asks the opposite
+   * question — is every writer named? — by deriving the subject list from the
+   * tree, so a new one cannot ship without the decision being made.
+   */
+  describe('every connection-linking writer is accounted for', () => {
+    const LINKING_MODULES: Record<string, string> = {
+      'src/features/pantry/cache/items.ts':
+        'covered: the GetPantry cases above (optimistic, CreatePantryItem, SyncPantryItem, MoveShoppingItemToPantry, PantryItemForEvent)',
+      'src/features/pantry/hooks/usePantrySubscriptions.ts':
+        'covered: the pantry event read-back case, and the fragment comparison below',
+      'src/features/shoppingList/hooks/useMoveToPantry.ts':
+        'covered: the MoveShoppingItemToPantry case, and the fragment comparison below',
+      'src/features/notifications/utils/notificationCacheWrites.ts':
+        'covered: the notification feed fragment comparison above',
+      'src/features/barcode/hooks/useAddScannedItem.ts':
+        'covered indirectly: the row is written in full by buildOptimisticPantryItem before the mutation fires, so the narrow response merges onto a complete record — the optimistic-add case above is what holds that',
+      'src/features/catalog/hooks/useCreateStorageLocation.ts':
+        'covered: the GetStorageLocations reader is compared below',
+      'src/features/catalog/hooks/useStorageLocationManagement.ts':
+        'covered: the GetStorageLocations reader is compared below',
+      'src/features/home/hooks/useHomeInvitations.ts':
+        'covered: InviteToHome is compared below',
+      'src/features/shoppingList/hooks/useInviteCollaborator.ts':
+        'covered: AddCollaborator is compared below',
+    };
+
+    it('names every module that links an entity into a parent connection', () => {
+      const srcRoot = path.resolve(__dirname, '../../src');
+      const walk = (dir: string, out: string[] = []): string[] => {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          const full = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            if (entry.name !== '__tests__') walk(full, out);
+          } else if (entry.name.endsWith('.ts')) out.push(full);
+        }
+        return out;
+      };
+      const linking = walk(srcRoot)
+        .filter(file =>
+          /createAddTo(Parent|Root)ConnectionUpdater/.test(
+            fs.readFileSync(file, 'utf8'),
+          ),
+        )
+        .map(file => path.relative(path.resolve(__dirname, '../..'), file))
+        .filter(rel => rel !== 'src/apollo/utils/cacheUpdaters.ts')
+        .sort();
+
+      expect(linking.length).toBeGreaterThan(5);
+      expect(linking.filter(rel => !(rel in LINKING_MODULES))).toEqual([]);
+      expect(
+        Object.keys(LINKING_MODULES).filter(rel => !linking.includes(rel)),
+      ).toEqual([]);
+    });
+
+    it('each covered writer selects everything its readers read off a node', () => {
+      expectWriterCoversReader(
+        MoveShoppingItemToPantryDocument,
+        'pantryItem',
+        GetPantryDocument,
+        'PantryItem',
+      );
+      expectWriterCoversReader(
+        PantryItemForEventDocument,
+        'pantryItem',
+        GetPantryDocument,
+        'PantryItem',
+      );
+      expectWriterCoversReader(
+        ShoppingListItemForEventDocument,
+        'shoppingListItem',
+        GetShoppingListItemsFilteredDocument,
+        'ShoppingListItem',
+      );
+      expectWriterCoversReader(
+        CreateStorageLocationDocument,
+        'storageLocation',
+        GetStorageLocationsDocument,
+        'StorageLocation',
+      );
+      expectWriterCoversReader(
+        InviteToHomeDocument,
+        'homeInvite',
+        GetHomeDocument,
+        'HomeInvite',
+        'invitesConnection',
+      );
+      expectWriterCoversReader(
+        AddCollaboratorDocument,
+        'collaborator',
+        GetShoppingListDetailsDocument,
+        'ShoppingListCollaborator',
+        'collaboratorsConnection',
       );
     });
   });

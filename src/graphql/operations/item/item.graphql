@@ -270,40 +270,6 @@ query AutocompleteCategories($input: AutocompleteCategoryInput!) {
   }
 }
 
-query GetPopularItems($first: Int = 10) {
-  items(orderBy: { popularity: DESC }, first: $first) {
-    edges {
-      node {
-        id
-        name
-        imageUrl
-        popularity
-        displayUnit {
-          id
-          name
-          symbol
-          type
-        }
-        brands {
-          brand {
-            id
-            name
-          }
-        }
-        categories {
-          isPrimary
-          category {
-            id
-            name
-            type
-          }
-        }
-      }
-    }
-    totalCount
-  }
-}
-
 # ============================================
 # MUTATIONS
 # ============================================

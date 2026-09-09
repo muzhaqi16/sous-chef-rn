@@ -9,8 +9,6 @@
     "cantDeleteDefaultMessage": "Cakto më parë një vend tjetër si të parazgjedhur.",
     "cantDeleteTitle": "Nuk mund të fshihet vendi",
     "cantDeleteWithItems": "\"{{name}}\" ka {{description}}. Lëvizi ose hiqi më parë.",
-    "itemSingular": "{{count}} artikull",
-    "itemPlural": "{{count}} artikuj",
     "subLocationSingular": "{{count}} nën-vend",
     "subLocationPlural": "{{count}} nën-vende",
     "gotIt": "Kuptova",
@@ -415,9 +413,7 @@
   },
   "storageLocationCard": {
     "default": "Parazgjedhur",
-    "insideParent": "Ndodhet te {{parent}}",
-    "itemCount_one": "{{count}} artikull",
-    "itemCount_other": "{{count}} artikuj"
+    "insideParent": "Ndodhet te {{parent}}"
   },
   "itemSubtitle": {
     "percentRemaining": "({{percent}}% e mbetur)",

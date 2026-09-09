@@ -35,6 +35,8 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
@@ -48,8 +50,6 @@
 	<string>Take photos of your pantry items and scan barcodes to quickly add products to your inventory.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Use Face ID to securely access your saved login credentials</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Sous Chef needs your location to suggest nearby stores for shopping list items and help you find products more easily.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Save photos of your items to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -60,10 +60,7 @@
 	<true/>
 	<key>UIAppFonts</key>
 	<array>
-		<string>Feather.ttf</string>
 		<string>Ionicons.ttf</string>
-		<string>MaterialDesignIcons.ttf</string>
-		<string>MaterialIcons.ttf</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>

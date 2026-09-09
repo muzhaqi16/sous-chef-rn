@@ -98,7 +98,6 @@
     "selectListLabel": "Zgjidh një listë",
     "noLists": "Nuk u gjet asnjë listë blerjesh",
     "generatingMessage": "Po gjenerohet lista e blerjeve...",
-    "itemsCount": "{{count}} artikuj",
     "readyNothingToAdd": "\"{{name}}\" është gati — asgjë për të shtuar.",
     "createdSuccess_one": "Lista e blerjeve \"{{name}}\" u krijua me {{count}} artikull{{shared}}",
     "createdSuccess_other": "Lista e blerjeve \"{{name}}\" u krijua me {{count}} artikuj{{shared}}",

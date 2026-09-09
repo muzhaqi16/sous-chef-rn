@@ -69,7 +69,6 @@
     "defaultPantry": "Default Pantry",
     "defaultPantryDesc": "Make this your default pantry for this home",
     "itemsInPantry": "Items in pantry",
-    "itemsCount": "{{count}} items",
     "deleteWarning": "Deleting this pantry will permanently remove all items stored in it. This action cannot be undone.",
     "deleteConfirmMessage": "Are you sure you want to delete this pantry? This action cannot be undone and will remove all items in this pantry.",
     "nameEmptyError": "Pantry name cannot be empty",
@@ -306,8 +305,6 @@
   "pantryScreen": {
     "greetingFallback": "Good morning",
     "searchPlaceholder": "Search your pantry...",
-    "itemCount_one": "{{count}} item",
-    "itemCount_other": "{{count}} items",
     "sort": "Sort",
     "tabAll": "All",
     "tabPantry": "Pantry",

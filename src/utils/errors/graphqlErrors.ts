@@ -71,8 +71,9 @@ export function isResourceAccessLostError(error: unknown): boolean {
 
 /**
  * True when the server refused a page request's CURSOR. Keyed on the code plus
- * the cursor the caller SENT — never the message, and never a guess at the
- * argument's name: a connection calls it what it likes (`itemsCursor` here).
+ * the cursor the caller SENT — never the message, never the argument's name.
+ * Wider than a cursor: the API refuses every pagination argument with
+ * VALIDATION_FAILED and no field, so one bounded restart is what caps it.
  */
 export function isDeadCursorError(error: unknown, cursor: unknown): boolean {
   if (cursor == null || cursor === '') return false;

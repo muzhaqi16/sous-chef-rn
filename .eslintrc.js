@@ -888,6 +888,7 @@ module.exports = {
           },
           add: [
             {
+              // Not a dependency; the ban is the tripwire that keeps it out.
               name: '@react-native-picker/picker',
               message:
                 'Use ModalPicker (#components/molecules/ModalPicker) instead. ' +

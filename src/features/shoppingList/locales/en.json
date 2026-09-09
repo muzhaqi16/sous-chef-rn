@@ -266,5 +266,12 @@
   },
   "shoppingList": {
     "alreadyInPantry": "Already in your pantry"
+  },
+  "shoppingListPicker": {
+    "newListNamePlaceholder": "New list name",
+    "createAndAddIngredients": "Create & Add Ingredients",
+    "defaultBadge": "Default",
+    "newList": "New list",
+    "noLists": "No shopping lists yet"
   }
 }

@@ -42,6 +42,17 @@ export type ExpirationVariant = 'normal' | 'warning' | 'critical' | 'expired';
 
 type ExpiryStatus = 'expired' | 'warning' | 'normal';
 
+/**
+ * The one place `getExpirationStatus`'s scale becomes a visual state. `critical`
+ * is "expires today" — not expired — so it reads as a warning, and the border
+ * and the text cannot disagree about where that boundary sits.
+ */
+const toItemVariant = (type: ExpirationVariant): ItemVariant => {
+  if (type === 'expired') return 'expired';
+  if (type === 'critical' || type === 'warning') return 'warning';
+  return 'normal';
+};
+
 // Extracted so `styles.useVariants` fires once per row and theme colors reach
 // it through the ShadowTree instead of a React re-render.
 const ExpirationText: React.FC<{
@@ -162,26 +173,19 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
     ? differenceInCalendarDays(new Date(expiresAt), new Date())
     : null;
   const expStatus = getExpirationStatus(expiresIn);
-  const isExpired = expiresIn !== null && expiresIn < 0;
-  const isExpiringSoon = expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
-  const variant: ItemVariant = isExpired
-    ? 'expired'
-    : isExpiringSoon
-    ? 'warning'
-    : 'normal';
   const showExpiration =
     expiresIn !== null && expiresIn <= EXPIRATION_DISPLAY_THRESHOLD_DAYS;
+
+  // ONE ladder for the border and the text, so they cannot collapse
+  // `getExpirationStatus`'s four levels at different boundaries. An item
+  // expiring TODAY is `critical` — not expired — and reads as a warning on
+  // both.
+  const variant: ItemVariant = toItemVariant(expStatus.type);
   const expirationText = showExpiration ? expStatus.text : null;
   const expirationVariant: ExpirationVariant | undefined = showExpiration
     ? expStatus.type
     : undefined;
-  const expiryStatusKey: ExpiryStatus = (() => {
-    if (!showExpiration) return 'normal';
-    if (expStatus.type === 'expired' || expStatus.type === 'critical')
-      return 'expired';
-    if (expStatus.type === 'warning') return 'warning';
-    return 'normal';
-  })();
+  const expiryStatusKey: ExpiryStatus = showExpiration ? variant : 'normal';
 
   const quantity = formatQuantityDisplay(
     pantryItem.quantity,

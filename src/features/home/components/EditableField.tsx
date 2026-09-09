@@ -7,6 +7,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#components/atoms/FormInput';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { localizedErrorMessage } from '#/services/errorService';
 import { Text } from '#components/atoms/Text';
 
 interface EditableFieldProps {
@@ -67,7 +68,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
       },
       setSaving,
       err => {
-        setError(err instanceof Error ? err.message : t('errors.saveFailed'));
+        setError(localizedErrorMessage(err, t('errors.saveFailed')));
       },
     );
   };

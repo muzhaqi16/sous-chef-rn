@@ -1,14 +1,26 @@
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { isErrorTypename } from './mutationPayload';
 import { t } from '#/i18n';
 import { logger } from '#/utils/environment';
 
+/**
+ * The optimistic-lock failure, in both spellings the contract uses: the union
+ * member's `code` and the thrown `extensions.code`. Exported because the
+ * offline queue needs exactly this subset — a write may be re-sent without its
+ * captured version only when the version is what the server objected to.
+ */
+export const VERSION_CONFLICT_CODES: readonly string[] = [
+  ErrorCode.VersionConflict,
+  TopLevelErrorCode.ResourceVersionConflict,
+];
+
 // Conflict codes on BOTH channels — a top-level `extensions.code` and a resolved
-// union member's own `code`. `VERSION_CONFLICT` is the optimistic-lock failure,
-// `CONFLICT` covers uniqueness/state; both get "updated elsewhere".
+// union member's own `code`. `CONFLICT` covers uniqueness/state, which is not
+// re-sendable; it is here because the foreground shows "updated elsewhere" for
+// both, and deliberately absent from the queue's narrower subset above.
 const CONFLICT_CODES = new Set<string>([
   ErrorCode.Conflict,
-  ErrorCode.VersionConflict,
+  ...VERSION_CONFLICT_CODES,
 ]);
 
 /**
@@ -81,24 +93,22 @@ export function findFirstErrorMember(
 
 /**
  * Routes a resolved `ConflictError` member to the version-conflict refresh UX
- * rather than a generic alert.
+ * rather than a generic alert. A predicate, not an accessor: the member's own
+ * `message` is unlocalizable English and is never a candidate for display.
  */
-export function findConflictDataMember(
-  data: unknown,
-): { message: string | null } | null {
+export function isConflictDataMember(data: unknown): boolean {
   const member = findFirstErrorMember(data);
-  if (!member) return null;
-  const isConflict =
+  if (!member) return false;
+  return (
     member.typename === 'ConflictError' ||
-    (member.code !== null && CONFLICT_CODES.has(member.code));
-  return isConflict ? { message: member.message } : null;
+    (member.code !== null && CONFLICT_CODES.has(member.code))
+  );
 }
 
 /**
  * Always the generic "updated elsewhere" body: the API drops the
  * `currentVersion`/`expectedVersion` extensions when mapping to a union member,
- * so no typed detail exists on either channel. A caller holding the member's
- * own `message` shows that instead.
+ * so no typed detail exists on either channel.
  */
 export function getVersionConflictMessage(): string {
   return t('errors.codes.versionConflict');

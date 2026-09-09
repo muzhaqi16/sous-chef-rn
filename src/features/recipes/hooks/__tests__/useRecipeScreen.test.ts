@@ -41,7 +41,14 @@ jest.mock('#/services/alertService', () => ({
 }));
 
 // ── Mock useAppStore (selector + getState) ──
-const appStoreState = { user: { id: 'user-123' } };
+const appStoreState = {
+  user: { id: 'user-123' },
+  // The network fields the offline empty state reads. Absent, `isApiUnavailable`
+  // reads `undefined` as "offline" and every case renders the offline state.
+  isOnline: true,
+  apiReachable: true as boolean | null,
+  offlineModeEnabled: false,
+};
 jest.mock('#store/useAppStore', () => {
   const useAppStore = jest.fn((selector: (s: unknown) => unknown) =>
     selector(appStoreState),
@@ -286,6 +293,20 @@ beforeEach(() => {
 });
 
 describe('useRecipeScreen', () => {
+  // Discovery and search both need the network; "no recipes found" offline
+  // blames the library for the connection.
+  it('shows the offline empty state when the API is unreachable', () => {
+    appStoreState.apiReachable = false;
+    try {
+      const { result } = renderRecipeScreen();
+      expect(result.current.emptyStateConfig.title).toBe(
+        'Not available offline',
+      );
+    } finally {
+      appStoreState.apiReachable = true;
+    }
+  });
+
   it('exposes initial state shape', () => {
     const { result } = renderRecipeScreen();
 
@@ -429,10 +450,10 @@ describe('useRecipeScreen', () => {
     );
     expect(result.current.searchResults).toHaveLength(2);
     // Transform: SearchRecipesResult ids prefixed with 'spoonacular-'
-    expect(result.current.searchResults[0].id).toBe('spoonacular-7001');
-    expect(result.current.searchResults[0].title).toBe('Pasta Carbonara');
+    expect(result.current.searchResults[0]!.id).toBe('spoonacular-7001');
+    expect(result.current.searchResults[0]!.title).toBe('Pasta Carbonara');
     expect(result.current.showSearchResults).toBe(true);
-    expect(result.current.items[0].id).toBe('spoonacular-7001');
+    expect(result.current.items[0]!.id).toBe('spoonacular-7001');
   });
 
   it('handleTextSearch is a no-op for empty/whitespace queries', async () => {
@@ -510,8 +531,8 @@ describe('useRecipeScreen', () => {
     await waitFor(() => {
       expect(result.current.searchResults).toHaveLength(1);
     });
-    expect(result.current.searchResults[0].title).toBe('Tomato Soup');
-    expect(result.current.searchResults[0].id).toBe('spoonacular-8001');
+    expect(result.current.searchResults[0]!.title).toBe('Tomato Soup');
+    expect(result.current.searchResults[0]!.id).toBe('spoonacular-8001');
   });
 
   it('clearSearch resets search state but preserves discovery', () => {
@@ -673,11 +694,11 @@ describe('useRecipeScreen', () => {
         'spoonacular-7001',
         'spoonacular-7002',
       ]);
-      expect(result.current.searchResults[0].title).toBe('Family Lasagna');
+      expect(result.current.searchResults[0]!.title).toBe('Family Lasagna');
       // Backend results are the app's recipe corpus, not the user's own —
       // a non-saved result with no live match carries no badge.
-      expect(result.current.searchResults[0].badge).toBeUndefined();
-      expect(result.current.searchResults[0].subtitle).toContain('60');
+      expect(result.current.searchResults[0]!.badge).toBeUndefined();
+      expect(result.current.searchResults[0]!.subtitle).toContain('60');
     });
 
     it('dedupes Spoonacular results that share a backend title', async () => {

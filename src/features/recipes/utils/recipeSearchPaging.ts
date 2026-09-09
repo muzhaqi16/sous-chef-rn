@@ -1,6 +1,9 @@
 import { errorService } from '#/services/errorService';
 import type { ApolloClient } from '@apollo/client';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
+import { useStore } from '#store';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 import { t as tGlobal } from '#/i18n';
 import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
 import {
@@ -42,6 +45,13 @@ export function handleSearchError(error: unknown, label: string): void {
     isRateLimitError?: boolean;
   };
   errorService.reportError(error, { operation: label });
+  // Offline is a state, not a failure: a modal covers the screen and its copy
+  // ("search failed") says nothing the reader can act on. The search surface
+  // shows its own offline state instead.
+  if (isApiUnavailable(useStore.getState())) {
+    toastService.info(tGlobal('errors.offlineSearchUnavailable'));
+    return;
+  }
   if (err.isQuotaExceeded) {
     alertService.alert(
       tGlobal('recipes.apiLimitTitle'),

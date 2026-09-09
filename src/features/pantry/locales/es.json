@@ -69,7 +69,6 @@
     "defaultPantry": "Despensa predeterminada",
     "defaultPantryDesc": "Establecer esta como despensa predeterminada de este hogar",
     "itemsInPantry": "Artículos en la despensa",
-    "itemsCount": "{{count}} artículos",
     "deleteWarning": "Eliminar esta despensa quitará permanentemente todos los artículos que contiene. Esta acción no se puede deshacer.",
     "deleteConfirmMessage": "¿Seguro que quieres eliminar esta despensa? Esta acción no se puede deshacer y eliminará todos los artículos.",
     "nameEmptyError": "El nombre de la despensa no puede estar vacío",
@@ -306,8 +305,6 @@
   "pantryScreen": {
     "greetingFallback": "Buenos días",
     "searchPlaceholder": "Busca en tu despensa...",
-    "itemCount_one": "{{count}} artículo",
-    "itemCount_other": "{{count}} artículos",
     "sort": "Ordenar",
     "tabAll": "Todos",
     "tabPantry": "Despensa",

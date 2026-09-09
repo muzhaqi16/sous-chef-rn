@@ -275,7 +275,10 @@ export const PantryContent = React.forwardRef<
       componentName: 'PantryContent',
       reportInterval: 10000,
       hasRealContent: !initialSkeletons,
-      rowCount: listData.length,
+      // The BODY rows, not `listData.length`: the sticky sentinel is always in
+      // that array, so a settled-empty tab would never reach the `rowCount === 0`
+      // release and its cover would wait for a commit that has no rows to make.
+      rowCount: listData.length - 1,
     });
     // FlashList re-renders EVERY mounted cell when this prop's identity changes,
     // so it must never change: the live handler (which flips to `undefined` as

@@ -13,7 +13,12 @@ import type { ApolloClient } from '@apollo/client';
  */
 export const APOLLO_DEFAULT_OPTIONS: ApolloClient.DefaultOptions.Input = {
   query: {
-    fetchPolicy: 'network-only', // Always fetch fresh data for one-time queries
+    // Cache first, so a one-shot read works offline unless the caller says it
+    // needs fresh data. `network-only` as the DEFAULT made every imperative
+    // read offline-hostile by omission — the opposite of what an offline-first
+    // app wants from the option it gets when nobody chose one.
+    // `defaultOptions.test.ts` pins this and lists the callers that opt out.
+    fetchPolicy: 'cache-first',
     errorPolicy: 'all', // Return both data and errors for observability
   },
   mutate: {

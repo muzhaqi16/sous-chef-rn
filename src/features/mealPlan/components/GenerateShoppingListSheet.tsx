@@ -211,7 +211,7 @@ export const GenerateShoppingListSheet: React.FC<
                 <View style={styles.listItemContent}>
                   <Text role="bodyStrong">{list.name}</Text>
                   <Text role="caption" tone="secondary">
-                    {t('generateShoppingList.itemsCount', {
+                    {t('labels.itemCount', {
                       count: list.totalItems,
                     })}
                   </Text>

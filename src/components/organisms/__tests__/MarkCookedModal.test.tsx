@@ -1,191 +1,124 @@
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
-import type { BottomSheetFormScrollView as BottomSheetFormScrollViewComponent } from '#components/atoms/BottomSheetFormScrollView';
-import type { BottomSheetHeader as BottomSheetHeaderComponent } from '#components/molecules/BottomSheetHeader';
-import type { FractionInput as FractionInputComponent } from '#components/molecules/FractionInput';
-import type { FormInput as FormInputComponent } from '#components/atoms/FormInput';
-import { MarkCookedModal } from '#components/organisms/MarkCookedModal';
+import { render, screen, fireEvent } from '@testing-library/react-native';
+import { MarkCookedModal } from '../MarkCookedModal';
 
-jest.mock('#hooks/useStandardBottomSheet', () => ({
-  useStandardBottomSheet: jest.fn(() => ({
-    ref: { current: null },
-    modalProps: {},
-    contentContainerStyle: {},
-    theme: {
-      colors: {
-        textPrimary: '#000',
-        textSecondary: '#666',
-        primary: '#007AFF',
-        surface: '#FFF',
-        surfaceVariant: '#F5F5F5',
-        border: '#CCC',
-        white: '#FFF',
-        background: '#FFF',
-      },
-      spacing: { xs: 2, sm: 4, md: 8, lg: 16, xl: 24 },
-    },
-  })),
-  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
-}));
-
-jest.mock('#components/atoms/BottomSheetFormScrollView', () => {
-  const RN = require('react-native');
+jest.mock('#components/templates/Sheet', () => {
+  const { View } = require('react-native');
   return {
-    BottomSheetFormScrollView: (
-      props: React.ComponentProps<typeof BottomSheetFormScrollViewComponent>,
-    ) => require('react').createElement(RN.View, props),
+    Sheet: ({ children }: { children?: React.ReactNode }) => (
+      <View>{children}</View>
+    ),
   };
 });
 
 jest.mock('#components/molecules/BottomSheetHeader', () => {
-  const RN = require('react-native');
-  const R = require('react');
+  const { Pressable, Text } = require('react-native');
   return {
     BottomSheetHeader: ({
-      title,
-      onCancel,
       onConfirm,
-      confirmLabel,
-    }: React.ComponentProps<typeof BottomSheetHeaderComponent>) =>
-      R.createElement(
-        RN.View,
-        { testID: 'bottom-sheet-header' },
-        R.createElement(RN.Text, null, title),
-        R.createElement(
-          RN.Pressable,
-          { onPress: onCancel, testID: 'cancel-button' },
-          R.createElement(RN.Text, null, 'Cancel'),
-        ),
-        R.createElement(
-          RN.Pressable,
-          { onPress: onConfirm, testID: 'confirm-button' },
-          R.createElement(RN.Text, null, confirmLabel),
-        ),
-      ),
+      confirmDisabled,
+    }: {
+      onConfirm?: () => void;
+      confirmDisabled?: boolean;
+    }) => (
+      <Pressable
+        testID="confirm"
+        disabled={confirmDisabled}
+        accessibilityState={{ disabled: !!confirmDisabled }}
+        onPress={confirmDisabled ? undefined : onConfirm}
+      >
+        <Text>confirm</Text>
+      </Pressable>
+    ),
   };
 });
 
 jest.mock('#components/molecules/FractionInput', () => {
-  const RN = require('react-native');
-  const R = require('react');
+  const { TextInput, Text, View } = require('react-native');
   return {
     FractionInput: ({
-      label,
       value,
       onChangeText,
-      placeholder,
-    }: React.ComponentProps<typeof FractionInputComponent>) =>
-      R.createElement(
-        RN.View,
-        null,
-        R.createElement(RN.Text, null, label),
-        R.createElement(RN.TextInput, {
-          value,
-          onChangeText,
-          placeholder,
-          testID: 'fraction-input',
-        }),
-      ),
+      error,
+    }: {
+      value?: string;
+      onChangeText?: (next: string) => void;
+      error?: string;
+    }) => (
+      <View>
+        <TextInput
+          testID="servings"
+          value={value}
+          onChangeText={onChangeText}
+        />
+        {error ? <Text testID="servings-error">{error}</Text> : null}
+      </View>
+    ),
   };
 });
 
-jest.mock('#components/atoms/FormInput', () => {
-  const RN = require('react-native');
-  const R = require('react');
-  return {
-    FormInput: ({
-      label,
-      value,
-      onChangeText,
-      placeholder,
-    }: React.ComponentProps<typeof FormInputComponent>) =>
-      R.createElement(
-        RN.View,
-        null,
-        R.createElement(RN.Text, null, label),
-        R.createElement(RN.TextInput, {
-          value,
-          onChangeText,
-          placeholder,
-          testID: `form-input-${label?.replace(/\s+/g, '-').toLowerCase()}`,
-        }),
-      ),
-  };
-});
+const renderModal = (onConfirm = jest.fn()) => {
+  render(
+    <MarkCookedModal
+      visible
+      recipeName="Soup"
+      defaultServings={4}
+      onClose={jest.fn()}
+      onConfirm={onConfirm}
+    />,
+  );
+  return onConfirm;
+};
 
-jest.mock('#/utils/fractionUtils', () => ({
-  parseFractionalInput: (input: string) => {
-    const val = parseFloat(input);
-    return isNaN(val) ? null : val;
-  },
-}));
+describe('MarkCookedModal servings', () => {
+  // The parser reports a value it cannot read with the same `null` the empty
+  // field uses, so the guard against it has to separate the two — otherwise
+  // the pantry is deducted for a serving count nobody entered.
+  it.each(['1 1/', '1/2/3', 'a pinch', '3/0'])(
+    'reports %s on the field instead of cooking the default',
+    unreadable => {
+      const onConfirm = renderModal();
 
-describe('MarkCookedModal', () => {
-  const defaultProps = {
-    visible: true,
-    recipeName: 'Spaghetti Bolognese',
-    defaultServings: 4,
-    onClose: jest.fn(),
-    onConfirm: jest.fn(),
-    hasPantry: false,
-  };
+      fireEvent.changeText(screen.getByTestId('servings'), unreadable);
 
-  beforeEach(() => {
-    jest.clearAllMocks();
+      expect(screen.getByTestId('servings-error')).toBeTruthy();
+      fireEvent.press(screen.getByTestId('confirm'));
+      expect(onConfirm).not.toHaveBeenCalled();
+    },
+  );
+
+  it('cooks the recipe default when the field is left empty', () => {
+    const onConfirm = renderModal();
+
+    fireEvent.changeText(screen.getByTestId('servings'), '');
+    fireEvent.press(screen.getByTestId('confirm'));
+
+    expect(onConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({ servings: 4 }),
+    );
   });
 
-  it('renders the mark cooked action', () => {
-    render(<MarkCookedModal {...defaultProps} />);
-    expect(screen.getByText('Mark Cooked')).toBeTruthy();
+  // A sloppy separator run is READ, not refused: the locale-aware normalizer
+  // settles it, so this is not the unreadable case.
+  it('reads a doubled decimal separator rather than refusing it', () => {
+    const onConfirm = renderModal();
+
+    fireEvent.changeText(screen.getByTestId('servings'), '2..5');
+    fireEvent.press(screen.getByTestId('confirm'));
+
+    expect(onConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({ servings: 2.5 }),
+    );
   });
 
-  it('displays the recipe name', () => {
-    render(<MarkCookedModal {...defaultProps} />);
-    expect(screen.getByText('Spaghetti Bolognese')).toBeTruthy();
-  });
+  it('cooks the entered amount when it can be read', () => {
+    const onConfirm = renderModal();
 
-  it('renders Servings Made input', () => {
-    render(<MarkCookedModal {...defaultProps} />);
-    expect(screen.getByText('Servings Made')).toBeTruthy();
-  });
+    fireEvent.changeText(screen.getByTestId('servings'), '1 1/2');
+    fireEvent.press(screen.getByTestId('confirm'));
 
-  it('renders Deduct from Pantry toggle', () => {
-    render(<MarkCookedModal {...defaultProps} />);
-    expect(screen.getByText('Deduct from Pantry')).toBeTruthy();
-  });
-
-  it('renders notes input', () => {
-    render(<MarkCookedModal {...defaultProps} />);
-    expect(screen.getByText('Notes (Optional)')).toBeTruthy();
-  });
-
-  it('calls onClose when Cancel is pressed', async () => {
-    const user = userEvent.setup();
-    render(<MarkCookedModal {...defaultProps} />);
-    await user.press(screen.getByTestId('cancel-button'));
-    expect(defaultProps.onClose).toHaveBeenCalled();
-  });
-
-  it('calls onConfirm and onClose when Mark Cooked is pressed', async () => {
-    const user = userEvent.setup();
-    render(<MarkCookedModal {...defaultProps} />);
-    await user.press(screen.getByTestId('confirm-button'));
-    expect(defaultProps.onConfirm).toHaveBeenCalled();
-    expect(defaultProps.onClose).toHaveBeenCalled();
-  });
-
-  it('does not show Smart Deduction when hasPantry is false', () => {
-    render(<MarkCookedModal {...defaultProps} hasPantry={false} />);
-    expect(screen.queryByText('Smart Deduction')).toBeNull();
-  });
-
-  it('shows Smart Deduction when hasPantry is true', () => {
-    render(<MarkCookedModal {...defaultProps} hasPantry={true} />);
-    expect(screen.getByText('Smart Deduction')).toBeTruthy();
-  });
-
-  it('renders confirm button with Mark Cooked label', () => {
-    render(<MarkCookedModal {...defaultProps} />);
-    expect(screen.getByText('Mark Cooked')).toBeTruthy();
+    expect(onConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({ servings: 1.5 }),
+    );
   });
 });

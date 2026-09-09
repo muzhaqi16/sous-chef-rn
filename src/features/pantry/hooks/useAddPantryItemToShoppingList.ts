@@ -14,13 +14,12 @@ import { errorService } from '#/services/errorService';
 export type AddToListOutcome = 'kept' | 'reverted';
 
 /**
- * Put one pantry item on the selected shopping list. The row is written before
- * firing so it survives a queued create, and the reconciler discards it when
- * the server refuses.
+ * Put one pantry item on a shopping list. The row is written before firing so it
+ * survives a queued create, and the reconciler discards it on a refusal. The
+ * list is a per-call argument because one screen adds a row to the list already
+ * selected and adds every row to a list picked in the moment.
  */
-export function useAddPantryItemToShoppingList(
-  shoppingListId: string | null | undefined,
-) {
+export function useAddPantryItemToShoppingList() {
   const client = useApolloClient();
 
   const [addToShoppingList] = useMutation(
@@ -33,6 +32,7 @@ export function useAddPantryItemToShoppingList(
   );
 
   const addToList = async (
+    shoppingListId: string | null | undefined,
     itemId: string,
     display: { itemName: string; unitId?: string },
   ): Promise<AddToListOutcome> => {

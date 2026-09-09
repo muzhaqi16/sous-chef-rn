@@ -266,5 +266,12 @@
   },
   "shoppingList": {
     "alreadyInPantry": "Tashmë te qilari yt"
+  },
+  "shoppingListPicker": {
+    "newListNamePlaceholder": "Emri i listës së re",
+    "createAndAddIngredients": "Krijo dhe shto përbërësit",
+    "defaultBadge": "Parazgjedhur",
+    "newList": "Listë e re",
+    "noLists": "Ende nuk ka lista blerjesh"
   }
 }

@@ -1,5 +1,9 @@
 import { createTestStore } from '#/test-utils/createTestStore';
-import { isApiUnavailable, shouldTreatAsOffline } from '../networkSlice';
+import {
+  blocksCacheMissQueries,
+  isApiUnavailable,
+  shouldTreatAsOffline,
+} from '../networkSlice';
 
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
@@ -100,9 +104,23 @@ describe('networkSlice', () => {
   });
 
   describe('apiReachable', () => {
-    it('defaults to true (reachable until proven otherwise)', () => {
+    it('defaults to unknown, not reachable', () => {
       const store = createTestStore();
-      expect(store.getState().apiReachable).toBe(true);
+      expect(store.getState().apiReachable).toBeNull();
+    });
+
+    // A first-hand `true` vetoes NetInfo's `isOnline: false`, so an assumed one
+    // outranks the platform saying there is no link.
+    it('lets a cold start with no link read as offline', () => {
+      const store = createTestStore();
+      store.getState().setNetworkStatus({
+        isOnline: false,
+        isInternetReachable: false,
+        networkType: 'none',
+      });
+
+      expect(shouldTreatAsOffline(store.getState())).toBe(true);
+      expect(blocksCacheMissQueries(store.getState())).toBe(true);
     });
 
     it('setApiReachable toggles the flag', () => {

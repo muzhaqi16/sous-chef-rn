@@ -13,8 +13,6 @@ import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 
-import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
-
 import { FolderPicker } from '#features/recipes/components/FolderPicker';
 import { RecipeDetailErrorBoundary } from '#components/providers/ScreenErrorBoundary';
 import { MarkCookedModal } from '#components/organisms/MarkCookedModal';
@@ -37,7 +35,7 @@ import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { SavedRecipeMetadataPanel } from '#features/recipes/components/recipeDetail/SavedRecipeMetadataPanel';
 import { RecipeInstructions } from '#features/recipes/components/recipeDetail/RecipeInstructions';
-import { ShoppingListPickerSheet } from '#features/recipes/components/recipeDetail/ShoppingListPickerSheet';
+import { ShoppingListPickerSheet } from '#features/shoppingList/ui/ShoppingListPickerSheet';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useUser } from '#store/useAppStore';
@@ -100,7 +98,6 @@ const RecipeDetailScreen: React.FC = () => {
   } = useRecipeDetail();
 
   // Scroll component for FlashList instances rendered inside bottom sheets.
-  const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   // Get available folders and tags for picker and autocomplete
   const { folders } = useRecipeFolders();
@@ -295,7 +292,10 @@ const RecipeDetailScreen: React.FC = () => {
     );
   }
 
-  if (error || backendError || !displayData) {
+  // `displayData` first: a revalidation that fails while the recipe is cached
+  // must not replace it with "not found" — which is what an offline open of a
+  // cached recipe read as.
+  if (!displayData) {
     const errorMessage =
       error ||
       backendError?.message ||
@@ -553,7 +553,6 @@ const RecipeDetailScreen: React.FC = () => {
         onListSelected={handleListSelected}
         onCreateListAndAdd={handleCreateListAndAddIngredients}
         onDismiss={handleSheetDismiss}
-        BottomSheetScrollable={BottomSheetScrollable}
       />
 
       {/* Mark Cooked Modal */}

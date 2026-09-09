@@ -87,10 +87,27 @@ jest.mock('#features/pantry/hooks/useCurrentPantry', () => ({
   }),
 }));
 
-jest.mock('#features/pantry/hooks/useAddLowStockToShoppingList', () => ({
-  useAddLowStockToShoppingList: () => ({
-    addLowStockToShoppingList: jest.fn(),
-    loading: false,
+// The sheet needs a bottom-sheet host and navigation context this render has
+// no use for; the recipe screen's test stubs it the same way.
+jest.mock('#features/shoppingList/ui/ShoppingListPickerSheet', () => ({
+  ShoppingListPickerSheet: () => null,
+}));
+
+jest.mock('#features/shoppingList/hooks/useShoppingListsLite', () => ({
+  useShoppingListsLite: () => ({ lists: [], loading: false }),
+}));
+
+const mockOpenForAll = jest.fn();
+const mockOpenForRow = jest.fn();
+jest.mock('#features/pantry/hooks/useLowStockListPicker', () => ({
+  useLowStockListPicker: () => ({
+    pickerVisible: false,
+    busy: false,
+    openForAll: mockOpenForAll,
+    openForRow: mockOpenForRow,
+    handleListSelected: jest.fn(),
+    handleCreateListAndAdd: jest.fn(),
+    dismissPicker: jest.fn(),
   }),
 }));
 
@@ -243,6 +260,36 @@ describe('FilteredPantryItems', () => {
     mockHasResult = true;
   });
 
+  // Cart visibility has ONE rule: a known permission refusal. A per-mode flag
+  // beside it would hide the cart on the screens where a re-buy is most likely
+  // — something expiring today — so there is none, and this pins that.
+  describe('the cart is offered in every mode', () => {
+    const MODES = [
+      ['lowStock', () => mockLowStockItems],
+      ['expiring', () => mockExpiringItems],
+      ['expired', () => mockExpiredItems],
+    ] as const;
+
+    it.each(MODES)('%s offers the cart', (mode, rows) => {
+      mockAllItems = rows();
+      renderWithApollo(<FilteredPantryItems route={makeRoute(mode)} />);
+      expect(
+        screen.queryAllByLabelText('Add to Shopping List').length,
+      ).toBeGreaterThan(0);
+    });
+
+    it.each(MODES)('%s withholds the cart on a known refusal', (mode, rows) => {
+      mockAllItems = rows();
+      mockListCanAddItems = false;
+      try {
+        renderWithApollo(<FilteredPantryItems route={makeRoute(mode)} />);
+        expect(screen.queryAllByLabelText('Add to Shopping List')).toEqual([]);
+      } finally {
+        mockListCanAddItems = true;
+      }
+    });
+  });
+
   describe('lowStock mode', () => {
     it('renders the title', () => {
       renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
@@ -297,8 +344,10 @@ describe('FilteredPantryItems', () => {
 
       await waitFor(() => expect(mockAddToList).toHaveBeenCalled());
       // The fixtures give every row a catalog id unlike its own, so passing
-      // the row id through is visible rather than coincidentally equal.
-      const [sentId] = mockAddToList.mock.calls[0]!;
+      // the row id through is visible rather than coincidentally equal. The
+      // list id leads: a row adds to the list already selected.
+      const [sentListId, sentId] = mockAddToList.mock.calls[0]!;
+      expect(sentListId).toBe('list-1');
       expect(sentId).toBe(`catalog-${mockLowStockItems[0]!.id}`);
       expect(sentId).not.toBe(mockLowStockItems[0]!.id);
     });
@@ -374,9 +423,11 @@ describe('FilteredPantryItems', () => {
       expect(screen.getByText('Expiring Items')).toBeTruthy();
     });
 
-    it('does not show add-all button in header', () => {
+    // Something expiring today is the most likely re-buy on the screen; the
+    // per-mode flag that hid this had no stated reason.
+    it('shows the add-all button in header', () => {
       renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
-      expect(screen.queryByTestId('add-all-low-stock')).toBeNull();
+      expect(screen.queryByTestId('add-all-low-stock')).not.toBeNull();
     });
 
     it('renders expiring item names', () => {

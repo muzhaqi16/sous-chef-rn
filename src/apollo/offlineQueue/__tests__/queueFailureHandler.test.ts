@@ -1,12 +1,14 @@
 import {
   handleQueueFailure,
   registerQueueFailureHandler,
+  reportQueueOverwrite,
 } from '../queueFailureHandler';
 import { queueManager } from '../queueManager';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { restoreItemToShoppingListAfterMoveToPantry } from '#features/shoppingList/cache/moveToPantry';
 import { toastService } from '#/services/toastService';
+import { t } from '#/i18n';
 import { queueStore } from '../queueStore';
 import type { FailedMutationInfo } from '../types';
 
@@ -148,6 +150,50 @@ describe('queue failure handler', () => {
     expect(message).not.toContain('VALIDATION_ERROR');
   });
 
+  // "Someone got there first" is a different thing for the user to know than
+  // "this failed", and the resource map already names the entity.
+  it('names the entity when a newer change overwrote this one', () => {
+    handleQueueFailure(
+      failure({
+        error: {
+          type: 'conflict',
+          message: 'Version conflict',
+          code: 'VERSION_CONFLICT',
+          timestamp: 0,
+          retryable: false,
+        },
+      }),
+    );
+
+    const [message] = (toastService.error as jest.Mock).mock.calls[0];
+    expect(message).toContain('pantry item');
+    expect(message).not.toBe(t('errors.queuedChangeRejected'));
+    expect(safeEvict).toHaveBeenCalledWith(
+      expect.anything(),
+      'PantryItem',
+      'item-1',
+    );
+  });
+
+  it('falls back to the generic overwrite copy with no entity', () => {
+    handleQueueFailure(
+      failure({
+        entityType: null,
+        entityId: null,
+        error: {
+          type: 'conflict',
+          message: 'Version conflict',
+          code: 'VERSION_CONFLICT',
+          timestamp: 0,
+          retryable: false,
+        },
+      }),
+    );
+
+    const [message] = (toastService.error as jest.Mock).mock.calls[0];
+    expect(message).toBe(t('errors.queuedChangeOverwritten'));
+  });
+
   it('still tells the person when the entity cannot be identified', () => {
     // An operation with no single entity, or one already evicted. Nothing to
     // withdraw, but silence would leave them believing the change stuck.
@@ -156,6 +202,36 @@ describe('queue failure handler', () => {
     expect(safeEvict).not.toHaveBeenCalled();
     expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
     expect(toastService.error).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('reporting a server-side overwrite', () => {
+  const overwrite = (entityType: string | null = 'PantryItem') => ({
+    mutationId: 'q9',
+    operationName: 'SyncPantryItem',
+    entityType,
+    entityId: 'item-9',
+  });
+
+  it('tells the person and names the entity', () => {
+    reportQueueOverwrite(overwrite());
+    const [message] = (toastService.error as jest.Mock).mock.calls[0];
+    expect(message).toContain('pantry item');
+  });
+
+  // The replay SUCCEEDED — the server took the write and kept its own value.
+  // Withdrawing here would remove a row the server still has.
+  it('withdraws nothing', () => {
+    reportQueueOverwrite(overwrite());
+    expect(safeEvict).not.toHaveBeenCalled();
+    expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
+    expect(queueStore.removeMutation).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the generic copy with no entity', () => {
+    reportQueueOverwrite(overwrite(null));
+    const [message] = (toastService.error as jest.Mock).mock.calls[0];
+    expect(message).toBe(t('errors.queuedChangeOverwritten'));
   });
 });
 

@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 
 import { useTranslation } from '#/i18n';
+import { useAppStore } from '#store/useAppStore';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 import { useApolloClient } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { t as tGlobal } from '#/i18n';
@@ -36,6 +38,7 @@ import {
 
 export function useRecipeScreen() {
   const { t } = useTranslation();
+  const apiUnavailable = useAppStore(isApiUnavailable);
 
   // ── User ──
   const userId = useUserId();
@@ -325,7 +328,15 @@ export function useRecipeScreen() {
     title: string;
     description: string;
     action?: { label: string; onPress: () => void };
-  } = searchLoading
+  } = apiUnavailable
+    ? {
+        // Discovery and search both need the network. Saying "no recipes found"
+        // offline blames the library for the connection.
+        icon: 'cloud-offline-outline',
+        title: t('errors.notAvailableOffline'),
+        description: t('errors.offlineSearchUnavailable'),
+      }
+    : searchLoading
     ? {
         icon: 'search',
         title: t('recipes.searchingTitle'),

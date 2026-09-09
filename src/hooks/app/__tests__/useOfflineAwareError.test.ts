@@ -1,16 +1,16 @@
 import { renderHook } from '@testing-library/react-native';
 import { useOfflineAwareError } from '../useOfflineAwareError';
 
-jest.mock('#hooks/app/useBlocksCacheMissQueries', () => ({
-  useBlocksCacheMissQueries: jest.fn(() => false),
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: jest.fn(() => false),
 }));
 
-const mocked = jest.requireMock('#hooks/app/useBlocksCacheMissQueries') as {
-  useBlocksCacheMissQueries: jest.Mock;
+const mocked = jest.requireMock('#hooks/app/useIsApiUnavailable') as {
+  useIsApiUnavailable: jest.Mock;
 };
 
 const setNetworkBlocked = (blocked: boolean) =>
-  mocked.useBlocksCacheMissQueries.mockReturnValue(blocked);
+  mocked.useIsApiUnavailable.mockReturnValue(blocked);
 
 const failure = new Error('boom');
 

@@ -77,6 +77,45 @@ describe('SettingRow', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
+  // The row reports itself disabled to assistive technology and greys its
+  // switch, so its label area must not still run the action.
+  it("does not run a disabled row's action when its label is pressed", async () => {
+    const user = userEvent.setup();
+    const onPress = jest.fn();
+    const item = {
+      key: 'biometricAuthentication',
+      label: 'Face ID',
+      type: 'switch',
+      icon: <Text>B</Text>,
+      disabled: true,
+      value: false,
+      onPress,
+    };
+    render(<SettingRow item={item} isFirst={false} isLast={true} />);
+
+    await user.press(screen.getByText('Face ID'));
+
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it('runs the action once the row is no longer disabled', async () => {
+    const user = userEvent.setup();
+    const onPress = jest.fn();
+    const item = {
+      key: 'biometricAuthentication',
+      label: 'Face ID',
+      type: 'action',
+      icon: <Text>B</Text>,
+      disabled: false,
+      onPress,
+    };
+    render(<SettingRow item={item} isFirst={false} isLast={true} />);
+
+    await user.press(screen.getByText('Face ID'));
+
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
   it('renders modal type with selected option label', () => {
     const item = {
       key: 'theme',

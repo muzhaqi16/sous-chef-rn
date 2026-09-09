@@ -27,12 +27,14 @@ describe('useAddPantryItemToShoppingList', () => {
     });
 
     const { result } = renderHookWithApollo(
-      () => useAddPantryItemToShoppingList(LIST_ID),
+      () => useAddPantryItemToShoppingList(),
       { operationMocks: [add.mock] },
     );
     await waitFor(() => expect(result.current.addToList).toBeDefined());
 
-    await result.current.addToList(CATALOG_ITEM_ID, { itemName: 'tomatoes' });
+    await result.current.addToList(LIST_ID, CATALOG_ITEM_ID, {
+      itemName: 'tomatoes',
+    });
 
     await waitFor(() => expect(add.fired.length).toBe(1));
     const input = add.fired[0]?.input as {

@@ -9,8 +9,6 @@
     "cantDeleteDefaultMessage": "Set another location as default first.",
     "cantDeleteTitle": "Cannot Delete Location",
     "cantDeleteWithItems": "\"{{name}}\" has {{description}}. Move or remove them first.",
-    "itemSingular": "{{count}} item",
-    "itemPlural": "{{count}} items",
     "subLocationSingular": "{{count}} sub-location",
     "subLocationPlural": "{{count}} sub-locations",
     "gotIt": "Got It",
@@ -415,9 +413,7 @@
   },
   "storageLocationCard": {
     "default": "Default",
-    "insideParent": "Inside {{parent}}",
-    "itemCount_one": "{{count}} item",
-    "itemCount_other": "{{count}} items"
+    "insideParent": "Inside {{parent}}"
   },
   "itemSubtitle": {
     "percentRemaining": "({{percent}}% remaining)",

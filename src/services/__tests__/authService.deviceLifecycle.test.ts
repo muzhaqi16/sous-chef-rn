@@ -444,6 +444,24 @@ describe('a server-ended session stops push delivery too', () => {
     );
   });
 
+  // The two accessors are picked by whether the caller can wait. This lookup
+  // already awaits a round trip, so an unusable mirror must not decide the
+  // answer: taking the synchronous null clears no token at all.
+  it('waits for the durable identity when the fast copy is unavailable', async () => {
+    const { getDeviceId } = require('#/storage/deviceId');
+    (getDeviceId as jest.Mock).mockReturnValue(null);
+    mockQuery.mockResolvedValue({
+      data: { deviceByDeviceId: { id: 'srv-7', deviceId: MOCK_DEVICE_ID } },
+    });
+
+    await teardown();
+    await flush();
+
+    expect(updateCallsWith('clearPushToken')).toContainEqual(
+      expect.objectContaining({ id: 'srv-7', clearPushToken: true }),
+    );
+  });
+
   it('resolves this device row when the session ends before registration', async () => {
     mockQuery.mockResolvedValue({
       data: { deviceByDeviceId: { id: 'srv-9', deviceId: MOCK_DEVICE_ID } },

@@ -1,4 +1,4 @@
-import { useBlocksCacheMissQueries } from '#hooks/app/useBlocksCacheMissQueries';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
 
 /**
@@ -41,7 +41,7 @@ export function useDataState({
   skipped = false,
 }: DataStateInput): DataState {
   const hasData = hasResult && !isEmpty;
-  const networkBlocked = useBlocksCacheMissQueries();
+  const networkBlocked = useIsApiUnavailable();
   const classified = useOfflineAwareError(error, hasData);
 
   if (hasData) return 'ready';

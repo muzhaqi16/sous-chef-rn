@@ -69,7 +69,6 @@
     "defaultPantry": "Dispensa predefinita",
     "defaultPantryDesc": "Imposta questa come dispensa predefinita per questa casa",
     "itemsInPantry": "Articoli nella dispensa",
-    "itemsCount": "{{count}} articoli",
     "deleteWarning": "Eliminare questa dispensa rimuoverà permanentemente tutti gli articoli al suo interno. Questa azione non può essere annullata.",
     "deleteConfirmMessage": "Vuoi davvero eliminare questa dispensa? Questa azione non può essere annullata e rimuoverà tutti gli articoli.",
     "nameEmptyError": "Il nome della dispensa non può essere vuoto",
@@ -306,8 +305,6 @@
   "pantryScreen": {
     "greetingFallback": "Buongiorno",
     "searchPlaceholder": "Cerca nella tua dispensa...",
-    "itemCount_one": "{{count}} articolo",
-    "itemCount_other": "{{count}} articoli",
     "sort": "Ordina",
     "tabAll": "Tutti",
     "tabPantry": "Dispensa",

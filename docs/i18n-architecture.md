@@ -132,6 +132,34 @@ per-context keys (`labels.default` → `Predeterminado`,
 `storageLocationCard.default` → `Predeterminada`); that is the
 grammatical-role case above.
 
+**An interpolated entity noun takes a frame with nothing agreeing with it.**
+Two slots name an entity at run time: `{{resource}}`, fed the
+`errors.resourceNames` map keyed by GraphQL typename, and `{{entity}}`, fed a
+bare noun. The sentence is fixed at translation time and the noun is not, so any
+article or participle attached to it is right for about half the entities:
+
+```
+es  "No se pudo encontrar la receta. …haya sido eliminado o movido."  ✗
+it  "La ricetta non è stato trovato."                                  ✗
+es  "Invitación actualizado"                                           ✗
+es  "Tu cambio en el la despensa…"   (frame added a second article)    ✗
+it  "La tua modifica al L'articolo…" (al = a + il)                     ✗
+```
+
+The frame is written **per locale**, because the labels differ in shape: es, it
+and sq labels carry their own article (`la despensa`, `L'articolo`), so those
+frames supply none; English labels are bare (`pantry item`), so its frame
+supplies "the". Where a participle is unavoidable, lead with the label and a
+colon so the participle agrees with a fixed noun instead
+(`{{resource}}: la tua modifica è stata sostituita…`). Spanish `en` is safe
+before either gender; `a` and `de` are not, because they contract with `el`.
+
+`__tests__/i18n/entityLabelAgreement.test.ts` fails a determiner immediately
+before a slot, and fails any new interpolation site until it is added to that
+test's `REVIEWED_SLOTS` with a note. Grammar itself is not checkable — a
+participle may correctly agree with some other noun — so the test forces the
+reading rather than attempting the judgement.
+
 ## Guards that exist today
 
 | guard | catches |
@@ -146,6 +174,7 @@ grammatical-role case above.
 | `__tests__/i18n/numberNounConcatenation.test.ts` | `${count} ${t('noun')}` shapes and literal `'s'` appends |
 | `__tests__/i18n/pluralCategories.test.ts` | a locale missing a CLDR plural category it needs |
 | `__tests__/i18n/addresseeGender.test.ts` | copy inflected for the reader's gender |
+| `__tests__/i18n/entityLabelAgreement.test.ts` | a determiner before an interpolated entity noun, and unreviewed new slots |
 | `__tests__/i18n/enumKeyCoverage.test.ts` + `composedKeyNamespaces.test.ts` | runtime-composed key namespaces with holes |
 
 None of them proves completeness. A string reaching JSX through a variable is

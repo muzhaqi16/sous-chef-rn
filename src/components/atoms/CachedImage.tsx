@@ -93,7 +93,12 @@ export const CachedImage = ({
 
   if (!uri) {
     return (
+      // `rest` carries the testID and the accessible name. Dropping them here
+      // makes the component anonymous in exactly the state a placeholder is
+      // shown, so a check targeting it finds nothing while the literal is
+      // still in the source.
       <View
+        {...rest}
         style={[
           styles.placeholder,
           style as StyleProp<ViewStyle>,

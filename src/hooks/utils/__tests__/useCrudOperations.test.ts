@@ -410,14 +410,12 @@ describe('useCrudOperations', () => {
       const data = await updateOp({ name: 'x' });
 
       // The conflict is surfaced via the refresh alert wired to onVersionConflict,
-      // not the generic error alert.
+      // not the generic error alert. The member's own `message` is never passed
+      // on: it is unlocalizable English, so the alert resolves its own copy.
       expect(data).toBe(false);
-      expect(alertVersionConflict).toHaveBeenCalledWith(
-        expect.objectContaining({
-          onRefresh: onVersionConflict,
-          customMessage: 'Stale write',
-        }),
-      );
+      expect(alertVersionConflict).toHaveBeenCalledWith({
+        onRefresh: onVersionConflict,
+      });
       expect(alertService.alert).not.toHaveBeenCalled();
       expect(onError).toHaveBeenCalled();
     });

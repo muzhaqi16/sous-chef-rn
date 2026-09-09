@@ -292,7 +292,7 @@ export const PantrySettings: React.FC<
 
             <InfoRow
               label={t('pantrySettings.itemsInPantry')}
-              value={t('pantrySettings.itemsCount', {
+              value={t('labels.itemCount', {
                 count: pantryItemCount,
               })}
             />

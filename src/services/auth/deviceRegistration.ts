@@ -23,7 +23,6 @@ import {
 import {
   clearLegacyDeviceFingerprint,
   ensureDeviceId,
-  getDeviceId,
   readLegacyDeviceFingerprint,
 } from '#/storage/deviceId';
 import { registerSessionTeardown } from '#/store/sessionTeardown';
@@ -204,7 +203,10 @@ async function findDeviceRowId(): Promise<string | null> {
   // attempts would spend ~30s establishing that.
   if (useStore.getState().isOnline === false) return null;
 
-  const deviceId = getDeviceId();
+  // This lookup already awaits a round trip, so it can wait for the durable
+  // identity: the synchronous accessor answers `null` whenever the mirror is
+  // unusable, and a null here clears no push token at all.
+  const deviceId = await ensureDeviceId();
   if (!deviceId) return null;
 
   let found;

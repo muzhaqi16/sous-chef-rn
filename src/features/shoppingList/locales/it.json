@@ -266,5 +266,12 @@
   },
   "shoppingList": {
     "alreadyInPantry": "Già in dispensa"
+  },
+  "shoppingListPicker": {
+    "newListNamePlaceholder": "Nome nuova lista",
+    "createAndAddIngredients": "Crea e aggiungi ingredienti",
+    "defaultBadge": "Predefinita",
+    "newList": "Nuova lista",
+    "noLists": "Nessuna lista della spesa"
   }
 }

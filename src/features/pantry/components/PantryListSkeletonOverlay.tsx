@@ -29,7 +29,9 @@ export const PantryListSkeletonOverlay: React.FC = () => (
     pointerEvents="none"
   >
     <PantryStickyTabs pinned={false} />
-    <View style={styles.rows}>
+    {/* No inset between the tabs and the first row: the tabs' own
+        `paddingBottom` is the whole gap in the real list too. */}
+    <View>
       {Array.from({ length: SKELETON_ROWS }, (_, index) => (
         <PantryItemSkeleton key={index} />
       ))}
@@ -45,8 +47,5 @@ const styles = StyleSheet.create((theme, rt) => ({
     right: 0,
     height: rt.screen.height,
     backgroundColor: theme.colors.background,
-  },
-  rows: {
-    paddingTop: theme.spacing.sm,
   },
 }));

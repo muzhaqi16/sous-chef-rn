@@ -92,9 +92,16 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   // The item's own currency denominates its cost rows; a purchase read off the
   // Purchase record carries its own, which can differ from what the stack is in.
   const itemCurrency = resolveCurrency(item.costCurrency, preferredCurrency);
+  // A batch figure is denominated by the batch. Falling back to the item's
+  // currency here would read the account's whenever the batches disagree —
+  // which is exactly when they were bought in different currencies.
+  const batchCurrency = fromBatch?.currency ?? item.costCurrency;
   const purchaseCurrency = fromBatch
-    ? itemCurrency
+    ? resolveCurrency(batchCurrency, preferredCurrency)
     : resolveCurrency(item.purchase?.currency, preferredCurrency);
+  // An amount whose denomination cannot be established is withheld rather than
+  // shown under an assumed one.
+  const purchaseTotalIsDenominated = !fromBatch || !!batchCurrency;
 
   return (
     <>
@@ -337,7 +344,9 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           )}
           // The TOTAL, not the unit price the Cost/Unit row above already shows.
           value={`${formatDate(purchaseDate)}${
-            purchaseTotal != null && purchaseTotal > 0
+            purchaseTotal != null &&
+            purchaseTotal > 0 &&
+            purchaseTotalIsDenominated
               ? ` · ${formatCostOrNull(purchaseTotal, purchaseCurrency)}`
               : ''
           }`}

@@ -8,22 +8,23 @@ import { AppSettingsScreen } from '../AppSettingsScreen';
 const mockUpdateAppSetting = jest.fn().mockResolvedValue(true);
 const mockResetToDefaults = jest.fn().mockResolvedValue(true);
 
+const mockAppSettings = jest.fn(() => ({
+  settings: {
+    preferredUnitSystem: 'METRIC',
+    autoSync: true,
+    offlineMode: false,
+    showTutorials: true,
+    betaFeatures: [],
+  },
+  loading: false,
+  hasLoadedSettings: true,
+  error: undefined as unknown,
+  refetch: jest.fn(),
+  updateAppSetting: mockUpdateAppSetting,
+  resetToDefaults: mockResetToDefaults,
+}));
 jest.mock('#features/profile/hooks/useAppSettings', () => ({
-  useAppSettings: () => ({
-    settings: {
-      preferredUnitSystem: 'METRIC',
-      autoSync: true,
-      offlineMode: false,
-      showTutorials: true,
-      betaFeatures: [],
-    },
-    loading: false,
-    hasLoadedSettings: true,
-    error: undefined,
-    refetch: jest.fn(),
-    updateAppSetting: mockUpdateAppSetting,
-    resetToDefaults: mockResetToDefaults,
-  }),
+  useAppSettings: () => mockAppSettings(),
 }));
 
 jest.mock('#store/useAppStore', () => {
@@ -174,6 +175,30 @@ jest.mock('#components/molecules/ModalPicker', () => {
 describe('AppSettingsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  // Offline is exactly when someone reaches for this switch, and its value
+  // lives in the store, not in the settings query. Behind the server-data gate
+  // it was unreachable in the state it exists for.
+  it('offers the offline switch when the settings query has nothing', () => {
+    mockAppSettings.mockReturnValueOnce({
+      settings: {
+        preferredUnitSystem: 'METRIC',
+        autoSync: true,
+        offlineMode: false,
+        showTutorials: true,
+        betaFeatures: [],
+      },
+      loading: false,
+      hasLoadedSettings: false,
+      error: new Error('offline'),
+      refetch: jest.fn(),
+      updateAppSetting: mockUpdateAppSetting,
+      resetToDefaults: mockResetToDefaults,
+    });
+
+    const { getByTestId } = render(<AppSettingsScreen />);
+    expect(getByTestId('settings-offline-mode-switch')).toBeTruthy();
   });
 
   it('renders the settings screen', () => {

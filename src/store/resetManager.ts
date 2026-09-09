@@ -1,5 +1,6 @@
 import type { RootState } from './index';
 import { initialAppState } from './slices/appSlice';
+import { TRANSIENT_UI_STATE } from './slices/uiSlice';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 import { storage } from '#/storage/mmkv';
 import {
@@ -116,19 +117,7 @@ export const createResetManager = (
     }
 
     if (resetOptions.ui) {
-      Object.assign(newState, {
-        isLoading: false,
-        isError: false,
-        isFetching: false,
-        bottomSheetVisible: false,
-        bottomSheetIndex: 0,
-        activeFormId: null,
-        formData: {},
-        globalSearchQuery: '',
-        activeFilters: {},
-        toastMessage: null,
-        toastType: null,
-      });
+      Object.assign(newState, TRANSIENT_UI_STATE);
     }
 
     // Keeps theme and language unless FULL_RESET.

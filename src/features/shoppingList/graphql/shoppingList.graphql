@@ -1130,37 +1130,6 @@ mutation RemoveItemsFromShoppingList(
   }
 }
 
-mutation AddItemsToShoppingList($input: AddItemsToShoppingListInput!) {
-  addItemsToShoppingList(input: $input) {
-    __typename
-    ... on AddItemsToShoppingListPayload {
-      results {
-        index
-        clientId
-        success
-        item {
-          id
-          ...useRecipeShoppingList_addedItem
-        }
-        quantityIncremented
-        error
-      }
-      summary {
-        succeeded
-        failed
-        skipped
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
 mutation ShareShoppingList($input: ShareShoppingListInput!) {
   shareShoppingList(input: $input) {
     __typename

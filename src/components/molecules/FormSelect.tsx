@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { View, Modal, ViewStyle } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
-import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
+import { View, Modal, ScrollView, ViewStyle } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
@@ -46,10 +44,11 @@ export const FormSelect: React.FC<FormSelectProps> = ({
     setModalVisible(false);
   };
 
-  const renderOption = ({ item }: { item: SelectOption }) => {
+  const renderOption = (item: SelectOption) => {
     const isSelected = item.value === value;
     return (
       <AppPressable
+        key={item.value}
         style={[styles.option, isSelected && styles.selectedOption]}
         onPress={() => handleSelect(item.value)}
       >
@@ -99,13 +98,15 @@ export const FormSelect: React.FC<FormSelectProps> = ({
               <Text role="bodyStrong" style={styles.modalTitle}>
                 {label}
               </Text>
-              <FlashList
-                data={options}
-                renderItem={renderOption}
-                keyExtractor={item => item.value}
-                renderScrollComponent={SwipeAwareScrollComponent}
+              {/* A scroller, not a recycling list: the card sizes to its
+                  content, so it offers no height for a `flex: 1` list to
+                  claim. The option sets here are bounded reference sets. */}
+              <ScrollView
                 showsVerticalScrollIndicator={false}
-              />
+                keyboardShouldPersistTaps="handled"
+              >
+                {options.map(renderOption)}
+              </ScrollView>
               <AppPressable
                 style={styles.closeButton}
                 onPress={() => setModalVisible(false)}

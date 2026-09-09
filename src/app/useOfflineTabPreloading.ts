@@ -22,8 +22,8 @@ import { errorService } from '#/services/errorService';
  * Variables MUST match the consuming hooks exactly, or the warm populates a
  * different cache entry and buys nothing.
  */
-// One-shot `query` defaults to network-only, so `cache-first` must be explicit
-// — otherwise every launch refetches what is already cached.
+// Stated rather than defaulted: a warm that refetched what is already cached
+// would cost a launch what it exists to save.
 const WARM_OPTIONS: { fetchPolicy: 'cache-first'; errorPolicy: 'all' } = {
   fetchPolicy: 'cache-first',
   errorPolicy: 'all',

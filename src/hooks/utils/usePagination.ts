@@ -3,6 +3,8 @@ import type { OperationVariables } from '@apollo/client';
 import { errorService } from '#/services/errorService';
 import { isDeadCursorError } from '#/utils/errors/graphqlErrors';
 import { logger } from '#/utils/environment';
+import { useStore } from '#store';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 import type { PaginationState } from '#hooks/types';
 
 /**
@@ -52,6 +54,13 @@ export interface UsePaginationReturn extends PaginationState {
   endCursor: string | null | undefined;
   /** Whether the last loadMore call failed */
   loadMoreError: boolean;
+  /**
+   * The failed page could not be fetched because the API is unreachable, not
+   * because the request was refused. Lets a footer say "offline" instead of the
+   * generic failure — and distinguishes it from the silent no-op the guard
+   * above produces, which told the reader nothing at all.
+   */
+  loadMoreOffline: boolean;
 }
 
 /** Cursor pagination for any Apollo connection query exposing `pageInfo`. */
@@ -85,6 +94,7 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
   const isFetchingMoreRef = useRef(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
+  const [loadMoreOffline, setLoadMoreOffline] = useState(false);
 
   // Released one frame AFTER the commit that appended the page. Clearing it in
   // that commit's effect phase re-opens `loadMore` while the page is still
@@ -119,6 +129,7 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     isFetchingMoreRef.current = true;
     setIsFetchingMore(true);
     setLoadMoreError(false);
+    setLoadMoreOffline(false);
 
     const variables = {
       ...fetchMoreVariablesRef.current,
@@ -150,6 +161,7 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     setIsFetchingMore(false);
     if (!result) {
       setLoadMoreError(true);
+      setLoadMoreOffline(isApiUnavailable(useStore.getState()));
     }
   };
 
@@ -161,5 +173,6 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     loadMore,
     isLoadingMore,
     loadMoreError,
+    loadMoreOffline,
   };
 }

@@ -131,6 +131,70 @@ describe('usePagination', () => {
     expect(result.current.loadMoreError).toBe(false);
   });
 
+  // Without this the end of a persisted page is a silent no-op: the reader
+  // pulls, nothing arrives, and nothing says why.
+  it('marks a failed page offline when the server is unreachable', async () => {
+    const { useStore } = require('#store');
+    const previous = useStore.getState();
+    useStore.setState({
+      isOnline: true,
+      apiReachable: false,
+      offlineModeEnabled: false,
+    });
+
+    try {
+      const { result } = renderHook(() =>
+        usePagination({
+          pageInfo: { hasNextPage: true, endCursor: 'cursor-abc' },
+          loading: false,
+          itemCount: 10,
+          fetchMore: jest.fn().mockRejectedValue(new Error('Network error')),
+          cursorVariableName: 'itemsCursor',
+        }),
+      );
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(result.current.loadMoreError).toBe(true);
+      expect(result.current.loadMoreOffline).toBe(true);
+    } finally {
+      useStore.setState(previous);
+    }
+  });
+
+  it('marks a failed page as an error when the server is reachable', async () => {
+    const { useStore } = require('#store');
+    const previous = useStore.getState();
+    useStore.setState({
+      isOnline: true,
+      apiReachable: true,
+      offlineModeEnabled: false,
+    });
+
+    try {
+      const { result } = renderHook(() =>
+        usePagination({
+          pageInfo: { hasNextPage: true, endCursor: 'cursor-abc' },
+          loading: false,
+          itemCount: 10,
+          fetchMore: jest.fn().mockRejectedValue(new Error('Boom')),
+          cursorVariableName: 'itemsCursor',
+        }),
+      );
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(result.current.loadMoreError).toBe(true);
+      expect(result.current.loadMoreOffline).toBe(false);
+    } finally {
+      useStore.setState(previous);
+    }
+  });
+
   it('loadMore() does nothing when hasMore is false', async () => {
     const { result } = renderHook(() =>
       usePagination({

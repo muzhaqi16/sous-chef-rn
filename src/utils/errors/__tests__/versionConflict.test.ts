@@ -4,7 +4,7 @@ import {
   getVersionConflictMessage,
   handleVersionConflict,
   findFirstErrorMember,
-  findConflictDataMember,
+  isConflictDataMember,
 } from '../versionConflict';
 import { logger } from '#/utils/environment';
 
@@ -143,33 +143,33 @@ describe('versionConflict', () => {
     });
   });
 
-  describe('findConflictDataMember', () => {
+  describe('isConflictDataMember', () => {
     it('detects a ConflictError member by typename', () => {
       expect(
-        findConflictDataMember({
+        isConflictDataMember({
           updateItem: { __typename: 'ConflictError', message: 'Stale' },
         }),
-      ).toEqual({ message: 'Stale' });
+      ).toBe(true);
     });
 
     it('detects a coded conflict on another error typename', () => {
       expect(
-        findConflictDataMember({
+        isConflictDataMember({
           updateItem: {
             __typename: 'MutationError',
             code: 'VERSION_CONFLICT',
             message: null,
           },
         }),
-      ).toEqual({ message: null });
+      ).toBe(true);
     });
 
-    it('returns null for a non-conflict error member', () => {
+    it('returns false for a non-conflict error member', () => {
       expect(
-        findConflictDataMember({
+        isConflictDataMember({
           updateItem: { __typename: 'ValidationError', code: 'INVALID' },
         }),
-      ).toBeNull();
+      ).toBe(false);
     });
   });
 });

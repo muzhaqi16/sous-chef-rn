@@ -134,19 +134,23 @@ export const SettingRow: React.FC<SettingRowProps> = ({
     return undefined;
   };
 
+  // A row that reports itself disabled is inert everywhere, not only in the
+  // switch it greys: the label area is the rest of the same control.
+  const isInert = item.type === 'info' || !!item.disabled;
+
   return (
     <>
       <AppPressable
         testID={item.testID || `profile-${item.key}-button`}
-        onPress={item.type === 'info' ? undefined : handlePress}
+        onPress={isInert ? undefined : handlePress}
         // Selection tick on rows that do something on press. Info rows aren't
         // pressable; switch rows toggle via the switch widget (a row-level
         // haptic there would double-fire with the switch's own feedback).
         haptic={
           item.type !== 'info' && item.type !== 'switch' && !item.disabled
         }
-        disabled={item.type === 'info'}
-        android_ripple={item.type === 'info' ? null : RIPPLE.SUBTLE}
+        disabled={isInert}
+        android_ripple={isInert ? null : RIPPLE.SUBTLE}
         style={[
           styles.rowWrapper,
           isFirst && styles.rowFirst,

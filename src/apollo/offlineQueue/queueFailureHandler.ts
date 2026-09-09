@@ -7,7 +7,11 @@ import { COUNT_WITHDRAWALS, UNLINK_WITHDRAWALS } from './withdrawalRegistry';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
 import { logger } from '#/utils/environment';
-import type { FailedMutationInfo } from '#/apollo/offlineQueue/types';
+import type {
+  FailedMutationInfo,
+  OverwrittenMutationInfo,
+  QueueError,
+} from '#/apollo/offlineQueue/types';
 
 /**
  * Withdraws a locally-applied change the server permanently rejected. An evict
@@ -57,12 +61,43 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
   }
 
   // The app's own words, not the server's: `error.message` is written for
-  // developers and can carry operation names and identifiers.
-  toastService.error(t('errors.queuedChangeRejected'));
+  // developers and can carry operation names and identifiers. A conflict gets
+  // its own sentence — "someone got there first" is a different thing for the
+  // user to know than "this failed".
+  toastService.error(withdrawalMessage(error.type, entityType));
 
   // Withdrawn, so it records nothing; left in place it would pad every drain
   // scan and persisted write until `cleanupTerminal` ages it out 24h later.
   queueStore.removeMutation(mutationId);
+}
+
+/**
+ * The server accepted the replay and kept its own value. Nothing is withdrawn —
+ * the entry already dequeued as success — so this only tells the person, using
+ * the same copy the withdrawal path uses for a conflict.
+ */
+export function reportQueueOverwrite(info: OverwrittenMutationInfo): void {
+  logger.warn(`Queue: ${info.operationName} converged on the server's value`, {
+    entityType: info.entityType,
+    entityId: info.entityId,
+  });
+  toastService.error(withdrawalMessage('conflict', info.entityType));
+}
+
+/** Resolves the withdrawal toast, naming the entity where the map knows it. */
+function withdrawalMessage(
+  type: QueueError['type'],
+  entityType: string | null,
+): string {
+  if (type !== 'conflict') return t('errors.queuedChangeRejected');
+  if (!entityType) return t('errors.queuedChangeOverwritten');
+
+  const resource = t(`errors.resourceNames.${entityType}`, {
+    defaultValue: '',
+  });
+  return resource
+    ? t('errors.queuedChangeOverwrittenResource', { resource })
+    : t('errors.queuedChangeOverwritten');
 }
 
 /**
@@ -72,4 +107,5 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
  */
 export function registerQueueFailureHandler(): void {
   queueManager.setFailureHandler(handleQueueFailure);
+  queueManager.setOverwriteReporter(reportQueueOverwrite);
 }

@@ -1,4 +1,5 @@
 import { Kind } from 'graphql';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import type { StoreObject } from '@apollo/client';
 import { QueueManager } from '../queueManager';
 import { queueStore } from '../queueStore';
@@ -243,7 +244,7 @@ describe('QueueManager', () => {
         .invocationCallOrder[0];
       const collectOrder = (queueStore.getPendingMutationsForUser as jest.Mock)
         .mock.invocationCallOrder[0];
-      expect(resetOrder).toBeLessThan(collectOrder);
+      expect(resetOrder).toBeLessThan(collectOrder!);
     });
 
     it('prevents concurrent processing', async () => {
@@ -645,6 +646,40 @@ describe('QueueManager', () => {
         }),
       );
     });
+
+    // The API documents each of these as clearing on its own. Withdrawing the
+    // write over one discards a change the server never refused.
+    it.each([
+      'SERVICE_UNAVAILABLE',
+      'RATE_LIMIT_EXCEEDED',
+      'OPERATION_RATE_LIMITED',
+    ])('defers %s instead of withdrawing the write', async code => {
+      const failureHandler = jest.fn();
+      manager.setFailureHandler(failureHandler);
+      const mutation = makeMutation({
+        id: `transient-${code}`,
+        retryCount: 3,
+        maxRetries: 3,
+      });
+
+      const result = await handleMutationError(
+        mutation,
+        new CombinedGraphQLErrors({
+          errors: [{ message: 'Refused', extensions: { code } }],
+        }),
+      );
+
+      expect(result.deferred).toBe(true);
+      expect(queueStore.markMutationFailed).not.toHaveBeenCalled();
+      expect(failureHandler).not.toHaveBeenCalled();
+      expect(queueStore.updateMutation).toHaveBeenCalledWith(
+        `transient-${code}`,
+        expect.objectContaining({
+          status: QueueStatus.PENDING,
+          retryCount: 0,
+        }),
+      );
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -731,6 +766,127 @@ describe('QueueManager', () => {
         status: QueueStatus.SUCCESS,
         processedAt: expect.any(Number),
       });
+    });
+
+    // The captured version is knowingly stale, so re-checking it can only fail
+    // again. The user's value is re-sent against the current row instead.
+    it('re-sends without the captured version after a version conflict', async () => {
+      const mutation = makeMutation({
+        id: 'conflict-1',
+        operationName: 'SyncPantryItem',
+        variables: { input: { clientId: 'cuid-1', quantity: 3, version: 7 } },
+      });
+      mockClient.mutate
+        .mockResolvedValueOnce({
+          data: {
+            syncPantryItem: {
+              __typename: 'ConflictError',
+              code: 'VERSION_CONFLICT',
+              message: 'Version conflict',
+            },
+          },
+        })
+        .mockResolvedValueOnce({
+          data: { syncPantryItem: { item: {}, converged: false } },
+        });
+
+      jest.useRealTimers();
+      const result = await processMutation(mutation);
+      jest.useFakeTimers();
+
+      expect(result.success).toBe(true);
+      expect(mockClient.mutate).toHaveBeenCalledTimes(2);
+      expect(mockClient.mutate.mock.calls[1][0].variables.input).toEqual({
+        clientId: 'cuid-1',
+        quantity: 3,
+      });
+      expect(queueStore.updateMutation).toHaveBeenCalledWith('conflict-1', {
+        conflictCount: 1,
+      });
+    });
+
+    it('withdraws a write that conflicts again without its version', async () => {
+      const failureHandler = jest.fn();
+      manager.setFailureHandler(failureHandler);
+      const conflict = {
+        data: {
+          syncPantryItem: {
+            __typename: 'ConflictError',
+            code: 'VERSION_CONFLICT',
+            message: 'Version conflict',
+          },
+        },
+      };
+      const mutation = makeMutation({
+        id: 'conflict-2',
+        operationName: 'SyncPantryItem',
+        variables: { input: { clientId: 'cuid-2', quantity: 3, version: 7 } },
+      });
+      mockClient.mutate.mockResolvedValue(conflict);
+
+      jest.useRealTimers();
+      const result = await processMutation(mutation);
+      jest.useFakeTimers();
+
+      expect(result.success).toBe(false);
+      expect(mockClient.mutate).toHaveBeenCalledTimes(2);
+      expect(queueStore.markMutationFailed).toHaveBeenCalledWith(
+        'conflict-2',
+        expect.objectContaining({ type: 'conflict', retryable: false }),
+      );
+      expect(failureHandler).toHaveBeenCalled();
+    });
+
+    // The server accepted the replay and kept its own value. The entry dequeues
+    // as success, so nothing else on this path would tell the person.
+    it('reports an overwrite when the server keeps its own value', async () => {
+      const reporter = jest.fn();
+      manager.setOverwriteReporter(reporter);
+      const mutation = makeMutation({
+        id: 'converged-1',
+        operationName: 'SyncPantryItem',
+        variables: { input: { clientId: 'cuid-3', quantity: 3 } },
+      });
+      mockClient.mutate.mockResolvedValue({
+        data: {
+          syncPantryItem: {
+            item: {},
+            converged: true,
+            conflict: {
+              clientVersion: 3,
+              serverVersion: 5,
+              message: 'Version mismatch',
+            },
+          },
+        },
+      });
+
+      jest.useRealTimers();
+      const result = await processMutation(mutation);
+      jest.useFakeTimers();
+
+      expect(result.success).toBe(true);
+      expect(reporter).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mutationId: 'converged-1',
+          operationName: 'SyncPantryItem',
+        }),
+      );
+    });
+
+    it('says nothing when the replay carried no conflict', async () => {
+      const reporter = jest.fn();
+      manager.setOverwriteReporter(reporter);
+      const mutation = makeMutation({ id: 'clean-1' });
+      mockClient.mutate.mockResolvedValue({
+        data: { syncPantryItem: { item: {}, converged: false } },
+      });
+
+      jest.useRealTimers();
+      await processMutation(mutation);
+      jest.useFakeTimers();
+
+      expect(reporter).not.toHaveBeenCalled();
     });
 
     it('handles mutation failure', async () => {

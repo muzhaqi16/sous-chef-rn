@@ -13,6 +13,8 @@ export function useAppStore<T>(
 const selectUser = (state: RootState) => state.user;
 const selectUserId = (state: RootState) => state.user?.id;
 const selectUpdateUser = (state: RootState) => state.updateUser;
+const selectHasStoredCredentials = (state: RootState) =>
+  state.hasStoredCredentials;
 const selectIsLoggingOut = (state: RootState) => state.isLoggingOut;
 const selectHydrated = (state: RootState) => state.isHydrated;
 const selectIsAdminUser = (state: RootState) =>
@@ -139,6 +141,9 @@ const selectThemePreferences = (state: RootState) => ({
 export const useUser = () => useAppStore(selectUser);
 export const useUserId = () => useAppStore(selectUserId);
 export const useUpdateUser = () => useAppStore(selectUpdateUser);
+/** Null until a slot check has answered; false once one is proven unusable. */
+export const useHasStoredCredentials = () =>
+  useAppStore(selectHasStoredCredentials);
 export const useSelectedHomeId = () => useAppStore(selectSelectedHomeId);
 export const useSelectedPantryId = () => useAppStore(selectSelectedPantryId);
 export const useSetSelectedPantryId = () =>

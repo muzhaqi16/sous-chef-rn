@@ -142,7 +142,7 @@ describe('Apollo client', () => {
 
   it('client has correct default options', () => {
     const { client } = require('../client');
-    expect(client.defaultOptions.query?.fetchPolicy).toBe('network-only');
+    expect(client.defaultOptions.query?.fetchPolicy).toBe('cache-first');
     expect(client.defaultOptions.query?.errorPolicy).toBe('all');
     expect(client.defaultOptions.mutate?.errorPolicy).toBe('all');
     expect(client.defaultOptions.watchQuery?.fetchPolicy).toBe(

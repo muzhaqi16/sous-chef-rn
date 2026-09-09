@@ -270,6 +270,39 @@ describe('classifyError — auth codes', () => {
 // CombinedGraphQLErrors is the RESPONSE-level extensions bag rather than the
 // per-error one the API populates, so all of them were dead against real
 // traffic while the synthetic fixtures kept passing.
+// Each of these clears without the client doing anything. Withdrawing the write
+// over one discards a change the server never refused.
+describe('classifyError — load shedding and rate limits', () => {
+  const combined = (code: string): CombinedGraphQLErrors =>
+    new CombinedGraphQLErrors({
+      errors: [{ message: 'Refused', extensions: { code } }],
+    });
+
+  it.each([
+    'SERVICE_UNAVAILABLE',
+    'RATE_LIMIT_EXCEEDED',
+    'OPERATION_RATE_LIMITED',
+  ])('defers %s rather than withdrawing the write', code => {
+    const queueError = classifyError(combined(code));
+
+    expect(queueError.type).toBe('server');
+    expect(queueError.retryable).toBe(true);
+    expect(queueError.code).toBe(code);
+  });
+
+  it('defers a 503 that carries no GraphQL code', () => {
+    const queueError = classifyError(
+      new ServerError('Service Unavailable', {
+        response: { status: 503 } as Response,
+        bodyText: 'Service Unavailable',
+      }),
+    );
+
+    expect(queueError.type).toBe('server');
+    expect(queueError.retryable).toBe(true);
+  });
+});
+
 describe('classifyError — real Apollo error shapes', () => {
   const combined = (code: string, message = 'Refused'): CombinedGraphQLErrors =>
     new CombinedGraphQLErrors({
@@ -283,7 +316,7 @@ describe('classifyError — real Apollo error shapes', () => {
     const error = combined('FORBIDDEN');
 
     expect(error.extensions?.code).toBeUndefined();
-    expect(error.errors[0].extensions?.code).toBe('FORBIDDEN');
+    expect(error.errors[0]!.extensions?.code).toBe('FORBIDDEN');
   });
 
   it('reads the code from a CombinedGraphQLErrors, not the response extensions', () => {

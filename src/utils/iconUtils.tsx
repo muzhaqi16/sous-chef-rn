@@ -29,6 +29,7 @@ export const TONE_TO_COLOR = {
   textOnSurfaceVariant: (t: Theme) => t.colors.textOnSurfaceVariant,
   error: (t: Theme) => t.colors.error,
   warning: (t: Theme) => t.colors.warning,
+  expiring: (t: Theme) => t.colors.expiration.warningText,
   expired: (t: Theme) => t.colors.expiration.expiredText,
   success: (t: Theme) => t.colors.success,
   info: (t: Theme) => t.colors.info,

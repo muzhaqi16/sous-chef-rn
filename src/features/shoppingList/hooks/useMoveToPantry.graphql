@@ -25,6 +25,7 @@ fragment useMoveToPantry_pantryItem on PantryItem {
     code
   }
   version
+  createdAt
   updatedAt
   storageState
   expiresAt
@@ -34,6 +35,13 @@ fragment useMoveToPantry_pantryItem on PantryItem {
   lastUsedAt
   netWeight
   remainingNetWeight
+  portionUnitId
+  portionUnit {
+    id
+    name
+    symbol
+  }
+  remainingPortions
   activeBatchCount
   earliestBatchExpiration
   item {
@@ -48,6 +56,8 @@ fragment useMoveToPantry_pantryItem on PantryItem {
     id
     name
     symbol
+    type
+    displayAsFraction
   }
   netWeightUnit {
     id
@@ -58,5 +68,36 @@ fragment useMoveToPantry_pantryItem on PantryItem {
     id
     name
     type
+  }
+  packageBreakdown {
+    count
+    contentUnit {
+      id
+      name
+      symbol
+    }
+    perUnitNetWeight
+    perUnitNetWeightUnit {
+      id
+      name
+      symbol
+    }
+    totalNetWeight
+  }
+  quantityBreakdown {
+    fullPackages
+    looseContentUnits
+    contentUnit {
+      id
+      name
+      symbol
+    }
+    totalContentUnits
+    remainingWeight
+    remainingWeightUnit {
+      id
+      name
+      symbol
+    }
   }
 }

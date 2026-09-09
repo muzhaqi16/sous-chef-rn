@@ -64,8 +64,13 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
   const parsedServings = typedServings
     ? parseFractionalInput(typedServings)
     : null;
+  // The parser reports "cannot read this" with the same `null` the empty field
+  // uses, so the two are separated here: substituting the default for text
+  // nobody could read cooks — and deducts — a number never entered.
+  const servingsUnreadable = !!typedServings && parsedServings == null;
   const servingsError =
-    parsedServings != null && (isNaN(parsedServings) || parsedServings <= 0)
+    servingsUnreadable ||
+    (parsedServings != null && (isNaN(parsedServings) || parsedServings <= 0))
       ? t('errors.field.servingsMade')
       : undefined;
 

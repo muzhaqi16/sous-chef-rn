@@ -373,11 +373,15 @@ Defaults:
 - **Optimistic entities must be COMPLETE for every query that reads them.**
   One missing field makes the whole cache read incomplete and `useQuery`
   returns nothing — invisible offline for the rest of the session. A field
-  added to a list query (or a fragment it spreads) must reach the optimistic
-  builder, the create mutation's selection, AND the queue's `Sync*` replay
-  fragment. `__tests__/apollo/optimisticEntityCompleteness.test.ts` executes
-  the real schema and asserts `cache.diff` completeness for all three writers
-  — add a case for any new local-first entity.
+  added to a list query (or a fragment it spreads) must reach EVERY writer that
+  links the entity into a read connection: the optimistic builder, the create
+  mutation's selection, the queue's `Sync*` replay fragment, a move/restock
+  payload, and the subscription read-back fragment a collaborator's change
+  arrives through. `__tests__/apollo/optimisticEntityCompleteness.test.ts`
+  executes the real schema and asserts `cache.diff` completeness for each, and
+  DERIVES the writer list from the tree — every module using
+  `createAddTo*ConnectionUpdater` must appear there with a case or a reason, so
+  a new writer cannot ship uncovered.
 - Nested entity references (`unit`, `item`): resolve via `cache.readFragment`
   selecting **every** field the query needs — it returns null on a partially
   cached entity exactly as on a missing one.
@@ -575,9 +579,16 @@ place and they read it.
   own row title size.
 - **A thumbnail carries no margin** — `rowContent`'s `gap` spaces every slot,
   and a margin on top of it double-spaces the one slot that has it.
-- **A skeleton row uses the same three primitives, and its list container adds
-  NO gutter and NO gap.** The item already places itself, so a container that
-  insets or spaces does it twice and the skeleton lands off the real row.
+- **A skeleton row uses the same three primitives, so its container adds NO gap
+  — and owns the gutter exactly when the real list's does.** `rowWrapper` already
+  carries the row gap, so a container that spaces double-spaces it. The GUTTER is
+  the other way round: `rowWrapper` deliberately has no horizontal inset because
+  the list rendering the row owns it, so the answer depends on where the skeleton
+  SITS. Nested inside the real list's padded `contentContainerStyle` (the pantry
+  flap, absolute inside `ListHeaderComponent`) it inherits the inset and must add
+  none. A standalone sibling list overlaid on the real one (`SkeletonList` under
+  the shopping tabs) is a second list and has to reproduce the gutter itself,
+  or the whole skeleton sits flush against the screen edge.
 
 ### Unistyles
 
@@ -802,6 +813,16 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
 
 - `estimatedItemSize` is **removed** in FlashList v2 — the prop no longer
   exists in the installed 2.3.2; don't reintroduce it or a workalike.
+- **A FlashList must be given a height by its host.** Its root is `flex: 1`
+  (so `flexBasis: 0`): it claims free space and contributes none, so a
+  container that sizes to its children gives it zero height and no rows —
+  silently, and invisibly to any test asserting on data or props. `FlatList`
+  survives the same container because RN's `ScrollView` base style uses
+  `flexBasis: auto`, which is why swapping one for the other empties a picker
+  that worked. gorhom's `BottomSheetView` is the same trap from the other
+  direction (absolute, no height). A bounded option set belongs in a scroll
+  container that sizes to its content;
+  `__tests__/ui/recyclingListHostIsBounded.test.ts` holds the rule.
 - **Never feed FlashList `data` from `useDeferredValue` or inside
   `startTransition`.** FlashList truncates its layout table during render and
   re-indexes cells only at commit; only a transition render can be interrupted

@@ -39,6 +39,8 @@ const AUTHORS: Record<string, string> = {
     'single host, self-inset',
   'src/features/shoppingList/components/skeletons/ShoppingListSkeleton.tsx':
     'single host, self-inset',
+  'src/features/shoppingList/components/SkeletonList.tsx':
+    'skeleton list, overlaid on a padded list it is not inside',
   'src/features/mealPlan/components/skeletons/MealPlanSkeleton.tsx':
     'single host, self-inset',
   'src/features/notifications/components/NotificationFilters.tsx':
@@ -62,6 +64,25 @@ const GUTTERLESS = ['FilterTabs'];
 const INHERITS_AN_INSET: Record<string, string> = {
   'src/features/pantry/components/pantryDisplay/PantryStickyTabs.tsx':
     "row 0 of PantryContent's list, whose content container carries the gutter",
+};
+
+/**
+ * A skeleton list that INHERITS its inset, and the padded container it sits in.
+ * Every other file rendering a run of skeleton rows has to read the token —
+ * `commonStyles.rowWrapper` carries no horizontal inset, so a skeleton list
+ * standing beside the real list rather than inside it lands flush to the edge.
+ */
+const SKELETON_INHERITS_AN_INSET: Record<string, string> = {
+  'src/components/atoms/PaginationFooter.tsx':
+    "the list's own footer slot, inside its content container",
+  'src/features/pantry/components/PantryListSkeletonOverlay.tsx':
+    "absolute inside PantryContent's ListHeaderComponent, itself inside the gutter",
+  'src/features/pantry/components/skeletons/PantryScreenSkeleton.tsx':
+    'PantryMain and the list empty state, both of which inset bare children',
+  'src/features/profile/components/ProfileSkeleton.tsx':
+    'ProfileScreen, a gutter="page" Screen',
+  'src/features/recipes/components/skeletons/RecipeSkeleton.tsx':
+    'RecipeMain, which insets bare children',
 };
 
 /**
@@ -127,6 +148,40 @@ describe('the page gutter has one author per page', () => {
       .sort();
 
     expect(bare).toEqual([]);
+  });
+
+  it('is read by every skeleton list that is not already inside one', () => {
+    // Derived from the tree, not listed: a skeleton list is a file rendering a
+    // RUN of skeleton rows. The shopping tabs' one shipped without the token —
+    // its rows sat flush to the screen edge beside a real list that was inset.
+    const skeletonLists = sources.filter(f => {
+      if (f.includes('__tests__')) return false;
+      const src = readFileSync(f, 'utf8');
+      return src.includes('Skeleton') && /Array\.from\(\{\s*length/.test(src);
+    });
+
+    expect(skeletonLists.length).toBeGreaterThan(0);
+
+    const flush = skeletonLists
+      .filter(f => !readFileSync(f, 'utf8').includes('layout.pageGutter'))
+      .filter(f => !(f in SKELETON_INHERITS_AN_INSET))
+      .sort();
+
+    expect(flush).toEqual([]);
+  });
+
+  it('lists no inheriting skeleton that has started applying its own', () => {
+    const doubled = Object.keys(SKELETON_INHERITS_AN_INSET)
+      .filter(f => {
+        try {
+          return readFileSync(f, 'utf8').includes('layout.pageGutter');
+        } catch {
+          return true;
+        }
+      })
+      .sort();
+
+    expect(doubled).toEqual([]);
   });
 
   it('is not applied by the shared row shell', () => {

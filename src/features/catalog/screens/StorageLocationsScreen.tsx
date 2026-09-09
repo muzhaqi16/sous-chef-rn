@@ -158,12 +158,9 @@ export const StorageLocationsScreen: React.FC<
       const parts: string[] = [];
       if (itemCount > 0) {
         parts.push(
-          t(
-            itemCount === 1
-              ? 'storageLocations.itemSingular'
-              : 'storageLocations.itemPlural',
-            { count: itemCount },
-          ),
+          // `t` picks the plural form from `count`; a ternary over two keys
+          // cannot, and is wrong in every locale with more than two forms.
+          t('labels.itemCount', { count: itemCount }),
         );
       }
       if (childCount > 0) {

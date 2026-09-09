@@ -250,7 +250,18 @@ export const useConfigurableSettings = () => {
                             // Server first, while the session that authorises
                             // it is live; then the local slot.
                             await authService.revokeDeviceCredentialForThisDevice();
-                            await removeCredentials(email);
+                            // `removeCredentials` reports a failed keychain
+                            // delete by returning false rather than throwing,
+                            // so an unread result flips the toggle over a slot
+                            // that is still there to be offered next launch.
+                            const removed = await removeCredentials(email);
+                            if (!removed) {
+                              alertService.alert(
+                                t('labels.error'),
+                                t('biometrics.disableFailed'),
+                              );
+                              return;
+                            }
                             setBiometricEnabled(false);
                           }
                         } catch (error) {

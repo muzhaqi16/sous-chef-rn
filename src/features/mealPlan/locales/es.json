@@ -98,7 +98,6 @@
     "selectListLabel": "Selecciona una lista",
     "noLists": "No se encontraron listas de la compra",
     "generatingMessage": "Generando lista de la compra...",
-    "itemsCount": "{{count}} artículos",
     "readyNothingToAdd": "\"{{name}}\" está lista — nada que añadir.",
     "createdSuccess_one": "Lista de la compra \"{{name}}\" creada con {{count}} artículo{{shared}}",
     "createdSuccess_other": "Lista de la compra \"{{name}}\" creada con {{count}} artículos{{shared}}",

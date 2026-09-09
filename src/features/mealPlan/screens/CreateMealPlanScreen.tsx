@@ -5,6 +5,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
+import { localizedErrorMessage } from '#/services/errorService';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
@@ -153,9 +154,10 @@ export const CreateMealPlanScreen: React.FC = () => {
     try {
       result = await createMealPlan(createMealPlanOptions);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : t('mealPlan.failedToCreate');
-      alertService.alert(t('labels.error'), errorMessage);
+      alertService.alert(
+        t('labels.error'),
+        localizedErrorMessage(error, t('mealPlan.failedToCreate')),
+      );
     }
     // `false` means the mutation threw — the onError above already alerted.
     if (!result) return;

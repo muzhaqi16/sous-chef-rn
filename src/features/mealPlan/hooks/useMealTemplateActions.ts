@@ -22,7 +22,7 @@ import {
   createRemoveFromQueryConnectionUpdater,
   skipUnmatchedFilterVariants,
 } from '#/apollo/utils/cacheUpdaters';
-import { useIsApiUnavailable } from '#features/mealPlan/hooks/useIsApiUnavailable';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { t } from '#/i18n';
 import { errorService } from '#/services/errorService';
 

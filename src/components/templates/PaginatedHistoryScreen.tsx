@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -29,6 +30,8 @@ export interface PaginatedHistoryScreenProps<T> {
   /** No-ops unless another page exists — see `hasNextPage` at the call site. */
   onEndReached: () => void;
   isFetchingMore: boolean;
+  /** The next page could not be fetched because the API is unreachable. */
+  loadMoreOffline?: boolean;
   keyExtractor: (item: T) => string;
   renderItem: (info: ListRenderItemInfo<T>) => React.ReactElement;
   /** One string per row shape, for FlashList's recycling pools. */
@@ -60,6 +63,7 @@ export function PaginatedHistoryScreen<T>({
   onRetry,
   onEndReached,
   isFetchingMore,
+  loadMoreOffline = false,
   keyExtractor,
   renderItem,
   getItemType,
@@ -70,6 +74,7 @@ export function PaginatedHistoryScreen<T>({
   componentName,
   renderScrollComponent,
 }: PaginatedHistoryScreenProps<T>) {
+  const { t } = useTranslation();
   const { goBack } = useAppNavigation();
 
   const flashListRef = useRef<FlashListRef<T>>(null);
@@ -126,6 +131,16 @@ export function PaginatedHistoryScreen<T>({
           ListFooterComponent={
             isFetchingMore ? (
               <ThemedActivityIndicator style={styles.footerLoader} />
+            ) : loadMoreOffline ? (
+              // Without this the end of a persisted page is a silent no-op: the
+              // reader pulls, nothing arrives, and nothing says why.
+              <Text
+                role="footnote"
+                tone="secondary"
+                style={styles.footerNotice}
+              >
+                {t('errors.offlineNoMorePages')}
+              </Text>
             ) : null
           }
           ListEmptyComponent={
@@ -191,5 +206,9 @@ const styles = StyleSheet.create(theme => ({
   },
   footerLoader: {
     marginVertical: theme.spacing.lg,
+  },
+  footerNotice: {
+    marginVertical: theme.spacing.lg,
+    textAlign: 'center',
   },
 }));

@@ -1,15 +1,13 @@
 import { renderHook } from '@testing-library/react-native';
 import { useDataState, type DataState } from '../useDataState';
-import { useBlocksCacheMissQueries } from '#hooks/app/useBlocksCacheMissQueries';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 
-jest.mock('#hooks/app/useBlocksCacheMissQueries', () => ({
-  useBlocksCacheMissQueries: jest.fn(() => false),
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: jest.fn(() => false),
 }));
 
-const online = () =>
-  (useBlocksCacheMissQueries as jest.Mock).mockReturnValue(false);
-const offline = () =>
-  (useBlocksCacheMissQueries as jest.Mock).mockReturnValue(true);
+const online = () => (useIsApiUnavailable as jest.Mock).mockReturnValue(false);
+const offline = () => (useIsApiUnavailable as jest.Mock).mockReturnValue(true);
 
 const classify = (input: Parameters<typeof useDataState>[0]): DataState =>
   renderHook(() => useDataState(input)).result.current;

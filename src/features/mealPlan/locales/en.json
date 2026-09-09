@@ -98,7 +98,6 @@
     "selectListLabel": "Select a list",
     "noLists": "No shopping lists found",
     "generatingMessage": "Generating shopping list...",
-    "itemsCount": "{{count}} items",
     "readyNothingToAdd": "\"{{name}}\" is ready — nothing to add.",
     "createdSuccess_one": "Shopping list \"{{name}}\" created with {{count}} item{{shared}}",
     "createdSuccess_other": "Shopping list \"{{name}}\" created with {{count}} items{{shared}}",

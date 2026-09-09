@@ -200,7 +200,10 @@ describe('resetManager', () => {
         expect(firstCall.sessionTokensInKeychain).toBeUndefined();
       });
 
-      it('resets UI state when ui option is true', async () => {
+      // The cross-screen hand-offs: each names a row or holds an image the next
+      // account must not receive. `tutorialResetGeneration` is deliberately not
+      // among them — resetting a bump counter reads as a reset somebody asked for.
+      it('drops the transient UI hand-offs when ui option is true', async () => {
         await resetManager.resetStore({
           auth: false,
           ui: true,
@@ -208,11 +211,10 @@ describe('resetManager', () => {
           clearApolloCache: false,
         });
         const firstCall = mockSet.mock.calls[0][0];
-        expect(firstCall.isLoading).toBe(false);
-        expect(firstCall.isError).toBe(false);
-        expect(firstCall.bottomSheetVisible).toBe(false);
-        expect(firstCall.toastMessage).toBeNull();
-        expect(firstCall.globalSearchQuery).toBe('');
+        expect(firstCall.pendingPantryScrollToTop).toBe(false);
+        expect(firstCall.pendingCroppedImage).toBeNull();
+        expect(firstCall.pendingItemImages).toBeNull();
+        expect(firstCall.tutorialResetGeneration).toBeUndefined();
       });
 
       it('resets preferences when preferences option is true', async () => {

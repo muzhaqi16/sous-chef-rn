@@ -24,11 +24,12 @@ import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement'
 import type { PantryItemFilters } from '#/graphql/generated/schemaTypes';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
-import { useAddLowStockToShoppingList } from '#features/pantry/hooks/useAddLowStockToShoppingList';
+import { ShoppingListPickerSheet } from '#features/shoppingList/ui/ShoppingListPickerSheet';
+import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
+import { useLowStockListPicker } from '#features/pantry/hooks/useLowStockListPicker';
 import { useSelectedShoppingListId, useUser } from '#store/useAppStore';
 import { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';
 import { useShoppingListPermissions } from '#features/shoppingList/hooks/useShoppingListPermissions';
-import { toastService } from '#/services/toastService';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { useAddPantryItemToShoppingList } from '#features/pantry/hooks/useAddPantryItemToShoppingList';
 import {
@@ -83,7 +84,6 @@ interface ModeConfig {
   sort?: (a: FilteredItem, b: FilteredItem) => number;
   subtitle: (item: FilteredItem) => string;
   tutorialSteps: TutorialStep[];
-  showCartAction: boolean;
 }
 
 function formatExpirySubtitle(
@@ -130,7 +130,6 @@ function buildModeConfig(
           rectKey: 'headerCart',
         },
       ],
-      showCartAction: true,
     },
     expiring: {
       title: t('filteredPantry.expiringTitle'),
@@ -158,7 +157,6 @@ function buildModeConfig(
       },
       subtitle: item => formatExpirySubtitle(item.expiresAt, t),
       tutorialSteps: [],
-      showCartAction: false,
     },
     expired: {
       title: t('filteredPantry.expiredTitle'),
@@ -183,7 +181,6 @@ function buildModeConfig(
       },
       subtitle: item => formatExpirySubtitle(item.expiresAt, t),
       tutorialSteps: [],
-      showCartAction: false,
     },
   };
 }
@@ -317,9 +314,6 @@ export const FilteredPantryItems: React.FC<
   // Use cache-only hook for pantry resolution (no network requests)
   const { pantry, selectedHomeId } = useCurrentPantry();
 
-  const { addLowStockToShoppingList, loading: addAllLoading } =
-    useAddLowStockToShoppingList({ homeId: selectedHomeId ?? undefined });
-
   const selectedShoppingListId = useSelectedShoppingListId();
   // The cart writes to a SHOPPING LIST, so the list's permission decides
   // whether to offer it — the pantry's says only what may be done here. A
@@ -333,7 +327,7 @@ export const FilteredPantryItems: React.FC<
     selectedListDetails,
     user?.id,
   );
-  const { addToList } = useAddPantryItemToShoppingList(selectedShoppingListId);
+  const { addToList } = useAddPantryItemToShoppingList();
 
   const {
     state: {
@@ -375,6 +369,18 @@ export const FilteredPantryItems: React.FC<
     }
     return filtered;
   })();
+  const { lists: pickerLists } = useShoppingListsLite();
+  const picker = useLowStockListPicker({
+    addToList,
+    // The rows on screen: the button adds what the person is looking at, not a
+    // set the server picks and the client cannot see.
+    rows: () =>
+      filteredItems.map(item => ({
+        itemId: item.itemId,
+        display: { itemName: item.itemName, unitId: item.unit?.id },
+      })),
+    homeId: selectedHomeId ?? undefined,
+  });
 
   // Full screen, so the per-cell wrapper's cost is worth the blank-cell
   // instrumentation (per-session sampled, 5% in release).
@@ -412,10 +418,12 @@ export const FilteredPantryItems: React.FC<
     display: { itemName: string; unitId?: string },
   ) => {
     if (!selectedShoppingListId) {
-      toastService.info(t('filteredPantry.noListSelected'));
+      picker.openForRow({ itemId, display });
       return;
     }
-    if ((await addToList(itemId, display)) === 'reverted') {
+    if (
+      (await addToList(selectedShoppingListId, itemId, display)) === 'reverted'
+    ) {
       alertService.alert(
         t('labels.error'),
         t('filteredPantry.addToShoppingFailed'),
@@ -423,7 +431,13 @@ export const FilteredPantryItems: React.FC<
     }
   };
 
-  const showCart = config.showCartAction && listPermissions.canAddItems;
+  // Every mode lists items someone might re-buy, so the only reason to withhold
+  // the cart is a KNOWN permission refusal — never a list still loading or
+  // unchosen, which is what the cart itself exists to ask about. No per-mode
+  // flag: one true in every case only waits to hide a cart a screen wants.
+  const listRefusesAdds =
+    listPermissions.resolved && !listPermissions.canAddItems;
+  const showCart = !listRefusesAdds;
 
   const actions = {
     navigateTo: (params: { itemId: string }) => toPantryItemDetail(params),
@@ -435,8 +449,8 @@ export const FilteredPantryItems: React.FC<
         {
           icon: 'cart-outline',
           accessibilityLabel: t('labels.addToShoppingList'),
-          onPress: addLowStockToShoppingList,
-          loading: addAllLoading,
+          onPress: picker.openForAll,
+          loading: picker.busy,
           testID: 'add-all-low-stock',
           onMeasure: setHeaderCartRect,
         },
@@ -510,6 +524,16 @@ export const FilteredPantryItems: React.FC<
           onTargetPress={tutorial.advance}
         />
       ) : null}
+
+      <ShoppingListPickerSheet
+        visible={picker.pickerVisible}
+        shoppingLists={pickerLists}
+        defaultNewListName={config.title}
+        creatingList={picker.busy}
+        onListSelected={picker.handleListSelected}
+        onCreateListAndAdd={picker.handleCreateListAndAdd}
+        onDismiss={picker.dismissPicker}
+      />
     </Screen>
   );
 };

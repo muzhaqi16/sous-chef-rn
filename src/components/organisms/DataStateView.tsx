@@ -55,7 +55,10 @@ export const DataStateView: React.FC<DataStateViewProps> = ({
   return (
     <ErrorState
       icon={offline ? 'cloud-offline-outline' : 'alert-circle-outline'}
-      severity={offline ? 'info' : 'error'}
+      // `warning`, not `info`: the offline pill and the offline toast are both
+      // amber, and one condition reading blue on one screen and amber on the
+      // next is the app disagreeing with itself.
+      severity={offline ? 'warning' : 'error'}
       title={t(offline ? 'errors.notAvailableOffline' : 'dataState.errorTitle')}
       message={t(offline ? 'dataState.offlineBody' : 'dataState.errorBody')}
       onRetry={onRetry}

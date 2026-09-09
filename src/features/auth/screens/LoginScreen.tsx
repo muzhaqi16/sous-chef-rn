@@ -18,7 +18,7 @@ import { logValidationErrors } from '#/utils/validation/common';
 import { type LoginInput } from '#/graphql/generated/schemaTypes';
 import { useRememberMe } from '#features/auth/hooks/useRememberMe';
 import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
-import { useAppStore } from '#store/useAppStore';
+import { useAppStore, useHasStoredCredentials } from '#store/useAppStore';
 import { useBiometricBackoff } from '../hooks/useBiometricBackoff';
 import { authService } from '#/services/authService';
 import { CodeVerificationScreen } from '#features/auth/screens/CodeVerificationScreen';
@@ -115,8 +115,14 @@ export function LoginScreen(): React.JSX.Element {
     }
   }, [postLoginCredentials, showRememberMePrompt]);
 
-  const [shouldShowBiometricButton, setShouldShowBiometricButton] =
+  const [biometricSlotSeenOnMount, setShouldShowBiometricButton] =
     useState(false);
+  // A slot proven unusable during this session takes the affordance down
+  // without a remount: the mount check cannot answer for what happened after
+  // it, and every further tap on a dead slot repeats the same dead end.
+  const slotStillOffered = useHasStoredCredentials() !== false;
+  const shouldShowBiometricButton =
+    biometricSlotSeenOnMount && slotStillOffered;
   const [isBiometricLoading, setIsBiometricLoading] = useState(false);
   const biometricBackoff = useBiometricBackoff();
   // The address a refused-as-unverified sign-in was for. Null until the server

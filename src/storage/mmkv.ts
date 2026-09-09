@@ -80,6 +80,22 @@ export const purgeRecoveryStorage = (): void => {
   }
 };
 
+/**
+ * Whether a quarantined launch left state in the recovery file. `existsMMKV`,
+ * not `createMMKV`: the latter would materialise the file on every device.
+ */
+const recoveryStorageHasState = (): boolean => {
+  try {
+    if (!existsMMKV(RECOVERY_STORAGE_KEY)) return false;
+    return createMMKV({ id: RECOVERY_STORAGE_KEY }).getAllKeys().length > 0;
+  } catch (error) {
+    // Unreadable is not empty: an unexplained emptiness must not be read as a
+    // reinstall, because that drops a session the person may still hold.
+    logger.warn('Could not probe recovery storage:', error);
+    return true;
+  }
+};
+
 const scheduleRecoveryPurge = (): void => {
   const idle = (
     globalThis as { requestIdleCallback?: (cb: () => void) => void }
@@ -129,11 +145,13 @@ export const initializeSecureStorage = async (): Promise<MMKV> => {
     }
 
     // An empty encrypted store means no local state stands behind whatever the
-    // keychain still holds — a reinstall, or cleared app data. Recorded here
-    // and read during hydration, which is where the keychain is reachable
-    // without closing an import cycle through i18n and the store.
+    // keychain holds — a reinstall, or cleared app data. A launch quarantined
+    // on the recovery instance also leaves it empty with a live session behind
+    // it, so state in the recovery file is what tells the two apart. Read
+    // before the purge is scheduled, and during hydration for the keychain.
     if (!usingRecoveryInstance) {
-      openedEmptyStore = instance.getAllKeys().length === 0;
+      openedEmptyStore =
+        instance.getAllKeys().length === 0 && !recoveryStorageHasState();
     }
 
     secureStorageInstance = instance;

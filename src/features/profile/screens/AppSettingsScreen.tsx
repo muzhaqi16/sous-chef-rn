@@ -186,6 +186,18 @@ export const AppSettingsScreen: React.FC = () => {
           }}
           testID="settings-state"
         />
+        {/* Offline is exactly when someone reaches for this switch, and its
+            value lives in the store, not in the settings query. Behind the
+            gate it was unreachable in the state it exists for. */}
+        <SettingsSection variant="inset" title={t('settings.syncOffline')}>
+          <SettingSwitch
+            testID="settings-offline-mode-switch"
+            title={t('settings.offlineMode')}
+            description={t('settings.offlineModeDesc')}
+            value={offlineModeEnabled}
+            onValueChange={handleOfflineModeChange}
+          />
+        </SettingsSection>
       </ProfileScreenWrapper>
     );
   }

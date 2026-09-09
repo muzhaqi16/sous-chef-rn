@@ -119,7 +119,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                 </View>
                 <Text style={[commonStyles.caption, styles.subtitle]}>
                   {!location.parentLocation && <Text>{typeLabel} • </Text>}
-                  {t('storageLocationCard.itemCount', {
+                  {t('labels.itemCount', {
                     // i18next selects the plural form from `count`, and a
                     // non-number silently lands on the wrong one. The prop is
                     // declared `number | null | undefined` even though the

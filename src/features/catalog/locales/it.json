@@ -9,8 +9,6 @@
     "cantDeleteDefaultMessage": "Imposta prima un'altra posizione come predefinita.",
     "cantDeleteTitle": "Impossibile eliminare la posizione",
     "cantDeleteWithItems": "\"{{name}}\" ha {{description}}. Sposta o rimuovi prima.",
-    "itemSingular": "{{count}} articolo",
-    "itemPlural": "{{count}} articoli",
     "subLocationSingular": "{{count}} sotto-posizione",
     "subLocationPlural": "{{count}} sotto-posizioni",
     "gotIt": "Capito",
@@ -415,9 +413,7 @@
   },
   "storageLocationCard": {
     "default": "Predefinita",
-    "insideParent": "Dentro {{parent}}",
-    "itemCount_one": "{{count}} articolo",
-    "itemCount_other": "{{count}} articoli"
+    "insideParent": "Dentro {{parent}}"
   },
   "itemSubtitle": {
     "percentRemaining": "({{percent}}% rimanente)",

@@ -144,10 +144,12 @@ export function BottomSheetAutocompleteInput<T>({
     }
   }
 
+  // `data.length > 0` is the whole condition: the hooks answer from the warmed
+  // local sets when offline, so gating on `isOnline` hid suggestions the device
+  // already had. Connectivity gates the network leg, inside the search hook.
   const shouldAutoOpen =
     data.length > 0 &&
     searchTerm.length >= minSearchLength &&
-    isOnline &&
     !userDismissed &&
     hasInteracted;
   if (shouldAutoOpen && !showAutocomplete) {

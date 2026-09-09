@@ -218,6 +218,10 @@ const sectionById = (
 describe('useConfigurableSettings', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // The keychain delete succeeds unless a case says otherwise: it reports
+    // failure by returning false, so an unset default would put every case on
+    // the failure path.
+    mockRemoveCredentials.mockResolvedValue(true);
   });
 
   it('returns sections from config', () => {
@@ -236,7 +240,7 @@ describe('useConfigurableSettings', () => {
       'security',
       'logout',
     ]);
-    expect(result.current.sections[0].title).toBe('Appearance & Language');
+    expect(result.current.sections[0]!.title).toBe('Appearance & Language');
   });
 
   it('returns BiometricModal element', () => {
@@ -523,7 +527,7 @@ describe('useConfigurableSettings', () => {
       const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
         operationMocks: [settings.mock],
       });
-      const items = result.current.sections[0].items;
+      const items = result.current.sections[0]!.items;
 
       items.forEach((item: SettingItem) => {
         expect(typeof item.onPress).toBe('function');
@@ -566,7 +570,7 @@ describe('useConfigurableSettings', () => {
       const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
         operationMocks: [settings.mock],
       });
-      const items = result.current.sections[0].items;
+      const items = result.current.sections[0]!.items;
 
       expect(findByKey(items, 'personalInformation').testID).toBe(
         'profile-menu-personalInformation',
@@ -750,6 +754,52 @@ describe('useConfigurableSettings', () => {
       });
 
       expect(mockRemoveCredentials).toHaveBeenCalledWith('test@example.com');
+    });
+
+    // The delete reports failure by returning false rather than throwing, so
+    // the catch never runs: the toggle would read off over a slot still there
+    // to be offered on the next launch.
+    it('keeps biometrics on when the keychain delete does not succeed', async () => {
+      mockGetBiometricInfo.mockResolvedValue({
+        isAvailable: true,
+        biometryType: 'FaceID',
+      });
+      mockCheckStoredCredentials.mockResolvedValue(true);
+      mockRemoveCredentials.mockResolvedValue(false);
+
+      const { settings } = buildMocks();
+      const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+        operationMocks: [settings.mock],
+      });
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      });
+
+      const biometricItem = findByKey(
+        sectionById(result.current.sections, 'security').items,
+        'biometricAuthentication',
+      );
+      await act(async () => {
+        await biometricItem.onPress?.();
+      });
+
+      const alertCalls = (alertService.alert as jest.Mock).mock.calls;
+      const buttons = alertCalls[alertCalls.length - 1]![2] as AlertButton[];
+      (alertService.alert as jest.Mock).mockClear();
+
+      await act(async () => {
+        await buttons.find(button => button.text === 'Disable')?.onPress?.();
+      });
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        expect.any(String),
+      );
+      const stillOn = findByKey(
+        sectionById(result.current.sections, 'security').items,
+        'biometricAuthentication',
+      );
+      expect(stillOn.value).toBe(true);
     });
 
     it('biometric uses "biometric" fallback when biometryType is null', async () => {

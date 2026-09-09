@@ -116,6 +116,10 @@ describe('logout and biometric credentials', () => {
     mockStoreState.biometricRetryAt = 0;
     mockHasCredentials.mockResolvedValue(true);
     mockClearCredentials.mockClear();
+    // Call records do not survive into the next case: several assertions here
+    // read "was this called at all", which a sibling's call would answer for.
+    mockQuery.mockClear();
+    mockMutate.mockClear();
     mockMutate.mockResolvedValue({ data: {} });
     // The lookup that finds THIS device's credential so it can be revoked.
     mockQuery.mockResolvedValue({
@@ -185,6 +189,46 @@ describe('logout and biometric credentials', () => {
 
     expect(revoked).toBe(false);
     expect(mockMutate).not.toHaveBeenCalled();
+  });
+
+  // The sign-out's own cleanup has to reach the server: `authLink` refuses
+  // everything once `isLoggingOut` is set, and this revoke needs two sequential
+  // round trips, so without the opt-in a slow link cancels it.
+  it('opts its round trips out of the logout refusal', async () => {
+    await authService.revokeDeviceCredentialForThisDevice();
+
+    // `toEqual` drops undefined entries, so the opt-in is read as a boolean
+    // per call — an absent context has to be visible as `false`.
+    const optedIn = [
+      ...mockQuery.mock.calls.map(([options]) => ['query', options]),
+      ...mockMutate.mock.calls.map(([options]) => ['mutate', options]),
+    ].map(
+      ([kind, options]) =>
+        `${kind}:${
+          (options as { context?: { allowDuringLogout?: boolean } })?.context
+            ?.allowDuringLogout === true
+        }`,
+    );
+
+    expect(optedIn.length).toBeGreaterThan(1);
+    expect(optedIn.filter(entry => entry.endsWith(':false'))).toStrictEqual([]);
+  });
+
+  // `RevokeDeviceCredentialResult` is a union and `errorPolicy: 'all'` resolves
+  // a refusal as data, so an unread result reports the credential dead when it
+  // is still exchangeable.
+  it('reports a refused revoke as a failure rather than a success', async () => {
+    mockMutate.mockResolvedValueOnce({
+      data: {
+        revokeDeviceCredential: {
+          __typename: 'ForbiddenError',
+          code: 'FORBIDDEN',
+          message: 'nope',
+        },
+      },
+    });
+
+    expect(await authService.revokeDeviceCredentialForThisDevice()).toBe(false);
   });
 
   it('treats a device with no credential of its own as nothing to revoke', async () => {

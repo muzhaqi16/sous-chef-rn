@@ -108,10 +108,12 @@ describe('mmkv storage', () => {
       ) as { DeviceKeyManager: { getDeviceEncryptionKey: jest.Mock } };
       DeviceKeyManager.getDeviceEncryptionKey.mockReset();
       DeviceKeyManager.getDeviceEncryptionKey.mockImplementation(keyImpl);
-      const { createMMKV } = jest.requireMock('react-native-mmkv') as {
-        createMMKV: jest.Mock;
-      };
+      const { createMMKV, existsMMKV } = jest.requireMock(
+        'react-native-mmkv',
+      ) as { createMMKV: jest.Mock; existsMMKV: jest.Mock };
       createMMKV.mockClear();
+      existsMMKV.mockReset();
+      existsMMKV.mockReturnValue(true);
       const mmkvModule = require('../mmkv') as typeof import('../mmkv');
       return {
         mmkvModule,
@@ -196,10 +198,12 @@ describe('mmkv storage', () => {
         key: 'a-key',
         encryptionType: 'AES-256' as const,
       });
-      const { createMMKV } = jest.requireMock('react-native-mmkv') as {
-        createMMKV: jest.Mock;
-      };
+      const { createMMKV, existsMMKV } = jest.requireMock(
+        'react-native-mmkv',
+      ) as { createMMKV: jest.Mock; existsMMKV: jest.Mock };
       createMMKV.mockClear();
+      existsMMKV.mockReset();
+      existsMMKV.mockReturnValue(true);
       const clearAll = jest.fn();
       createMMKV.mockImplementation((opts: { id: string }) => ({
         id: opts.id,
@@ -211,7 +215,7 @@ describe('mmkv storage', () => {
         clearAll,
       }));
       const mmkvModule = require('../mmkv') as typeof import('../mmkv');
-      return { mmkvModule, createMMKV, clearAll };
+      return { mmkvModule, createMMKV, existsMMKV, clearAll };
     };
 
     it('clears the recovery file once the encrypted instance opens', async () => {
@@ -239,10 +243,43 @@ describe('mmkv storage', () => {
       expect(mmkvModule.openedWithEmptyStore()).toBe(true);
     });
 
+    // An empty encrypted file means "nothing stands behind the keychain" only
+    // when nothing was written anywhere. A launch quarantined on the recovery
+    // instance leaves the encrypted file untouched, so the launch that first
+    // opens it sees the same emptiness with a live session behind it.
+    it('does not report an empty store when a quarantined launch left state', async () => {
+      jest.useFakeTimers();
+      const { mmkvModule } = loadWithRecoveryFile(['sous-chef-storage'], {
+        primaryKeys: [],
+      });
+
+      await mmkvModule.initializeSecureStorage();
+      await jest.runAllTimersAsync();
+
+      expect(mmkvModule.openedWithEmptyStore()).toBe(false);
+    });
+
     it('does not report an empty store when it has data', async () => {
       jest.useFakeTimers();
       const { mmkvModule } = loadWithRecoveryFile([], {
         primaryKeys: ['sous-chef-storage'],
+      });
+
+      await mmkvModule.initializeSecureStorage();
+      await jest.runAllTimersAsync();
+
+      expect(mmkvModule.openedWithEmptyStore()).toBe(false);
+    });
+
+    // Unreadable is not empty. An emptiness the app cannot explain must not be
+    // read as a reinstall, because that drops a session the person still holds.
+    it('does not report an empty store when the recovery probe fails', async () => {
+      jest.useFakeTimers();
+      const { mmkvModule, existsMMKV } = loadWithRecoveryFile([], {
+        primaryKeys: [],
+      });
+      existsMMKV.mockImplementation(() => {
+        throw new Error('cannot stat the recovery file');
       });
 
       await mmkvModule.initializeSecureStorage();

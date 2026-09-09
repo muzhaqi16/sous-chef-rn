@@ -630,9 +630,9 @@ async function logout(options?: LogoutOptions): Promise<void> {
 }
 
 /**
- * Take the biometric affordance down with the slot it offers: the login screen
- * renders it from `hasStoredCredentials`, which no clear path writes, so the
- * button outlives its own credential and every tap is a dead end.
+ * Take the biometric affordance down with the slot it offers. The login screen
+ * gates its button on `hasStoredCredentials`, so a slot proven unusable stops
+ * being offered without waiting for a remount.
  */
 function forgetBiometricSlot(): void {
   useStore.getState().setHasStoredCredentials(false);
@@ -819,20 +819,31 @@ async function revokeDeviceCredentialForThisDevice(): Promise<boolean> {
       return false;
     }
 
+    // Both round trips belong to the sign-out, which sets `isLoggingOut`
+    // before they can finish on a slow link — without the opt-in `authLink`
+    // refuses the cleanup the sign-out is waiting for.
     const listed = await client.query({
       query: MyDeviceCredentialsDocument,
       fetchPolicy: 'network-only',
+      context: { allowDuringLogout: true },
     });
     const mine = listed.data?.deviceCredentials?.find(
       credential => credential.deviceId === deviceId,
     );
     if (!mine) return true;
 
-    await client.mutate({
+    const revoked = await client.mutate({
       mutation: RevokeDeviceCredentialDocument,
       variables: { input: { id: mine.id } },
+      context: { allowDuringLogout: true },
     });
-    return true;
+    // A refusal is a union member resolved as data, so the absence of a throw
+    // is not a revoke: the credential stays exchangeable while the local slot
+    // is dropped.
+    return (
+      revoked.data?.revokeDeviceCredential?.__typename ===
+      'RevokeDeviceCredentialPayload'
+    );
   } catch (error) {
     logger.warn('Could not revoke the device credential server-side', error);
     return false;

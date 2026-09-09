@@ -23,6 +23,7 @@ import { RecipeTagsSection } from '#features/recipes/components/recipeForm/Recip
 import type { IngredientFormState, StepFormState } from './formState';
 import type { RecipeCreatedBy } from '#features/recipes/utils/recipeCacheWriters';
 import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
+import { localizedErrorMessage } from '#/services/errorService';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 export const RecipeFormScreen: React.FC<
@@ -104,9 +105,10 @@ export const RecipeFormScreen: React.FC<
     try {
       await runSave();
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : t('recipes.unexpectedError');
-      alertService.alert(t('labels.error'), message);
+      alertService.alert(
+        t('labels.error'),
+        localizedErrorMessage(err, t('recipes.unexpectedError')),
+      );
     }
   };
 

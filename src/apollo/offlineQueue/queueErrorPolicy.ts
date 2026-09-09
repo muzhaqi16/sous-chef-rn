@@ -5,6 +5,7 @@ import {
 } from '@apollo/client/errors';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { isAuthRefusalCode } from '#/utils/authErrorCodes';
+import { VERSION_CONFLICT_CODES } from '#/utils/errors/versionConflict';
 import { isErrorTypename } from '#/utils/errors/mutationPayload';
 import type { QueueError } from './types';
 
@@ -107,6 +108,17 @@ function readStatusCode(error: unknown): number | undefined {
  */
 const UNIT_RESOURCE = 'unit';
 
+/**
+ * Codes the API documents as shedding load or pacing the caller. Each clears on
+ * its own, so the entry is deferred rather than withdrawn — reverting a write
+ * over one of these discards work the server never refused.
+ */
+const TRANSIENT_SERVER_CODES: readonly string[] = [
+  TopLevelErrorCode.ServiceUnavailable,
+  TopLevelErrorCode.RateLimitExceeded,
+  TopLevelErrorCode.OperationRateLimited,
+];
+
 function isStaleUnitRefusal(error: ReplayRejectedError): boolean {
   if (error.payloadCode === ErrorCode.UnitInvalid) return true;
 
@@ -136,6 +148,22 @@ export function classifyError(error: unknown): QueueError {
         retryable: true,
       };
     }
+    // The entity moved on since the write was made. Re-sendable, but only
+    // without the stale `version` the write captured — QueueManager strips it
+    // and re-sends once.
+    if (
+      error.payloadCode !== null &&
+      VERSION_CONFLICT_CODES.includes(error.payloadCode)
+    ) {
+      return {
+        type: 'conflict',
+        message: error.message,
+        code: error.payloadCode,
+        timestamp: Date.now(),
+        retryable: true,
+      };
+    }
+
     // The write names a unit the vocabulary repair merged away. The write is
     // fine — its reference went stale — so it is re-sent, not reverted. Both
     // spellings: a missing row, or a unit the server will not accept.
@@ -161,6 +189,27 @@ export function classifyError(error: unknown): QueueError {
   const err = (error ?? {}) as { message?: string };
   const message = err.message || String(error);
   const code = readErrorCode(error);
+
+  // The thrown spelling of the same condition as the union member above.
+  if (code && VERSION_CONFLICT_CODES.includes(code)) {
+    return {
+      type: 'conflict',
+      message,
+      code,
+      timestamp: Date.now(),
+      retryable: true,
+    };
+  }
+
+  if (code && TRANSIENT_SERVER_CODES.includes(code)) {
+    return {
+      type: 'server',
+      message,
+      code,
+      timestamp: Date.now(),
+      retryable: true,
+    };
+  }
 
   // Build below the server's minimum: deferred, not failed, so the change
   // survives on disk and syncs once the user updates. `retryable: false` skips

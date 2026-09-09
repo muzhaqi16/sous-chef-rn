@@ -12,26 +12,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  containerPadded: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    padding: theme.spacing.md,
-  },
-  containerCentered: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
 
-  surface: {
-    backgroundColor: theme.colors.surface,
-  },
-  surfaceRounded: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-  },
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
@@ -55,10 +36,6 @@ export const commonStyles = StyleSheet.create(theme => ({
       },
     ],
   },
-  bottomBorder: {
-    borderBottomWidth: theme.borderWidth.hairline,
-    borderBottomColor: theme.colors.border,
-  },
 
   row: {
     flexDirection: 'row',
@@ -69,54 +46,9 @@ export const commonStyles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  rowCenter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  column: {
-    flexDirection: 'column',
-  },
-  flex1: {
-    flex: 1,
-  },
   center: {
     justifyContent: 'center',
     alignItems: 'center',
-  },
-
-  paddingHorizontal: {
-    paddingHorizontal: theme.spacing.md,
-  },
-  paddingVertical: {
-    paddingVertical: theme.spacing.md,
-  },
-  padding: {
-    padding: theme.spacing.md,
-  },
-  paddingSmall: {
-    padding: theme.spacing.sm,
-  },
-  paddingLarge: {
-    padding: theme.spacing.lg,
-  },
-  marginBottom: {
-    marginBottom: theme.spacing.md,
-  },
-  marginBottomSmall: {
-    marginBottom: theme.spacing.sm,
-  },
-  marginBottomLarge: {
-    marginBottom: theme.spacing.lg,
-  },
-  gap: {
-    gap: theme.spacing.md,
-  },
-  gapSmall: {
-    gap: theme.spacing.sm,
-  },
-  gapLarge: {
-    gap: theme.spacing.lg,
   },
 
   header: {
@@ -135,28 +67,7 @@ export const commonStyles = StyleSheet.create(theme => ({
       lg: theme.spacing.lg,
     },
   },
-  headerTitle: {
-    ...theme.type.heading,
-    color: theme.colors.textPrimary,
-  },
-  headerAction: {
-    padding: theme.spacing.xs,
-  },
-  headerPlaceholder: {
-    width: 24,
-  },
 
-  absoluteFill: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: theme.colors.overlay,
-  },
   scrollContent: {
     flexGrow: 1,
   },
@@ -172,12 +83,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.inputBackground,
   },
-  inputError: {
-    borderColor: theme.colors.error,
-  },
-  inputFocused: {
-    borderColor: theme.colors.primary,
-  },
   inputGroup: {
     marginBottom: theme.spacing.lg,
   },
@@ -185,15 +90,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     ...theme.type.label,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
-  },
-  errorText: {
-    ...theme.type.caption,
-    color: theme.colors.error,
-    marginTop: theme.spacing.xs,
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
   },
 
   button: {
@@ -219,25 +115,11 @@ export const commonStyles = StyleSheet.create(theme => ({
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
-  buttonDanger: {
-    backgroundColor: theme.colors.error,
-  },
-  buttonText: {
-    ...theme.type.bodyStrong,
-  },
   buttonTextPrimary: {
     color: theme.colors.onPrimary,
   },
   buttonTextSecondary: {
     color: theme.colors.textPrimary,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  iconButton: {
-    padding: theme.spacing.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 
   settingsSection: {
@@ -278,46 +160,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
   },
 
-  listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: theme.borderWidth.hairline,
-    borderBottomColor: theme.colors.border,
-  },
-  listItemContent: {
-    flex: 1,
-  },
-  listItemTitle: {
-    ...theme.type.bodyStrong,
-    color: theme.colors.textPrimary,
-  },
-  listItemSubtitle: {
-    ...theme.type.caption,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
-  },
-  listItemImageContainer: {
-    width: theme.sizes.listImage.width,
-    height: theme.sizes.listImage.height,
-    marginRight: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.primary,
-    ...theme.shadows.card,
-  },
-  listItemImage: {
-    width: theme.sizes.listImage.width,
-    height: theme.sizes.listImage.height,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    resizeMode: 'cover',
-  },
   // The row's own `gap` spaces this from the text, so it carries no margin.
   listItemImageContainerCompact: {
     width: theme.sizes.itemCard.compact.image,
@@ -393,27 +235,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
 
-  modalContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing.md,
-    borderBottomWidth: theme.borderWidth.hairline,
-    borderBottomColor: theme.colors.border,
-  },
-  modalTitle: {
-    ...theme.type.heading,
-    color: theme.colors.textPrimary,
-    flex: 1,
-    textAlign: 'center',
-  },
-  modalContent: {
-    padding: theme.spacing.md,
-  },
   bottomSheetScrollView: {
     flex: 1,
   },
@@ -519,12 +340,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     ...theme.type.label,
     color: theme.colors.chipText,
   },
-  chipSelected: {
-    backgroundColor: theme.colors.chipSelectedBackground,
-  },
-  chipTextSelected: {
-    color: theme.colors.chipSelectedText,
-  },
   body: {
     ...theme.type.body,
     color: theme.colors.textPrimary,
@@ -544,19 +359,5 @@ export const commonStyles = StyleSheet.create(theme => ({
   caption: {
     ...theme.type.caption,
     color: theme.colors.textSecondary,
-  },
-  link: {
-    color: theme.colors.primary,
-    textDecorationLine: 'underline',
-  },
-
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
-  disabled: {
-    opacity: theme.opacity.disabled,
-  },
-  cardPressed: {
-    opacity: theme.opacity.cardPressed,
   },
 }));

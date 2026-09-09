@@ -69,7 +69,6 @@
     "defaultPantry": "Qilari i parazgjedhur",
     "defaultPantryDesc": "Vendose këtë si qilarin e parazgjedhur për këtë shtëpi",
     "itemsInPantry": "Artikuj në qilar",
-    "itemsCount": "{{count}} artikuj",
     "deleteWarning": "Fshirja e këtij qilari do të heqë përgjithmonë të gjithë artikujt brenda tij. Ky veprim nuk mund të zhbëhet.",
     "deleteConfirmMessage": "Vërtet dëshiron ta fshish këtë qilar? Ky veprim nuk mund të zhbëhet dhe do të heqë të gjithë artikujt.",
     "nameEmptyError": "Emri i qilarit nuk mund të jetë bosh",
@@ -306,8 +305,6 @@
   "pantryScreen": {
     "greetingFallback": "Mirëmëngjes",
     "searchPlaceholder": "Kërko në qilarin tënd...",
-    "itemCount_one": "{{count}} artikull",
-    "itemCount_other": "{{count}} artikuj",
     "sort": "Rendit",
     "tabAll": "Të gjitha",
     "tabPantry": "Qilar",

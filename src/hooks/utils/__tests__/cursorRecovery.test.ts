@@ -2,6 +2,11 @@ import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { GraphQLError } from 'graphql';
 import { loadPageWithCursorRecovery } from '../cursorRecovery';
 import { isDeadCursorError } from '#/utils/errors/graphqlErrors';
+import { errorService } from '#/services/errorService';
+
+jest.mock('#/services/errorService', () => ({
+  errorService: { reportError: jest.fn() },
+}));
 
 function refusal(code: string, message = 'Invalid cursor.') {
   return new CombinedGraphQLErrors({
@@ -48,6 +53,65 @@ describe('isDeadCursorError', () => {
   it('is not a dead cursor for another refusal, or for a transport failure', () => {
     expect(isDeadCursorError(refusal('FORBIDDEN'), 'abc')).toBe(false);
     expect(isDeadCursorError(new Error('offline'), 'abc')).toBe(false);
+  });
+});
+
+// The class recognised is wider than a cursor, because the API answers every
+// refused pagination argument with one code and no field. What keeps that
+// bounded is the recovery: one restart, never re-entered, always reported.
+describe('cursor recovery is bounded and reported', () => {
+  const variables = { after: 'stale-cursor', first: 20 };
+
+  it('spends exactly two requests when the restart is refused too', async () => {
+    const fetchMore = jest.fn().mockRejectedValue(refusal('VALIDATION_FAILED'));
+    const refetch = jest.fn().mockRejectedValue(refusal('VALIDATION_FAILED'));
+
+    await loadPageWithCursorRecovery({
+      fetchMore,
+      refetch,
+      variables,
+      operation: 'pantry.loadMore',
+    });
+
+    expect(fetchMore).toHaveBeenCalledTimes(1);
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a failure that is not a cursor refusal, and does not restart', async () => {
+    const fetchMore = jest.fn().mockRejectedValue(refusal('FORBIDDEN'));
+    const refetch = jest.fn().mockResolvedValue({});
+
+    await loadPageWithCursorRecovery({
+      fetchMore,
+      refetch,
+      variables,
+      operation: 'pantry.loadMore',
+    });
+
+    expect(refetch).not.toHaveBeenCalled();
+    expect(errorService.reportError).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ operation: 'pantry.loadMore' }),
+    );
+  });
+
+  it('reports a failed restart separately from the failure that prompted it', async () => {
+    const fetchMore = jest.fn().mockRejectedValue(refusal('VALIDATION_FAILED'));
+    const refetch = jest.fn().mockRejectedValue(new Error('offline'));
+
+    await loadPageWithCursorRecovery({
+      fetchMore,
+      refetch,
+      variables,
+      operation: 'pantry.loadMore',
+    });
+
+    expect(errorService.reportError).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        operation: 'pantry.loadMore.restartAfterDeadCursor',
+      }),
+    );
   });
 });
 

@@ -72,6 +72,21 @@ describe('CachedImage', () => {
     jest.clearAllMocks();
   });
 
+  // The placeholder is a state, not a different component: a check targeting
+  // the image by id must still find it when there is no image to show.
+  it('keeps its testID and accessible name with no uri to show', () => {
+    render(
+      <CachedImage
+        uri=""
+        testID="shopping-item-hero-image"
+        accessibilityLabel="Item photo"
+      />,
+    );
+
+    expect(screen.getByTestId('shopping-item-hero-image')).toBeTruthy();
+    expect(screen.getByLabelText('Item photo')).toBeTruthy();
+  });
+
   it('renders placeholder when uri is null', () => {
     render(<CachedImage uri={null} />);
     expect(screen.getByTestId('icon-image-outline')).toBeTruthy();
