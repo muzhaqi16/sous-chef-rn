@@ -7,6 +7,8 @@
     "subtitleHasList": "Invita altri alla tua lista della spesa (opzionale)",
     "nothingToShare": "Niente da condividere ancora",
     "nothingToShareDesc": "Devi creare prima una casa o una lista della spesa. Puoi invitare in seguito dalle impostazioni.",
+    "offlineTitle": "Gli inviti richiedono una connessione",
+    "offlineDescription": "Invitare qualcuno invia un link che solo il server può creare. Continua per ora e invita le persone dalle impostazioni della casa quando torni online.",
     "noInvitesYet": "Nessun invito aggiunto",
     "noInvitesYetDesc": "Aggiungi email sopra per invitare membri",
     "invitingPersonSingular": "Invito {{count}} persona:",

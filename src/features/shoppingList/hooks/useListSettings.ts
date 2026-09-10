@@ -260,12 +260,13 @@ export const useListSettings = (listId: string | undefined) => {
     executeWithLoadingState(
       async () => {
         if (!listId && selectedTemplateId) {
-          // The server copies the template's items and mints the id, so this
-          // cannot be queued offline and takes no homeId. The default flag
-          // still rides on its own mutation afterwards.
+          // The copy is assembled on the device, so it is queued like any
+          // other create and carries the home the user picked. The default
+          // flag still rides on its own mutation afterwards.
           const newListId = await createFromTemplate(
             selectedTemplateId,
             name.trim(),
+            selectedHomeId || undefined,
           );
           if (!newListId) return;
           if (isDefault) {
@@ -486,11 +487,6 @@ export const useListSettings = (listId: string | undefined) => {
     setSelectedTemplateId(next?.id ?? null);
     if (!name.trim() || name === selectedTemplate?.displayName) {
       setName(next?.displayName ?? '');
-    }
-    // The template path can't carry a home, so drop a pending choice rather
-    // than keep state the create would silently ignore.
-    if (next) {
-      setSelectedHomeId(null);
     }
   };
 

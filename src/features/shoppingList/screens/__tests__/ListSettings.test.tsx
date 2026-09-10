@@ -472,17 +472,15 @@ describe('ListSettings', () => {
       expect(screen.getByText('option:Party Supplies')).toBeTruthy();
     });
 
-    it('names the list after the chosen template and drops home linking', () => {
+    it('names the list after the chosen template and keeps home linking open', () => {
       render(<ListSettings route={createRoute} />);
       fireEvent.press(screen.getByText('None (Blank List)'));
       fireEvent.press(screen.getByText('option:Weekly Staples'));
 
       expect(screen.getByDisplayValue('Weekly Staples')).toBeTruthy();
-      expect(
-        screen.getByText(
-          "Lists created from a template are personal and can't be linked to a home.",
-        ),
-      ).toBeTruthy();
+      // The copy is assembled on the device, so it carries a home like any
+      // other create.
+      expect(screen.getByText('Personal (No Home)')).toBeTruthy();
     });
 
     it('creates from the template and opens the new list', async () => {
@@ -500,6 +498,7 @@ describe('ListSettings', () => {
         expect(mockCreateFromTemplate).toHaveBeenCalledWith(
           'tpl2',
           'Party Supplies',
+          undefined,
         ),
       );
       expect(goBack).toHaveBeenCalled();
@@ -515,15 +514,12 @@ describe('ListSettings', () => {
       );
     });
 
-    it('hides the picker while offline — the create is server-side', () => {
+    it('offers the picker while offline — the copy is derived, not requested', () => {
       const { useIsOnline } = require('#store/useAppStore');
       useIsOnline.mockReturnValue(false);
 
       render(<ListSettings route={createRoute} />);
-      expect(screen.queryByText('None (Blank List)')).toBeNull();
-      expect(
-        screen.getByText('Creating from a template needs a connection'),
-      ).toBeTruthy();
+      expect(screen.getByText('None (Blank List)')).toBeTruthy();
 
       useIsOnline.mockReturnValue(true);
     });

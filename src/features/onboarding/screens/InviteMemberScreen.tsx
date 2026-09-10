@@ -20,6 +20,7 @@ import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useSendOnboardingInvites } from '#features/onboarding/hooks/useSendOnboardingInvites';
 import { useAppStore, useSelectedHomeId } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#features/onboarding/hooks/useOnboardingNavigation';
+import { useIsOfflineBannerVisible } from '#hooks/app/useIsOfflineBannerVisible';
 import { useUser } from '#store/useAppStore';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
@@ -41,6 +42,11 @@ export const InviteMemberScreen = () => {
   const selectedShoppingListId = useAppStore(
     state => state.selectedShoppingListId,
   );
+
+  // Inviting is the one onboarding step that genuinely needs the server: the
+  // invite's bearer token is minted there and disclosed once. Reads the
+  // DEBOUNCED cause, so a single failed request does not flash this branch.
+  const isOffline = useIsOfflineBannerVisible();
 
   // Determine what resources the user has
   const hasHome = !!selectedHomeId;
@@ -142,6 +148,33 @@ export const InviteMemberScreen = () => {
     if (hasHome) return t('inviteMembers.subtitleHasHome');
     return t('inviteMembers.subtitleHasList');
   };
+
+  // Offline, the step explains itself and yields rather than dead-ending the
+  // flow — `guided-flow-navigation` requires that a user can always leave one.
+  if (isOffline) {
+    return (
+      <OnBoardingWrapper
+        title={t('inviteMembers.title')}
+        subtitle={getSubtitle()}
+        onSkip={() => navigateToNextStep('InviteMembers')}
+      >
+        <View style={styles.container}>
+          <EmptyState
+            icon="cloud-offline-outline"
+            title={t('inviteMembers.offlineTitle')}
+            description={t('inviteMembers.offlineDescription')}
+          />
+        </View>
+
+        <Button
+          title={t('labels.continue')}
+          onPress={() => navigateToNextStep('InviteMembers')}
+          variant="primary"
+          testID="invite-offline-continue"
+        />
+      </OnBoardingWrapper>
+    );
+  }
 
   // If user has neither home nor shopping list, show message and skip button
   if (hasNeither) {

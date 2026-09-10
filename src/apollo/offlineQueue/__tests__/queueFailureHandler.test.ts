@@ -13,14 +13,16 @@ import { queueStore } from '../queueStore';
 import type { FailedMutationInfo } from '../types';
 
 jest.mock('#/apollo/client', () => ({ client: { cache: {} } }));
-// The two factories are called at MODULE scope by `pantryCacheUpdaters`, which
-// `queueManager` now reaches through `queueReplayReconcilers`. A factory
-// omitting them makes this suite fail to load, not fail an assertion — so they
-// return a jest.fn() rather than being left undefined.
+// These factories are called at MODULE scope by the pantry and home cache
+// updaters, which `queueManager` reaches through `queueReplayReconcilers`. A
+// factory omitting one makes this suite fail to LOAD, not fail an assertion —
+// so each returns a jest.fn() rather than being left undefined.
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   safeEvict: jest.fn(),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
+  createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
+  createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 jest.mock('#features/shoppingList/cache/moveToPantry', () => ({
   restoreItemToShoppingListAfterMoveToPantry: jest.fn(),

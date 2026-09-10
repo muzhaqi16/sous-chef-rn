@@ -1,14 +1,10 @@
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useQuery } from '@apollo/client/react';
 import {
   GetHomesDocument,
   GetMyPendingInvitesDocument,
-  CreateHomeDocument,
-  type CreateHomeMutation,
 } from '#operations/home/home.generated';
-import { addToHomesCache } from '#features/home/hooks/homeCacheUpdaters';
+import { useCreateHome } from '#features/home/hooks/useCreateHome';
 import { extractNodes } from '#/utils/connectionUtils';
-import type { CreateHomeInput } from '#/graphql/generated/schemaTypes';
-import type { MutationOutcome } from '#/utils/errors/mutationOutcome';
 
 interface HomeSummary {
   id: string;
@@ -44,18 +40,10 @@ export function useCreateHomeFlow({ userId }: CreateHomeFlowArgs) {
     { skip: !userId },
   );
 
-  const [createHome] = useMutation(CreateHomeDocument, {
-    // `useDefaultHome` fires the app's only GetHomes fetch once per session, and
-    // during onboarding that happened when the account had zero homes — so the
-    // cached empty list is authoritative and the new home must be written here.
-    update: (cache, { data }) => {
-      if (data?.createHome?.__typename !== 'CreateHomePayload') return;
-      // `cache.modify` skips fields the cache lacks, reporting no write rather
-      // than throwing, so refetch instead.
-      if (!addToHomesCache(cache, data.createHome.home, { position: 'end' })) {
-        void refetchHomes();
-      }
-    },
+  // One home create, wherever it is made — the local-first one, which writes
+  // the home and the creator's membership before it fires.
+  const { createHome } = useCreateHome(() => {
+    void refetchHomes();
   });
 
   const homes = extractNodes(homesData?.homes) as HomeSummary[];
@@ -78,12 +66,6 @@ export function useCreateHomeFlow({ userId }: CreateHomeFlowArgs) {
     needsPantry: !existingPantry,
     homesLoading,
     invitesLoading,
-    createHome: (
-      input: CreateHomeInput,
-    ): Promise<MutationOutcome<CreateHomeMutation>> =>
-      createHome({ variables: { input } }),
+    createHome,
   };
 }
-
-/** The create call this hook returns, for callers that pass it on. */
-export type CreateHomeFn = ReturnType<typeof useCreateHomeFlow>['createHome'];

@@ -2,13 +2,15 @@
 
 import type { ErrorLike } from '@apollo/client';
 import { t } from '#/i18n';
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
-  CreateHomeDocument,
   DeleteHomeDocument,
   GetHomesDocument,
-  type CreateHomeMutation,
 } from '#operations/home/home.generated';
+import { useCreateHome } from '#features/home/hooks/useCreateHome';
+import { readDefaultPantryId } from '#features/home/utils/homePantries';
+import { alertService } from '#/services/alertService';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import {
   useSelectedHomeId,
   useHomeState,
@@ -17,7 +19,7 @@ import {
 import { handleMutationError } from '#/utils/errorHandlers';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
-import { addToHomesCache, removeFromHomesCache } from './homeCacheUpdaters';
+import { removeFromHomesCache } from './homeCacheUpdaters';
 import { errorService } from '#/services/errorService';
 
 interface UseHomeMutationsOptions {
@@ -35,70 +37,14 @@ export function useHomeMutations({
   const selectedHomeId = useSelectedHomeId();
   const hasUnverifiedEmail = useHasUnverifiedEmail();
   const { setSelectedHomeId } = useHomeState();
-  const { createAddOperation, createRemoveOperation } = useCrudOperations();
+  const { createRemoveOperation } = useCrudOperations();
+  const client = useApolloClient();
 
-  const [createHomeMutation, { loading: creating, client }] = useMutation(
-    CreateHomeDocument,
-    {
-      // Note: No optimisticResponse - the mutation returns complex nested types that are difficult to predict
-      update: (cache, { data }) => {
-        if (data?.createHome?.__typename !== 'CreateHomePayload') return;
-        const newHome = data.createHome.home;
-
-        try {
-          addToHomesCache(cache, newHome, { position: 'end' });
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Cache update failed for createHome:',
-          });
-          refetch?.();
-        }
-      },
-      onCompleted: async data => {
-        if (data?.createHome?.__typename === 'CreateHomePayload') {
-          const newHome = data.createHome.home;
-
-          // Read fresh data from Apollo cache (no refetch needed!)
-          const cachedData = client.cache.readQuery({
-            query: GetHomesDocument,
-          });
-          const freshHomes = extractNodes(cachedData?.homes);
-
-          // Only set as default if this is truly the first/only home
-          const isFirstHome =
-            freshHomes.length === 1 && freshHomes[0]?.id === newHome.id;
-
-          if (isFirstHome) {
-            setSelectedHomeId(newHome.id);
-            // `setDefaultHome` resolves false on a refusal rather than
-            // rejecting, so the status is the only signal there is.
-            void setDefaultHome(newHome.id).then(ok => {
-              if (!ok) {
-                handleMutationError(
-                  new Error('markHomeAsDefault refused for first home'),
-                  { operation: 'Set First Home as Default', showAlert: false },
-                );
-              }
-            });
-
-            // Adopt the new home's default pantry ONLY when we also switched
-            // to that home. Unconditionally, creating a SECOND home points
-            // `selectedPantryId` at a pantry in a home `selectedHomeId` does
-            // not name, and every pantry watcher fires across homes until
-            // `useCurrentPantry` reconciles a render later.
-            const pantries = extractNodes(newHome.pantriesConnection);
-            const defaultPantry = pantries.find(p => p.isDefault);
-            if (defaultPantry) {
-              setSelectedPantryId(defaultPantry.id);
-            }
-          }
-        }
-      },
-      onError: (error: ErrorLike) => {
-        handleMutationError(error, { operation: 'Create Home' });
-      },
-    },
-  );
+  // One home create, wherever it is made — the local-first one, which writes
+  // the home and the creator's membership before it fires.
+  const { createHome: createHomeWrite, creating } = useCreateHome(() => {
+    void refetch?.();
+  });
 
   const [deleteHomeMutation, { loading: deleting, client: deleteClient }] =
     useMutation(DeleteHomeDocument, {
@@ -161,52 +107,83 @@ export function useHomeMutations({
       },
     });
 
-  // Helper functions using CRUD utilities
-  const createHomeOperation = createAddOperation({
-    mutation: createHomeMutation,
-    transformInput: (input: {
-      name: string;
-      createDefaultPantry?: boolean;
-      allowJoinCode?: boolean;
-    }) => ({
-      name: input.name.trim(),
-      createDefaultPantry: input.createDefaultPantry ?? true,
-      // The server refuses `createHome` outright when `allowJoinCode` is true
-      // and the caller's email is unverified, so asking for one here would fail
-      // the whole creation — including onboarding, which requests a join code
-      // unconditionally. Create the home without one instead; it can be enabled
-      // later through `enableHomeJoinLink` once the address is verified.
-      allowJoinCode: hasUnverifiedEmail ? false : input.allowJoinCode ?? true,
-    }),
-    validateInput: (input: { name: string }) => {
-      if (!input.name?.trim()) {
-        return t('homeDetail.homeNameEmptyError');
-      }
-      return true;
-    },
-    onSuccess: (data: CreateHomeMutation) =>
-      data?.createHome?.__typename === 'CreateHomePayload'
-        ? data.createHome.home
-        : undefined,
-    operationName: 'Create Home',
-  });
-
-  // Wrapper to support both string and object signatures
+  /**
+   * Validates, writes, then adopts the new home: its own default flag and its
+   * default pantry. Adoption is keyed off the MINTED id, so it happens whether
+   * the server answered or the create is queued.
+   */
   const createHome = async (
     nameOrInput:
       | string
       | {
           name: string;
-          createDefaultPantry?: boolean;
           allowJoinCode?: boolean;
         },
   ) => {
     const input =
       typeof nameOrInput === 'string'
-        ? { name: nameOrInput, createDefaultPantry: true, allowJoinCode: true }
+        ? { name: nameOrInput, allowJoinCode: true }
         : nameOrInput;
-    return createHomeOperation(input);
+
+    if (!input.name?.trim()) {
+      alertService.alert(
+        t('labels.validationError'),
+        t('homeDetail.homeNameEmptyError'),
+      );
+      return false;
+    }
+
+    const outcome = await createHomeWrite({
+      name: input.name.trim(),
+      // The server refuses `createHome` outright when `allowJoinCode` is true
+      // and the caller's email is unverified, so asking for one here would fail
+      // the whole creation. Create the home without one instead; it can be
+      // enabled later through `enableHomeJoinLink` once the address is verified.
+      allowJoinCode: hasUnverifiedEmail ? false : input.allowJoinCode ?? true,
+    });
+
+    if (outcome.status === 'rejected') {
+      // The caller's copy is the FALLBACK; the refusal's own code selects the
+      // localized line.
+      alertRejectedMutation(outcome.result, t('errors.createHomeFailed'));
+      return false;
+    }
+
+    adoptNewHome(outcome.id);
+    return true;
   };
+
+  /**
+   * A first home becomes the selection and the account default. Read from the
+   * CACHE rather than a payload: a queued create has none, and the optimistic
+   * write already put the home there.
+   */
+  function adoptNewHome(homeId: string) {
+    const cachedData = client.cache.readQuery({ query: GetHomesDocument });
+    const freshHomes = extractNodes(cachedData?.homes);
+    const isFirstHome = freshHomes.length === 1 && freshHomes[0]?.id === homeId;
+    if (!isFirstHome) return;
+
+    setSelectedHomeId(homeId);
+    // `setDefaultHome` resolves false on a refusal rather than rejecting, so
+    // the status is the only signal there is.
+    void setDefaultHome(homeId).then(ok => {
+      if (!ok) {
+        handleMutationError(
+          new Error('markHomeAsDefault refused for first home'),
+          { operation: 'Set First Home as Default', showAlert: false },
+        );
+      }
+    });
+
+    // Adopt the new home's default pantry ONLY when we also switched to that
+    // home. Unconditionally, creating a SECOND home points `selectedPantryId`
+    // at a pantry in a home `selectedHomeId` does not name, and every pantry
+    // watcher fires across homes until `useCurrentPantry` reconciles a render
+    // later.
+    const defaultPantry = readDefaultPantryId(client.cache, homeId);
+    if (defaultPantry) setSelectedPantryId(defaultPantry);
+  }
 
   const deleteHome = (homeId: string, homeName: string) => {
     const operation = createRemoveOperation({

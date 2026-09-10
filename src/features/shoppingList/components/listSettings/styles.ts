@@ -52,9 +52,6 @@ export const listSettingsStyles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.smPlus,
     backgroundColor: theme.colors.surface,
   },
-  pickerButtonDisabled: {
-    opacity: 0.6,
-  },
   fieldNote: {
     marginTop: theme.spacing.sm,
   },

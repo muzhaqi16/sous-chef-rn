@@ -286,6 +286,7 @@
     "cookingPreferences": "Cooking Preferences",
     "copied": "Copied",
     "copy": "Copy",
+    "copyOfName": "{{name}} (Copy)",
     "couldnTSendThat": "Couldn't send that",
     "couldnTSetThatPhoto": "Couldn't set that photo",
     "create": "Create",

@@ -79,7 +79,6 @@
   "duplicatePlan": {
     "duplicating": "Po dublohet...",
     "duplicate": "Dublo",
-    "copySuffix": "{{name}} (Kopje)",
     "currentPlanLabel": "Plani aktual",
     "newNameLabel": "Emri i ri i planit",
     "newNamePlaceholder": "Fut emrin e planit",

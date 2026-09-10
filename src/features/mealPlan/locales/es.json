@@ -79,7 +79,6 @@
   "duplicatePlan": {
     "duplicating": "Duplicando...",
     "duplicate": "Duplicar",
-    "copySuffix": "{{name}} (Copia)",
     "currentPlanLabel": "Plan actual",
     "newNameLabel": "Nombre del nuevo plan",
     "newNamePlaceholder": "Introduce el nombre del plan",

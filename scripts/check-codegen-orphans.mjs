@@ -51,6 +51,14 @@ const SKIP_FILES = new Set([
     'hooks',
     'mealPlanDetailNeutral.generated.ts',
   ),
+  // Same generator, derived from `home.graphql`.
+  fromRoot(
+    'src',
+    'features',
+    'home',
+    'cache',
+    'homeDetailNeutral.generated.ts',
+  ),
 ]);
 
 const fix = process.argv.includes('--fix');

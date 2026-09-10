@@ -89,15 +89,12 @@ describe('helpers', () => {
   });
 
   describe('createPantryForHome', () => {
-    it('creates pantry and returns true on success', async () => {
+    it('selects the id the create minted and returns true', async () => {
       const mockCreatePantry = jest.fn().mockResolvedValue({
-        data: {
-          createPantry: {
-            __typename: 'CreatePantryPayload',
-            success: true,
-            pantry: { id: 'pantry-1', name: 'Kitchen' },
-          },
-        },
+        status: 'ok',
+        rejectionMessage: null,
+        result: {},
+        id: 'pantry-1',
       });
       const mockSetPantryId = jest.fn();
 
@@ -120,40 +117,48 @@ describe('helpers', () => {
       );
     });
 
-    it('returns false when mutation fails', async () => {
-      const mockCreatePantry = jest.fn().mockResolvedValue({
-        data: { createPantry: { success: false, pantry: null } },
-      });
-
+    // The create is local-first: queued, it resolves with no payload at all,
+    // and the minted id is still the pantry's id.
+    it('succeeds on a queued create, which carries no payload', async () => {
+      const mockSetPantryId = jest.fn();
       const result = await createPantryForHome(
         'home-1',
         'Kitchen',
-        mockCreatePantry,
-        jest.fn(),
+        jest.fn().mockResolvedValue({
+          status: 'ok',
+          rejectionMessage: null,
+          result: { data: { createPantry: null } },
+          id: 'pantry-2',
+        }),
+        mockSetPantryId,
+      );
+
+      expect(result).toBe(true);
+      expect(mockSetPantryId).toHaveBeenCalledWith('pantry-2');
+    });
+
+    it('returns false when the create is refused', async () => {
+      const mockSetPantryId = jest.fn();
+      const result = await createPantryForHome(
+        'home-1',
+        'Kitchen',
+        jest.fn().mockResolvedValue({
+          status: 'rejected',
+          rejectionMessage: 'nope',
+          result: {},
+          id: 'pantry-3',
+        }),
+        mockSetPantryId,
       );
 
       expect(result).toBe(false);
+      expect(mockSetPantryId).not.toHaveBeenCalled();
     });
 
     it('returns false on error', async () => {
       const mockCreatePantry = jest
         .fn()
         .mockRejectedValue(new Error('Network error'));
-
-      const result = await createPantryForHome(
-        'home-1',
-        'Kitchen',
-        mockCreatePantry,
-        jest.fn(),
-      );
-
-      expect(result).toBe(false);
-    });
-
-    it('returns false when pantry is null in response', async () => {
-      const mockCreatePantry = jest.fn().mockResolvedValue({
-        data: { createPantry: { success: true, pantry: null } },
-      });
 
       const result = await createPantryForHome(
         'home-1',

@@ -426,23 +426,22 @@ function buildCreatePantryMock(): MockedResponse {
       },
     },
     maxUsageCount: 100,
-    result: {
+    // The server echoes the id the CLIENT minted — that is what makes the
+    // create idempotent on replay.
+    result: (variables: Record<string, unknown>) => ({
       data: {
         createPantry: {
-          __typename: 'PantryPayload',
-          success: true,
-          message: null,
-          code: null,
+          __typename: 'CreatePantryPayload' as const,
           pantry: {
-            __typename: 'Pantry',
-            id: 'p-new',
+            __typename: 'Pantry' as const,
+            id: (variables.input as { id: string }).id,
             name: 'Kitchen',
             isDefault: true,
-            homeId: 'home-1',
+            homeId: (variables.input as { homeId: string }).homeId,
           },
         },
       },
-    },
+    }),
   };
 }
 
@@ -1061,45 +1060,34 @@ describe('CreateHomeScreen', () => {
     expect(errorMessage).toBeTruthy();
   });
 
-  it('sets home id and pantry id on successful createHome with home in response', async () => {
+  it('mints the home id and creates its pantry as a second write', async () => {
     const user = userEvent.setup();
-    mockCreateHomeResponse = {
-      createHome: {
-        __typename: 'CreateHomePayload',
-        home: {
-          __typename: 'Home',
-          id: 'home-new',
-          name: 'My Home',
-          isDefault: true,
-          version: 1,
-          pantriesConnection: {
-            __typename: 'PantryConnection',
-            totalCount: 1,
-            edges: [
-              {
-                __typename: 'PantryEdge',
-                node: { __typename: 'Pantry', id: 'p1', isDefault: true },
-              },
-            ],
-          },
-          myMembership: null,
-        },
-      },
-    };
-
-    const { extractNodes } = require('#/utils/connectionUtils');
-    // First call is during initial render (homesData?.homes), second is during mutation result
-    extractNodes
-      .mockReturnValueOnce([]) // initial render: no homes
-      .mockReturnValueOnce([{ id: 'p1', isDefault: true }]); // mutation result: pantries
+    const { createPantryForHome } = require('../helpers');
+    createPantryForHome.mockResolvedValue(true);
 
     const { findByTestId } = renderScreen();
     await user.press(await findByTestId('submit-button'));
 
     await waitFor(() => {
-      expect(mockSetSelectedHomeId).toHaveBeenCalledWith('home-new');
+      expect(createPantryForHome).toHaveBeenCalled();
     });
-    expect(mockSetSelectedPantryId).toHaveBeenCalledWith('p1');
+
+    // The home is created WITHOUT a default pantry: a server-minted pantry id
+    // is one no offline pantry write could name as its parent, so the pantry
+    // is a second, separately minted create — parented to the MINTED home id,
+    // never to one a payload carries.
+    const homeInput = recordedMutations.find(m => m.name === 'CreateHome')
+      ?.variables?.input as { id: string; createDefaultPantry: boolean };
+
+    expect(homeInput.createDefaultPantry).toBe(false);
+    expect(homeInput.id).toBeTruthy();
+    expect(mockSetSelectedHomeId).toHaveBeenCalledWith(homeInput.id);
+    expect(createPantryForHome).toHaveBeenCalledWith(
+      homeInput.id,
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   it('handles createHome conflict error response', async () => {
@@ -1431,44 +1419,16 @@ describe('CreateHomeScreen', () => {
     expect(await findByText('Bob')).toBeTruthy();
   });
 
-  it('navigates to next step on successful home creation with first pantry (non-default)', async () => {
+  it('navigates to the next step once the home and its pantry are created', async () => {
     const user = userEvent.setup();
-    const { extractNodes } = require('#/utils/connectionUtils');
-    // First call is during initial render (homesData?.homes), second is during mutation result
-    extractNodes
-      .mockReturnValueOnce([]) // initial render: no homes
-      .mockReturnValueOnce([{ id: 'p1', isDefault: false }]); // mutation result: pantries
-
-    mockCreateHomeResponse = {
-      createHome: {
-        __typename: 'CreateHomePayload',
-        home: {
-          __typename: 'Home',
-          id: 'home-new',
-          name: 'My Home',
-          isDefault: true,
-          version: 1,
-          pantriesConnection: {
-            __typename: 'PantryConnection',
-            totalCount: 1,
-            edges: [
-              {
-                __typename: 'PantryEdge',
-                node: { __typename: 'Pantry', id: 'p1', isDefault: false },
-              },
-            ],
-          },
-          myMembership: null,
-        },
-      },
-    };
+    const { createPantryForHome } = require('../helpers');
+    createPantryForHome.mockResolvedValue(true);
 
     const { findByTestId } = renderScreen();
     await user.press(await findByTestId('submit-button'));
 
     await waitFor(() => {
-      expect(mockSetSelectedPantryId).toHaveBeenCalledWith('p1');
+      expect(mockNavigateToNextStep).toHaveBeenCalledWith('CreateHome');
     });
-    expect(mockNavigateToNextStep).toHaveBeenCalledWith('CreateHome');
   });
 });

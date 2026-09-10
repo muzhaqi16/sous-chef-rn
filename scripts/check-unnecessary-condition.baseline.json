@@ -23,7 +23,7 @@
     "src/features/home/hooks/useDefaultHome.ts": 9,
     "src/features/home/hooks/useHomeDetailManagement.ts": 5,
     "src/features/home/hooks/useHomeInvitations.ts": 4,
-    "src/features/home/hooks/useHomeMutations.ts": 11,
+    "src/features/home/hooks/useHomeMutations.ts": 6,
     "src/features/home/hooks/useHomeQuery.ts": 1,
     "src/features/home/hooks/useHomeSubscriptions.ts": 1,
     "src/features/home/utils/defaultHomeCacheWrites.ts": 2,
@@ -37,10 +37,8 @@
     "src/features/notifications/hooks/useNotifications.ts": 5,
     "src/features/notifications/utils/expirationLadder.ts": 1,
     "src/features/notifications/utils/toDisplayNotification.ts": 1,
-    "src/features/onboarding/hooks/useCreateHomeFlow.ts": 1,
     "src/features/onboarding/hooks/useOnboardingItems.ts": 2,
     "src/features/onboarding/hooks/useOnboardingNavigation.ts": 2,
-    "src/features/onboarding/screens/createHome/helpers.ts": 1,
     "src/features/pantry/cache/typePolicies.ts": 1,
     "src/features/pantry/components/modals/adjustQuantityFormConfig.ts": 1,
     "src/features/pantry/components/modals/correctWeightFormConfig.ts": 1,
@@ -57,7 +55,7 @@
     "src/features/pantry/hooks/usePantryItemSubmission.ts": 1,
     "src/features/pantry/hooks/usePantryItemSuggestions.ts": 5,
     "src/features/pantry/hooks/usePantryScreen.ts": 4,
-    "src/features/pantry/hooks/usePantrySettings.ts": 4,
+    "src/features/pantry/hooks/usePantrySettings.ts": 3,
     "src/features/pantry/hooks/usePantrySubscriptions.ts": 5,
     "src/features/pantry/hooks/usePantryUsageHistory.ts": 3,
     "src/features/pantry/utils/optimisticPantry.ts": 3,
@@ -84,9 +82,7 @@
     "src/features/shoppingList/cache/moveToPantry.ts": 4,
     "src/features/shoppingList/components/moveToPantry/moveToPantryFormConfig.ts": 1,
     "src/features/shoppingList/hooks/mutations/useAddShoppingItem.ts": 1,
-    "src/features/shoppingList/hooks/mutations/useRecurringShoppingList.ts": 1,
     "src/features/shoppingList/hooks/mutations/useRemoveShoppingItem.ts": 1,
-    "src/features/shoppingList/hooks/mutations/useShoppingListTemplate.ts": 1,
     "src/features/shoppingList/hooks/mutations/useToggleShoppingItem.ts": 8,
     "src/features/shoppingList/hooks/useCreateShoppingList.ts": 1,
     "src/features/shoppingList/hooks/useInviteByToken.ts": 4,
@@ -207,5 +203,5 @@
     "src/features/shoppingList/screens/ShareList.tsx": 3,
     "src/features/shoppingList/screens/ShoppingListMain.tsx": 5
   },
-  "scannedFiles": 1130
+  "scannedFiles": 1139
 }

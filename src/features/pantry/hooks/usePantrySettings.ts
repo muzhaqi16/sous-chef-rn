@@ -5,31 +5,25 @@ import {
   GetPantryDocument,
   UpdatePantryDocument,
   DeletePantryDocument,
-  CreatePantryDocument,
   MarkPantryAsDefaultDocument,
   type DeletePantryMutation,
   type DeletePantryMutationVariables,
-  type CreatePantryMutation,
 } from '#features/pantry/graphql/pantry.generated';
-import type { CreatePantryInput } from '#/graphql/generated/schemaTypes';
+import {
+  useCreatePantry,
+  type PantryWriteOutcome,
+} from '#features/pantry/hooks/useCreatePantry';
 import {
   snapshotFields,
   updateEntityFieldsLocalFirst,
 } from '#/apollo/utils/localFirstFields';
+import { classifyDeleteResult } from '#/apollo/utils/classifyCreateResult';
 import {
-  classifyCreateResult,
-  classifyDeleteResult,
-} from '#/apollo/utils/classifyCreateResult';
-import {
-  addPantryToHomeCache,
-  buildOptimisticPantry,
   removeOptimisticPantry,
   restorePantryToHomeCache,
-  writeOptimisticPantry,
 } from '#features/pantry/utils/optimisticPantry';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { errorService } from '#/services/errorService';
-import { generateEntityId } from '#/utils/generateEntityId';
 import { logger } from '#/utils/environment';
 
 /** Module-level so the try/catch does not bail the hook out of the compiler. */
@@ -52,35 +46,6 @@ function buildDeletePantryUpdater(homeId: string | null | undefined) {
   };
 }
 
-/** Module-level so the try/catch does not bail the hook out of the compiler.
- *  Idempotent by pantry id — the pre-fire write already inserted the same one. */
-function buildCreatePantryUpdater(homeId: string | null | undefined) {
-  return function createPantryUpdater(
-    cache: ApolloCache,
-    { data }: { data?: CreatePantryMutation | null },
-  ) {
-    const newPantry =
-      data?.createPantry?.__typename === 'CreatePantryPayload'
-        ? data.createPantry.pantry
-        : null;
-    if (!newPantry || !homeId) return;
-    try {
-      addPantryToHomeCache(cache, homeId, newPantry);
-    } catch (error) {
-      logger.warn('Cache update failed for createPantry:', error);
-    }
-  };
-}
-
-/** A write's verdict, plus the refusal copy the caller reports. */
-export interface PantryWriteOutcome {
-  status: 'ok' | 'rejected';
-  /** The payload's own message, when the server sent one. */
-  rejectionMessage: string | null;
-  /** Carried so the caller can resolve LOCALIZED copy from `errors.field.*`. */
-  result: { data?: unknown; error?: unknown };
-}
-
 interface UsePantrySettingsArgs {
   pantryId: string | undefined;
   homeId: string | null | undefined;
@@ -89,6 +54,8 @@ interface UsePantrySettingsArgs {
 /** The pantry a settings screen reads, and every write it can make to it. */
 export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
   const client = useApolloClient();
+  // The create is `useCreatePantry`'s — one pantry create, wherever it is made.
+  const { createPantry } = useCreatePantry();
   // Gates the `pantryId!` assertion below.
   const hasValidPantryId = !!pantryId?.trim();
 
@@ -121,10 +88,6 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
     update: buildDeletePantryUpdater(homeId),
   });
 
-  const [createPantryMutation] = useMutation(CreatePantryDocument, {
-    update: buildCreatePantryUpdater(homeId),
-  });
-
   /** False when the flag did not stick, so the caller can put its switch back. */
   const setDefault = async (id: string): Promise<boolean> => {
     let result;
@@ -151,52 +114,6 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
         'MarkPantryAsDefaultPayload',
       )
     );
-  };
-
-  /**
-   * Mint the row's real PK and write the complete pantry before firing, so
-   * creation works offline and takes items at once. Online echoes the same id
-   * and a queued replay is keyed by it, so the caller can select it either way.
-   */
-  const createPantry = async (
-    fields: Omit<CreatePantryInput, 'id'>,
-  ): Promise<PantryWriteOutcome & { id: string }> => {
-    const id = generateEntityId();
-    const input = { ...fields, id };
-    const optimisticPantry = buildOptimisticPantry(id, input);
-    try {
-      writeOptimisticPantry(client.cache, optimisticPantry);
-      if (homeId) addPantryToHomeCache(client.cache, homeId, optimisticPantry);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Create Pantry (optimistic)',
-      });
-    }
-
-    const result = await createPantryMutation({
-      variables: { input },
-      context: { localFirst: true },
-    });
-
-    if (classifyCreateResult(result) !== 'rejected') {
-      return { status: 'ok', rejectionMessage: null, result, id };
-    }
-
-    try {
-      if (homeId) removeOptimisticPantry(client.cache, homeId, id);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Revert rejected Pantry create',
-      });
-    }
-    const payload = result.data?.createPantry;
-    return {
-      status: 'rejected',
-      rejectionMessage:
-        payload && 'message' in payload ? payload.message : null,
-      result,
-      id,
-    };
   };
 
   /**

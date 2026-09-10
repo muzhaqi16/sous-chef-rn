@@ -38,11 +38,15 @@ jest.mock('#store/useAppStore', () => {
     selector: (state: {
       selectedHomeId: string | null;
       selectedShoppingListId: string | null;
+      offlineBannerCause: string | null;
     }) => unknown,
   ) =>
     selector({
       selectedHomeId: mockSelectedHomeId,
       selectedShoppingListId: mockSelectedShoppingListId,
+      // Present on purpose: the step reads the DEBOUNCED cause, and a field
+      // absent from the mock reads as offline for every case in this file.
+      offlineBannerCause: mockOfflineBannerCause,
     });
   fn.getState = () => ({});
   fn.setState = jest.fn();
@@ -53,6 +57,8 @@ jest.mock('#store/useAppStore', () => {
     useSelectedHomeId: jest.fn(() => mockSelectedHomeId),
   };
 });
+
+let mockOfflineBannerCause: string | null = null;
 
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#/utils/finallyHelpers');
@@ -123,6 +129,37 @@ describe('InviteMemberScreen', () => {
     jest.clearAllMocks();
     mockSelectedHomeId = 'h1';
     mockSelectedShoppingListId = 'sl1';
+    mockOfflineBannerCause = null;
+  });
+
+  describe('offline', () => {
+    beforeEach(() => {
+      mockOfflineBannerCause = 'api-unreachable';
+    });
+
+    // Inviting is the one onboarding step that genuinely needs the server: the
+    // invite's bearer token is minted there. The step has to say so and yield,
+    // rather than dead-ending the flow.
+    it('explains why and lets the user continue', () => {
+      renderWithApollo(<InviteMemberScreen />);
+
+      expect(screen.getByText('Invites need a connection')).toBeTruthy();
+      expect(screen.getByTestId('invite-offline-continue')).toBeTruthy();
+    });
+
+    it('reaches the main app from the Continue action', () => {
+      renderWithApollo(<InviteMemberScreen />);
+
+      fireEvent.press(screen.getByTestId('invite-offline-continue'));
+
+      expect(mockNavigateToNextStep).toHaveBeenCalledWith('InviteMembers');
+    });
+
+    it('offers no address field, since none of it could be sent', () => {
+      renderWithApollo(<InviteMemberScreen />);
+
+      expect(screen.queryByPlaceholderText('Enter email address')).toBeNull();
+    });
   });
 
   it('renders invite title', () => {

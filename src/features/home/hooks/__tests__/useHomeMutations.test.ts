@@ -28,6 +28,12 @@ jest.mock('#store/useAppStore', () => ({
     selectedHomeId: mockStoreState.selectedHomeId,
     setSelectedHomeId: mockStoreState.setSelectedHomeId,
   })),
+  // The create writes the creator's own membership, so it reads the identity.
+  useUser: jest.fn(() => ({
+    id: 'user-1',
+    email: 'user@example.com',
+    displayName: 'Tani',
+  })),
 }));
 
 jest.mock('#/services/errorService');
@@ -156,13 +162,16 @@ describe('useHomeMutations', () => {
         await result.current.createHome('My Home');
       });
 
-      expect(m.fired).toContainEqual({
+      // The id is minted here, and the default pantry is asked for OFF — a
+      // server-minted pantry id is one no offline pantry write could name.
+      expect(m.fired[0]).toMatchObject({
         input: {
           name: 'My Home',
-          createDefaultPantry: true,
           allowJoinCode: true,
+          createDefaultPantry: false,
         },
       });
+      expect((m.fired[0] as { input: { id?: string } }).input.id).toBeTruthy();
     });
 
     it('creates home with options object', async () => {
@@ -175,17 +184,12 @@ describe('useHomeMutations', () => {
       await act(async () => {
         await result.current.createHome({
           name: 'Test',
-          createDefaultPantry: false,
           allowJoinCode: false,
         });
       });
 
-      expect(m.fired).toContainEqual({
-        input: {
-          name: 'Test',
-          createDefaultPantry: false,
-          allowJoinCode: false,
-        },
+      expect(m.fired[0]).toMatchObject({
+        input: { name: 'Test', allowJoinCode: false },
       });
     });
 
@@ -203,12 +207,8 @@ describe('useHomeMutations', () => {
         await result.current.createHome('My Home');
       });
 
-      expect(m.fired).toContainEqual({
-        input: {
-          name: 'My Home',
-          createDefaultPantry: true,
-          allowJoinCode: false,
-        },
+      expect(m.fired[0]).toMatchObject({
+        input: { name: 'My Home', allowJoinCode: false },
       });
     });
 

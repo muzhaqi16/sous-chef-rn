@@ -1,4 +1,4 @@
-import type { TypePolicies } from '@apollo/client';
+import type { FieldFunctionOptions, TypePolicies } from '@apollo/client';
 import { mergeConnectionByNodeId } from '#/apollo/cacheFieldPolicies';
 
 /**
@@ -21,6 +21,21 @@ export const homeTypePolicies: TypePolicies = {
   Query: {
     fields: {
       homes: mergeConnectionByNodeId(),
+      // Redirect to the cached entity, so a home the device created reads back
+      // by id without a request the server cannot answer yet.
+      home: {
+        read(
+          existing: unknown,
+          { args, toReference, canRead }: FieldFunctionOptions,
+        ) {
+          if (existing !== undefined) return existing;
+          const ref = toReference({
+            __typename: 'Home',
+            id: args?.id as string,
+          });
+          return canRead(ref) ? ref : existing;
+        },
+      },
     },
   },
 };

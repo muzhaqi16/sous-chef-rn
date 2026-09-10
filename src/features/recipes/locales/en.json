@@ -85,6 +85,8 @@
     "hasVideo": "Video available",
     "draftBadge": "Draft — not published",
     "forkFailed": "Failed to fork recipe",
+    "forkSourceNotLoaded": "Open this recipe while online once, so it is on your device to copy.",
+    "forkCopyName": "{{name}} (My Version)",
     "forkA11y": "Fork this recipe",
     "publishA11y": "Publish recipe",
     "unpublishA11y": "Unpublish recipe",

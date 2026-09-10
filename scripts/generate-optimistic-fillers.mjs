@@ -116,6 +116,20 @@ const TARGETS = [
     },
   },
   {
+    graphql: fromRoot('src', 'features', 'home', 'cache', 'home.graphql'),
+    out: fromRoot(
+      'src',
+      'features',
+      'home',
+      'cache',
+      'homeDetailNeutral.generated.ts',
+    ),
+    typesFrom: './home.generated',
+    fragments: {
+      home_homeDetail: ['NEUTRAL_HOME_DETAIL', 'Home_HomeDetailFragment'],
+    },
+  },
+  {
     graphql: fromRoot(
       'src',
       'features',

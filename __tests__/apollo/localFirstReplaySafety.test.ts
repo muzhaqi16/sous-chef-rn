@@ -58,7 +58,10 @@ const REPLAY_SAFETY_BASELINE: Record<
   'absolute-update' | 'bulk-create'
 > = {
   AddDietaryRestriction: 'absolute-update',
-  CreateFromTemplate: 'bulk-create',
+  // Takes NO input at all: it sets one boolean on the CALLER's own user row.
+  // A replay writes the value already there, and there is no id for
+  // `hasIdempotentInput` to find because the operation names no row.
+  CompleteOnboarding: 'absolute-update',
   CreateShoppingListItemsFromRecipe: 'bulk-create',
   DeleteMultipleNotifications: 'absolute-update',
   DeleteRecipeFolder: 'absolute-update',

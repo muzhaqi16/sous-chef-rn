@@ -104,57 +104,6 @@ mutation DeleteMealTemplate($input: DeleteMealTemplateInput!) {
   }
 }
 
-mutation DuplicateTemplate($input: DuplicateTemplateInput!) {
-  duplicateTemplate(input: $input) {
-    __typename
-    ... on DuplicateTemplatePayload {
-      mealTemplate {
-        id
-        ...MealTemplateDisplay
-        items {
-          id
-          ...MealTemplateItemFragment
-        }
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation CreateMealPlanFromTemplate($input: CreateMealPlanFromTemplateInput!) {
-  createMealPlanFromTemplate(input: $input) {
-    __typename
-    ... on CreateMealPlanPayload {
-      mealPlan {
-        id
-        ...MealPlanMain_mealPlan
-        ...MealPlanSettingsSheet_mealPlan
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
 mutation CreateMealTemplate($input: CreateMealTemplateInput!) {
   createMealTemplate(input: $input) {
     __typename
@@ -267,33 +216,6 @@ mutation RemoveTemplateItem($input: RemoveTemplateItemInput!) {
       }
       mealTemplateItem {
         id
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation CreateTemplateFromMealPlan($input: CreateTemplateFromMealPlanInput!) {
-  createTemplateFromMealPlan(input: $input) {
-    __typename
-    ... on CreateTemplateFromMealPlanPayload {
-      mealTemplate {
-        id
-        ...MealTemplateDisplay
-        items {
-          id
-          ...MealTemplateItemFragment
-        }
       }
     }
     ... on Error {
