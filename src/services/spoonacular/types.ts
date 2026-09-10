@@ -93,9 +93,15 @@ export interface RecipeIngredient {
   unitShort?: string;
   unitLong?: string;
   meta: string[];
-  measures: {
-    us: RecipeIngredientMeasure;
-    metric: RecipeIngredientMeasure;
+  /**
+   * Both systems, when stated. Spoonacular omits the block for some
+   * ingredients, and omits a side of it for others — a bare count has no
+   * measure to state. Declaring it required made every guard against that read
+   * as dead code.
+   */
+  measures?: {
+    us?: RecipeIngredientMeasure;
+    metric?: RecipeIngredientMeasure;
   };
 }
 

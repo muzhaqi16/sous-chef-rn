@@ -102,7 +102,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     const { inputs, displayNames, skipped, pantryChecked } =
       deriveShoppingListFromMealPlan(meals, {
         mealPlanId,
-        mealPlanName: plan.name ?? '',
+        mealPlanName: plan.name,
         checkPantry: options.checkPantry ?? true,
         pantryRows,
       });
@@ -115,10 +115,20 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     const listName = options.name?.trim() || defaultListName(plan.name);
     let listId = options.shoppingListId ?? null;
     if (!listId) {
-      const created = await createShoppingList({
-        name: listName,
-        homeId: plan.homeId,
-      });
+      // `createShoppingList` THROWS a refusal rather than returning one, so an
+      // unguarded call would surface a domain error at the screen. Assign in
+      // the try and read outside it: a value block inside bails the compiler.
+      let created;
+      try {
+        created = await createShoppingList({
+          name: listName,
+          homeId: plan.homeId,
+        });
+      } catch (error) {
+        errorService.reportError(error, {
+          operation: 'Generate shopping list',
+        });
+      }
       listId = created?.id ?? null;
     }
     if (!listId) return null;

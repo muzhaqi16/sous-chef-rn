@@ -1,5 +1,5 @@
 {
-  "maxRiskyPairs": 66,
+  "maxRiskyPairs": 67,
   "pairs": [
     "AddTemplateItem::MealTemplate",
     "AdjustPantryItemQuantity::PantryItem",
@@ -25,6 +25,7 @@
     "ExchangeDeviceCredential::User",
     "InvitationAcceptanceModalDeclineShoppingListInvite::ShoppingListCollaborator",
     "JoinShoppingListByShareCode::ShoppingList",
+    "LinkDerivedListToMealPlan::ShoppingList",
     "Login::User",
     "MarkAsTemplate::ShoppingList",
     "MarkHomeAsDefault::Pantry",

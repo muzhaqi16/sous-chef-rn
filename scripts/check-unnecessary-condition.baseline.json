@@ -27,7 +27,6 @@
     "src/features/home/hooks/useHomeQuery.ts": 1,
     "src/features/home/hooks/useHomeSubscriptions.ts": 1,
     "src/features/home/utils/defaultHomeCacheWrites.ts": 2,
-    "src/features/mealPlan/hooks/useGenerateShoppingList.ts": 2,
     "src/features/mealPlan/hooks/useMealPlan.ts": 1,
     "src/features/mealPlan/hooks/useMealPlanSubscriptions.ts": 1,
     "src/features/mealPlan/hooks/useMealTemplateEditor.ts": 1,
@@ -74,13 +73,12 @@
     "src/features/recipes/hooks/useRecipePreload.ts": 2,
     "src/features/recipes/hooks/useRecipeReviews.ts": 6,
     "src/features/recipes/hooks/useRecipeSavedMetadata.ts": 1,
-    "src/features/recipes/hooks/useRecipeShoppingList.ts": 8,
     "src/features/recipes/hooks/useRecipeTags.ts": 4,
     "src/features/recipes/hooks/useSavedRecipes.ts": 1,
     "src/features/recipes/screens/RecipeForm/useRecipeForm.ts": 12,
     "src/features/recipes/utils/recipeCacheWriters.ts": 1,
     "src/features/recipes/utils/recipeSearchPaging.ts": 1,
-    "src/features/recipes/utils/toRecipeInput.ts": 23,
+    "src/features/recipes/utils/toRecipeInput.ts": 7,
     "src/features/shoppingList/cache/connections.ts": 7,
     "src/features/shoppingList/cache/items.ts": 1,
     "src/features/shoppingList/cache/moveToPantry.ts": 4,
@@ -187,7 +185,7 @@
     "src/features/profile/hooks/useConfigurableSettings.tsx": 1,
     "src/features/profile/hooks/useDietaryProfile.tsx": 9,
     "src/features/profile/screens/DietaryProfileScreen.tsx": 8,
-    "src/features/recipes/components/recipeDetail/IngredientCard.tsx": 3,
+    "src/features/recipes/components/recipeDetail/IngredientCard.tsx": 1,
     "src/features/recipes/components/recipeDetail/RecipeInstructions.tsx": 1,
     "src/features/recipes/hooks/useRecipeScreen.tsx": 3,
     "src/features/recipes/screens/RecipeDetail/index.tsx": 7,
@@ -209,5 +207,5 @@
     "src/features/shoppingList/screens/ShareList.tsx": 3,
     "src/features/shoppingList/screens/ShoppingListMain.tsx": 5
   },
-  "scannedFiles": 1121
+  "scannedFiles": 1130
 }

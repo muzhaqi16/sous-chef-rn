@@ -26,10 +26,11 @@ fragment useGenerateShoppingList_mealPlan on MealPlan {
             name
             quantity
             isOptional
+            # The id alone: the derive keys its aggregate on it and sends it
+            # back as `unit.unitId`. A name or symbol here would be a fourth
+            # copy of a shape nothing on this path renders.
             unit {
               id
-              name
-              symbol
             }
             item {
               id
