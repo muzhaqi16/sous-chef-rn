@@ -531,7 +531,13 @@ module.exports = {
       // `MockedResponse` re-exported from `__tests__/helpers/apolloMockProvider`).
       files: ['src/**/*.ts', 'src/**/*.tsx', 'App.tsx'],
       parserOptions: {
+        // Pinned to this file's directory. A relative `project` resolves
+        // against process.cwd(), so a runner invoking ESLint from anywhere
+        // else silently gets an inferred program with DEFAULT compiler
+        // options — no strictNullChecks, and every `??` on an optional value
+        // reads as unnecessary.
         project: './tsconfig.json',
+        tsconfigRootDir: __dirname,
       },
       rules: {
         '@typescript-eslint/no-deprecated': 'warn',
@@ -571,7 +577,13 @@ module.exports = {
         '**/*.test.{ts,tsx}',
       ],
       parserOptions: {
+        // Pinned to this file's directory. A relative `project` resolves
+        // against process.cwd(), so a runner invoking ESLint from anywhere
+        // else silently gets an inferred program with DEFAULT compiler
+        // options — no strictNullChecks, and every `??` on an optional value
+        // reads as unnecessary.
         project: './tsconfig.json',
+        tsconfigRootDir: __dirname,
       },
       rules: {
         '@typescript-eslint/no-unnecessary-condition': 'error',
@@ -638,6 +650,7 @@ module.exports = {
       files: ['e2e/**/*.ts'],
       parserOptions: {
         project: './__tests__/tsconfig.json',
+        tsconfigRootDir: __dirname,
       },
     },
     {
@@ -647,6 +660,7 @@ module.exports = {
       files: ['__tests__/**/*.ts', '__tests__/**/*.tsx'],
       parserOptions: {
         project: './__tests__/tsconfig.json',
+        tsconfigRootDir: __dirname,
       },
       rules: {
         '@typescript-eslint/no-deprecated': 'warn',
