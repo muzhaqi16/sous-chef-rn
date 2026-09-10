@@ -196,7 +196,7 @@
     "@react-native/jest-preset": "0.86.3",
     "@react-native/metro-config": "0.86.3",
     "@react-native/typescript-config": "0.86.3",
-    "@react-navigation/devtools": "8.0.0-alpha.32",
+    "@react-navigation/devtools": "8.0.0-alpha.35",
     "@testing-library/react-native": "^13.3.3",
     "@types/chroma-js": "^3.1.2",
     "@types/jest": "^29.5.13",
