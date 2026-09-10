@@ -286,6 +286,7 @@
     "cookingPreferences": "Preferenze di cucina",
     "copied": "Copiato",
     "copy": "Copia",
+    "copyOfName": "{{name}} (Copia)",
     "couldnTSendThat": "Impossibile inviare",
     "couldnTSetThatPhoto": "Impossibile impostare la foto",
     "create": "Crea",

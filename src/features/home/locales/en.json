@@ -7,6 +7,8 @@
     "subtitleHasList": "Invite others to your shopping list (optional)",
     "nothingToShare": "Nothing to share yet",
     "nothingToShareDesc": "You need to create a home or shopping list first to invite others. You can invite people later from settings.",
+    "offlineTitle": "Invites need a connection",
+    "offlineDescription": "Inviting someone sends them a link only the server can create. Continue for now and invite people from home settings once you are back online.",
     "noInvitesYet": "No invitations added yet",
     "noInvitesYetDesc": "Add email addresses above to invite members",
     "invitingPersonSingular": "Inviting {{count}} person:",

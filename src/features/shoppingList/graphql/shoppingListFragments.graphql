@@ -198,3 +198,78 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
     completionRate
   }
 }
+
+# The shape a list is COPIED from, read out of the cache by `listFromTemplate`
+# and `nextRecurringList` so a copy runs with the API unreachable.
+# Spread by: shoppingList.graphql (GetShoppingListTemplates)
+# Read via cache.readFragment by: useShoppingListTemplate.ts,
+#   useRecurringShoppingList.ts
+# Kept shared — both derived writes copy the identical shape.
+#
+# The two line connections are the SAME cache entries the items screen fills
+# (`filters` is the only keyArg), so a list the user has opened is already a
+# usable source. Both purchase states are read because the server's copy takes
+# every line and the fresh list starts them all unpurchased.
+# `first` is a variable on purpose: a literal multiplies the operation's
+# armor cost by its value, which no ceiling here has room for. The line fields
+# are inlined rather than spread for the same kind of reason: a named spread
+# costs a depth level, and this shape is already at depth 10 of 12.
+#
+# The lines are held to the subset of ShoppingListItemDisplayFragment every
+# writer of the entity guarantees, so a source list holding a line created
+# offline still reads complete. `priority` and the price estimates the server's
+# own copy carries are absent for that reason: no writer produces them.
+fragment CopyableShoppingListFragment on ShoppingList {
+  id
+  name
+  description
+  budgetAmount
+  tags
+  homeId
+  unpurchasedLines: itemsConnection(
+    filters: { isPurchased: false }
+    first: $copyableItemLimit
+  ) {
+    edges {
+      node {
+        id
+        itemName
+        quantity
+        quantityInput
+        category
+        notes
+        unitName
+        sortOrder
+        item {
+          id
+        }
+        unit {
+          id
+        }
+      }
+    }
+  }
+  purchasedLines: itemsConnection(
+    filters: { isPurchased: true }
+    first: $copyableItemLimit
+  ) {
+    edges {
+      node {
+        id
+        itemName
+        quantity
+        quantityInput
+        category
+        notes
+        unitName
+        sortOrder
+        item {
+          id
+        }
+        unit {
+          id
+        }
+      }
+    }
+  }
+}

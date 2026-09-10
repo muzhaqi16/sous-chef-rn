@@ -53,7 +53,16 @@ import {
 } from '#features/pantry/graphql/pantry.generated';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { PantryItemForEventDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
-import { InviteToHomeDocument, GetHomeDocument } from '#operations/home/home.generated';
+import {
+  InviteToHomeDocument,
+  GetHomeDocument,
+  GetHomesDocument,
+  type GetHomesQuery,
+} from '#operations/home/home.generated';
+import {
+  buildOptimisticHome,
+  writeOptimisticHome,
+} from '#features/home/cache/optimisticHome';
 import {
   CreateStorageLocationDocument,
   GetStorageLocationsDocument,
@@ -1089,6 +1098,101 @@ describe('optimistic entity completeness', () => {
       });
       expect(describeMissing(diff.missing)).toBe('none');
       expect(diff.complete).toBe(true);
+    });
+  });
+
+  describe('home', () => {
+    const HOME_INPUT = {
+      name: 'Offline Home',
+      description: 'Made with no network',
+      allowJoinCode: false,
+      // The client mints the pantry itself, through the local-first
+      // `CreatePantry`, because a server-minted pantry id is one no offline
+      // pantry write can name as its parent.
+      createDefaultPantry: false,
+    };
+    const CREATOR = {
+      id: 'user-1',
+      email: 'user@example.com',
+      displayName: 'Tani',
+    };
+
+    it('keeps GetHomes complete after an optimistic home create', async () => {
+      const cache = makeCache();
+      const vars = { first: 20 };
+      const data = await runAgainstSchema<Unmasked<GetHomesQuery>>(
+        GetHomesDocument,
+        vars,
+      );
+      cache.writeQuery({ query: GetHomesDocument, variables: vars, data });
+
+      writeOptimisticHome(
+        cache,
+        buildOptimisticHome(
+          'client-home-1',
+          { ...HOME_INPUT, id: 'client-home-1' },
+          CREATOR,
+        ),
+      );
+
+      const diff = cache.diff({
+        query: GetHomesDocument,
+        variables: vars,
+        optimistic: true,
+        returnPartialData: true,
+      });
+      expect(describeMissing(diff.missing)).toBe('none');
+      expect(diff.complete).toBe(true);
+    });
+
+    // The list node and the DETAIL query select different things, so a home
+    // satisfying only the first appears and then dead-ends when opened.
+    it('keeps GetHome complete after an optimistic home create', () => {
+      const cache = makeCache();
+      writeOptimisticHome(
+        cache,
+        buildOptimisticHome(
+          'client-home-detail',
+          { ...HOME_INPUT, id: 'client-home-detail' },
+          CREATOR,
+        ),
+      );
+
+      const diff = cache.diff({
+        query: GetHomeDocument,
+        variables: { homeId: 'client-home-detail' },
+        optimistic: true,
+        returnPartialData: true,
+      });
+      expect(describeMissing(diff.missing)).toBe('none');
+      expect(diff.complete).toBe(true);
+    });
+
+    // Every permission gate reads the cache, so the placeholder has to grant
+    // what the server grants an owner or the creator cannot use their own home.
+    it('writes the creator an Owner membership with every capability', () => {
+      const cache = makeCache();
+      const home = buildOptimisticHome(
+        'client-home-2',
+        { ...HOME_INPUT, id: 'client-home-2' },
+        CREATOR,
+      );
+      writeOptimisticHome(cache, home);
+
+      expect(home.myMembership).toMatchObject({
+        role: 'OWNER',
+        status: 'ACTIVE',
+        canManageHome: true,
+        canViewPantry: true,
+        canEditPantry: true,
+        canAddItems: true,
+        canRemoveItems: true,
+        canInviteOthers: true,
+      });
+      // The same row is the home's only member, so the members list shows the
+      // creator rather than an empty home.
+      expect(home.membersConnection.totalCount).toBe(1);
+      expect(home.membersConnection.edges[0]?.node.userId).toBe('user-1');
     });
   });
 

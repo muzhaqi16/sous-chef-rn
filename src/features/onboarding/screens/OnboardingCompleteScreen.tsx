@@ -20,7 +20,7 @@ export const OnboardingCompleteScreen = () => {
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { completeOnboarding } = useCompleteOnboarding();
+  const { completeOnboarding } = useCompleteOnboarding(user?.id);
 
   const handleComplete = async () => {
     if (!user?.id) {

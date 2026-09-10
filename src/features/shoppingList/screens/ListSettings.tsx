@@ -7,7 +7,6 @@ import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { commonStyles } from '#/styles/commonStyles';
 import { InfoRow } from '#components/atoms/InfoRow';
-import { OfflineGate } from '#features/shoppingList/components/OfflineGate';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { RecurringPattern } from '#/graphql/generated/schemaTypes';
@@ -288,10 +287,7 @@ export const ListSettings: React.FC<
               placeholder={t('shoppingListScreens.listNamePlaceholder')}
             />
 
-            {/* Home selector - only show for new lists. A list created from a
-                template can't be linked to a home (createFromTemplate takes no
-                homeId), so the picker is inert while one is selected rather
-                than silently dropping the choice. */}
+            {/* Home selector - only show for new lists. */}
             {!listId && (
               <View style={commonStyles.settingsInputGroup}>
                 <Text style={commonStyles.settingsLabel}>
@@ -300,29 +296,16 @@ export const ListSettings: React.FC<
                 <Pressable
                   style={({ pressed }) => [
                     styles.pickerButton,
-                    !!selectedTemplate && styles.pickerButtonDisabled,
                     pressed && styles.pressed,
                   ]}
                   onPress={handleOpenHomePicker}
-                  disabled={!!selectedTemplate}
                 >
-                  <Text tone={selectedTemplate ? 'secondary' : 'primary'}>
-                    {selectedTemplate
-                      ? t('shoppingListScreens.personalNoHome')
-                      : homes?.find(h => h.id === selectedHomeId)?.name ||
-                        t('shoppingListScreens.personalNoHome')}
+                  <Text>
+                    {homes?.find(h => h.id === selectedHomeId)?.name ||
+                      t('shoppingListScreens.personalNoHome')}
                   </Text>
                   <Icon name="chevron-down" size={20} tone="textSecondary" />
                 </Pressable>
-                {!!selectedTemplate && (
-                  <Text
-                    role="caption"
-                    tone="secondary"
-                    style={styles.fieldNote}
-                  >
-                    {t('shoppingListScreens.templateHomeNote')}
-                  </Text>
-                )}
               </View>
             )}
 
@@ -353,34 +336,27 @@ export const ListSettings: React.FC<
               {t('shoppingListScreens.templateSection')}
             </Text>
 
-            {/* createFromTemplate is online-only — the server mints the new
-                list's id, so it can't be queued. */}
-            <OfflineGate
-              compact
-              message={t('shoppingListScreens.templatesOfflineMessage')}
-            >
-              <View style={commonStyles.settingsInputGroup}>
-                <Text style={commonStyles.settingsLabel}>
-                  {t('shoppingListScreens.startFromTemplate')}
+            <View style={commonStyles.settingsInputGroup}>
+              <Text style={commonStyles.settingsLabel}>
+                {t('shoppingListScreens.startFromTemplate')}
+              </Text>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.pickerButton,
+                  pressed && styles.pressed,
+                ]}
+                onPress={() => setShowTemplatePicker(true)}
+              >
+                <Text>
+                  {selectedTemplate?.displayName ??
+                    t('shoppingListScreens.noTemplateBlankList')}
                 </Text>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.pickerButton,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={() => setShowTemplatePicker(true)}
-                >
-                  <Text>
-                    {selectedTemplate?.displayName ??
-                      t('shoppingListScreens.noTemplateBlankList')}
-                  </Text>
-                  <Icon name="chevron-down" size={20} tone="textSecondary" />
-                </Pressable>
-                <Text role="caption" tone="secondary" style={styles.fieldNote}>
-                  {t('shoppingListScreens.startFromTemplateDesc')}
-                </Text>
-              </View>
-            </OfflineGate>
+                <Icon name="chevron-down" size={20} tone="textSecondary" />
+              </Pressable>
+              <Text role="caption" tone="secondary" style={styles.fieldNote}>
+                {t('shoppingListScreens.startFromTemplateDesc')}
+              </Text>
+            </View>
           </View>
         )}
 

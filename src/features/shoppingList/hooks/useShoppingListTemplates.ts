@@ -7,6 +7,7 @@
 
 import { useQuery } from '@apollo/client/react';
 import { GetShoppingListTemplatesDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { COPYABLE_ITEM_LIMIT } from '#features/shoppingList/cache/copySource';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
@@ -19,7 +20,9 @@ export interface ShoppingListTemplateOption {
 
 export function useShoppingListTemplates(options: { skip?: boolean } = {}) {
   const { data, loading, error } = useQuery(GetShoppingListTemplatesDocument, {
-    variables: { first: 50 },
+    // The lines come with the picker so a template can be copied offline;
+    // `copySource` reads them straight back out of the cache.
+    variables: { first: 50, copyableItemLimit: COPYABLE_ITEM_LIMIT },
     skip: options.skip,
   });
 

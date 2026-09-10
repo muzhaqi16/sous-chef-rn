@@ -85,6 +85,8 @@
     "hasVideo": "Video në dispozicion",
     "draftBadge": "Draft — e papublikuar",
     "forkFailed": "Receta nuk u degëzua",
+    "forkSourceNotLoaded": "Hape këtë recetë një herë me lidhje, që të jetë në pajisje dhe të mund të kopjohet.",
+    "forkCopyName": "{{name}} (versioni im)",
     "forkA11y": "Degëzo këtë recetë",
     "publishA11y": "Publiko recetën",
     "unpublishA11y": "Hiq publikimin e recetës",

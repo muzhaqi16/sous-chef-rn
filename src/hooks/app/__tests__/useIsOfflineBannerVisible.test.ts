@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react-native';
-import { useIsOfflineBannerVisible } from '#features/mealPlan/hooks/useIsOfflineBannerVisible';
+import { useIsOfflineBannerVisible } from '#hooks/app/useIsOfflineBannerVisible';
 import type { OfflineBannerCause } from '#store/slices/networkSlice';
 
 // Break circular dependency chain (matches useOfflineMode.test.ts).

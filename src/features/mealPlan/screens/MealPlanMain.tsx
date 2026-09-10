@@ -7,7 +7,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { parseISO } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
 import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
-import { useIsOfflineBannerVisible } from '#features/mealPlan/hooks/useIsOfflineBannerVisible';
+import { useIsOfflineBannerVisible } from '#hooks/app/useIsOfflineBannerVisible';
 import { WeekStrip } from '#features/mealPlan/components/WeekStrip';
 import { MonthCalendar } from '#features/mealPlan/components/MonthCalendar';
 import { DayMealList } from '#features/mealPlan/components/DayMealList';

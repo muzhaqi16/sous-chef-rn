@@ -85,6 +85,8 @@
     "hasVideo": "Vídeo disponible",
     "draftBadge": "Borrador — no publicado",
     "forkFailed": "No se pudo bifurcar la receta",
+    "forkSourceNotLoaded": "Abre esta receta con conexión una vez, para que esté en tu dispositivo y se pueda copiar.",
+    "forkCopyName": "{{name}} (mi versión)",
     "forkA11y": "Bifurcar esta receta",
     "publishA11y": "Publicar receta",
     "unpublishA11y": "Despublicar receta",

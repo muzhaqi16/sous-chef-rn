@@ -1,23 +1,23 @@
 /**
- * markAsTemplate is local-first: the flags are an absolute set keyed by the list
- * id, written to the cache before firing and idempotent on a queued replay.
- * createFromTemplate is ONLINE-ONLY — the server mints the new list's id, so there
- * is no client key to make a replay idempotent and a queued one would duplicate.
+ * Both are local-first. markAsTemplate is an absolute flag set keyed by the list
+ * id. createFromTemplate copies the template on the device — one create plus one
+ * batch add, every row under a client-minted id — rather than asking the server
+ * to fan out.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
-import {
-  MarkAsTemplateDocument,
-  CreateFromTemplateDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+import { MarkAsTemplateDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   UseShoppingListTemplate_ListFragmentDoc,
   type UseShoppingListTemplate_ListFragment,
 } from './useShoppingListTemplate.generated';
-import { addShoppingListToQueryCache } from '#features/shoppingList/cache/list';
+import { readCopyableList } from '#features/shoppingList/cache/copySource';
+import { listFromTemplate } from '#features/shoppingList/utils/listFromTemplate';
+import { useCopyShoppingList } from './useCopyShoppingList';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
+import { toastService } from '#/services/toastService';
 import { errorService } from '#/services/errorService';
 
 export function useShoppingListTemplate() {
@@ -26,20 +26,8 @@ export function useShoppingListTemplate() {
   const [markMutation, { loading: marking }] = useMutation(
     MarkAsTemplateDocument,
   );
-  const [createMutation, { loading: creating }] = useMutation(
-    CreateFromTemplateDocument,
-    {
-      update(cache, { data }) {
-        if (
-          data?.createFromTemplate?.__typename === 'CreateFromTemplatePayload'
-        ) {
-          addShoppingListToQueryCache(
-            cache,
-            data.createFromTemplate.shoppingList,
-          );
-        }
-      },
-    },
+  const { copyList, copying: creating } = useCopyShoppingList(
+    t('shoppingListScreens.failedToCreateFromTemplate'),
   );
 
   const markAsTemplate = async (
@@ -84,35 +72,34 @@ export function useShoppingListTemplate() {
     return true;
   };
 
+  /**
+   * `homeId` overrides the template's own link; leaving it out keeps the
+   * template's home, which the server's fan-out could not carry at all.
+   */
   const createFromTemplate = async (
     templateId: string,
     name?: string,
+    homeId?: string | null,
   ): Promise<string | null> => {
-    let result;
-    const createMutationOptions = {
-      variables: { input: { templateId, ...(name && { name }) } },
-    };
-    try {
-      result = await createMutation(createMutationOptions);
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Create From Template error:',
-      });
-    }
-
-    if (!result) return null;
-    if (
-      alertIfRejected(
-        result,
-        t('shoppingListScreens.failedToCreateFromTemplate'),
-      )
-    ) {
+    const source = readCopyableList(client.cache, templateId);
+    if (!source) {
+      toastService.error(t('shoppingListScreens.copySourceNotLoaded'));
       return null;
     }
-    const payload = result.data?.createFromTemplate;
-    return payload?.__typename === 'CreateFromTemplatePayload'
-      ? payload.shoppingList.id
-      : null;
+
+    const derived = listFromTemplate(source, {
+      name: name?.trim() || t('labels.copyOfName', { name: source.name }),
+    });
+
+    const listId = await copyList(derived, { homeId });
+    if (listId && derived.skipped.length > 0) {
+      toastService.info(
+        t('shoppingListScreens.copyLinesSkipped', {
+          count: derived.skipped.length,
+        }),
+      );
+    }
+    return listId;
   };
 
   return { markAsTemplate, createFromTemplate, marking, creating };

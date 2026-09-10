@@ -51,7 +51,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
     setPrevVisible(visible);
     setPrevMealPlan(mealPlan);
     if (visible && mealPlan) {
-      setName(t('duplicatePlan.copySuffix', { name: mealPlan.name }));
+      setName(t('labels.copyOfName', { name: mealPlan.name }));
       setStartDateOffset(0);
     }
   }

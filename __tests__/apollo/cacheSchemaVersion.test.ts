@@ -29,6 +29,12 @@ import { createHash } from 'crypto';
  *
  * Re-record by running this test: the failure message prints the new hash.
  */
+// Re-recorded 2026-09-10: `Query.home` gained a cache redirect, so a home the
+// device created reads back by id without a request the server cannot answer
+// yet. A redirect only READS, and it reads the same `Home` entity an old blob
+// already holds — a blob with no such entity simply misses, as before. No merge
+// changed. No version bump.
+//
 // Re-recorded 2026-09-04: `mergeTypePolicies` now refuses a collision on any
 // policy key, not just `fields`, and `registry.cache.ts` joined the file list
 // below. Both are guards over the assembly; no `merge` or `read` changed, so
@@ -52,7 +58,7 @@ import { createHash } from 'crypto';
 // `features/<name>/cache/typePolicies.ts`, byte-identical, and `cache.ts`
 // became the assembler. Nothing a `merge` or `read` does changed, so an old
 // blob restores exactly as before. No version bump.
-const REVIEWED_CACHE_POLICY_HASH = '8262ffac8b778262';
+const REVIEWED_CACHE_POLICY_HASH = 'd49ec90a9e7336ae';
 
 const FEATURES = join('src', 'features');
 

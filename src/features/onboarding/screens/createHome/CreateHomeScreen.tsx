@@ -26,10 +26,9 @@ import {
   useCreatePantry,
   type CreatePantryFn,
 } from '#features/pantry/hooks/useCreatePantry';
-import {
-  useCreateHomeFlow,
-  type CreateHomeFn,
-} from '#features/onboarding/hooks/useCreateHomeFlow';
+import type { CreateHomeFn } from '#features/home/hooks/useCreateHome';
+import { unwrapPayload } from '#/utils/errors/mutationPayload';
+import { useCreateHomeFlow } from '#features/onboarding/hooks/useCreateHomeFlow';
 
 import {
   useAppStore,
@@ -43,11 +42,9 @@ import { useOnboardingNavigation } from '#features/onboarding/hooks/useOnboardin
 import { getCreateHomeSchema } from '#features/onboarding/utils/validation';
 import { logValidationErrors } from '#/utils/validation/common';
 import { createPantryForHome, showPantryCreationError } from './helpers';
-import { extractNodes } from '#/utils/connectionUtils';
 import { OnboardingErrorBoundary } from '#components/providers/ScreenErrorBoundary';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { Card } from '#components/atoms/Card';
 
 /** Module scope so the try/catch does not bail the component out of the compiler. */
@@ -69,7 +66,7 @@ async function performCreateHome(
   },
 ): Promise<void> {
   if (deps.needsHome) {
-    const response = await deps.createHome({
+    const outcome = await deps.createHome({
       name: data.homeName.trim(),
       description: tGlobal('onBoarding.createdDuringOnboarding'),
       type: HomeType.Household,
@@ -78,25 +75,35 @@ async function performCreateHome(
       // refuse the whole mutation, dead-ending onboarding for anyone who
       // deferred verification. A join code can be enabled later in settings.
       allowJoinCode: !deps.hasUnverifiedEmail,
-      createDefaultPantry: true,
-      defaultPantryName: data.pantryName.trim(),
       tags: ['onboarding'],
     });
 
-    const payload = unwrapPayload(
-      response.data?.createHome,
-      'CreateHomePayload',
-      deps.createHomeFailedMessage,
-    );
+    // Throws the precise domain error, whose CODE the screen resolves to
+    // localized copy. Its `message` is English by construction and is never
+    // shown. A QUEUED create is not rejected and never reaches this.
+    if (outcome.status === 'rejected') {
+      unwrapPayload(
+        outcome.payload,
+        'CreateHomePayload',
+        deps.createHomeFailedMessage,
+      );
+    }
 
-    deps.setSelectedHomeId(payload.home.id);
+    // The minted id, not a payload's: queued, there is no payload, and the
+    // home is still this one.
+    deps.setSelectedHomeId(outcome.id);
 
-    const pantries = extractNodes<{ id: string; isDefault: boolean }>(
-      payload.home.pantriesConnection,
+    // The pantry is minted here rather than by `createDefaultPantry`, so every
+    // pantry write made before reconnect has a parent it can name.
+    const created = await createPantryForHome(
+      outcome.id,
+      data.pantryName,
+      deps.createPantry,
+      deps.setSelectedPantryId,
     );
-    const defaultPantry = pantries.find(p => p.isDefault) || pantries[0];
-    if (defaultPantry) {
-      deps.setSelectedPantryId(defaultPantry.id);
+    if (!created) {
+      showPantryCreationError(() => deps.skipToStep('CreateShoppingList'));
+      return;
     }
   } else if (deps.needsPantry && deps.selectedHomeId) {
     const success = await createPantryForHome(

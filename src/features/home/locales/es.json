@@ -7,6 +7,8 @@
     "subtitleHasList": "Invita a otros a tu lista de la compra (opcional)",
     "nothingToShare": "Nada que compartir aún",
     "nothingToShareDesc": "Necesitas crear un hogar o una lista de la compra para poder invitar. Puedes invitar más tarde desde ajustes.",
+    "offlineTitle": "Las invitaciones necesitan conexión",
+    "offlineDescription": "Invitar a alguien envía un enlace que solo el servidor puede crear. Continúa por ahora e invita a personas desde los ajustes del hogar cuando vuelvas a estar en línea.",
     "noInvitesYet": "Aún no hay invitaciones",
     "noInvitesYetDesc": "Añade direcciones de email arriba para invitar a miembros",
     "invitingPersonSingular": "Invitando a {{count}} persona:",

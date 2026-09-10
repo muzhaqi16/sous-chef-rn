@@ -85,6 +85,8 @@
     "hasVideo": "Video disponibile",
     "draftBadge": "Bozza — non pubblicata",
     "forkFailed": "Impossibile duplicare la ricetta",
+    "forkSourceNotLoaded": "Apri questa ricetta una volta con la connessione, così è sul dispositivo e si può copiare.",
+    "forkCopyName": "{{name}} (la mia versione)",
     "forkA11y": "Duplica questa ricetta",
     "publishA11y": "Pubblica ricetta",
     "unpublishA11y": "Annulla pubblicazione ricetta",

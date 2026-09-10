@@ -64,6 +64,12 @@ jest.mock('#store/useAppStore', () => ({
     selectedHomeId: mockStoreState.selectedHomeId,
     setSelectedHomeId: mockStoreState.setSelectedHomeId,
   })),
+  // The create writes the creator's own membership, so it reads the identity.
+  useUser: jest.fn(() => ({
+    id: 'user-1',
+    email: 'user@example.com',
+    displayName: 'Tani',
+  })),
 }));
 
 jest.mock('#/services/errorService');
@@ -95,6 +101,35 @@ const noHomesMock = () =>
     },
   });
 
+/**
+ * The server echoes the id the CLIENT minted — that is what makes the create
+ * idempotent, and a mock returning a different one would look like a second
+ * home to every reader.
+ */
+const createdHomeMock = () =>
+  recordMock(CreateHomeDocument, {
+    data: (vars: Record<string, unknown>) => ({
+      createHome: {
+        __typename: 'CreateHomePayload' as const,
+        home: {
+          __typename: 'Home' as const,
+          id: (vars.input as { id: string }).id,
+          name: 'First Home',
+          // Not default server-side yet — that is what MarkHomeAsDefault is
+          // for, and it keeps `remoteDefaultHomeId` honest.
+          isDefault: false,
+          // Empty so the only writer of the pantry selection is the
+          // MarkHomeAsDefault response.
+          pantriesConnection: {
+            __typename: 'PantryConnection' as const,
+            edges: [],
+            totalCount: 0,
+          },
+        },
+      },
+    }),
+  });
+
 const markDefaultMock = (defaultPantryId: string) =>
   recordMock(MarkHomeAsDefaultDocument, {
     data: {
@@ -122,24 +157,7 @@ describe('first home becomes the default', () => {
     // A new user left with no default home is invisible otherwise: the
     // surviving log call is stripped in release and never reaches errorService.
     const homes = noHomesMock();
-    const create = recordMock(CreateHomeDocument, {
-      data: {
-        createHome: {
-          __typename: 'CreateHomePayload',
-          home: {
-            __typename: 'Home',
-            id: 'home-new',
-            name: 'First Home',
-            isDefault: false,
-            pantriesConnection: {
-              __typename: 'PantryConnection',
-              edges: [],
-              totalCount: 0,
-            },
-          },
-        },
-      },
-    });
+    const create = createdHomeMock();
     const markDefault = markDefaultRefusedMock();
 
     const { result } = renderHookWithApollo(() => useHomeManagement(), {
@@ -162,28 +180,7 @@ describe('first home becomes the default', () => {
 
   it('syncs a newly created first home to the server, with no alert', async () => {
     const homes = noHomesMock();
-    const create = recordMock(CreateHomeDocument, {
-      data: {
-        createHome: {
-          __typename: 'CreateHomePayload',
-          home: {
-            __typename: 'Home',
-            id: 'home-new',
-            name: 'First Home',
-            // Not default server-side yet — that is what MarkHomeAsDefault is
-            // for, and it keeps `remoteDefaultHomeId` honest.
-            isDefault: false,
-            // Empty so the only writer of the pantry selection is the
-            // MarkHomeAsDefault response, not createHome's own onCompleted.
-            pantriesConnection: {
-              __typename: 'PantryConnection',
-              edges: [],
-              totalCount: 0,
-            },
-          },
-        },
-      },
-    });
+    const create = createdHomeMock();
     const markDefault = markDefaultMock('pantry-new');
 
     const { result } = renderHookWithApollo(() => useHomeManagement(), {
@@ -200,19 +197,20 @@ describe('first home becomes the default', () => {
     // wait on its LAST effect rather than on the mutation firing — `fired`
     // records the invocation, not the resolved result, and asserting on it
     // would both race and leak the pending promise into the next test.
+    const mintedId = (create.fired[0] as { input: { id: string } }).input.id;
     await waitFor(() =>
       expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
         'pantry-new',
       ),
     );
-    expect(markDefault.fired).toContainEqual({ input: { homeId: 'home-new' } });
+    expect(markDefault.fired).toContainEqual({ input: { homeId: mintedId } });
 
     // `setHomeAndPantry` / `setIsHomeSelectionReady` are written ONLY by
     // `setDefaultHome` — the auto-select effect fires the mutation directly and
     // touches neither. Asserting on them is what stops this test passing via
     // that effect rather than via the path it means to cover.
     expect(mockStoreState.setHomeAndPantry).toHaveBeenCalledWith(
-      'home-new',
+      mintedId,
       null,
     );
     expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(false);

@@ -24,6 +24,8 @@ fragment list_listDetail on ShoppingList {
   nextRecurringDate
   isTemplate
   templateName
+  description
+  tags
   basedOnTemplate {
     id
     name
