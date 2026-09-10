@@ -8,101 +8,121 @@ Delete a section once the schema carries it.
 Not a design document. It says what the client is trying to do and what it is
 missing, not how the server should model it.
 
-## Pantry deduction sums quantities across units it never converts
+## Open
 
-**Affects:** what a derived shopping list has to deliberately not copy.
+Nothing. The three gaps this file carried are answered below, with the client
+work each one leaves.
 
-`generateShoppingListFromMealPlan` deducts pantry stock per aggregated
-ingredient. It selects the pantry rows whose catalog item matches AND whose unit
-has the same TYPE as the ingredient's unit, then sums their raw quantities:
+## Answered — what the API now does, and what the client must change
 
-```ts
-if (pantryItem.unit?.type === entry.unitType && pantryItem.unitId) {
-  totalAvailable += pantryItem.quantity;
-}
+All three sections were confirmed against the server and fixed there. Two were
+server defects; the third was a missing mutation. No database migration was
+needed, and every schema change is additive.
+
+### Recipe ingredients keep their unit
+
+**Was:** the ingest path read the flat `usUnit`/`metricUnit` fields, which the
+typed mirror replaced, so `resolveUnitId` was handed `undefined` and every
+ingredient imported through the documented contract was written with
+`unitId: null` — silently, with nothing in the logs. Both the meal-plan and the
+deficit paths skip a null-unit ingredient, which is why a derived list came back
+empty.
+
+**Now:** one seam reads every carrier a client may use — `unitId`, the flat
+fields, `measurements`, `externalSources[].spoonacular.unit` and
+`spoonacular.measures` — and takes the QUANTITY and the UNIT from the same
+measure. Spelling resolution goes through the seeded unit vocabulary by name,
+symbol or alias, so `tbs`, `floz` and `fl. oz.` resolve; a spelling it does not
+know still leaves `unitId` null rather than minting a unit with an invented
+conversion factor. Existing null-unit rows are repaired from the verbatim
+payload stored beside them.
+
+**A defect worth knowing about, because the client has data shaped by it:**
+`amount` pairs with `unit`, **not** with `measures.us`. A metric-authored recipe
+sends `amount: 200, unit: "g"` alongside `measures.us: { amount: 7.05,
+unitShort: "oz" }`. The old flat contract took the unit from `measures.us` while
+the quantity stayed `amount`, so a 200 g ingredient was stored as 200 oz — a 28×
+error. Anything that pairs an amount with a unit from a different measure has
+this bug.
+
+**Client work:**
+
+1. `toRecipeInput.ts:132-133` derives `spoonacular.unitShort`/`unitLong` from
+   `measures.us`. Send the ingredient's own `unitShort`/`unitLong` where the
+   response carries them, falling back to `measures.us`. Keep sending `unit`
+   verbatim and both measures whole — the server persists both systems now.
+
+### Both unit systems come back, and reads follow the user's preference
+
+The us and metric measures are stored on
+`RecipeIngredient.externalSources[].metadata` as `usAmount` / `usUnit` /
+`metricAmount` / `metricUnit`. That field is already in the schema — no client
+codegen change is needed to read it.
+
+For the caller's own preference there is a new field:
+
+```graphql
+RecipeIngredient.convertedQuantity: ConvertedValue   # { value, unit }
 ```
 
-The rows are only type-compatible at that point, not the same unit, and the
-deficit is then computed with the ingredient's unit id on BOTH sides:
+Viewer-scoped: it resolves through `UserSettings.preferredUnitSystem` (falling
+back to locale for `SYSTEM`), so two callers reading one recipe get different
+answers, and it is pinned out of the shared cache. Null when the ingredient
+names no unit. It works for hand-written recipes too, which have no mirror.
 
-```ts
-const deficit = await quantityOps.calculateDeficit(
-  quantityToAdd,
-  entry.unitId,
-  totalAvailable,
-  entry.unitId,
-  entry.itemId,
-);
+**Client work:**
+
+2. `IngredientCard.tsx:38-40` renders `ingredient.unit?.symbol` for a saved
+   recipe and hardcodes `measures.us.unitShort` for a preview. Render
+   `convertedQuantity` for the saved case, falling back to `quantity`/`unit`;
+   for the un-saved preview pick `measures.metric` vs `measures.us` by
+   `preferredUnitSystem` instead of always US.
+3. `useRecipeShoppingList.ts:147-148` and `:470-471` send
+   `unit.unitName` from `measures.us.unitShort` when adding recipe ingredients
+   to a list, discarding the metric measure. Send the measure matching the
+   user's `preferredUnitSystem`, or omit `unit` entirely and let the server
+   resolve it from the ingredient row.
+
+### Pantry deduction converts before it subtracts
+
+**Was:** the deduction selected pantry rows whose unit had the same TYPE as the
+ingredient's and summed their raw quantities, then computed the deficit with the
+ingredient's unit id on both sides — so nothing ever converted. 500 ml counted
+as 500 against a 2-litre requirement and the line was dropped as covered.
+
+**Now:** every stack is converted into the ingredient's unit through the item's
+own conversions, its density and its net weight. A stack no conversion reaches
+is left out of the total and reported rather than counted. Two ingredients
+naming one catalog item no longer each spend the whole stock: what the first
+takes is held against the second, in the unit it was taken in.
+
+**Client work:** none. The client's exact-unit-id deduction is still a safe
+subset — it can over-buy, never under-buy — but the two now agree wherever a
+conversion exists, so the divergence this repo works to avoid is gone.
+
+### A derived shopping list can record its meal plan
+
+New mutation:
+
+```graphql
+linkShoppingListToMealPlan(input: LinkShoppingListToMealPlanInput!):
+  LinkShoppingListToMealPlanResult!
 ```
 
-So a pantry holding 500 ml counts as 500 against an ingredient needing 2 litres,
-and the line is dropped as fully covered. The type match is what makes the rows
-eligible; nothing converts them.
+`LinkShoppingListToMealPlanInput` is `{ id: ID!, mealPlanId: ID! }`, where `id`
+is the shopping list. It sets `ShoppingList.mealPlanId` and
+`generatedFromMealPlan`, which is what `MealPlan.generatedShoppingLists` rolls
+up from — so the "Generated lists" section on the meal plan settings sheet fills
+in. Both ends are checked: edit access to the list, view access to the plan.
 
-The client deducts on the exact unit id instead, which is a subset of the rows
-the server takes and needs no conversion. That is the safe direction — a derived
-list can over-buy, never under-buy — but it means a plan generated on the server
-and the same plan derived on the client will not always produce the same
-quantities, which is the divergence this repo otherwise works hard to avoid.
+**Client work:**
 
-**A sufficient answer:** convert before subtracting, so the available total is
-expressed in the ingredient's unit. The client can then match the rule exactly,
-since `Unit.type` is already selectable and both sides would agree.
+4. `createShoppingList` → `addItemsToShoppingList` → `linkShoppingListToMealPlan`
+   as a third queued write. It is idempotent, so a replay is harmless.
 
-## Imported recipe ingredients lose their unit
+## Not planned
 
-**Blocks:** generating a shopping list from a meal plan at all, for any recipe
-imported since 2026-06-14.
-
-Spoonacular sends units. Its `extendedIngredients` entries carry `unit`,
-`unitShort`, `unitLong` and a `measures` object with `us` and `metric` variants,
-and `SpoonacularIngredientPayload` in the API models every one of them.
-
-The client sends them too, inside the typed mirror:
-
-```ts
-spoonacular: {
-  unit: ing.unit,
-  unitShort: ing.measures?.us?.unitShort,
-  measures: { us: { unitShort: … }, metric: { unitShort: … } },
-}
-```
-
-The server resolves the unit from somewhere else. `prepareIngredientForPersist`
-reads the flat carriers only:
-
-```ts
-unitId = await this.getService(UnitService).resolveUnitId(
-  ingredient.usUnit ?? ingredient.metricUnit,
-);
-```
-
-`usUnit` and `metricUnit` are not sent. The client used to send
-`usUnit: ing.measures?.us?.unitShort` and dropped it when it moved to the typed
-mirror. So `resolveUnitId` is handed `undefined`, returns before its
-"Unrecognized unit string" log line, and every ingredient imported since is
-written with `unitId: null` — silently, with nothing in the logs.
-
-The evidence is visible in the app. A recipe imported before that change shows
-"28 oz canned tomatoes" and "0.5 lb mushrooms". One imported today shows
-"8 rotini" and "1 olive oil", from a source recipe that reads "8 ounces
-whole-wheat rotini" and "1 tablespoon extra-virgin olive oil".
-
-This is why a derived shopping list comes back empty. Both implementations skip
-an ingredient with no unit — the server's own fan-out does
-`if (!ingredient.itemId || !ingredient.unitId) continue;` — so the server has
-been generating empty lists from these recipes too.
-
-The client now sends the flat pair as well, so imports made after that ship
-resolve their unit. What remains is the backfill: every ingredient imported
-between 2026-06-14 and that change still has `unitId: null`.
-
-**A sufficient answer:** backfill the existing null rows. The source strings were
-never lost — the verbatim payload is stored alongside, in the external source's
-`data` column.
-
-Two things worth fixing while in there. `resolveUnitId` matches a unit by name or
-symbol only, so the alias lists that already exist (`tbs`, `tblsp`, `floz`) are
-never consulted and Spoonacular spellings like `Tbsps` would still miss. And the
-same dead metadata keys are read when adding recipe ingredients to a shopping
-list, so that path loses the unit for the same reason.
+`possibleUnits`, `shoppingListUnits` and `categoryPath` stay server-owned. They
+live only on `GET /food/ingredients/{id}/information`, which is one call per
+ingredient and would blow the quota — the decision not to call it stands. Send
+them only if that call is ever made for another reason.
