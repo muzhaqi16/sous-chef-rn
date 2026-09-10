@@ -142,40 +142,63 @@ if (process.argv.includes('--self-test')) {
     process.exit(2);
   }
 
-  if (asConfigured.length !== 1) {
-    // Which blocks actually reached the probe. A type-aware rule that lands
-    // without `parserOptions.project` is reading an inferred program with
-    // DEFAULT compiler options, which is the shape of this failure.
-    let resolved = '(unavailable)';
-    try {
-      const cfg = await new ESLint({ cwd: REPO_ROOT }).calculateConfigForFile(
-        probe,
-      );
-      resolved = JSON.stringify({
-        project: cfg.parserOptions?.project,
-        tsconfigRootDir: cfg.parserOptions?.tsconfigRootDir,
-        parser: cfg.parser,
-        rule: cfg.rules?.[RULE],
-      });
-    } catch (error) {
-      resolved = `(threw: ${error.message})`;
-    }
-    console.error(`\n  Resolved config for the probe: ${resolved}`);
+  // The scope assertion reads the RESOLVED CONFIG, not a finding count. A
+  // count also depends on the type program being warm for a file created
+  // moments earlier: where it is not, the rule falls back to an inferred
+  // program with default options and reports a necessary `??` as unnecessary.
+  // That is a property of the run, not of `.eslintrc.js`, and the tree-wide
+  // pass below is what holds the counts.
+  let scope;
+  try {
+    const cfg = await new ESLint({ cwd: REPO_ROOT }).calculateConfigForFile(
+      probe,
+    );
+    scope = {
+      rule: cfg.rules?.[RULE]?.[0],
+      project: cfg.parserOptions?.project,
+      parser: cfg.parser,
+    };
+  } catch (error) {
     console.error(
-      `\n✗ Self-test failed: .eslintrc.js does not apply ${RULE} to a new file\n` +
-        `  under src/ (${asConfigured.length} finding(s), expected 1).\n` +
-        `${listed(asConfigured)}\n\n` +
-        `  The rule sees the defect, so the scope is what broke. Most likely a\n` +
-        `  second overrides block declares the rule: a block REPLACES a rule's\n` +
-        `  config rather than merging it, so the later one silently wins.\n`,
+      `\n✗ Self-test failed: resolving the probe's config threw.\n  ${error.message}\n`,
+    );
+    process.exit(2);
+  }
+
+  const enabled = scope.rule === 'error' || scope.rule === 2;
+  const typeAware =
+    Boolean(scope.project) && /typescript-eslint/.test(scope.parser ?? '');
+
+  if (!enabled || !typeAware) {
+    console.error(
+      `\n✗ Self-test failed: .eslintrc.js does not apply ${RULE} type-aware to\n` +
+        `  a new file under src/.\n` +
+        `    rule: ${JSON.stringify(scope.rule)}  project: ${JSON.stringify(
+          scope.project,
+        )}\n` +
+        `    parser: ${scope.parser}\n\n` +
+        `  An \`overrides\` block REPLACES a rule's config rather than merging\n` +
+        `  it, so a second block declaring this rule silently wins — and a block\n` +
+        `  without \`parserOptions.project\` leaves the rule reading an inferred\n` +
+        `  program with default compiler options.\n`,
+    );
+    process.exit(2);
+  }
+
+  // It must still be live on the file: the defect the probe carries is
+  // reported whatever the program's strictness.
+  if (!asConfigured.some(m => m.line === 5)) {
+    console.error(
+      `\n✗ Self-test failed: ${RULE} is configured for the probe but reported\n` +
+        `  nothing on its always-falsy condition.\n${listed(asConfigured)}\n`,
     );
     process.exit(2);
   }
 
   console.log(
-    '✓ Self-test passed: a function read without calling it is reported, a\n' +
-      '  `??` on a genuinely optional value is not, and .eslintrc.js applies the\n' +
-      '  rule to a new file under src/.',
+    '✓ Self-test passed: the rule still reports a function read without\n' +
+      '  calling it and leaves a necessary `??` alone, and .eslintrc.js applies\n' +
+      '  it type-aware to a new file under src/.',
   );
   process.exit(0);
 }
