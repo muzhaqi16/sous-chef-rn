@@ -5739,6 +5739,27 @@ export type LinkItemToExternalSourcePayload = {
  */
 export type LinkItemToExternalSourceResult = ConflictError | ForbiddenError | LinkItemToExternalSourcePayload | NotFoundError | ValidationError;
 
+export type LinkShoppingListToMealPlanInput = {
+  /**
+   * The shopping list to link. Named id, because that is the field the
+   * resource-access directive reads.
+   */
+  id: Scalars['ID']['input'];
+  mealPlanId: Scalars['ID']['input'];
+};
+
+export type LinkShoppingListToMealPlanPayload = {
+  __typename: 'LinkShoppingListToMealPlanPayload';
+  shoppingList: ShoppingList;
+};
+
+/**
+ * Result of LinkShoppingListToMealPlan. Select on LinkShoppingListToMealPlanPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type LinkShoppingListToMealPlanResult = ConflictError | ForbiddenError | LinkShoppingListToMealPlanPayload | NotFoundError | ValidationError;
+
 export enum ListActivityType {
   CollaboratorAdded = 'COLLABORATOR_ADDED',
   CollaboratorRemoved = 'COLLABORATOR_REMOVED',
@@ -7355,6 +7376,14 @@ export type Mutation = {
   leaveHome: LeaveHomeResult;
   /** Link an existing item to an external source. */
   linkItemToExternalSource: LinkItemToExternalSourceResult;
+  /**
+   * Record the meal plan a shopping list was derived from.
+   *
+   * The plan link is stamped inside generateShoppingListFromMealPlan's own
+   * transaction, which a client assembling the list offline never runs. Both
+   * ends are checked: edit access to the list, view access to the plan.
+   */
+  linkShoppingListToMealPlan: LinkShoppingListToMealPlanResult;
   /** Authenticate a user with credentials and return tokens. */
   login: LoginResult;
   /** Mark all notifications as read for the current user. */
@@ -9132,6 +9161,19 @@ export type MutationLeaveHomeArgs = {
  */
 export type MutationLinkItemToExternalSourceArgs = {
   input: LinkItemToExternalSourceInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationLinkShoppingListToMealPlanArgs = {
+  input: LinkShoppingListToMealPlanInput;
 };
 
 
@@ -13559,6 +13601,16 @@ export type RecipeForkEdge = Edge & {
 export type RecipeIngredient = {
   __typename: 'RecipeIngredient';
   availablePantryItemIds: Array<Scalars['ID']['output']>;
+  /**
+   * quantity auto-converted to the caller's preferred unit system.
+   *
+   * Viewer-scoped: it resolves through context.user to
+   * userSettings.preferredUnitSystem, so two callers reading the same recipe get
+   * different answers. The pin is what keeps it out of a shared cache. Null when
+   * the ingredient names no unit, or when no seeded unit of the preferred system
+   * shares its dimension.
+   */
+  convertedQuantity: Maybe<ConvertedValue>;
   estimatedPrice: Maybe<Scalars['Float']['output']>;
   externalSources: Array<RecipeIngredientSourceMapping>;
   id: Scalars['ID']['output'];

@@ -5811,6 +5811,26 @@ Always include a __typename so the variant can be discriminated.
 """
 union LinkItemToExternalSourceResult = ConflictError | ForbiddenError | LinkItemToExternalSourcePayload | NotFoundError | ValidationError
 
+input LinkShoppingListToMealPlanInput {
+  """
+  The shopping list to link. Named id, because that is the field the
+  resource-access directive reads.
+  """
+  id: ID!
+  mealPlanId: ID!
+}
+
+type LinkShoppingListToMealPlanPayload {
+  shoppingList: ShoppingList!
+}
+
+"""
+Result of LinkShoppingListToMealPlan. Select on LinkShoppingListToMealPlanPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union LinkShoppingListToMealPlanResult = ConflictError | ForbiddenError | LinkShoppingListToMealPlanPayload | NotFoundError | ValidationError
+
 enum ListActivityType {
   COLLABORATOR_ADDED
   COLLABORATOR_REMOVED
@@ -7412,6 +7432,14 @@ type Mutation {
   leaveHome(input: LeaveHomeInput!): LeaveHomeResult!
   """Link an existing item to an external source."""
   linkItemToExternalSource(input: LinkItemToExternalSourceInput!): LinkItemToExternalSourceResult!
+  """
+  Record the meal plan a shopping list was derived from.
+  
+  The plan link is stamped inside generateShoppingListFromMealPlan's own
+  transaction, which a client assembling the list offline never runs. Both
+  ends are checked: edit access to the list, view access to the plan.
+  """
+  linkShoppingListToMealPlan(input: LinkShoppingListToMealPlanInput!): LinkShoppingListToMealPlanResult!
   """Authenticate a user with credentials and return tokens."""
   login(input: LoginInput!): LoginResult!
   """Mark all notifications as read for the current user."""
@@ -10192,6 +10220,16 @@ type RecipeForkEdge implements Edge {
 
 type RecipeIngredient {
   availablePantryItemIds: [ID!]!
+  """
+  quantity auto-converted to the caller's preferred unit system.
+  
+  Viewer-scoped: it resolves through context.user to
+  userSettings.preferredUnitSystem, so two callers reading the same recipe get
+  different answers. The pin is what keeps it out of a shared cache. Null when
+  the ingredient names no unit, or when no seeded unit of the preferred system
+  shares its dimension.
+  """
+  convertedQuantity: ConvertedValue
   estimatedPrice: Float
   externalSources: [RecipeIngredientSourceMapping!]!
   id: ID!

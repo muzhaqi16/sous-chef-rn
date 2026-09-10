@@ -836,6 +836,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "LinkShoppingListToMealPlanResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "LinkShoppingListToMealPlanPayload",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "LoginResult": [
       "AuthPayload",
       "AuthenticationError",
