@@ -109,18 +109,17 @@ export const toRecipeInput = (
           quantity: ing.amount || 0,
           originalString: ing.original,
           sortOrder: idx,
-          // BOTH systems, flat and nested. The server resolves an ingredient's
-          // unit from `usUnit ?? metricUnit` and reads nothing else, so an
-          // import sending only the mirror below is stored with no unit — and
-          // every path needing one (a derived shopping list, the pantry
-          // deduction) then skips the ingredient.
+          // BOTH systems, each amount with the unit it belongs to. Never pair
+          // one measure's amount with another's: a metric-authored recipe sends
+          // `amount: 200, unit: "g"` beside `measures.us: { amount: 7.05,
+          // unitShort: "oz" }`, so crossing them stores 200 g as 200 oz.
           usAmount: ing.measures?.us?.amount,
-          usUnit: ing.measures?.us?.unitShort ?? ing.unit,
+          usUnit: ing.measures?.us?.unitShort,
           metricAmount: ing.measures?.metric?.amount,
           metricUnit: ing.measures?.metric?.unitShort,
           measurements: {
             usAmount: ing.measures?.us?.amount,
-            usUnit: ing.measures?.us?.unitShort ?? ing.unit,
+            usUnit: ing.measures?.us?.unitShort,
             metricAmount: ing.measures?.metric?.amount,
             metricUnit: ing.measures?.metric?.unitShort,
           },
@@ -142,10 +141,13 @@ export const toRecipeInput = (
                 nameClean: ing.nameClean,
                 original: ing.original,
                 originalName: ing.originalName,
+                // The ingredient's OWN measure — `unit` is what `amount` is
+                // stated in. `measures.us` is the fallback only because some
+                // responses omit the abbreviations, not because it is a peer.
                 amount: ing.amount,
                 unit: ing.unit,
-                unitShort: ing.measures?.us?.unitShort,
-                unitLong: ing.measures?.us?.unitLong,
+                unitShort: ing.unitShort ?? ing.measures?.us?.unitShort,
+                unitLong: ing.unitLong ?? ing.measures?.us?.unitLong,
                 consistency: ing.consistency,
                 aisle: ing.aisle,
                 // Filename only — the server builds the CDN URL and

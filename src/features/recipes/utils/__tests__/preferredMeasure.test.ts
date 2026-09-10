@@ -61,4 +61,41 @@ describe('showing an ingredient in the reader’s system', () => {
       unit: '',
     });
   });
+
+  it('never crosses one measure’s amount with another’s unit', () => {
+    // A metric-authored recipe: `amount`/`unit` say 200 g, and the US measure
+    // says 7.05 oz. Reporting 200 with "oz" is a 28-fold error.
+    const metricAuthored = {
+      us: { amount: 7.05, unitShort: 'oz' },
+      metric: { amount: 200, unitShort: 'g' },
+    };
+
+    expect(preferredMeasure(metricAuthored, UnitSystem.Metric)).toEqual({
+      amount: 200,
+      unit: 'g',
+    });
+    expect(preferredMeasure(metricAuthored, UnitSystem.Imperial)).toEqual({
+      amount: 7.05,
+      unit: 'oz',
+    });
+  });
+
+  it('falls back to the ingredient’s own pair, both halves together', () => {
+    const own = { amount: 200, unitShort: 'g' };
+
+    expect(preferredMeasure(undefined, UnitSystem.Metric, own)).toEqual({
+      amount: 200,
+      unit: 'g',
+    });
+  });
+
+  it('prefers a stated measure over the ingredient’s own', () => {
+    const own = { amount: 200, unitShort: 'g' };
+    const stated = { us: { amount: 7.05, unitShort: 'oz' }, metric: null };
+
+    expect(preferredMeasure(stated, UnitSystem.Imperial, own)).toEqual({
+      amount: 7.05,
+      unit: 'oz',
+    });
+  });
 });

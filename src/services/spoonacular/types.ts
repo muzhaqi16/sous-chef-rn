@@ -87,7 +87,11 @@ export interface RecipeIngredient {
   original: string;
   originalName: string;
   amount: number;
+  /** Pairs with `amount`, in whichever system the source recipe was written. */
   unit: string;
+  /** The same unit abbreviated and spelled out. Not on every response. */
+  unitShort?: string;
+  unitLong?: string;
   meta: string[];
   measures: {
     us: RecipeIngredientMeasure;

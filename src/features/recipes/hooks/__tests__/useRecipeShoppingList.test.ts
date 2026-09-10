@@ -23,6 +23,12 @@ jest.mock('#store/useAppStore', () => ({
 const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
 const mockToastInfo = jest.fn();
+// The hook reads only the preferred unit system from settings; the real hook
+// calls useUser, which this suite replaces with a partial store mock.
+jest.mock('#features/profile/hooks/useAppSettings', () => ({
+  useAppSettings: () => ({ settings: { preferredUnitSystem: 'METRIC' } }),
+}));
+
 jest.mock('#/services/toastService', () => ({
   toastService: {
     success: (...args: unknown[]) => mockToastSuccess(...args),

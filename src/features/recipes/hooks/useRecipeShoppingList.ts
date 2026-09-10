@@ -33,6 +33,9 @@ import {
 } from '#features/shoppingList/cache/items';
 import { logger } from '#/utils/environment';
 import { stripPriceFromName } from '#features/recipes/utils/stripPriceFromName';
+import { preferredMeasure } from '#features/recipes/utils/preferredMeasure';
+import { useAppSettings } from '#features/profile/hooks/useAppSettings';
+import { UnitSystem } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 import type {
   AddItemsToShoppingListInput,
@@ -70,6 +73,8 @@ async function addIngredientToList(
       context: { localFirst: boolean };
     }): Promise<{ data?: unknown; error?: unknown }>;
     onRejected: () => void;
+    /** The reader's system, so a line is bought in the units they think in. */
+    unitSystem: UnitSystem;
     /** Write the row into the cache before firing, so it survives being queued. */
     writeOptimisticRow(
       rowId: string,
@@ -89,6 +94,7 @@ async function addIngredientToList(
     addRecipeIngredientMutation,
     addItemsToShoppingListMutation,
     onRejected,
+    unitSystem,
     writeOptimisticRow,
     revertOptimisticRow,
   } = deps;
@@ -143,14 +149,19 @@ async function addIngredientToList(
     const itemName = stripPriceFromName(
       ingredient.name || ingredient.original || 'Unknown ingredient',
     );
-    const unitName =
-      ingredient.measures?.us?.unitShort ||
-      ingredient.measures?.metric?.unitShort ||
-      undefined;
+    // Amount and unit from ONE measure. Taking the unit from `measures.us`
+    // while the quantity stayed `ingredient.amount` is what stored a
+    // metric-authored "200 g" as "200 oz".
+    const measure = preferredMeasure(ingredient.measures, unitSystem, {
+      amount: ingredient.amount,
+      unitShort: ingredient.unit,
+    });
+    const quantity = measure.amount ?? 0;
+    const unitName = measure.unit || undefined;
 
     writeOptimisticRow(rowId, {
       itemName,
-      quantity: ingredient.amount || 0,
+      quantity,
       unitName: unitName ?? null,
     });
 
@@ -162,7 +173,7 @@ async function addIngredientToList(
             {
               id: rowId,
               item: { itemName },
-              quantity: ingredient.amount || 0,
+              quantity,
               unit: { unitName },
               storePrefs: ingredient.aisle
                 ? { aisle: ingredient.aisle }
@@ -196,6 +207,8 @@ export function useRecipeShoppingList({
   externalRecipe,
 }: UseRecipeShoppingListOptions) {
   const { t } = useTranslation();
+  const { settings } = useAppSettings();
+  const unitSystem = settings.preferredUnitSystem;
   const { data: shoppingListsData, loading: shoppingListsLoading } = useQuery(
     GetShoppingListsLiteForRecipeDocument,
     {},
@@ -361,6 +374,7 @@ export function useRecipeShoppingList({
         isBackendRecipe,
         addRecipeIngredientMutation,
         addItemsToShoppingListMutation,
+        unitSystem,
         onRejected: () =>
           toastService.error(t('recipes.addIngredientToListFailed')),
         // Written before the mutation fires so the row shows immediately and
@@ -451,30 +465,33 @@ export function useRecipeShoppingList({
           }
         } else if (externalRecipe?.extendedIngredients) {
           const items: BatchAddShoppingListItemInput[] =
-            externalRecipe.extendedIngredients.map((ingredient, index) => ({
-              // `id` is the row's primary key (so a queued batch replays
-              // idempotently); `clientId` stays the ingredient index used below
-              // to match each result back to its ingredient.
-              id: generateEntityId(),
-              clientId: String(ingredient.id || index),
-              item: {
-                itemName: stripPriceFromName(
-                  ingredient.name ||
-                    ingredient.original ||
-                    'Unknown ingredient',
-                ),
-              },
-              quantity: ingredient.amount || 0,
-              unit: {
-                unitName:
-                  ingredient.measures?.us?.unitShort ||
-                  ingredient.measures?.metric?.unitShort ||
-                  '',
-              },
-              storePrefs: ingredient.aisle
-                ? { aisle: ingredient.aisle }
-                : undefined,
-            }));
+            externalRecipe.extendedIngredients.map((ingredient, index) => {
+              // Amount and unit from ONE measure — see `addOneIngredient`.
+              const measure = preferredMeasure(
+                ingredient.measures,
+                unitSystem,
+                { amount: ingredient.amount, unitShort: ingredient.unit },
+              );
+              return {
+                // `id` is the row's primary key (so a queued batch replays
+                // idempotently); `clientId` stays the ingredient index used
+                // below to match each result back to its ingredient.
+                id: generateEntityId(),
+                clientId: String(ingredient.id || index),
+                item: {
+                  itemName: stripPriceFromName(
+                    ingredient.name ||
+                      ingredient.original ||
+                      'Unknown ingredient',
+                  ),
+                },
+                quantity: measure.amount ?? 0,
+                unit: { unitName: measure.unit },
+                storePrefs: ingredient.aisle
+                  ? { aisle: ingredient.aisle }
+                  : undefined,
+              };
+            });
 
           // Write the rows before firing. The `update` callback only runs with
           // a server payload, so offline it never fires: the recipe reported
