@@ -80,3 +80,58 @@ quantities, which is the divergence this repo otherwise works hard to avoid.
 **A sufficient answer:** convert before subtracting, so the available total is
 expressed in the ingredient's unit. The client can then match the rule exactly,
 since `Unit.type` is already selectable and both sides would agree.
+
+## Imported recipe ingredients lose their unit
+
+**Blocks:** generating a shopping list from a meal plan at all, for any recipe
+imported since 2026-06-14.
+
+Spoonacular sends units. Its `extendedIngredients` entries carry `unit`,
+`unitShort`, `unitLong` and a `measures` object with `us` and `metric` variants,
+and `SpoonacularIngredientPayload` in the API models every one of them.
+
+The client sends them too, inside the typed mirror:
+
+```ts
+spoonacular: {
+  unit: ing.unit,
+  unitShort: ing.measures?.us?.unitShort,
+  measures: { us: { unitShort: … }, metric: { unitShort: … } },
+}
+```
+
+The server resolves the unit from somewhere else. `prepareIngredientForPersist`
+reads the flat carriers only:
+
+```ts
+unitId = await this.getService(UnitService).resolveUnitId(
+  ingredient.usUnit ?? ingredient.metricUnit,
+);
+```
+
+`usUnit` and `metricUnit` are not sent. The client used to send
+`usUnit: ing.measures?.us?.unitShort` and dropped it when it moved to the typed
+mirror. So `resolveUnitId` is handed `undefined`, returns before its
+"Unrecognized unit string" log line, and every ingredient imported since is
+written with `unitId: null` — silently, with nothing in the logs.
+
+The evidence is visible in the app. A recipe imported before that change shows
+"28 oz canned tomatoes" and "0.5 lb mushrooms". One imported today shows
+"8 rotini" and "1 olive oil", from a source recipe that reads "8 ounces
+whole-wheat rotini" and "1 tablespoon extra-virgin olive oil".
+
+This is why a derived shopping list comes back empty. Both implementations skip
+an ingredient with no unit — the server's own fan-out does
+`if (!ingredient.itemId || !ingredient.unitId) continue;` — so the server has
+been generating empty lists from these recipes too.
+
+**A sufficient answer:** resolve the unit from the typed mirror the client
+actually sends, and backfill the existing null rows. The source strings were
+never lost — the verbatim payload is stored alongside, in the external source's
+`data` column.
+
+Two things worth fixing while in there. `resolveUnitId` matches a unit by name or
+symbol only, so the alias lists that already exist (`tbs`, `tblsp`, `floz`) are
+never consulted and Spoonacular spellings like `Tbsps` would still miss. And the
+same dead metadata keys are read when adding recipe ingredients to a shopping
+list, so that path loses the unit for the same reason.
