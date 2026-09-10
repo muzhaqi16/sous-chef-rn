@@ -73,7 +73,7 @@ const subscriptions: Array<{ name: string; identityOnly: boolean }> = [];
 for (const file of graphqlFiles) {
   const src = readFileSync(file, 'utf8');
   for (const match of src.matchAll(/^subscription\s+(\w+)/gm)) {
-    const name = match[1];
+    const name = match[1]!;
     const body = src.slice(match.index!);
     const end = body.indexOf('\n}');
     const doc = end === -1 ? body : body.slice(0, end);
@@ -99,7 +99,9 @@ describe('event subscriptions with an identity-only node', () => {
   it.each(['UserEvents', 'NotificationEvents'])(
     'classifies %s as a real write-through, not an envelope',
     name => {
-      expect(subscriptions.find(s => s.name === name)?.identityOnly).toBe(false);
+      expect(subscriptions.find(s => s.name === name)?.identityOnly).toBe(
+        false,
+      );
     },
   );
 
@@ -113,7 +115,7 @@ describe('event subscriptions with an identity-only node', () => {
 
       expect(callSite).not.toBe('');
 
-      const src = readFileSync(callSite.split('\n')[0], 'utf8');
+      const src = readFileSync(callSite.split('\n')[0]!, 'utf8');
       const call = src.slice(src.indexOf(`useSubscription(${name}Document`));
       const options = call.slice(0, call.indexOf('\n  });'));
       expect(options).toContain("fetchPolicy: 'no-cache'");

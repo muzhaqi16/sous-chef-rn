@@ -11,7 +11,6 @@ describe('appSlice', () => {
     expect(state.navigationState).toBe('loading');
     expect(state.showBiometricSetup).toBe(false);
     expect(state.postLoginCredentials).toBeNull();
-    expect(state.registrationPassword).toBeNull();
     expect(state.cachedUnits).toEqual([]);
     expect(state.lastUnitsFetchedAt).toBeNull();
   });
@@ -66,31 +65,17 @@ describe('appSlice', () => {
   describe('setPostLoginCredentials', () => {
     it('sets credentials', () => {
       const store = createTestStore();
-      const creds = { email: 'test@test.com', password: 'pass123' };
+      const creds = { email: 'test@test.com' };
       store.getState().setPostLoginCredentials(creds);
       expect(store.getState().postLoginCredentials).toEqual(creds);
     });
 
     it('clears credentials by setting null', () => {
       const store = createTestStore({
-        postLoginCredentials: { email: 'a@b.com', password: 'x' },
+        postLoginCredentials: { email: 'a@b.com' },
       });
       store.getState().setPostLoginCredentials(null);
       expect(store.getState().postLoginCredentials).toBeNull();
-    });
-  });
-
-  describe('registration password', () => {
-    it('sets registration password', () => {
-      const store = createTestStore();
-      store.getState().setRegistrationPassword('secure123');
-      expect(store.getState().registrationPassword).toBe('secure123');
-    });
-
-    it('clears registration password', () => {
-      const store = createTestStore({ registrationPassword: 'old' });
-      store.getState().clearRegistrationPassword();
-      expect(store.getState().registrationPassword).toBeNull();
     });
   });
 

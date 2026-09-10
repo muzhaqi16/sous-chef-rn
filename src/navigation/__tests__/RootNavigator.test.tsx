@@ -123,7 +123,7 @@ jest.mock('#components/providers/ErrorBoundary', () => ({
 }));
 
 // Mock the post-login biometric screen (rendered only in the biometric_setup group)
-jest.mock('#screens/auth/PostLoginBiometricScreen', () => ({
+jest.mock('#features/auth/screens/PostLoginBiometricScreen', () => ({
   PostLoginBiometricScreen: () => null,
 }));
 
@@ -218,13 +218,13 @@ jest.mock('#features/home/screens/registration', () => ({
 
 // Mock screen imports — only what RootNavigator.tsx itself still imports
 // directly.
-jest.mock('#screens/auth/CodeVerificationScreen', () => ({
+jest.mock('#features/auth/screens/CodeVerificationScreen', () => ({
   CodeVerificationScreen: () => null,
 }));
-jest.mock('#screens/auth/EmailVerificationDeepLinkScreen', () => ({
+jest.mock('#features/auth/screens/EmailVerificationDeepLinkScreen', () => ({
   EmailVerificationDeepLinkScreen: () => null,
 }));
-jest.mock('#screens/auth/ResetPasswordScreen', () => ({
+jest.mock('#features/auth/screens/ResetPasswordScreen', () => ({
   ResetPasswordScreen: () => null,
 }));
 jest.mock('#features/shoppingList/screens/AcceptInvite', () => ({

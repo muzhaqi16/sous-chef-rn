@@ -124,7 +124,7 @@ describe('persistedQueryLink ↔ manifest identity', () => {
         .catch(() => undefined);
 
       expect(captured.length).toBeGreaterThan(0);
-      expect(captured[0].sha256Hash).toBe(manifestEntry!.id);
+      expect(captured[0]!.sha256Hash).toBe(manifestEntry!.id);
     },
   );
 
@@ -147,8 +147,8 @@ describe('persistedQueryLink ↔ manifest identity', () => {
         })
         .catch(() => undefined);
 
-      expect(sha256(captured[0].body)).toBe(captured[0].sha256Hash);
-      expect(captured[0].body).toBe(
+      expect(sha256(captured[0]!.body)).toBe(captured[0]!.sha256Hash);
+      expect(captured[0]!.body).toBe(
         manifest.operations.find(op => op.name === operationName)!.body,
       );
     },

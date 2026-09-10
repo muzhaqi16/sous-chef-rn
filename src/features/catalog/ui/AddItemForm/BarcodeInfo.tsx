@@ -25,30 +25,20 @@ export const BarcodeInfo: React.FC<BarcodeInfoProps> = ({
 
   return (
     <View style={styles.barcodeInfo}>
-      <Text
-        size="xs"
-        weight="semibold"
-        tone="secondary"
-        style={styles.barcodeLabel}
-      >
+      <Text role="label" tone="secondary" style={styles.barcodeLabel}>
         {scannedValue && detectScanType(scannedValue) === 'sku'
           ? t('labels.sku')
           : t('barcode.upc')}
       </Text>
-      <Text size="md" weight="medium" style={styles.barcodeValue}>
+      <Text role="bodyStrong" style={styles.barcodeValue}>
         {scannedValue || barcode}
       </Text>
       {!!format && (
         <>
-          <Text
-            size="xs"
-            weight="semibold"
-            tone="secondary"
-            style={styles.formatLabel}
-          >
+          <Text role="label" tone="secondary" style={styles.formatLabel}>
             {t('barcodeInfo.format')}
           </Text>
-          <Text size="sm" weight="medium" tone="onSurfaceVariant">
+          <Text role="label" tone="onSurfaceVariant">
             {format.toUpperCase()}
           </Text>
         </>

@@ -37,7 +37,7 @@ function findAppStateChangeCall() {
   }
   return {
     notify: mock.mock.calls[index][1] as (state: AppStateStatus) => void,
-    subscription: mock.mock.results[index].value as { remove: jest.Mock },
+    subscription: mock.mock.results[index]!.value as { remove: jest.Mock },
   };
 }
 

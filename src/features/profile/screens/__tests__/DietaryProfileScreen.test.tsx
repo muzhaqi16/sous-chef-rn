@@ -47,9 +47,7 @@ jest.mock('#/styles/commonStyles', () => ({
 
 jest.mock('#/services/errorService');
 
-jest.mock('#constants/animations', () => ({
-  TIMING: { SLOW: 300 },
-}));
+jest.mock('#constants/animations', () => ({}));
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',
@@ -99,7 +97,7 @@ jest.mock('#features/profile/components/CuisineSelector', () => {
 });
 
 jest.mock(
-  '#/components/organisms/StringArrayManager/StringArrayManager',
+  '#features/profile/components/StringArrayManager/StringArrayManager',
   () => {
     const { View, Text } = require('react-native');
     return {
@@ -121,20 +119,23 @@ jest.mock(
   },
 );
 
-jest.mock('#/components/modals/NumberInputSheet/NumberInputSheet', () => {
-  const { View } = require('react-native');
-  return {
-    NumberInputSheet: ({
-      visible,
-      title,
-    }: {
-      visible?: boolean;
-      title?: string;
-    }) => (visible ? <View testID={`sheet-${title}`} /> : null),
-  };
-});
+jest.mock(
+  '#features/profile/components/NumberInputSheet/NumberInputSheet',
+  () => {
+    const { View } = require('react-native');
+    return {
+      NumberInputSheet: ({
+        visible,
+        title,
+      }: {
+        visible?: boolean;
+        title?: string;
+      }) => (visible ? <View testID={`sheet-${title}`} /> : null),
+    };
+  },
+);
 
-jest.mock('#/components/molecules/InfoRow', () => {
+jest.mock('#components/atoms/InfoRow', () => {
   const { View, Text } = require('react-native');
   return {
     InfoRow: ({
@@ -153,15 +154,18 @@ jest.mock('#/components/molecules/InfoRow', () => {
 });
 
 jest.mock(
-  '#/components/modals/CookingPreferencesSheet/CookingPreferencesSheet',
+  '#features/profile/components/CookingPreferencesSheet/CookingPreferencesSheet',
   () => ({
     CookingPreferencesSheet: () => null,
   }),
 );
 
-jest.mock('#/components/modals/MacroTargetsSheet/MacroTargetsSheet', () => ({
-  MacroTargetsSheet: () => null,
-}));
+jest.mock(
+  '#features/profile/components/MacroTargetsSheet/MacroTargetsSheet',
+  () => ({
+    MacroTargetsSheet: () => null,
+  }),
+);
 
 describe('DietaryProfileScreen', () => {
   beforeEach(() => {

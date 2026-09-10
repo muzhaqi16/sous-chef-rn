@@ -235,7 +235,8 @@ export class HttpTransport implements TelemetryTransport {
             };
             this.histogramAccumulator.set(key, agg);
           }
-          agg.buckets[this.bucketIndex(metric.value, agg.bounds)] += 1;
+          const bucket = this.bucketIndex(metric.value, agg.bounds);
+          agg.buckets[bucket] = (agg.buckets[bucket] ?? 0) + 1;
           agg.sum += metric.value;
           agg.count += 1;
         }
@@ -485,7 +486,8 @@ export class HttpTransport implements TelemetryTransport {
   // index N = above all bounds.
   private bucketIndex(value: number, bounds: number[]): number {
     for (let i = 0; i < bounds.length; i++) {
-      if (value <= bounds[i]) {
+      const bound = bounds[i];
+      if (bound !== undefined && value <= bound) {
         return i;
       }
     }

@@ -169,7 +169,9 @@ describe('purchaseInfo selections', () => {
 
     expect(fragment).toBeDefined();
 
-    const fields = (fragment as { selectionSet: SelectionSetNode }).selectionSet.selections
+    const fields = (
+      fragment as { selectionSet: SelectionSetNode }
+    ).selectionSet.selections
       .filter(s => s.kind === Kind.FIELD)
       .map(s => (s as { name: { value: string } }).name.value);
 
@@ -188,16 +190,22 @@ describe('purchaseInfo selections', () => {
     it('refuses a partial selection', () => {
       expect(isAllowedShape([], ['isPurchased', 'purchasedPrice'])).toBe(false);
       expect(
-        isAllowedShape([], ['isPurchased', 'purchasedQuantity', 'purchaseDate']),
+        isAllowedShape(
+          [],
+          ['isPurchased', 'purchasedQuantity', 'purchaseDate'],
+        ),
       ).toBe(false);
       // Complete but for the purchaser — the shape that erases attribution.
       expect(
-        isAllowedShape([], [
-          'isPurchased',
-          'purchasedQuantity',
-          'purchasedPrice',
-          'purchaseDate',
-        ]),
+        isAllowedShape(
+          [],
+          [
+            'isPurchased',
+            'purchasedQuantity',
+            'purchasedPrice',
+            'purchaseDate',
+          ],
+        ),
       ).toBe(false);
     });
 
@@ -227,7 +235,7 @@ describe('purchaseInfo selections', () => {
         }
       }
       expect(found).toHaveLength(1);
-      expect(found[0].fields).toEqual(['isPurchased', 'purchasedPrice']);
+      expect(found[0]!.fields).toEqual(['isPurchased', 'purchasedPrice']);
     });
   });
 });

@@ -79,8 +79,8 @@ jest.mock('#/utils/finallyHelpers', () => ({
   ),
 }));
 
-jest.mock('#hooks/haptic/useHaptic', () => ({
-  useHaptic: () => ({
+jest.mock('#services/haptic/HapticService', () => ({
+  HapticService: {
     selection: jest.fn(),
     warning: jest.fn(),
     success: jest.fn(),
@@ -88,7 +88,7 @@ jest.mock('#hooks/haptic/useHaptic', () => ({
     light: jest.fn(),
     medium: jest.fn(),
     heavy: jest.fn(),
-  }),
+  },
 }));
 
 jest.mock('../mutations/useClearShoppingListItems', () => ({

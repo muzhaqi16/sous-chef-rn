@@ -2,12 +2,12 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { EditableField } from '../../../src/components/molecules/EditableField';
+import { EditableField } from '#features/home/components/EditableField';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
 
-jest.mock('../../../src/components/molecules/FormInput', () => ({
+jest.mock('../../../src/components/atoms/FormInput', () => ({
   FormInput: (props: {
     value?: string;
     onChangeText?: (text: string) => void;
@@ -45,7 +45,7 @@ describe('EditableField', () => {
       <EditableField
         {...defaultProps}
         placeholder="Enter name"
-        validation={(v) => (v.length < 2 ? 'Too short' : null)}
+        validation={v => (v.length < 2 ? 'Too short' : null)}
       />,
     );
     expect(toJSON()).toBeTruthy();

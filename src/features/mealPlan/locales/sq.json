@@ -16,7 +16,9 @@
     "nameRequiredMessage": "Shkruaj një emër për planin e vakteve.",
     "startDateRequiredTitle": "Kërkohet data e fillimit",
     "startDateRequiredMessage": "Zgjidh një datë fillimi.",
-    "failedToCreate": "Nuk u krijua dot plani i vakteve."
+    "failedToCreate": "Nuk u krijua dot plani i vakteve.",
+    "needsThePlan": "Hap fillimisht planin, që vaktet e tij të jenë të disponueshme.",
+    "needsTheTemplate": "Hap fillimisht modelin, që vaktet e tij të jenë të disponueshme."
   },
   "addMealSheet": {
     "searchPlaceholder": "Kërko receta ose shto një vakt të personalizuar...",
@@ -77,12 +79,14 @@
   "duplicatePlan": {
     "duplicating": "Po dublohet...",
     "duplicate": "Dublo",
-    "copySuffix": "{{name}} (Kopje)",
     "currentPlanLabel": "Plani aktual",
     "newNameLabel": "Emri i ri i planit",
     "newNamePlaceholder": "Fut emrin e planit",
     "infoText": "Të gjitha vaktet do të kopjohen në intervalin e ri të datave me të njëjtën strukturë.",
-    "endDateSubtext": "deri më {{date}}"
+    "endDateSubtext": "deri më {{date}}",
+    "durationDiffers": "Zgjidh një interval me të njëjtën kohëzgjatje si origjinali.",
+    "someSkipped_one": "{{count}} vakt u la jashtë sepse nuk emërton as recetë as veten.",
+    "someSkipped_other": "{{count}} vakte u lanë jashtë sepse nuk emërtojnë as recetë as veten."
   },
   "generateShoppingList": {
     "generating": "Po gjenerohet...",
@@ -98,12 +102,17 @@
     "selectListLabel": "Zgjidh një listë",
     "noLists": "Nuk u gjet asnjë listë blerjesh",
     "generatingMessage": "Po gjenerohet lista e blerjeve...",
-    "itemsCount": "{{count}} artikuj",
     "readyNothingToAdd": "\"{{name}}\" është gati — asgjë për të shtuar.",
     "createdSuccess_one": "Lista e blerjeve \"{{name}}\" u krijua me {{count}} artikull{{shared}}",
     "createdSuccess_other": "Lista e blerjeve \"{{name}}\" u krijua me {{count}} artikuj{{shared}}",
     "sharedSuffix": " (e ndarë me {{homeName}})",
-    "generateFailed": "Krijimi i listës së blerjeve dështoi"
+    "generateFailed": "Krijimi i listës së blerjeve dështoi",
+    "planNotLoaded": "Hap fillimisht planin e vakteve, që recetat e tij të jenë të disponueshme.",
+    "nothingToAdd": "Asgjë për të shtuar — ky plan ende nuk ka përbërës recetash.",
+    "defaultName": "Listë blerjesh për {{name}}",
+    "someSkipped_one": "{{count}} zë u la jashtë sepse receta e tij nuk është shkarkuar.",
+    "someSkipped_other": "{{count}} zëra u lanë jashtë sepse recetat e tyre nuk janë shkarkuar.",
+    "pantryNotChecked": "Qilari yt nuk u zbrit — hap qilarin një herë që të jetë i disponueshëm."
   },
   "saveAsTemplate": {
     "sharedWithHome": "Ky model do të ndahet me {{name}}",
@@ -128,7 +137,6 @@
   },
   "templateCard": {
     "usedTimes": "Përdorur {{count}} herë",
-    "durationDays": "{{count}} ditë",
     "servings": "{{count}} racione"
   },
   "templatePreview": {

@@ -26,10 +26,7 @@ export interface PerformanceState {
 
   // Record metrics
   recordComponentRender: (componentName: string, renderTime: number) => void;
-  recordScreenTransition: (
-    screenName: string,
-    interactiveTime: number,
-  ) => void;
+  recordScreenTransition: (screenName: string, interactiveTime: number) => void;
   addMemorySnapshot: (snapshot: MemorySnapshot) => void;
 
   // Selectors

@@ -8,14 +8,10 @@
  * A feature is meant to be liftable — into a sibling app, into a package, or
  * out of this one entirely. That only works if every feature keeps its parts in
  * the same places, so a consumer can find them without reading the feature.
- * Today they do not: `profile` has eleven screens and no `components/` at all
- * (its UI lives in `src/components/organisms/ProfileInfo/`), `home` and
- * `barcode` scatter `.graphql` beside components instead of in `graphql/`, two
- * features have no `screens/registration.ts`, and contexts live in three
- * different folders depending on the feature.
- *
- * None of that is wrong on its own. All of it together is why "delete the
- * folder and remove its registry entry" does not currently work.
+ * It got there from three deviations: `profile` had eleven screens and no
+ * `components/` at all, and `barcode`/`notifications` let their stacks declare
+ * the screen lists they should have owned. None was wrong on its own; together
+ * they were why "delete the folder and remove its registry entry" did not work.
  *
  * ## Rules
  *
@@ -48,7 +44,7 @@
  *   node scripts/check-feature-shape.mjs --update  # re-baseline
  */
 import { existsSync, readFileSync } from 'node:fs';
-import { join, sep } from 'node:path';
+import { basename, join, relative, sep } from 'node:path';
 
 import {
   baselineFile,
@@ -65,6 +61,25 @@ const BASELINE = baselineFile(
 );
 
 const FEATURES_DIR = fromRoot('src/features');
+
+/**
+ * Anything the navigator names as a screen — a feature's `registration.ts`, a
+ * stack, or `RootNavigator` itself, which registers the deep-link screens
+ * directly rather than through a stack.
+ */
+const REGISTERED_SCREENS = new Set(
+  filesUnder([
+    'src/features/*/screens/registration.ts',
+    'src/navigation/stacks/*.tsx',
+    'src/navigation/RootNavigator.tsx',
+  ]).flatMap(file =>
+    [...readFileSync(file, 'utf8').matchAll(/\b([A-Z][A-Za-z0-9]*)\b/g)].map(
+      m => m[1],
+    ),
+  ),
+);
+
+const SKIP = [/(^|\/)__tests__(\/|$)/, /\.test\.tsx?$/, /\.generated\.ts$/];
 
 const featureDirs = filesUnder('src/features/*/manifest.ts')
   .map(f => f.split(sep).at(-2))
@@ -117,6 +132,48 @@ for (const feature of featureDirs) {
       `${screens.length} screens, no screens/registration.ts`,
     );
   }
+
+  // A file under `screens/` that nothing registers is a COMPONENT in the wrong
+  // place: it reads as an entry point, and a reader looking for the screen list
+  // has to open each one to find out. Registration is the test rather than the
+  // `*Screen` suffix — `PantryMain` and `ShareList` are screens too.
+  for (const file of filesUnder(`src/features/${feature}/screens/**/*.tsx`, {
+    exclude: SKIP,
+  })) {
+    const name = basename(file, '.tsx');
+    if (name === 'index') continue;
+    if (!REGISTERED_SCREENS.has(name)) {
+      note(
+        feature,
+        'screens',
+        `${relative(FEATURES_DIR, file)} is not registered — a component ` +
+          `belongs in components/, a context in context/`,
+      );
+    }
+  }
+
+  // A `pushRoute` on the STATIC manifest names a tab by string, because that
+  // manifest may not import a screen. Nothing type-checks it against the
+  // navigator, and a tab renamed on one side sends every tap to the feed.
+  const staticPath = join(root, 'manifest.static.ts');
+  const pushRoute = existsSync(staticPath)
+    ? readFileSync(staticPath, 'utf8').match(
+        /pushRoute:\s*\{[^}]*tab:\s*'([^']+)'[^}]*screen:\s*'([^']+)'/s,
+      )
+    : null;
+  if (pushRoute) {
+    const [, tab, screen] = pushRoute;
+    if (!new RegExp(`screenName:\\s*'${tab}'`).test(manifest)) {
+      note(feature, 'pushRoute', `tab '${tab}' is not this feature's tab`);
+    }
+    if (!new RegExp(`mainScreen:\\s*'${screen}'`).test(manifest)) {
+      note(
+        feature,
+        'pushRoute',
+        `screen '${screen}' is not this feature's mainScreen`,
+      );
+    }
+  }
 }
 
 const current = deviations.sort();
@@ -159,7 +216,7 @@ if (added.length) {
 
 console.log(
   `check-feature-shape: ${current.length} deviation(s) across ${featureDirs.length} ` +
-    `features, baseline ${baseline.deviations.length}` +
+    `features, baseline ${(baseline.deviations ?? []).length}` +
     (removed.length ? ` (${removed.length} cleared — run --update)` : '') +
     '.',
 );

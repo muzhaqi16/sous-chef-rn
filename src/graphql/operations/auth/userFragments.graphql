@@ -1,10 +1,14 @@
 # Bootstrap fragment for login/register responses.
-# Spread by: auth.graphql (Login, Register, RefreshToken — 3 operations)
+# Spread by: auth.graphql (Login, VerifyEmail, ExchangeDeviceCredential)
 # Read via cache.readFragment by: authService.ts
 # Kept shared — all consumers need the identical bootstrap shape.
 fragment LoginUser on User {
   id
   email
+  # The name a HOUSEMATE or a collaborator reads this account by. Selected here
+  # because this fragment writes `User:me`, and the member and collaborator
+  # cells read it back off that same record.
+  displayName
   emailVerified
   role
   canAccessDevTools
@@ -12,6 +16,11 @@ fragment LoginUser on User {
   createdAt
   updatedAt
   timezone
+  # The currency the SERVER records a new cost in when nothing else names one
+  # (`resolveIntakeCurrency`: purchase → list → this → the system default). Read
+  # here because it is also what an undenominated figure is displayed in, and a
+  # display that disagreed with intake would misreport what the money is.
+  preferredCurrency
   defaultHomeId
   defaultShoppingListId
   defaultHome {

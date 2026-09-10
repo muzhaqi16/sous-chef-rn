@@ -1,4 +1,5 @@
 import chroma from 'chroma-js';
+import { appConfig } from '#/config/appConfig';
 import { onColor } from '../derivePalette';
 import { lightTheme, darkTheme } from '../themes';
 
@@ -6,9 +7,13 @@ const WHITE = '#FFFFFF';
 const NEAR_BLACK = '#211E18';
 const AA_BODY = 4.5;
 
-/** The colours the Appearance screen lets a user pick as the brand. */
+/**
+ * The colours the Appearance screen lets a user pick as the brand. The first is
+ * its "Default" swatch, which reads `appConfig` — named the same way here so
+ * the two cannot drift.
+ */
 const BRAND_SWATCHES = [
-  '#f97416',
+  appConfig.branding.primaryColor,
   '#2563EB',
   '#16A34A',
   '#7C3AED',
@@ -19,8 +24,18 @@ const BRAND_SWATCHES = [
 
 describe('onColor', () => {
   it('picks the candidate with more contrast', () => {
-    expect(onColor('#f97416', WHITE, NEAR_BLACK)).toBe(NEAR_BLACK);
+    expect(onColor('#16A34A', WHITE, NEAR_BLACK)).toBe(NEAR_BLACK);
     expect(onColor('#2563EB', WHITE, NEAR_BLACK)).toBe(WHITE);
+  });
+
+  it('does not decide the default brand, which the theme fixes', () => {
+    // The brand orange's more readable foreground is the near-black, and the
+    // theme pairs it with white anyway — `onBrand` in themes.ts. So the default
+    // swatch is the one colour whose on-token this function does not settle.
+    const brand = appConfig.branding.primaryColor;
+
+    expect(onColor(brand, WHITE, NEAR_BLACK)).toBe(NEAR_BLACK);
+    expect(lightTheme.colors.onPrimary).toBe(WHITE);
   });
 
   it('always picks the more readable of the two candidates', () => {
@@ -69,10 +84,23 @@ describe('on-fill tokens', () => {
     );
   });
 
-  it('give the primary button a readable label', () => {
+  it('give the primary button white, deliberately below AA', () => {
+    // Recorded, not enforced: white on the brand orange is ~2.6:1. Pinned so
+    // the trade stays visible and a later brand change has to restate it.
     const { primary, onPrimary } = lightTheme.colors;
 
-    expect(chroma.contrast(primary, onPrimary)).toBeGreaterThanOrEqual(AA_BODY);
+    expect(onPrimary).toBe(WHITE);
+    expect(chroma.contrast(primary, onPrimary)).toBeLessThan(AA_BODY);
+  });
+
+  it('keep a user-picked brand at AA, where the foreground is still derived', () => {
+    // Only the default is fixed. Teal tops out at 4.44:1 against either
+    // candidate, so it is the one swatch no foreground can rescue.
+    const failing = BRAND_SWATCHES.slice(1).filter(
+      fill => chroma.contrast(fill, onColor(fill, WHITE, NEAR_BLACK)) < AA_BODY,
+    );
+
+    expect(failing).toEqual(['#0D9488']);
   });
 
   it('keep a selected chip readable in both themes', () => {

@@ -16,7 +16,9 @@
     "nameRequiredMessage": "Introduce un nombre para tu plan de comidas.",
     "startDateRequiredTitle": "Fecha de inicio requerida",
     "startDateRequiredMessage": "Selecciona una fecha de inicio.",
-    "failedToCreate": "No se pudo crear el plan de comidas."
+    "failedToCreate": "No se pudo crear el plan de comidas.",
+    "needsThePlan": "Abre primero el plan para tener sus comidas.",
+    "needsTheTemplate": "Abre primero la plantilla para tener sus comidas."
   },
   "addMealSheet": {
     "searchPlaceholder": "Busca recetas o añade una comida personalizada...",
@@ -77,12 +79,14 @@
   "duplicatePlan": {
     "duplicating": "Duplicando...",
     "duplicate": "Duplicar",
-    "copySuffix": "{{name}} (Copia)",
     "currentPlanLabel": "Plan actual",
     "newNameLabel": "Nombre del nuevo plan",
     "newNamePlaceholder": "Introduce el nombre del plan",
     "infoText": "Todas las comidas se copiarán al nuevo rango de fechas con la misma estructura.",
-    "endDateSubtext": "hasta {{date}}"
+    "endDateSubtext": "hasta {{date}}",
+    "durationDiffers": "Elige un rango con la misma duración que el original.",
+    "someSkipped_one": "Se omitió {{count}} comida porque no indica ni receta ni nombre.",
+    "someSkipped_other": "Se omitieron {{count}} comidas porque no indican ni receta ni nombre."
   },
   "generateShoppingList": {
     "generating": "Generando...",
@@ -98,12 +102,17 @@
     "selectListLabel": "Selecciona una lista",
     "noLists": "No se encontraron listas de la compra",
     "generatingMessage": "Generando lista de la compra...",
-    "itemsCount": "{{count}} artículos",
     "readyNothingToAdd": "\"{{name}}\" está lista — nada que añadir.",
     "createdSuccess_one": "Lista de la compra \"{{name}}\" creada con {{count}} artículo{{shared}}",
     "createdSuccess_other": "Lista de la compra \"{{name}}\" creada con {{count}} artículos{{shared}}",
     "sharedSuffix": " (compartida con {{homeName}})",
-    "generateFailed": "No se pudo generar la lista de la compra"
+    "generateFailed": "No se pudo generar la lista de la compra",
+    "planNotLoaded": "Abre primero el plan de comidas para tener sus recetas.",
+    "nothingToAdd": "Nada que añadir: este plan aún no tiene ingredientes de recetas.",
+    "defaultName": "Lista de la compra para {{name}}",
+    "someSkipped_one": "Se omitió {{count}} entrada porque su receta no está descargada.",
+    "someSkipped_other": "Se omitieron {{count}} entradas porque sus recetas no están descargadas.",
+    "pantryNotChecked": "No se descontó tu despensa: abre la despensa una vez para tenerla disponible."
   },
   "saveAsTemplate": {
     "sharedWithHome": "Esta plantilla se compartirá con {{name}}",
@@ -128,7 +137,6 @@
   },
   "templateCard": {
     "usedTimes": "Usada {{count}}x",
-    "durationDays": "{{count}} días",
     "servings": "{{count}} raciones"
   },
   "templatePreview": {

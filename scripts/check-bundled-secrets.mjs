@@ -24,11 +24,17 @@
  * committed here — that would be the same mistake in a new place).
  */
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
-import { join, extname } from 'node:path';
+import { join, extname, dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-// The same parser the generator uses, so the scanner looks for exactly the
-// values the bundler inlined rather than a second interpretation of the file.
-const { parseEnvFile } = createRequire(import.meta.url)('./generate-env.js');
+// The same parser AND the same env-file resolution the generator uses, so the
+// scanner looks for exactly the values the bundler inlined rather than a second
+// interpretation of which file that was.
+const { parseEnvFile, resolveEnvFileName } = createRequire(import.meta.url)(
+  './generate-env.js',
+);
+
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
  * Env vars whose VALUE must never reach a bundle. Not hand-maintained:
@@ -178,12 +184,22 @@ function isSearchable(value) {
 }
 
 /**
+ * Exit code for a run with nothing to search for. In CI that is a failure: the
+ * job is the only place this check runs against a real bundle, so a run handed
+ * no values proves nothing while looking identical to a clean pass. Locally it
+ * stays a warning, where a missing `.env` is ordinary.
+ */
+function vacuityExitCode(secretCount, isCI) {
+  if (secretCount > 0) return 0;
+  return isCI ? 2 : 0;
+}
+
+/**
  * The secret values to look for, from the same sources `generate-env.js` reads:
  * `process.env` wins over the active env file.
  */
 function collectSecrets() {
-  const envFile = process.env.ENVFILE ? `.env.${process.env.ENVFILE}` : '.env';
-  const fromFile = parseEnvFile(envFile);
+  const fromFile = parseEnvFile(join(REPO_ROOT, resolveEnvFileName()));
   const secrets = [];
   for (const key of SECRET_ENV_KEYS) {
     const value = process.env[key] ?? fromFile[key];
@@ -256,6 +272,24 @@ if (process.argv.includes('--self-test')) {
     process.exit(2);
   }
 
+  // An empty candidate set must fail the CI run rather than pass it. This is
+  // the case that made the gate decorative when a workflow stopped writing the
+  // env file: nothing to search for, and a green check either way.
+  const vacuity = [
+    ['no values in CI', vacuityExitCode(0, true), 2],
+    ['no values locally', vacuityExitCode(0, false), 0],
+    ['values present in CI', vacuityExitCode(3, true), 0],
+  ];
+  const wrong = vacuity.filter(([, actual, expected]) => actual !== expected);
+  if (wrong.length > 0) {
+    console.error(
+      `✗ Self-test failed: the empty-candidate-set guard is wrong for ` +
+        `${wrong.map(([name]) => name).join(', ')}.\n` +
+        `  A CI run with nothing to search for must fail, not pass.`,
+    );
+    process.exit(2);
+  }
+
   console.log(
     '✓ Self-test passed: a planted secret is found, noise is filtered,\n' +
       `  and the candidate set (${candidates.length} keys) still catches an ` +
@@ -276,16 +310,19 @@ if (targets.length === 0) {
 const secrets = collectSecrets();
 const files = bundleFiles(targets);
 
-// Distinguish "nothing to look for" from "looked and found nothing" — the same
-// vacuity trap the other checks in this repo exist to close.
 if (secrets.length === 0) {
-  console.log(
-    `⚠ No credential VALUES available to search for ` +
-      `(checked ${SECRET_ENV_KEYS.join(', ')}).\n` +
-      `  This run proves nothing. Give the job the same env the bundle was ` +
-      `built with, or the check is decorative.`,
-  );
-  process.exit(0);
+  const code = vacuityExitCode(secrets.length, Boolean(process.env.CI));
+  const message =
+    `No credential VALUES available to search for ` +
+    `(checked ${SECRET_ENV_KEYS.join(', ')}).\n` +
+    `  This run proves nothing. Give the job the same env the bundle was ` +
+    `built with, or the check is decorative.`;
+  if (code === 0) {
+    console.log(`⚠ ${message}`);
+  } else {
+    console.error(`✗ ${message}`);
+  }
+  process.exit(code);
 }
 
 // Scanning zero files is not a pass. A renamed build output would otherwise

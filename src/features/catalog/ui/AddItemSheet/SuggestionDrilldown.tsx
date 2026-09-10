@@ -51,7 +51,7 @@ export function SuggestionDrilldown<T extends BaseSuggestionItem>({
         >
           <Icon name="chevron-back" size={24} tone="textPrimary" />
         </AppPressable>
-        <Text size="xl" weight="bold" style={styles.title}>
+        <Text role="subheading" style={styles.title}>
           {title}
         </Text>
       </View>
@@ -67,8 +67,8 @@ export function SuggestionDrilldown<T extends BaseSuggestionItem>({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text size="base" tone="secondary" align="center">
+          <View style={styles.emptyInset}>
+            <Text tone="secondary" align="center">
               {emptyLabel}
             </Text>
           </View>
@@ -78,7 +78,7 @@ export function SuggestionDrilldown<T extends BaseSuggestionItem>({
   );
 }
 
-const Separator = () => <View style={styles.separator} />;
+const Separator = () => <View style={styles.rowGap} />;
 
 const styles = StyleSheet.create(theme => ({
   container: {
@@ -101,10 +101,11 @@ const styles = StyleSheet.create(theme => ({
   listContent: {
     paddingHorizontal: theme.spacing.md,
   },
-  separator: {
+  // A gap between rows, not a rule — it draws nothing.
+  rowGap: {
     height: theme.spacing.xs,
   },
-  emptyContainer: {
+  emptyInset: {
     padding: theme.spacing.xl,
     alignItems: 'center',
   },

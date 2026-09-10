@@ -1,13 +1,4 @@
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { logger } from '#/utils/environment';
-
-/**
- * Invalid Unit Error Details
- */
-export interface InvalidUnitDetails {
-  rejectedUnit: string;
-  validUnits: string[];
-}
 
 /**
  * Shape of a single GraphQL error carrying a UNIT_INVALID extension.
@@ -16,7 +7,6 @@ interface GraphQLErrorLike {
   message?: string;
   extensions?: {
     code?: string;
-    validUnits?: unknown;
   };
 }
 
@@ -39,10 +29,10 @@ function getSingleError(error: unknown): GraphQLErrorLike | undefined {
 }
 
 /**
- * Check if an error is a UNIT_INVALID error from the API (Apollo error level)
- *
- * @param error - Error object that may contain GraphQL errors
- * @returns True if the error is an invalid unit error
+ * Whether an Apollo-level error is the API's UNIT_INVALID refusal. Nothing is
+ * extractable from it: no machine-readable list of units that WOULD work, and
+ * an unlocalizable English `message`. Callers report `errors.codes.unitInvalid`
+ * and re-query the ranked-unit list, as `schema.graphql` directs.
  */
 export function isInvalidUnitError(error: unknown): boolean {
   const graphQLErrors = getGraphQLErrors(error);
@@ -61,84 +51,9 @@ export function isInvalidUnitError(error: unknown): boolean {
 }
 
 /**
- * Check if an errors-as-data member's `code` marks a UNIT_INVALID error. The
- * union member carries only `code` + `message` (+ `validUnits`) — pass the
- * member's code directly (there is no `success` field on current payloads).
+ * Whether an errors-as-data member's `code` marks a UNIT_INVALID refusal — pass
+ * the member's code directly (there is no `success` field on current payloads).
  */
 export function isInvalidUnitPayload(code: string): boolean {
   return code === TopLevelErrorCode.UnitInvalid;
-}
-
-/**
- * Extract valid units from a UNIT_INVALID error
- *
- * @param error - Error containing UNIT_INVALID
- * @returns Array of valid unit symbols, or null if not a UNIT_INVALID error
- */
-export function getValidUnits(error: unknown): string[] | null {
-  let unitError: GraphQLErrorLike | undefined;
-
-  const graphQLErrors = getGraphQLErrors(error);
-  if (graphQLErrors) {
-    unitError = graphQLErrors.find(
-      err => err.extensions?.code === TopLevelErrorCode.UnitInvalid,
-    );
-  } else {
-    unitError = getSingleError(error);
-  }
-
-  const validUnits = unitError?.extensions?.validUnits;
-  if (Array.isArray(validUnits)) {
-    return validUnits;
-  }
-
-  return null;
-}
-
-/**
- * Get a user-friendly message for a UNIT_INVALID error
- *
- * @param error - Error containing UNIT_INVALID
- * @returns User-friendly error message
- */
-export function getInvalidUnitMessage(error: unknown): string {
-  let unitError: GraphQLErrorLike | undefined;
-
-  const graphQLErrors = getGraphQLErrors(error);
-  if (graphQLErrors) {
-    unitError = graphQLErrors.find(
-      err => err.extensions?.code === TopLevelErrorCode.UnitInvalid,
-    );
-  } else {
-    unitError = getSingleError(error);
-  }
-
-  if (unitError?.message) {
-    return unitError.message;
-  }
-
-  return 'This unit is not available for this operation. Please select a different unit.';
-}
-
-/**
- * Handle invalid unit errors — check and return whether it was handled
- *
- * @param error - Apollo error to check
- * @returns True if error was an invalid unit error
- */
-export function handleInvalidUnit(error: unknown): boolean {
-  if (!isInvalidUnitError(error)) {
-    return false;
-  }
-
-  const message = getInvalidUnitMessage(error);
-  const validUnits = getValidUnits(error);
-
-  logger.warn('⚠️ Invalid unit detected:', {
-    message,
-    validUnits,
-    error,
-  });
-
-  return true;
 }

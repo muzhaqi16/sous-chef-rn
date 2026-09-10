@@ -251,7 +251,13 @@ ${entries}
 // candidate set from it. Exporting the array — rather than having the checker
 // parse this file — keeps one source of truth without making the gate's
 // coverage depend on the punctuation of the comments above.
-module.exports = { generateEnv, KEYS, parseEnvFile, readGeneratedValue };
+module.exports = {
+  generateEnv,
+  KEYS,
+  parseEnvFile,
+  readGeneratedValue,
+  resolveEnvFileName,
+};
 
 // Run when invoked directly (npm scripts, CI), not when required by metro.config.
 if (require.main === module) {

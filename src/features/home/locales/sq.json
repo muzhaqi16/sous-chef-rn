@@ -7,6 +7,8 @@
     "subtitleHasList": "Fto të tjerë te lista jote e blerjeve (opsionale)",
     "nothingToShare": "Asgjë për të ndarë ende",
     "nothingToShareDesc": "Duhet të krijosh më parë një shtëpi ose listë blerjesh. Mund të ftosh më vonë nga cilësimet.",
+    "offlineTitle": "Ftesat kërkojnë lidhje",
+    "offlineDescription": "Ftesa i dërgon dikujt një lidhje që vetëm serveri mund ta krijojë. Vazhdo tani për tani dhe fto njerëz nga cilësimet e shtëpisë kur të rikthehesh në linjë.",
     "noInvitesYet": "Ende pa ftesa",
     "noInvitesYetDesc": "Shto adresa email-i sipër për të ftuar anëtarë",
     "invitingPersonSingular": "Ftuar {{count}} person:",
@@ -53,7 +55,10 @@
     "roleLabel": "Roli: {{role}}",
     "descriptionLabel": "Përshkrim:",
     "acceptFailed": "Pranimi i ftesës dështoi. Provo sërish.",
-    "declineFailed": "Refuzimi i ftesës dështoi. Provo sërish."
+    "declineFailed": "Refuzimi i ftesës dështoi. Provo sërish.",
+    "unavailableHere": "Hape këtë ftesë nga njoftimi i saj, ose nga email-i që të dërguam, për ta pranuar.",
+    "wrongAccountTitle": "Je i kyçur me një llogari tjetër",
+    "wrongAccount": "Kjo ftesë iu dërgua dikujt tjetër. Kyçu me llogarinë e ftuar për ta pranuar."
   },
   "homeManagement": {
     "title": "Shtëpitë e Mia",

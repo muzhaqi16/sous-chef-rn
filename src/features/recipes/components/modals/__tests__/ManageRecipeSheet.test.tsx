@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ViewProps } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
-import type { TagInputProps } from '#components/molecules/TagInput';
+import type { TagInputProps } from '#features/recipes/components/TagInput';
 import { ManageRecipeSheet } from '#features/recipes/components/modals/ManageRecipeSheet/ManageRecipeSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -36,7 +36,7 @@ jest.mock('#components/atoms/BottomSheetKeyboardAwareScrollView', () => {
   };
 });
 
-jest.mock('#components/molecules/TagInput', () => {
+jest.mock('#features/recipes/components/TagInput', () => {
   const RN = require('react-native');
   const R = require('react');
   return {

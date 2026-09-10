@@ -3,7 +3,7 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { Button } from '#components/atoms/Button';
+import { Button } from '#components/molecules/Button';
 import { Text } from '#components/atoms/Text';
 
 interface ItemNotFoundProps {
@@ -19,18 +19,23 @@ export const ItemNotFound: React.FC<ItemNotFoundProps> = ({
   return (
     <View style={styles.container}>
       <Icon name="qr-code-outline" size={48} tone="textSecondary" />
-      <Text size="xl" weight="semibold" align="center">
+      <Text role="subheading" align="center">
         {t('barcode.itemNotFound')}
       </Text>
       <Text
-        size="sm"
+        role="caption"
         tone="secondary"
         align="center"
         style={styles.notFoundMessage}
       >
         {t('barcode.noItemWithCode', { barcode })}
       </Text>
-      <Text size="sm" tone="accent" align="center" style={styles.addItemHint}>
+      <Text
+        role="caption"
+        tone="accent"
+        align="center"
+        style={styles.addItemHint}
+      >
         {t('barcode.addItemHint')}
       </Text>
       {!!onAddItem && (

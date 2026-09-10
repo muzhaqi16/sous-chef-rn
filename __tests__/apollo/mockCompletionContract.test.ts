@@ -63,9 +63,9 @@ function complete(query: DocumentNode, data: unknown): Record<string, unknown> {
     request: { query, variables: () => true },
     result: { data: data as Record<string, unknown> },
   } as MockedResponse);
-  const result = completed.result as (
-    vars: Record<string, unknown>,
-  ) => { data: Record<string, unknown> };
+  const result = completed.result as (vars: Record<string, unknown>) => {
+    data: Record<string, unknown>;
+  };
   return result({}).data;
 }
 
@@ -85,7 +85,7 @@ describe('a completed fixture is reproducible', () => {
     const second = complete(query, { units: [{ id: 'u-1' }] });
     expect(second).toEqual(first);
     // And it is a real member of `UnitType`, not an invention.
-    const filled = (first.units as Array<{ type: string }>)[0].type;
+    const filled = (first.units as Array<{ type: string }>)[0]!.type;
     expect(UNIT_TYPES).toContain(filled);
   });
 
@@ -139,9 +139,9 @@ describe('completion does not alter what the fixture states', () => {
       units: [{ id: 'u-1', name: undefined }],
     });
     const units = data.units as Array<Record<string, unknown>>;
-    expect('name' in units[0]).toBe(false);
+    expect('name' in units[0]!).toBe(false);
     // ...and a field it simply did not mention is still completed.
-    expect(units[0].id).toBe('u-1');
+    expect(units[0]!.id).toBe('u-1');
   });
 
   it('keeps an id the fixture stated', () => {
@@ -149,8 +149,8 @@ describe('completion does not alter what the fixture states', () => {
       units: [{ id: 'pinned-1', name: 'Alpha' }, { name: 'Beta' }],
     });
     const units = data.units as Array<{ id: string }>;
-    expect(units[0].id).toBe('pinned-1');
-    expect(units[1].id).not.toBe('pinned-1');
+    expect(units[0]!.id).toBe('pinned-1');
+    expect(units[1]!.id).not.toBe('pinned-1');
   });
 
   it('issues disjoint identity to two fixtures completed in one test', () => {
@@ -270,7 +270,7 @@ describe('completion is memoized per variables, not across them', () => {
         echo.result as (v: Record<string, unknown>) => {
           data: { items: { edges: Array<{ node: { name: string } }> } };
         }
-      )({ filters: { category } }).data.items.edges[0].node.name;
+      )({ filters: { category } }).data.items.edges[0]!.node.name;
 
     expect(run('a')).toBe('a');
     expect(run('b')).toBe('b');
@@ -286,7 +286,9 @@ describe('the shared schema carries no state between tests', () => {
   const firstIds: string[] = [];
 
   it('issues identity from the start of the sequence', () => {
-    firstIds.push(...idsIn(complete(LIST_FOR_RESET, { units: [{ name: 'A' }] })));
+    firstIds.push(
+      ...idsIn(complete(LIST_FOR_RESET, { units: [{ name: 'A' }] })),
+    );
     expect(firstIds.length).toBeGreaterThan(0);
   });
 
@@ -313,7 +315,10 @@ describe('schema drift fails at wrapper construction', () => {
     expect(() =>
       createApolloTestWrapper({
         operationMocks: [
-          { request: { query: drifted }, result: { data: {} } } as MockedResponse,
+          {
+            request: { query: drifted },
+            result: { data: {} },
+          } as MockedResponse,
         ],
       }),
     ).toThrow(/does not match src\/graphql\/generated\/schema\.graphql/);
@@ -439,10 +444,9 @@ describe('an empty operationMocks array means no mocks', () => {
     // The schema-driven branch is the one that builds a SchemaLink; the
     // per-operation branch passes a `mocks` array instead. Rendering a query
     // under this wrapper yields a no-mock failure rather than invented data.
-    const { result } = renderHookWithApollo(
-      () => useQuery(PROBE_UNITS),
-      { operationMocks: [] },
-    );
+    const { result } = renderHookWithApollo(() => useQuery(PROBE_UNITS), {
+      operationMocks: [],
+    });
     expect(result.current.data).toBeUndefined();
   });
 });
@@ -460,7 +464,9 @@ describe('the document is validated in the form the client sends', () => {
         }
       }
     `;
-    expect(() => complete(paginated, { units: [{ name: 'Alpha' }] })).not.toThrow();
+    expect(() =>
+      complete(paginated, { units: [{ name: 'Alpha' }] }),
+    ).not.toThrow();
   });
 });
 
@@ -483,7 +489,8 @@ function loadEveryOperation(): Array<{ name: string; document: DocumentNode }> {
   for (const file of files) {
     for (const definition of parse(readFileSync(file, 'utf8')).definitions) {
       if (definition.kind === 'FragmentDefinition') fragments.push(definition);
-      if (definition.kind === 'OperationDefinition') operations.push(definition);
+      if (definition.kind === 'OperationDefinition')
+        operations.push(definition);
     }
   }
 
@@ -502,7 +509,9 @@ function idsIn(value: unknown, out: string[] = []): string[] {
     return out;
   }
   if (!value || typeof value !== 'object') return out;
-  for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
+  for (const [key, nested] of Object.entries(
+    value as Record<string, unknown>,
+  )) {
     if (key === 'id' && typeof nested === 'string') out.push(nested);
     else idsIn(nested, out);
   }

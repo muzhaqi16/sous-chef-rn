@@ -1,5 +1,5 @@
 {
-  "maxRiskyPairs": 66,
+  "maxRiskyPairs": 67,
   "pairs": [
     "AddTemplateItem::MealTemplate",
     "AdjustPantryItemQuantity::PantryItem",
@@ -22,8 +22,10 @@
     "DeleteShoppingList::ShoppingList",
     "DeleteShoppingListReminder::ShoppingList",
     "DeleteStorageLocation::StorageLocation",
+    "ExchangeDeviceCredential::User",
     "InvitationAcceptanceModalDeclineShoppingListInvite::ShoppingListCollaborator",
     "JoinShoppingListByShareCode::ShoppingList",
+    "LinkDerivedListToMealPlan::ShoppingList",
     "Login::User",
     "MarkAsTemplate::ShoppingList",
     "MarkHomeAsDefault::Pantry",
@@ -53,7 +55,6 @@
     "UpdateCollaboratorRole::ShoppingListCollaborator",
     "UpdateFavoriteRecipe::SavedRecipe",
     "UpdateItem::Item",
-    "UpdateItemImage::Item",
     "UpdateMealPlan::MealPlan",
     "UpdatePantry::Pantry",
     "UpdatePantryItem::PantryItem",

@@ -74,8 +74,6 @@ function referenceMocks() {
             sortOrder: 0,
             displayAsFraction: false,
             minPrecision: 0,
-            conversionFactor: 1,
-            baseUnitId: null,
           },
         ],
       },

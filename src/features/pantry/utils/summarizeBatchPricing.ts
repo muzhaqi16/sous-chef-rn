@@ -11,8 +11,16 @@ export interface BatchPricingSummary {
    * rate reads below anything actually paid — don't show it as a price.
    */
   isRateDiluted: boolean;
-  /** The newest priced batch: what the last acquisition cost, and when. */
-  lastPurchase: { date: string; totalCost: number | null } | null;
+  /**
+   * The newest priced batch: what the last acquisition cost, when, and in
+   * WHICH currency — a batch bought abroad keeps its own, and the item-level
+   * currency is null precisely when the batches disagree.
+   */
+  lastPurchase: {
+    date: string;
+    totalCost: number | null;
+    currency: PantryItemBatchFragment['currency'];
+  } | null;
 }
 
 /**
@@ -43,7 +51,11 @@ export function summarizeBatchPricing(
     isAveraged: priced.length > 1,
     isRateDiluted: priced.length > 0 && priced.length < active.length,
     lastPurchase: newest
-      ? { date: newest.createdAt, totalCost: newest.totalCost ?? null }
+      ? {
+          date: newest.createdAt,
+          totalCost: newest.totalCost ?? null,
+          currency: newest.currency,
+        }
       : null,
   };
 }

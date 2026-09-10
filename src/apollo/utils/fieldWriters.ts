@@ -1,12 +1,11 @@
 /**
- * A field with a write-time invariant routes through the ONE writer that runs it:
- * `ShoppingListItem.purchaseInfo` through `writePurchaseInfo` (clear-on-flip, no
- * spread over a reference, cached record carried forward). A registry, so the
- * offline restoration pass need not know which fields it must not blind-merge.
+ * A field with a write-time invariant routes through the ONE writer that runs
+ * it, so the offline restoration pass need not know which fields it must not
+ * blind-merge. Each feature owns its entries; this composes them.
  */
 
 import type { ApolloCache } from '@apollo/client';
-import { writePurchaseInfo } from './shoppingListCacheUpdaters';
+import { SHOPPING_LIST_FIELD_WRITERS } from '#features/shoppingList/offline/fieldWriters';
 
 /** Applies a persisted patch for one field of one entity. */
 export type FieldWriter = (
@@ -15,25 +14,11 @@ export type FieldWriter = (
   value: unknown,
 ) => void;
 
-const KEY = (typename: string, field: string) => `${typename}.${field}`;
+/** Keyed `<typename>.<field>`, the shape {@link fieldWriterFor} looks up. */
+export type FieldWriterTable = Record<string, FieldWriter>;
 
-const WRITERS: Record<string, FieldWriter> = {
-  [KEY('ShoppingListItem', 'purchaseInfo')]: (cache, entityId, value) => {
-    if (typeof value !== 'object' || value === null) return;
-    const patch = value as {
-      isPurchased?: unknown;
-      movedToPantryAt?: unknown;
-    };
-    writePurchaseInfo(cache, entityId, {
-      ...(typeof patch.isPurchased === 'boolean'
-        ? { isPurchased: patch.isPurchased }
-        : {}),
-      ...(typeof patch.movedToPantryAt === 'string' ||
-      patch.movedToPantryAt === null
-        ? { movedToPantryAt: patch.movedToPantryAt }
-        : {}),
-    });
-  },
+const WRITERS: FieldWriterTable = {
+  ...SHOPPING_LIST_FIELD_WRITERS,
 };
 
 /**
@@ -44,5 +29,5 @@ export function fieldWriterFor(
   typename: string,
   field: string,
 ): FieldWriter | undefined {
-  return WRITERS[KEY(typename, field)];
+  return WRITERS[`${typename}.${field}`];
 }

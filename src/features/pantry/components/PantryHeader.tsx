@@ -5,7 +5,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { OfflineStatusPill } from '#components/atoms/OfflineStatusPill';
+import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
 import { Text } from '#components/atoms/Text';
 
 // Matches theme.typography.fontSize.lg (18). Inlined so the component does not
@@ -70,17 +70,19 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
             without any re-render. */}
         <View style={styles.greetingTextRow} testID="pantry-greeting-row">
           {!!greetingBefore && (
-            <Text weight="bold" style={styles.greeting}>
+            <Text role="heading" style={styles.greeting}>
               {greetingBefore}
             </Text>
           )}
           {!!userName && (
-            <Text weight="bold" size="2xl" tone="accent">
+            <Text role="title" tone="accent">
               {userName}
             </Text>
           )}
+          {/* The trailing punctuation belongs to the name, so it takes the
+              name's role rather than the greeting's smaller one. */}
           {!!greetingAfter && (
-            <Text weight="bold" style={styles.greeting}>
+            <Text role="title" style={styles.greeting}>
               {greetingAfter}
             </Text>
           )}
@@ -113,7 +115,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
               name="swap-horizontal-outline"
               tone="primary"
             />
-            <Text size="sm" tone="secondary">
+            <Text role="caption" tone="secondary">
               {householdName}
             </Text>
             <Icon
@@ -145,6 +147,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
       {/* Avatar */}
       <Pressable
         onPress={onAvatarPress}
+        accessibilityLabel={t('a11y.openProfile')}
         style={styles.avatarContainer}
         testID="tab-profile"
         accessibilityRole="button"
@@ -175,7 +178,6 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
   },
   greetingContent: {
     flex: 1,
@@ -188,11 +190,9 @@ const styles = StyleSheet.create(theme => ({
     flexWrap: 'wrap',
   },
   greeting: {
-    fontSize: theme.typography.fontSize['2xl'] + 2,
     // Leading must come with the font size: `Text` only pairs the two via its
     // `size` PROP, so a style-set `fontSize` keeps the variant's line box and
     // clips glyphs — visible on diacritics above the cap height.
-    lineHeight: theme.typography.lineHeight.loose,
     color: theme.colors.textPrimary,
   },
   householdBadge: {
@@ -202,7 +202,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    gap: theme.spacing.xs + 2,
+    gap: theme.spacing.xsPlus,
   },
   offlinePill: {
     marginRight: theme.spacing.sm,
@@ -222,7 +222,7 @@ const styles = StyleSheet.create(theme => ({
     // Primary so the unread dot tracks the user's App Color; a standalone host
     // View, so the ShadowTree pushes the change without a re-render.
     backgroundColor: theme.colors.primary,
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     borderColor: theme.colors.background,
   },
   avatarContainer: {
@@ -234,7 +234,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.xl - 2,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',

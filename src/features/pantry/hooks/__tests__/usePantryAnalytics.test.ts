@@ -14,16 +14,16 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
 }));
 
-jest.mock('#hooks/app/useBlocksCacheMissQueries', () => ({
-  useBlocksCacheMissQueries: jest.fn(() => false),
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: jest.fn(() => false),
 }));
 
 const mockedNetworkBlocked = jest.requireMock(
-  '#hooks/app/useBlocksCacheMissQueries',
-) as { useBlocksCacheMissQueries: jest.Mock };
+  '#hooks/app/useIsApiUnavailable',
+) as { useIsApiUnavailable: jest.Mock };
 
 const setNetworkBlocked = (blocked: boolean) =>
-  mockedNetworkBlocked.useBlocksCacheMissQueries.mockReturnValue(blocked);
+  mockedNetworkBlocked.useIsApiUnavailable.mockReturnValue(blocked);
 
 beforeEach(() => setNetworkBlocked(false));
 

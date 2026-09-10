@@ -121,13 +121,13 @@ export function useCommitTracking(
     }
 
     if (renderCount.current === 1) {
-      console.log(
+      console.debug(
         `[Performance] ${componentName} first render: ${renderDuration.toFixed(
           2,
         )}ms`,
       );
     } else if (renderCount.current <= 10) {
-      console.log(
+      console.debug(
         `[Performance] ${componentName} render #${
           renderCount.current
         }: ${renderDuration.toFixed(2)}ms (avg: ${avgRenderTime.toFixed(2)}ms)`,

@@ -62,9 +62,8 @@ jest.mock('#/utils/errorSerialization', () => ({
 }));
 
 // Mock deviceId
-jest.mock('#/utils/deviceId', () => ({
+jest.mock('#/storage/deviceId', () => ({
   getDeviceId: jest.fn(() => 'test-device-id'),
-  getDeviceIdSync: jest.fn(() => 'test-device-id'),
 }));
 
 // The socket calls whatever refresh function was registered via
@@ -74,6 +73,7 @@ jest.mock('#/utils/deviceId', () => ({
 import { AppState } from 'react-native';
 import { Telemetry } from '#/services/telemetry';
 import { isLibraryFatalCloseCode } from '../wsCloseCodes';
+import { wsLink } from '../wsLink';
 import {
   reconnectWebSocket,
   disableAutoReconnect,
@@ -91,6 +91,29 @@ describe('wsLink', () => {
     jest.clearAllMocks();
     // Re-enable auto reconnect for each test
     enableAutoReconnect();
+  });
+
+  describe('disposing through the link facade', () => {
+    // The facade exists so the real client can be REPLACED after a dispose
+    // latches it shut — a disposed graphql-ws client silently refuses every
+    // retry. Disposing without dropping the reference defeats that: the next
+    // `getOrCreateClient()` hands the latched client back forever, and every
+    // subscription stays dead for the life of the process.
+    it('drops the client so the next connect builds a fresh one', async () => {
+      const { createClient } = require('graphql-ws');
+      expect(getWebSocketState().hasClient).toBe(true);
+
+      await wsLink.client.dispose?.();
+
+      expect(getWebSocketState().hasClient).toBe(false);
+
+      const before = createClient.mock.calls.length;
+      wsLink.client.subscribe(
+        { query: 'subscription { x }' },
+        { next: jest.fn(), error: jest.fn(), complete: jest.fn() },
+      );
+      expect(createClient.mock.calls.length).toBe(before + 1);
+    });
   });
 
   describe('onWebSocketReconnected', () => {
@@ -180,6 +203,52 @@ describe('wsLink', () => {
       const state = getWebSocketState();
       // After disabling, state should be stable
       expect(state.hasClient).toBe(true);
+    });
+
+    it('abandons a dial parked on the backoff instead of releasing it', async () => {
+      // `url()` resolving IS the dial: graphql-ws builds the socket straight
+      // after it, with no disposed check. A session end must leave the parked
+      // promise unsettled, exactly as it does for an offline waiter.
+      enableAutoReconnect();
+      await dialGate();
+
+      let settled = false;
+      const parked = dialGate().then(() => {
+        settled = true;
+      });
+
+      disableAutoReconnect();
+      for (let i = 0; i < 8; i++) await Promise.resolve();
+
+      expect(settled).toBe(false);
+      void parked;
+    });
+  });
+
+  describe('the dial backoff', () => {
+    it('still spreads clients once the delay reaches its ceiling', async () => {
+      // Clamping delay+jitter together makes every client at the ceiling
+      // compute the same number — a herd, at the moment a herd costs most.
+      jest.useFakeTimers();
+      enableAutoReconnect();
+      const spy = jest.spyOn(global, 'setTimeout');
+
+      for (let i = 0; i < 12; i++) {
+        const dial = dialGate();
+        await Promise.resolve();
+        jest.runOnlyPendingTimers();
+        await dial;
+      }
+
+      const waits = spy.mock.calls
+        .map(call => Number(call[1]))
+        .filter(ms => ms >= 30000);
+      spy.mockRestore();
+      jest.useRealTimers();
+
+      expect(waits.length).toBeGreaterThan(3);
+      expect(Math.max(...waits)).toBeLessThanOrEqual(37500);
+      expect(new Set(waits).size).toBeGreaterThan(1);
     });
   });
 
@@ -1137,7 +1206,7 @@ describe('wsLink', () => {
       setAppState('active');
       for (let i = 0; i < 8; i++) await gateSettlesWithin(400_000);
 
-      expect(await gateSettlesWithin(31_000)).toBe(true);
+      expect(await gateSettlesWithin(38_000)).toBe(true);
     });
 
     /** Settle the dial gate, reporting whether `ms` was enough for it. */
@@ -1166,7 +1235,10 @@ describe('wsLink', () => {
       // Climb the exponent past the cap so the ceiling is what binds.
       for (let i = 0; i < 8; i++) await gateSettlesWithin(400_000);
 
-      expect(await gateSettlesWithin(31_000)).toBe(true);
+      // The ceiling caps the base and jitter adds up to 25% on top, so the
+      // worst case here is 37.5s. A 31s bound would only hold if jitter were
+      // clamped away — which is what let every client re-dial in one tick.
+      expect(await gateSettlesWithin(38_000)).toBe(true);
     });
 
     it('stretches the ceiling once failures become a streak', async () => {
@@ -1190,7 +1262,7 @@ describe('wsLink', () => {
       seedStore();
       for (let i = 0; i < 8; i++) await gateSettlesWithin(400_000);
 
-      expect(await gateSettlesWithin(31_000)).toBe(true);
+      expect(await gateSettlesWithin(38_000)).toBe(true);
     });
 
     // The throttle stopwatch has to be monotonic: on a wall clock a backwards

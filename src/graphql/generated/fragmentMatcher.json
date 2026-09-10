@@ -754,6 +754,14 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "ExchangeDeviceCredentialResult": [
+      "AuthenticationError",
+      "ConflictError",
+      "DeviceCredentialSessionPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "ForkRecipeResult": [
       "ConflictError",
       "ForbiddenError",
@@ -793,6 +801,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "IssueDeviceCredentialResult": [
+      "ConflictError",
+      "DeviceCredentialPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "JoinHomeByCodeResult": [
       "ConflictError",
       "ForbiddenError",
@@ -818,6 +833,13 @@
       "ConflictError",
       "ForbiddenError",
       "LinkItemToExternalSourcePayload",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "LinkShoppingListToMealPlanResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "LinkShoppingListToMealPlanPayload",
       "NotFoundError",
       "ValidationError"
     ],
@@ -1148,6 +1170,20 @@
       "ForbiddenError",
       "NotFoundError",
       "RestoreItemPayload",
+      "ValidationError"
+    ],
+    "RevokeDeviceCredentialResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "RevokeDeviceCredentialPayload",
+      "ValidationError"
+    ],
+    "RevokeDeviceSessionsResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "RevokeDeviceSessionsPayload",
       "ValidationError"
     ],
     "SendTestNotificationResult": [

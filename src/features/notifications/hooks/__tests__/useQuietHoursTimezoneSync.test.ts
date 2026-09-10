@@ -30,12 +30,12 @@ jest.mock('#store/useAppStore', () => {
   };
 });
 
-jest.mock('#/utils/notifications/quietHours', () => ({
-  ...jest.requireActual('#/utils/notifications/quietHours'),
+jest.mock('#features/notifications/utils/quietHours', () => ({
+  ...jest.requireActual('#features/notifications/utils/quietHours'),
   getDeviceTimezone: jest.fn(() => 'America/New_York'),
 }));
 const mockGetDeviceTimezone = jest.requireMock(
-  '#/utils/notifications/quietHours',
+  '#features/notifications/utils/quietHours',
 ).getDeviceTimezone as jest.Mock;
 
 const basePreferences = {

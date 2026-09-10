@@ -71,3 +71,12 @@ export const zustandStorage = {
 export const initializeSecureStorage = jest.fn(async () => storage);
 export const getStorage = jest.fn(async () => storage);
 export const isStorageReady = jest.fn(() => true);
+
+/**
+ * Defaults to the encrypted instance, which is the state every suite that does
+ * not say otherwise means. Override per-test to exercise the quarantined path:
+ * `(isRecoveryStorage as jest.Mock).mockReturnValue(true)`.
+ */
+export const isRecoveryStorage = jest.fn(() => false);
+export const openedWithEmptyStore = jest.fn(() => false);
+export const purgeRecoveryStorage = jest.fn();

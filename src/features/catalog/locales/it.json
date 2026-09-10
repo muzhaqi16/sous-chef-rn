@@ -9,8 +9,6 @@
     "cantDeleteDefaultMessage": "Imposta prima un'altra posizione come predefinita.",
     "cantDeleteTitle": "Impossibile eliminare la posizione",
     "cantDeleteWithItems": "\"{{name}}\" ha {{description}}. Sposta o rimuovi prima.",
-    "itemSingular": "{{count}} articolo",
-    "itemPlural": "{{count}} articoli",
     "subLocationSingular": "{{count}} sotto-posizione",
     "subLocationPlural": "{{count}} sotto-posizioni",
     "gotIt": "Capito",
@@ -77,7 +75,6 @@
     "hintText": "Puoi modificare i dettagli in seguito in Impostazioni > Posizioni di conservazione"
   },
   "addItemSheet": {
-    "addManually": "Aggiungi manualmente",
     "more": "Altro",
     "allAdded": "Tutto aggiunto",
     "dismiss": "Ignora suggerimento",
@@ -100,7 +97,9 @@
     "emptyTitle": "Ancora nessun suggerimento",
     "emptyPantrySubtext": "Aggiungi articoli alla tua dispensa per ricevere suggerimenti personalizzati",
     "emptyShoppingListSubtext": "Aggiungi articoli alla tua lista e appariranno qui per riaggiungerli rapidamente",
-    "addToPantry": "Aggiungi alla dispensa"
+    "addToPantry": "Aggiungi alla dispensa",
+    "addManuallyWithTerm": "Aggiungi «{{term}}» manualmente",
+    "noMatchesAddManually": "Nessun risultato. Aggiungi «{{term}}» manualmente"
   },
   "storageLocationSheet": {
     "editTitle": "Modifica posizione di conservazione",
@@ -335,7 +334,8 @@
     "quantityUnit": "Quantità e unità",
     "quantityStock": "Quantità e scorte",
     "quantityRequired": "Quantità *",
-    "quantityCurrent": "Quantità attuale"
+    "quantityCurrent": "Quantità attuale",
+    "placeholderBrand": "es., Kellogg’s"
   },
   "folderPicker": {
     "selectFolder": "Seleziona cartella",
@@ -400,7 +400,8 @@
     "typeMoreToAddBrand": "Continua a digitare per aggiungere «{{term}}» come marca personalizzata",
     "typeMoreToAddStore": "Continua a digitare per aggiungere «{{term}}» come negozio personalizzato",
     "typeAtLeastTwo": "Digita almeno 2 caratteri per cercare",
-    "tryDifferentTerm": "Prova con un altro termine di ricerca"
+    "tryDifferentTerm": "Prova con un altro termine di ricerca",
+    "typeMoreToAddCategory": "Continua a digitare per usare «{{term}}» come categoria personalizzata"
   },
   "unitEntryList": {
     "title": "Unità",
@@ -412,9 +413,7 @@
   },
   "storageLocationCard": {
     "default": "Predefinita",
-    "insideParent": "Dentro {{parent}}",
-    "itemCount_one": "{{count}} articolo",
-    "itemCount_other": "{{count}} articoli"
+    "insideParent": "Dentro {{parent}}"
   },
   "itemSubtitle": {
     "percentRemaining": "({{percent}}% rimanente)",

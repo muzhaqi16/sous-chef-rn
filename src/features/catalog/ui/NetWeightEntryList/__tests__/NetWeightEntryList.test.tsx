@@ -12,7 +12,7 @@ jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#/components/molecules/FormInput', () => ({
+jest.mock('#components/atoms/FormInput', () => ({
   FormInput: ({
     label,
     value,
@@ -79,7 +79,7 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
   },
 }));
 
-jest.mock('#components/atoms/Button', () => ({
+jest.mock('#components/molecules/Button', () => ({
   Button: ({
     children,
     onPress,
@@ -169,8 +169,8 @@ describe('NetWeightEntryList', () => {
     const finalEntries = defaultProps.onEntriesChanged.mock.calls.at(
       -1,
     )?.[0] as NetWeightEntry[];
-    expect(finalEntries[0].unitName).toBe('oz');
+    expect(finalEntries[0]!.unitName).toBe('oz');
     // Typing invalidates the unit selected before the keystroke.
-    expect(finalEntries[0].unitId).toBeUndefined();
+    expect(finalEntries[0]!.unitId).toBeUndefined();
   });
 });

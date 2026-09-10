@@ -25,7 +25,7 @@ import {
   changeReviewRating,
   getReviewRating,
   removeReviewFromRecipe,
-} from '#/apollo/utils/recipeReviewCacheUpdaters';
+} from '#features/recipes/cache/reviews';
 
 interface UseRecipeReviewsOptions {
   recipeId: string;
@@ -70,7 +70,7 @@ export function useRecipeReviews({
           from: { __typename: 'RecipeReview', id: ref.id },
         }),
       )
-      .filter((r): r is NonNullable<typeof r> => r !== null && r !== undefined);
+      .filter((r): r is NonNullable<typeof r> => r != null);
     return materialized.sort((a, b) => {
       if (b.helpful !== a.helpful) return b.helpful - a.helpful;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();

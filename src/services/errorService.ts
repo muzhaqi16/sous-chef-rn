@@ -80,6 +80,10 @@ export class ErrorService {
     // expires, so the copy points at support rather than inviting a retry.
     AUTH_ACCOUNT_SUSPENDED: 'accountSuspended',
     AUTH_EMAIL_NOT_VERIFIED: 'emailNotVerified',
+    // Permanently useless, and uniform across every reason on purpose —
+    // which one applied is not disclosed. The client clears the stored
+    // credential and falls back to the password screen.
+    AUTH_DEVICE_CREDENTIAL_INVALID: 'deviceCredentialInvalid',
 
     // Authorization Errors. FORBIDDEN is the only code here.
     FORBIDDEN: 'forbidden',
@@ -297,7 +301,7 @@ export class ErrorService {
     Telemetry.trackError(errorMessage, {
       component: 'reported',
       operation,
-      serialized_error: JSON.stringify(serialized),
+      serialized_error: serialized,
       ...context,
     });
   }
@@ -410,7 +414,7 @@ export class ErrorService {
           component: category,
           operation,
           code: errorCode,
-          serialized_error: JSON.stringify(serializeError(error)),
+          serialized_error: serializeError(error),
         });
       }
 
@@ -496,6 +500,17 @@ export const errorService = new ErrorService();
  * also yields to it — that copy is written for a read, and on a write is untrue.
  */
 const TRANSPORT_CODES = new Set(['NETWORK_ERROR', 'CIRCUIT_OPEN']);
+
+/**
+ * True unless the SERVER issued this verdict — an unclassified failure cannot
+ * be shown to have arrived, so it earns no persisted penalty either. A new
+ * unrecognised shape reads as "no verdict" rather than as a lockout.
+ */
+export const isTransportFailure = (error: unknown): boolean => {
+  const code = errorService.parseApolloError(error, { logError: false }).error
+    ?.code;
+  return !code || code === 'UNKNOWN_ERROR' || TRANSPORT_CODES.has(code);
+};
 
 export const localizedErrorMessage = (
   error: unknown,

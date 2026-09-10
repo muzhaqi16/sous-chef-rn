@@ -172,7 +172,7 @@ describe('ItemPhotoCarousel', () => {
     );
 
     act(() => {
-      screen.UNSAFE_getAllByType(CachedImage)[0].props.onError?.();
+      screen.UNSAFE_getAllByType(CachedImage)[0]!.props.onError?.();
     });
     expect(onUnrenderable).toHaveBeenCalled();
   });
@@ -190,7 +190,7 @@ describe('ItemPhotoCarousel', () => {
     );
 
     act(() => {
-      screen.UNSAFE_getAllByType(CachedImage)[0].props.onError?.();
+      screen.UNSAFE_getAllByType(CachedImage)[0]!.props.onError?.();
     });
     expect(onUnrenderable).not.toHaveBeenCalled();
   });

@@ -1,0 +1,106 @@
+# The ingredient lines a shopping list is derived from, read out of the cache
+# after `GetMealPlan` has run so the derive works with the API unreachable.
+#
+# Spread by GetMealPlan ONLY, deliberately NOT by `MealPlanMain_mealPlan`. That
+# fragment is also spread by `CreateMealPlanFromTemplate`, which starts two
+# levels deeper inside a mutation payload — carrying the ingredients there takes
+# it to depth 14 against the server's HTTP limit of 12, and armor refuses the
+# whole mutation. Here it costs GetMealPlan two levels: depth 8 → 10, cost
+# 194 → 292. `documentLimits.test.ts` holds both numbers.
+fragment useGenerateShoppingList_mealPlan on MealPlan {
+  id
+  # The derived list takes its default name from the plan and inherits its home,
+  # which is what the server's fan-out does.
+  name
+  homeId
+  mealPlanItems {
+    id
+    servings
+    recipe {
+      id
+      servings
+      ingredientsConnection {
+        edges {
+          node {
+            id
+            name
+            quantity
+            isOptional
+            # The id alone: the derive keys its aggregate on it and sends it
+            # back as `unit.unitId`. A name or symbol here would be a fourth
+            # copy of a shape nothing on this path renders.
+            unit {
+              id
+            }
+            item {
+              id
+              name
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+# The derived lines, added in one batch. Mirrors the pantry screen's add so both
+# reconcile through `buildAddItemsReconcileUpdate`, which pairs a result back to
+# the client-minted id by its index into `input.items`.
+mutation AddDerivedItemsToShoppingList($input: AddItemsToShoppingListInput!) {
+  addItemsToShoppingList(input: $input) {
+    __typename
+    ... on AddItemsToShoppingListPayload {
+      results {
+        index
+        clientId
+        success
+        quantityIncremented
+        error
+        item {
+          id
+          ...AddedShoppingListItemFields
+        }
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+# Records the plan a derived list came from. The fan-out stamps this inside its
+# own transaction, which a client assembling the list offline never runs, so the
+# link is a separate queued write keyed by the list's own id.
+mutation LinkDerivedListToMealPlan($input: LinkShoppingListToMealPlanInput!) {
+  linkShoppingListToMealPlan(input: $input) {
+    __typename
+    ... on LinkShoppingListToMealPlanPayload {
+      shoppingList {
+        id
+        generatedFromMealPlan
+        mealPlan {
+          id
+        }
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}

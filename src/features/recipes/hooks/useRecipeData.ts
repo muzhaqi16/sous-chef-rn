@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import type { ErrorLike } from '@apollo/client';
 import { errorService } from '#/services/errorService';
 import { useApolloClient, useQuery } from '@apollo/client/react';
-import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
+import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
 import type {
   RecipeInformation,
   RecipeIngredient as ExternalRecipeIngredient,
   RecipeInstruction as ExternalRecipeInstruction,
-} from '#/services/recipeApi/types';
+} from '#/services/spoonacular/types';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import type { GetRecipeQuery } from '#features/recipes/graphql/recipe.generated';
 import {

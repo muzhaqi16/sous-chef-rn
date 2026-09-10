@@ -7,7 +7,7 @@ import {
   userEvent,
 } from '@testing-library/react-native';
 import { PurchaseAmountSheet } from '../PurchaseAmountSheet';
-import type { HeaderAction } from '#/components/atoms/HeaderActionIcon';
+import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 
 type PurchaseAmountSheetProps = React.ComponentProps<
   typeof PurchaseAmountSheet
@@ -29,7 +29,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
   BottomSheetModal: ({ children }: ChildrenProps) => children,
 }));
 
-jest.mock('#/components/molecules/Header', () => ({
+jest.mock('#components/organisms/Header', () => ({
   Header: ({
     title,
     onClose,

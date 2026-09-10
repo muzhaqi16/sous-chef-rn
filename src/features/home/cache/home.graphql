@@ -1,0 +1,107 @@
+# Full materialization for a local-first home create.
+#
+# `GetHomes` (the list) and `GetHome` (the detail screen) read overlapping but
+# different shapes, so a home created offline has to satisfy both or it appears
+# in the list and dead-ends when opened — Apollo serves no partial data and goes
+# to the network for an id the server does not have yet.
+#
+# FLAT (no nested fragment spreads) so `cache.writeFragment` sees the unmasked
+# shape — a spread here would write masked refs and the read would still come
+# back incomplete.
+#
+# The three connections carry a `first` argument because the readers do: their
+# type policy keys on `filters` alone, which none of them takes, so every
+# `first: N` collapses to one cache field — but a selection with NO argument at
+# all is a DIFFERENT store field from one with any, and the read then misses.
+#
+# Consumers: src/features/home/cache/optimisticHome.ts.
+fragment home_homeDetail on Home {
+  id
+  name
+  isDefault
+  description
+  timezone
+  currency
+  isPublic
+  joinCode
+  allowJoinCode
+  joinLink {
+    universal
+  }
+  maxMembers
+  version
+  createdAt
+  updatedAt
+  myMembership {
+    id
+    role
+    status
+    displayName
+    canManageHome
+    canViewPantry
+    canEditPantry
+    canAddItems
+    canRemoveItems
+    canInviteOthers
+  }
+  membersConnection(first: 20) {
+    edges {
+      node {
+        id
+        homeId
+        userId
+        role
+        status
+        displayName
+        canManageHome
+        canViewPantry
+        canEditPantry
+        canAddItems
+        canRemoveItems
+        canInviteOthers
+        user {
+          id
+          email
+          displayName
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+  invitesConnection(first: 20) {
+    edges {
+      node {
+        id
+        email
+        recipientName
+        role
+        status
+        expiresAt
+        message
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+  pantriesConnection(first: 20) {
+    edges {
+      node {
+        id
+        name
+        isDefault
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+}

@@ -61,15 +61,18 @@
     "failedToSetRecurring": "Impossibile impostare la lista ricorrente",
     "failedToCancelRecurring": "Impossibile interrompere la ricorrenza",
     "failedToGenerateNext": "Impossibile generare la lista successiva",
+    "notRecurring": "Questa lista non si ripete, quindi non c’è una successiva da creare.",
+    "recurringListName": "{{name}} - {{date}}",
     "templateSection": "Modelli",
     "basedOnTemplate": "Basata su",
     "createFromTemplate": "Crea lista da modello",
+    "copySourceNotLoaded": "Apri questa lista una volta con la connessione, così i suoi articoli sono sul dispositivo e si possono copiare.",
+    "copyLinesSkipped_one": "{{count}} riga è stata esclusa perché non indica alcun articolo.",
+    "copyLinesSkipped_other": "{{count}} righe sono state escluse perché non indicano alcun articolo.",
     "startFromTemplate": "Inizia da un modello",
     "startFromTemplateDesc": "Copia gli articoli del modello nella tua nuova lista.",
     "noTemplateBlankList": "Nessuno (lista vuota)",
     "selectTemplate": "Seleziona modello",
-    "templateHomeNote": "Le liste create da un modello sono personali e non possono essere collegate a una casa.",
-    "templatesOfflineMessage": "Creare da un modello richiede una connessione",
     "failedToSaveTemplate": "Impossibile salvare come modello",
     "failedToCreateFromTemplate": "Impossibile creare dal modello",
     "reminderSection": "Promemoria",
@@ -266,5 +269,12 @@
   },
   "shoppingList": {
     "alreadyInPantry": "Già in dispensa"
+  },
+  "shoppingListPicker": {
+    "newListNamePlaceholder": "Nome nuova lista",
+    "createAndAddIngredients": "Crea e aggiungi ingredienti",
+    "defaultBadge": "Predefinita",
+    "newList": "Nuova lista",
+    "noLists": "Nessuna lista della spesa"
   }
 }

@@ -33,8 +33,8 @@ jest.mock('#/utils/fractionUtils', () => ({
   }),
 }));
 
-jest.mock('#/utils/errors/pantryItemDuplicate', () => {
-  const actual = jest.requireActual('#/utils/errors/pantryItemDuplicate');
+jest.mock('#domain/pantryItemDuplicate', () => {
+  const actual = jest.requireActual('#domain/pantryItemDuplicate');
   const isDup = jest.fn().mockReturnValue(false);
   const getInfo = jest.fn().mockReturnValue(null);
   return {
@@ -416,7 +416,7 @@ describe('usePantryItemSubmission', () => {
     const {
       isPantryItemDuplicateError,
       getPantryItemDuplicateInfo,
-    } = require('#/utils/errors/pantryItemDuplicate');
+    } = require('#domain/pantryItemDuplicate');
     isPantryItemDuplicateError.mockReturnValue(true);
     getPantryItemDuplicateInfo.mockReturnValue({
       existingPantryItemId: 'existing-1',
@@ -441,7 +441,7 @@ describe('usePantryItemSubmission', () => {
   it('shows error when result has error but is not duplicate', async () => {
     const {
       isPantryItemDuplicateError,
-    } = require('#/utils/errors/pantryItemDuplicate');
+    } = require('#domain/pantryItemDuplicate');
     isPantryItemDuplicateError.mockReturnValue(false);
 
     const { result } = renderHookWithApollo(

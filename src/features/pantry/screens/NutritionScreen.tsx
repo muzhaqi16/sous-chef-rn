@@ -2,11 +2,10 @@ import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { Header } from '#components/molecules/Header';
 import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { NutritionDetailList } from '#features/pantry/components/NutritionDetailList';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { commonStyles } from '#/styles/commonStyles';
+import { Screen } from '#components/templates/Screen';
 
 type NutritionScreenParams = {
   itemId: string;
@@ -22,9 +21,11 @@ export const NutritionScreen: React.FC<
   const { itemName, nutritions, actualServingGrams } = route.params;
 
   return (
-    <View style={commonStyles.container}>
-      <Header title={itemName} centerTitle onBack={goBack} />
-
+    <Screen
+      header={{ title: itemName, back: goBack, centerTitle: true }}
+      scroll="list"
+      gutter="none"
+    >
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
@@ -47,7 +48,7 @@ export const NutritionScreen: React.FC<
           />
         </View>
       </ScrollView>
-    </View>
+    </Screen>
   );
 };
 

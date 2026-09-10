@@ -162,7 +162,7 @@ jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({
 const mockDeferredScreen = jest.fn(
   ({ fallback }: DeferredScreenMockProps) => fallback,
 );
-jest.mock('#components/molecules/WeekStrip', () => ({
+jest.mock('#features/mealPlan/components/WeekStrip', () => ({
   WeekStrip: () => null,
 }));
 jest.mock('#features/mealPlan/components/MonthCalendar', () => ({
@@ -183,8 +183,12 @@ jest.mock('#features/mealPlan/components/MealPlanEmptyState', () => {
 jest.mock('#features/mealPlan/components/AddMealSheet', () => ({
   AddMealSheet: () => null,
 }));
+const saveTemplateProps: Record<string, unknown>[] = [];
 jest.mock('#features/mealPlan/components/SaveAsTemplateSheet', () => ({
-  SaveAsTemplateSheet: () => null,
+  SaveAsTemplateSheet: (props: Record<string, unknown>) => {
+    saveTemplateProps.push(props);
+    return null;
+  },
 }));
 jest.mock('#features/mealPlan/components/TemplateBrowserSheet', () => ({
   TemplateBrowserSheet: () => null,
@@ -198,13 +202,17 @@ jest.mock('#features/mealPlan/components/GenerateShoppingListSheet', () => ({
 jest.mock('#features/mealPlan/components/MealPlanSettingsSheet', () => ({
   MealPlanSettingsSheet: () => null,
 }));
+const duplicateProps: Record<string, unknown>[] = [];
 jest.mock('#features/mealPlan/components/DuplicatePlanSheet', () => ({
-  DuplicatePlanSheet: () => null,
+  DuplicatePlanSheet: (props: Record<string, unknown>) => {
+    duplicateProps.push(props);
+    return null;
+  },
 }));
 jest.mock('#features/mealPlan/components/NutritionSummaryCard', () => ({
   NutritionSummaryCard: () => null,
 }));
-jest.mock('#components/modals/MarkCookedModal', () => ({
+jest.mock('#components/organisms/MarkCookedModal', () => ({
   MarkCookedModal: () => null,
 }));
 jest.mock(
@@ -449,6 +457,54 @@ describe('MealPlanMain', () => {
 
     const tree = renderWithApollo(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
+  });
+
+  describe('when the selected plan is gone and the active one is a fallback', () => {
+    // `useActiveMealPlan` falls back when the selected plan is deleted or
+    // unshared, so `activePlanId` and `currentPlan.id` name DIFFERENT plans.
+    // Both sheets must act on the one the screen is actually showing.
+    const renderWithFallback = () => {
+      saveTemplateProps.length = 0;
+      duplicateProps.length = 0;
+      mockDeferredScreen.mockImplementation(
+        ({ component: Component }: DeferredScreenMockProps) => <Component />,
+      );
+      const { useMealPlans } = jest.requireMock(
+        '#features/mealPlan/hooks/useMealPlans',
+      );
+      useMealPlans.mockReturnValue(
+        mockMealPlansState({
+          currentPlan: { id: 'plan-1', name: 'Current Plan' },
+          mealPlans: [
+            { id: 'plan-1', name: 'Current Plan' },
+            { id: 'plan-2', name: 'Selected Plan' },
+          ],
+        }),
+      );
+      // The persisted selection wins over `currentPlan` in `useActiveMealPlan`,
+      // so the screen shows plan-2 while `currentPlan` still names plan-1.
+      const { useAppStore } = jest.requireMock('#store/useAppStore');
+      useAppStore.mockImplementation(
+        (selector: (s: { selectedMealPlanId: string }) => unknown) =>
+          selector({ selectedMealPlanId: 'plan-2' }),
+      );
+      renderWithApollo(<MealPlanMain />);
+    };
+
+    it('names the template after the plan on screen', () => {
+      renderWithFallback();
+
+      const last = saveTemplateProps[saveTemplateProps.length - 1];
+      expect(last!.mealPlanId).toBe('plan-2');
+      expect(last!.mealPlanName).not.toBe('Current Plan');
+    });
+
+    it('duplicates the plan on screen', () => {
+      renderWithFallback();
+
+      const last = duplicateProps[duplicateProps.length - 1];
+      expect((last!.mealPlan as { id: string } | null)?.id).toBe('plan-2');
+    });
   });
 
   it('renders with nutrition summary from meal plan', () => {

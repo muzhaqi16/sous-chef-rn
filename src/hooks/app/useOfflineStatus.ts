@@ -1,9 +1,9 @@
 import { useTranslation } from '#/i18n';
-import type { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useAppStore } from '#store/useAppStore';
 import { usePendingMutationCount } from '#/hooks/offline/usePendingMutationCount';
+import type { IconName } from '#utils/iconUtils';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+type IoniconName = IconName;
 
 export interface OfflineStatus {
   /** Whether the server can't currently be reached. */

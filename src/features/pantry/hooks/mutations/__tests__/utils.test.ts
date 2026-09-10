@@ -51,13 +51,7 @@ describe('pantry mutations utils', () => {
         name: 'Gram',
         symbol: 'g',
         type: UnitType.Weight,
-        isMetric: true,
-        baseUnitId: 'base-1',
-        conversionFactor: 0.001,
-        isCommon: true,
         displayAsFraction: false,
-        minPrecision: 2,
-        autoConvertThreshold: 1000,
       };
 
       const result = buildOptimisticUnit(newUnit, currentUnit);
@@ -68,13 +62,7 @@ describe('pantry mutations utils', () => {
           name: 'Gram',
           symbol: 'g',
           type: 'WEIGHT',
-          isMetric: true,
-          baseUnitId: 'base-1',
-          conversionFactor: 0.001,
-          isCommon: true,
           displayAsFraction: false,
-          minPrecision: 2,
-          autoConvertThreshold: 1000,
         }),
       );
     });
@@ -115,13 +103,27 @@ describe('pantry mutations utils', () => {
 
       const result = buildOptimisticUnit(newUnit);
 
-      expect(result?.isMetric).toBe(false);
-      expect(result?.baseUnitId).toBeNull();
-      expect(result?.conversionFactor).toBe(1);
-      expect(result?.isCommon).toBe(false);
       expect(result?.displayAsFraction).toBe(false);
-      expect(result?.minPrecision).toBe(0);
-      expect(result?.autoConvertThreshold).toBeNull();
+    });
+
+    it('writes exactly the fields a PantryItem.unit selection names', () => {
+      // One field short and the whole cache read is INCOMPLETE; one field over
+      // and the optimistic entity retains a value the server may have redefined.
+      const result = buildOptimisticUnit({
+        id: 'unit-6',
+        name: 'Cup',
+        symbol: 'cup',
+        type: 'VOLUME',
+      });
+
+      expect(Object.keys(result ?? {}).sort()).toEqual([
+        '__typename',
+        'displayAsFraction',
+        'id',
+        'name',
+        'symbol',
+        'type',
+      ]);
     });
   });
 

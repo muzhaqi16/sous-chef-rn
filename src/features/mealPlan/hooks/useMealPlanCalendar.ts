@@ -9,12 +9,12 @@ import {
   addMonths,
   subMonths,
   eachDayOfInterval,
-  format,
   isSameDay,
   isBefore,
   isAfter,
   startOfDay,
 } from 'date-fns';
+import { formatMonthYear } from '#/utils/formatters/date';
 
 export type CalendarView = 'week' | 'month';
 
@@ -125,7 +125,7 @@ export function useMealPlanCalendar(options?: UseMealPlanCalendarOptions) {
     setReferenceDate(date);
   };
 
-  const formattedMonth = format(referenceDate, 'MMMM yyyy');
+  const formattedMonth = formatMonthYear(referenceDate);
   const isToday = isSameDay(selectedDate, new Date());
 
   return {

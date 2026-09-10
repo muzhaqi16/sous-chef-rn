@@ -160,7 +160,7 @@ describe('performanceSlice', () => {
       store.getState().recordComponentRender('Medium', 10);
       const slowest = store.getState().getSlowestComponents(2);
       expect(slowest).toHaveLength(2);
-      expect(slowest[0].componentName).toBe('Slow');
+      expect(slowest[0]!.componentName).toBe('Slow');
     });
 
     it('getSlowestScreens returns sorted screens', () => {
@@ -168,7 +168,7 @@ describe('performanceSlice', () => {
       store.getState().recordScreenTransition('Fast', 100);
       store.getState().recordScreenTransition('Slow', 500);
       const slowest = store.getState().getSlowestScreens(1);
-      expect(slowest[0].screenName).toBe('Slow');
+      expect(slowest[0]!.screenName).toBe('Slow');
     });
 
     it('getRecentMemorySnapshots returns latest', () => {
@@ -182,7 +182,7 @@ describe('performanceSlice', () => {
       }
       const recent = store.getState().getRecentMemorySnapshots(3);
       expect(recent).toHaveLength(3);
-      expect(recent[0].timestamp).toBe(2);
+      expect(recent[0]!.timestamp).toBe(2);
     });
 
     it('getComponentMetrics returns specific component', () => {

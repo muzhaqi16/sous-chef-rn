@@ -6,7 +6,7 @@ import type { SortableItem_ItemFragmentDoc } from './SortableItem.generated';
 import type {
   SwipeableRef,
   SwipeAction,
-} from '#/components/molecules/SwipeableItem/types';
+} from '#components/organisms/SwipeableItem/types';
 
 export type Positions = Record<number, number>;
 
@@ -62,11 +62,13 @@ export interface SortableShoppingListProps
   refreshing?: boolean;
   onEndReached?: () => void;
   onEndReachedThreshold?: number;
-  canRemoveItems?: boolean;
-  canEditItems?: boolean;
-  canMarkPurchased?: boolean;
-  /** Drag-to-reorder is offered on unpurchased items only. */
-  canReorderItems?: boolean;
+  /**
+   * Whether this list offers drag-to-reorder — unpurchased items only. A tab
+   * affordance, not a permission: the permissions come from
+   * `ShoppingListPermissionsProvider`, so no layer between here and the
+   * resolver has to say what an absent one means.
+   */
+  reorderable: boolean;
   ListEmptyComponent?: FlashListProps<ShoppingListRowItem>['ListEmptyComponent'];
   /** Defaults to true. Threaded through context to keep one list-level
    * subscription on the user preference. */

@@ -1,4 +1,4 @@
-import { useBlocksCacheMissQueries } from '#hooks/app/useBlocksCacheMissQueries';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 
 interface OfflineAwareError<E> {
   /** A genuine failure worth reporting. Undefined when `offline` is true. */
@@ -8,16 +8,15 @@ interface OfflineAwareError<E> {
 }
 
 /**
- * Splits `offlineModeLink`'s synthetic "no cached data" error ("we never tried")
- * from a real failure. Matters most for user-driven variables: each combination
- * is its own cache entry, so offline the first touch of a control is a
- * guaranteed miss. `hasData` keeps a failed revalidation reportable.
+ * Splits "the server is unreachable" from a real failure. Keyed on
+ * `isApiUnavailable`, not `blocksCacheMissQueries` — that one asks whether the
+ * LINK short-circuited the request, which is false with only the breaker open.
  */
 export function useOfflineAwareError<E>(
   error: E | undefined,
   hasData: boolean,
 ): OfflineAwareError<E> {
-  const networkBlocked = useBlocksCacheMissQueries();
+  const networkBlocked = useIsApiUnavailable();
   const unavailableOffline = networkBlocked && !!error && !hasData;
 
   return {

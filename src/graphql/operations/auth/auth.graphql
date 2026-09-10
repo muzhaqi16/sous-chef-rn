@@ -165,3 +165,86 @@ mutation ChangePassword($input: ChangePasswordInput!) {
     }
   }
 }
+
+# ============================================
+# DEVICE CREDENTIAL — biometric sign-in
+# ============================================
+#
+# The secret comes back ONCE from `issueDeviceCredential` and is never readable
+# again; it lives in the keychain behind biometry from then on. `exchange`
+# replaces the password replay `autoLogin` used to run, so a defeated keychain
+# yields a revocable, device-bound credential rather than the account password.
+
+mutation IssueDeviceCredential($input: IssueDeviceCredentialInput!) {
+  issueDeviceCredential(input: $input) {
+    __typename
+    ... on DeviceCredentialPayload {
+      credential
+      deviceCredential {
+        id
+        deviceId
+        expiresAt
+      }
+    }
+    ... on ValidationError {
+      field
+    }
+    ... on Error {
+      code
+      message
+    }
+  }
+}
+
+# `user` selects the same shape `Login` writes: every writer of the user record
+# writes the full set `GetUserProfile` reads, or the cache read goes incomplete
+# and the profile screen renders nothing.
+mutation ExchangeDeviceCredential($input: ExchangeDeviceCredentialInput!) {
+  exchangeDeviceCredential(input: $input) {
+    __typename
+    ... on DeviceCredentialSessionPayload {
+      accessToken
+      refreshToken
+      credentialExpiresAt
+      user {
+        id
+        ...LoginUser
+      }
+    }
+    ... on ValidationError {
+      field
+    }
+    ... on Error {
+      code
+      message
+    }
+  }
+}
+
+# Revoking needs the credential's id, which the client does not keep — the
+# keychain holds the secret only. This finds it by the device id it is bound to,
+# which also reaches a credential issued before the current install.
+query MyDeviceCredentials {
+  deviceCredentials {
+    id
+    deviceId
+  }
+}
+
+mutation RevokeDeviceCredential($input: RevokeDeviceCredentialInput!) {
+  revokeDeviceCredential(input: $input) {
+    __typename
+    ... on RevokeDeviceCredentialPayload {
+      deviceCredential {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}

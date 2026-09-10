@@ -1,25 +1,26 @@
 import { useEffect, useState } from 'react';
-import { useIsOnline, useUserId } from '#store/useAppStore';
+import { useAppStore, useUserId } from '#store/useAppStore';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 import { backfillActiveQueries } from '#/apollo/offline/reconnectBackfill';
 
 /**
- * Runs `backfillActiveQueries` once per offline → online transition. Separate
- * from `useOnlineQueueSync`, whose effect also re-runs when the user or token
- * lands — a backfill answers an outage ending, not credentials arriving. The
- * counter is render-time so the effect needs no `setState` of its own.
+ * Runs `backfillActiveQueries` once per unreachable → reachable transition —
+ * separate from `useOnlineQueueSync`, which also re-runs when the user or token
+ * lands. Keyed on `isApiUnavailable`, not the device link: an API-only outage
+ * leaves `isOnline` true, so nothing else refreshes watched queries.
  */
 export function useReconnectBackfill(): void {
-  const isOnline = useIsOnline();
+  const apiUnavailable = useAppStore(isApiUnavailable);
   const userId = useUserId();
 
-  const [wasOnline, setWasOnline] = useState(isOnline);
+  const [wasUnavailable, setWasUnavailable] = useState(apiUnavailable);
   const [reconnectCount, setReconnectCount] = useState(0);
 
-  if (wasOnline !== isOnline) {
-    setWasOnline(isOnline);
+  if (wasUnavailable !== apiUnavailable) {
+    setWasUnavailable(apiUnavailable);
     // Signed out, there are no watched queries worth refreshing, and whoever
     // signs in next fetches from scratch.
-    if (isOnline && userId) {
+    if (!apiUnavailable && userId) {
       setReconnectCount(count => count + 1);
     }
   }

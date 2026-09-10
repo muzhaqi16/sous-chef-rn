@@ -2,8 +2,9 @@ import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, { FadeOut } from 'react-native-reanimated';
-import { TIMING } from '#constants/animations';
+
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
+import { motion } from '#/theme/foundations/motion';
 
 interface DeferredScreenProps {
   fallback: React.ReactNode;
@@ -27,7 +28,7 @@ export function DeferredScreen({
       {isReady ? <Component /> : null}
       {isReady ? null : (
         <Animated.View
-          exiting={FadeOut.duration(TIMING.STANDARD)}
+          exiting={FadeOut.duration(motion.timing.STANDARD)}
           style={styles.overlay}
           pointerEvents="none"
         >

@@ -29,23 +29,30 @@ export class PantryScreen extends BaseScreen {
   private static readonly FORM_PAGE_DETAILS = 1;
 
   /**
-   * Open the add-details sheet through the picker sheet that precedes it. Both
-   * taps are retried: one landing while the sheet above is still animating gets
-   * swallowed with no error.
+   * Open the add-details sheet through the picker sheet. "Add manually" lives in
+   * the SEARCH RESULTS, so a term is typed first. Taps are retried: one landing
+   * while the sheet above is still animating gets swallowed with no error.
    */
   async openAddDetailsForm() {
     await this.tapAddButton();
 
     try {
-      await waitFor(element(by.id('add-pantry-item-add-manually-button')))
+      await waitFor(element(by.id('add-pantry-item-search-input')))
         .toBeVisible()
         .withTimeout(3000);
     } catch {
       await this.tapAddButton();
-      await waitFor(element(by.id('add-pantry-item-add-manually-button')))
+      await waitFor(element(by.id('add-pantry-item-search-input')))
         .toBeVisible()
         .withTimeout(3000);
     }
+
+    // The search bar debounces 250ms before the results (and the row below)
+    // render, so the wait that follows is what settles it.
+    await element(by.id('add-pantry-item-search-input')).replaceText('zz');
+    await waitFor(element(by.id('add-pantry-item-add-manually-button')))
+      .toBeVisible()
+      .withTimeout(5000);
 
     await element(by.id('add-pantry-item-add-manually-button')).tap();
     try {

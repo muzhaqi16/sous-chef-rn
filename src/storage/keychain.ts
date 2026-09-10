@@ -26,6 +26,7 @@ export const DEFAULT_SERVICE = `${NAMESPACE}.credentials`;
 export const CREDENTIALS_INDICATOR_SERVICE = `${NAMESPACE}.credentials.indicator`;
 export const TEMP_REGISTRATION_SERVICE = `${NAMESPACE}.temp.registration`;
 export const SESSION_TOKENS_SERVICE = `${NAMESPACE}.session.tokens`;
+export const DEVICE_ID_SERVICE = `${NAMESPACE}.device.id`;
 export const LAST_BIOMETRIC_EMAIL_KEY =
   appConfig.identity.lastBiometricEmailKey;
 
@@ -142,8 +143,10 @@ export async function saveCredentials(
       password,
       {
         service,
-        // Allow either FaceID/TouchID (iOS) or any enrolled biometric (Android)
-        accessControl: ACCESS_CONTROL.BIOMETRY_ANY,
+        // CURRENT_SET, not ANY: the entry is invalidated when a face or finger
+        // is enrolled, so someone who learns the passcode cannot add their own
+        // biometric and unlock the stored credential.
+        accessControl: ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
         // On Android, prefer a hardware-backed keystore; falls back to
         // software-backed when the device has no secure element.
         securityLevel: SECURITY_LEVEL.SECURE_HARDWARE,
@@ -184,14 +187,46 @@ export async function saveCredentials(
 }
 
 /**
- * Retrieve a specific account's stored credentials, prompting the user
- * to authenticate with biometrics / passcode.
+ * Android reports a `BIOMETRY_CURRENT_SET` entry whose enrolment changed as a
+ * permanently invalidated key. iOS removes the item instead, which surfaces as
+ * a resolved-but-empty read. Both mean the same thing: this slot can never be
+ * unlocked again and must be re-enrolled.
+ */
+const INVALIDATED =
+  /Key\s*Permanently\s*Invalidated|BiometryCurrentSet|changed or deleted their auth/i;
+
+// react-native-keychain rejects every `CryptoFailedException` as
+// `E_CRYPTO_FAILED`, and its biometric handler builds one for EVERY androidx
+// outcome — a cancel included — formatted `code: <n>, msg: …`. Only the prompt
+// callback writes that marker, so it means authentication ended without
+// succeeding, which is never the same thing as an unusable key.
+const PROMPT_OUTCOME = /(?:^|\s)code:\s*\d+/;
+
+// The Android bridge spreads one rejection across `code`, `name` and
+// `message`; join them so the signal is read wherever it landed.
+function rejectionText(error: unknown): string {
+  if (error === null || typeof error !== 'object') return String(error);
+  const { code, name, message } = error as Record<string, unknown>;
+  return [code, name, message]
+    .filter((part): part is string => typeof part === 'string')
+    .join(' ');
+}
+
+function isPermanentlyInvalidated(error: unknown): boolean {
+  const text = rejectionText(error);
+  if (PROMPT_OUTCOME.test(text)) return false;
+  return INVALIDATED.test(text);
+}
+
+/**
+ * Retrieve a specific account's stored credentials, prompting for biometrics.
+ * A slot invalidated by a biometric enrolment change is cleared rather than
+ * left behind, so the login screen stops offering a prompt that cannot succeed.
  */
 export async function loadCredentials(
   email: string,
 ): Promise<{ username: string; password: string } | null> {
   try {
-    // This call will now *always* trigger FaceID/TouchID (or device passcode)
     const creds = await getGenericPassword({
       service: credentialsServiceFor(email),
       authenticationPrompt: {
@@ -200,15 +235,31 @@ export async function loadCredentials(
       },
     });
     if (!creds) {
-      // user hit "cancel" or failed the check
+      // A resolved-but-empty read means the entry is gone while its
+      // unprotected indicator may remain. Cancellation rejects instead.
+      await discardInvalidatedCredentials(email);
       return null;
     }
-    const result = { username: creds.username, password: creds.password };
-    return result;
-  } catch {
-    // could also inspect err.code here if you want, but treating
-    // any error as "no creds" is simplest:
+    return { username: creds.username, password: creds.password };
+  } catch (error) {
+    if (isPermanentlyInvalidated(error)) {
+      await discardInvalidatedCredentials(email);
+    }
+    // Cancellation and transient failures keep the slot: the person can retry.
     return null;
+  }
+}
+
+/** Drop a slot the device refuses to unlock. Never throws — the caller is
+ * already on a failure path and falls back to password sign-in. */
+async function discardInvalidatedCredentials(email: string): Promise<void> {
+  try {
+    await clearCredentials(email);
+    logger.info(
+      'Biometric credentials were invalidated; re-enrolment is required.',
+    );
+  } catch {
+    credentialsExistCache.delete(normalizeAccount(email));
   }
 }
 
@@ -309,9 +360,9 @@ export async function getBiometricCapability(): Promise<{
 }
 
 /**
- * Remember which account most recently enrolled biometric login. The login
- * screen has no logged-in user, so it reads this to decide which account's
- * credentials the biometric button should unlock.
+ * Record which account the biometric prompt offers — the login screen has no
+ * logged-in user to ask. The accounts it does not name keep their slots:
+ * deleting a local credential revokes nothing server-side.
  */
 export async function saveLastBiometricEmail(email: string): Promise<void> {
   try {
@@ -350,50 +401,10 @@ export async function getLastBiometricEmail(): Promise<string | null> {
 }
 
 /**
- * Store the registration password temporarily in the keychain during onboarding.
- * No biometric gate — uses WHEN_UNLOCKED_THIS_DEVICE_ONLY for basic protection.
- * The email is stored as the username so we can validate ownership on load.
- */
-export async function saveTempRegistrationPassword(
-  email: string,
-  password: string,
-): Promise<void> {
-  return queueOperation(async () => {
-    await setGenericPassword(email, password, {
-      service: TEMP_REGISTRATION_SERVICE,
-      accessible: ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-    });
-  });
-}
-
-/**
- * Load the temp registration password from the keychain.
- * Returns the password only if the stored username matches the provided email.
- * If there's a mismatch (different user), returns null and clears the stale entry.
- */
-export async function loadTempRegistrationPassword(
-  email: string,
-): Promise<string | null> {
-  try {
-    const creds = await getGenericPassword({
-      service: TEMP_REGISTRATION_SERVICE,
-    });
-    if (!creds) return null;
-
-    if (creds.username !== email) {
-      // Stale entry from a different user — clear it
-      await clearTempRegistrationPassword();
-      return null;
-    }
-
-    return creds.password;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Clear the temp registration password from the keychain.
+ * Purge the plaintext registration password an earlier build stored here while
+ * onboarding ran. Nothing writes this entry any more — enrolment authorises off
+ * the live session — but a keychain item survives app deletion, so the purge
+ * runs at startup and at session end until it can be assumed gone.
  */
 export async function clearTempRegistrationPassword(): Promise<void> {
   try {
@@ -484,54 +495,64 @@ export async function saveSessionTokens(
   });
 }
 
+/** An attempt that failed in a way a later one might not. */
+type RetryableRead<T> = T | { status: 'retry'; error: unknown };
+
+/** Sleep BETWEEN attempts, never inside one: the queue's lock is not held here. */
+const backoff = (attempt: number): Promise<void> =>
+  new Promise(resolve =>
+    setTimeout(resolve, SESSION_LOAD_RETRY_BASE_MS * attempt),
+  );
+
+async function readSessionTokensOnce(): Promise<
+  RetryableRead<SessionTokenLoadResult>
+> {
+  return queueOperation<RetryableRead<SessionTokenLoadResult>>(async () => {
+    let creds;
+    try {
+      creds = await getGenericPassword({ service: SESSION_TOKENS_SERVICE });
+    } catch (error) {
+      return { status: 'retry', error };
+    }
+    if (!creds) return { status: 'absent' };
+
+    let parsed: Partial<SessionTokens>;
+    try {
+      parsed = JSON.parse(creds.password) as Partial<SessionTokens>;
+    } catch {
+      // Corrupted entry — retrying can't fix it; treat as no session.
+      logger.error('Stored session tokens are unparseable; ignoring them');
+      return { status: 'absent' };
+    }
+    if (!parsed.accessToken || !parsed.refreshToken) {
+      return { status: 'absent' };
+    }
+    const tokens = {
+      accessToken: parsed.accessToken,
+      refreshToken: parsed.refreshToken,
+    };
+    confirmedSessionPair = JSON.stringify(tokens);
+    return { status: 'ok', tokens };
+  });
+}
+
 /**
- * Load the session tokens, distinguishing a confirmed absence ('absent' —
- * the user must log in) from a keychain read failure ('error' — retried
- * with backoff first; callers should fall back to any MMKV copy rather
- * than treating the session as gone).
+ * 'absent' is a confirmed absence — the user must log in. 'error' is a read
+ * that failed after its retries, and a caller should fall back to any MMKV
+ * copy rather than treat the session as gone.
  */
 export async function loadSessionTokens(): Promise<SessionTokenLoadResult> {
-  return queueOperation<SessionTokenLoadResult>(
-    async (): Promise<SessionTokenLoadResult> => {
-      let lastError: unknown;
-      for (let attempt = 1; attempt <= SESSION_LOAD_ATTEMPTS; attempt++) {
-        try {
-          const creds = await getGenericPassword({
-            service: SESSION_TOKENS_SERVICE,
-          });
-          if (!creds) return { status: 'absent' };
-          let parsed: Partial<SessionTokens>;
-          try {
-            parsed = JSON.parse(creds.password) as Partial<SessionTokens>;
-          } catch {
-            // Corrupted entry — retrying can't fix it; treat as no session.
-            logger.error(
-              'Stored session tokens are unparseable; ignoring them',
-            );
-            return { status: 'absent' };
-          }
-          if (!parsed.accessToken || !parsed.refreshToken) {
-            return { status: 'absent' };
-          }
-          const tokens = {
-            accessToken: parsed.accessToken,
-            refreshToken: parsed.refreshToken,
-          };
-          confirmedSessionPair = JSON.stringify(tokens);
-          return { status: 'ok', tokens };
-        } catch (error) {
-          lastError = error;
-          if (attempt < SESSION_LOAD_ATTEMPTS) {
-            await new Promise(resolve =>
-              setTimeout(resolve, SESSION_LOAD_RETRY_BASE_MS * attempt),
-            );
-          }
-        }
-      }
-      logger.error('Session token read failed after retries:', lastError);
-      return { status: 'error' };
-    },
-  );
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= SESSION_LOAD_ATTEMPTS; attempt++) {
+    const result = await readSessionTokensOnce();
+    if (result.status !== 'retry') return result;
+    lastError = result.error;
+    // Each attempt is its own queued operation, so this wait releases the lock
+    // instead of holding every other keychain caller behind a sleeping one.
+    if (attempt < SESSION_LOAD_ATTEMPTS) await backoff(attempt);
+  }
+  logger.error('Session token read failed after retries:', lastError);
+  return { status: 'error' };
 }
 
 /**
@@ -555,24 +576,63 @@ export async function clearSessionTokens(): Promise<boolean> {
   });
 }
 
-// Account-scoped aliases kept for the existing call sites.
-export async function hasCredentialsForAccount(
-  email: string,
-): Promise<boolean> {
-  return hasCredentials(email);
+/**
+ * This install's device identifier, kept beside the credentials it binds. On
+ * iOS a keychain entry outlives an app deletion while MMKV does not, so an
+ * identifier held only in MMKV lets a surviving credential name a device the
+ * server has never seen.
+ */
+export async function saveDeviceId(deviceId: string): Promise<boolean> {
+  return queueOperation(async () => {
+    try {
+      const stored = await setGenericPassword('device', deviceId, {
+        service: DEVICE_ID_SERVICE,
+        accessible: ACCESSIBLE.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+      });
+      if (!stored) {
+        logger.warn('Keychain rejected the device id write');
+        return false;
+      }
+      return true;
+    } catch (error) {
+      logger.warn('Failed to persist the device id to the keychain:', error);
+      return false;
+    }
+  });
 }
 
-export async function loadCredentialsForAccount(email: string): Promise<{
-  username: string;
-  password: string;
-} | null> {
-  return loadCredentials(email);
+/**
+ * A read that FAILED is not a read that found nothing: only `absent` may lead to
+ * minting, because minting over a durable entry the device still holds strands
+ * the credential bound to it.
+ */
+export type DeviceIdLoadResult =
+  | { status: 'ok'; deviceId: string }
+  | { status: 'absent' }
+  | { status: 'error' };
+
+async function readDeviceIdOnce(): Promise<RetryableRead<DeviceIdLoadResult>> {
+  return queueOperation<RetryableRead<DeviceIdLoadResult>>(async () => {
+    let entry;
+    try {
+      entry = await getGenericPassword({ service: DEVICE_ID_SERVICE });
+    } catch (error) {
+      return { status: 'retry', error };
+    }
+    return entry
+      ? { status: 'ok', deviceId: entry.password }
+      : { status: 'absent' };
+  });
 }
 
-export async function getStoredAccounts(): Promise<
-  Array<{ email: string; lastUsed: number; biometricMethod: string }>
-> {
-  // For the new simplified implementation, return empty array
-  // This can be enhanced later if multi-account support is needed
-  return [];
+export async function loadDeviceId(): Promise<DeviceIdLoadResult> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= SESSION_LOAD_ATTEMPTS; attempt++) {
+    const result = await readDeviceIdOnce();
+    if (result.status !== 'retry') return result;
+    lastError = result.error;
+    if (attempt < SESSION_LOAD_ATTEMPTS) await backoff(attempt);
+  }
+  logger.error('Device id read failed after retries:', lastError);
+  return { status: 'error' };
 }

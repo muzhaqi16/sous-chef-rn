@@ -4,9 +4,7 @@
  */
 
 import {
-  SPRING,
   SHEET,
-  TIMING,
   SLIDE_PRESETS,
   staggeredEntryAnimation,
   screenEntryAnimation,
@@ -23,20 +21,28 @@ import {
   EDGE_THRESHOLD,
   MAX_SCROLL_SPEED,
 } from '../drag';
-import { SKILL_LEVELS, DIETARY_LIMITS } from '../dietary';
-import { PAGINATION } from '../shoppingList';
-import { HIT_SLOP, HIT_SLOP_SM, HIT_SLOP_LG } from '../touch';
-import { getTabBarBottomPadding } from '../layout';
+import { SKILL_LEVELS, DIETARY_LIMITS } from '#domain/dietary';
+import {
+  HIT_SLOP,
+  HIT_SLOP_SM,
+  HIT_SLOP_LG,
+} from '#features/shoppingList/constants/touch';
+import {
+  getTabBarBottomPadding,
+  getScrollClearancePadding,
+  TAB_BAR_HEIGHT,
+} from '../layout';
+import { motion } from '#/theme/foundations/motion';
 
 describe('animations constants', () => {
-  it('exports SPRING presets with expected keys', () => {
-    expect(SPRING.DEFAULT).toBeDefined();
-    expect(SPRING.SNAPPY).toBeDefined();
-    expect(SPRING.PRESS).toBeDefined();
-    expect(SPRING.GENTLE).toBeDefined();
-    expect(SPRING.HEAVY).toBeDefined();
-    expect(SPRING.EXPAND).toBeDefined();
-    expect(SPRING.DEFAULT.damping).toBe(15);
+  it('exports spring presets with expected keys', () => {
+    expect(motion.spring.DEFAULT).toBeDefined();
+    expect(motion.spring.SNAPPY).toBeDefined();
+    expect(motion.spring.PRESS).toBeDefined();
+    expect(motion.spring.GENTLE).toBeDefined();
+    expect(motion.spring.HEAVY).toBeDefined();
+    expect(motion.spring.EXPAND).toBeDefined();
+    expect(motion.spring.DEFAULT.damping).toBe(15);
   });
 
   it('exports SHEET constants', () => {
@@ -44,12 +50,12 @@ describe('animations constants', () => {
     expect(SHEET.BACKDROP_OPACITY).toBe(0.5);
   });
 
-  it('exports TIMING presets', () => {
-    expect(TIMING.INSTANT).toBe(100);
-    expect(TIMING.FAST).toBe(150);
-    expect(TIMING.STANDARD).toBe(200);
-    expect(TIMING.MODERATE).toBe(250);
-    expect(TIMING.SLOW).toBe(300);
+  it('exports timing presets', () => {
+    expect(motion.timing.INSTANT).toBe(100);
+    expect(motion.timing.FAST).toBe(150);
+    expect(motion.timing.STANDARD).toBe(200);
+    expect(motion.timing.MODERATE).toBe(250);
+    expect(motion.timing.SLOW).toBe(300);
   });
 
   it('exports SLIDE_PRESETS', () => {
@@ -113,12 +119,6 @@ describe('dietary constants', () => {
   });
 });
 
-describe('shoppingList constants', () => {
-  it('exports PAGINATION', () => {
-    expect(PAGINATION.ITEMS_PAGE_SIZE).toBe(25);
-  });
-});
-
 describe('touch constants', () => {
   it('exports HIT_SLOP with all sides', () => {
     expect(HIT_SLOP).toEqual({ top: 8, bottom: 8, left: 8, right: 8 });
@@ -134,12 +134,33 @@ describe('touch constants', () => {
 });
 
 describe('layout', () => {
+  it('declares the tab bar height once', () => {
+    expect(TAB_BAR_HEIGHT).toBe(65);
+  });
+
   describe('getTabBarBottomPadding', () => {
-    it('calculates bottom padding from safe area', () => {
+    it('clears the bar and the safe area', () => {
       // TAB_BAR_HEIGHT (65) + safeBottom + 16
       expect(getTabBarBottomPadding(0)).toBe(81);
       expect(getTabBarBottomPadding(34)).toBe(115);
       expect(getTabBarBottomPadding(20)).toBe(101);
+    });
+  });
+
+  describe('getScrollClearancePadding', () => {
+    // Trailing slack for a scrolling list, which also has to pass under the
+    // action button; a centred surface takes the bar padding instead, so the
+    // two are separate functions rather than one with a flag.
+    it('adds the floating button on top of the bar padding', () => {
+      const button = 56 + 12;
+      expect(getScrollClearancePadding(0)).toBe(81 + button);
+      expect(getScrollClearancePadding(34)).toBe(115 + button);
+    });
+
+    it('is always the larger of the two', () => {
+      expect(getScrollClearancePadding(20)).toBeGreaterThan(
+        getTabBarBottomPadding(20),
+      );
     });
   });
 });

@@ -31,7 +31,7 @@ describe('App settings — single tap', () => {
     await tapByID('profile-menu-appSettings');
     // The screen renders a loading branch (no testID) until GetUserSettings
     // resolves, so wait for a switch rather than the container.
-    await waitFor(element(by.id(SWITCHES[0].testID)))
+    await waitFor(element(by.id(SWITCHES[0]!.testID)))
       .toBeVisible()
       .withTimeout(TIMEOUTS.NETWORK);
   });

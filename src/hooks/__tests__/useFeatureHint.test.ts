@@ -3,15 +3,13 @@ import { useFeatureHint } from '../useFeatureHint';
 
 jest.mock('#/storage/mmkv');
 
-const { __mockStore: mockStore } = jest.requireMock<{
-  __mockStore: Map<string, boolean | string | number | ArrayBuffer>;
-}>('#/storage/mmkv');
+import { useStore } from '#store';
+
+/** The hint record the store keeps, in the shape these assertions read. */
+const hints = () => useStore.getState().featureHintsShown;
 
 // Mock tutorials setting — enabled by default
 let mockTutorialsEnabled = true;
-jest.mock('#hooks/settings/useShowTutorials', () => ({
-  useShowTutorials: () => mockTutorialsEnabled,
-}));
 
 // Mock user store
 let mockUserId: string | undefined = 'user-1';
@@ -24,11 +22,12 @@ jest.mock('#store/useAppStore', () => {
       selector(getState()),
     useUser: () => (s => s.user)(getState()),
     useUserId: () => (s => s.user?.id)(getState()),
+    useShowTutorials: () => mockTutorialsEnabled,
   };
 });
 
 beforeEach(() => {
-  mockStore.clear();
+  useStore.getState().clearAllFeatureHints();
   mockTutorialsEnabled = true;
   mockUserId = 'user-1';
   jest.useFakeTimers();
@@ -80,7 +79,7 @@ describe('useFeatureHint', () => {
   });
 
   it('does not show on mount when already shown before', () => {
-    mockStore.set('feature_hint_shown_user-1_test', true);
+    useStore.getState().markFeatureHintShown('feature_hint_shown_user-1_test');
 
     const { result } = renderHook(() =>
       useFeatureHint({ featureId: 'test', showOnMount: true }),
@@ -125,7 +124,7 @@ describe('useFeatureHint', () => {
 
     expect(result.current.isVisible).toBe(false);
     expect(result.current.hasBeenShown).toBe(true);
-    expect(mockStore.get('feature_hint_shown_user-1_test')).toBe(true);
+    expect(hints()['feature_hint_shown_user-1_test']).toBe(true);
   });
 
   it('actions.hide() hides hint without persisting', () => {
@@ -139,11 +138,11 @@ describe('useFeatureHint', () => {
 
     expect(result.current.isVisible).toBe(false);
     expect(result.current.hasBeenShown).toBe(false);
-    expect(mockStore.has('feature_hint_shown_user-1_test')).toBe(false);
+    expect(hints()['feature_hint_shown_user-1_test']).toBeUndefined();
   });
 
   it('actions.reset() clears persisted state', () => {
-    mockStore.set('feature_hint_shown_user-1_test', true);
+    useStore.getState().markFeatureHintShown('feature_hint_shown_user-1_test');
 
     const { result } = renderHook(() => useFeatureHint({ featureId: 'test' }));
 
@@ -155,7 +154,7 @@ describe('useFeatureHint', () => {
 
     expect(result.current.hasBeenShown).toBe(false);
     expect(result.current.isVisible).toBe(false);
-    expect(mockStore.has('feature_hint_shown_user-1_test')).toBe(false);
+    expect(hints()['feature_hint_shown_user-1_test']).toBeUndefined();
   });
 
   it('scopes storage key per user', () => {
@@ -167,7 +166,7 @@ describe('useFeatureHint', () => {
       result.current.actions.dismiss();
     });
 
-    expect(mockStore.has('feature_hint_shown_user-1_hint1')).toBe(true);
+    expect(hints()['feature_hint_shown_user-1_hint1']).toBe(true);
   });
 
   it('uses unscoped key when no user is logged in', () => {
@@ -181,6 +180,6 @@ describe('useFeatureHint', () => {
       result.current.actions.dismiss();
     });
 
-    expect(mockStore.has('feature_hint_shown_hint1')).toBe(true);
+    expect(hints()['feature_hint_shown_hint1']).toBe(true);
   });
 });

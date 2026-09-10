@@ -5,7 +5,6 @@ import { t } from '#/i18n';
 // The module-level `t` takes a fallback string, not options, so an interpolated
 // key has to go through the i18next instance directly — same split as
 // src/utils/errorHandlers.ts.
-import { getI18n } from '#/i18n/config';
 import { errorService } from '#/services/errorService';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
@@ -15,7 +14,7 @@ import {
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
   buildAddItemsReconcileUpdate,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+} from '#features/shoppingList/cache/items';
 import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredToWaste';
 import { useConvertExpiredBatchesToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredBatchesToWaste';
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
@@ -310,7 +309,7 @@ export function usePantryItemDetailActions({
     } else {
       alertService.alert(
         t('pantryItemDetail.discardItemTitle'),
-        getI18n().t('pantryItemDetail.discardItemBody', {
+        t('pantryItemDetail.discardItemBody', {
           quantity: item.quantity,
           unit: item.unit?.name || '',
         }),

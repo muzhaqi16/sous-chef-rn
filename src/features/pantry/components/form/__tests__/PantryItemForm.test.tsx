@@ -65,7 +65,7 @@ jest.mock('#/utils/fractionUtils', () => ({
 jest.mock('#/utils/finallyHelpers');
 
 // Form sub-sections — exercised via their own focused tests.
-jest.mock('#components/molecules/FormInput', () => ({
+jest.mock('#components/atoms/FormInput', () => ({
   FormInput: ({
     label,
     placeholder,
@@ -94,7 +94,7 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
   },
 }));
 
-jest.mock('#components/molecules/Header', () => ({
+jest.mock('#components/organisms/Header', () => ({
   Header: ({ title }: { title?: string }) => {
     const { Text, View } = require('react-native');
     return (
@@ -161,7 +161,7 @@ jest.mock('#components/molecules/DynamicFormFields', () => ({
   },
 }));
 
-jest.mock('#components/molecules/FieldRow', () => ({
+jest.mock('#components/atoms/FieldRow', () => ({
   FieldRow: ({ children }: { children?: React.ReactNode }) => {
     const { View } = require('react-native');
     return <View>{children}</View>;

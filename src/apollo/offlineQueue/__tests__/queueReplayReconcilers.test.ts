@@ -2,10 +2,14 @@ import { reconcileReplaySuccess } from '../queueReplayReconcilers';
 import {
   addPantryItemLocally,
   removePantryItemLocally,
-} from '#/apollo/utils/pantryCacheUpdaters';
+} from '#features/pantry/cache/items';
 
-jest.mock('#/apollo/client', () => ({ client: { cache: {} } }));
-jest.mock('#/apollo/utils/pantryCacheUpdaters', () => ({
+jest.mock('#/apollo/clientRegistry', () => ({
+  getApolloClient: () => ({ cache: {} }),
+  registerApolloClient: jest.fn(),
+  clearApolloClient: jest.fn(),
+}));
+jest.mock('#features/pantry/cache/items', () => ({
   addPantryItemLocally: jest.fn(),
   removePantryItemLocally: jest.fn(),
 }));

@@ -5,11 +5,11 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { FormInput } from '#/components/molecules/FormInput';
+import { FormInput } from '#components/atoms/FormInput';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
-import { Button } from '#components/atoms/Button';
-import { Text } from '#components/atoms/Text';
+import { Button } from '#components/molecules/Button';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
 export interface UnitEntry {
   id: string;
@@ -49,8 +49,9 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
   const handleRemoveEntry = (index: number) => {
     const updated = entries.filter((_, i) => i !== index);
     // If we removed the default entry, make the first one default
-    if (updated.length > 0 && !updated.some(e => e.isDefault)) {
-      updated[0] = { ...updated[0], isDefault: true };
+    const [firstEntry] = updated;
+    if (firstEntry && !updated.some(e => e.isDefault)) {
+      updated[0] = { ...firstEntry, isDefault: true };
     }
     onEntriesChanged(updated);
   };
@@ -122,9 +123,9 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text size="lg" weight="semibold" style={styles.sectionTitle}>
+      <SectionHeader style={styles.sectionTitleSpacing}>
         {t('unitEntryList.title')}
-      </Text>
+      </SectionHeader>
       <DropdownStack>
         {entries.map((entry, index) => (
           <View key={entry.id}>
@@ -161,6 +162,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                 </View>
                 <AppPressable
                   onPress={() => handleRemoveEntry(index)}
+                  accessibilityLabel={t('labels.remove')}
                   disabled={disabled}
                   style={styles.deleteButton}
                 >
@@ -203,10 +205,10 @@ const styles = StyleSheet.create(theme => ({
   container: {
     marginBottom: theme.spacing.md,
   },
-  sectionTitle: {
+  sectionTitleSpacing: {
     marginBottom: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.borderLight,
   },
   entryRow: {
@@ -231,7 +233,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
     marginLeft: theme.spacing.sm,
     paddingLeft: theme.spacing.md,
-    borderLeftWidth: 2,
+    borderLeftWidth: theme.borderWidth.medium,
     borderLeftColor: theme.colors.borderLight,
   },
   pressed: {

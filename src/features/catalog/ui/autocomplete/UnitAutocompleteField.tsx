@@ -4,8 +4,8 @@ import {
   useUnitAutocomplete,
   type UnitItem,
 } from '#features/catalog/hooks/useUnitAutocomplete';
-import { GenericAutocompleteField } from '#components/molecules/AutocompleteField/GenericAutocompleteField';
-import { AutocompleteRow } from '#components/molecules/AutocompleteField/AutocompleteRow';
+import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
+import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
 
 interface UnitAutocompleteFieldProps {
   variant: 'inline' | 'modal';

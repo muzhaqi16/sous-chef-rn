@@ -62,6 +62,9 @@ jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
+// Both the plain atom and its themed wrapper: the wrapper is declared beside
+// what it wraps, so a factory naming only the atom leaves the screen's import
+// undefined.
 jest.mock('#components/atoms/BackButton', () => ({
   BackButton: ({ onPress }: { onPress?: () => void }) => {
     const { Pressable, Text } = require('react-native');
@@ -71,9 +74,17 @@ jest.mock('#components/atoms/BackButton', () => ({
       </Pressable>
     );
   },
+  ThemedBackButton: ({ onPress }: { onPress?: () => void }) => {
+    const { Pressable, Text } = require('react-native');
+    return (
+      <Pressable onPress={onPress} testID="back-button">
+        <Text>Back</Text>
+      </Pressable>
+    );
+  },
 }));
 
-jest.mock('#components/molecules/ImagePicker', () => ({
+jest.mock('#features/catalog/components/ImagePicker', () => ({
   ImageFile: {},
 }));
 

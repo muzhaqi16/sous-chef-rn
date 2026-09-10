@@ -7,6 +7,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Label } from '#components/atoms/Label';
 import { Text } from '#components/atoms/Text';
+import { formatMonthDayYear } from '#/utils/formatters/date';
 
 interface DatePickerFieldProps {
   label?: string;
@@ -60,11 +61,7 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
   };
 
   const formatDate = (date: Date): string => {
-    return date.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+    return formatMonthDayYear(date);
   };
 
   return (
@@ -75,12 +72,12 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
         onPress={handlePress}
       >
         <Icon name="calendar-outline" size={20} tone="textSecondary" />
-        <Text size="md" style={[styles.dateText, !value && styles.placeholder]}>
+        <Text style={[styles.dateText, !value && styles.placeholder]}>
           {value ? formatDate(value) : placeholder}
         </Text>
       </AppPressable>
       {error ? (
-        <Text size="sm" tone="error" style={styles.errorText}>
+        <Text role="caption" tone="error" style={styles.errorText}>
           {error}
         </Text>
       ) : null}
@@ -104,8 +101,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   label: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
+    ...theme.type.bodyStrong,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
   },
@@ -120,7 +116,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.inputBackground,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     gap: theme.spacing.sm,
   },

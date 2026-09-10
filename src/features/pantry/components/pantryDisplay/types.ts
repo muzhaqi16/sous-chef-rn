@@ -1,7 +1,7 @@
 import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { type PantryStats } from '#/graphql/generated/schemaTypes';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
-import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
+import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 import type {
   PantrySortOption,
   PantrySortDirection,

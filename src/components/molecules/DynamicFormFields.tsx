@@ -12,7 +12,7 @@ import {
 import { StyleSheet } from 'react-native-unistyles';
 
 // Import new unified autocomplete components
-import { FormInput } from './FormInput';
+import { FormInput } from '#components/atoms/FormInput';
 import { Text } from '#components/atoms/Text';
 import { useFieldRenderers } from './fieldRenderers';
 
@@ -272,7 +272,7 @@ export function DynamicFormFields<T extends FieldValues>({
                 typeof Input === 'string' && renderers[Input]?.ownsErrorDisplay
               ) && (
                 <Text
-                  size="sm"
+                  role="caption"
                   tone="error"
                   style={styles.errorText}
                   testID={

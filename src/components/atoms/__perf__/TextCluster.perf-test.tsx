@@ -23,11 +23,11 @@ test('Text x40 rows', async () => {
     <View>
       {ROWS.map(index => (
         <View key={index}>
-          <Text size="md" weight="semibold">{`Item ${index}`}</Text>
-          <Text size="sm" tone="secondary">
+          <Text role="bodyStrong">{`Item ${index}`}</Text>
+          <Text role="caption" tone="secondary">
             Fridge
           </Text>
-          <Text size="xs" tone="tertiary">
+          <Text role="caption" tone="tertiary">
             2 L
           </Text>
         </View>

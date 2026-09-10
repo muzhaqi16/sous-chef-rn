@@ -4,7 +4,7 @@
  * answer at all, and its refusal carries no usable ids on the replay path.
  */
 import { gql, type ApolloCache } from '@apollo/client';
-import type { PantryItemDuplicateInfo } from '#/utils/errors/pantryItemDuplicate';
+import type { PantryItemDuplicateInfo } from '#domain/pantryItemDuplicate';
 import { logger } from '#/utils/environment';
 
 /**
@@ -94,7 +94,11 @@ function scanCachedPantryItems(
         itemName: (node.itemName as string | null) ?? null,
         quantity: (node.quantity as number | null) ?? null,
         item: (node.item as { __ref?: string } | null)?.__ref
-          ? { id: String((node.item as { __ref: string }).__ref).split(':')[1] }
+          ? {
+              id:
+                String((node.item as { __ref: string }).__ref).split(':')[1] ??
+                '',
+            }
           : null,
       });
     }

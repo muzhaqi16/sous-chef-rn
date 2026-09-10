@@ -4,10 +4,10 @@ import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { FractionInput } from '#components/molecules/FractionInput';
-import { FormInput } from '#components/molecules/FormInput';
+import { FormInput } from '#components/atoms/FormInput';
 import { DatePickerField } from '#components/molecules/DatePickerField';
-import { ConversionPreview } from '#components/atoms/ConversionPreview';
-import { FractionQuickSelect } from '#components/atoms/FractionQuickSelect';
+import { ConversionPreview } from '#features/pantry/components/ConversionPreview';
+import { FractionQuickSelect } from '#features/pantry/components/FractionQuickSelect';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { formatQuantity } from '#/utils/formatQuantity';
 import { useConversionPreview } from '#features/pantry/hooks/useConversionPreview';
@@ -200,12 +200,7 @@ const RestockActionFields: React.FC<{
         {newQuantity !== null || shared.isConvertedUnit ? (
           <View style={commonStyles.bottomSheetInfoRow}>
             {newQuantity !== null ? (
-              <Text
-                size="sm"
-                weight="medium"
-                tone="accent"
-                style={[styles.newQuantityText, { marginTop: 0 }]}
-              >
+              <Text role="label" tone="accent" style={styles.newQuantityText}>
                 {t('restockItem.newQuantityPrefix')}
                 {formatQuantity(newQuantity)} {newQuantitySymbol}
               </Text>
@@ -214,9 +209,7 @@ const RestockActionFields: React.FC<{
               <ConversionPreview
                 previewText={conversion.previewText}
                 loading={conversion.previewLoading}
-                confidence={
-                  shared.selectedUnitInfo?.conversionConfidence ?? null
-                }
+                confidence={conversion.confidence}
               />
             ) : null}
           </View>
@@ -293,8 +286,9 @@ const styles = StyleSheet.create(theme => ({
   costField: {
     flex: 1,
   },
+  // The row already spaces its children; a top margin here doubles the gap.
   newQuantityText: {
-    marginTop: theme.spacing.xs,
+    marginTop: 0,
   },
   pressed: {
     opacity: theme.opacity.pressed,

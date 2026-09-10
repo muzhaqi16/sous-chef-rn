@@ -1,7 +1,10 @@
 import { useRef, useEffect, useState } from 'react';
 import type { OperationVariables } from '@apollo/client';
 import { errorService } from '#/services/errorService';
+import { isDeadCursorError } from '#/utils/errors/graphqlErrors';
 import { logger } from '#/utils/environment';
+import { useStore } from '#store';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 import type { PaginationState } from '#hooks/types';
 
 /**
@@ -32,6 +35,12 @@ export interface PaginationConfig {
   fetchMoreVariables?: Record<string, unknown>;
   /** Name of the cursor variable (default: 'cursor') */
   cursorVariableName?: string;
+  /**
+   * Re-read the collection from its FIRST page. Called when the server refuses
+   * the stored cursor, which strands the list otherwise — see
+   * {@link isDeadCursorError}. Without one the refusal is only reported.
+   */
+  restart?: () => Promise<unknown>;
 }
 
 /**
@@ -45,6 +54,13 @@ export interface UsePaginationReturn extends PaginationState {
   endCursor: string | null | undefined;
   /** Whether the last loadMore call failed */
   loadMoreError: boolean;
+  /**
+   * The failed page could not be fetched because the API is unreachable, not
+   * because the request was refused. Lets a footer say "offline" instead of the
+   * generic failure — and distinguishes it from the silent no-op the guard
+   * above produces, which told the reader nothing at all.
+   */
+  loadMoreOffline: boolean;
 }
 
 /** Cursor pagination for any Apollo connection query exposing `pageInfo`. */
@@ -55,6 +71,7 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     fetchMore,
     fetchMoreVariables = {},
     cursorVariableName = 'cursor',
+    restart,
   } = config;
 
   const hasMore = pageInfo?.hasNextPage || false;
@@ -77,6 +94,7 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
   const isFetchingMoreRef = useRef(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
+  const [loadMoreOffline, setLoadMoreOffline] = useState(false);
 
   // Released one frame AFTER the commit that appended the page. Clearing it in
   // that commit's effect phase re-opens `loadMore` while the page is still
@@ -111,22 +129,39 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     isFetchingMoreRef.current = true;
     setIsFetchingMore(true);
     setLoadMoreError(false);
+    setLoadMoreOffline(false);
+
+    const variables = {
+      ...fetchMoreVariablesRef.current,
+      [cursorVariableName]: endCursor,
+    };
 
     let result;
+    let deadCursor = false;
     try {
-      result = await fetchMore({
-        variables: {
-          ...fetchMoreVariablesRef.current,
-          [cursorVariableName]: endCursor,
-        },
-      });
+      result = await fetchMore({ variables });
     } catch (error) {
+      deadCursor = isDeadCursorError(error, endCursor);
       errorService.reportError(error, { operation: 'Pagination.loadMore' });
+    }
+
+    // A refused cursor cannot be retried — the same value is all this hook has,
+    // and re-presenting it loops. Re-read from page one instead and show the
+    // reader nothing: the list keeps working, and the refusal is in the log.
+    if (deadCursor && restart) {
+      try {
+        result = await restart();
+      } catch (restartError) {
+        errorService.reportError(restartError, {
+          operation: 'Pagination.restartAfterDeadCursor',
+        });
+      }
     }
 
     setIsFetchingMore(false);
     if (!result) {
       setLoadMoreError(true);
+      setLoadMoreOffline(isApiUnavailable(useStore.getState()));
     }
   };
 
@@ -138,5 +173,6 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     loadMore,
     isLoadingMore,
     loadMoreError,
+    loadMoreOffline,
   };
 }

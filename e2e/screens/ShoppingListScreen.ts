@@ -256,24 +256,32 @@ export class ShoppingListScreen extends BaseScreen {
   }
 
   /**
-   * Open the details form: tab-bar add button -> picker sheet -> "Add Manually".
-   * Both taps are retried — a tap landing mid-animation is swallowed with no
-   * error. Extracted so every caller gets the retries.
+   * Open the details form: tab-bar add button -> picker sheet -> search a term ->
+   * "Add Manually". The row lives in the SEARCH RESULTS, so a term has to be
+   * typed first. Both taps are retried — a tap landing mid-animation is
+   * swallowed with no error. Extracted so every caller gets the retries.
    */
   async openAddDetailsForm() {
     await this.tapAddButton();
 
     try {
-      await waitFor(element(by.id('add-shopping-item-add-manually-button')))
+      await waitFor(element(by.id('add-shopping-item-search-input')))
         .toBeVisible()
         .withTimeout(3000);
     } catch {
       console.log('Picker sheet did not open, retrying add button tap...');
       await this.tapAddButton();
-      await waitFor(element(by.id('add-shopping-item-add-manually-button')))
+      await waitFor(element(by.id('add-shopping-item-search-input')))
         .toBeVisible()
         .withTimeout(3000);
     }
+
+    // The search bar debounces 250ms before the results (and the row below)
+    // render, so the wait that follows is what settles it.
+    await element(by.id('add-shopping-item-search-input')).replaceText('zz');
+    await waitFor(element(by.id('add-shopping-item-add-manually-button')))
+      .toBeVisible()
+      .withTimeout(5000);
 
     // Wait on the NAME INPUT, not on `add-shopping-item-modal`: that id belongs
     // to the PICKER sheet, which this tap navigates away from, so waiting for it

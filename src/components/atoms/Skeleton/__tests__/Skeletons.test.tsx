@@ -4,7 +4,7 @@ import { SkeletonBase } from '../SkeletonBase';
 import { SkeletonCircle } from '../SkeletonCircle';
 import { SkeletonLine } from '../SkeletonLine';
 import { SkeletonRectangle } from '../SkeletonRectangle';
-import { SkeletonList } from '../SkeletonList';
+import { SkeletonList } from '#features/shoppingList/components/SkeletonList';
 
 describe('Skeleton smoke tests', () => {
   describe('SkeletonBase', () => {

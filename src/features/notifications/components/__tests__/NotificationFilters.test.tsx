@@ -45,7 +45,7 @@ describe('NotificationFilters', () => {
     const user = userEvent.setup();
     render(<NotificationFilters {...defaultProps} />);
     const firstCategory = Object.values(NotificationCategory)[0];
-    await user.press(screen.getByText(displayLabel(firstCategory)));
+    await user.press(screen.getByText(displayLabel(firstCategory!)));
     expect(defaultProps.onCategoryChange).toHaveBeenCalledWith(firstCategory);
   });
 

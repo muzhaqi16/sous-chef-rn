@@ -26,6 +26,9 @@ query GetShoppingListDetails($id: ID!) {
     nextRecurringDate
     isTemplate
     templateName
+    # Read by `listFromTemplate` / `nextRecurringList` when this list is copied.
+    description
+    tags
     basedOnTemplate {
       id
       name
@@ -110,6 +113,7 @@ query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
           user {
             id
             email
+            displayName
             profile {
               id
               displayName
@@ -130,7 +134,11 @@ query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
 # Lists the user saved as templates, for the "start from template" picker on
 # the create screen. `shoppingLists` is cached per `filters`, so this variant is
 # separate from the overview connection the list selector reads.
-query GetShoppingListTemplates($first: Int, $after: String) {
+query GetShoppingListTemplates(
+  $first: Int
+  $after: String
+  $copyableItemLimit: Int
+) {
   shoppingLists(filters: { isTemplate: true }, first: $first, after: $after) {
     edges {
       cursor
@@ -139,6 +147,9 @@ query GetShoppingListTemplates($first: Int, $after: String) {
         name
         templateName
         totalItems
+        # Caches each template's lines with the picker that offers it, so
+        # starting a list from one works offline.
+        ...CopyableShoppingListFragment
       }
     }
     pageInfo {
@@ -260,6 +271,7 @@ query GetItemPurchaseHistory($itemId: ID!, $first: Int, $after: String) {
           user {
             id
             email
+            displayName
             profile {
               id
               displayName
@@ -555,44 +567,6 @@ mutation CancelRecurring($input: CancelRecurringInput!) {
   }
 }
 
-mutation GenerateNextRecurringList($input: GenerateNextRecurringListInput!) {
-  generateNextRecurringList(input: $input) {
-    __typename
-    ... on GenerateNextRecurringListPayload {
-      shoppingList {
-        id
-        name
-        isDefault
-        status
-        totalItems
-        completedItems
-        createdAt
-        updatedAt
-        homeId
-        home {
-          id
-          name
-        }
-        ownerships {
-          id
-          ...ShoppingListOwnershipFragment
-        }
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
 mutation MarkAsTemplate($input: MarkAsTemplateInput!) {
   markAsTemplate(input: $input) {
     __typename
@@ -604,44 +578,6 @@ mutation MarkAsTemplate($input: MarkAsTemplateInput!) {
         status
         updatedAt
         version
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation CreateFromTemplate($input: CreateFromTemplateInput!) {
-  createFromTemplate(input: $input) {
-    __typename
-    ... on CreateFromTemplatePayload {
-      shoppingList {
-        id
-        name
-        isDefault
-        status
-        totalItems
-        completedItems
-        createdAt
-        updatedAt
-        homeId
-        home {
-          id
-          name
-        }
-        ownerships {
-          id
-          ...ShoppingListOwnershipFragment
-        }
       }
     }
     ... on Error {
@@ -1128,37 +1064,6 @@ mutation RemoveItemsFromShoppingList(
   }
 }
 
-mutation AddItemsToShoppingList($input: AddItemsToShoppingListInput!) {
-  addItemsToShoppingList(input: $input) {
-    __typename
-    ... on AddItemsToShoppingListPayload {
-      results {
-        index
-        clientId
-        success
-        item {
-          id
-          ...useRecipeShoppingList_addedItem
-        }
-        quantityIncremented
-        error
-      }
-      summary {
-        succeeded
-        failed
-        skipped
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
 mutation ShareShoppingList($input: ShareShoppingListInput!) {
   shareShoppingList(input: $input) {
     __typename
@@ -1246,6 +1151,9 @@ mutation SyncShoppingListItem($input: SyncShoppingListItemInput!) {
     ... on ValidationError {
       field
     }
+    ... on NotFoundError {
+      resource
+    }
   }
 }
 
@@ -1273,6 +1181,9 @@ mutation SyncDeleteShoppingListItem($input: SyncDeleteShoppingListItemInput!) {
     }
     ... on ValidationError {
       field
+    }
+    ... on NotFoundError {
+      resource
     }
   }
 }
@@ -1306,6 +1217,9 @@ mutation SyncMoveShoppingListItem($input: SyncMoveShoppingListItemInput!) {
     }
     ... on ValidationError {
       field
+    }
+    ... on NotFoundError {
+      resource
     }
   }
 }

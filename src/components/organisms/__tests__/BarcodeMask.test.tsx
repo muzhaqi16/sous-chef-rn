@@ -16,7 +16,7 @@ jest.mock('react-native-svg', () => {
     Mask: View,
   };
 });
-jest.mock('#components/molecules/AnimatedScanLine', () => {
+jest.mock('#features/barcode/components/AnimatedScanLine', () => {
   const { View } = require('react-native');
   return { __esModule: true, default: View };
 });

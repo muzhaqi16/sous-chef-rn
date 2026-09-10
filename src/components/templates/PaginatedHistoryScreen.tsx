@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -7,18 +8,17 @@ import {
   type FlashListRef,
 } from '@shopify/flash-list';
 
-import {
-  ThemedActivityIndicator,
-  ThemedBackButton,
-} from '#components/atoms/themedComponents';
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
+import { BackButton } from '#components/atoms/BackButton';
 import { Text } from '#components/atoms/Text';
-import { Icon, type IconName } from '#utils/iconUtils';
-import { DataStateView } from '#components/molecules/DataStateView';
+import type { IconName } from '#utils/iconUtils';
+import { DataStateView } from '#components/organisms/DataStateView';
 import type { DataState } from '#hooks/data/useDataState';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { EmptyState } from '#components/molecules/EmptyState';
 
 export interface PaginatedHistoryScreenProps<T> {
   title: string;
@@ -30,6 +30,8 @@ export interface PaginatedHistoryScreenProps<T> {
   /** No-ops unless another page exists — see `hasNextPage` at the call site. */
   onEndReached: () => void;
   isFetchingMore: boolean;
+  /** The next page could not be fetched because the API is unreachable. */
+  loadMoreOffline?: boolean;
   keyExtractor: (item: T) => string;
   renderItem: (info: ListRenderItemInfo<T>) => React.ReactElement;
   /** One string per row shape, for FlashList's recycling pools. */
@@ -61,6 +63,7 @@ export function PaginatedHistoryScreen<T>({
   onRetry,
   onEndReached,
   isFetchingMore,
+  loadMoreOffline = false,
   keyExtractor,
   renderItem,
   getItemType,
@@ -71,12 +74,14 @@ export function PaginatedHistoryScreen<T>({
   componentName,
   renderScrollComponent,
 }: PaginatedHistoryScreenProps<T>) {
+  const { t } = useTranslation();
   const { goBack } = useAppNavigation();
 
   const flashListRef = useRef<FlashListRef<T>>(null);
   const perfCallbacks = useFlashListPerformance(flashListRef, {
     componentName,
     hasRealContent: items.length > 0,
+    rowCount: items.length,
   });
   useDataReferenceTracker(
     items,
@@ -87,13 +92,11 @@ export function PaginatedHistoryScreen<T>({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <ThemedBackButton onPress={goBack} style={styles.backButton} />
+        <BackButton onPress={goBack} style={styles.backButton} />
         <View style={styles.headerContent}>
-          <Text size="lg" weight="semibold">
-            {title}
-          </Text>
+          <Text role="heading">{title}</Text>
           {!!subtitle && (
-            <Text size="sm" tone="secondary" style={styles.headerSubtitle}>
+            <Text role="caption" tone="secondary" style={styles.headerSubtitle}>
               {subtitle}
             </Text>
           )}
@@ -128,28 +131,27 @@ export function PaginatedHistoryScreen<T>({
           ListFooterComponent={
             isFetchingMore ? (
               <ThemedActivityIndicator style={styles.footerLoader} />
+            ) : loadMoreOffline ? (
+              // Without this the end of a persisted page is a silent no-op: the
+              // reader pulls, nothing arrives, and nothing says why.
+              <Text
+                role="footnote"
+                tone="secondary"
+                style={styles.footerNotice}
+              >
+                {t('errors.offlineNoMorePages')}
+              </Text>
             ) : null
           }
           ListEmptyComponent={
             state === 'error' || state === 'offline' ? (
               <DataStateView state={state} onRetry={onRetry} />
             ) : (
-              <View style={styles.emptyContainer}>
-                <Icon name={emptyIcon} size={64} tone="iconDisabled" />
-                <Text size="lg" weight="semibold" style={styles.emptyText}>
-                  {emptyTitle}
-                </Text>
-                {!!emptyDescription && (
-                  <Text
-                    size="sm"
-                    tone="secondary"
-                    align="center"
-                    style={styles.emptyDescription}
-                  >
-                    {emptyDescription}
-                  </Text>
-                )}
-              </View>
+              <EmptyState
+                icon={emptyIcon}
+                title={emptyTitle}
+                description={emptyDescription}
+              />
             )
           }
           contentContainerStyle={styles.content}
@@ -171,7 +173,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   backButton: {
@@ -205,15 +207,8 @@ const styles = StyleSheet.create(theme => ({
   footerLoader: {
     marginVertical: theme.spacing.lg,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xl,
-  },
-  emptyText: {
-    marginTop: theme.spacing.md,
-  },
-  emptyDescription: {
-    marginTop: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.xl,
+  footerNotice: {
+    marginVertical: theme.spacing.lg,
+    textAlign: 'center',
   },
 }));

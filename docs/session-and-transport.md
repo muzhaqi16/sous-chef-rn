@@ -50,6 +50,30 @@ its own step at module init — `logoutCleanup` the Apollo teardown,
   sign-out path.
 - **`apiReachabilityBreaker`'s `/health` probe keeps running.** It is
   unauthenticated, and the sign-in screen needs to know whether the API is up.
+- **`devicePushToken` clears the server's delivery target.** `updateDevice`
+  removes only the token; the device row survives, because deleting it revokes
+  the device credential biometric sign-in exchanges. It resolves the row with
+  `deviceByDeviceId` when this launch never registered, skips the lookup while
+  offline, and is fire-and-forget so a round trip cannot hold the teardown. On
+  `refresh_token_dead` the access token is already refused, so a `ForbiddenError`
+  here is the expected outcome and is logged at `warn`, not treated as an
+  incident.
+
+**Every session-end path clears the push token, not just `logout()`.** It is a
+teardown step rather than a call beside the sign-out for exactly that reason:
+`endSession` — the path `account_inactive`, `refresh_token_dead` and
+`session_revoked` take — otherwise leaves a live delivery target for an account
+that has been signed out, and the next person to sign in on that device receives
+its notifications.
+
+**A device update is read as errors-as-data.** `UpdateDeviceResult` is a union
+(`ConflictError | ForbiddenError | NotFoundError | UpdateDevicePayload |
+ValidationError`), so a refusal RESOLVES and a `.catch` never sees it.
+`readDeviceUpdate` in `src/services/auth/deviceRegistration.ts` discriminates on
+`__typename`; no caller may report a change from the absence of a throw.
+
+Where the identity that names the device comes from, and why it is keychain-
+primary: `docs/subscriptions-echo-and-budget.md` § The device identity.
 
 ## Token rotation
 

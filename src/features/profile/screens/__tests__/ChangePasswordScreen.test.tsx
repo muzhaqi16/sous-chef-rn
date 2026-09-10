@@ -8,13 +8,24 @@ import {
 import { ChangePasswordDocument } from '#operations/auth/auth.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import type { Header } from '#components/molecules/Header';
-import type { PasswordInputProps } from '#components/atoms/PasswordInput';
+import type { Header } from '#components/organisms/Header';
+import type { PasswordInputProps } from '#components/molecules/PasswordInput';
 import { ChangePasswordScreen } from '../ChangePasswordScreen';
 
 type HeaderProps = React.ComponentProps<typeof Header>;
 
-const mockToast = jest.fn();
+const mockToastSuccess = jest.fn();
+const mockToastError = jest.fn();
+const mockToastInfo = jest.fn();
+const mockToastWarning = jest.fn();
+jest.mock('#services/toastService', () => ({
+  toastService: {
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+    error: (...args: unknown[]) => mockToastError(...args),
+    info: (...args: unknown[]) => mockToastInfo(...args),
+    warning: (...args: unknown[]) => mockToastWarning(...args),
+  },
+}));
 
 jest.mock('#hooks/navigation/useAppNavigation');
 const mockNav = (
@@ -22,10 +33,6 @@ const mockNav = (
     useAppNavigation: jest.Mock;
   }
 ).useAppNavigation();
-
-jest.mock('#hooks/useToast', () => ({
-  useToast: () => mockToast,
-}));
 
 jest.mock('#/utils/finallyHelpers');
 
@@ -47,7 +54,7 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',
 }));
 
-jest.mock('#components/molecules/Header', () => {
+jest.mock('#components/organisms/Header', () => {
   const { View, Text, Pressable } = require('react-native');
   return {
     Header: ({ title, onBack }: Pick<HeaderProps, 'title' | 'onBack'>) => (
@@ -63,7 +70,7 @@ jest.mock('#components/molecules/Header', () => {
   };
 });
 
-jest.mock('#components/atoms/PasswordInput', () => {
+jest.mock('#components/molecules/PasswordInput', () => {
   const { TextInput } = require('react-native');
   return {
     PasswordInput: ({
@@ -207,9 +214,7 @@ describe('ChangePasswordScreen', () => {
       ),
     );
 
-    expect(mockToast).not.toHaveBeenCalledWith(
-      expect.objectContaining({ message: SERVER_PROSE }),
-    );
+    expect(mockToastError).not.toHaveBeenCalledWith(SERVER_PROSE);
   });
 
   it('renders password input placeholders', () => {

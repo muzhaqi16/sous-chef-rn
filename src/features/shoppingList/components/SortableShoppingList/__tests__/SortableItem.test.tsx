@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { screen } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 
 /**
@@ -22,7 +22,7 @@ const swipeableProps: {
   rightActions?: unknown[];
 }[] = [];
 
-jest.mock('#/components/molecules/SwipeableItem/SwipeableItem', () => ({
+jest.mock('#components/organisms/SwipeableItem/SwipeableItem', () => ({
   SwipeableItem: ({
     children,
     leftActions,
@@ -38,7 +38,7 @@ jest.mock('#/components/molecules/SwipeableItem/SwipeableItem', () => ({
   },
 }));
 
-jest.mock('#/components/molecules/ListItem', () => ({
+jest.mock('#components/molecules/ListItem', () => ({
   ListItem: ({
     title,
     subtitle,
@@ -65,7 +65,7 @@ jest.mock('#/components/molecules/ListItem', () => ({
   },
 }));
 
-jest.mock('#/components/atoms/AnimatedCheckbox', () => ({
+jest.mock('#features/shoppingList/components/AnimatedCheckbox', () => ({
   AnimatedCheckbox: ({
     checked,
     testID,
@@ -82,24 +82,36 @@ jest.mock('#/components/atoms/AnimatedCheckbox', () => ({
   },
 }));
 
-jest.mock('#/components/atoms/QuantityBadge', () => ({
+// Carries `testID`, `onPress` and `disabled` through, so a test can assert what
+// the row wires to the chip rather than only what it displays on it.
+jest.mock('#features/shoppingList/components/QuantityBadge', () => ({
   QuantityBadge: ({
     quantity,
     unit,
+    testID,
+    onPress,
+    disabled,
   }: {
     quantity?: number;
     unit?: string | null;
+    testID?: string;
+    onPress?: () => void;
+    disabled?: boolean;
   }) => {
-    const { Text, View } = require('react-native');
+    const { Text, Pressable } = require('react-native');
     return (
-      <View testID="quantity-badge">
+      <Pressable
+        testID={testID ?? 'quantity-badge'}
+        onPress={onPress}
+        disabled={disabled}
+      >
         <Text>{`${quantity} ${unit || ''}`}</Text>
-      </View>
+      </Pressable>
     );
   },
 }));
 
-jest.mock('#/components/atoms/CachedImage', () => ({
+jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: () => {
     const { View } = require('react-native');
     return <View testID="cached-image" />;
@@ -118,7 +130,7 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#/constants/touch', () => ({
+jest.mock('#features/shoppingList/constants/touch', () => ({
   HIT_SLOP: { top: 8, bottom: 8, left: 8, right: 8 },
 }));
 
@@ -130,12 +142,10 @@ jest.mock('#hooks/animations/useSlideAnimation', () => ({
 }));
 
 jest.mock('#constants/animations', () => ({
-  standardEasing: { factory: jest.fn(() => jest.fn()) },
   staggeredEntryAnimation: { duration: 300 },
-  TIMING: { MODERATE: 300 },
 }));
 
-jest.mock('#context/StaggeredEntryContext', () => ({
+jest.mock('#features/shoppingList/context/StaggeredEntryContext', () => ({
   useStaggeredEntry: jest.fn(() => ({
     getEntryDelay: jest.fn(() => 0),
   })),
@@ -227,12 +237,21 @@ function seedItem(overrides: Record<string, unknown> = {}) {
     purchaseInfo: {
       __typename: 'ShoppingListItemPurchaseInfo',
       isPurchased: false,
+      movedToPantryAt: null,
     },
     item: null,
     ...overrides,
   };
   return entry;
 }
+
+/**
+ * Seeded against the row's OWN fragment, so a fixture too thin for what
+ * `SortableItem` reads fails here rather than rendering a blank row.
+ */
+const seedRow = (
+  entry: Record<string, unknown> & { __typename: string; id: string },
+) => seedCache([{ fragment: SortableItem_ItemFragmentDoc, data: entry }]);
 
 function rowItem(
   entry: ReturnType<typeof seedItem>,
@@ -273,7 +292,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     renderWithApollo(
       <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
       {
-        cache: seedCache([entry]),
+        cache: seedRow(entry),
       },
     );
     expect(screen.getByText('Milk')).toBeTruthy();
@@ -284,7 +303,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     renderWithApollo(
       <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
       {
-        cache: seedCache([entry]),
+        cache: seedRow(entry),
       },
     );
     expect(screen.getByText('2 liters')).toBeTruthy();
@@ -295,7 +314,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     renderWithApollo(
       <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
       {
-        cache: seedCache([entry]),
+        cache: seedRow(entry),
       },
     );
     expect(screen.getByTestId('swipeable-item')).toBeTruthy();
@@ -306,7 +325,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     renderWithApollo(
       <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
       {
-        cache: seedCache([entry]),
+        cache: seedRow(entry),
       },
     );
     expect(screen.getByTestId('list-item')).toBeTruthy();
@@ -317,7 +336,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     renderWithApollo(
       <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
       {
-        cache: seedCache([entry]),
+        cache: seedRow(entry),
       },
     );
     expect(screen.getByTestId('shopping-item-checkbox-item-1')).toBeTruthy();
@@ -328,7 +347,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     const entry = seedItem();
     renderWithApollo(
       <SwipeableListItem item={rowItem(entry, true)} index={0} target="Cell" />,
-      { cache: seedCache([entry]) },
+      { cache: seedRow(entry) },
     );
     expect(screen.getByText('checked')).toBeTruthy();
   });
@@ -338,10 +357,12 @@ describe('SwipeableListItem (SortableItem)', () => {
     renderWithApollo(
       <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
       {
-        cache: seedCache([entry]),
+        cache: seedRow(entry),
       },
     );
-    expect(screen.getByTestId('quantity-badge')).toBeTruthy();
+    expect(
+      screen.getByTestId(`shopping-list-item-${entry.id}-quantity`),
+    ).toBeTruthy();
     expect(screen.getByText('3 pcs')).toBeTruthy();
   });
 
@@ -406,18 +427,18 @@ describe('SwipeableListItem (SortableItem)', () => {
       const entry = seedItem();
       renderWithApollo(
         <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-        { cache: seedCache([entry]) },
+        { cache: seedRow(entry) },
       );
 
       const last = swipeableProps[swipeableProps.length - 1];
-      expect(last.leftActions).toHaveLength(1);
-      expect(last.rightActions).toHaveLength(1);
+      expect(last!.leftActions).toHaveLength(1);
+      expect(last!.rightActions).toHaveLength(1);
 
       // The descriptor must carry the screen's handler, not a wrapper that
       // silently no-ops — that is the shape the dead buttons had.
-      (last.leftActions as { onPress: () => void }[])[0].onPress();
+      (last!.leftActions as { onPress: () => void }[])[0]!.onPress();
       expect(onEdit).toHaveBeenCalledWith(entry.id);
-      (last.rightActions as { onPress: () => void }[])[0].onPress();
+      (last!.rightActions as { onPress: () => void }[])[0]!.onPress();
       expect(onDelete).toHaveBeenCalledWith(entry.id);
     });
 
@@ -427,12 +448,12 @@ describe('SwipeableListItem (SortableItem)', () => {
       const entry = seedItem();
       renderWithApollo(
         <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-        { cache: seedCache([entry]) },
+        { cache: seedRow(entry) },
       );
 
       const last = swipeableProps[swipeableProps.length - 1];
-      expect(last.leftActions).toBeUndefined();
-      expect(last.rightActions).toBeUndefined();
+      expect(last!.leftActions).toBeUndefined();
+      expect(last!.rightActions).toBeUndefined();
     });
 
     it('withholds edit and delete that the permissions forbid', () => {
@@ -449,12 +470,88 @@ describe('SwipeableListItem (SortableItem)', () => {
       const entry = seedItem();
       renderWithApollo(
         <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-        { cache: seedCache([entry]) },
+        { cache: seedRow(entry) },
       );
 
       const last = swipeableProps[swipeableProps.length - 1];
-      expect(last.leftActions).toBeUndefined();
-      expect(last.rightActions).toBeUndefined();
+      expect(last!.leftActions).toBeUndefined();
+      expect(last!.rightActions).toBeUndefined();
+    });
+  });
+
+  describe('the quantity chip', () => {
+    // The sheet it opens is fully interactive and its Save arms as soon as the
+    // value changes, so a viewer reaching it can edit somebody else's list. The
+    // swipe actions were gated on `canEditItems`; this control was not.
+    const setPermissions = (permissions: {
+      canRemoveItems: boolean;
+      canEditItems: boolean;
+      canMarkPurchased: boolean;
+    }) => {
+      const onQuantityPress = jest.fn();
+      // The real hook withholds a handler the permissions forbid, so the double
+      // withholds it too — a double that hands one over tests a path the row
+      // cannot reach.
+      (useSortableListActions as jest.Mock).mockReturnValue({
+        actions: {
+          onItemPress: jest.fn(),
+          onTogglePurchase: permissions.canMarkPurchased
+            ? jest.fn()
+            : undefined,
+          onMoveToPantry:
+            permissions.canEditItems && permissions.canRemoveItems
+              ? jest.fn()
+              : undefined,
+          onQuantityPress: permissions.canEditItems
+            ? onQuantityPress
+            : undefined,
+          onSwipeableWillOpen: jest.fn(),
+          onSwipeableClose: jest.fn(),
+        },
+        permissions,
+        permissionsRef: { current: permissions },
+      });
+      return onQuantityPress;
+    };
+
+    it('does not open the editor for someone who may not edit', () => {
+      const onQuantityPress = setPermissions({
+        canRemoveItems: false,
+        canEditItems: false,
+        canMarkPurchased: true,
+      });
+
+      const entry = seedItem();
+      renderWithApollo(
+        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+        { cache: seedRow(entry) },
+      );
+
+      fireEvent.press(
+        screen.getByTestId(`shopping-list-item-${entry.id}-quantity`),
+      );
+
+      expect(onQuantityPress).not.toHaveBeenCalled();
+    });
+
+    it('opens the editor for someone who may', () => {
+      const onQuantityPress = setPermissions({
+        canRemoveItems: true,
+        canEditItems: true,
+        canMarkPurchased: true,
+      });
+
+      const entry = seedItem();
+      renderWithApollo(
+        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+        { cache: seedRow(entry) },
+      );
+
+      fireEvent.press(
+        screen.getByTestId(`shopping-list-item-${entry.id}-quantity`),
+      );
+
+      expect(onQuantityPress).toHaveBeenCalledWith(entry.id);
     });
   });
 
@@ -500,7 +597,7 @@ describe('SwipeableListItem (SortableItem)', () => {
           index={0}
           target="Cell"
         />,
-        { cache: seedCache([entry]) },
+        { cache: seedRow(entry) },
       );
 
       expect(
@@ -525,7 +622,7 @@ describe('SwipeableListItem (SortableItem)', () => {
           index={0}
           target="Cell"
         />,
-        { cache: seedCache([entry]) },
+        { cache: seedRow(entry) },
       );
 
       // The bulk move filters its working set on this same stamp, so offering
@@ -559,7 +656,7 @@ describe('SwipeableListItem (SortableItem)', () => {
           index={0}
           target="Cell"
         />,
-        { cache: seedCache([entry]) },
+        { cache: seedRow(entry) },
       );
       expect(mockRegisterRect).not.toHaveBeenCalledWith('checkbox', null);
 
@@ -586,7 +683,7 @@ describe('SwipeableListItem (SortableItem)', () => {
           index={0}
           target="Cell"
         />,
-        { cache: seedCache([entry]) },
+        { cache: seedRow(entry) },
       );
       expect(mockRegisterRect).not.toHaveBeenCalledWith('archiveIcon', null);
 
@@ -613,7 +710,7 @@ describe('SwipeableListItem (SortableItem)', () => {
           index={0}
           target="Cell"
         />,
-        { cache: seedCache([entry]) },
+        { cache: seedRow(entry) },
       );
       expect(mockRegisterRect).not.toHaveBeenCalledWith('itemCard', null);
 

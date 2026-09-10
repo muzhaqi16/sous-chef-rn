@@ -17,6 +17,8 @@ interface BaseSwitchProps {
   disabled?: boolean;
   loading?: boolean;
   testID?: string;
+  /** What the switch controls. A row's own label, where the row has one. */
+  accessibilityLabel?: string;
 }
 
 export const BaseSwitch: React.FC<BaseSwitchProps> = ({
@@ -25,6 +27,7 @@ export const BaseSwitch: React.FC<BaseSwitchProps> = ({
   disabled = false,
   loading = false,
   testID,
+  accessibilityLabel,
 }) => {
   return (
     <ThemedSwitch
@@ -32,6 +35,11 @@ export const BaseSwitch: React.FC<BaseSwitchProps> = ({
       value={value}
       onValueChange={onValueChange}
       disabled={disabled || loading}
+      accessibilityRole="switch"
+      accessibilityLabel={accessibilityLabel}
+      // RN reads a Switch's own `value` on iOS but not its busy state, and a
+      // loading switch is disabled without looking it.
+      accessibilityState={{ checked: value, disabled: disabled || loading }}
     />
   );
 };

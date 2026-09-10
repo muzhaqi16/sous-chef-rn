@@ -3,7 +3,7 @@ import { render, screen, userEvent } from '@testing-library/react-native';
 import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 
 // Mock the nutritionUtils to control outputs
-jest.mock('#utils/nutritionUtils', () => ({
+jest.mock('#domain/nutrition', () => ({
   parseNutritions: jest.fn((raw: unknown) => raw),
   extractMacroSummary: jest.fn(() => ({
     calories: 250,
@@ -34,7 +34,7 @@ describe('NutritionSummary', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Re-set hasNutritionData to return true by default
-    const { hasNutritionData } = require('#utils/nutritionUtils');
+    const { hasNutritionData } = require('#domain/nutrition');
     (hasNutritionData as jest.Mock).mockReturnValue(true);
   });
 
@@ -84,7 +84,7 @@ describe('NutritionSummary', () => {
   });
 
   it('returns null when no nutrition data is available', () => {
-    const { hasNutritionData } = require('#utils/nutritionUtils');
+    const { hasNutritionData } = require('#domain/nutrition');
     (hasNutritionData as jest.Mock).mockReturnValue(false);
 
     const { toJSON } = render(<NutritionSummary nutritions={null} />);

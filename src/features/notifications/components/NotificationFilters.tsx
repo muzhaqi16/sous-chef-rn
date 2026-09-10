@@ -2,8 +2,8 @@ import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
-import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
+import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
+import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
 import { NOTIFICATION_CATEGORIES } from '#features/notifications/types';
 
@@ -67,6 +67,9 @@ const styles = StyleSheet.create(theme => ({
   // Hairline separator below the filter strip so it reads as a distinct band
   // above the list, consistent with the warm background showing through.
   container: {
+    // FilterTabs carries no inset of its own, so its host owns the gutter —
+    // and this one renders it bare inside a screen with none.
+    paddingHorizontal: theme.layout.pageGutter,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: theme.colors.border,
   },

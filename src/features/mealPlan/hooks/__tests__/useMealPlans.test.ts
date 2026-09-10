@@ -7,6 +7,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import { MealPlanDisplayFragmentDoc } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import type { PaginationConfig } from '#hooks/utils/usePagination';
 import { useMealPlans } from '../useMealPlans';
 
@@ -15,27 +16,32 @@ function seedPlanCache(
 ) {
   return seedCache(
     plans.map(p => ({
-      __typename: 'MealPlan' as const,
-      id: p.id,
-      name: `Plan ${p.id}`,
-      description: null,
-      planType: 'WEEKLY',
-      startDate: p.startDate,
-      endDate: p.endDate,
-      servings: 1,
-      totalCalories: null,
-      totalProtein: null,
-      totalCarbs: null,
-      totalFat: null,
-      actualCost: null,
-      budgetAmount: null,
-      homeId: 'h1',
-      home: null,
-      user: { __typename: 'User' as const, id: `u-${p.id}` },
-      createdBy: null,
-      version: 1,
-      createdAt: '2025-01-01T00:00:00Z',
-      updatedAt: '2025-01-01T00:00:00Z',
+      // The production selection `useMealPlans` reads back, so a thin fixture
+      // fails here instead of defining its own idea of complete.
+      fragment: MealPlanDisplayFragmentDoc,
+      data: {
+        __typename: 'MealPlan' as const,
+        id: p.id,
+        name: `Plan ${p.id}`,
+        description: null,
+        planType: 'WEEKLY',
+        startDate: p.startDate,
+        endDate: p.endDate,
+        servings: 1,
+        totalCalories: null,
+        totalProtein: null,
+        totalCarbs: null,
+        totalFat: null,
+        actualCost: null,
+        budgetAmount: null,
+        homeId: 'h1',
+        home: null,
+        user: { __typename: 'User' as const, id: `u-${p.id}` },
+        createdBy: null,
+        version: 1,
+        createdAt: '2025-01-01T00:00:00Z',
+        updatedAt: '2025-01-01T00:00:00Z',
+      },
     })),
   );
 }
@@ -122,7 +128,7 @@ describe('useMealPlans', () => {
       cache: seedPlanCache([plan]),
     });
     await waitFor(() => expect(result.current.state.mealPlans).toHaveLength(1));
-    expect(result.current.state.mealPlans[0].id).toBe('1');
+    expect(result.current.state.mealPlans[0]!.id).toBe('1');
     expect(result.current.state.totalCount).toBe(1);
   });
 

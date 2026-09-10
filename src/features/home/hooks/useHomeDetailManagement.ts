@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { alertService } from '#/services/alertService';
-import { localizedErrorMessage } from '#/services/errorService';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import { useFragment, useMutation, useQuery } from '@apollo/client/react';
+import { useUpdateHomeFields } from '#features/home/hooks/useUpdateHomeFields';
 import { HomeDetailScreen_HomeFragmentDoc } from '#features/home/screens/HomeDetailScreen.generated';
 import {
   GetHomeDocument,
-  UpdateHomeDocument,
   EnableHomeJoinLinkDocument,
   UpdateHomeJoinCodeDocument,
   TransferHomeOwnershipDocument,
@@ -28,8 +27,6 @@ export type MembershipPermissionKey =
   | 'canInviteOthers'
   | 'canManageHome';
 import { t } from '#/i18n';
-// Interpolated key — the module-level t takes a fallback, not options.
-import { getI18n } from '#/i18n/config';
 import {
   createRemoveFromParentConnectionUpdater,
   safeEvict,
@@ -98,20 +95,7 @@ export function useHomeDetailManagement(homeId: string) {
   });
 
   // Mutations
-  const [updateHomeMutation, { loading: updating }] = useMutation(
-    UpdateHomeDocument,
-    {
-      // Mutation returns updated scalar fields; Apollo auto-merges by __typename + id
-      onError: error => {
-        alertService.alert(
-          t('labels.error'),
-          // Code-resolved, with this site's own copy as the fallback. The
-          // server's `message` is English by construction.
-          localizedErrorMessage(error, t('errors.updateHomeNameFailed')),
-        );
-      },
-    },
-  );
+  const { updateHomeFields, updating } = useUpdateHomeFields(homeId);
   const { requireVerifiedEmail } = useVerifiedEmailGate();
   const [enableJoinLinkMutation] = useMutation(EnableHomeJoinLinkDocument);
   const [rotateJoinCodeMutation, { loading: rotatingJoinCode }] = useMutation(
@@ -227,8 +211,8 @@ export function useHomeDetailManagement(homeId: string) {
           });
           const remainingHomes = extractNodes(cachedData?.homes);
 
-          if (remainingHomes.length > 0) {
-            const newDefaultHome = remainingHomes[0];
+          const [newDefaultHome] = remainingHomes;
+          if (newDefaultHome) {
             setSelectedHomeId(newDefaultHome.id);
             setSelectedPantryId(null);
             void markAsDefault(newDefaultHome.id).then(({ status }) => {
@@ -267,15 +251,14 @@ export function useHomeDetailManagement(homeId: string) {
   // CRUD operations utilities
   const { createRemoveOperation } = useCrudOperations();
 
-  // Handler functions
+  /**
+   * Local-first: an absolute field set keyed by the home id, written to the
+   * cache before firing and idempotent on a queued replay. The server requires
+   * the version for its optimistic-concurrency check.
+   */
   const saveName = async (name: string) => {
-    // The server requires the version for the optimistic-concurrency check.
     if (!home) return;
-    await updateHomeMutation({
-      variables: {
-        input: { id: homeId, name, version: home.version },
-      },
-    });
+    await updateHomeFields({ name }, home, 'Save Home Name');
   };
 
   // Role picker state (drives ModalPicker in the screen)
@@ -369,7 +352,7 @@ export function useHomeDetailManagement(homeId: string) {
     return new Promise(resolve => {
       alertService.alert(
         t('labels.leaveHome'),
-        getI18n().t('home.leaveBody', { name: homeName }),
+        t('home.leaveBody', { name: homeName }),
         [
           {
             text: t('labels.cancel'),
@@ -426,11 +409,11 @@ export function useHomeDetailManagement(homeId: string) {
     // rejection surface as the enable branch: a resolved error member never
     // fires onError under errorPolicy:'all', so classify the result here.
     if (!home) return;
-    const result = await updateHomeMutation({
-      variables: {
-        input: { id: homeId, allowJoinCode: false, version: home.version },
-      },
-    });
+    const { result } = await updateHomeFields(
+      { allowJoinCode: false },
+      home,
+      'Disable Home Join Link',
+    );
     alertIfRejected(result, t('errors.updateHomeFailed'));
   };
 

@@ -8,7 +8,7 @@ import type {
   RecipeSearchResult,
   SearchRecipesResult,
   RecipeInformation,
-} from '#/services/recipeApi/types';
+} from '#/services/spoonacular/types';
 
 interface CachedRecipeSearch {
   results: (RecipeSearchResult | SearchRecipesResult | RecipeInformation)[];
@@ -170,8 +170,8 @@ export const useRecipeCacheStore = create<RecipeCacheState>()(
       clearExpiredCache: () => {
         const now = Date.now();
         set(state => {
-          for (const key of Object.keys(state.cache)) {
-            if (now - state.cache[key].cachedAt > CACHE_TTL_MS) {
+          for (const [key, entry] of Object.entries(state.cache)) {
+            if (now - entry.cachedAt > CACHE_TTL_MS) {
               delete state.cache[key];
             }
           }

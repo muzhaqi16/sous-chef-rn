@@ -35,6 +35,7 @@ import {
 import { markSubscriptionRejected } from './rejectedSubscriptions';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
+import { SubscriptionSuppression } from './SubscriptionSuppression';
 
 /** `StoreObject` (so `toReference` accepts it) plus the `id` the service reads. */
 type PayloadEntity = StoreObject & { id?: string };
@@ -45,35 +46,6 @@ export class SubscriptionService {
   // Active subscription registry
   private subscriptions = new Map<string, SubscriptionEntry>();
 
-  // Deduplication tracking
-  private processedMutations = new Set<string>();
-  private readonly MAX_PROCESSED_MUTATIONS = 100;
-
-  // Recent reorder tracking (for ignoring subscription echoes)
-  private recentReorders = new Map<string, number>(); // itemId -> timestamp
-  /** Expiry timers for {@link recentReorders}, so a session end can cancel them. */
-  private reorderTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
-  // An optimistic delete can be undone by Apollo re-normalizing the subscription
-  // payload for the same item; tracked here so it can be re-evicted.
-  private pendingDeletes = new Map<
-    string,
-    {
-      parentId: string;
-      entityType: string;
-      parentTypename: string;
-      connectionField: string;
-      // 30s safety-net expiry; cancelled when the entry is removed early.
-      timer: ReturnType<typeof setTimeout>;
-    }
-  >();
-
-  // Subscriptions stay live while a parent (list, pantry) is being deleted, so
-  // its id is parked here to skip processing until the delete settles.
-  private pendingParentDeletes = new Set<string>();
-  /** Expiry timers for {@link pendingParentDeletes}, cancelled by `cleanup()`. */
-  private parentDeleteTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
   // Statistics
   private stats = {
     totalUpdates: 0,
@@ -81,6 +53,74 @@ export class SubscriptionService {
     dedupedUpdates: 0,
     filteredSortOrderUpdates: 0,
   };
+
+  /**
+   * The suppression policy — what an event must be ignored FOR. Delegated
+   * rather than mixed in: the registry is about wiring handlers up, and
+   * everything below is about the short memory that decides to drop one.
+   */
+  private readonly suppression = new SubscriptionSuppression();
+
+  registerPendingDelete(
+    itemId: string,
+    parentId: string,
+    entityType: string,
+    parentTypename: string = 'Pantry',
+    connectionField: string = 'itemsConnection',
+  ): void {
+    this.suppression.registerPendingDelete(
+      itemId,
+      parentId,
+      entityType,
+      parentTypename,
+      connectionField,
+    );
+  }
+
+  unregisterPendingDelete(itemId: string): void {
+    this.suppression.unregisterPendingDelete(itemId);
+  }
+
+  isPendingDelete(itemId: string): boolean {
+    return this.suppression.isPendingDelete(itemId);
+  }
+
+  hasPendingDeletes(): boolean {
+    return this.suppression.hasPendingDeletes();
+  }
+
+  registerParentDeletion(entityId: string): void {
+    this.suppression.registerParentDeletion(entityId);
+  }
+
+  unregisterParentDeletion(entityId: string): void {
+    this.suppression.unregisterParentDeletion(entityId);
+  }
+
+  isParentDeleting(entityId: string): boolean {
+    return this.suppression.isParentDeleting(entityId);
+  }
+
+  filterPendingDeletes<T extends { id: string }>(items: T[]): T[] {
+    return this.suppression.filterPendingDeletes(items);
+  }
+
+  markItemReordered(itemId: string): void {
+    this.suppression.markItemReordered(itemId);
+  }
+
+  private shouldProcessUpdate<TData>(
+    payload: SubscriptionPayload<TData>,
+    config: SubscriptionConfig<TData>,
+  ): boolean {
+    return this.suppression.shouldProcessUpdate<TData>(payload, info =>
+      this.log(config, LogLevel.DEBUG, 'Filtered sortOrder-only update', {
+        itemId: info.itemId,
+        updatedFields: payload.updatedFields,
+        recentReorder: info.recentReorder,
+      }),
+    );
+  }
 
   private constructor() {}
 
@@ -90,119 +130,6 @@ export class SubscriptionService {
     }
     return SubscriptionService.instance;
   }
-
-  /**
-   * Guards an optimistic delete: a subscription carrying the deleted item's data
-   * makes Apollo re-add it by normalization, and this is what re-evicts it.
-   */
-  registerPendingDelete(
-    itemId: string,
-    parentId: string,
-    entityType: string,
-    parentTypename: string = 'Pantry',
-    connectionField: string = 'itemsConnection',
-  ): void {
-    // Or the previous entry's timer is stranded, holding a reference for 30s.
-    this.clearPendingDelete(itemId);
-    this.pendingDeletes.set(itemId, {
-      parentId,
-      entityType,
-      parentTypename,
-      connectionField,
-      // Safety net against an entry never being unregistered.
-      timer: setTimeout(() => this.clearPendingDelete(itemId), 30000),
-    });
-  }
-
-  /**
-   * The single removal path: deleting the map entry alone strands a live 30s
-   * timer per delete, long after the mutation it guards has settled.
-   */
-  private clearPendingDelete(itemId: string): void {
-    const pending = this.pendingDeletes.get(itemId);
-    if (!pending) return;
-    clearTimeout(pending.timer);
-    this.pendingDeletes.delete(itemId);
-  }
-
-  /** Called once the delete mutation completes. */
-  unregisterPendingDelete(itemId: string): void {
-    this.clearPendingDelete(itemId);
-  }
-
-  /** True while the item may still be re-added by Apollo's normalization. */
-  isPendingDelete(itemId: string): boolean {
-    return this.pendingDeletes.has(itemId);
-  }
-
-  /**
-   * A handler re-reading a parent from the network must wait on this, or the
-   * server's copy resurrects rows the user has already removed locally.
-   */
-  hasPendingDeletes(): boolean {
-    return this.pendingDeletes.size > 0;
-  }
-
-  /**
-   * Register that a parent entity (shopping list, pantry) is being deleted.
-   * Subscriptions for this entity will be skipped during the deletion process.
-   *
-   * @param entityId - The ID of the entity being deleted
-   */
-  registerParentDeletion(entityId: string): void {
-    this.pendingParentDeletes.add(entityId);
-    // Tracked, so `cleanup()` can cancel it. `pendingDeletes` sixty lines above
-    // already keeps its timer handle for exactly this reason; these two did not,
-    // so a session end cleared the SET while leaving callbacks scheduled against
-    // it — they then fired against post-teardown state, and in a test they keep
-    // the fake-timer queue alive past the assertions.
-    this.clearParentDeletionTimer(entityId);
-    this.parentDeleteTimers.set(
-      entityId,
-      setTimeout(() => {
-        this.parentDeleteTimers.delete(entityId);
-        this.pendingParentDeletes.delete(entityId);
-      }, 10000),
-    );
-  }
-
-  /** Cancel a pending parent-deletion expiry, if one is scheduled. */
-  private clearParentDeletionTimer(entityId: string): void {
-    const timer = this.parentDeleteTimers.get(entityId);
-    if (timer) {
-      clearTimeout(timer);
-      this.parentDeleteTimers.delete(entityId);
-    }
-  }
-
-  /**
-   * Unregister a parent entity deletion (called after navigation completes)
-   */
-  unregisterParentDeletion(entityId: string): void {
-    this.clearParentDeletionTimer(entityId);
-    this.pendingParentDeletes.delete(entityId);
-  }
-
-  /**
-   * Check if a parent entity is currently being deleted
-   */
-  isParentDeleting(entityId: string): boolean {
-    return this.pendingParentDeletes.has(entityId);
-  }
-
-  /**
-   * Filter out items that are pending deletion.
-   * Call this on arrays of items before rendering to prevent flicker
-   * during the race condition between optimistic delete and subscription.
-   */
-  filterPendingDeletes<T extends { id: string }>(items: T[]): T[] {
-    if (this.pendingDeletes.size === 0) {
-      return items;
-    }
-    return items.filter(item => !this.pendingDeletes.has(item.id));
-  }
-
-  /** Main entry point: handlers to spread into an Apollo subscription hook. */
   register<TData = unknown>(
     config: SubscriptionConfig<TData>,
   ): SubscriptionHandlers {
@@ -251,7 +178,10 @@ export class SubscriptionService {
     return ({ data, client }) => {
       try {
         // Skip processing if parent entity is being deleted
-        if (config.entityId && this.pendingParentDeletes.has(config.entityId)) {
+        if (
+          config.entityId &&
+          this.suppression.isParentDeleting(config.entityId)
+        ) {
           this.log(
             config,
             LogLevel.DEBUG,
@@ -461,116 +391,6 @@ export class SubscriptionService {
     };
   }
 
-  /**
-   * Mark an item as recently reordered to ignore subscription echoes
-   * Call this after a successful drag-and-drop mutation
-   */
-  markItemReordered(itemId: string): void {
-    this.recentReorders.set(itemId, Date.now());
-    // Clean up after 200ms — tracked so `cleanup()` can cancel it.
-    const existing = this.reorderTimers.get(itemId);
-    if (existing) clearTimeout(existing);
-    this.reorderTimers.set(
-      itemId,
-      setTimeout(() => {
-        this.reorderTimers.delete(itemId);
-        this.recentReorders.delete(itemId);
-      }, 200),
-    );
-  }
-
-  /**
-   * Check if subscription update is ONLY for sortOrder changes
-   * These should be ignored since we handle reordering optimistically
-   */
-  private isSortOrderOnlyUpdate<TData>(
-    payload: SubscriptionPayload<TData>,
-  ): boolean {
-    // Only filter ITEM_UPDATED mutations
-    if (payload.mutation !== MutationType.ItemUpdated) {
-      return false;
-    }
-
-    // If no updatedFields, process the update (can't tell what changed)
-    if (!payload.updatedFields || payload.updatedFields.length === 0) {
-      return false;
-    }
-
-    // Check if ONLY sortOrder was updated
-    const onlySortOrder =
-      payload.updatedFields.length === 1 &&
-      payload.updatedFields[0] === 'sortOrder';
-
-    return onlySortOrder;
-  }
-
-  /**
-   * Drops duplicates (same timestamp + mutation) and sortOrder-only updates,
-   * which optimistic mutations already applied. Self-echo is deliberately NOT
-   * filtered here — a call site that needs it uses `isSelfEcho`, so one user on
-   * two devices still sees their own changes on the other.
-   */
-  private shouldProcessUpdate<TData>(
-    payload: SubscriptionPayload<TData>,
-    config: SubscriptionConfig<TData>,
-  ): boolean {
-    if (!payload) return false;
-
-    // Filter sortOrder-only updates (handled by optimistic mutations)
-    if (this.isSortOrderOnlyUpdate(payload)) {
-      const itemId =
-        (payload.item as { id?: string } | undefined)?.id ||
-        (payload.node as { id?: string } | undefined)?.id;
-
-      if (itemId) {
-        const reorderTime = this.recentReorders.get(itemId);
-        const isRecentReorder = reorderTime && Date.now() - reorderTime < 200;
-
-        if (isRecentReorder || this.recentReorders.size > 0) {
-          this.stats.filteredSortOrderUpdates++;
-          this.log(config, LogLevel.DEBUG, 'Filtered sortOrder-only update', {
-            itemId,
-            updatedFields: payload.updatedFields,
-            recentReorder: isRecentReorder,
-          });
-          return false;
-        }
-      }
-    }
-
-    // Dedup key = mutation + subtype + node + tick. The server can emit distinct
-    // events in one tick, so subtype + node keep those apart.
-    if (payload.timestamp && payload.mutation) {
-      const nodeId =
-        (payload.node as { id?: string } | undefined)?.id ??
-        (payload.item as { id?: string } | undefined)?.id ??
-        '';
-      const mutationKey = `${payload.mutation}-${
-        payload.subtype ?? ''
-      }-${nodeId}-${payload.timestamp}`;
-
-      if (this.processedMutations.has(mutationKey)) {
-        return false;
-      }
-
-      this.processedMutations.add(mutationKey);
-
-      if (this.processedMutations.size > this.MAX_PROCESSED_MUTATIONS) {
-        const iterator = this.processedMutations.values();
-        const firstKey = iterator.next().value;
-        if (firstKey) {
-          this.processedMutations.delete(firstKey);
-        }
-      }
-    }
-
-    return true;
-  }
-
-  /**
-   * CREATE adds to the array via cache.modify(), UPDATE relies on Apollo's
-   * normalization, DELETE removes from the array and evicts.
-   */
   private updateCache<TData>(
     cache: ApolloCache,
     config: SubscriptionConfig<TData>,
@@ -660,7 +480,7 @@ export class SubscriptionService {
           // Check if this is a pending delete (self-triggered from our mutation)
           // Apollo's auto-normalization may have re-added the item from the subscription
           // payload, so we need to re-evict it AND ensure it's removed from the Connection
-          const pendingDelete = this.pendingDeletes.get(itemId);
+          const pendingDelete = this.suppression.getPendingDelete(itemId);
           if (pendingDelete) {
             this.log(
               config,
@@ -719,7 +539,7 @@ export class SubscriptionService {
 
             // Then evict the item itself
             safeEvict(cache, config.entityType, itemId);
-            this.clearPendingDelete(itemId);
+            this.unregisterPendingDelete(itemId);
             break;
           }
 
@@ -937,15 +757,7 @@ export class SubscriptionService {
    */
   cleanup(): void {
     this.subscriptions.clear();
-    this.processedMutations.clear();
-    this.recentReorders.clear();
-    this.pendingDeletes.forEach(pending => clearTimeout(pending.timer));
-    this.pendingDeletes.clear();
-    this.parentDeleteTimers.forEach(clearTimeout);
-    this.parentDeleteTimers.clear();
-    this.pendingParentDeletes.clear();
-    this.reorderTimers.forEach(clearTimeout);
-    this.reorderTimers.clear();
+    this.suppression.cleanup();
     this.stats = {
       totalUpdates: 0,
       totalErrors: 0,

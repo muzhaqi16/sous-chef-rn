@@ -6,7 +6,6 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  Easing,
   cancelAnimation,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -15,24 +14,20 @@ import { StyleSheet } from 'react-native-unistyles';
 import { differenceInCalendarDays } from 'date-fns';
 import { useFragment } from '@apollo/client/react';
 import { type FragmentType } from '@apollo/client/masking';
-import { BaseItemCard } from '#components/molecules/BaseItemCard/BaseItemCard';
-import { CardLeftSlot } from '#components/molecules/BaseItemCard/CardLeftSlot';
-import { CardContent } from '#components/molecules/BaseItemCard/CardContent';
-import { CardRightSlot } from '#components/molecules/BaseItemCard/CardRightSlot';
-import type { CardVariant } from '#components/molecules/BaseItemCard/types';
+import { BaseItemCard } from '#features/pantry/components/BaseItemCard/BaseItemCard';
+import { CardLeftSlot } from '#features/pantry/components/BaseItemCard/CardLeftSlot';
+import { CardContent } from '#features/pantry/components/BaseItemCard/CardContent';
+import { CardRightSlot } from '#features/pantry/components/BaseItemCard/CardRightSlot';
+import type { CardVariant } from '#features/pantry/components/BaseItemCard/types';
 import { SLIDE_PRESETS } from '#/constants/animations';
 import { usePantryActions } from './PantryActionsContext';
 import { Text } from '#components/atoms/Text';
 import { resolveImageUrl } from '#utils/imageUtils';
-import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
-import {
-  getExpirationStatus,
-  formatPackageBreakdown,
-  formatRemainingNetWeight,
-  formatQuantityBreakdown,
-} from '#features/pantry/hooks/usePantryItemTransformation';
+import { useIsPendingSync } from '#features/pantry/hooks/useIsPendingSync';
+import { getExpirationStatus } from '#features/pantry/hooks/usePantryItemTransformation';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated';
+import { motion } from '#/theme/foundations/motion';
 
 // Slide animation distance only; no reactive updates needed.
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -47,6 +42,17 @@ export type ExpirationVariant = 'normal' | 'warning' | 'critical' | 'expired';
 
 type ExpiryStatus = 'expired' | 'warning' | 'normal';
 
+/**
+ * The one place `getExpirationStatus`'s scale becomes a visual state. `critical`
+ * is "expires today" — not expired — so it reads as a warning, and the border
+ * and the text cannot disagree about where that boundary sits.
+ */
+const toItemVariant = (type: ExpirationVariant): ItemVariant => {
+  if (type === 'expired') return 'expired';
+  if (type === 'critical' || type === 'warning') return 'warning';
+  return 'normal';
+};
+
 // Extracted so `styles.useVariants` fires once per row and theme colors reach
 // it through the ShadowTree instead of a React re-render.
 const ExpirationText: React.FC<{
@@ -57,7 +63,7 @@ const ExpirationText: React.FC<{
   styles.useVariants({ expiryStatus: status });
   return (
     <Text
-      weight={bold ? 'medium' : undefined}
+      role={bold ? 'footnoteStrong' : 'footnote'}
       style={styles.expiration}
       numberOfLines={1}
     >
@@ -103,7 +109,7 @@ const SlideAnimatedWrapper: React.FC<{
 
     const config = {
       duration: SLIDE_PRESETS.exitWithFade.duration,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+      easing: motion.easing.standard,
     };
 
     slide.set(
@@ -130,22 +136,6 @@ const SlideAnimatedWrapper: React.FC<{
     </Animated.View>
   );
 };
-
-/** Returns true when at least one usage has been recorded for the item. */
-function hasConsumptionStarted(item: {
-  lastUsedAt: string | null;
-  netWeight: number | null;
-  remainingNetWeight: number | null;
-}): boolean {
-  if (item.lastUsedAt != null) return true;
-  if (
-    item.netWeight != null &&
-    item.remainingNetWeight != null &&
-    item.remainingNetWeight !== item.netWeight
-  )
-    return true;
-  return false;
-}
 
 interface PantryItemCardProps {
   pantryItemRef: FragmentType<typeof PantryItemCard_PantryItemFragmentDoc>;
@@ -183,26 +173,19 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
     ? differenceInCalendarDays(new Date(expiresAt), new Date())
     : null;
   const expStatus = getExpirationStatus(expiresIn);
-  const isExpired = expiresIn !== null && expiresIn < 0;
-  const isExpiringSoon = expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
-  const variant: ItemVariant = isExpired
-    ? 'expired'
-    : isExpiringSoon
-    ? 'warning'
-    : 'normal';
   const showExpiration =
     expiresIn !== null && expiresIn <= EXPIRATION_DISPLAY_THRESHOLD_DAYS;
+
+  // ONE ladder for the border and the text, so they cannot collapse
+  // `getExpirationStatus`'s four levels at different boundaries. An item
+  // expiring TODAY is `critical` — not expired — and reads as a warning on
+  // both.
+  const variant: ItemVariant = toItemVariant(expStatus.type);
   const expirationText = showExpiration ? expStatus.text : null;
   const expirationVariant: ExpirationVariant | undefined = showExpiration
     ? expStatus.type
     : undefined;
-  const expiryStatusKey: ExpiryStatus = (() => {
-    if (!showExpiration) return 'normal';
-    if (expStatus.type === 'expired' || expStatus.type === 'critical')
-      return 'expired';
-    if (expStatus.type === 'warning') return 'warning';
-    return 'normal';
-  })();
+  const expiryStatusKey: ExpiryStatus = showExpiration ? variant : 'normal';
 
   const quantity = formatQuantityDisplay(
     pantryItem.quantity,
@@ -211,38 +194,10 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   // Custom names only; the default locations are the filter tabs.
   const location = pantryItem.storageLocation?.name ?? null;
   const isOutOfStock = pantryItem.quantity === 0;
-  const packageBreakdownText = formatPackageBreakdown(
-    pantryItem.packageBreakdown,
-    pantryItem.quantityBreakdown?.totalContentUnits,
-  );
-  const remainingNetWeightText = hasConsumptionStarted(pantryItem)
-    ? formatRemainingNetWeight(
-        pantryItem.remainingNetWeight,
-        pantryItem.netWeightUnit,
-      )
-    : null;
-  const quantityBreakdownText = formatQuantityBreakdown(
-    pantryItem.quantityBreakdown,
-  );
-  const activeBatchCount = pantryItem.activeBatchCount;
-
-  // The single "detail" line shown under the quantity on the right — quantity
-  // breakdown, remaining net weight, or batch count (at most one).
-  const detailText =
-    quantityBreakdownText ||
-    packageBreakdownText ||
-    remainingNetWeightText ||
-    (activeBatchCount && activeBatchCount > 1
-      ? `${activeBatchCount} batches`
-      : undefined) ||
-    undefined;
-
-  // Location fills the empty left line-2 slot when there's no expiry, else
-  // rides the right side if the detail line is free. With both present it is
-  // dropped to keep the row at two lines — the filter tabs already convey it.
-  const locationOnLeft = !isOutOfStock && !expirationText && !!location;
-  const rightSecondary =
-    detailText || (locationOnLeft ? undefined : location || undefined);
+  // Each of the row's four text slots has ONE owner, and an absent value leaves
+  // its slot empty rather than letting another value move in. Amounts and
+  // breakdowns belong to the detail screen.
+  const rightSecondary = location || undefined;
 
   const itemActions = {
     onPress: () => actions.onItemPress(id),
@@ -269,14 +224,14 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   const getSubtitle = () => {
     if (isPendingSync) {
       return (
-        <Text weight="medium" tone="secondary" style={styles.pendingSync}>
+        <Text role="footnote" tone="secondary" style={styles.pendingSync}>
           {t('status.syncing')}
         </Text>
       );
     }
     if (isOutOfStock) {
       return (
-        <Text weight="medium" tone="warning" style={styles.outOfStock}>
+        <Text role="footnoteStrong" tone="warning" style={styles.outOfStock}>
           {t('pantryScreen.outOfStock')}
         </Text>
       );
@@ -288,15 +243,6 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
           status={expiryStatusKey}
           bold={expirationBold}
         />
-      );
-    }
-    // No expiry — surface the storage location here instead of as a third row
-    // on the right.
-    if (locationOnLeft) {
-      return (
-        <Text size="sm" tone="secondary" numberOfLines={1}>
-          {location}
-        </Text>
       );
     }
     return undefined;
@@ -353,7 +299,6 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   expiration: {
-    fontSize: theme.typography.fontSize.sm - 1,
     variants: {
       expiryStatus: {
         expired: { color: theme.colors.expiration.expiredText },
@@ -365,9 +310,7 @@ const styles = StyleSheet.create(theme => ({
   pendingSync: {
     fontStyle: 'italic',
   },
-  outOfStock: {
-    fontSize: theme.typography.fontSize.sm - 1,
-  },
+  outOfStock: {},
 }));
 
 // PantryItemVariant alias for backwards compatibility

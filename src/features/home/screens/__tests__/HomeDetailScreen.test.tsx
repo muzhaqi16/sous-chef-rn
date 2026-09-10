@@ -110,7 +110,7 @@ jest.mock('#components/templates/DetailTemplate', () => ({
   },
 }));
 
-jest.mock('#components/molecules/EditableField', () => ({
+jest.mock('#features/home/components/EditableField', () => ({
   EditableField: ({ label, value }: { label: string; value: string }) => {
     const { View, Text } = require('react-native');
     return (
@@ -123,7 +123,7 @@ jest.mock('#components/molecules/EditableField', () => ({
   },
 }));
 
-jest.mock('#components/molecules/NavigationRow', () => ({
+jest.mock('#features/home/components/NavigationRow', () => ({
   NavigationRow: ({
     title,
     onPress,
@@ -151,7 +151,7 @@ jest.mock('#features/home/components/HomeMembersSection', () => ({
   },
 }));
 
-jest.mock('#components/settings/SettingSwitch', () => ({
+jest.mock('#components/molecules/SettingSwitch', () => ({
   SettingSwitch: ({
     title,
     value,
@@ -176,7 +176,7 @@ jest.mock('#components/settings/SettingSwitch', () => ({
   },
 }));
 
-jest.mock('#components/atoms/Button', () => ({
+jest.mock('#components/molecules/Button', () => ({
   Button: ({ title, onPress }: { title?: string; onPress?: () => void }) => {
     const { Pressable, Text } = require('react-native');
     return (

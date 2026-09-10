@@ -55,6 +55,7 @@ const makeOwnership = (
     __typename: 'User',
     id: 'user-1',
     email,
+    displayName: null,
     profile:
       displayName === null
         ? null
@@ -123,8 +124,8 @@ jest.mock('#features/shoppingList/components/ShoppingListAvatar', () => ({
   ShoppingListAvatar: 'ShoppingListAvatar',
 }));
 
-// Keep the real module surface — useDeleteShoppingList reaches the shared
-// shoppingListCacheUpdaters, which needs the full factory set at import time.
+// Keep the real module surface — useDeleteShoppingList reaches the shopping
+// list's cache updaters, which need the full factory set at import time.
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
@@ -237,9 +238,9 @@ describe('useShoppingListSelectorModal', () => {
     const { actions } = result.current.listConfig;
     expect(actions).toBeDefined();
     expect(actions!.length).toBe(3);
-    expect(actions![0].label).toBe('Create');
-    expect(actions![1].label).toBe('Share');
-    expect(actions![2].label).toBe('Settings');
+    expect(actions![0]!.label).toBe('Create');
+    expect(actions![1]!.label).toBe('Share');
+    expect(actions![2]!.label).toBe('Settings');
   });
 
   it('has only create action when no currentListId', () => {
@@ -253,7 +254,7 @@ describe('useShoppingListSelectorModal', () => {
 
     const { actions } = result.current.listConfig;
     expect(actions!.length).toBe(1);
-    expect(actions![0].label).toBe('Create');
+    expect(actions![0]!.label).toBe('Create');
   });
 
   it('sets title to "Select Shopping List" when not in delete mode', () => {
@@ -344,7 +345,7 @@ describe('useShoppingListSelectorModal', () => {
 
     const lists = makeLists();
     mount(
-      result.current.listConfig.renderCustomItem!(lists[1], false, jest.fn()),
+      result.current.listConfig.renderCustomItem!(lists[1]!, false, jest.fn()),
     );
 
     // list-2: 'Party', shared by 'Other', 3 items with none completed.
@@ -365,7 +366,7 @@ describe('useShoppingListSelectorModal', () => {
 
     const lists = makeLists();
     mount(
-      result.current.listConfig.renderCustomItem!(lists[0], true, jest.fn()),
+      result.current.listConfig.renderCustomItem!(lists[0]!, true, jest.fn()),
     );
 
     // list-1: 'Groceries', owned, 5 items with 2 completed.
@@ -441,7 +442,7 @@ describe('useShoppingListSelectorModal', () => {
     );
 
     act(() => {
-      result.current.listConfig.onSelect('list-2', makeLists()[1]);
+      result.current.listConfig.onSelect('list-2', makeLists()[1]!);
     });
 
     expect(mockSetId).toHaveBeenCalledWith('list-2');
@@ -515,7 +516,7 @@ describe('useShoppingListSelectorModal', () => {
     );
 
     act(() => {
-      result.current.listConfig.actions![0].onPress();
+      result.current.listConfig.actions![0]!.onPress();
     });
 
     expect(mockSetOverlayOpen).toHaveBeenCalledWith(false);
@@ -532,7 +533,7 @@ describe('useShoppingListSelectorModal', () => {
     );
 
     act(() => {
-      result.current.listConfig.actions![1].onPress();
+      result.current.listConfig.actions![1]!.onPress();
     });
 
     expect(mockNav.toShareList).toHaveBeenCalledWith({
@@ -550,7 +551,7 @@ describe('useShoppingListSelectorModal', () => {
     );
 
     act(() => {
-      result.current.listConfig.actions![2].onPress();
+      result.current.listConfig.actions![2]!.onPress();
     });
 
     expect(mockNav.toListSettings).toHaveBeenCalledWith({
@@ -583,7 +584,7 @@ describe('useShoppingListSelectorModal', () => {
 
     mount(
       result.current.listConfig.renderCustomItem!(
-        listsNoProfile[0],
+        listsNoProfile[0]!,
         false,
         jest.fn(),
       ),
@@ -634,7 +635,7 @@ describe('useShoppingListSelectorModal', () => {
       const lists = makeLists();
       const onPress = jest.fn();
       const rendered = result.current.listConfig.renderCustomItem!(
-        lists[0],
+        lists[0]!,
         false,
         onPress,
       );
@@ -694,7 +695,7 @@ describe('useShoppingListSelectorModal', () => {
       // The onSelect function checks isDeleteModeRef.current
       // Since we can't directly set the ref, we test the normal path
       act(() => {
-        result.current.listConfig.onSelect('list-1', makeLists()[0]);
+        result.current.listConfig.onSelect('list-1', makeLists()[0]!);
       });
 
       // Normal mode: should set id
@@ -828,7 +829,11 @@ describe('useShoppingListSelectorModal', () => {
       );
 
       mount(
-        result.current.listConfig.renderCustomItem!(lists[0], false, jest.fn()),
+        result.current.listConfig.renderCustomItem!(
+          lists[0]!,
+          false,
+          jest.fn(),
+        ),
       );
 
       expect(screen.getByText('Shared by someone')).toBeTruthy();
@@ -856,7 +861,11 @@ describe('useShoppingListSelectorModal', () => {
       );
 
       mount(
-        result.current.listConfig.renderCustomItem!(lists[0], false, jest.fn()),
+        result.current.listConfig.renderCustomItem!(
+          lists[0]!,
+          false,
+          jest.fn(),
+        ),
       );
 
       expect(screen.getByText('Shared by friend@test.com')).toBeTruthy();
@@ -918,7 +927,11 @@ describe('useShoppingListSelectorModal', () => {
 
       const lists = makeLists();
       mount(
-        result.current.listConfig.renderCustomItem!(lists[0], false, jest.fn()),
+        result.current.listConfig.renderCustomItem!(
+          lists[0]!,
+          false,
+          jest.fn(),
+        ),
       );
 
       expect(screen.getByText('Groceries')).toBeTruthy();
@@ -938,7 +951,7 @@ describe('useShoppingListSelectorModal', () => {
 
       const lists = makeLists();
       mount(
-        result.current.listConfig.renderCustomItem!(lists[0], true, jest.fn()),
+        result.current.listConfig.renderCustomItem!(lists[0]!, true, jest.fn()),
       );
 
       expect(screen.getByText('Groceries')).toBeTruthy();
@@ -989,7 +1002,7 @@ describe('useShoppingListSelectorModal', () => {
       );
 
       act(() => {
-        result.current.listConfig.actions![1].onPress();
+        result.current.listConfig.actions![1]!.onPress();
       });
 
       expect(mockSetOverlayOpen).toHaveBeenCalledWith(false);
@@ -1008,7 +1021,7 @@ describe('useShoppingListSelectorModal', () => {
       );
 
       act(() => {
-        result.current.listConfig.actions![2].onPress();
+        result.current.listConfig.actions![2]!.onPress();
       });
 
       expect(mockSetOverlayOpen).toHaveBeenCalledWith(false);

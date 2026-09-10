@@ -23,7 +23,7 @@ export const Label: React.FC<LabelProps> = ({
 }) => {
   return (
     <Text
-      variant="label"
+      role="label"
       size={size}
       weight={weight}
       style={[styles.container, style]}

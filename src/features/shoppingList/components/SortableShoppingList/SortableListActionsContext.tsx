@@ -7,7 +7,7 @@ import React, {
   type ReactNode,
 } from 'react';
 import { createActionsContext } from '#hooks/utils/createActionsContext';
-import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
+import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 
 export interface SortableListActions {
   onItemPress?: (id: string) => void;
@@ -29,10 +29,12 @@ export interface SortableListActions {
 }
 
 export interface SortableListPermissions {
-  canRemoveItems?: boolean;
-  canEditItems?: boolean;
-  canMarkPurchased?: boolean;
-  canReorderItems?: boolean;
+  // Required: the answer arrives whole from `ShoppingListPermissionsProvider`,
+  // so an absent one is not a state this has to have an opinion about.
+  canRemoveItems: boolean;
+  canEditItems: boolean;
+  canMarkPurchased: boolean;
+  canReorderItems: boolean;
   disabled?: boolean;
 }
 
@@ -98,6 +100,35 @@ export const SortableListActionsProvider: React.FC<
   );
 };
 
+/**
+ * Hand back only the handlers the permissions allow. A row renders a control
+ * when it has a handler for it, so withholding here gates every control at
+ * once — including one added later, which a per-control test would miss.
+ */
+function permittedActions(
+  actions: SortableListActions,
+  permissions: SortableListPermissions,
+): SortableListActions {
+  return {
+    ...actions,
+    onTogglePurchase: permissions.canMarkPurchased
+      ? actions.onTogglePurchase
+      : undefined,
+    onQuantityPress: permissions.canEditItems
+      ? actions.onQuantityPress
+      : undefined,
+    // Moving a row to the pantry removes it from this list AND writes a pantry
+    // item, so it takes both permissions rather than either.
+    onMoveToPantry:
+      permissions.canEditItems && permissions.canRemoveItems
+        ? actions.onMoveToPantry
+        : undefined,
+    onSortOrderUpdate: permissions.canReorderItems
+      ? actions.onSortOrderUpdate
+      : undefined,
+  };
+}
+
 /** Throws outside the provider: a missing one would silently drop row actions. */
 export const useSortableListActions = () => {
   const permissionsValue = useContext(PermissionsContext);
@@ -107,7 +138,10 @@ export const useSortableListActions = () => {
     );
   }
   return {
-    actions: actionsContext.useActions(),
+    actions: permittedActions(
+      actionsContext.useActions(),
+      permissionsValue.permissions,
+    ),
     ...permissionsValue,
   };
 };

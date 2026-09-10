@@ -1,7 +1,11 @@
 import { handleStoreRehydration, useStore } from '../index';
 import { errorService } from '#/services/errorService';
+import { openedWithEmptyStore } from '#/storage/mmkv';
+import { clearSessionTokens, loadSessionTokens } from '#/storage/keychain';
 
 jest.mock('#/services/errorService');
+jest.mock('#/storage/mmkv');
+jest.mock('#/storage/keychain');
 
 describe('handleStoreRehydration', () => {
   it('recovers isHydrated and reports to telemetry when rehydration fails', async () => {
@@ -15,6 +19,35 @@ describe('handleStoreRehydration', () => {
     expect(useStore.getState().isHydrated).toBe(true);
     expect(errorService.reportError).toHaveBeenCalledWith(err, {
       operation: 'storeHydration',
+    });
+  });
+
+  describe('the currency mirror and the account record', () => {
+    // Both come back from the same blob. The record is authoritative: the
+    // mirror can be stale if the currency changed on another device since this
+    // one last ran `setAuth`.
+    it('prefers the record when they disagree', () => {
+      const state = {
+        user: { id: 'u1', preferredCurrency: 'EUR' },
+        preferredCurrency: 'USD',
+        setHydrated: jest.fn(),
+      } as unknown as Parameters<typeof handleStoreRehydration>[0];
+
+      handleStoreRehydration(state, undefined);
+
+      expect(state!.preferredCurrency).toBe('EUR');
+    });
+
+    it('leaves the mirror alone when the record names no currency', () => {
+      const state = {
+        user: { id: 'u1', preferredCurrency: null },
+        preferredCurrency: 'EUR',
+        setHydrated: jest.fn(),
+      } as unknown as Parameters<typeof handleStoreRehydration>[0];
+
+      handleStoreRehydration(state, undefined);
+
+      expect(state!.preferredCurrency).toBe('EUR');
     });
   });
 
@@ -46,5 +79,50 @@ describe('home selection readiness', () => {
     // Restored is not valid: the pair may name a home the account has since
     // left, and this flag is what opens the pantry query's gate.
     expect(setIsHomeSelectionReady).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * A keychain item outlives the app on iOS, so a reinstalled app can find a
+ * previous owner's session tokens with no local state behind them. The
+ * encrypted store opening empty is the signal that nothing stands behind them.
+ */
+describe('a fresh install does not resume a session', () => {
+  const emptyStore = openedWithEmptyStore as jest.Mock;
+  const clearTokens = clearSessionTokens as jest.Mock;
+  const loadTokens = loadSessionTokens as jest.Mock;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    emptyStore.mockReturnValue(false);
+    loadTokens.mockResolvedValue({ status: 'absent' });
+  });
+
+  it('clears stored tokens and never reads them back', async () => {
+    emptyStore.mockReturnValue(true);
+    const setTokens = jest.fn();
+    useStore.setState({ isHydrated: false });
+
+    handleStoreRehydration({ ...useStore.getState(), setTokens }, undefined);
+    await new Promise(resolve => setImmediate(resolve));
+
+    expect(clearTokens).toHaveBeenCalled();
+    expect(setTokens).not.toHaveBeenCalled();
+    expect(useStore.getState().isHydrated).toBe(true);
+  });
+
+  it('restores the session normally when the store has data', async () => {
+    emptyStore.mockReturnValue(false);
+    loadTokens.mockResolvedValue({
+      status: 'ok',
+      tokens: { accessToken: 'a', refreshToken: 'r' },
+    });
+    const setTokens = jest.fn();
+
+    handleStoreRehydration({ ...useStore.getState(), setTokens }, undefined);
+    await new Promise(resolve => setImmediate(resolve));
+
+    expect(clearTokens).not.toHaveBeenCalled();
+    expect(setTokens).toHaveBeenCalled();
   });
 });

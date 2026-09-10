@@ -33,7 +33,7 @@ jest.mock('../MealPlanStack', () => ({ MealPlanStack: 'MealPlanStack' }));
 jest.mock('#/context/TabBarActionsContext', () => ({
   TabBarActionsProvider: ({ children }: { children: ReactNode }) => children,
 }));
-jest.mock('#components/navigation/FloatingTabBar/FloatingTabBar', () => ({
+jest.mock('#app/FloatingTabBar/FloatingTabBar', () => ({
   FloatingTabBar: 'FloatingTabBar',
 }));
 

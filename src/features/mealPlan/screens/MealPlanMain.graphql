@@ -70,9 +70,29 @@ fragment MealPlanMain_mealPlan on MealPlan {
   }
   nutritionGoalProgress {
     overallScore
-    caloriesProgress { target current percentage status }
-    proteinProgress { target current percentage status }
-    carbsProgress { target current percentage status }
-    fatProgress { target current percentage status }
+    caloriesProgress {
+      target
+      current
+      percentage
+      status
+    }
+    proteinProgress {
+      target
+      current
+      percentage
+      status
+    }
+    carbsProgress {
+      target
+      current
+      percentage
+      status
+    }
+    fatProgress {
+      target
+      current
+      percentage
+      status
+    }
   }
 }

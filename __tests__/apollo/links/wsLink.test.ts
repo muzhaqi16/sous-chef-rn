@@ -38,9 +38,8 @@ jest.mock('#/utils/errorSerialization', () => ({
   })),
 }));
 
-jest.mock('#/utils/deviceId', () => ({
+jest.mock('#/storage/deviceId', () => ({
   getDeviceId: jest.fn(() => 'test-device-id'),
-  getDeviceIdSync: jest.fn(() => 'test-device-id'),
 }));
 
 jest.mock('#/config/env', () => ({
@@ -240,6 +239,16 @@ describe('wsLink createClient config', () => {
         deviceId: 'test-device-id',
       }),
     );
+  });
+
+  // Storage has not opened yet. A generated substitute would dial as a NEW
+  // device, so the prior connection is never superseded and its subscriptions
+  // sit against the per-user cap until the heartbeat reaps them.
+  it('connectionParams omits deviceId when storage has not opened', () => {
+    const { getDeviceId } = require('#/storage/deviceId');
+    getDeviceId.mockReturnValueOnce(null);
+
+    expect(loadConnectionParams()()).not.toHaveProperty('deviceId');
   });
 
   it('connectionParams omits authorization when token is null', () => {

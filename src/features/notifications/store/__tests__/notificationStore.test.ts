@@ -59,8 +59,8 @@ describe('notificationSlice', () => {
       store.getState().linkExpirationData('notif-1', enrichment());
 
       const linked = store.getState().pendingExpirationLinks['notif-1'];
-      expect(linked.expirationAction).toBe('CONSUMED');
-      expect(linked.pantryItemName).toBe('Milk');
+      expect(linked!.expirationAction).toBe('CONSUMED');
+      expect(linked!.pantryItemName).toBe('Milk');
     });
   });
 
@@ -72,7 +72,7 @@ describe('notificationSlice', () => {
       store.getState().setExpirationAction('notif-1', 'WASTED');
 
       expect(
-        store.getState().pendingExpirationLinks['notif-1'].expirationAction,
+        store.getState().pendingExpirationLinks['notif-1']!.expirationAction,
       ).toBe('WASTED');
     });
 

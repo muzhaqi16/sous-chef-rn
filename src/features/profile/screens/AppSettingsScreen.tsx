@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
-import { SettingSwitch } from '#components/settings/SettingSwitch';
+import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import {
@@ -22,7 +22,7 @@ import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { Telemetry } from '#services/telemetry';
 import { Text } from '#components/atoms/Text';
 import { useDataState } from '#hooks/data/useDataState';
-import { DataStateView } from '#components/molecules/DataStateView';
+import { DataStateView } from '#components/organisms/DataStateView';
 
 export const AppSettingsScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -186,6 +186,18 @@ export const AppSettingsScreen: React.FC = () => {
           }}
           testID="settings-state"
         />
+        {/* Offline is exactly when someone reaches for this switch, and its
+            value lives in the store, not in the settings query. Behind the
+            gate it was unreachable in the state it exists for. */}
+        <SettingsSection variant="inset" title={t('settings.syncOffline')}>
+          <SettingSwitch
+            testID="settings-offline-mode-switch"
+            title={t('settings.offlineMode')}
+            description={t('settings.offlineModeDesc')}
+            value={offlineModeEnabled}
+            onValueChange={handleOfflineModeChange}
+          />
+        </SettingsSection>
       </ProfileScreenWrapper>
     );
   }
@@ -208,7 +220,7 @@ export const AppSettingsScreen: React.FC = () => {
           <Text style={commonStyles.subtitle}>
             {t('settings.preferredUnitSystem')}
           </Text>
-          <Text size="sm" tone="accent" style={styles.picker}>
+          <Text role="caption" tone="accent" style={styles.picker}>
             {selectedUnitLabel}
           </Text>
         </AppPressable>

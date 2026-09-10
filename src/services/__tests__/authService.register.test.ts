@@ -16,7 +16,6 @@ jest.mock('#/apollo/client', () => ({
 
 const mockStoreSpies = {
   setAuthIsLoading: jest.fn(),
-  setRegistrationPassword: jest.fn(),
   setRememberMe: jest.fn(),
   setAuth: jest.fn(),
 };
@@ -24,14 +23,20 @@ jest.mock('#store', () => ({
   useStore: { getState: () => mockStoreSpies },
 }));
 
-const mockSaveTempPassword = jest.fn().mockResolvedValue(undefined);
-const mockClearTempPassword = jest.fn().mockResolvedValue(undefined);
-jest.mock('#/storage/keychain', () => ({
-  saveTempRegistrationPassword: (...args: unknown[]) =>
-    mockSaveTempPassword(...args),
-  clearTempRegistrationPassword: (...args: unknown[]) =>
-    mockClearTempPassword(...args),
-}));
+const mockKeychainWrites = jest.fn();
+jest.mock(
+  '#/storage/keychain',
+  () =>
+    new Proxy(
+      {},
+      {
+        get:
+          (_target, name: string) =>
+          (...args: unknown[]) =>
+            mockKeychainWrites(name, ...args),
+      },
+    ),
+);
 
 const mockToastError = jest.fn();
 jest.mock('#/services/toastService', () => ({
@@ -65,14 +70,10 @@ describe('authService.register — verification-first', () => {
     expect(ok).toBe(true);
     // The headline invariant: registration must NOT authenticate.
     expect(mockStoreSpies.setAuth).not.toHaveBeenCalled();
-    // Credentials are persisted so the post-verification login can prefill.
-    expect(mockStoreSpies.setRegistrationPassword).toHaveBeenCalledWith(
-      INPUT.password,
-    );
-    expect(mockSaveTempPassword).toHaveBeenCalledWith(
-      INPUT.email,
-      INPUT.password,
-    );
+    // A verification-first register has no session to enrol against, so the
+    // password has no local reader and is never written down anywhere.
+    expect(mockKeychainWrites).not.toHaveBeenCalled();
+    expect(JSON.stringify(mockStoreSpies)).not.toContain(INPUT.password);
     // Loading flag is always reset.
     expect(mockStoreSpies.setAuthIsLoading).toHaveBeenLastCalledWith(false);
   });
@@ -111,6 +112,6 @@ describe('authService.register — verification-first', () => {
     expect(mockToastError).not.toHaveBeenCalledWith('Email is invalid.');
     expect(mockToastError).toHaveBeenCalledTimes(1);
     expect(mockStoreSpies.setAuth).not.toHaveBeenCalled();
-    expect(mockStoreSpies.setRegistrationPassword).not.toHaveBeenCalled();
+    expect(mockKeychainWrites).not.toHaveBeenCalled();
   });
 });

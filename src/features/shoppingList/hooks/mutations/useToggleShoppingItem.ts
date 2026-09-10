@@ -23,14 +23,14 @@ import {
 import {
   moveShoppingListItemToPurchased,
   moveShoppingListItemToUnpurchased,
-  writePurchaseInfo,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+} from '#features/shoppingList/cache/connections';
+import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { logger } from '#/utils/environment';
 import { isSuccessPayload } from '#/utils/errors/mutationPayload';
 import { handleMutationError } from '#/utils/errorHandlers';
-import { PAGINATION } from '#/constants/shoppingList';
+import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
 import { errorService } from '#/services/errorService';
 
 interface UseToggleShoppingItemOptions {

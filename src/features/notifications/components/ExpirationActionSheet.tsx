@@ -9,12 +9,11 @@ import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { ExpirationAction } from '#/graphql/generated/schemaTypes';
 import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
-import { Icon } from '#utils/iconUtils';
+import { Icon, type IconName } from '#utils/iconUtils';
 import { Title } from '#components/atoms/Title';
 import { Text } from '#components/atoms/Text';
 
@@ -33,7 +32,7 @@ const EXPIRATION_ACTIONS: {
   action: ExpirationAction;
   /** i18n key path — this table is module-level, no hook. */
   labelKey: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
+  icon: IconName;
   destructive?: boolean;
 }[] = [
   {
@@ -105,7 +104,7 @@ function OptionRow({
         size={24}
         tone={option.destructive ? 'error' : 'primary'}
       />
-      <Text size="md" weight="medium" style={styles.optionLabel}>
+      <Text role="bodyStrong" style={styles.optionLabel}>
         {t(option.labelKey)}
       </Text>
     </AppPressable>
@@ -137,7 +136,7 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
       ref={ref}
       {...modalProps}
       index={0}
-      handleIndicatorStyle={{ backgroundColor: 'gray' }}
+      handleIndicatorStyle={styles.handleIndicator}
     >
       <BottomSheetScrollView
         style={styles.scrollView}
@@ -150,7 +149,7 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
         <Title style={styles.title}>
           {t('expirationAction.title', { itemName })}
         </Title>
-        <Text size="sm" tone="secondary" style={styles.subtitle}>
+        <Text role="caption" tone="secondary" style={styles.subtitle}>
           {subtitle}
         </Text>
         <View style={styles.optionsList}>
@@ -173,6 +172,10 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  // Matches what `useStandardBottomSheet` gives every other sheet.
+  handleIndicator: {
+    backgroundColor: theme.colors.textSecondary,
+  },
   scrollView: {
     flex: 1,
   },
@@ -194,7 +197,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     overflow: 'hidden',
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.borderLight,
   },
 
@@ -206,7 +209,7 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       notLast: {
         true: {
-          borderBottomWidth: 1,
+          borderBottomWidth: theme.borderWidth.hairline,
           borderBottomColor: theme.colors.border,
         },
       },

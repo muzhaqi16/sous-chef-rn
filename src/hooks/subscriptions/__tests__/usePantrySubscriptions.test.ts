@@ -18,8 +18,8 @@ type CapturedOnData = (data: unknown, client: unknown) => void;
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
-jest.mock('#/utils/deviceId', () => ({
-  getDeviceIdSync: jest.fn(() => 'device_this'),
+jest.mock('#/storage/deviceId', () => ({
+  getDeviceId: jest.fn(() => 'device_this'),
 }));
 
 const mockRegister = jest.fn().mockReturnValue({});

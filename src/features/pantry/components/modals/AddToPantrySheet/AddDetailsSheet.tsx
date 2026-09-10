@@ -26,8 +26,8 @@ import { DetailsPage } from './DetailsPage';
 import { StoragePage } from './StoragePage';
 import { StockSettingsPage } from './StockSettingsPage';
 import { Text } from '#components/atoms/Text';
-import { SheetFormHeader } from '#components/molecules/SheetFormHeader';
-import { makeIdNameHandler } from '#components/modals/makeIdNameHandler';
+import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
+import { makeIdNameHandler } from '#components/organisms/makeIdNameHandler';
 import { logValidationErrors } from '#/utils/validation/common';
 import {
   addPantryItemSchema,
@@ -103,7 +103,7 @@ const indicatorStyles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     gap: theme.spacing.xl,
     paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
     marginBottom: theme.spacing.md,
   },
@@ -123,7 +123,7 @@ const indicatorStyles = StyleSheet.create(theme => ({
     },
   },
   label: {
-    fontSize: theme.fonts.size.sm,
+    ...theme.type.caption,
     fontWeight: '400',
     color: theme.colors.textSecondary,
     variants: {
@@ -358,16 +358,16 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
 
   return (
     <View style={styles.container} testID="add-pantry-item-details-modal">
-      <SheetFormHeader
+      <BottomSheetHeader
         title={t('addToPantry.addItemDetails')}
         cancelLabel={t('labels.cancel')}
-        saveLabel={loading ? t('labels.adding') : t('labels.add')}
+        confirmLabel={loading ? t('labels.adding') : t('labels.add')}
         onCancel={onClose}
         // `handleSubmit` runs the schema first: an invalid form renders its
         // message on the offending field and jumps to that field's page, so
         // the message is on screen rather than behind a tab the user has to
         // find. Only a valid form reaches `handleConfirm`.
-        onSave={() => {
+        onConfirm={() => {
           void handleSubmit(handleConfirm, formErrors => {
             logValidationErrors(formErrors);
             const firstField = Object.keys(formErrors)[0];
@@ -376,7 +376,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
           })();
         }}
         saving={loading}
-        submitTestID="add-pantry-item-submit-button"
+        confirmTestID="add-pantry-item-submit-button"
       />
 
       {/* Page Indicators */}

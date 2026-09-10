@@ -1,5 +1,5 @@
 import React, { createContext, useContext, type ReactNode } from 'react';
-import type { SwipeableRef } from '#components/molecules/SwipeableItem/types';
+import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 
 export interface ItemListActions {
   onItemPress: (id: string) => void;

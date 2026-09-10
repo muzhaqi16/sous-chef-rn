@@ -117,7 +117,7 @@ function handleMeasure(entry: PerformanceEntry) {
 
     // Only `interactive` is routed: `mount` times two effects in the same commit
     // and reads ~0 everywhere, `transition` uses marks identical to this one.
-    if (phase === 'interactive') {
+    if (phase === 'interactive' && screen) {
       Telemetry.histogram('screen_interactive_duration_ms', duration, {
         screen,
       });
@@ -130,9 +130,11 @@ function handleMeasure(entry: PerformanceEntry) {
   // reports the weaker `component_commit_gap_ms` instead.
   if (name.startsWith('component:')) {
     const component = name.split(':')[1];
-    Telemetry.histogram('component_render_duration_ms', duration, {
-      component,
-    });
+    if (component) {
+      Telemetry.histogram('component_render_duration_ms', duration, {
+        component,
+      });
+    }
     return;
   }
 

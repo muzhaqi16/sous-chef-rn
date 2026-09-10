@@ -50,7 +50,7 @@ export function usePantrySelectorConfig(
         state={isSelected ? 'selected' : 'default'}
         onPress={onPress}
       >
-        <Text size="md" weight="semibold" style={styles.itemName}>
+        <Text role="bodyStrong" style={styles.itemName}>
           {item.name}
         </Text>
         {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}

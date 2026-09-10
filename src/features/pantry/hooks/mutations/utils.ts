@@ -17,8 +17,10 @@ import { parseDecimalInput } from '#/utils/parseDecimalInput';
 // Cache updater for adding items to Pantry.itemsConnection
 
 /**
- * Build optimistic Unit object for cache updates.
- * Includes all Unit fields to prevent cache warnings.
+ * Optimistic `Unit` for a cache update. Writes exactly the fields every
+ * `PantryItem.unit` selection names — one short and the whole read is
+ * INCOMPLETE, so the fields here and in `writePantryItemDetailStub_unit` move
+ * together.
  */
 export function buildOptimisticUnit(
   newUnit: UnitSelection,
@@ -35,14 +37,7 @@ export function buildOptimisticUnit(
     symbol: newUnit.symbol || currentUnit?.symbol || '',
     name: newUnit.name || currentUnit?.name || newUnit.symbol || '',
     type: unitType,
-    // Preserve existing fields from current unit or use sensible defaults
-    isMetric: currentUnit?.isMetric ?? false,
-    baseUnitId: currentUnit?.baseUnitId ?? null,
-    conversionFactor: currentUnit?.conversionFactor ?? 1,
-    isCommon: currentUnit?.isCommon ?? false,
     displayAsFraction: currentUnit?.displayAsFraction ?? false,
-    minPrecision: currentUnit?.minPrecision ?? 0,
-    autoConvertThreshold: currentUnit?.autoConvertThreshold ?? null,
   };
 }
 

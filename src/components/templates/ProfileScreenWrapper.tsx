@@ -1,8 +1,7 @@
 import React from 'react';
-import { View, RefreshControlProps, ScrollView } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import type { RefreshControlProps } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { Header } from '#components/molecules/Header';
+import { Screen } from './Screen';
 
 interface ProfileScreenWrapperProps {
   children: React.ReactNode;
@@ -14,8 +13,9 @@ interface ProfileScreenWrapperProps {
 }
 
 /**
- * Reusable wrapper for profile sub-screens
- * Provides consistent layout, styling, safe area handling, and back navigation
+ * A settings sub-screen: the standard header with a back control, and a plain
+ * scroll host. A preset over `Screen`, so the inset and gutter rules are the
+ * scaffold's rather than this file's.
  */
 export const ProfileScreenWrapper: React.FC<ProfileScreenWrapperProps> = ({
   children,
@@ -28,31 +28,30 @@ export const ProfileScreenWrapper: React.FC<ProfileScreenWrapperProps> = ({
   const { goBack } = useAppNavigation();
 
   return (
-    <View style={styles.container} testID={testID}>
-      {!!showBackButton && (
-        <Header title={title ?? ''} onBack={goBack} centerTitle />
-      )}
-      {scrollEnabled ? (
-        <ScrollView
-          style={styles.scrollView}
-          contentInsetAdjustmentBehavior="automatic"
-          refreshControl={refreshControl}
-        >
-          {children}
-        </ScrollView>
-      ) : (
-        <View style={styles.scrollView}>{children}</View>
-      )}
-    </View>
+    <Screen
+      testID={testID}
+      gutter="none"
+      scroll={scrollEnabled ? 'scroll' : 'none'}
+      refresh={
+        refreshControl
+          ? {
+              refreshing: Boolean(refreshControl.props.refreshing),
+              onRefresh: () => refreshControl.props.onRefresh?.(),
+            }
+          : undefined
+      }
+      header={
+        showBackButton
+          ? {
+              variant: 'standard',
+              title: title ?? '',
+              back: goBack,
+              centerTitle: true,
+            }
+          : { variant: 'none' }
+      }
+    >
+      {children}
+    </Screen>
   );
 };
-
-const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-}));

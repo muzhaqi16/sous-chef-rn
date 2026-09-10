@@ -16,7 +16,9 @@
     "nameRequiredMessage": "Inserisci un nome per il piano dei pasti.",
     "startDateRequiredTitle": "Data di inizio richiesta",
     "startDateRequiredMessage": "Seleziona una data di inizio.",
-    "failedToCreate": "Impossibile creare il piano dei pasti."
+    "failedToCreate": "Impossibile creare il piano dei pasti.",
+    "needsThePlan": "Apri prima il piano, così i suoi pasti sono disponibili.",
+    "needsTheTemplate": "Apri prima il modello, così i suoi pasti sono disponibili."
   },
   "addMealSheet": {
     "searchPlaceholder": "Cerca ricette o aggiungi un pasto personalizzato...",
@@ -77,12 +79,14 @@
   "duplicatePlan": {
     "duplicating": "Duplicazione in corso...",
     "duplicate": "Duplica",
-    "copySuffix": "{{name}} (Copia)",
     "currentPlanLabel": "Piano attuale",
     "newNameLabel": "Nome nuovo piano",
     "newNamePlaceholder": "Inserisci il nome del piano",
     "infoText": "Tutti i pasti verranno copiati nel nuovo intervallo di date con la stessa struttura.",
-    "endDateSubtext": "al {{date}}"
+    "endDateSubtext": "al {{date}}",
+    "durationDiffers": "Scegli un intervallo della stessa durata dell’originale.",
+    "someSkipped_one": "{{count}} pasto è stato escluso perché non indica né una ricetta né un nome.",
+    "someSkipped_other": "{{count}} pasti sono stati esclusi perché non indicano né una ricetta né un nome."
   },
   "generateShoppingList": {
     "generating": "Generazione in corso...",
@@ -98,12 +102,17 @@
     "selectListLabel": "Seleziona una lista",
     "noLists": "Nessuna lista della spesa trovata",
     "generatingMessage": "Generazione lista della spesa...",
-    "itemsCount": "{{count}} articoli",
     "readyNothingToAdd": "\"{{name}}\" è pronta — niente da aggiungere.",
     "createdSuccess_one": "Lista della spesa \"{{name}}\" creata con {{count}} articolo{{shared}}",
     "createdSuccess_other": "Lista della spesa \"{{name}}\" creata con {{count}} articoli{{shared}}",
     "sharedSuffix": " (condivisa con {{homeName}})",
-    "generateFailed": "Impossibile generare la lista della spesa"
+    "generateFailed": "Impossibile generare la lista della spesa",
+    "planNotLoaded": "Apri prima il piano dei pasti, così le sue ricette sono disponibili.",
+    "nothingToAdd": "Niente da aggiungere: questo piano non ha ancora ingredienti di ricette.",
+    "defaultName": "Lista della spesa per {{name}}",
+    "someSkipped_one": "{{count}} voce è stata esclusa perché la sua ricetta non è scaricata.",
+    "someSkipped_other": "{{count}} voci sono state escluse perché le loro ricette non sono scaricate.",
+    "pantryNotChecked": "La dispensa non è stata sottratta: aprila una volta per renderla disponibile."
   },
   "saveAsTemplate": {
     "sharedWithHome": "Questo modello sarà condiviso con {{name}}",
@@ -128,7 +137,6 @@
   },
   "templateCard": {
     "usedTimes": "Usato {{count}} volte",
-    "durationDays": "{{count}} giorni",
     "servings": "{{count}} porzioni"
   },
   "templatePreview": {

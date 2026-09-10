@@ -10,6 +10,13 @@ fragment PantryDetailInfo_pantryItem on PantryItem {
   acquisitionMethod
   costPerUnit
   totalCost
+  # What totalCost and costPerUnit are denominated in. Null when they are, and
+  # when the costed batches disagree about currency. Read rather than assumed:
+  # a cost recorded in euros stays euros whatever the account prefers now.
+  costCurrency {
+    id
+    code
+  }
   minQuantity
   restockQuantity
   storageNotes
@@ -38,5 +45,10 @@ fragment PantryDetailInfo_pantryItem on PantryItem {
     # Both: the Purchased row shows the total, Cost/Unit already shows the split.
     unitPrice
     totalPrice
+    # What this purchase was paid in — not necessarily what the stack is in.
+    currency {
+      id
+      code
+    }
   }
 }

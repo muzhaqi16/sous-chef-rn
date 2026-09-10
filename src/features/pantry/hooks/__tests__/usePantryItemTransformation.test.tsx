@@ -10,7 +10,6 @@ import {
   formatPackageBreakdownFull,
   formatNetWeight,
   formatNetWeightDisplay,
-  formatRemainingNetWeight,
   formatQuantityBreakdown,
 } from '../usePantryItemTransformation';
 import { getI18n } from '#/i18n/config';
@@ -191,17 +190,6 @@ describe('formatNetWeightDisplay', () => {
   });
   it('formats integer values', () => {
     expect(formatNetWeightDisplay(500, { symbol: 'g' })).toBe('500 g');
-  });
-});
-
-describe('formatRemainingNetWeight', () => {
-  it('returns null for null remaining', () => {
-    expect(formatRemainingNetWeight(null)).toBeNull();
-  });
-  it('formats remaining weight', () => {
-    expect(formatRemainingNetWeight(25, { symbol: 'oz' })).toBe(
-      '25 oz remaining',
-    );
   });
 });
 

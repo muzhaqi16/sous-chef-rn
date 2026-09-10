@@ -28,6 +28,13 @@ fragment writePantryItemDetailStub_pantryItem on PantryItem {
   acquisitionMethod
   costPerUnit
   totalCost
+  # What totalCost and costPerUnit are denominated in. Null when they are, and
+  # when the costed batches disagree about currency. Read rather than assumed:
+  # a cost recorded in euros stays euros whatever the account prefers now.
+  costCurrency {
+    id
+    code
+  }
   purchase {
     id
     purchaseDate
@@ -141,24 +148,17 @@ fragment writePantryItemDetailStub_unitRef on PantryItem {
 
 # The tracking `Unit`, topped up the same way the catalog `Item` is.
 #
-# `buildOptimisticPantryItem` embeds the unit through `toReference(unit, true)`
-# with the five fields the LIST query selects, while
-# `PantryItemDetail_pantryItem` selects eleven — so a create carrying a unitId
-# left `GetPantryItem` reading INCOMPLETE ("Can't find field 'isMetric' on
-# object { __typename: Unit, … }"), and the detail screen was blank offline for
-# the rest of the session. It bit precisely when the Unit was WELL cached, which
-# is why no test with a bare create ever saw it.
+# `buildOptimisticPantryItem` embeds the unit through `toReference(unit, true)`,
+# so this fragment and every `PantryItem.unit` selection must name the SAME
+# fields: one the builder does not write leaves `GetPantryItem` reading
+# INCOMPLETE ("Can't find field 'isMetric' on object { __typename: Unit, … }")
+# and the detail screen blank offline for the rest of the session. It bites
+# precisely when the Unit is WELL cached, which is why a bare create never
+# catches it — `optimisticEntityCompleteness.test.ts` does.
 fragment writePantryItemDetailStub_unit on Unit {
   id
   name
   symbol
   type
-  isMetric
-  baseUnitId
-  conversionFactor
-  isCommon
   displayAsFraction
-  minPrecision
-  autoConvertThreshold
 }
-

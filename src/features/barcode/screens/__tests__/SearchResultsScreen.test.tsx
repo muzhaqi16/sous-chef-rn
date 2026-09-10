@@ -43,14 +43,7 @@ jest.mock('../../hooks/useSearchResults', () => ({
   })),
 }));
 
-jest.mock('../../components/LoadingState', () => ({
-  LoadingState: ({ message }: { message: string }) => {
-    const { Text } = require('react-native');
-    return <Text>{message}</Text>;
-  },
-}));
-
-jest.mock('#components/atoms/ErrorState', () => ({
+jest.mock('#components/molecules/ErrorState', () => ({
   ErrorState: ({ message }: { message: string }) => {
     const { Text } = require('react-native');
     return <Text>{message}</Text>;
@@ -71,7 +64,7 @@ jest.mock('../../components/SearchResults', () => ({
   },
 }));
 
-jest.mock('#components/molecules/Header', () => ({
+jest.mock('#components/organisms/Header', () => ({
   Header: ({ title }: { title?: string }) => {
     const { Text } = require('react-native');
     return <Text>{title}</Text>;
@@ -146,7 +139,10 @@ describe('SearchResultsScreen', () => {
     });
 
     const { getByText } = render(<SearchResultsScreen {...defaultProps} />);
-    expect(getByText('Searching for item...')).toBeTruthy();
+    // The brand loader sets its banner in caps, and the barcode reads back
+    // below it so a wrong scan is visible while the search runs.
+    expect(getByText('SEARCHING FOR ITEM...')).toBeTruthy();
+    expect(getByText('Barcode: 1234567890')).toBeTruthy();
   });
 
   it('shows search results when found', () => {

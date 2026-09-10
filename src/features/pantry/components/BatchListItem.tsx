@@ -1,4 +1,5 @@
 import React from 'react';
+import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
@@ -11,9 +12,9 @@ import {
   type PantryItemBatchFragment,
 } from '#features/pantry/graphql/pantryFragments.generated';
 import { formatQuantity } from '#/utils/formatQuantity';
-import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 import { Text } from '#components/atoms/Text';
 import { Badge } from '#components/atoms/Badge';
+import { formatMonthDay } from '#/utils/formatters/date';
 
 interface BatchListItemProps {
   batch: PantryItemBatchFragment;
@@ -56,10 +57,7 @@ const getExpiryText = (
  */
 const formatDate = (dateString: string | null | undefined) => {
   if (!dateString) return null;
-  return new Date(dateString).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  });
+  return formatMonthDay(new Date(dateString));
 };
 
 const BatchListItemComponent: React.FC<BatchListItemProps> = ({
@@ -69,6 +67,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
   onWaste,
 }) => {
   const { t } = useTranslation();
+  const money = useMoney();
   // Per-entity cache subscription: re-renders only when this batch's
   // PantryItemBatchFragment fields change (e.g., status, isOpened, quantity
   // updated by openBatch / wasteBatch mutations). Falls back to the source
@@ -87,7 +86,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
     <View style={styles.container}>
       <View style={styles.leftSection}>
         <View style={styles.titleRow}>
-          <Text size="base" weight="medium">
+          <Text role="bodyStrong">
             {t('pantryItemDetail.batch.number', { number: batch.batchNumber })}
           </Text>
           {!!batch.isOpened && (
@@ -103,13 +102,16 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
           )}
         </View>
 
-        <Text size="sm" style={styles.quantityText}>
+        <Text role="caption" style={styles.quantityText}>
           {formatQuantity(batch.quantity)} {unitSymbol ?? ''}
         </Text>
 
         {expiryInfo ? (
           <View style={styles.expiryRow}>
-            <Text size="sm" tone={expiryInfo.isExpired ? 'error' : 'warning'}>
+            <Text
+              role="caption"
+              tone={expiryInfo.isExpired ? 'error' : 'warning'}
+            >
               {expiryInfo.text}
             </Text>
             {!!batch.expiresAtIsManual && (
@@ -119,21 +121,21 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
         ) : null}
 
         {batch.store?.name ? (
-          <Text size="xs" tone="tertiary" style={styles.metaText}>
+          <Text role="caption" tone="tertiary" style={styles.metaText}>
             {batch.store.name}
           </Text>
         ) : null}
 
-        {batch.costPerUnit != null && batch.costPerUnit > 0 ? (
-          <Text size="xs" tone="tertiary" style={styles.metaText}>
+        {batch.costPerUnit != null ? (
+          <Text role="caption" tone="tertiary" style={styles.metaText}>
             {t('pantryItemDetail.batch.costPerUnit', {
-              cost: formatCurrency(batch.costPerUnit, DEFAULT_CURRENCY),
+              cost: money(batch.costPerUnit, batch.currency),
             })}
           </Text>
         ) : null}
 
         {batch.depletedAt ? (
-          <Text size="xs" tone="tertiary" style={styles.metaText}>
+          <Text role="caption" tone="tertiary" style={styles.metaText}>
             {/* `depletedAt` is when the batch reached zero, whichever way —
                 so the label follows the STATUS. */}
             {t(
@@ -147,7 +149,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
 
         {batch.notes ? (
           <Text
-            size="xs"
+            role="caption"
             tone="tertiary"
             style={styles.metaText}
             numberOfLines={1}
@@ -161,6 +163,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
           {!batch.isOpened && !!onOpen && (
             <AppPressable
               onPress={() => onOpen(batch.id)}
+              accessibilityLabel={t('a11y.openBatch')}
               style={styles.actionButton}
               hitSlop={8}
             >
@@ -170,6 +173,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
           {!!onWaste && (
             <AppPressable
               onPress={() => onWaste(batch.id)}
+              accessibilityLabel={t('a11y.wasteBatch')}
               style={styles.actionButton}
               hitSlop={8}
             >
@@ -194,7 +198,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   leftSection: {

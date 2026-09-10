@@ -81,7 +81,7 @@ jest.mock('#components/atoms/BaseSwitch', () => ({
   },
 }));
 
-jest.mock('#components/atoms/BottomSheetHeader', () => ({
+jest.mock('#components/molecules/BottomSheetHeader', () => ({
   BottomSheetHeader: ({
     title,
     onCancel,
@@ -126,7 +126,7 @@ jest.mock('#components/atoms/BottomSheetFormScrollView', () => ({
   },
 }));
 
-jest.mock('#components/molecules/FormInput', () => ({
+jest.mock('#components/atoms/FormInput', () => ({
   FormInput: ({
     label,
     value,

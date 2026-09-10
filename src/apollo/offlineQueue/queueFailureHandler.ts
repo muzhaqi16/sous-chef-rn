@@ -3,64 +3,15 @@ import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { removePantryItemLocally } from '#/apollo/utils/pantryCacheUpdaters';
-import { restoreItemToShoppingListAfterMoveToPantry } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { COUNT_WITHDRAWALS, UNLINK_WITHDRAWALS } from './withdrawalRegistry';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
 import { logger } from '#/utils/environment';
-import type { OperationVariables } from '@apollo/client';
-import type { FailedMutationInfo } from '#/apollo/offlineQueue/types';
-
-/**
- * `safeEvict` withdraws what a write CREATED; an operation that also UNLINKED
- * an existing entity leaves that half standing, and no evict puts it back.
- * Keep every entry IDEMPOTENT — a withdrawal can follow a revert the call site
- * already ran, when the write failed with the screen still open.
- */
-const UNLINK_WITHDRAWALS: Record<
-  string,
-  (variables: OperationVariables) => void
-> = {
-  MoveShoppingItemToPantry: variables => {
-    const input = variables.input as
-      | { shoppingListItemId?: string; removeFromList?: boolean | null }
-      | undefined;
-    if (!input?.shoppingListItemId) return;
-    // `removeFromList: false` never unlinked anything.
-    if (input.removeFromList === false) return;
-    restoreItemToShoppingListAfterMoveToPantry(
-      client.cache,
-      input.shoppingListItemId,
-    );
-  },
-};
-
-/**
- * Aggregates the eager write moved that an evict does not put back: a queued
- * pantry write adjusts `Pantry.stats.totalItems` itself, because the mutation's
- * `update` callback never runs while it is queued. Runs BEFORE the evict, so
- * the paired helper can still see the edge it is uncounting.
- */
-const COUNT_WITHDRAWALS: Record<
-  string,
-  (variables: OperationVariables, entityId: string | null) => void
-> = {
-  CreatePantryItem: (variables, entityId) => {
-    const pantryId = (variables.input as { pantryId?: string } | undefined)
-      ?.pantryId;
-    if (!pantryId || !entityId) return;
-    removePantryItemLocally(client.cache, pantryId, entityId);
-  },
-  MoveShoppingItemToPantry: (variables, entityId) => {
-    const input = variables.input as
-      | { pantryId?: string; pantryItemId?: string }
-      | undefined;
-    const pantryId = input?.pantryId;
-    const rowId = input?.pantryItemId ?? entityId;
-    if (!pantryId || !rowId) return;
-    removePantryItemLocally(client.cache, pantryId, rowId);
-  },
-};
+import type {
+  FailedMutationInfo,
+  OverwrittenMutationInfo,
+  QueueError,
+} from '#/apollo/offlineQueue/types';
 
 /**
  * Withdraws a locally-applied change the server permanently rejected. An evict
@@ -79,7 +30,7 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
   const withdrawCount = COUNT_WITHDRAWALS[operationName];
   if (withdrawCount) {
     try {
-      withdrawCount(info.variables, entityId);
+      withdrawCount(client.cache, info.variables, entityId);
     } catch (countError) {
       logger.warn(
         `Queue: could not withdraw ${operationName}'s count`,
@@ -100,7 +51,7 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
   const withdrawUnlink = UNLINK_WITHDRAWALS[operationName];
   if (withdrawUnlink) {
     try {
-      withdrawUnlink(info.variables);
+      withdrawUnlink(client.cache, info.variables);
     } catch (withdrawError) {
       logger.warn(
         `Queue: could not withdraw ${operationName}'s unlink`,
@@ -110,12 +61,43 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
   }
 
   // The app's own words, not the server's: `error.message` is written for
-  // developers and can carry operation names and identifiers.
-  toastService.error(t('errors.queuedChangeRejected'));
+  // developers and can carry operation names and identifiers. A conflict gets
+  // its own sentence — "someone got there first" is a different thing for the
+  // user to know than "this failed".
+  toastService.error(withdrawalMessage(error.type, entityType));
 
   // Withdrawn, so it records nothing; left in place it would pad every drain
   // scan and persisted write until `cleanupTerminal` ages it out 24h later.
   queueStore.removeMutation(mutationId);
+}
+
+/**
+ * The server accepted the replay and kept its own value. Nothing is withdrawn —
+ * the entry already dequeued as success — so this only tells the person, using
+ * the same copy the withdrawal path uses for a conflict.
+ */
+export function reportQueueOverwrite(info: OverwrittenMutationInfo): void {
+  logger.warn(`Queue: ${info.operationName} converged on the server's value`, {
+    entityType: info.entityType,
+    entityId: info.entityId,
+  });
+  toastService.error(withdrawalMessage('conflict', info.entityType));
+}
+
+/** Resolves the withdrawal toast, naming the entity where the map knows it. */
+function withdrawalMessage(
+  type: QueueError['type'],
+  entityType: string | null,
+): string {
+  if (type !== 'conflict') return t('errors.queuedChangeRejected');
+  if (!entityType) return t('errors.queuedChangeOverwritten');
+
+  const resource = t(`errors.resourceNames.${entityType}`, {
+    defaultValue: '',
+  });
+  return resource
+    ? t('errors.queuedChangeOverwrittenResource', { resource })
+    : t('errors.queuedChangeOverwritten');
 }
 
 /**
@@ -125,4 +107,5 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
  */
 export function registerQueueFailureHandler(): void {
   queueManager.setFailureHandler(handleQueueFailure);
+  queueManager.setOverwriteReporter(reportQueueOverwrite);
 }

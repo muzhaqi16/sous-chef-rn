@@ -1,0 +1,19 @@
+{
+  "counts": {
+    "stylesheet-type::src/components/molecules/BaseInput/BaseInput.styles.ts": 4,
+    "stylesheet-type::src/components/atoms/DetailTitleRow.tsx": 1,
+    "stylesheet-type::src/components/organisms/SettingsSection.tsx": 2,
+    "stylesheet-type::src/components/organisms/biometric/BiometricSetupView.tsx": 1,
+    "stylesheet-type::src/components/providers/AlertProvider.tsx": 1,
+    "stylesheet-type::src/features/barcode/components/ProductResultCard.tsx": 1,
+    "stylesheet-type::src/features/home/screens/JoinHomeByCodeScreen.tsx": 1,
+    "stylesheet-type::src/features/notifications/components/InvitationAcceptanceModal.tsx": 1,
+    "stylesheet-type::src/features/pantry/components/PantryDetailInfo.tsx": 1,
+    "stylesheet-type::src/features/pantry/components/charts/TrendLineChart.tsx": 1,
+    "stylesheet-type::src/features/pantry/components/modals/AddToPantrySheet/AddDetailsSheet.tsx": 2,
+    "stylesheet-type::src/features/recipes/screens/RecipeMain.tsx": 2,
+    "stylesheet-type::src/features/shoppingList/components/QuantityEditSheet/QuantityEditSheet.tsx": 2,
+    "stylesheet-type::src/features/shoppingList/screens/JoinByShareCodeScreen.tsx": 1
+  },
+  "scannedFiles": 1092
+}

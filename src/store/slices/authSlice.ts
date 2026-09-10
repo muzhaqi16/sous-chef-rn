@@ -5,12 +5,12 @@
 // ============================================
 
 import { StateCreator } from 'zustand';
-import { RootState } from '../index';
+import type { RootState } from '../index';
 import {
-  scheduleTokenRefresh,
-  cancelTokenRefresh,
-} from '../../apollo/links/tokenScheduler';
-import { proactiveTokenRefresh } from '../../apollo/links/refreshToken';
+  cancelProactiveRefresh,
+  refreshTokenNow,
+  scheduleProactiveRefresh,
+} from '../tokenRefreshBridge';
 import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
 import { saveSessionTokens, clearSessionTokens } from '#storage/keychain';
 import { logger } from '#/utils/environment';
@@ -44,7 +44,7 @@ export const handleTokenRefreshOnResume = async (
     '[AuthSlice] Token expired/expiring on app resume, refreshing...',
   );
   try {
-    await proactiveTokenRefresh();
+    await refreshTokenNow();
   } catch {
     logger.warn(
       '[AuthSlice] Token refresh on resume failed, reactive refresh will handle',
@@ -68,6 +68,14 @@ export interface User {
   lastName?: string;
   profilePicture?: string;
   name?: string;
+  /**
+   * The name a HOUSEMATE or collaborator reads this account by — gated by the
+   * sharing relationship, unlike `profile.displayName` which profile visibility
+   * can withhold. `name` above is the profile one, flattened for the greeting.
+   */
+  displayName?: string | null;
+  /** ISO code; null until the person states one. See `src/domain/money.ts`. */
+  preferredCurrency?: string | null;
 }
 
 /**
@@ -82,6 +90,9 @@ export type AuthUserInput = User & {
     firstName?: string | null;
     lastName?: string | null;
   } | null;
+  settings?: {
+    showTutorials?: boolean | null;
+  } | null;
 };
 
 export interface AuthState {
@@ -93,6 +104,12 @@ export interface AuthState {
   // Auth preferences
   // NOTE: rememberMe is owned by preferencesSlice — do NOT duplicate here
   hasStoredCredentials: boolean | null;
+
+  // Wall-clock deadline before another device-credential exchange may be sent,
+  // and the count behind it. A DEADLINE, not a countdown, so a backgrounded JS
+  // thread cannot stretch it, and persisted so a relaunch cannot skip it.
+  biometricRetryAt: number;
+  biometricAttempts: number;
 
   // Auto-login state
   isAutoLoggingIn: boolean;
@@ -121,17 +138,32 @@ export interface AuthState {
   setOnboarded: (onboarded: boolean) => void;
   clearAuth: () => void;
   setHasStoredCredentials: (has: boolean | null) => void;
+  registerBiometricRefusal: (retryAfterMs?: number) => void;
+  clearBiometricBackoff: () => void;
   setIsAutoLoggingIn: (loading: boolean) => void;
   setAuthIsLoading: (v: boolean) => void;
   setAuthIsLoadingCredentials: (v: boolean) => void;
   setSessionTokensInKeychain: (inKeychain: boolean) => void;
 }
 
+/**
+ * Seconds between device-credential exchanges after a refusal. Index 0 is the
+ * never-refused state, so counting from 1 always lands on a real delay.
+ */
+const BIOMETRIC_BACKOFF_SECONDS = [0, 30, 60, 180, 300];
+
+const backoffForAttempt = (attempt: number): number =>
+  (BIOMETRIC_BACKOFF_SECONDS[
+    Math.min(Math.max(attempt, 0), BIOMETRIC_BACKOFF_SECONDS.length - 1)
+  ] ?? 0) * 1000;
+
 const initialAuthState = {
   user: null,
   accessToken: null,
   refreshToken: null,
   hasStoredCredentials: null,
+  biometricRetryAt: 0,
+  biometricAttempts: 0,
   isAutoLoggingIn: false,
   authIsLoading: false,
   authIsLoadingCredentials: false,
@@ -200,6 +232,18 @@ export const createAuthSlice: StateCreator<
         state.accessToken = accessToken;
         state.refreshToken = refreshToken;
         state.isAutoLoggingIn = false; // Clear auto-login state on success
+        // Mirrored out of the auth payload so every money surface can read it
+        // without a query of its own; the reset manager clears it on sign-out.
+        if (user.preferredCurrency) {
+          state.preferredCurrency = user.preferredCurrency;
+        }
+        // Seeded here, not from `useAppSettings` — that hook mounts only on the
+        // App Settings screen, while a session end resets this to `true`. The
+        // gap between the two showed a never-seen coach mark to someone who
+        // had turned tutorials off, and marked it seen.
+        if (typeof user.settings?.showTutorials === 'boolean') {
+          state.showTutorials = user.settings.showTutorials;
+        }
       });
 
       persistSessionTokens(accessToken, refreshToken);
@@ -207,9 +251,7 @@ export const createAuthSlice: StateCreator<
       // Schedule proactive token refresh (best practice)
       // This will automatically refresh the token 5 minutes before it expires
       // to prevent user-facing 401 errors and provide seamless UX
-      scheduleTokenRefresh(accessToken, async () => {
-        await proactiveTokenRefresh();
-      });
+      scheduleProactiveRefresh(accessToken);
     },
 
     updateUser: updates => {
@@ -238,9 +280,7 @@ export const createAuthSlice: StateCreator<
       // The tokenScheduler has built-in offline protection, so we always schedule
       // This ensures refresh is scheduled even after offline->online transitions
       if (accessToken) {
-        scheduleTokenRefresh(accessToken, async () => {
-          await proactiveTokenRefresh();
-        });
+        scheduleProactiveRefresh(accessToken);
       }
     },
 
@@ -263,7 +303,7 @@ export const createAuthSlice: StateCreator<
     clearAuth: () => {
       // Cancel any scheduled token refresh before clearing auth
       // This prevents refresh attempts with invalid/cleared tokens
-      cancelTokenRefresh();
+      cancelProactiveRefresh();
 
       set(state => {
         state.user = null;
@@ -282,6 +322,22 @@ export const createAuthSlice: StateCreator<
     setHasStoredCredentials: has => {
       set(state => {
         state.hasStoredCredentials = has;
+      });
+    },
+
+    registerBiometricRefusal: retryAfterMs => {
+      set(state => {
+        state.biometricAttempts += 1;
+        // The server's own deadline wins: it knows what budget is left.
+        const wait = retryAfterMs ?? backoffForAttempt(state.biometricAttempts);
+        state.biometricRetryAt = Date.now() + wait;
+      });
+    },
+
+    clearBiometricBackoff: () => {
+      set(state => {
+        state.biometricAttempts = 0;
+        state.biometricRetryAt = 0;
       });
     },
 

@@ -97,7 +97,7 @@ export const ActiveFilterChipsRow: React.FC<ActiveFilterChipsRowProps> = ({
         testID="active-filters-summary"
       >
         <Icon name="options-outline" size={14} tone="primary" />
-        <Text size="sm" weight="semibold" tone="secondary">
+        <Text role="label" tone="secondary">
           {t('recipes.filtersActiveSummary', { count: chips.length })}
         </Text>
         <Icon
@@ -122,7 +122,7 @@ export const ActiveFilterChipsRow: React.FC<ActiveFilterChipsRowProps> = ({
                 filter: chip.label,
               })}
             >
-              <Text size="sm" weight="semibold" style={styles.chipText}>
+              <Text role="label" style={styles.chipText}>
                 {chip.label}
               </Text>
               {/* textInverse tracks chipSelectedText (neutral-0 light / neutral-900 dark) */}
@@ -138,7 +138,7 @@ export const ActiveFilterChipsRow: React.FC<ActiveFilterChipsRowProps> = ({
             accessibilityRole="button"
             accessibilityLabel={t('recipeFilters.clearAllA11y')}
           >
-            <Text size="sm" weight="semibold" tone="secondary">
+            <Text role="label" tone="secondary">
               {t('labels.clear')}
             </Text>
           </Pressable>
@@ -158,10 +158,10 @@ const styles = StyleSheet.create(theme => ({
     alignSelf: 'flex-start',
     gap: theme.spacing.xs,
     paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.base,
   },
   scrollContent: {
-    paddingHorizontal: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.base,
     paddingBottom: theme.spacing.xs,
     gap: theme.spacing.sm,
     alignItems: 'center',
@@ -171,7 +171,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.xs,
     paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm + 2,
+    paddingHorizontal: theme.spacing.smPlus,
     borderRadius: theme.radii['2xl'],
     borderCurve: 'continuous',
     backgroundColor: theme.colors.chipSelectedBackground,

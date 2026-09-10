@@ -3,7 +3,7 @@ import { useApolloClient } from '@apollo/client/react';
 
 import { useUser } from '#store/useAppStore';
 import { preloadImages } from '#components/atoms/CachedImage';
-import { isShoppingListOwner } from '#utils/ownershipHelpers';
+import { isShoppingListOwner } from '#features/shoppingList/utils/ownershipHelpers';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { isResourceAccessLostError } from '#/utils/errors/graphqlErrors';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
@@ -49,6 +49,7 @@ export function useShoppingListScreen() {
     rawPurchasedItems,
     shoppingList: currentListDetails,
     listNotFound,
+    detailsLoading,
     loading: itemsLoading,
     error,
     isTransitioning,
@@ -165,6 +166,7 @@ export function useShoppingListScreen() {
       rawPurchasedItems,
 
       loading,
+      detailsLoading,
       isLoadingInitial,
       isTransitioning,
       error,

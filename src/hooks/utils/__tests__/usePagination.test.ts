@@ -1,6 +1,8 @@
 'use no memo';
 
 import { renderHook, act } from '@testing-library/react-native';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import { GraphQLError } from 'graphql';
 import { usePagination } from '../usePagination';
 
 jest.mock('#/services/errorService');
@@ -94,6 +96,103 @@ describe('usePagination', () => {
         itemsCursor: 'cursor-xyz',
       },
     });
+  });
+
+  it('restarts when the server refuses a cursor the connection names its own way', async () => {
+    // The pantry is the one caller that supplies `restart`, and its cursor
+    // argument is `itemsCursor` — so a recogniser keyed on `after`/`cursor`
+    // leaves exactly that list stranded at the page it stopped on.
+    const refusal = new CombinedGraphQLErrors({
+      errors: [
+        new GraphQLError('Invalid cursor.', {
+          extensions: { code: 'VALIDATION_FAILED' },
+        }),
+      ],
+    });
+    const fetchMore = jest.fn().mockRejectedValue(refusal);
+    const restart = jest.fn().mockResolvedValue({});
+
+    const { result } = renderHook(() =>
+      usePagination({
+        pageInfo: { hasNextPage: true, endCursor: 'stale-cursor' },
+        loading: false,
+        itemCount: 10,
+        fetchMore,
+        cursorVariableName: 'itemsCursor',
+        restart,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    expect(restart).toHaveBeenCalledTimes(1);
+    expect(result.current.loadMoreError).toBe(false);
+  });
+
+  // Without this the end of a persisted page is a silent no-op: the reader
+  // pulls, nothing arrives, and nothing says why.
+  it('marks a failed page offline when the server is unreachable', async () => {
+    const { useStore } = require('#store');
+    const previous = useStore.getState();
+    useStore.setState({
+      isOnline: true,
+      apiReachable: false,
+      offlineModeEnabled: false,
+    });
+
+    try {
+      const { result } = renderHook(() =>
+        usePagination({
+          pageInfo: { hasNextPage: true, endCursor: 'cursor-abc' },
+          loading: false,
+          itemCount: 10,
+          fetchMore: jest.fn().mockRejectedValue(new Error('Network error')),
+          cursorVariableName: 'itemsCursor',
+        }),
+      );
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(result.current.loadMoreError).toBe(true);
+      expect(result.current.loadMoreOffline).toBe(true);
+    } finally {
+      useStore.setState(previous);
+    }
+  });
+
+  it('marks a failed page as an error when the server is reachable', async () => {
+    const { useStore } = require('#store');
+    const previous = useStore.getState();
+    useStore.setState({
+      isOnline: true,
+      apiReachable: true,
+      offlineModeEnabled: false,
+    });
+
+    try {
+      const { result } = renderHook(() =>
+        usePagination({
+          pageInfo: { hasNextPage: true, endCursor: 'cursor-abc' },
+          loading: false,
+          itemCount: 10,
+          fetchMore: jest.fn().mockRejectedValue(new Error('Boom')),
+          cursorVariableName: 'itemsCursor',
+        }),
+      );
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(result.current.loadMoreError).toBe(true);
+      expect(result.current.loadMoreOffline).toBe(false);
+    } finally {
+      useStore.setState(previous);
+    }
   });
 
   it('loadMore() does nothing when hasMore is false', async () => {

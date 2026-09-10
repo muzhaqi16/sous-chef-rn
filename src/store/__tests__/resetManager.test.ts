@@ -28,9 +28,21 @@ jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
   },
 }));
 
+// Apollo registers these at client init; here the test stands in for it, which
+// is what makes every step of the reset observable.
+const apolloReset = {
+  cancelTokenRefresh: jest.fn(),
+  clearPersistedCache: jest.fn(),
+  clearStore: jest.fn(() => Promise.resolve()),
+};
+
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import { useBarcodeScannerStore } from '#features/barcode/store/barcodeScannerStore';
 import { RESET_SCENARIOS, createResetManager } from '../resetManager';
+import {
+  clearApolloResetBridge,
+  registerApolloResetBridge,
+} from '../apolloResetBridge';
 import type { RootState } from '#store/index';
 import { storage } from '#/storage/mmkv';
 import {
@@ -54,19 +66,12 @@ const findAuthResetCall = (mockSet: jest.Mock) =>
     (call: SetCall) => call[0]?.user === null && call[0]?.accessToken === null,
   );
 
-// Asserts the half of the cache clear this environment can observe.
-//
-// `client.clearStore()` sits behind `await import('#/apollo/client')`, which is
-// dynamic to break the store → resetManager → apollo/client → links → store
-// require cycle. Jest here runs without --experimental-vm-modules and the RN
-// babel preset does not down-level `import()`, so that call always rejects with
-// "A dynamic import callback was invoked without --experimental-vm-modules" and
-// `clearStore` is unreachable from any test, so no assertion here can cover it
-// beyond checking that the failure is logged. The persisted blob is cleared
-// before that import and in its own try, so it IS covered: it is also the half
-// that matters most, being the copy that survives a restart.
+// Both halves of the cache clear. The persisted blob matters most — it is the
+// copy of the previous account's data that survives a restart — and it is
+// cleared in its own try, so a failure there cannot skip the in-memory clear.
 const expectPersistedCacheCleared = () => {
-  expect(apolloCachePersistence.clear).toHaveBeenCalled();
+  expect(apolloReset.clearPersistedCache).toHaveBeenCalled();
+  expect(apolloReset.clearStore).toHaveBeenCalled();
   expect(logger.error).not.toHaveBeenCalledWith(
     expect.stringContaining('Error clearing persisted Apollo cache:'),
     expect.anything(),
@@ -119,9 +124,14 @@ describe('resetManager', () => {
 
     beforeEach(() => {
       jest.clearAllMocks();
+      registerApolloResetBridge(apolloReset);
       mockSet = jest.fn();
       mockGet = jest.fn(() => ({}));
       resetManager = createResetManager(mockSet, mockGet);
+    });
+
+    afterEach(() => {
+      clearApolloResetBridge();
     });
 
     describe('resetStore', () => {
@@ -170,7 +180,7 @@ describe('resetManager', () => {
 
         // Left armed, the proactive timer fires against tokens this reset just
         // cleared; left set, the two flags describe a session that is gone.
-        expect(cancelTokenRefresh).toHaveBeenCalled();
+        expect(apolloReset.cancelTokenRefresh).toHaveBeenCalled();
         const firstCall = mockSet.mock.calls[0][0];
         expect(firstCall.isAutoLoggingIn).toBe(false);
         expect(firstCall.sessionTokensInKeychain).toBe(false);
@@ -190,7 +200,10 @@ describe('resetManager', () => {
         expect(firstCall.sessionTokensInKeychain).toBeUndefined();
       });
 
-      it('resets UI state when ui option is true', async () => {
+      // The cross-screen hand-offs: each names a row or holds an image the next
+      // account must not receive. `tutorialResetGeneration` is deliberately not
+      // among them — resetting a bump counter reads as a reset somebody asked for.
+      it('drops the transient UI hand-offs when ui option is true', async () => {
         await resetManager.resetStore({
           auth: false,
           ui: true,
@@ -198,11 +211,10 @@ describe('resetManager', () => {
           clearApolloCache: false,
         });
         const firstCall = mockSet.mock.calls[0][0];
-        expect(firstCall.isLoading).toBe(false);
-        expect(firstCall.isError).toBe(false);
-        expect(firstCall.bottomSheetVisible).toBe(false);
-        expect(firstCall.toastMessage).toBeNull();
-        expect(firstCall.globalSearchQuery).toBe('');
+        expect(firstCall.pendingPantryScrollToTop).toBe(false);
+        expect(firstCall.pendingCroppedImage).toBeNull();
+        expect(firstCall.pendingItemImages).toBeNull();
+        expect(firstCall.tutorialResetGeneration).toBeUndefined();
       });
 
       it('resets preferences when preferences option is true', async () => {
@@ -285,11 +297,9 @@ describe('resetManager', () => {
       });
 
       it('logs and swallows a persisted-cache clear failure without abandoning the reset', async () => {
-        (apolloCachePersistence.clear as jest.Mock).mockImplementationOnce(
-          () => {
-            throw new Error('storage unavailable');
-          },
-        );
+        apolloReset.clearPersistedCache.mockImplementationOnce(() => {
+          throw new Error('storage unavailable');
+        });
 
         await resetManager.resetStore({
           auth: true,
@@ -309,9 +319,12 @@ describe('resetManager', () => {
       });
 
       it('clears the persisted blob even when the in-memory clear fails', async () => {
-        // The two are separately guarded on purpose: the in-memory half runs
-        // behind a dynamic import that can fail (and always does under this
-        // jest config), and the persisted blob must not survive that.
+        // Separately guarded on purpose: the persisted blob is the copy that
+        // survives a restart, so an in-memory failure must not leave it behind.
+        apolloReset.clearStore.mockRejectedValueOnce(
+          new Error('cache unavailable'),
+        );
+
         await resetManager.resetStore({
           auth: true,
           ui: false,
@@ -323,7 +336,7 @@ describe('resetManager', () => {
           expect.stringContaining('Error clearing Apollo cache:'),
           expect.anything(),
         );
-        expect(apolloCachePersistence.clear).toHaveBeenCalledTimes(1);
+        expect(apolloReset.clearPersistedCache).toHaveBeenCalledTimes(1);
       });
 
       it('does not reset auth state when auth option is false', async () => {
@@ -374,7 +387,7 @@ describe('resetManager', () => {
         expect(authCall).toBeDefined();
         expect(authCall?.[0].isAutoLoggingIn).toBe(false);
         expect(authCall?.[0].sessionTokensInKeychain).toBe(false);
-        expect(cancelTokenRefresh).toHaveBeenCalled();
+        expect(apolloReset.cancelTokenRefresh).toHaveBeenCalled();
         expectPersistedCacheCleared();
         expect(logger.info).toHaveBeenCalledWith(
           expect.stringContaining('refresh_rejected'),
@@ -432,7 +445,7 @@ describe('resetManager', () => {
           expect(authState?.isHomeSelectionReady).toBe(false);
 
           // Scheduled refresh, keychain tier, and persisted tokens
-          expect(cancelTokenRefresh).toHaveBeenCalled();
+          expect(apolloReset.cancelTokenRefresh).toHaveBeenCalled();
           expect(clearTempRegistrationPassword).toHaveBeenCalled();
           expect(storage.remove).toHaveBeenCalledWith('accessToken');
           expect(storage.remove).toHaveBeenCalledWith('refreshToken');
@@ -530,7 +543,7 @@ describe('resetManager', () => {
         // ApolloCachePersistence.clear() drops the MMKV keys a cold start
         // restores from, so the ended session's normalized entities cannot
         // reappear under whoever signs in next.
-        expect(apolloCachePersistence.clear).toHaveBeenCalledTimes(1);
+        expect(apolloReset.clearPersistedCache).toHaveBeenCalledTimes(1);
       });
 
       it.each(REASONS)(

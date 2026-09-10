@@ -82,6 +82,7 @@ const fullItem: Unmasked<ItemDetail_ShoppingListItemFragment> = {
     __typename: 'User',
     id: 'u1',
     email: 'sam@example.com',
+    displayName: null,
     profile: {
       __typename: 'UserProfile',
       id: 'profile-1',

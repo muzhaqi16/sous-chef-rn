@@ -1,16 +1,13 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
-import { ScrollView } from 'react-native-gesture-handler';
+import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
 import { MealTypeSection } from './MealTypeSection';
 import { EmptyDayState } from './EmptyDayState';
-import { Text } from '#components/atoms/Text';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import type { MealTypeGroup } from '#features/mealPlan/hooks/useDailyMeals';
 import { type MealType } from '#/graphql/generated/schemaTypes';
+import { getScrollClearancePadding } from '#constants/layout';
 
 interface DayMealListProps {
   selectedDate: Date;
@@ -41,12 +38,11 @@ export const DayMealList: React.FC<DayMealListProps> = ({
   refreshing = false,
   onRefresh,
 }) => {
-  const { t } = useTranslation();
   // Ensure only one row's swipe-to-delete is open at a time across all sections.
   const { handleSwipeableWillOpen, handleSwipeableClose } =
     useSwipeableCoordinator();
   return (
-    <ScrollView
+    <SwipeAwareScrollComponent
       style={styles.container}
       contentContainerStyle={[styles.content, isEmpty && styles.contentEmpty]}
       showsVerticalScrollIndicator={false}
@@ -78,59 +74,24 @@ export const DayMealList: React.FC<DayMealListProps> = ({
               onSwipeableClose={handleSwipeableClose}
             />
           ))}
-
-          {/* Add a meal button */}
-          {!!onAddMeal && (
-            <AppPressable
-              onPress={() => onAddMeal()}
-              style={styles.addMealButton}
-            >
-              <Icon name="add-circle-outline" size={20} tone="primary" />
-              <Text
-                size="md"
-                weight="medium"
-                tone="accent"
-                style={styles.addMealText}
-              >
-                {t('labels.addAMeal')}
-              </Text>
-            </AppPressable>
-          )}
         </>
       )}
-    </ScrollView>
+    </SwipeAwareScrollComponent>
   );
 };
 
 DayMealList.displayName = 'DayMealList';
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create((theme, rt) => ({
   container: {
     flex: 1,
   },
   content: {
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: 120, // Account for tab bar
+    // The list owns the gutter for everything it renders, rows included.
+    paddingHorizontal: theme.layout.pageGutter,
+    paddingBottom: getScrollClearancePadding(rt.insets.bottom),
   },
   contentEmpty: {
     flexGrow: 1,
-  },
-  addMealButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: theme.spacing.md,
-    marginTop: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderStyle: 'dashed',
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
-  addMealText: {
-    marginLeft: theme.spacing.sm,
   },
 }));

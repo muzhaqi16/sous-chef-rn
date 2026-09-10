@@ -68,7 +68,7 @@ describe('useCreateStorageLocation', () => {
 
     // A client-minted cuid2 rode the create as input.id, alongside the homeId.
     expect(fired).toHaveLength(1);
-    const input = fired[0].input as {
+    const input = fired[0]!.input as {
       id: string;
       name: string;
       homeId: string;

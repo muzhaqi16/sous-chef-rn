@@ -103,7 +103,15 @@ const KERNEL_GLOBS = [
   'src/constants/**/*.{ts,tsx}',
   'src/theme/**/*.{ts,tsx}',
   'src/i18n/**/*.{ts,tsx}',
+  'src/context/**/*.{ts,tsx}',
+  'src/graphql/**/*.{ts,tsx}',
 ];
+
+/**
+ * `src/screens/` is deliberately absent: a `SelectPantryItems` screen in
+ * onboarding names what it does, not a domain forked into the kernel. It
+ * leaves this layer when both flows become features.
+ */
 
 /**
  * Per-feature navigation stacks are named after features BY DESIGN — they are
@@ -111,7 +119,13 @@ const KERNEL_GLOBS = [
  * exemption `src/app/` gets. Naming `PantryStack.tsx` anything else would make
  * it worse, not more portable.
  */
-const KERNEL_EXEMPT = [/^src\/navigation\/stacks\//];
+const KERNEL_EXEMPT = [
+  /^src\/navigation\/stacks\//,
+  // `src/domain` IS the home for a shared domain module, so a domain name
+  // there is the point rather than the finding. `check-single-consumer` holds
+  // the other half: nothing with a single consumer may sit there.
+  /^src\/domain\//,
+];
 
 const SKIP = [
   /(^|\/)__tests__(\/|$)/,
@@ -150,12 +164,17 @@ const EXTRA_DOMAIN_TERMS = [
 ];
 
 /**
- * Feature ids that are app chrome, not a domain.
- * `home` collides with the tab-navigator sense (`HomeTabs`); `profile` and
- * `notifications` name concepts every app of this shape has. Excluding them
- * keeps the name test precise; real coupling still shows as `featureImport`.
+ * Feature ids that are app chrome, not a domain: `home` collides with
+ * `HomeTabs`, and session state is kernel, so a shared `useIsLoggedOut` is not
+ * the auth feature's. Real coupling still shows as `featureImport`.
  */
-const AMBIGUOUS_IDS = new Set(['home', 'profile', 'notifications']);
+const AMBIGUOUS_IDS = new Set([
+  'home',
+  'profile',
+  'notifications',
+  'auth',
+  'onboarding',
+]);
 
 /**
  * Both forms of each term. The feature directory is `recipes`, but the files
@@ -443,7 +462,7 @@ if (kernelDiff.added.length) {
 
 console.log(
   `check-layer-purity: ${current.length} coupled kit file(s), ` +
-    `baseline ${baseline.files.length}` +
+    `baseline ${(baseline.files ?? []).length}` +
     (removed.length ? ` (${removed.length} cleared — run --update)` : '') +
     `.\ncheck-layer-purity: ${currentKernel.length} domain-named kernel file(s), ` +
     `baseline ${(baseline.kernelFiles ?? []).length}` +

@@ -262,8 +262,8 @@ describe('useStorageLocationManagement', () => {
     );
 
     await waitFor(() => expect(result.current.locations).toHaveLength(2));
-    expect(result.current.locations[0].name).toBe('Fridge');
-    expect(result.current.locations[1].name).toBe('Pantry');
+    expect(result.current.locations[0]!.name).toBe('Fridge');
+    expect(result.current.locations[1]!.name).toBe('Pantry');
   });
 
   it('returns loading state', async () => {

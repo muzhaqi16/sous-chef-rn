@@ -17,12 +17,13 @@ jest.mock('#store/useAppStore', () => ({
 
 const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
+const mockToastWarning = jest.fn();
 jest.mock('#/services/toastService', () => ({
   toastService: {
     success: (...args: unknown[]) => mockToastSuccess(...args),
     error: (...args: unknown[]) => mockToastError(...args),
     info: jest.fn(),
-    warning: jest.fn(),
+    warning: (...args: unknown[]) => mockToastWarning(...args),
   },
 }));
 
@@ -40,13 +41,27 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-function cookedMock(outcome: { kind: 'success' } | { kind: 'rejected' }) {
+type SkippedIngredient = {
+  __typename: 'SkippedRecipeIngredient';
+  itemName: string;
+  reason: string;
+};
+
+function cookedMock(
+  outcome:
+    | { kind: 'success'; skipped?: SkippedIngredient[] }
+    | { kind: 'rejected' },
+) {
   return recordMock(MarkRecipeAsCookedDocument, {
     data:
       outcome.kind === 'success'
         ? {
             markRecipeAsCooked: {
               __typename: 'MarkRecipeAsCookedPayload',
+              // Stated, not left to the schema filler: the success toast
+              // branches on it, so a generated non-empty list would silently
+              // exercise the wrong arm.
+              skippedIngredients: outcome.skipped ?? [],
               cookingLog: {
                 __typename: 'CookingLog',
                 id: 'client-cooklog-1',
@@ -122,6 +137,40 @@ describe('useRecipeCookingActions', () => {
         'Recipe marked as cooked! Ingredients deducted from pantry.',
       ),
     );
+  });
+
+  it('does not report full success when the server skipped an ingredient', async () => {
+    // The server names what it could not deduct; reporting an unqualified
+    // success hides a pantry that is now wrong.
+    const cooked = cookedMock({
+      kind: 'success',
+      skipped: [
+        {
+          __typename: 'SkippedRecipeIngredient',
+          itemName: 'Garlic',
+          reason: 'No conversion from clove to head',
+        },
+      ],
+    });
+    const { result } = renderHookWithApollo(
+      () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
+      { operationMocks: [cooked.mock] },
+    );
+
+    await act(async () => {
+      result.current.handleMarkAsCooked({
+        servings: 4,
+        deductFromPantry: true,
+        useGranularDeduction: false,
+      });
+    });
+
+    await waitFor(() =>
+      expect(mockToastWarning).toHaveBeenCalledWith(
+        'Recipe marked as cooked. 1 ingredient could not be deducted.',
+      ),
+    );
+    expect(mockToastSuccess).not.toHaveBeenCalled();
   });
 
   it('shows the no-deduction success toast when deductFromPantry is false', async () => {

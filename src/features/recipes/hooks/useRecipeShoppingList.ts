@@ -17,20 +17,25 @@ import {
 import { type BatchAddShoppingListItemInput } from '#/graphql/generated/schemaTypes';
 import { useAppStore, useSelectedShoppingListId } from '#store/useAppStore';
 import { extractNodes } from '#/utils/connectionUtils';
-import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { toastService } from '#/services/toastService';
-import type { RecipeInformation } from '#/services/recipeApi/types';
+import type { RecipeInformation } from '#/services/spoonacular/types';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import {
   addOptimisticShoppingListItem,
+  buildAddItemsReconcileUpdate,
   createOptimisticShoppingListItem,
+  reconcileShoppingItemCreateUpdate,
   revertOptimisticShoppingListItem,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+} from '#features/shoppingList/cache/items';
 import { logger } from '#/utils/environment';
-import { stripPriceFromName } from '#/utils/stripPriceFromName';
+import { stripPriceFromName } from '#features/recipes/utils/stripPriceFromName';
+import { preferredMeasure } from '#features/recipes/utils/preferredMeasure';
+import { useAppSettings } from '#features/profile/hooks/useAppSettings';
+import { UnitSystem } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 import type {
   AddItemsToShoppingListInput,
@@ -68,6 +73,8 @@ async function addIngredientToList(
       context: { localFirst: boolean };
     }): Promise<{ data?: unknown; error?: unknown }>;
     onRejected: () => void;
+    /** The reader's system, so a line is bought in the units they think in. */
+    unitSystem: UnitSystem;
     /** Write the row into the cache before firing, so it survives being queued. */
     writeOptimisticRow(
       rowId: string,
@@ -87,6 +94,7 @@ async function addIngredientToList(
     addRecipeIngredientMutation,
     addItemsToShoppingListMutation,
     onRejected,
+    unitSystem,
     writeOptimisticRow,
     revertOptimisticRow,
   } = deps;
@@ -141,14 +149,19 @@ async function addIngredientToList(
     const itemName = stripPriceFromName(
       ingredient.name || ingredient.original || 'Unknown ingredient',
     );
-    const unitName =
-      ingredient.measures?.us?.unitShort ||
-      ingredient.measures?.metric?.unitShort ||
-      undefined;
+    // Amount and unit from ONE measure. Taking the unit from `measures.us`
+    // while the quantity stayed `ingredient.amount` is what stored a
+    // metric-authored "200 g" as "200 oz".
+    const measure = preferredMeasure(ingredient.measures, unitSystem, {
+      amount: ingredient.amount,
+      unitShort: ingredient.unit,
+    });
+    const quantity = measure.amount ?? 0;
+    const unitName = measure.unit || undefined;
 
     writeOptimisticRow(rowId, {
       itemName,
-      quantity: ingredient.amount || 0,
+      quantity,
       unitName: unitName ?? null,
     });
 
@@ -160,7 +173,7 @@ async function addIngredientToList(
             {
               id: rowId,
               item: { itemName },
-              quantity: ingredient.amount || 0,
+              quantity,
               unit: { unitName },
               storePrefs: ingredient.aisle
                 ? { aisle: ingredient.aisle }
@@ -194,6 +207,8 @@ export function useRecipeShoppingList({
   externalRecipe,
 }: UseRecipeShoppingListOptions) {
   const { t } = useTranslation();
+  const { settings } = useAppSettings();
+  const unitSystem = settings.preferredUnitSystem;
   const { data: shoppingListsData, loading: shoppingListsLoading } = useQuery(
     GetShoppingListsLiteForRecipeDocument,
     {},
@@ -308,14 +323,15 @@ export function useRecipeShoppingList({
         )
           return;
         try {
-          const shoppingListId = variables.input.shoppingListId;
-          if (!response.wasUpdated) {
-            addNewItemToShoppingListCache(
-              cache,
-              shoppingListId,
-              response.shoppingListItem,
-            );
-          }
+          // The row was already written and counted optimistically, so this
+          // only re-wires the edge — and withdraws the optimistic row when the
+          // server merged the ingredient into an existing line.
+          reconcileShoppingItemCreateUpdate(
+            cache,
+            variables.input.shoppingListId,
+            response.shoppingListItem,
+            variables.input.id,
+          );
         } catch (cacheError) {
           errorService.reportError(cacheError, {
             operation: 'Cache update failed for addRecipeIngredient:',
@@ -328,29 +344,11 @@ export function useRecipeShoppingList({
   const [addItemsToShoppingListMutation] = useMutation(
     AddItemsToShoppingListFromRecipeDocument,
     {
-      update: (cache, { data }, { variables }) => {
-        const payload = data?.addItemsToShoppingList;
-        if (
-          payload?.__typename !== 'AddItemsToShoppingListPayload' ||
-          !variables
-        )
-          return;
-        const shoppingListId = variables.input.shoppingListId;
-        // Filtered before the try — a `&&` inside a try body makes the React
-        // Compiler bail out of this hook.
-        const addedItems = payload.results.flatMap(result =>
-          result.success && result.item ? [result.item] : [],
-        );
-        try {
-          addedItems.forEach(item =>
-            addNewItemToShoppingListCache(cache, shoppingListId, item),
-          );
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Cache update failed for addItemsToShoppingList:',
-          });
-        }
-      },
+      // Every row here was written and counted by an optimistic add before the
+      // mutation fired, so the reconcile re-wires edges without re-counting.
+      update: buildAddItemsReconcileUpdate({
+        wrap: { message: 'Cache update failed for addItemsToShoppingList:' },
+      }),
       onError: err => {
         logger.error('Batch add items to shopping list error:', err);
         const errorMessage =
@@ -376,6 +374,7 @@ export function useRecipeShoppingList({
         isBackendRecipe,
         addRecipeIngredientMutation,
         addItemsToShoppingListMutation,
+        unitSystem,
         onRejected: () =>
           toastService.error(t('recipes.addIngredientToListFailed')),
         // Written before the mutation fires so the row shows immediately and
@@ -466,30 +465,33 @@ export function useRecipeShoppingList({
           }
         } else if (externalRecipe?.extendedIngredients) {
           const items: BatchAddShoppingListItemInput[] =
-            externalRecipe.extendedIngredients.map((ingredient, index) => ({
-              // `id` is the row's primary key (so a queued batch replays
-              // idempotently); `clientId` stays the ingredient index used below
-              // to match each result back to its ingredient.
-              id: generateEntityId(),
-              clientId: String(ingredient.id || index),
-              item: {
-                itemName: stripPriceFromName(
-                  ingredient.name ||
-                    ingredient.original ||
-                    'Unknown ingredient',
-                ),
-              },
-              quantity: ingredient.amount || 0,
-              unit: {
-                unitName:
-                  ingredient.measures?.us?.unitShort ||
-                  ingredient.measures?.metric?.unitShort ||
-                  '',
-              },
-              storePrefs: ingredient.aisle
-                ? { aisle: ingredient.aisle }
-                : undefined,
-            }));
+            externalRecipe.extendedIngredients.map((ingredient, index) => {
+              // Amount and unit from ONE measure — see `addOneIngredient`.
+              const measure = preferredMeasure(
+                ingredient.measures,
+                unitSystem,
+                { amount: ingredient.amount, unitShort: ingredient.unit },
+              );
+              return {
+                // `id` is the row's primary key (so a queued batch replays
+                // idempotently); `clientId` stays the ingredient index used
+                // below to match each result back to its ingredient.
+                id: generateEntityId(),
+                clientId: String(ingredient.id || index),
+                item: {
+                  itemName: stripPriceFromName(
+                    ingredient.name ||
+                      ingredient.original ||
+                      'Unknown ingredient',
+                  ),
+                },
+                quantity: measure.amount ?? 0,
+                unit: { unitName: measure.unit },
+                storePrefs: ingredient.aisle
+                  ? { aisle: ingredient.aisle }
+                  : undefined,
+              };
+            });
 
           // Write the rows before firing. The `update` callback only runs with
           // a server payload, so offline it never fires: the recipe reported
@@ -638,7 +640,7 @@ export function useRecipeShoppingList({
           variables: {
             input: {
               name: name.trim(),
-              description: 'Created from recipe',
+              description: t('recipes.createdFromRecipe'),
               isDefault: false,
               tags: ['recipe-created'],
             },

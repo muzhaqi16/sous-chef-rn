@@ -1,4 +1,4 @@
-import { client } from '../client';
+import { getApolloClient } from '#/apollo/clientRegistry';
 import type { OperationVariables, TypedDocumentNode } from '@apollo/client';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
@@ -11,10 +11,12 @@ import {
   QueueError,
   type FailedMutationInfo,
   type FailureHandler,
+  type OverwriteReporter,
 } from './types';
 import { convertToSyncMutation } from './convertToSyncMutation';
 import { reconcileReplaySuccess } from './queueReplayReconcilers';
 import { proactiveTokenRefresh } from '../links/refreshToken';
+import { refreshUnitVocabulary } from './refreshUnitVocabulary';
 import {
   classifyError,
   calculateRetryDelay,
@@ -27,9 +29,48 @@ import { Telemetry } from '#/services/telemetry';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { registerSessionTeardown } from '#store/sessionTeardown';
 
+/**
+ * The queue only ever runs after `client.ts` has evaluated — it is the link
+ * chain that starts a drain — so a missing client here is a wiring bug, not a
+ * state to handle.
+ */
+const requireApolloClient = () => {
+  const client = getApolloClient();
+  if (!client) {
+    throw new Error('Apollo client not registered before a queue drain');
+  }
+  return client;
+};
+
 const DEFAULT_CONFIG: QueueConfig = {
   retryDelayMs: 1000,
   processingTimeoutMs: 30000,
+};
+
+/** One version-free re-send. A second conflict is a race, not a stale read. */
+const MAX_CONFLICT_RESENDS = 1;
+
+/**
+ * Drops the `version` a write captured when the user acted. Covers the batch
+ * shape too: single-add shopping ops send `input.items[]`, each line carrying
+ * its own version.
+ */
+const withoutVersion = (variables: OperationVariables): OperationVariables => {
+  const input = variables.input as Record<string, unknown> | undefined;
+  if (!input || typeof input !== 'object') return variables;
+
+  const { version: _version, ...rest } = input;
+  const items = rest.items;
+  if (Array.isArray(items)) {
+    rest.items = items.map(line =>
+      line && typeof line === 'object'
+        ? (({ version: _lineVersion, ...lineRest }) => lineRest)(
+            line as Record<string, unknown>,
+          )
+        : line,
+    );
+  }
+  return { ...variables, input: rest };
 };
 
 /**
@@ -41,7 +82,12 @@ export class QueueManager {
   private isProcessing = false;
   private processingPromise: Promise<void> | null = null;
   private failureHandler: FailureHandler | null = null;
+  private overwriteReporter: OverwriteReporter | null = null;
   private drainTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Whether this drain has already re-fetched the unit vocabulary. */
+  private hasRefreshedUnits = false;
+  /** Entries that have already spent their one re-resolution attempt. */
+  private staleReferenceRetried = new Set<string>();
 
   constructor(config: Partial<QueueConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -50,6 +96,11 @@ export class QueueManager {
   /** Invoked when a mutation permanently fails after exhausting retries. */
   setFailureHandler(handler: FailureHandler): void {
     this.failureHandler = handler;
+  }
+
+  /** Invoked when the server accepted a replay but kept its own value. */
+  setOverwriteReporter(reporter: OverwriteReporter): void {
+    this.overwriteReporter = reporter;
   }
 
   async processQueue(): Promise<void> {
@@ -125,6 +176,11 @@ export class QueueManager {
       logger.error('❌ Queue: Token validation failed, cannot process');
       return;
     }
+
+    // Per-drain, not per-entry: a backlog of writes naming the same retired
+    // unit draws one refresh between them, and an entry gets one re-resolution.
+    this.hasRefreshedUnits = false;
+    this.staleReferenceRetried.clear();
 
     // Recover entries a killed process left mid-replay: drains are serialized
     // by isProcessing, so any PROCESSING entry visible here is stranded debris,
@@ -246,6 +302,7 @@ export class QueueManager {
   private async executeMutation(
     mutation: QueuedMutation,
   ): Promise<Record<string, unknown> | undefined> {
+    const client = requireApolloClient();
     const { syncMutation, syncVariables } = convertToSyncMutation(
       mutation,
       client.cache,
@@ -280,6 +337,10 @@ export class QueueManager {
           __typename?: string;
           code?: string;
           message?: string;
+          // `NotFoundError.resource` — which row the server could not find.
+          // Without it a refusal over a merged-away Unit is indistinguishable
+          // from one over the record itself, and cannot be re-resolved.
+          resource?: string;
           conflict?: { message?: string };
         }
       | null
@@ -303,11 +364,13 @@ export class QueueManager {
         payload?.message ??
           `${mutation.operationName} was rejected by the server on replay`,
         payload?.code ?? null,
+        payload?.resource ?? null,
       );
     }
 
-    // Server wins on conflict, and its version already rides back in the
-    // response; this is diagnostics only.
+    // The server accepted the replay and kept its own value. The entry dequeues
+    // as success — nothing to withdraw — but the user's change is gone, so
+    // saying nothing would leave them believing it stuck.
     if (payload?.conflict) {
       logger.warn(
         `⚠️ Queue: Conflict detected for ${mutation.operationName}:`,
@@ -316,6 +379,7 @@ export class QueueManager {
       Telemetry.increment('offline_queue_conflicts_total', 1, {
         operation: mutation.operationName,
       });
+      this.reportOverwrite(mutation);
     }
 
     // The replay ran with no `update` callback, so it got normalization and
@@ -353,6 +417,58 @@ export class QueueManager {
       }
       useStore.getState().setNeedsTokenRefresh(false);
       logger.info(`🔐 Queue: Token refreshed for ${mutation.id}, retrying`);
+    }
+
+    // A unit the write names was merged away by the API's vocabulary repair.
+    // Refresh the vocabulary and re-send ONCE — `convertToSyncMutation` rebuilds
+    // the sync input from the cache on every attempt, so the rebuilt write
+    // resolves against current rows. A second refusal is a real one: drop
+    // `retryable` so it falls through to revert-and-inform below.
+    if (queueError.type === 'stale-reference') {
+      if (this.staleReferenceRetried.has(mutation.id)) {
+        logger.warn(
+          `❌ Queue: ${mutation.id} still names a retired unit after re-resolution`,
+        );
+        queueError.retryable = false;
+      } else {
+        this.staleReferenceRetried.add(mutation.id);
+        if (!this.hasRefreshedUnits) {
+          this.hasRefreshedUnits = true;
+          refreshUnitVocabulary();
+        }
+        logger.info(
+          `♻️ Queue: ${mutation.id} names a retired unit, re-resolving and retrying`,
+        );
+      }
+    }
+
+    // The entity changed since the write was made. The captured `version` is
+    // knowingly stale, so re-checking it can only fail again: strip it and
+    // re-send the value the user actually entered, once. `version` is optional
+    // on every input that carries it, and omitting it means "apply against the
+    // current row" — the last-write-wins the API implements. A second conflict
+    // is a race the client cannot win; it falls through to revert-and-inform.
+    if (queueError.type === 'conflict') {
+      const conflictCount = (mutation.conflictCount ?? 0) + 1;
+      queueStore.updateMutation(mutation.id, { conflictCount });
+
+      if (conflictCount > MAX_CONFLICT_RESENDS) {
+        logger.warn(
+          `❌ Queue: ${mutation.id} still conflicts after a version-free re-send`,
+        );
+        queueError.retryable = false;
+      } else {
+        const variables = withoutVersion(mutation.variables);
+        queueStore.updateMutation(mutation.id, { variables });
+        logger.info(
+          `♻️ Queue: ${mutation.id} conflicted, re-sending without the captured version`,
+        );
+        return await this.processMutation({
+          ...mutation,
+          variables,
+          conflictCount,
+        });
+      }
     }
 
     // Retryable errors (refreshed-auth, network, 5xx): bounded in-run retries
@@ -535,7 +651,7 @@ export class QueueManager {
    * the generic ApolloCache type erases that to `unknown`.
    */
   private extractCacheSnapshot(): Record<string, unknown> {
-    return client.cache.extract() as Record<string, unknown>;
+    return requireApolloClient().cache.extract() as Record<string, unknown>;
   }
 
   private findCachedTypename(
@@ -577,6 +693,21 @@ export class QueueManager {
    */
   withdrawUnqueueableWrite(mutation: QueuedMutation, error: QueueError): void {
     this.invokeFailureHandler(mutation, error);
+  }
+
+  private reportOverwrite(mutation: QueuedMutation): void {
+    if (!this.overwriteReporter) return;
+    const { entityType, entityId } = this.extractEntityInfo(mutation);
+    try {
+      this.overwriteReporter({
+        mutationId: mutation.id,
+        operationName: mutation.operationName,
+        entityType,
+        entityId,
+      });
+    } catch (reporterError) {
+      logger.error('Queue: Overwrite reporter threw an error:', reporterError);
+    }
   }
 
   private invokeFailureHandler(

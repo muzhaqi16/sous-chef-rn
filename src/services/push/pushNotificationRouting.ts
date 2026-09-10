@@ -6,7 +6,7 @@
  */
 
 import NavigationService from '#/services/NavigationService';
-import { NotificationCategory } from '#/graphql/generated/schemaTypes';
+import { STATIC_FEATURE_REGISTRY } from '#features/registry.static';
 
 // FCM/Notifee payloads are flat string maps. Routing keys off `category`; the
 // other fields ride along for dedup and correlation, so aren't modeled here.
@@ -31,28 +31,19 @@ export const routeNotificationTap = (
   // Category alone. Quiet hours DELAY each notification's own push rather than
   // merging them (`docs/guides/push-notifications.md` § Consent and gating), so
   // no delivery stands for several and there is nothing to route around.
-  switch (category?.toUpperCase()) {
-    case NotificationCategory.Shopping:
-      NavigationService.navigate('Home', {
-        screen: 'ShoppingList',
-        params: { screen: 'ShoppingListMain' },
-      });
-      return;
-    case NotificationCategory.Pantry:
-      NavigationService.navigate('Home', {
-        screen: 'Pantry',
-        params: { screen: 'PantryMain' },
-      });
-      return;
-    case NotificationCategory.Recipe:
-      NavigationService.navigate('Home', {
-        screen: 'Recipe',
-        params: { screen: 'RecipeMain' },
-      });
-      return;
-    default:
-      // Everything else (home/system or an unknown category) opens the feed,
-      // where the user can read the item and take its specific action.
-      NavigationService.navigate('Notifications');
+  const route = STATIC_FEATURE_REGISTRY.find(
+    feature => feature.pushRoute?.category === category?.toUpperCase(),
+  )?.pushRoute;
+
+  if (route) {
+    NavigationService.navigate('Home', {
+      screen: route.tab,
+      params: { screen: route.screen },
+    });
+    return;
   }
+
+  // Everything else (home/system, or a category no feature claims) opens the
+  // feed, where the user can read the item and take its specific action.
+  NavigationService.navigate('Notifications');
 };

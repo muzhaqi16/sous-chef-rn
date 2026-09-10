@@ -1,6 +1,7 @@
 'use no memo';
 
-import type { StoreObject } from '@apollo/client';
+import { gql, type StoreObject } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import { storage } from '#storage/mmkv';
 import { apolloCachePersistence } from '../ApolloCachePersistence';
 import { logger } from '#/utils/environment';
@@ -11,7 +12,7 @@ const DEFERRED_KEY = 'apollo-cache-v1-deferred';
 const VERSION_KEY = 'apollo-cache-version';
 // Identifies the shape of a persisted blob, not the app version that wrote it
 // — `CURRENT_CACHE_VERSION` in ApolloCachePersistence. Keep in step with it.
-const CURRENT_VERSION = 'shape-1';
+const CURRENT_VERSION = 'shape-2';
 
 describe('ApolloCachePersistence', () => {
   beforeEach(() => {
@@ -169,22 +170,61 @@ describe('ApolloCachePersistence', () => {
       expect(persisted).not.toContain('Old');
     });
 
-    it('still skips a save when nothing changed at all', () => {
-      // The optimization has to survive the fix: identical extracts must not
-      // re-serialize the whole cache on every debounce tick.
-      const cache = {
-        ROOT_QUERY: { __typename: 'Query' },
-        'PantryItem:1': { __typename: 'PantryItem', id: '1', name: 'Same' },
-      };
-      apolloCachePersistence.save(cache);
+    // Passing one object twice cannot fail, so it proved nothing. The real
+    // shape is two separate `extract()` calls off an unchanged cache: every
+    // entity keeps its reference, and `__META` is a fresh object literal each
+    // time (`entityStore.extract`) — so comparing it made the skip unreachable.
+    it('skips a save when two extracts of an unchanged cache match', () => {
+      const cache = makeCache();
+      cache.writeFragment({
+        id: 'Unit:u1',
+        fragment: gql`
+          fragment PersistProbe on Unit {
+            id
+            name
+          }
+        `,
+        data: { __typename: 'Unit', id: 'u1', name: 'gram' },
+      });
+      const first = cache.extract();
+      expect(Object.keys(first)).toContain('__META');
+
+      apolloCachePersistence.save(first);
       settle();
 
       const debugSpy = jest.spyOn(logger, 'debug');
-      apolloCachePersistence.save(cache);
+      apolloCachePersistence.save(cache.extract());
       settle();
 
       expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('skipped'));
       debugSpy.mockRestore();
+    });
+
+    it('does not skip once an entity actually changed', () => {
+      const cache = makeCache();
+      const fragment = gql`
+        fragment PersistProbe2 on Unit {
+          id
+          name
+        }
+      `;
+      cache.writeFragment({
+        id: 'Unit:u1',
+        fragment,
+        data: { __typename: 'Unit', id: 'u1', name: 'gram' },
+      });
+      apolloCachePersistence.save(cache.extract());
+      settle();
+
+      cache.writeFragment({
+        id: 'Unit:u1',
+        fragment,
+        data: { __typename: 'Unit', id: 'u1', name: 'kilogram' },
+      });
+      apolloCachePersistence.save(cache.extract());
+      settle();
+
+      expect(storage.getString(CACHE_KEY)).toContain('kilogram');
     });
 
     it('persists an entity added without any other change', () => {
@@ -284,12 +324,20 @@ describe('ApolloCachePersistence', () => {
   });
 
   describe('pause / resume', () => {
-    it('suppresses saves while paused', () => {
+    // A write made on a pushed screen is as durable as one made on a tab root.
+    // Pausing only widens the window; a pause that persisted nothing lost that
+    // screen's writes to an app kill.
+    it('still saves while paused, on the wider window', () => {
       apolloCachePersistence.pause();
       apolloCachePersistence.save({ 'Paused:1': { id: '1' } });
 
-      jest.runAllTimers();
+      jest.advanceTimersByTime(3000);
       expect(storage.getString(CACHE_KEY)).toBeUndefined();
+
+      jest.runAllTimers();
+      expect(JSON.parse(storage.getString(CACHE_KEY)!)).toEqual({
+        'Paused:1': { id: '1' },
+      });
     });
 
     it('flushes pending save on resume', () => {
@@ -318,14 +366,31 @@ describe('ApolloCachePersistence', () => {
       expect(storage.getString(CACHE_KEY)).toBeUndefined();
     });
 
-    it('cancels pending debounced save when pausing', () => {
+    it('keeps a pending debounced save when pausing', () => {
       apolloCachePersistence.save({ 'BeforePause:1': { id: '1' } });
-      // Pause before debounce fires
+      // Pause before the debounce fires. The timer already installed still
+      // runs — cancelling it dropped the write the user had already made.
       jest.advanceTimersByTime(1000);
       apolloCachePersistence.pause();
 
       jest.runAllTimers();
-      expect(storage.getString(CACHE_KEY)).toBeUndefined();
+      expect(JSON.parse(storage.getString(CACHE_KEY)!)).toEqual({
+        'BeforePause:1': { id: '1' },
+      });
+    });
+
+    // `flushPending` runs on the background transition. Reading only the timer
+    // fields made it a no-op on exactly the screens the pause covers.
+    it('flushes a write made while paused when the app backgrounds', () => {
+      apolloCachePersistence.pause();
+      apolloCachePersistence.save({ 'PausedFlush:1': { id: '1' } });
+      apolloCachePersistence.flushPending(() => ({
+        'PausedFlush:1': { id: '1' },
+      }));
+
+      expect(JSON.parse(storage.getString(CACHE_KEY)!)).toEqual({
+        'PausedFlush:1': { id: '1' },
+      });
     });
 
     it('uses the latest extractor when multiple saves happen while paused', () => {

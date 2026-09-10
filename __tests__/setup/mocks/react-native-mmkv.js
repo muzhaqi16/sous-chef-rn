@@ -15,5 +15,8 @@ jest.mock('react-native-mmkv', () => {
   };
   return {
     createMMKV: jest.fn().mockImplementation(createInstance),
+    // Non-creating existence probe. Defaults to true so a suite that does not
+    // care sees the store it expects; the recovery tests drive it explicitly.
+    existsMMKV: jest.fn(() => true),
   };
 });

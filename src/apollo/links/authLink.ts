@@ -2,7 +2,7 @@ import { SetContextLink } from '@apollo/client/link/context';
 import { useStore } from '#store';
 import { env } from '#/config/env';
 import { LogoutCleanup } from '../logoutCleanup';
-import { getDeviceIdSync } from '#/utils/deviceId';
+import { getDeviceId } from '#/storage/deviceId';
 import { isTokenExpired, isTokenExpiringSoon } from '#/utils/tokenExpiry';
 import { proactiveTokenRefresh } from './refreshToken';
 import { logger } from '#/utils/environment';
@@ -46,9 +46,11 @@ export const authLink = new SetContextLink(
     // Always include the API key for all requests
     const apiKey = env.API_KEY;
 
-    // Get device ID for subscription self-echo filtering
-    // Server includes this in subscription payloads as originatorClientId
-    const deviceId = getDeviceIdSync();
+    // This install's device identity. The server registers the device on a
+    // successful sign-in, binds the session to it, and echoes it back on
+    // subscription payloads as `originatorClientId`. Null before storage opens,
+    // and an absent header is not an error — the request is unattributed.
+    const deviceId = getDeviceId();
 
     // Operations that don't need authentication
     const publicOperations = ['RefreshToken', 'Login', 'Register', 'SignUp'];
@@ -126,7 +128,7 @@ export const authLink = new SetContextLink(
         ...(apiKey && { 'x-api-key': apiKey }),
         // Include authorization header only when token is available
         ...(token && { authorization: `Bearer ${token}` }),
-        // Include device ID for subscription self-echo filtering
+        // Omitted rather than substituted when storage has not opened yet
         ...(deviceId && { 'x-device-id': deviceId }),
       },
     };

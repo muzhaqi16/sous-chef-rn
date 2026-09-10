@@ -1,7 +1,7 @@
 import React, { createContext, useContext } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
+import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 
 /**

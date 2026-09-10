@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { useFragment, useQuery } from '@apollo/client/react';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
-import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
-import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
-import { UnitPicker } from '#components/molecules/UnitPicker';
+import { FormattedItemSubtitle } from '#components/molecules/FormattedItemSubtitle';
+import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
+import { UnitPicker } from '#features/pantry/components/UnitPicker';
 import {
   useOperationUnits,
   type SelectedUnitInfo,
@@ -17,11 +16,8 @@ import { useConvertAvailableQuantity } from '#features/pantry/hooks/useConvertAv
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
-import {
-  GetPantryActionItemDocument,
-  PantryActionModal_PantryItemFragmentDoc,
-  type PantryActionModal_PantryItemFragment,
-} from './PantryActionModal.generated';
+import type { PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
+import { usePantryActionItem } from '#features/pantry/hooks/usePantryActionItem';
 
 export interface PantryActionSharedState {
   selectedUnitInfo: SelectedUnitInfo | null;
@@ -79,9 +75,8 @@ interface PantryActionModalProps {
 
 /**
  * Shared shell for the pantry action modals (Consume, RecordWaste, Restock);
- * action-specific fields arrive through `renderActionFields`. Reads the item
- * live via `useFragment` keyed by `pantryItemId`, so a cache update reaches
- * the open modal without re-snapshotting state.
+ * action-specific fields arrive through `renderActionFields`. The item is read
+ * live, so a cache update reaches the open modal without re-snapshotting state.
  */
 export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   visible,
@@ -109,22 +104,8 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     snapPoints,
   });
 
-  // Guarantees the modal's full read shape however the item arrived (list
-  // query, create mutation, subscription push): `cache-first` is a no-op when
-  // the cache satisfies it, so partial entries self-heal.
-  const { loading: itemQueryLoading } = useQuery(GetPantryActionItemDocument, {
-    variables: { id: pantryItemId ?? '' },
-    skip: !pantryItemId,
-    fetchPolicy: 'cache-first',
-    errorPolicy: 'all',
-  });
-
-  const { data, complete } = useFragment({
-    fragment: PantryActionModal_PantryItemFragmentDoc,
-    fragmentName: 'PantryActionModal_pantryItem',
-    from: pantryItemId ? { __typename: 'PantryItem', id: pantryItemId } : null,
-  });
-  const pantryItem = pantryItemId && complete ? data : null;
+  const { pantryItem, loading: itemQueryLoading } =
+    usePantryActionItem(pantryItemId);
 
   const [selectedUnitInfo, setSelectedUnitInfo] =
     useState<SelectedUnitInfo | null>(null);
@@ -143,6 +124,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     trackingUnitId: pantryItem?.unit?.id,
     trackingUnitType: pantryItem?.unit?.type,
     netWeightUnitId: pantryItem?.netWeightUnit?.id,
+    portionUnitId: pantryItem?.portionUnitId,
     operation,
   });
 
@@ -255,7 +237,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetKeyboardAwareScrollView
+      <BottomSheetFormScrollView
         style={commonStyles.bottomSheetScrollView}
         contentContainerStyle={[
           commonStyles.bottomSheetContent,
@@ -349,7 +331,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
             <ThemedActivityIndicator />
           </View>
         ) : null}
-      </BottomSheetKeyboardAwareScrollView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 };

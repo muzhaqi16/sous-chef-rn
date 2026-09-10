@@ -39,3 +39,19 @@ export function classifyCreateResult(
   // as null). Keep the optimistic item.
   return 'queued';
 }
+
+/**
+ * The same classification for a DELETE, where "never held" is the outcome asked
+ * for, not a refusal: `NotFoundError` and a `converged: true` payload both mean
+ * the row is gone. Treating the first as a refusal reverts the optimistic
+ * removal and leaves a phantom no refresh can clear.
+ */
+export function classifyDeleteResult(
+  result: { data?: unknown; error?: unknown } | null | undefined | false,
+): CreateOutcome {
+  const outcome = classifyCreateResult(result);
+  if (outcome !== 'rejected') return outcome;
+
+  const payload = extractMutationPayload(result ? result.data : undefined);
+  return payload?.__typename === 'NotFoundError' ? 'created' : 'rejected';
+}

@@ -7,7 +7,8 @@ import { MealPlanItemCard } from './MealPlanItemCard';
 import { Text } from '#components/atoms/Text';
 import { type MealType } from '#/graphql/generated/schemaTypes';
 import { type MealPlanItemCard_ItemFragment } from './MealPlanItemCard.generated';
-import { type SwipeableRef } from '#components/molecules/SwipeableItem/types';
+import { type SwipeableRef } from '#components/organisms/SwipeableItem/types';
+import { useTranslation } from '#/i18n';
 
 interface MealTypeSectionProps {
   mealType: MealType;
@@ -36,17 +37,16 @@ export const MealTypeSection: React.FC<MealTypeSectionProps> = ({
   onSwipeableWillOpen,
   onSwipeableClose,
 }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text size="md" weight="semibold">
-          {label}
-        </Text>
+        <Text role="bodyStrong">{label}</Text>
         {!!onAddMeal && (
           <Pressable
             onPress={() => onAddMeal(mealType)}
-            style={styles.addButton}
-            hitSlop={8}
+            accessibilityLabel={t('labels.addNamed', { name: label })}
+            hitSlop={12}
           >
             <Icon name="add" size={20} tone="primary" />
           </Pressable>
@@ -79,10 +79,5 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: theme.spacing.sm,
-  },
-  addButton: {
-    padding: theme.spacing.xs,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.surface,
   },
 }));

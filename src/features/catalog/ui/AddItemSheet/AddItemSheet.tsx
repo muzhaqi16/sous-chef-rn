@@ -8,14 +8,10 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
-import { ItemSuggestionsList } from '#components/molecules/ItemSuggestionsList';
+import { ItemSuggestionsList } from '#features/catalog/ui/ItemSuggestionsList';
 import { ReportItemForm } from '#features/catalog/ui/ReportItemForm/ReportItemForm';
-import {
-  BottomSheetSearchBar,
-  type BottomSheetSearchBarRef,
-} from '#components/molecules/BottomSheetSearchBar';
-import { ActionCard } from '#components/molecules/ActionCard';
-import { SuggestionListItem } from '#components/molecules/SuggestionListItem';
+import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
+import { SuggestionListItem } from '#features/catalog/components/SuggestionListItem';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#utils/iconUtils';
 import { useItemAutocomplete } from '#features/catalog/hooks/useItemAutocomplete';
@@ -27,6 +23,7 @@ import type {
 import { useAddItemSheetState } from './useAddItemSheetState';
 import { SuggestionDrilldown } from './SuggestionDrilldown';
 import { Text } from '#components/atoms/Text';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
 /**
  * How many rows each section shows in the overview before a "More" affordance
@@ -59,7 +56,7 @@ export function AddItemSheet<
 }: AddItemSheetProps<T>) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const searchBarRef = useRef<BottomSheetSearchBarRef>(null);
+  const searchBarRef = useRef<SearchBarRef>(null);
 
   const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
     visible: visible && !!contextId,
@@ -91,7 +88,7 @@ export function AddItemSheet<
   // Use external exiting items if provided, otherwise use internal state
   const exitingItems = externalExitingItems ?? state.exitingItems;
 
-  // Autocomplete search — debounceMs: 0 because BottomSheetSearchBar already debounces
+  // Autocomplete search — debounceMs: 0 because the search bar already debounces
   const autocomplete = useItemAutocomplete({ debounceMs: 0 });
   const { handleSearchTermChange, reset: resetAutocomplete } = autocomplete;
 
@@ -119,7 +116,7 @@ export function AddItemSheet<
   const inDrilldown =
     !!activeGroup && activeItems.length > 0 && showSuggestions;
 
-  // Search handler - called after BottomSheetSearchBar debounce
+  // Search handler - called after the search bar debounce
   const handleSearchChange = (text: string) => {
     setSearchQuery(text);
     handleSearchTermChange(text);
@@ -217,14 +214,7 @@ export function AddItemSheet<
     return (
       <View key={groupConfig.key} style={styles.suggestionSection}>
         <View style={styles.sectionHeader}>
-          <Text
-            size="sm"
-            weight="semibold"
-            tone="secondary"
-            style={styles.sectionTitle}
-          >
-            {sectionTitle}
-          </Text>
+          <SectionHeader variant="overline">{sectionTitle}</SectionHeader>
           {!!hasMore && (
             <AppPressable
               onPress={() => setActiveSourceKey(groupConfig.key)}
@@ -233,7 +223,7 @@ export function AddItemSheet<
               accessibilityRole="button"
               accessibilityLabel={`${t('addItemSheet.more')} ${sectionTitle}`}
             >
-              <Text size="sm" weight="semibold" tone="accent">
+              <Text role="label" tone="accent">
                 {t('addItemSheet.more')}
               </Text>
               <Icon name="chevron-forward" size={16} tone="primary" />
@@ -256,7 +246,7 @@ export function AddItemSheet<
       // @ts-expect-error - BottomSheetModal doesn't officially support testID but it works
       testID={`${config.testIDPrefix}-modal`}
     >
-      <View style={{ flex: 1 }} testID={`${config.testIDPrefix}-modal`}>
+      <View style={styles.sheetBody} testID={`${config.testIDPrefix}-modal`}>
         {step === 'report' ? (
           <ReportItemForm
             candidates={autocomplete.displayItems.map(item => ({
@@ -291,17 +281,24 @@ export function AddItemSheet<
             keyboardShouldPersistTaps="handled"
           >
             {/* Header */}
-            <Text size="xl" weight="bold" style={styles.title}>
+            <Text role="subheading" style={styles.title}>
               {t(config.titleKey)}
             </Text>
 
             {/* Search Input */}
-            <BottomSheetSearchBar
+            <SearchBar
+              showSearchIcon
               ref={searchBarRef}
+              containerStyle={styles.searchBar}
+              testID={`${config.testIDPrefix}-search-input`}
               placeholder={t(config.searchPlaceholderKey)}
               onChangeText={handleSearchChange}
               onClear={() => setSearchQuery('')}
-              initialValue={initialSearchQuery}
+              defaultValue={initialSearchQuery}
+              debounceMs={250}
+              autoCapitalize="words"
+              autoCorrect={false}
+              returnKeyType="search"
               isLoading={!!autocomplete.isLoading && hasSearchQuery}
               rightActions={[
                 {
@@ -318,6 +315,7 @@ export function AddItemSheet<
                 suggestions={autocomplete.displayItems}
                 loading={autocomplete.isLoading}
                 addManuallyPosition={config.addManuallyPosition}
+                testIDPrefix={config.testIDPrefix}
                 onAddManually={handleAddManually}
                 onSelectSuggestion={handleSelectSearchSuggestion}
                 quickAddDisabled={isMutating}
@@ -328,23 +326,6 @@ export function AddItemSheet<
               />
             )}
 
-            {/* Action Buttons - hidden when showing search results */}
-            {!showSearchResults && (
-              <View style={styles.actionButtons}>
-                <ActionCard
-                  icon="barcode-outline"
-                  label={t('labels.scanBarcode')}
-                  onPress={onScanPress}
-                />
-                <ActionCard
-                  icon="add"
-                  label={t('addItemSheet.addManually')}
-                  onPress={handleAddManually}
-                  testID={`${config.testIDPrefix}-add-manually-button`}
-                />
-              </View>
-            )}
-
             {/* Tutorial hint (e.g. "Tap + next to an item to add it") */}
             {!!tutorialHint && !showSearchResults && tutorialHint}
 
@@ -352,20 +333,19 @@ export function AddItemSheet<
             {!!showSuggestions && !!state.shouldRenderSuggestions && (
               <>
                 {suggestions.loading && !suggestions.hasSuggestions ? (
-                  <View style={styles.loadingContainer}>
+                  <View style={styles.centeredSpinner}>
                     <PrimaryActivityIndicator size="small" />
                   </View>
                 ) : !suggestions.hasSuggestions ? (
-                  <View style={styles.emptyContainer}>
+                  <View style={styles.emptyInset}>
                     <Text
-                      size="base"
-                      weight="medium"
+                      role="bodyStrong"
                       tone="secondary"
-                      style={styles.emptyText}
+                      style={styles.emptyMessage}
                     >
                       {t(config.emptyStateMessageKey)}
                     </Text>
-                    <Text size="sm" tone="tertiary" align="center">
+                    <Text role="caption" tone="tertiary" align="center">
                       {t(config.emptyStateSubtextKey)}
                     </Text>
                   </View>
@@ -390,7 +370,7 @@ export function AddItemSheet<
 
 // Export ref getter function for wrapper components
 export function useAddItemSheetRefs() {
-  const searchBarRef = useRef<BottomSheetSearchBarRef>(null);
+  const searchBarRef = useRef<SearchBarRef>(null);
 
   const getSearchValue = () => {
     return searchBarRef.current?.getValue() || '';
@@ -404,6 +384,11 @@ export function useAddItemSheetRefs() {
 }
 
 const styles = StyleSheet.create(theme => ({
+  // A plain flex parent, not BottomSheetView: a scrollable inside that one is
+  // never height-bounded.
+  sheetBody: {
+    flex: 1,
+  },
   scrollView: {
     flex: 1,
   },
@@ -413,10 +398,9 @@ const styles = StyleSheet.create(theme => ({
   title: {
     marginBottom: theme.spacing.lg,
   },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-    marginBottom: theme.spacing.xl,
+  // The sections and results below carry no top margin of their own.
+  searchBar: {
+    marginBottom: theme.spacing.lg,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -424,26 +408,20 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     marginBottom: theme.spacing.md,
   },
-  sectionTitle: {
-    letterSpacing: 1,
-    // Titles are stored title-case for the drill-down header; the compact
-    // overview header keeps its uppercase treatment via text-transform.
-    textTransform: 'uppercase',
-  },
   moreButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs / 2,
   },
-  loadingContainer: {
+  centeredSpinner: {
     padding: theme.spacing.xl,
     alignItems: 'center',
   },
-  emptyContainer: {
+  emptyInset: {
     padding: theme.spacing.xl,
     alignItems: 'center',
   },
-  emptyText: {
+  emptyMessage: {
     marginBottom: theme.spacing.xs,
   },
   suggestionSection: {

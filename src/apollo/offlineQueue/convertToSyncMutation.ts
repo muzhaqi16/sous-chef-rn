@@ -1,20 +1,14 @@
-import type { ApolloCache } from '@apollo/client';
-import { PANTRY_SYNC_BUILDERS } from '#features/pantry/offline/syncBuilders';
-import { SHOPPING_LIST_SYNC_BUILDERS } from '#features/shoppingList/offline/syncBuilders';
-import type { QueuedMutation } from './types';
-import type { SyncBuilderTable, SyncConversion } from './syncBuilder';
-import { logger } from '#/utils/environment';
-
 /**
  * Two-tier replay mapping: entity CRUD/move ops replay through a `Sync*`
  * mutation idempotent by the client-minted cuid, everything else re-sends the
- * original, made at-most-once by its own `input.idempotencyKey`. Imports are
- * STATIC — the queue must know every replayable op before the first mutation.
+ * original, made at-most-once by its own `input.idempotencyKey`. The
+ * participating features are listed once in `syncRegistry.ts`.
  */
-const SYNC_REGISTRY: SyncBuilderTable = {
-  ...PANTRY_SYNC_BUILDERS,
-  ...SHOPPING_LIST_SYNC_BUILDERS,
-};
+import type { ApolloCache } from '@apollo/client';
+import { SYNC_REGISTRY } from './syncRegistry';
+import type { QueuedMutation } from './types';
+import type { SyncConversion } from './syncBuilder';
+import { logger } from '#/utils/environment';
 
 /**
  * queueLink's "replay-safe without an explicit `context.localFirst` opt-in"

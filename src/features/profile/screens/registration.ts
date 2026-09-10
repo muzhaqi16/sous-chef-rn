@@ -2,6 +2,8 @@ import React from 'react';
 import { createNativeStackScreen } from '@react-navigation/native-stack';
 import { settingsScreenOptions } from '#navigation/detailScreenOptions';
 import { ProfileScreen } from './ProfileScreen';
+import { devtoolsScreens } from '#features/devtools/screens/registration';
+import { motion } from '#/theme/foundations/motion';
 
 // Infrequently visited, so loaded on demand to keep them out of cold start.
 const ProfilePhotoUploadScreen = React.lazy(
@@ -14,8 +16,6 @@ const AppSettingsScreen = React.lazy(() => import('./AppSettingsScreen'));
 const PersonalInformationScreen = React.lazy(
   () => import('./PersonalInformationScreen'),
 );
-const PerformanceDashboard = React.lazy(() => import('./PerformanceDashboard'));
-const DebugInfo = React.lazy(() => import('./DebugInfo'));
 const ChangePasswordScreen = React.lazy(() => import('./ChangePasswordScreen'));
 const AppearanceScreen = React.lazy(() => import('./AppearanceScreen'));
 // Owned by the notifications feature but only ever reached from Profile's
@@ -28,7 +28,7 @@ const NotificationSettingsScreen = React.lazy(
 // it PUSHES over the app; the root navigator's `verification` group is a gate
 // with no app behind it, and swapping to it strands the user after verifying.
 const VerifyEmailScreen = React.lazy(() =>
-  import('#screens/auth/CodeVerificationScreen').then(m => ({
+  import('#features/auth/screens/CodeVerificationScreen').then(m => ({
     default: m.VerifyEmailScreen,
   })),
 );
@@ -42,7 +42,10 @@ const VerifyEmailScreen = React.lazy(() =>
 export const profileScreens = {
   Profile: createNativeStackScreen({
     screen: ProfileScreen,
-    options: { animation: 'slide_from_right', animationDuration: 200 },
+    options: {
+      animation: 'slide_from_right',
+      animationDuration: motion.timing.STANDARD,
+    },
     linking: null,
   }),
   ProfilePhotoUpload: createNativeStackScreen({
@@ -84,16 +87,7 @@ export const profileScreens = {
     options: settingsScreenOptions,
     linking: null,
   }),
-  PerformanceDashboard: createNativeStackScreen({
-    screen: PerformanceDashboard,
-    options: settingsScreenOptions,
-    linking: null,
-  }),
-  DebugInfo: createNativeStackScreen({
-    screen: DebugInfo,
-    options: settingsScreenOptions,
-    linking: null,
-  }),
+  ...devtoolsScreens,
   ChangePassword: createNativeStackScreen({
     screen: ChangePasswordScreen,
     options: settingsScreenOptions,

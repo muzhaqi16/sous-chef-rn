@@ -12,7 +12,6 @@ import { isNetworkError } from '#/utils/isNetworkError';
 import {
   isInvalidUnitError,
   isInvalidUnitPayload,
-  getInvalidUnitMessage,
 } from '#/utils/errors/invalidUnit';
 import {
   isVersionConflictError,
@@ -22,7 +21,7 @@ import {
 import {
   isNotFoundErrorPayload,
   getNotFoundMessage,
-} from '#/utils/errors/notFound';
+} from '#features/pantry/utils/notFound';
 import { Telemetry } from '#services/telemetry';
 import { generateEntityId } from '#/utils/generateEntityId';
 import {
@@ -58,6 +57,13 @@ const entityUpdatedTitle = (
   t: (key: string, options?: Record<string, unknown>) => string,
 ): string => t('errors.entityUpdatedTitle', { entity: t('labels.item') });
 
+/**
+ * A unit refusal makes the cached ranked lists wrong, so they are dropped and
+ * the picker refetches. `schema.graphql` directs clients here: the refusal
+ * carries no list of units that WOULD work, and this query answers exactly that.
+ */
+const RANKED_UNIT_FIELDS = ['consumptionUnitsForItem', 'restockUnitsForItem'];
+
 export function usePantryItemActions({
   removeItem,
   navigateTo,
@@ -68,6 +74,13 @@ export function usePantryItemActions({
   const [activeModal, setActiveModal] = useState<ActiveModal>(CLOSED_MODAL);
 
   const closeModal = () => setActiveModal(CLOSED_MODAL);
+
+  const refetchRankedUnits = () => {
+    for (const fieldName of RANKED_UNIT_FIELDS) {
+      client.cache.evict({ id: 'ROOT_QUERY', fieldName });
+    }
+    client.cache.gc();
+  };
 
   /**
    * Read the tracking-unit id for an item from the cache. Used by mutation
@@ -177,14 +190,13 @@ export function usePantryItemActions({
         getNotFoundMessage(resource),
       );
     } else if (isInvalidUnitPayload(code)) {
-      const rawValidUnits = (payload as { validUnits?: unknown }).validUnits;
-      const validList = Array.isArray(rawValidUnits)
-        ? (rawValidUnits as string[]).join(', ')
-        : undefined;
-      const detail = validList
-        ? `${message}\n\n${t('errors.validUnits', { units: validList })}`
-        : message;
-      alertService.alert(t('errors.invalidUnitTitle'), detail);
+      // Our copy, not the payload's: the refusal's `message` is unlocalizable
+      // English and names no units that would work. The picker re-queries.
+      refetchRankedUnits();
+      alertService.alert(
+        t('errors.invalidUnitTitle'),
+        t('errors.codes.unitInvalid'),
+      );
     } else if (isVersionConflictPayload(code)) {
       alertService.alert(entityUpdatedTitle(t), message);
     } else {
@@ -257,15 +269,16 @@ export function usePantryItemActions({
           return;
         }
         if (isInvalidUnitError(error)) {
+          refetchRankedUnits();
           alertService.alert(
             t('errors.invalidUnitTitle'),
-            getInvalidUnitMessage(error),
+            t('errors.codes.unitInvalid'),
           );
           return;
         }
         const errorMessage =
           (error instanceof Error && error.message) ||
-          'Failed to record item usage. Please try again.';
+          t('errors.recordUsageFailedRetry');
         errorService.reportError(error, { operation: 'consumePantryItem' });
         alertService.alert(t('labels.error'), errorMessage);
       }
@@ -354,15 +367,16 @@ export function usePantryItemActions({
           return;
         }
         if (isInvalidUnitError(error)) {
+          refetchRankedUnits();
           alertService.alert(
             t('errors.invalidUnitTitle'),
-            getInvalidUnitMessage(error),
+            t('errors.codes.unitInvalid'),
           );
           return;
         }
         const errorMessage =
           (error instanceof Error && error.message) ||
-          'Failed to record item waste. Please try again.';
+          t('errors.recordWasteFailedRetry');
         errorService.reportError(error, {
           operation: 'recordPantryItemWaste',
         });
@@ -465,15 +479,16 @@ export function usePantryItemActions({
           return;
         }
         if (isInvalidUnitError(error)) {
+          refetchRankedUnits();
           alertService.alert(
             t('errors.invalidUnitTitle'),
-            getInvalidUnitMessage(error),
+            t('errors.codes.unitInvalid'),
           );
           return;
         }
         const errorMessage =
           (error instanceof Error && error.message) ||
-          'Failed to restock item. Please try again.';
+          t('errors.restockFailedRetry');
         errorService.reportError(error, { operation: 'restockPantryItem' });
         alertService.alert(t('labels.error'), errorMessage);
       }

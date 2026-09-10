@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { RootState } from '../index';
+import type { RootState } from '../index';
 import { storage } from '#/storage/mmkv';
 
 const OFFLINE_MODE_KEY = 'user_offline_mode';
@@ -112,14 +112,18 @@ const resolveOfflineCause = (
 };
 
 const initialNetworkState = {
-  isOnline: true, // Assume online until proven otherwise.
+  isOnline: true, // Assume online until proven otherwise: try, then learn.
   isInternetReachable: null,
   networkType: null,
   lastOnlineTime: null,
   lastOfflineTime: null,
   needsTokenRefresh: false,
   offlineModeEnabled: false,
-  apiReachable: true,
+  // UNKNOWN, not reachable. `shouldTreatAsOffline` lets a first-hand `true`
+  // veto NetInfo's `isOnline: false`, so an assumed `true` here outranks the
+  // platform saying there is no link — on a cold start with no network the app
+  // reported itself online until the breaker had failed three requests.
+  apiReachable: null,
   offlineBannerCause: null,
 };
 

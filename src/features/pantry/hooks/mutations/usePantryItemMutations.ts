@@ -31,7 +31,7 @@ import { subscriptionService } from '#/services/subscriptions/SubscriptionServic
 import {
   removeFromPantryItemsCache,
   adjustPantryItemCount,
-} from '#/apollo/utils/pantryCacheUpdaters';
+} from '#features/pantry/cache/items';
 import type { PantryItemUpdate } from '../pantryDataTypes';
 import { errorService } from '#/services/errorService';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';

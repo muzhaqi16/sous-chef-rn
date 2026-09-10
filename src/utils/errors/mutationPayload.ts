@@ -30,7 +30,7 @@ export function extractMutationPayload(
   if (!data || typeof data !== 'object') return undefined;
   const fields = Object.entries(data).filter(([key]) => key !== '__typename');
   if (fields.length !== 1) return undefined;
-  return fields[0][1];
+  return fields[0]?.[1];
 }
 
 /**

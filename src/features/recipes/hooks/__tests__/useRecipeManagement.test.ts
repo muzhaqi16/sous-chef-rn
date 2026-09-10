@@ -160,7 +160,7 @@ describe('useRecipeManagement', () => {
       RecipeCategory.MainCourse,
     );
     expect(mainCourses).toHaveLength(1);
-    expect(readName(result, mainCourses[0].id)).toBe('Pasta');
+    expect(readName(result, mainCourses[0]!.id)).toBe('Pasta');
   });
 
   it('getRecipesByDifficulty filters by difficulty', async () => {

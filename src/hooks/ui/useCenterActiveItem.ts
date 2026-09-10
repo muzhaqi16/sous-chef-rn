@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type Component } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
 import Animated, {
-  Easing,
   cancelAnimation,
   scrollTo,
   useAnimatedReaction,
@@ -11,6 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import type { ScrollMetrics } from '#hooks/ui/useScrollEdgeFades';
 import { SCROLL_SLIDE } from '#constants/animations';
+import { motion } from '#/theme/foundations/motion';
 
 interface ItemLayout {
   x: number;
@@ -139,7 +139,7 @@ export function useCenterActiveItem<
           );
           target.set(from);
           target.set(
-            withTiming(dest, { duration, easing: Easing.out(Easing.cubic) }),
+            withTiming(dest, { duration, easing: motion.easing.decelerate }),
           );
         } else {
           target.set(dest);

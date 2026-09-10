@@ -20,11 +20,11 @@ jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: () => null,
 }));
 
-jest.mock('#components/molecules/BottomSheetSearchBar', () => {
+jest.mock('#components/molecules/SearchBar', () => {
   const R = require('react');
   const { TextInput } = require('react-native');
   return {
-    BottomSheetSearchBar: R.forwardRef(
+    SearchBar: R.forwardRef(
       (
         props: { placeholder?: string; onChangeText?: (text: string) => void },
         ref: React.Ref<{
@@ -152,14 +152,14 @@ jest.mock('#features/recipes/hooks/useRecipePreload', () => ({
   })),
 }));
 
-jest.mock('#services/recipeApi/SpoonacularService', () => ({
+jest.mock('#/services/spoonacular/SpoonacularService', () => ({
   spoonacularService: {
     searchRecipes: jest.fn().mockResolvedValue({ results: [] }),
     getRecipeInformation: jest.fn(),
   },
 }));
 
-jest.mock('#utils/recipeTransform', () => ({
+jest.mock('#domain/recipeTransform', () => ({
   transformRecipeForDisplay: jest.fn((r: unknown) => r),
 }));
 

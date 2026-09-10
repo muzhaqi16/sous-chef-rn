@@ -104,14 +104,6 @@ jest.mock('../mutations/useShoppingListItemMutations', () => ({
   }),
 }));
 
-jest.mock('#hooks/useSearchableList', () => ({
-  useSearchableList: <T>(items: T[]) => ({
-    query: '',
-    setQuery: jest.fn(),
-    filtered: items,
-  }),
-}));
-
 jest.mock('#/utils/searchUtils', () => ({
   shoppingListItemSearch: jest.fn((item: { itemName: string }, query: string) =>
     item.itemName.toLowerCase().includes(query.toLowerCase()),

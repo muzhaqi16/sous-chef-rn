@@ -23,7 +23,7 @@ jest.mock('#components/atoms/BottomSheetFormScrollView', () => {
   };
 });
 
-jest.mock('#components/atoms/BottomSheetHeader', () => {
+jest.mock('#components/molecules/BottomSheetHeader', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
@@ -62,7 +62,7 @@ jest.mock('#components/atoms/BottomSheetHeader', () => {
   };
 });
 
-jest.mock('#components/molecules/FormInput', () => {
+jest.mock('#components/atoms/FormInput', () => {
   const RN = require('react-native');
   const R = require('react');
   return {

@@ -9,6 +9,35 @@ import {
 // Enable detailed logging only in development
 const isDevelopment = __DEV__;
 
+// A dev console is read over shoulders, pasted into issues and captured by
+// screen recordings, so the credential a sign-in carries is masked here too.
+const SENSITIVE_VARIABLE =
+  /password|token|secret|credential|api[-_]?key|authorization/i;
+
+// Every auth operation takes a single `$input`, so masking only the top level
+// would leave the credential one key down — exactly where it always is.
+const MAX_MASK_DEPTH = 6;
+
+function maskValue(value: unknown, depth: number): unknown {
+  if (depth >= MAX_MASK_DEPTH || value === null || typeof value !== 'object') {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map(entry => maskValue(entry, depth + 1));
+  }
+  const out: Record<string, unknown> = {};
+  for (const [key, nested] of Object.entries(value)) {
+    out[key] = SENSITIVE_VARIABLE.test(key)
+      ? '[MASKED]'
+      : maskValue(nested, depth + 1);
+  }
+  return out;
+}
+
+function maskVariables(variables: Record<string, unknown>) {
+  return maskValue(variables, 0) as Record<string, unknown>;
+}
+
 // Cold-start detection: first N operations have inflated timing due to JS thread contention
 const COLD_START_THRESHOLD = 5;
 let operationsSeen = 0;
@@ -103,7 +132,7 @@ export const createConsoleLink = (
             operation.variables &&
             Object.keys(operation.variables).length > 0
           ) {
-            console.log('   📤 Variables:', operation.variables);
+            console.log('   📤 Variables:', maskVariables(operation.variables));
           }
 
           // Log errors as JSON strings to prevent React Native console serialization issues

@@ -1,4 +1,4 @@
-import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
+import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 import { createActionsContext } from '#hooks/utils/createActionsContext';
 
 /**

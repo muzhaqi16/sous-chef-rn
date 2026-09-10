@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Modal, FlatList, ViewStyle } from 'react-native';
+import { View, Modal, ScrollView, ViewStyle } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
@@ -44,14 +44,16 @@ export const FormSelect: React.FC<FormSelectProps> = ({
     setModalVisible(false);
   };
 
-  const renderOption = ({ item }: { item: SelectOption }) => {
+  const renderOption = (item: SelectOption) => {
     const isSelected = item.value === value;
     return (
       <AppPressable
+        key={item.value}
         style={[styles.option, isSelected && styles.selectedOption]}
         onPress={() => handleSelect(item.value)}
       >
         <Text
+          role="bodyStrong"
           style={[styles.optionText, isSelected && styles.selectedOptionText]}
         >
           {item.label}
@@ -72,6 +74,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         onPress={() => setModalVisible(true)}
       >
         <Text
+          role="body"
           style={[
             styles.selectText,
             !selectedOption && styles.selectTextPlaceholder,
@@ -92,18 +95,25 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         >
           <View style={styles.modal}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>{label}</Text>
-              <FlatList
-                data={options}
-                renderItem={renderOption}
-                keyExtractor={item => item.value}
+              <Text role="bodyStrong" style={styles.modalTitle}>
+                {label}
+              </Text>
+              {/* A scroller, not a recycling list: the card sizes to its
+                  content, so it offers no height for a `flex: 1` list to
+                  claim. The option sets here are bounded reference sets. */}
+              <ScrollView
                 showsVerticalScrollIndicator={false}
-              />
+                keyboardShouldPersistTaps="handled"
+              >
+                {options.map(renderOption)}
+              </ScrollView>
               <AppPressable
                 style={styles.closeButton}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.closeButtonText}>{t('labels.close')}</Text>
+                <Text role="bodyStrong" style={styles.closeButtonText}>
+                  {t('labels.close')}
+                </Text>
               </AppPressable>
             </View>
           </View>
@@ -115,12 +125,12 @@ export const FormSelect: React.FC<FormSelectProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   selectButton: {
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     backgroundColor: theme.colors.surface,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -130,7 +140,6 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.error,
   },
   selectText: {
-    fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
   },
   selectTextPlaceholder: {
@@ -146,19 +155,17 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
-    padding: theme.spacing['5'],
+    padding: theme.spacing.mdPlus,
     maxHeight: '80%',
     width: '90%',
   },
   modalTitle: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
     textAlign: 'center',
   },
   option: {
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
@@ -167,16 +174,14 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primaryLight,
   },
   optionText: {
-    fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
   },
   selectedOptionText: {
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
   },
   closeButton: {
     marginTop: theme.spacing.md,
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.lg,
     backgroundColor: theme.colors.border,
     borderRadius: theme.radii.md,
@@ -184,11 +189,6 @@ const styles = StyleSheet.create(theme => ({
     alignSelf: 'center',
   },
   closeButtonText: {
-    fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
-    fontWeight: theme.fonts.weight.medium,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

@@ -1,0 +1,15 @@
+{
+  "$comment": [
+    "Production-dependency advisories that ship knowingly, read by",
+    "scripts/check-dependency-audit.mjs. An entry excuses one advisory from the",
+    "gate and is reported on every run, so an exemption stays visible.",
+    "",
+    "Each entry needs: id (GHSA identifier) or package, reason (what the",
+    "hostile case actually is here, not 'not exploitable'), and revisit (a date",
+    "past which the gate reports it as stale). An entry with no revisit date is",
+    "treated as already expired.",
+    "",
+    "Empty is the correct state. Upgrade first; record only what cannot be."
+  ],
+  "accepted": []
+}

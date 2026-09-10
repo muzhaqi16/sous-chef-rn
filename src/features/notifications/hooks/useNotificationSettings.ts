@@ -17,7 +17,7 @@ import {
   updateEntityFieldsLocalFirst,
 } from '#/apollo/utils/localFirstFields';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { computeIsQuietTime } from '#/utils/notifications/quietHours';
+import { computeIsQuietTime } from '#features/notifications/utils/quietHours';
 import { logger } from '#/utils/environment';
 
 export interface NotificationSettings {
@@ -195,17 +195,19 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
 
   useApolloErrorLogger('GetNotificationPreferences', error);
 
-  // Without preferences every value below is a fabricated default that the
-  // settings screen presents as if it were saved state, and no write can ever
-  // change it. Say so rather than letting the screen quietly lie.
+  // `User.notificationPreferences` is NULLABLE: an account that has never
+  // changed a setting has no row, and the defaults below are then the right
+  // answer, not a lie. Only a read that produced no `me` at all leaves the
+  // screen unable to know what it is showing.
+  const readUser = data?.me;
   useEffect(() => {
-    if (!loading && !preferences) {
+    if (!loading && !skipped && !readUser) {
       logger.warn(
-        'Notification preferences unavailable — settings screen is showing defaults.',
-        { skipped, hasUser: !!user?.id, hasError: !!error },
+        'Notification preferences could not be read — settings screen is showing defaults.',
+        { hasUser: !!user?.id, hasError: !!error },
       );
     }
-  }, [loading, preferences, skipped, user?.id, error]);
+  }, [loading, readUser, skipped, user?.id, error]);
 
   const [updatePreferences] = useMutation(
     UpdateNotificationPreferencesDocument,

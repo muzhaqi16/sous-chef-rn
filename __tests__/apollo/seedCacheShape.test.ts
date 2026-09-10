@@ -90,7 +90,7 @@ describe('a seeded collection of entities is normalized', () => {
       brands: Array<{ brand: { name: string } }>;
     }>({ id: 'Item:item-1', fragment: BRANDS });
 
-    expect(parent?.brands[0].brand.name).toBe('Renamed');
+    expect(parent?.brands[0]!.brand.name).toBe('Renamed');
   });
 });
 

@@ -132,13 +132,25 @@ offline tab preloader. They are not reusable and a sibling app writes its own, s
 they sit outside the kit rather than being excused from its rule.
 
 `src/components/` and `src/hooks/` together are the **kit** — the layer a sibling
-app reuses wholesale. `scripts/check-layer-purity.mjs` ratchets what the kit knows
+app reuses wholesale. `scripts/check-layer-purity.mjs` holds what the kit may know
 about a feature: an import of `#features/…`, a colocated `.graphql` document, or a
-file named after a domain. The recorded baseline is the backlog, and it may only
-shrink. Generated-schema-type imports are counted but do not fail — that coupling
-only costs when a sibling app has a different schema.
+file named after a domain. Generated-schema-type imports are counted but do not
+fail — that coupling only costs when a sibling app has a different schema.
 
-Both baselines are empty, so both are invariants rather than backlogs.
+Both halves are at zero and hold no baseline, so both are invariants.
+
+**A module in the shared layers is there because more than one feature uses it.**
+`scripts/check-single-consumer.mjs` resolves every import through the tsconfig
+aliases, attributes each to a feature by path, and follows the reach TRANSITIVELY
+— a hook used only by an atom that only pantry renders belongs to pantry too. It
+went 101 → 0 and holds no baseline either: a module with a single consumer is one
+to move, not a number to record. It supersedes the kernel NAME test, which only
+ever approximated the same question by asking whether a filename looked
+domain-ish.
+
+`src/domain/` is the exception the rule needed: logic several features share, in
+neither a domain-free kit nor one feature's internals. Admission is by the same
+consumer count — two or more features, or it belongs in the one that uses it.
 
 `scripts/check-feature-shape.mjs` ratchets the other half: every feature has
 `manifest.ts` (whose `id` equals its directory name), `screens/`, `hooks/` and
@@ -158,9 +170,20 @@ named exceptions that each say why. Tests are exempt — a cache test has to
 import the fragment it exercises. The rules block NEW reach-across imports;
 migrating working code is not required.
 
-`src/screens/` holds auth and onboarding only. Those are flows rather than
-domains — they have no feature-shaped data layer, and they run before a home
-exists. Every domain, `home` included, is a folder under `src/features/`.
+`src/screens/` holds only `SplashScreen` and `NotFoundScreen` — the two the app
+shows before any feature is reachable. Auth and onboarding are features like
+every other: they had a data layer (ten files holding the Apollo client), 5,200
+lines no gate scanned, and fourteen kit modules that existed solely for them.
+Their stacks in `src/navigation/stacks/` now spread a `screens/registration.ts`
+the feature owns, as barcode and notifications already did.
+
+Their session PRIMITIVES stay in the kernel, which is a different question from
+where their screens live: `src/graphql/operations/auth` is imported by
+`refreshToken.ts` and `authService.ts`, and `useIsLoggedOut` and
+`useEmailVerification` are read by every feature. `auth` and `onboarding` are
+therefore in the name-based gates' `AMBIGUOUS_IDS`, beside `home`, `profile` and
+`notifications` — each names a concept every app of this shape has, so a shared
+module named for one is not evidence of feature coupling.
 
 ---
 
@@ -415,16 +438,15 @@ Two structural decisions worth knowing:
 
 `babel-plugin-react-compiler` handles memoization. Consequences:
 
-- **Default to no `useMemo` / `useCallback` / `React.memo` — a default, not an
-  absolute.** The compiler memoizes for you in the ordinary case, and
-  `React.memo` on list cells is usually redundant — FlashList v2's `ViewHolder`
-  already does reference equality on `item`. Manual memoization is legitimate
-  in exactly three places: a value that feeds a **dependency array**, a prop
-  read by something the compiler did not compile (a third-party `===` check),
-  and any file in the bailout baseline
-  (`scripts/check-compiler-bailouts.baseline.json`). The lint rule is an error
-  so the exception is written down: add
-  `// eslint-disable-next-line no-restricted-imports` with the reason.
+- **No `useMemo` / `useCallback` / `React.memo`.** The compiler memoizes, and
+  `React.memo` on list cells is redundant — FlashList v2's `ViewHolder` already
+  does reference equality on `item`. There is no escape hatch:
+  `eslint-comments/no-use` bans every `eslint-disable` directive repo-wide, so a
+  disable comment is itself an error, and the bailout baseline
+  (`scripts/check-compiler-bailouts.baseline.json`) is EMPTY — a file appearing
+  there is a regression to fix, not a licence to memoize. Where a stable
+  reference is genuinely needed for a **dependency array**, hoist the function
+  to module scope and pass what it needs as arguments.
 - **Two `try` shapes bail the compiler out of the whole function** (silently
   losing all its auto-memoization): a **finalizer** (`finally` with or without
   `catch`, and a catch-less `try`), and a **value block inside the `try` body**
@@ -437,6 +459,45 @@ Two structural decisions worth knowing:
   compiles every file.
 - **Never read or write `ref.current` during render.** Use the adjusting-state-
   during-render pattern instead.
+
+### The screen scaffold and the sheet shell
+
+Chrome is composed once, not per screen.
+
+- **`Screen`** (`src/components/templates/Screen.tsx`) is a screen's frame:
+  `header` (`standard | tab | collapsing | none`, with title, actions, back,
+  close, and the offline pill), `scroll` (`none | scroll | form | list`),
+  `gutter`, `refresh` and `state`. It never applies the top inset — the
+  navigator does that, and a screen adding its own is the `double-inset` half of
+  `check-screen-scaffold`; a bare `<SafeAreaView>` with no `edges` insets all
+  four sides and is how it usually happens. `scroll: 'list'` supplies the
+  container only: a pull-to-refresh control has to reach the FlashList itself,
+  never the scaffold, or RNGH cannot route the scroll gesture into it.
+- **`Sheet`** (`src/components/templates/Sheet.tsx`) is a bottom sheet's shell:
+  `view | form | action`. `form` brings both the keyboard offset and the input
+  context, so every `TextInput` under it resolves to gorhom's
+  `BottomSheetTextInput` rather than RN's, which would leave the sheet blind to
+  the keyboard. `__tests__/sheets/bottomSheetShell.test.ts` holds it.
+- **`FormScreen`** is a full-screen form — a screen with a form's chrome. It is
+  not a sheet and does not share a mechanism with one.
+
+### Typography roles
+
+Text is set by a named ROLE, never by a size and a weight. The nine roles live
+in `src/theme/foundations/type.ts` (`display`, `title`, `subheading`, `heading`,
+`body`, `bodyStrong`, `caption`, `label`, `error`) and each carries size, weight,
+leading and tracking together — and only those. **Colour is `tone`'s job**, so
+`role="error"` pairs with `tone="error"`; a role that carried a colour would
+decide it in a place the caller cannot see.
+
+`<Text role="caption">`, never `<Text size="sm">`. An element that cannot take
+the prop — a `TextInput`, a shared style module — spreads
+`...theme.type.<role>`. `size`, `weight` and `lineHeight` remain on `Text` as
+kit-only escape hatches; outside `src/components/**` they are a second
+definition of a role that already exists.
+`node scripts/check-typography-roles.mjs` holds both halves: `off-role-text` is
+at zero, and `stylesheet-type` is a shrinking list of the blocks no role
+expresses (a responsive size map, a 10px badge, a Skia draw call).
 
 ### Unistyles 3
 
@@ -502,12 +563,16 @@ i18n:check` (also a pre-push hook) fails on drift between locale files.
 src/
 ├── apollo/          Client, cache, links, offline queue, cache persistence
 ├── assets/          Bundled images and fonts
-├── components/      Shared UI: atoms · molecules · organisms · templates
-│                    plus charts, modals, navigation, providers, settings
+├── components/      Shared UI in four TIERS: atoms · molecules · organisms ·
+│                    templates, plus providers and performance. A component's
+│                    tier is computed from what it renders (check-component-tier)
 ├── config/          Generated env config
 ├── constants/
 ├── context/         App-level React context
-├── features/        Feature modules (see above) + registry.ts
+├── domain/          Domain logic SEVERAL features share — neither kit nor one
+│                    feature's internals; admission is by consumer count
+├── features/        The twelve feature modules (see above), registry.ts for
+│                    navigation and registry.static.ts for the app shell
 ├── graphql/         Shared operations, generated schema + types
 ├── hooks/           Shared hooks ONLY — what more than one feature uses:
 │                    apollo, offline, ui, search, auth, performance,
@@ -515,8 +580,8 @@ src/
 ├── i18n/            i18next config + locale JSON
 ├── native/          Native module bindings
 ├── navigation/      RootNavigator, stacks, layouts
-├── screens/         Auth and onboarding flows only
-├── services/        Push, subscriptions, telemetry, recipe API (Spoonacular),
+├── screens/         SplashScreen and NotFoundScreen only
+├── services/        Push, subscriptions, telemetry, Spoonacular,
 │                    haptics, permissions, performance, alerts, errors, toasts
 ├── storage/         MMKV wrappers
 ├── store/           Zustand store, slices, reset manager

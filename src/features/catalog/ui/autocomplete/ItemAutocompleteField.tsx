@@ -3,8 +3,8 @@ import React from 'react';
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { useItemAutocomplete } from '#features/catalog/hooks/useItemAutocomplete';
 import { resolveImageUrl } from '#utils/imageUtils';
-import { GenericAutocompleteField } from '#components/molecules/AutocompleteField/GenericAutocompleteField';
-import { AutocompleteRow } from '#components/molecules/AutocompleteField/AutocompleteRow';
+import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
+import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
 
 interface ItemAutocompleteFieldProps {
   variant: 'inline' | 'modal';
@@ -55,7 +55,7 @@ export const ItemAutocompleteField: React.FC<ItemAutocompleteFieldProps> = ({
           image={resolveImageUrl(i) ?? null}
           title={i.name}
           subtitle={
-            showBrand && i.brands?.length === 1 ? i.brands[0].name : undefined
+            showBrand && i.brands?.length === 1 ? i.brands[0]?.name : undefined
           }
         />
       )}

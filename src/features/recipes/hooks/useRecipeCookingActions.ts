@@ -42,8 +42,8 @@ export function useRecipeCookingActions({
   /**
    * Fires the cook-log mutation with a client-minted id, so a queued replay
    * converges on the same log instead of re-deducting the pantry. `'rejected'`
-   * means the server refused it or the call threw; `'created'` and `'queued'`
-   * both succeed.
+   * means it was refused or threw; `'created'`/`'queued'` succeed. `skipped`
+   * counts ingredients NOT deducted, which a bare success toast would hide.
    */
   const fireMarkCooked = async (vars: FireMarkCookedVars) => {
     const id = generateEntityId();
@@ -72,8 +72,24 @@ export function useRecipeCookingActions({
       });
     }
 
+    const skipped =
+      payload?.__typename === 'MarkRecipeAsCookedPayload'
+        ? payload.skippedIngredients.length
+        : 0;
+
     // A falsy result (the call threw) classifies as 'rejected'.
-    return classifyCreateResult(result);
+    return { outcome: classifyCreateResult(result), skipped };
+  };
+
+  /** Success copy that says so only when nothing was left undeducted. */
+  const deductionToast = (skipped: number) => {
+    if (skipped > 0) {
+      toastService.warning(
+        t('recipes.markedCookedSkipped', { count: skipped }),
+      );
+      return;
+    }
+    toastService.success(t('recipes.markedCookedDeducted'));
   };
 
   const handleMarkAsCooked = (input: MarkCookedInput) => {
@@ -88,7 +104,7 @@ export function useRecipeCookingActions({
         const loaded = await ingredientMatching.loadMatches(input.servings);
         if (!loaded) {
           // Fallback to simple deduction if matching fails
-          const outcome = await fireMarkCooked({
+          const { outcome, skipped } = await fireMarkCooked({
             recipeId,
             servings: input.servings,
             deductFromPantry: input.deductFromPantry,
@@ -98,7 +114,7 @@ export function useRecipeCookingActions({
             toastService.error(t('recipes.markCookedFailed'));
             return;
           }
-          toastService.success(t('recipes.markedCookedDeducted'));
+          deductionToast(skipped);
         }
       }, setMarkingAsCooked);
       return;
@@ -106,7 +122,7 @@ export function useRecipeCookingActions({
 
     // Simple deduction path
     executeWithLoadingState(async () => {
-      const outcome = await fireMarkCooked({
+      const { outcome, skipped } = await fireMarkCooked({
         recipeId,
         servings: input.servings,
         deductFromPantry: input.deductFromPantry,
@@ -118,7 +134,7 @@ export function useRecipeCookingActions({
       }
 
       if (input.deductFromPantry) {
-        toastService.success(t('recipes.markedCookedDeducted'));
+        deductionToast(skipped);
       } else {
         toastService.success(t('recipes.markedCooked'));
       }
@@ -130,7 +146,7 @@ export function useRecipeCookingActions({
     if (!recipeId) return;
     ingredientMatching.closeSheet();
     executeWithLoadingState(async () => {
-      const outcome = await fireMarkCooked({
+      const { outcome, skipped } = await fireMarkCooked({
         recipeId,
         servings: undefined,
         deductFromPantry: true,
@@ -139,7 +155,7 @@ export function useRecipeCookingActions({
         toastService.error(t('recipes.markCookedFailed'));
         return;
       }
-      toastService.success(t('recipes.markedCookedDeducted'));
+      deductionToast(skipped);
     }, setMarkingAsCooked);
   };
 

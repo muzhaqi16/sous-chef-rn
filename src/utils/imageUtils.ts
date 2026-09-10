@@ -190,7 +190,7 @@ export function galleryPhotos<T>(photos: readonly T[] | null | undefined): T[] {
     keep.add(i);
   }
 
-  return [...keep].sort((a, b) => a - b).map(index => photos[index]);
+  return [...keep].sort((a, b) => a - b).flatMap(index => photos[index] ?? []);
 }
 
 // =============================================================================

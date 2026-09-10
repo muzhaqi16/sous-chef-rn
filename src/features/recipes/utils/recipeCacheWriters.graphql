@@ -1,0 +1,27 @@
+# The `RecipeForm_recipe` fields that `useRecipeData_recipe` does NOT select.
+#
+# `GetRecipe` spreads BOTH fragments, so materializing only the detail one
+# leaves the query's cache read incomplete — and an incomplete read means
+# `useQuery` returns no data at all and goes to the network. Online the fetch
+# papers over it; offline the recipe detail (and its edit form) render nothing
+# for a recipe the user just created locally.
+#
+# FLAT (no nested fragment spreads) so `cache.writeFragment` sees the unmasked
+# shape. Kept as its own fragment rather than folded into either optimistic
+# builder because each of those is pinned to a generated fragment type that
+# can't carry the other's fields.
+#
+# Consumers: src/features/recipes/utils/recipeCacheWriters.ts
+# (`writeOptimisticRecipeFormFields`).
+fragment recipeCacheWriters_formFields on Recipe {
+  id
+  prepTimeMinutes
+  cookTimeMinutes
+  difficulty
+  category
+  cuisine
+  diets
+  healthGoals
+  intolerances
+  notes
+}

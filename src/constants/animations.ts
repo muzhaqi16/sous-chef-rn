@@ -1,28 +1,9 @@
-import {
-  FadeIn,
-  FadeOut,
-  LinearTransition,
-  Easing,
-} from 'react-native-reanimated';
+import { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import type { SlideAnimationConfig } from '#hooks/animations/types';
+import { motion } from '#/theme/foundations/motion';
 
 // Note: DRAG_ITEM_HEIGHT and other drag constants are in './drag.ts'
 // Import directly: import { DRAG_ITEM_HEIGHT } from '#/constants/drag';
-
-/** CSS ease-in-out equivalent. */
-export const standardEasing = Easing.bezier(0.25, 0.1, 0.25, 1);
-
-/** Named spring presets, in place of inline {damping, stiffness, mass}. */
-export const SPRING = {
-  DEFAULT: { damping: 15, stiffness: 150, mass: 0.4 },
-  SNAPPY: { damping: 10, stiffness: 400 },
-  PRESS: { damping: 15, stiffness: 300 },
-  GENTLE: { damping: 20, stiffness: 180 },
-  HEAVY: { damping: 25, stiffness: 350, mass: 0.8 },
-  EXPAND: { damping: 20, stiffness: 200 },
-  TOAST_ENTER: { damping: 20, stiffness: 180 },
-  TOAST_DISMISS: { damping: 25, stiffness: 200 },
-};
 
 /** Alert modal animation. */
 export const ALERT = {
@@ -47,7 +28,7 @@ export const SHEET = {
 export const TOAST = {
   /**
    * The default hold. Armed on the same tick the enter animation starts, so it
-   * spans the fade-in; add `TIMING.STANDARD` for total time on screen.
+   * spans the fade-in; add `motion.timing.STANDARD` for total time on screen.
    */
   AUTO_DISMISS_SHORT: 1400,
   /** For a full sentence rather than a confirmation — reading time. */
@@ -81,35 +62,24 @@ export const SCROLL_SLIDE = {
   MAX_MS: 500,
 };
 
-/** Named timing presets, in ms. */
-export const TIMING = {
-  // Sub-perceptible bounce for press feedback (squeeze in / out).
-  MICRO: 75,
-  INSTANT: 100,
-  FAST: 150,
-  STANDARD: 200,
-  MODERATE: 250,
-  SLOW: 300,
-};
-
 /** Slide presets, spread into `useSlideAnimation`. */
 export const SLIDE_PRESETS = {
   /** Full exit: off screen to the right. */
   fullExit: {
     slideDistance: 'screenWidth',
-    duration: 250,
+    duration: motion.timing.MODERATE,
     withOpacity: false,
   },
   /** Feedback only, no exit. */
   subtle: {
     slideDistance: 50,
-    duration: 200,
+    duration: motion.timing.STANDARD,
     withOpacity: false,
   },
   /** Exit with fade, for deletions. */
   exitWithFade: {
     slideDistance: 200,
-    duration: 250,
+    duration: motion.timing.MODERATE,
     withOpacity: true,
     opacityTarget: 0,
   },
@@ -117,9 +87,11 @@ export const SLIDE_PRESETS = {
 
 /** Show/hide transition for expandable forms and collapsible sections. */
 export const getFormAnimationPreset = () => ({
-  entering: FadeIn.duration(300).easing(standardEasing),
-  exiting: FadeOut.duration(200).easing(standardEasing),
-  layout: LinearTransition.duration(250),
+  entering: FadeIn.duration(motion.timing.SLOW).easing(motion.easing.standard),
+  exiting: FadeOut.duration(motion.timing.STANDARD).easing(
+    motion.easing.standard,
+  ),
+  layout: LinearTransition.duration(motion.timing.MODERATE),
 });
 
 /**
@@ -128,23 +100,23 @@ export const getFormAnimationPreset = () => ({
  */
 export const listItemExitAnimation = {
   slide: {
-    duration: 300,
+    duration: motion.timing.SLOW,
     distance: 300,
   },
   fade: {
     delay: 100,
-    duration: 200,
+    duration: motion.timing.STANDARD,
   },
   scale: {
     delay: 50,
-    duration: 250,
+    duration: motion.timing.MODERATE,
     toValue: 0.95,
   },
   // When to trigger item removal and layout shift
   // Must match slide duration so animation completes before removal
   removalDelay: 300,
   layoutAnimation: {
-    duration: 200,
+    duration: motion.timing.STANDARD,
   },
   itemHeight: 95, // 87px content + 8px margins (spacing.xs = 4px each side)
 };
@@ -155,33 +127,33 @@ export const listItemExitAnimation = {
  */
 export const listItemFastExitAnimation = {
   slide: {
-    duration: 200,
+    duration: motion.timing.STANDARD,
     distance: 200,
   },
   fade: {
     delay: 0, // Start immediately for snappier feel
-    duration: 200,
+    duration: motion.timing.STANDARD,
   },
   scale: {
     delay: 0,
-    duration: 200,
+    duration: motion.timing.STANDARD,
     toValue: 0.97, // Subtler scale
   },
   removalDelay: 200,
   layoutAnimation: {
-    duration: 150,
+    duration: motion.timing.FAST,
   },
 };
 
 /** Entry for an item appearing in the destination tab after a toggle. */
 export const listItemEntryAnimation = {
-  fade: { duration: 250 },
-  slide: { distance: 50, duration: 300 },
+  fade: { duration: motion.timing.MODERATE },
+  slide: { distance: 50, duration: motion.timing.SLOW },
 };
 
 /** Shift for items repositioning after another is removed. */
 export const getListItemLayoutAnimation = () =>
-  LinearTransition.duration(150).easing(standardEasing);
+  LinearTransition.duration(motion.timing.FAST).easing(motion.easing.standard);
 
 /**
  * Skeleton-to-content entry. At `delayPerItem: 0` every item fades in together;
@@ -191,7 +163,7 @@ export const getListItemLayoutAnimation = () =>
 export const staggeredEntryAnimation = {
   delayPerItem: 0,
   maxItems: 6,
-  duration: 200,
+  duration: motion.timing.STANDARD,
   initialDelay: 30,
 };
 
@@ -202,6 +174,6 @@ export const staggeredEntryAnimation = {
 export const screenEntryAnimation = {
   delayPerItem: 50,
   maxItems: 5,
-  duration: 250,
+  duration: motion.timing.MODERATE,
   initialDelay: 100,
 };

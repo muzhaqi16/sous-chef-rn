@@ -1,10 +1,9 @@
 import { NotificationType } from '#/graphql/generated/schemaTypes';
 import { Icon } from '#utils/iconUtils';
-import { format } from 'date-fns/format';
 import { safeParseDate } from '#utils/dateUtils';
-import { getDateFnsLocale } from '#utils/dateLocale';
 import type { NotificationPayload } from '#features/notifications/types';
 import type { Translate } from '#/i18n/types';
+import { formatMonthDay } from '#/utils/formatters/date';
 
 type IconProps = React.ComponentProps<typeof Icon>;
 
@@ -152,7 +151,7 @@ const buildExpiryName = (
   if (!parsed) {
     return fields.itemName;
   }
-  const date = format(parsed, 'MMM d', { locale: getDateFnsLocale() });
+  const date = formatMonthDay(parsed);
   return openedAt
     ? t('notifications.expiry.qualifierOpened', { name: fields.itemName, date })
     : t('notifications.expiry.qualifierAdded', { name: fields.itemName, date });

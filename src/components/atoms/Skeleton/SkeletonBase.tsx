@@ -7,10 +7,10 @@ import Animated, {
   withTiming,
   interpolate,
   cancelAnimation,
-  useReducedMotion,
-  Easing,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
+import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
+import { motion } from '#/theme/foundations/motion';
 
 interface SkeletonBaseProps {
   width?: number | string;
@@ -29,8 +29,8 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
   animated = true,
 }) => {
   const shimmerTranslate = useSharedValue(0);
-  const reducedMotion = useReducedMotion();
-  const shouldAnimate = animated && !reducedMotion;
+  const motionEnabled = useMotionEnabled();
+  const shouldAnimate = animated && motionEnabled;
 
   useLayoutEffect(() => {
     if (shouldAnimate) {
@@ -38,7 +38,7 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
         withRepeat(
           withTiming(1, {
             duration: 1500,
-            easing: Easing.ease,
+            easing: motion.easing.plain,
           }),
           -1, // infinite
           false, // don't reverse
@@ -78,9 +78,7 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
       {/* UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View */}
       {!!animated && (
         <View style={styles.shimmer}>
-          <Animated.View
-            style={[{ width: '100%', height: '100%' }, animatedStyle]}
-          />
+          <Animated.View style={[styles.shimmerFill, animatedStyle]} />
         </View>
       )}
     </View>
@@ -88,6 +86,10 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  shimmerFill: {
+    width: '100%',
+    height: '100%',
+  },
   skeleton: {
     backgroundColor: theme.colors.surfaceVariant,
     overflow: 'hidden',

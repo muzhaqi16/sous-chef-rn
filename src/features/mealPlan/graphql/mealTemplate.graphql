@@ -17,7 +17,8 @@ query GetMealTemplates(
     edges {
       node {
         id
-        ...MealTemplateDisplay      }
+        ...MealTemplateDisplay
+      }
       cursor
     }
     pageInfo {
@@ -31,9 +32,11 @@ query GetMealTemplates(
 query GetMealTemplate($id: ID!) {
   mealTemplate(id: $id) {
     id
-    ...MealTemplateDisplay    items {
+    ...MealTemplateDisplay
+    items {
       id
-      ...MealTemplateItemFragment    }
+      ...MealTemplateItemFragment
+    }
   }
 }
 
@@ -85,57 +88,6 @@ mutation DeleteMealTemplate($input: DeleteMealTemplateInput!) {
       mealTemplate {
         id
         name
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation DuplicateTemplate($input: DuplicateTemplateInput!) {
-  duplicateTemplate(input: $input) {
-    __typename
-    ... on DuplicateTemplatePayload {
-      mealTemplate {
-        id
-        ...MealTemplateDisplay
-        items {
-          id
-          ...MealTemplateItemFragment
-        }
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation CreateMealPlanFromTemplate($input: CreateMealPlanFromTemplateInput!) {
-  createMealPlanFromTemplate(input: $input) {
-    __typename
-    ... on CreateMealPlanPayload {
-      mealPlan {
-        id
-        ...MealPlanMain_mealPlan
-        ...MealPlanSettingsSheet_mealPlan
       }
     }
     ... on Error {
@@ -264,33 +216,6 @@ mutation RemoveTemplateItem($input: RemoveTemplateItemInput!) {
       }
       mealTemplateItem {
         id
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation CreateTemplateFromMealPlan($input: CreateTemplateFromMealPlanInput!) {
-  createTemplateFromMealPlan(input: $input) {
-    __typename
-    ... on CreateTemplateFromMealPlanPayload {
-      mealTemplate {
-        id
-        ...MealTemplateDisplay
-        items {
-          id
-          ...MealTemplateItemFragment
-        }
       }
     }
     ... on Error {

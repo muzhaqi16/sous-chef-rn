@@ -8,7 +8,12 @@ query GetMealPlans(
   $filters: MealPlanFilters
   $orderBy: MealPlanOrderBy
 ) {
-  mealPlans(first: $first, after: $after, filters: $filters, orderBy: $orderBy) {
+  mealPlans(
+    first: $first
+    after: $after
+    filters: $filters
+    orderBy: $orderBy
+  ) {
     edges {
       node {
         id
@@ -32,6 +37,8 @@ query GetMealPlan($id: ID!) {
     id
     ...MealPlanMain_mealPlan
     ...MealPlanSettingsSheet_mealPlan
+    ...useGenerateShoppingList_mealPlan
+    ...useDuplicateMealPlan_mealPlan
   }
 }
 
@@ -183,72 +190,6 @@ mutation DeleteMealPlanItem($input: DeleteMealPlanItemInput!) {
     ... on DeleteMealPlanItemPayload {
       mealPlanItem {
         id
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation DuplicateMealPlan($input: DuplicateMealPlanInput!) {
-  duplicateMealPlan(input: $input) {
-    __typename
-    ... on DuplicateMealPlanPayload {
-      mealPlan {
-        id
-        ...MealPlanDisplay
-        dietaryProfile {
-          id
-        }
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation GenerateShoppingListFromMealPlan($input: GenerateShoppingListFromMealPlanInput!) {
-  generateShoppingListFromMealPlan(input: $input) {
-    __typename
-    ... on GenerateShoppingListFromMealPlanPayload {
-      shoppingList {
-        id
-        name
-        isDefault
-        totalItems
-        completedItems
-        homeId
-        home {
-          id
-          name
-        }
-        ownerships {
-          id
-          userId
-          user {
-            id
-            email
-            profile { id displayName avatar }
-          }
-        }
       }
     }
     ... on Error {

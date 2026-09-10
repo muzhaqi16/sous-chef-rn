@@ -12,7 +12,7 @@ export const NotificationGroupHeader: React.FC<
 > = ({ title }) => {
   return (
     <View style={styles.container}>
-      <Text size="sm" weight="bold" tone="secondary" style={styles.title}>
+      <Text role="label" tone="secondary" style={styles.title}>
         {title}
       </Text>
     </View>

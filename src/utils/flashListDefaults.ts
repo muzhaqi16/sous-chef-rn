@@ -11,7 +11,7 @@ type FlashListPerformanceProps = Pick<
 // avoid double-fetches on rubber-banding scrolls. The "analyticsHeavy" preset
 // uses 0.8 for screens whose next-page render is expensive (Skia charts) and
 // benefits from earlier prefetch.
-export const FLASHLIST_DEFAULTS: Record<string, FlashListPerformanceProps> = {
+export const FLASHLIST_DEFAULTS = {
   fullScreen: {
     drawDistance: Math.round(Dimensions.get('window').height * 2),
     maxItemsInRecyclePool: 15,
@@ -27,7 +27,7 @@ export const FLASHLIST_DEFAULTS: Record<string, FlashListPerformanceProps> = {
     maxItemsInRecyclePool: 15,
     onEndReachedThreshold: 0.8,
   },
-};
+} satisfies Record<string, FlashListPerformanceProps>;
 
 // Sticky header sentinel: prepended to a FlashList's data so
 // stickyHeaderIndices pins it natively (UI thread, no JS bridge). A screen's
@@ -50,7 +50,7 @@ export const isStickyHeaderSentinel = (
   typeof item === 'object' &&
   item !== null &&
   '__sentinel' in item &&
-  (item as StickyHeaderSentinel).__sentinel === 'stickyHeader';
+  item.__sentinel === 'stickyHeader';
 
 /** Stable stickyHeaderIndices array — data[0] is always the sticky sentinel. */
 export const STICKY_HEADER_INDICES = [0];

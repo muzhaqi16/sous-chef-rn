@@ -45,6 +45,7 @@ fragment useRecipeData_recipe on Recipe {
   createdBy {
     id
     email
+    displayName
   }
   ingredientsConnection {
     edges {
@@ -62,6 +63,16 @@ fragment useRecipeData_recipe on Recipe {
           id
           name
           symbol
+        }
+        # Viewer-scoped: the server converts to the reader's preferred system.
+        # Null when the ingredient names no unit, or no seeded unit of that
+        # system shares its dimension — the stored pair above is the fallback.
+        convertedQuantity {
+          value
+          unit {
+            id
+            symbol
+          }
         }
         image
         isOptional

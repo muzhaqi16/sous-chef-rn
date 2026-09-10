@@ -29,7 +29,7 @@ export function useDataReferenceTracker<T>(
     }
 
     if (__DEV__) {
-      console.log(`📊 [${labelRef.current}] data reference changed`);
+      console.debug(`📊 [${labelRef.current}] data reference changed`);
     }
     onChangeRef.current?.();
   }, [value]);

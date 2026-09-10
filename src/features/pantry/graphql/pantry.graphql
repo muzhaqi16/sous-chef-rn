@@ -2,20 +2,6 @@
 # QUERIES
 # ============================================
 
-query GetPantries($homeId: ID!, $first: Int, $after: String) {
-  pantries(homeId: $homeId, first: $first, after: $after) {
-    edges {
-      node {
-        id
-        homeId
-        name
-        isDefault
-        createdAt
-      }
-    }
-  }
-}
-
 query GetPantry(
   $id: ID!
   $itemsCursor: String
@@ -52,7 +38,12 @@ query GetPantry(
         itemCount
       }
     }
-    itemsConnection(first: $itemsFirst, after: $itemsCursor, filters: $itemsFilter, orderBy: $itemsOrderBy) {
+    itemsConnection(
+      first: $itemsFirst
+      after: $itemsCursor
+      filters: $itemsFilter
+      orderBy: $itemsOrderBy
+    ) {
       edges {
         node {
           # Direct selections cover what the screen-level hooks + filtered
@@ -67,6 +58,10 @@ query GetPantry(
           # cache read and render blank.
           id
           itemName
+          # The CATALOG item's id, which is what a shopping-list add sends —
+          # the row's own `id` is the PantryItem and the server cannot resolve
+          # it as an Item.
+          itemId
           quantity
           expiresAt
           storageState
@@ -436,11 +431,13 @@ query ConsumptionUnitsForItem(
   $itemId: ID!
   $trackingUnitId: ID!
   $netWeightUnitId: ID
+  $portionUnitId: ID
 ) {
   consumptionUnitsForItem(
     itemId: $itemId
     trackingUnitId: $trackingUnitId
     netWeightUnitId: $netWeightUnitId
+    portionUnitId: $portionUnitId
   ) {
     unit {
       id
@@ -450,6 +447,7 @@ query ConsumptionUnitsForItem(
       unitRole
       commonFractions
       displayAsFraction
+      hasStandardCountFactor
     }
     rank
     source
@@ -469,6 +467,7 @@ query RestockUnitsForItem($pantryItemId: ID!) {
       unitRole
       commonFractions
       displayAsFraction
+      hasStandardCountFactor
     }
     rank
     source
@@ -615,12 +614,22 @@ mutation CreatePantryItem($input: CreatePantryItemInput!) {
         lastUsedAt
         netWeight
         remainingNetWeight
+        portionUnitId
+        portionUnit {
+          id
+          name
+          symbol
+        }
+        remainingPortions
         activeBatchCount
         earliestBatchExpiration
         item {
           id
           imageUrl
-          images { url kind }
+          images {
+            url
+            kind
+          }
         }
         # type + displayAsFraction for the same reason: PantryActionModal's
         # fragment (spread into GetPantry's nodes) reads them off `unit`, so a
@@ -802,6 +811,7 @@ mutation CreatePantryItemUsage($input: CreatePantryItemUsageInput!) {
         usedBy {
           id
           email
+          displayName
         }
       }
     }
@@ -908,42 +918,6 @@ mutation AdjustPantryItemWeight($input: AdjustPantryItemWeightInput!) {
       pantryItem {
         id
         ...useCorrectPantryItemWeight_pantryItem
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation AddLowStockItemsToShoppingList($input: AddLowStockItemsToShoppingListInput!) {
-  addLowStockItemsToShoppingList(input: $input) {
-    __typename
-    ... on AddLowStockItemsToShoppingListPayload {
-      addedItems {
-        pantryItemId
-        shoppingListItemId
-        itemName
-        quantity
-      }
-      skippedItems {
-        pantryItemId
-        itemName
-        reason
-      }
-      summary {
-        succeeded
-        skipped
-        total
-        failed
       }
     }
     ... on Error {
@@ -1089,7 +1063,9 @@ mutation WastePantryItemBatch($input: WastePantryItemBatchInput!) {
   }
 }
 
-mutation ConvertExpiredBatchesToWaste($input: ConvertExpiredBatchesToWasteInput!) {
+mutation ConvertExpiredBatchesToWaste(
+  $input: ConvertExpiredBatchesToWasteInput!
+) {
   convertExpiredBatchesToWaste(input: $input) {
     __typename
     ... on ConvertExpiredBatchesToWastePayload {
@@ -1145,6 +1121,9 @@ mutation SyncPantryItem($input: SyncPantryItemInput!) {
     ... on ValidationError {
       field
     }
+    ... on NotFoundError {
+      resource
+    }
   }
 }
 
@@ -1172,6 +1151,9 @@ mutation SyncDeletePantryItem($input: SyncDeletePantryItemInput!) {
     }
     ... on ValidationError {
       field
+    }
+    ... on NotFoundError {
+      resource
     }
   }
 }
@@ -1239,11 +1221,7 @@ query GetPantryItemUsageHistory(
     # Newest first, stated rather than assumed: the summary panel labels
     # `usageRecords[0]` the most recent entry, and a default order is the
     # server's to change.
-    usageRecords(
-      first: $first
-      after: $after
-      orderBy: { usedAt: DESC }
-    ) {
+    usageRecords(first: $first, after: $after, orderBy: { usedAt: DESC }) {
       totalCount
       pageInfo {
         hasNextPage

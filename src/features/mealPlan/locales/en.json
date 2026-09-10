@@ -16,7 +16,9 @@
     "nameRequiredMessage": "Please enter a name for your meal plan.",
     "startDateRequiredTitle": "Start Date Required",
     "startDateRequiredMessage": "Please select a start date.",
-    "failedToCreate": "Failed to create meal plan."
+    "failedToCreate": "Failed to create meal plan.",
+    "needsThePlan": "Open the plan first so its meals are available.",
+    "needsTheTemplate": "Open the template first so its meals are available."
   },
   "addMealSheet": {
     "searchPlaceholder": "Search recipes or add a custom meal...",
@@ -77,12 +79,14 @@
   "duplicatePlan": {
     "duplicating": "Duplicating...",
     "duplicate": "Duplicate",
-    "copySuffix": "{{name}} (Copy)",
     "currentPlanLabel": "Current Plan",
     "newNameLabel": "New Plan Name",
     "newNamePlaceholder": "Enter plan name",
     "infoText": "All meals will be copied to the new date range with the same structure.",
-    "endDateSubtext": "to {{date}}"
+    "endDateSubtext": "to {{date}}",
+    "durationDiffers": "Pick a range the same length as the original.",
+    "someSkipped_one": "{{count}} meal was left out because it names neither a recipe nor itself.",
+    "someSkipped_other": "{{count}} meals were left out because they name neither a recipe nor themselves."
   },
   "generateShoppingList": {
     "generating": "Generating...",
@@ -98,12 +102,17 @@
     "selectListLabel": "Select a list",
     "noLists": "No shopping lists found",
     "generatingMessage": "Generating shopping list...",
-    "itemsCount": "{{count}} items",
     "readyNothingToAdd": "\"{{name}}\" is ready — nothing to add.",
     "createdSuccess_one": "Shopping list \"{{name}}\" created with {{count}} item{{shared}}",
     "createdSuccess_other": "Shopping list \"{{name}}\" created with {{count}} items{{shared}}",
     "sharedSuffix": " (shared with {{homeName}})",
-    "generateFailed": "Failed to generate shopping list"
+    "generateFailed": "Failed to generate shopping list",
+    "planNotLoaded": "Open the meal plan first so its recipes are available.",
+    "nothingToAdd": "Nothing to add — this plan has no recipe ingredients yet.",
+    "defaultName": "Shopping list for {{name}}",
+    "someSkipped_one": "{{count}} entry was left out because its recipe is not downloaded.",
+    "someSkipped_other": "{{count}} entries were left out because their recipes are not downloaded.",
+    "pantryNotChecked": "Your pantry was not deducted — open the pantry once so it is available."
   },
   "saveAsTemplate": {
     "sharedWithHome": "This template will be shared with {{name}}",
@@ -128,7 +137,6 @@
   },
   "templateCard": {
     "usedTimes": "Used {{count}}x",
-    "durationDays": "{{count}} days",
     "servings": "{{count}} servings"
   },
   "templatePreview": {

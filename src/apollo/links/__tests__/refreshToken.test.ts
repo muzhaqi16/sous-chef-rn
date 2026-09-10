@@ -47,12 +47,12 @@ import {
   clearRefreshState,
   attemptTokenRefresh,
   proactiveTokenRefresh,
-  registerApolloClient,
 } from '../refreshToken';
 import { useStore } from '#store';
 import { client } from '../../client';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { reconnectWebSocket } from '../wsLink';
+import { registerApolloClient } from '#/apollo/clientRegistry';
 
 const mockedJwtDecode = jwtDecode as jest.MockedFunction<typeof jwtDecode>;
 const mockedClient = client as jest.Mocked<typeof client>;

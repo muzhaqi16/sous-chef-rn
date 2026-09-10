@@ -24,6 +24,7 @@ Developer documentation for the Sous Chef React Native app. For what the app
 | [Apollo client patterns](apollo-client-patterns.md) | The comprehensive Apollo guide: cache update patterns, optimistic responses, fragment composition and masking, error handling and version conflicts, subscriptions, fetch-policy decision trees. |
 | [Local-first architecture](local-first-architecture.md) | How writes apply instantly and offline — the mutation queue, replay on reconnect, conflict handling, and what "complete optimistic entity" means in practice. |
 | [Session & transport](session-and-transport.md) | How a session ends, how tokens rotate on both transports, and how WebSocket close codes are read — the verdict table and the mechanisms behind it. |
+| [Subscriptions — echo, budget, device identity](subscriptions-echo-and-budget.md) | Why echo suppression keys on the DEVICE and not the user, the subscription budget, and where device identity comes from. |
 
 ## Features
 
@@ -31,6 +32,12 @@ Developer documentation for the Sous Chef React Native app. For what the app
 | --- | --- |
 | [Meal planning](meal-planning.md) | Domain model for plans, meal types, templates, and shopping-list generation. |
 | [Push notifications](push-notifications.md) | Delivery architecture, APNs/FCM credentials, and how notification taps route into the app. |
+
+## Language
+
+| Document | What's in it |
+| --- | --- |
+| [i18n architecture](i18n-architecture.md) | How translation is wired, why five hardcoded-string sweeps each found more, and what each guard can and cannot prove. |
 
 ## UI & performance
 
@@ -56,6 +63,7 @@ Developer documentation for the Sous Chef React Native app. For what the app
 | [CI/CD](CI_CD.md) | Pipelines, triggers, and the release flow. |
 | [GitHub Actions environments](github-actions-environments.md) | The `dev` / `stg` / `prod` environments and their secrets. |
 | [Telemetry setup](telemetry-setup.md) | OTLP metrics and logs, endpoints, and credentials. |
+| [Bundled credentials — decision record](bundled-credentials-decision.md) | Which credentials ship in the binary, why each is acceptable or accepted as a finding, and the test `check-bundled-secrets` applies. |
 
 ---
 

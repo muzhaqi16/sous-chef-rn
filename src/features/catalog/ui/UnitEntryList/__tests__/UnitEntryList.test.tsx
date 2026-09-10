@@ -6,7 +6,7 @@ jest.mock('#utils/iconUtils', () => ({
   Icon: 'Icon',
 }));
 
-jest.mock('#/components/molecules/FormInput', () => {
+jest.mock('#components/atoms/FormInput', () => {
   const { View, Text, TextInput } = require('react-native');
   return {
     FormInput: ({
@@ -60,7 +60,7 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
   };
 });
 
-jest.mock('#components/atoms/Button', () => {
+jest.mock('#components/molecules/Button', () => {
   const { Pressable, Text } = require('react-native');
   return {
     Button: ({

@@ -4,7 +4,7 @@ import { screen } from '@testing-library/react-native';
 import { renderWithApollo as render } from '#/test-utils/apolloMockProvider';
 import { MealPlanSettingsSheet } from '../MealPlanSettingsSheet';
 import type { MealPlanSettingsSheet_MealPlanFragment } from '../MealPlanSettingsSheet.generated';
-import type { MealPlanPermissions } from '#utils/permissions/mealPlanPermissions';
+import type { MealPlanPermissions } from '#features/mealPlan/utils/mealPlanPermissions';
 
 type MealPlanSettingsSheetProps = React.ComponentProps<
   typeof MealPlanSettingsSheet
@@ -23,7 +23,7 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#components/atoms/BottomSheetHeader', () => ({
+jest.mock('#components/molecules/BottomSheetHeader', () => ({
   BottomSheetHeader: ({
     title,
     onCancel,

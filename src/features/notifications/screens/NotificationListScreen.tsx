@@ -1,11 +1,11 @@
 import React, { useRef, useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { View, SectionList } from 'react-native';
+import { View } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
 import { NotificationItem } from '#features/notifications/components/NotificationItem';
 import { EmptyNotifications } from '#features/notifications/components/EmptyNotifications';
-import { DataStateView } from '#components/molecules/DataStateView';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 import { NotificationHeader } from '#features/notifications/components/NotificationHeader';
 import { NotificationGroupHeader } from '#features/notifications/components/NotificationGroupHeader';
@@ -15,13 +15,16 @@ import { useNotifications } from '#features/notifications/hooks/useNotifications
 import { useNotificationHistory } from '#features/notifications/hooks/useNotificationHistory';
 import type { DisplayNotification as NotificationType } from '#features/notifications/utils/toDisplayNotification';
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
-import { Header } from '#components/molecules/Header';
+import { Header } from '#components/organisms/Header';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { NotificationActionHandler } from '#features/notifications/components/NotificationActionHandler';
 import {
   groupNotificationsByDate,
-  createSectionListData,
+  createNotificationFeedRows,
+  type NotificationFeedRow,
 } from '#features/notifications/utils/notificationGrouping';
+import { FlashList } from '@shopify/flash-list';
+import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 export const NotificationListScreen: React.FC = () => {
@@ -110,12 +113,13 @@ export const NotificationListScreen: React.FC = () => {
     }
   };
 
-  // Prepare sections for SectionList using utility
-  const sections = createSectionListData(filteredGroups);
+  // Headers inlined into one array; FlashList tells the two apart by item type.
+  const rows = createNotificationFeedRows(filteredGroups);
 
-  const hasNotifications = sections.length > 0;
+  const hasNotifications = rows.length > 0;
 
-  const keyExtractor = (item: NotificationType) => item.id;
+  const keyExtractor = (row: NotificationFeedRow) =>
+    row.kind === 'header' ? `header:${row.title}` : row.notification.id;
 
   const renderHeader = () => (
     <Header
@@ -125,6 +129,7 @@ export const NotificationListScreen: React.FC = () => {
       rightActions={[
         {
           icon: 'settings',
+          accessibilityLabel: t('a11y.notificationSettings'),
           onPress: toNotificationSettings,
         },
       ]}
@@ -135,22 +140,21 @@ export const NotificationListScreen: React.FC = () => {
     ((notification: NotificationType) => void) | null
   >(null);
 
-  const renderNotificationItem = ({ item }: { item: NotificationType }) => (
-    <NotificationItem
-      notification={item}
-      onPress={notification =>
-        handleNotificationPress(
-          notification,
-          notificationActionRef.current ?? undefined,
-        )
-      }
-      onDismiss={handleRemoveNotification}
-    />
-  );
-
-  const renderSectionHeader = ({ section }: { section: { title: string } }) => (
-    <NotificationGroupHeader title={section.title} />
-  );
+  const renderRow = ({ item }: { item: NotificationFeedRow }) =>
+    item.kind === 'header' ? (
+      <NotificationGroupHeader title={item.title} />
+    ) : (
+      <NotificationItem
+        notification={item.notification}
+        onPress={notification =>
+          handleNotificationPress(
+            notification,
+            notificationActionRef.current ?? undefined,
+          )
+        }
+        onDismiss={handleRemoveNotification}
+      />
+    );
 
   return (
     <NotificationActionHandler>
@@ -179,11 +183,12 @@ export const NotificationListScreen: React.FC = () => {
               hasNotifications={hasNotifications}
             />
 
-            <SectionList
-              sections={sections}
+            <FlashList
+              data={rows}
               keyExtractor={keyExtractor}
-              renderItem={renderNotificationItem}
-              renderSectionHeader={renderSectionHeader}
+              renderItem={renderRow}
+              getItemType={row => row.kind}
+              renderScrollComponent={SwipeAwareScrollComponent}
               ListEmptyComponent={
                 // The feed renders from the store, so an empty store looks
                 // exactly like a failed fetch unless the query is asked — and
@@ -206,7 +211,7 @@ export const NotificationListScreen: React.FC = () => {
               onEndReached={loadMore}
               onEndReachedThreshold={0.4}
               contentContainerStyle={
-                !hasNotifications ? styles.emptyContainer : undefined
+                !hasNotifications ? styles.emptyInset : undefined
               }
             />
           </View>
@@ -221,7 +226,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  emptyContainer: {
+  emptyInset: {
     flex: 1,
   },
   footerLoader: {

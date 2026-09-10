@@ -139,7 +139,7 @@ describe('i18n keys referenced in source', () => {
     for (const { file, text } of sources) {
       for (const match of text.matchAll(pattern)) {
         const key = match[1] ?? match[2];
-        if (!claims(key) || resolves(key)) continue;
+        if (!claims(key!) || resolves(key!)) continue;
         const line = text.slice(0, match.index).split('\n').length;
         missing.push(`${path.relative(SRC, file)}:${line} -> ${key}`);
       }

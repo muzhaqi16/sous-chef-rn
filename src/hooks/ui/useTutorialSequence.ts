@@ -1,10 +1,10 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { storage } from '#/storage/mmkv';
-import { useShowTutorials } from '#hooks/settings/useShowTutorials';
+import { useShowTutorials } from '#store/useAppStore';
 import { useUserId } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 import { hasFeatureHintBeenShown } from '#/hooks/useFeatureHint';
+import { storeApi } from '#store';
 
 // Same prefix used by useFeatureHint — keeps storage compatible with
 // resetAllFeatureHints() and hasFeatureHintBeenShown(). Per-account scoping
@@ -133,9 +133,11 @@ export const useTutorialSequence = ({
   }, [userId]);
 
   const advance = () => {
-    if (activeStepIndex === -1) return;
     const step = stepsRef.current[activeStepIndex];
-    storage.set(buildStorageKey(userIdRef.current, step.featureId), true);
+    if (!step) return;
+    storeApi
+      .getState()
+      .markFeatureHintShown(buildStorageKey(userIdRef.current, step.featureId));
     setGeneration(g => g + 1);
     setIsTransitioning(true);
     if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
@@ -146,15 +148,21 @@ export const useTutorialSequence = ({
   };
 
   const advanceInPlace = () => {
-    if (activeStepIndex === -1) return;
     const step = stepsRef.current[activeStepIndex];
-    storage.set(buildStorageKey(userIdRef.current, step.featureId), true);
+    if (!step) return;
+    storeApi
+      .getState()
+      .markFeatureHintShown(buildStorageKey(userIdRef.current, step.featureId));
     setGeneration(g => g + 1);
   };
 
   const skipAll = () => {
     for (const step of stepsRef.current) {
-      storage.set(buildStorageKey(userIdRef.current, step.featureId), true);
+      storeApi
+        .getState()
+        .markFeatureHintShown(
+          buildStorageKey(userIdRef.current, step.featureId),
+        );
     }
     setGeneration(g => g + 1);
   };
@@ -167,12 +175,13 @@ export const useTutorialSequence = ({
     !isTransitioning &&
     activeStepIndex !== -1;
 
+  const activeStep = steps[activeStepIndex];
   const currentStep: TutorialStepConfig | null =
-    isActive && activeStepIndex !== -1
+    isActive && activeStep
       ? {
-          targetRect: targetRects[steps[activeStepIndex].rectKey]!,
-          title: steps[activeStepIndex].title,
-          subtitle: steps[activeStepIndex].subtitle,
+          targetRect: targetRects[activeStep.rectKey]!,
+          title: activeStep.title,
+          subtitle: activeStep.subtitle,
           stepIndex: activeStepIndex,
           totalSteps: steps.length,
         }

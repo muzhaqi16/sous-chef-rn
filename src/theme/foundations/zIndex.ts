@@ -5,6 +5,12 @@
 export const zIndex = {
   hide: -1,
   base: 0,
+  // Ordering WITHIN one parent. RN `zIndex` orders siblings only, so a row that
+  // must cover the one after it needs a step of its own rather than a number
+  // chosen against layers it cannot see. A chain of form rows takes
+  // `DropdownStack`, which computes the descent.
+  raised: 1,
+  elevated: 2,
   dropdown: 100,
   sticky: 200,
   fixed: 300,

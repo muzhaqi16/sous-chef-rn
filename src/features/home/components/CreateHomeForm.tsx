@@ -2,9 +2,9 @@ import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { BaseInput } from '#/components/atoms/BaseInput/BaseInput';
-import { Button } from '#components/atoms/Button';
-import { FormCheckbox } from '#/components/molecules/FormCheckbox';
+import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
+import { Button } from '#components/molecules/Button';
+import { FormCheckbox } from '#components/molecules/FormCheckbox';
 
 interface CreateHomeFormProps {
   isVisible: boolean;

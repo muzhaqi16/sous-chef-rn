@@ -13,16 +13,35 @@ import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 // `AUTH_ACCOUNT_LOCKED` and `AUTH_EMAIL_NOT_VERIFIED` are in NO list below, on
 // purpose: the first is a self-clearing window, the second leaves the token
 // valid, so neither may end a session or spend a refresh.
-const DEAD_CREDENTIAL_CODES: string[] = [
+export const DEAD_ACCOUNT_CREDENTIAL_CODES: string[] = [
   ErrorCode.AuthCredentialsInvalid,
   ErrorCode.AuthAccountSuspended,
 ];
 
+// The stored biometric secret is permanently useless. Derived by SUBTRACTION so
+// a code added above reaches here unless it is deliberately removed.
+// `AUTH_CREDENTIALS_INVALID` is the one removed: `exchangeDeviceCredential`
+// names `AUTH_DEVICE_CREDENTIAL_INVALID` as its single clear-the-slot signal.
+// The failed-attempt lockout is `AUTH_ACCOUNT_LOCKED`, and a rate limit is a
+// top-level `OPERATION_RATE_LIMITED` that cannot populate this enum at all.
+export const CREDENTIAL_KEPT_ON_CODES: string[] = [
+  ErrorCode.AuthCredentialsInvalid,
+];
+
+const DEAD_CREDENTIAL_CODES: string[] = [
+  ...DEAD_ACCOUNT_CREDENTIAL_CODES.filter(
+    code => !CREDENTIAL_KEPT_ON_CODES.includes(code),
+  ),
+  ErrorCode.AuthDeviceCredentialInvalid,
+];
+
 // Plus the token-side refusals: the refresh token cannot be exchanged now or
 // later. AUTH_REFRESH_TOKEN_SUPERSEDED is pointedly ABSENT — same failed
-// exchange, living session; listing it turns a lost race into a sign-out.
+// exchange, living session; listing it turns a lost race into a sign-out. The
+// device credential is absent for the same shape of reason: it is exchanged
+// only when there is no session, so it can end none.
 const SESSION_ENDING_CODES: string[] = [
-  ...DEAD_CREDENTIAL_CODES,
+  ...DEAD_ACCOUNT_CREDENTIAL_CODES,
   ErrorCode.AuthRefreshTokenInvalid,
   ErrorCode.AuthTokenExpired,
   ErrorCode.AuthTokenMissing,

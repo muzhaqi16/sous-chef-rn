@@ -1,4 +1,18 @@
 # ============================================
+# QUERIES
+# ============================================
+
+# Resolves the server row a device identifier is filed under. Used to retire the
+# row a superseded identifier registered, and to reach this device's row when a
+# session ends before registration completed.
+query DeviceByDeviceId($deviceId: String!) {
+  deviceByDeviceId(deviceId: $deviceId) {
+    id
+    deviceId
+  }
+}
+
+# ============================================
 # MUTATIONS
 # ============================================
 
@@ -43,5 +57,3 @@ mutation UpdateDevice($input: UpdateDeviceInput!) {
 # ============================================
 # SUBSCRIPTIONS
 # ============================================
-
-

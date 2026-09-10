@@ -87,15 +87,15 @@ describe('pantry sticky tabs are decoupled from renderItem', () => {
   it('captures FlashList props at all, so the checks below are not vacuous', () => {
     renderWithApollo(<PantryContent {...baseProps} />);
     expect(flashListProps.length).toBeGreaterThan(0);
-    expect(lastProps().renderItem).toEqual(expect.any(Function));
+    expect(lastProps()!.renderItem).toEqual(expect.any(Function));
   });
 
   it('keeps the same renderItem identity across a filter change', () => {
     const { rerender } = renderWithApollo(<PantryContent {...baseProps} />);
-    const before = lastProps().renderItem;
+    const before = lastProps()!.renderItem;
 
     rerender(<PantryContent {...baseProps} locationFilter="fridge" />);
-    const after = lastProps().renderItem;
+    const after = lastProps()!.renderItem;
 
     // Module scope, so this holds by construction — and it is exactly what an
     // inline renderer closing over `locationFilter` would break.
@@ -104,11 +104,11 @@ describe('pantry sticky tabs are decoupled from renderItem', () => {
 
   it('keeps the same extraData across a filter change', () => {
     const { rerender } = renderWithApollo(<PantryContent {...baseProps} />);
-    const before = lastProps().extraData;
+    const before = lastProps()!.extraData;
 
     rerender(<PantryContent {...baseProps} locationFilter="fridge" />);
 
-    expect(lastProps().extraData).toBe(before);
+    expect(lastProps()!.extraData).toBe(before);
   });
 
   it('still carries the sort in extraData, which is a real invalidation signal', () => {
@@ -126,7 +126,7 @@ describe('pantry sticky tabs are decoupled from renderItem', () => {
       />,
     );
 
-    const extraData = String(lastProps().extraData);
+    const extraData = String(lastProps()!.extraData);
     expect(extraData).toContain(PantrySortOption.NAME);
     // …and the filter is not in it. `locationFilter` is 'all' here, which is
     // distinctive enough that its absence is meaningful.

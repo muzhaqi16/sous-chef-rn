@@ -25,13 +25,13 @@ export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
     <View style={styles.container}>
       <AppPressable style={styles.button} onPress={onMarkAllRead}>
         <Icon name="checkmark-done" size={20} tone="primary" />
-        <Text size="sm" weight="medium" style={styles.buttonText}>
+        <Text role="label" style={styles.buttonText}>
           {t('notifications.markAllRead')}
         </Text>
       </AppPressable>
       <AppPressable style={styles.button} onPress={onClearRead}>
         <Icon name="list-outline" size={20} tone="primary" />
-        <Text size="sm" weight="medium" style={styles.buttonText}>
+        <Text role="label" style={styles.buttonText}>
           {t('labels.clearRead')}
         </Text>
       </AppPressable>
@@ -45,7 +45,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   button: {

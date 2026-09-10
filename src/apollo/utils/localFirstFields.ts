@@ -46,7 +46,7 @@ function selectionFor(value: unknown): string {
       .map(entry => Object.keys(entry))
       .reduce((acc, keys) => acc.filter(key => keys.includes(key)));
     return selectionFor(
-      Object.fromEntries(shared.map(k => [k, entities[0][k]])),
+      Object.fromEntries(shared.map(k => [k, entities[0]?.[k]])),
     );
   }
   if (!isEntityLike(value)) return '';

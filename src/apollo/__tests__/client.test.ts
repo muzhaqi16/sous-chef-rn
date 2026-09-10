@@ -40,6 +40,7 @@ jest.mock('../offline/ApolloCachePersistence', () => ({
     clear: mockClear,
     markDirty: mockMarkDirty,
   },
+  cancelCachePersistence: () => mockCancel(),
 }));
 
 jest.mock('../links/tokenScheduler', () => ({
@@ -131,7 +132,9 @@ describe('Apollo client', () => {
 
   describe('cancelCachePersistence', () => {
     it('cancels pending persistence', () => {
-      const { cancelCachePersistence } = require('../client');
+      const {
+        cancelCachePersistence,
+      } = require('../offline/ApolloCachePersistence');
       cancelCachePersistence();
       expect(mockCancel).toHaveBeenCalled();
     });
@@ -139,7 +142,7 @@ describe('Apollo client', () => {
 
   it('client has correct default options', () => {
     const { client } = require('../client');
-    expect(client.defaultOptions.query?.fetchPolicy).toBe('network-only');
+    expect(client.defaultOptions.query?.fetchPolicy).toBe('cache-first');
     expect(client.defaultOptions.query?.errorPolicy).toBe('all');
     expect(client.defaultOptions.mutate?.errorPolicy).toBe('all');
     expect(client.defaultOptions.watchQuery?.fetchPolicy).toBe(

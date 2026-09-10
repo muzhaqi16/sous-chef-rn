@@ -72,7 +72,9 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
           onStartShouldSetResponder={() => true}
           testID="pantry-sort-modal"
         >
-          <Text style={styles.sortModalTitle}>{t('pantrySort.title')}</Text>
+          <Text role="bodyStrong" style={styles.sortModalTitle}>
+            {t('pantrySort.title')}
+          </Text>
           {SORT_OPTIONS.map(option => (
             <AppPressable
               key={option.key}
@@ -92,6 +94,7 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
                 tone="primary"
               />
               <Text
+                role="bodyStrong"
                 style={[
                   styles.sortOptionLabel,
                   sortOption === option.key && styles.sortOptionLabelActive,
@@ -131,22 +134,12 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
-    padding: theme.spacing['5'],
+    padding: theme.spacing.mdPlus,
     width: '80%',
     maxWidth: theme.sizes.modal.sm,
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: theme.spacing.xs,
-        blurRadius: theme.spacing['3'],
-        spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.15)',
-      },
-    ],
+    ...theme.shadows.lg,
   },
   sortModalTitle: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
     textAlign: 'center',
@@ -154,8 +147,8 @@ const styles = StyleSheet.create(theme => ({
   sortOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing['3'] + 2,
-    paddingHorizontal: theme.spacing['3'],
+    paddingVertical: theme.spacing.basePlus,
+    paddingHorizontal: theme.spacing.base,
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
     marginBottom: theme.spacing.sm,
@@ -166,14 +159,9 @@ const styles = StyleSheet.create(theme => ({
   },
   sortOptionLabel: {
     flex: 1,
-    fontSize: theme.typography.fontSize.sm + 1,
     color: theme.colors.textSecondary,
   },
   sortOptionLabelActive: {
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

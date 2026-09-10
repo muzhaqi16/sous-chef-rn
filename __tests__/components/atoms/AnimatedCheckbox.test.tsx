@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render, userEvent } from '@testing-library/react-native';
-import { AnimatedCheckbox } from '../../../src/components/atoms/AnimatedCheckbox';
+import { AnimatedCheckbox } from '#features/shoppingList/components/AnimatedCheckbox';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');

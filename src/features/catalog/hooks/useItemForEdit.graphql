@@ -24,6 +24,7 @@ fragment useItemForEdit_item on Item {
   shelfLifeDays
   shelfLifeOpenedDays
   netWeight
+  netWeightKind
   baseDimension
   imageUrl
   # The two write paths, which are mutually exclusive and each hard-fail when

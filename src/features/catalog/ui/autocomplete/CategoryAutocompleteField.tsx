@@ -5,8 +5,8 @@ import {
   CategoryType,
 } from '#/graphql/generated/schemaTypes';
 import { useCategoryAutocomplete } from '#features/catalog/hooks/useCategoryAutocomplete';
-import { GenericAutocompleteField } from '#components/molecules/AutocompleteField/GenericAutocompleteField';
-import { AutocompleteRow } from '#components/molecules/AutocompleteField/AutocompleteRow';
+import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
+import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
 
 interface CategoryAutocompleteFieldProps {
   variant: 'inline' | 'modal';
@@ -68,7 +68,9 @@ export const CategoryAutocompleteField: React.FC<
       modalTitle={t('autocomplete.selectCategory')}
       modalSearchPlaceholder={t('autocomplete.categorySearch')}
       modalEmptyText={t('autocomplete.noCategories')}
-      modalEmptySubtext={`Continue typing to use "${category.searchTerm}" as a custom category`}
+      modalEmptySubtext={t('autocomplete.typeMoreToAddCategory', {
+        term: category.searchTerm,
+      })}
       onSearchChange={category.handleSearchTermChange}
     />
   );

@@ -12,26 +12,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  containerPadded: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    padding: theme.spacing.md,
-  },
-  containerCentered: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
 
-  surface: {
-    backgroundColor: theme.colors.surface,
-  },
-  surfaceRounded: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-  },
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
@@ -55,10 +36,6 @@ export const commonStyles = StyleSheet.create(theme => ({
       },
     ],
   },
-  bottomBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
 
   row: {
     flexDirection: 'row',
@@ -69,61 +46,16 @@ export const commonStyles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  rowCenter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  column: {
-    flexDirection: 'column',
-  },
-  flex1: {
-    flex: 1,
-  },
   center: {
     justifyContent: 'center',
     alignItems: 'center',
-  },
-
-  paddingHorizontal: {
-    paddingHorizontal: theme.spacing.md,
-  },
-  paddingVertical: {
-    paddingVertical: theme.spacing.md,
-  },
-  padding: {
-    padding: theme.spacing.md,
-  },
-  paddingSmall: {
-    padding: theme.spacing.sm,
-  },
-  paddingLarge: {
-    padding: theme.spacing.lg,
-  },
-  marginBottom: {
-    marginBottom: theme.spacing.md,
-  },
-  marginBottomSmall: {
-    marginBottom: theme.spacing.sm,
-  },
-  marginBottomLarge: {
-    marginBottom: theme.spacing.lg,
-  },
-  gap: {
-    gap: theme.spacing.md,
-  },
-  gapSmall: {
-    gap: theme.spacing.sm,
-  },
-  gapLarge: {
-    gap: theme.spacing.lg,
   },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
     paddingVertical: {
       xs: theme.spacing.sm,
@@ -135,75 +67,29 @@ export const commonStyles = StyleSheet.create(theme => ({
       lg: theme.spacing.lg,
     },
   },
-  headerTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
-  headerAction: {
-    padding: theme.spacing.xs,
-  },
-  headerPlaceholder: {
-    width: 24,
-  },
 
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.divider,
-  },
-  dividerVertical: {
-    width: 1,
-    backgroundColor: theme.colors.divider,
-  },
-  absoluteFill: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: theme.colors.overlay,
-  },
   scrollContent: {
     flexGrow: 1,
   },
 
   input: {
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing['2.5'],
-    fontSize: theme.fonts.size.md,
+    paddingVertical: theme.spacing.smPlus,
+    ...theme.type.body,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.inputBackground,
-  },
-  inputError: {
-    borderColor: theme.colors.error,
-  },
-  inputFocused: {
-    borderColor: theme.colors.primary,
   },
   inputGroup: {
     marginBottom: theme.spacing.lg,
   },
   label: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.label,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
-  },
-  errorText: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.error,
-    marginTop: theme.spacing.xs,
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
   },
 
   button: {
@@ -226,15 +112,8 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
   buttonSecondary: {
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
-  },
-  buttonDanger: {
-    backgroundColor: theme.colors.error,
-  },
-  buttonText: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
   },
   buttonTextPrimary: {
     color: theme.colors.onPrimary,
@@ -242,23 +121,14 @@ export const commonStyles = StyleSheet.create(theme => ({
   buttonTextSecondary: {
     color: theme.colors.textPrimary,
   },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  iconButton: {
-    padding: theme.spacing.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
 
   settingsSection: {
     padding: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   settingsSectionTitle: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.bodyStrong,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
   },
@@ -266,8 +136,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
   },
   settingsLabel: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.fonts.weight.medium,
+    ...theme.type.label,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
@@ -275,68 +144,26 @@ export const commonStyles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
   },
   settingsRowInfo: {
     flex: 1,
-    marginRight: theme.spacing['3'],
+    marginRight: theme.spacing.base,
   },
   settingsRowLabel: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.medium,
+    ...theme.type.bodyStrong,
     color: theme.colors.textPrimary,
   },
   settingsRowDescription: {
-    fontSize: theme.typography.fontSize.sm,
+    ...theme.type.caption,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
 
-  listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  listItemContent: {
-    flex: 1,
-  },
-  listItemTitle: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  listItemSubtitle: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
-  },
-  listItemImageContainer: {
-    width: theme.sizes.listImage.width,
-    height: theme.sizes.listImage.height,
-    marginRight: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    ...theme.shadows.card,
-  },
-  listItemImage: {
-    width: theme.sizes.listImage.width,
-    height: theme.sizes.listImage.height,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    resizeMode: 'cover',
-  },
+  // The row's own `gap` spaces this from the text, so it carries no margin.
   listItemImageContainerCompact: {
     width: theme.sizes.itemCard.compact.image,
     height: theme.sizes.itemCard.compact.image,
-    marginRight: theme.spacing['3'],
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     overflow: 'hidden',
@@ -344,7 +171,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     // Hairline border + tinted fill, so an empty placeholder tile reads as a
     // deliberate thumbnail rather than a gap.
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.borderLight,
     backgroundColor: theme.colors.surfaceVariant,
     ...theme.shadows.sm,
@@ -356,30 +183,46 @@ export const commonStyles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     resizeMode: 'cover',
   },
+  // The list row, defined once for the four shells that compose one:
+  // `rowWrapper` is its place in the list, `rowSurface` the card, `rowContent`
+  // the slots inside it. Its text roles are `rowType` in `theme/foundations`.
+  // No horizontal inset: the list that renders the row owns the page gutter,
+  // so a row placing itself would be the second author of one edge.
+  rowWrapper: {
+    marginBottom: theme.layout.rowGap,
+  },
+  rowSurface: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.xl,
+    borderCurve: 'continuous',
+    // A status variant paints this border; the default row relies on the
+    // shadow alone and keeps a transparent one, so every row is the same
+    // height whether or not it carries a status.
+    borderWidth: theme.borderWidth.medium,
+    borderColor: 'transparent',
+    ...theme.shadows.card,
+  },
+  rowContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.layout.rowSlotGap,
+    padding: theme.layout.rowInset,
+    // `minHeight`, not a height: a two-line title grows rather than clips.
+    minHeight: theme.sizes.itemCard.compact.height,
+  },
+  rowTextGap: {
+    marginTop: theme.layout.rowTextGap,
+  },
+  // Rounds a press ripple to the row. It sits on the node INSIDE `rowSurface`,
+  // never on the surface itself, which would clip its own shadow away.
+  rowClip: {
+    overflow: 'hidden',
+    borderRadius: theme.radii.xl,
+    borderCurve: 'continuous',
+  },
+
   shadow: theme.shadows.card,
 
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: theme.spacing.xl,
-  },
-  emptyStateIcon: {
-    marginBottom: theme.spacing.md,
-  },
-  emptyStateTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-    textAlign: 'center',
-  },
-  emptyStateText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: theme.spacing.lg,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -388,32 +231,10 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
   loadingText: {
     marginTop: theme.spacing.md,
-    fontSize: theme.fonts.size.md,
+    ...theme.type.body,
     color: theme.colors.textSecondary,
   },
 
-  modalContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  modalTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    flex: 1,
-    textAlign: 'center',
-  },
-  modalContent: {
-    padding: theme.spacing.md,
-  },
   bottomSheetScrollView: {
     flex: 1,
   },
@@ -434,8 +255,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
   },
   bottomSheetItemName: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.heading,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
@@ -444,15 +264,14 @@ export const commonStyles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   bottomSheetItemLabel: {
-    fontSize: theme.fonts.size.base,
+    ...theme.type.body,
     color: theme.colors.textSecondary,
   },
   bottomSheetSection: {
     marginBottom: theme.spacing.md,
   },
   bottomSheetSectionLabel: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.label,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
@@ -463,7 +282,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
   },
   bottomSheetHelperText: {
-    fontSize: theme.fonts.size.sm,
+    ...theme.type.caption,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
@@ -482,7 +301,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
     gap: theme.spacing.xs,
@@ -492,12 +311,12 @@ export const commonStyles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surfaceVariant,
   },
   bottomSheetOptionText: {
-    fontSize: theme.fonts.size.sm,
+    ...theme.type.caption,
     color: theme.colors.textSecondary,
   },
   bottomSheetOptionTextSelected: {
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.bodyStrong,
   },
 
   badge: {
@@ -507,8 +326,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   badgeText: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.label,
     color: theme.colors.onPrimary,
   },
   chip: {
@@ -519,53 +337,27 @@ export const commonStyles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.sm,
   },
   chipText: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
+    ...theme.type.label,
     color: theme.colors.chipText,
   },
-  chipSelected: {
-    backgroundColor: theme.colors.chipSelectedBackground,
-  },
-  chipTextSelected: {
-    color: theme.colors.chipSelectedText,
-  },
   body: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.regular,
+    ...theme.type.body,
     color: theme.colors.textPrimary,
   },
   bodySecondary: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.regular,
+    ...theme.type.body,
     color: theme.colors.textSecondary,
   },
   title: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
+    ...theme.type.heading,
     color: theme.colors.textPrimary,
   },
   subtitle: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
+    ...theme.type.bodyStrong,
     color: theme.colors.textSecondary,
   },
   caption: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.regular,
+    ...theme.type.caption,
     color: theme.colors.textSecondary,
-  },
-  link: {
-    color: theme.colors.primary,
-    textDecorationLine: 'underline',
-  },
-
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
-  disabled: {
-    opacity: theme.opacity.disabled,
-  },
-  cardPressed: {
-    opacity: theme.opacity.cardPressed,
   },
 }));

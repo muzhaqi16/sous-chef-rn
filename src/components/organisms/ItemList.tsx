@@ -15,21 +15,22 @@ import {
   type ListRenderItemInfo,
 } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
-import type { SwipeAction } from '#components/molecules/SwipeableItem/types';
+import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { EmptyState } from '#components/atoms/EmptyState';
+import { EmptyState } from '#components/molecules/EmptyState';
 import { ItemCard } from './ItemCard';
 import { IconName } from '#/utils/iconUtils';
-import { getTabBarBottomPadding } from '#constants/layout';
-import type { SwipeableRef } from '#components/molecules/SwipeableItem/types';
+import { getScrollClearancePadding } from '#constants/layout';
+import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { CachedImage, preloadImages } from '#components/atoms/CachedImage';
 import { commonStyles } from '#/styles/commonStyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
-import { resolveRowActions } from '#components/molecules/SwipeableItem/commonActions';
+import { resolveRowActions } from '#components/organisms/SwipeableItem/commonActions';
 import {
   ItemSwipeActionsProvider,
   useItemSwipeActions,
@@ -191,6 +192,7 @@ export const ItemList: React.FC<ItemListProps> = ({
     // `items` reaching this point means the caller supplied no `emptyState`,
     // not that the data has settled, so it does not count as content.
     hasRealContent: items.length > 0,
+    rowCount: items.length,
   });
   useDataReferenceTracker(
     items,
@@ -220,8 +222,11 @@ export const ItemList: React.FC<ItemListProps> = ({
 
   // Dynamic content style with proper bottom padding for tab bar
   const contentStyle = {
-    paddingBottom: getTabBarBottomPadding(safeBottom),
+    paddingBottom: getScrollClearancePadding(safeBottom),
   };
+
+  // `flexGrow` lets the empty state fill the viewport rather than sit at the top.
+  const emptyContentStyle = { ...contentStyle, flexGrow: 1 };
 
   // Through the helper, never inline: an `await onRefresh()` between two
   // `setRefreshing` calls strands the spinner when the refresh rejects, which
@@ -260,10 +265,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   if (items.length === 0 && emptyState) {
     return (
       <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          paddingBottom: contentStyle.paddingBottom,
-        }}
+        contentContainerStyle={[styles.listContent, emptyContentStyle]}
         onScroll={onScroll}
         onScrollBeginDrag={onScrollBeginDrag}
         onScrollEndDrag={onScrollEndDrag}
@@ -304,7 +306,7 @@ export const ItemList: React.FC<ItemListProps> = ({
           keyExtractor={keyExtractor}
           getItemType={getItemType}
           CellRendererComponent={perfCallbacks.CellRendererComponent}
-          contentContainerStyle={contentStyle}
+          contentContainerStyle={[styles.listContent, contentStyle]}
           showsVerticalScrollIndicator={false}
           onScroll={onScroll}
           onScrollBeginDrag={onScrollBeginDrag}
@@ -355,3 +357,9 @@ export const ItemList: React.FC<ItemListProps> = ({
     </ItemListActionsProvider>
   );
 };
+
+const styles = StyleSheet.create(theme => ({
+  listContent: {
+    paddingHorizontal: theme.layout.pageGutter,
+  },
+}));

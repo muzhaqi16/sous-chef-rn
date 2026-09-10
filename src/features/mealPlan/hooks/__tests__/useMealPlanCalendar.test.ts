@@ -29,9 +29,9 @@ describe('useMealPlanCalendar', () => {
 
     expect(result.current.weekDays).toHaveLength(7);
     // First day should be Monday (day of week = 1)
-    expect(result.current.weekDays[0].getDay()).toBe(1);
+    expect(result.current.weekDays[0]!.getDay()).toBe(1);
     // Last day should be Sunday (day of week = 0)
-    expect(result.current.weekDays[6].getDay()).toBe(0);
+    expect(result.current.weekDays[6]!.getDay()).toBe(0);
   });
 
   it('dateRange matches current week in week view', () => {

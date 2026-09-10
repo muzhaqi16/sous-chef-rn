@@ -61,7 +61,6 @@ jest.mock('react-native-device-info', () => ({
 import DeviceInfo from 'react-native-device-info';
 import { DeviceType, MobilePlatform } from '#/graphql/generated/schemaTypes';
 import {
-  generateDeviceFingerprint,
   collectDeviceInformation,
   validateDeviceInformation,
   type DeviceInformation,
@@ -181,9 +180,11 @@ describe('deviceInfo', () => {
       expect(validateDeviceInformation(info as DeviceInformation)).toBe(false);
     });
 
-    it('returns false when deviceId is too short', () => {
+    // The identity is resolved by the caller before the collection runs, so a
+    // missing one is not something this function can or should discover.
+    it('does not judge the device identity', () => {
       const info: DeviceInformation = {
-        deviceId: 'abc',
+        deviceId: null,
         deviceType: DeviceType.Mobile,
         platform: MobilePlatform.Ios,
         osName: 'iOS',
@@ -192,21 +193,7 @@ describe('deviceInfo', () => {
         timezone: 'UTC',
         language: 'en-US',
       };
-      expect(validateDeviceInformation(info)).toBe(false);
-    });
-
-    it('returns false for empty deviceId', () => {
-      const info: DeviceInformation = {
-        deviceId: '',
-        deviceType: DeviceType.Mobile,
-        platform: MobilePlatform.Ios,
-        osName: 'iOS',
-        osVersion: '17.0',
-        appVersion: '1.0.0',
-        timezone: 'UTC',
-        language: 'en-US',
-      };
-      expect(validateDeviceInformation(info)).toBe(false);
+      expect(validateDeviceInformation(info)).toBe(true);
     });
 
     it('returns false when appVersion is missing', () => {
@@ -236,7 +223,6 @@ describe('deviceInfo', () => {
       };
       // Each case empties one required field; validation must then fail.
       const emptyRequiredFieldCases: Partial<DeviceInformation>[] = [
-        { deviceId: '' },
         { deviceType: '' as DeviceType },
         { platform: '' as MobilePlatform },
         { osName: '' },
@@ -250,104 +236,21 @@ describe('deviceInfo', () => {
   });
 
   // ==========================================================================
-  // generateDeviceFingerprint
-  // ==========================================================================
-  describe('generateDeviceFingerprint', () => {
-    // The fingerprint persists, so a case that varies the device mocks has to
-    // start from an empty keystore or it reads the previous case's value.
-    beforeEach(() => {
-      storage.clearAll();
-    });
-
-    it('generates a fingerprint containing platform prefix', async () => {
-      const fingerprint = await generateDeviceFingerprint();
-      expect(fingerprint).toContain('ios-');
-    });
-
-    /**
-     * The API keys `Device` rows on this value and updates the matching row
-     * rather than inserting, so a fingerprint that varies between calls
-     * registers a new device on every launch — 147 rows for one account.
-     */
-    it('returns the same fingerprint on repeated calls', async () => {
-      const fp1 = await generateDeviceFingerprint();
-      await new Promise(r => setTimeout(r, 5));
-      const fp2 = await generateDeviceFingerprint();
-      expect(fp2).toEqual(fp1);
-    });
-
-    it('reuses the persisted value rather than recomposing it', async () => {
-      storage.set('device_fingerprint', 'ios-persisted');
-      await expect(generateDeviceFingerprint()).resolves.toBe('ios-persisted');
-    });
-
-    it('persists a freshly composed fingerprint', async () => {
-      const fingerprint = await generateDeviceFingerprint();
-      expect(storage.getString('device_fingerprint')).toBe(fingerprint);
-    });
-
-    it('generates fingerprint for android platform', async () => {
-      Object.defineProperty(Platform, 'OS', {
-        value: 'android',
-        configurable: true,
-      });
-      const fingerprint = await generateDeviceFingerprint();
-      expect(fingerprint).toContain('android-');
-    });
-
-    it('returns fallback fingerprint when all identifiers are null', async () => {
-      (DeviceInfo.getUniqueId as jest.Mock).mockResolvedValue(null);
-      (DeviceInfo.getDeviceId as jest.Mock).mockReturnValue(null);
-      (DeviceInfo.getBrand as jest.Mock).mockReturnValue(null);
-      (DeviceInfo.getModel as jest.Mock).mockReturnValue(null);
-      (DeviceInfo.getSystemName as jest.Mock).mockReturnValue(null);
-      (DeviceInfo.getSystemVersion as jest.Mock).mockReturnValue(null);
-      (DeviceInfo.getBuildNumber as jest.Mock).mockReturnValue(null);
-      (DeviceInfo.getSerialNumber as jest.Mock).mockResolvedValue(null);
-      Object.defineProperty(Platform, 'Version', {
-        value: null,
-        configurable: true,
-      });
-
-      const fingerprint = await generateDeviceFingerprint();
-      expect(fingerprint).toContain('ios-');
-    });
-
-    it('returns emergency fallback on complete error', async () => {
-      (DeviceInfo.getUniqueId as jest.Mock).mockImplementation(() => {
-        throw new Error('fail');
-      });
-      (DeviceInfo.getDeviceId as jest.Mock).mockImplementation(() => {
-        throw new Error('fail');
-      });
-      (DeviceInfo.getBrand as jest.Mock).mockImplementation(() => {
-        throw new Error('fail');
-      });
-      (DeviceInfo.getModel as jest.Mock).mockImplementation(() => {
-        throw new Error('fail');
-      });
-      (DeviceInfo.getSystemName as jest.Mock).mockImplementation(() => {
-        throw new Error('fail');
-      });
-      (DeviceInfo.getSystemVersion as jest.Mock).mockImplementation(() => {
-        throw new Error('fail');
-      });
-      (DeviceInfo.getBuildNumber as jest.Mock).mockImplementation(() => {
-        throw new Error('fail');
-      });
-      (DeviceInfo.getSerialNumber as jest.Mock).mockImplementation(() => {
-        throw new Error('fail');
-      });
-
-      const fingerprint = await generateDeviceFingerprint();
-      expect(fingerprint).toContain('ios-emergency-');
-    });
-  });
-
-  // ==========================================================================
   // collectDeviceInformation
   // ==========================================================================
   describe('collectDeviceInformation', () => {
+    // One device identity: the id the server files the device under is the same
+    // value the header and the device credential present, and is not the
+    // hardware fingerprint reported alongside it as an attribute.
+    it('takes deviceId from the canonical accessor, not the hardware fingerprint', async () => {
+      storage.set('device_id', 'device_canonical');
+
+      const info = await collectDeviceInformation();
+
+      expect(info.deviceId).toBe('device_canonical');
+      expect(info.deviceId).not.toBe(info.deviceFingerprint);
+    });
+
     it('collects comprehensive device info on iOS', async () => {
       const info = await collectDeviceInformation();
       expect(info.deviceId).toBeTruthy();

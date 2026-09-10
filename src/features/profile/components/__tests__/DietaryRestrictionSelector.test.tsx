@@ -2,14 +2,14 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { Diet, Intolerance, HealthGoal } from '#/graphql/generated/schemaTypes';
-import type { RestrictionSectionProps } from '#/components/molecules/RestrictionSection/RestrictionSection';
-import type { MultiSelectChipSheetProps } from '#/components/molecules/MultiSelectChipSheet/MultiSelectChipSheet';
+import type { RestrictionSectionProps } from '#features/profile/components/RestrictionSection/RestrictionSection';
+import type { MultiSelectChipSheetProps } from '#components/organisms/MultiSelectChipSheet/MultiSelectChipSheet';
 import { DietaryRestrictionSelector } from '#features/profile/components/DietaryRestrictionSelector';
 
 jest.mock('#/utils/finallyHelpers');
 
 jest.mock(
-  '#/components/molecules/RestrictionSection/RestrictionSection',
+  '#features/profile/components/RestrictionSection/RestrictionSection',
   () => {
     const { View, Text, Pressable } = require('react-native');
     return {
@@ -47,7 +47,7 @@ jest.mock(
 );
 
 jest.mock(
-  '#/components/molecules/MultiSelectChipSheet/MultiSelectChipSheet',
+  '#components/organisms/MultiSelectChipSheet/MultiSelectChipSheet',
   () => {
     const { View, Text } = require('react-native');
     return {

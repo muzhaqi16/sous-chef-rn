@@ -4,12 +4,11 @@ import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { useMutation } from '@apollo/client/react';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
-import { ShareShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { useShareShoppingList } from '#features/shoppingList/hooks/useShareShoppingList';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { alertService } from '#/services/alertService';
@@ -17,6 +16,8 @@ import { localizedErrorMessage } from '#/services/errorService';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { getFormAnimationPreset } from '#/constants/animations';
 import { buildJoinListUrl, shareUrl } from '#/utils/deepLinkUrls';
+import { SectionHeader } from '#components/atoms/SectionHeader';
+import { motion } from '#/theme/foundations/motion';
 
 interface ShareCodeSectionProps {
   listId: string;
@@ -39,7 +40,7 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
 }) => {
   const { t } = useTranslation();
   const { requireVerifiedEmail } = useVerifiedEmailGate();
-  const [shareShoppingList] = useMutation(ShareShoppingListDocument);
+  const { setListPublic } = useShareShoppingList();
   const [togglingShareCode, setTogglingShareCode] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -64,16 +65,11 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
 
     executeWithLoadingState(
       async () => {
-        const { data } = await shareShoppingList({
-          variables: { input: { id: listId, isPublic: !isPublic } },
-        });
         unwrapPayload(
-          data?.shareShoppingList,
+          await setListPublic(listId, !isPublic),
           'ShareShoppingListPayload',
           t('shoppingListScreens.failedToUpdateShareSettings'),
         );
-        // No refetch needed: the mutation returns shoppingList { id, shareCode,
-        // isPublic } which Apollo normalizes by ShoppingList:${id}.
       },
       setTogglingShareCode,
       error => {
@@ -107,10 +103,10 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
 
   return (
     <View style={styles.shareCodeSection}>
-      <Text style={styles.sectionTitle}>
+      <SectionHeader style={styles.sectionTitleSpacing}>
         {t('shoppingListScreens.shareViaCode')}
-      </Text>
-      <Text style={styles.shareCodeDescription}>
+      </SectionHeader>
+      <Text role="caption" style={styles.shareCodeDescription}>
         {t('shoppingListScreens.shareCodeDescription')}
       </Text>
       <AppPressable
@@ -120,7 +116,7 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
       >
         <Animated.View
           key={isPublic ? 'public-on' : 'public-off'}
-          entering={FadeIn.duration(200)}
+          entering={FadeIn.duration(motion.timing.STANDARD)}
           style={styles.shareCodeToggleContent}
         >
           <Icon
@@ -128,7 +124,7 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
             size={20}
             tone={isPublic ? 'primary' : 'textSecondary'}
           />
-          <Text style={styles.shareCodeToggleText}>
+          <Text role="bodyStrong" style={styles.shareCodeToggleText}>
             {isPublic
               ? t('shoppingListScreens.publicSharingEnabled')
               : t('shoppingListScreens.publicSharingDisabled')}
@@ -160,7 +156,11 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
             style={styles.shareCodeDisplay}
             onPress={handleCopyShareCode}
           >
-            <Text style={styles.shareCodeValue} numberOfLines={1}>
+            <Text
+              role="bodyStrong"
+              style={styles.shareCodeValue}
+              numberOfLines={1}
+            >
               {shareCode}
             </Text>
             <Icon
@@ -174,7 +174,9 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
             onPress={handleShareLink}
           >
             <Icon name="share-outline" size={18} tone="primary" />
-            <Text style={styles.shareLinkText}>{t('labels.shareLink')}</Text>
+            <Text role="bodyStrong" style={styles.shareLinkText}>
+              {t('labels.shareLink')}
+            </Text>
           </AppPressable>
         </Animated.View>
       ) : null}
@@ -183,28 +185,20 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  sectionTitle: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing['3'],
-  },
   shareCodeSection: {
     padding: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   shareCodeDescription: {
-    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.md,
-    lineHeight: theme.typography.fontSize.sm * 1.5,
   },
   shareCodeToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: theme.spacing['3'],
+    padding: theme.spacing.base,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
@@ -215,9 +209,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   shareCodeToggleText: {
-    fontSize: theme.typography.fontSize.md,
     color: theme.colors.textPrimary,
-    fontWeight: theme.fonts.weight.medium,
   },
   toggleSlot: {
     width: 44,
@@ -240,7 +232,7 @@ const styles = StyleSheet.create(theme => ({
     width: 20,
     height: 20,
     borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.surface,
   },
   toggleThumbActive: {
     alignSelf: 'flex-end',
@@ -257,18 +249,16 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: theme.spacing.sm,
-    padding: theme.spacing['3'],
+    padding: theme.spacing.base,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderStyle: 'dashed',
   },
   shareCodeValue: {
     flexShrink: 1,
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
     letterSpacing: 2,
   },
@@ -278,18 +268,16 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.xs,
-    paddingVertical: theme.spacing['3'],
+    paddingVertical: theme.spacing.base,
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
   },
   shareLinkText: {
-    fontSize: theme.typography.fontSize.md,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
+  sectionTitleSpacing: {
+    marginBottom: theme.spacing.base,
   },
 }));

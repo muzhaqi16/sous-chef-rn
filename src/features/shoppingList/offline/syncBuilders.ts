@@ -12,9 +12,11 @@ import type {
 import {
   getClientId,
   getQueuedInput,
+  readUnitSpec,
   type QueuedInput,
   type SyncBuilder,
   type SyncBuilderTable,
+  type UnitSpec,
 } from '#/apollo/offlineQueue/syncBuilder';
 
 /**
@@ -114,14 +116,13 @@ const buildShoppingItemSync: SyncBuilder = (mutation, cache) => {
 
   // AddItem sends a `unit` UnitSpecInput; UpdateShoppingListItem(Quantity) sends
   // flat `unitId`/`unitName` — normalize both or the unit change is lost.
-  const unit =
-    input.unit ??
-    (input.unitId != null || input.unitName != null
-      ? {
-          ...(input.unitId != null && { unitId: input.unitId }),
-          ...(input.unitName != null && { unitName: input.unitName }),
-        }
-      : undefined);
+  // `readUnitSpec` then adds the cached symbol: an id the vocabulary repair
+  // retired cannot be re-resolved on replay, a symbol can.
+  const unit = readUnitSpec(cache, {
+    ...((input.unit ?? {}) as UnitSpec),
+    ...(input.unitId != null && { unitId: input.unitId as string }),
+    ...(input.unitName != null && { unitName: input.unitName as string }),
+  });
 
   // Update sends a `purchaseTracking` object, the toggle a flat `purchased`.
   const purchaseTracking =

@@ -103,8 +103,8 @@ describe('unconfirmed-create wiring (pantry items)', () => {
     expect(creators.length).toBeGreaterThanOrEqual(4);
     expect(creators).toEqual(
       expect.arrayContaining([
-        'src/features/barcode/components/SearchResults.tsx',
-        'src/features/pantry/components/modals/AddToPantrySheet/AddToPantrySheet.tsx',
+        'src/features/barcode/hooks/useAddScannedItem.ts',
+        'src/features/pantry/hooks/mutations/useAddToPantry.ts',
         'src/features/pantry/hooks/usePantryItemSubmission.ts',
         'src/features/shoppingList/hooks/useMoveToPantry.ts',
       ]),
@@ -149,7 +149,9 @@ describe('unconfirmed-create wiring (pantry items)', () => {
    * `RESOURCE_NOT_FOUND` that never retries.
    *
    * Scoped to the retry block rather than the file, which is the granularity the
-   * defect lives at.
+   * defect lives at. The block is named by whichever anchor the path uses: the
+   * prompt's own callback where the retry is inline, or the hook function the
+   * prompt calls.
    */
   const retryPaths = creators.filter(file =>
     stripComments(readFileSync(join(process.cwd(), file), 'utf8')).includes(
@@ -161,9 +163,13 @@ describe('unconfirmed-create wiring (pantry items)', () => {
     expect(retryPaths.length).toBeGreaterThanOrEqual(2);
   });
 
+  const RETRY_ANCHORS = ['onAddAnyway', 'forceAddPending'];
+
   it.each(retryPaths)('%s re-claims the id on its force-add retry', file => {
     const code = stripComments(readFileSync(join(process.cwd(), file), 'utf8'));
-    const start = code.indexOf('onAddAnyway');
+    const start = Math.max(
+      ...RETRY_ANCHORS.map(anchor => code.indexOf(anchor)),
+    );
     const end = code.indexOf('forceAdd: true', start);
     expect(start).toBeGreaterThanOrEqual(0);
     expect(end).toBeGreaterThan(start);
@@ -172,8 +178,8 @@ describe('unconfirmed-create wiring (pantry items)', () => {
 
   // The other half of the contract: the screens that read by that id.
   it.each([
-    'src/features/pantry/screens/PantryItemDetail.tsx',
-    'src/features/pantry/components/form/PantryItemForm.tsx',
+    'src/features/pantry/hooks/usePantryItemDetailData.ts',
+    'src/features/pantry/hooks/usePantryItemFormData.ts',
   ])('%s gates its pantry-item read on the create being acknowledged', file => {
     const code = stripComments(readFileSync(join(process.cwd(), file), 'utf8'));
     expect(code).toContain('useIsCreateUnconfirmed(');

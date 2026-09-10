@@ -74,7 +74,7 @@ jest.mock('#store', () => ({
   },
 }));
 
-jest.mock('#utils/notifications/localNotificationHelper', () => ({
+jest.mock('#/services/notifications/localNotificationHelper', () => ({
   showLocalNotification: jest.fn(),
 }));
 

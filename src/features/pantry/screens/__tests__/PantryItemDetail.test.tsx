@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { screen } from '@testing-library/react-native';
-import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
+import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   GetPantryItemBatchesDocument,
@@ -65,14 +65,14 @@ jest.mock('#store/useAppStore', () => ({
   useSelectedShoppingListId: jest.fn(() => 'sl-1'),
   useSelectedPantryId: jest.fn(() => 'p1'),
   // The screen classifies its own data state via useDataState ->
-  // useOfflineAwareError -> useBlocksCacheMissQueries, which calls
+  // useOfflineAwareError -> useIsApiUnavailable, which calls
   // useAppStore(selector). Online by default; individual tests override.
   useAppStore: jest.fn((selector: (s: unknown) => unknown) =>
     selector({ isOnline: true, isApiUnavailable: false }),
   ),
 }));
 
-jest.mock('#components/molecules/Header', () => ({
+jest.mock('#components/organisms/Header', () => ({
   Header: ({ rightActions }: { rightActions?: HeaderAction[] }) => {
     const { View } = require('react-native');
     return (
@@ -108,8 +108,8 @@ jest.mock('#components/atoms/SousChefLoader', () => ({
 // The offline predicate `useDataState` consults. Mocked at the hook rather than
 // the slice so the test does not depend on networkSlice internals.
 const mockBlocksCacheMissQueries = jest.fn(() => false);
-jest.mock('#hooks/app/useBlocksCacheMissQueries', () => ({
-  useBlocksCacheMissQueries: () => mockBlocksCacheMissQueries(),
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: () => mockBlocksCacheMissQueries(),
 }));
 
 beforeEach(() => {

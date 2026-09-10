@@ -1,5 +1,5 @@
-import { getI18n } from '#/i18n/config';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n';
 
 // Exact codes, never a `RATE_` prefix: OPERATION_RATE_LIMITED does not carry it,
 // so a prefix test drops every per-operation limit. Only two are declared in the
@@ -93,17 +93,16 @@ export function getRateLimitDetails(error: unknown): RateLimitDetails | null {
         : null,
     message:
       rateLimitError.message ||
-      getI18n().t('errors.rateLimitGeneric', {
+      t('errors.rateLimitGeneric', {
         defaultValue: 'Too many requests. Please try again later.',
       }),
   };
 }
 
 export function getRateLimitMessage(error: unknown): string {
-  const i18n = getI18n();
   const details = getRateLimitDetails(error);
   if (!details) {
-    return i18n.t('errors.rateLimitGeneric', {
+    return t('errors.rateLimitGeneric', {
       defaultValue: 'Too many requests. Please try again later.',
     });
   }
@@ -111,13 +110,13 @@ export function getRateLimitMessage(error: unknown): string {
   if (details.retryAfter && details.retryAfter > 0) {
     if (details.retryAfter >= 60) {
       const minutes = Math.ceil(details.retryAfter / 60);
-      return i18n.t('errors.rateLimitMinutes', {
+      return t('errors.rateLimitMinutes', {
         count: minutes,
         defaultValue:
           'Too many requests. Please try again in {{count}} minute(s).',
       });
     }
-    return i18n.t('errors.rateLimitSeconds', {
+    return t('errors.rateLimitSeconds', {
       count: details.retryAfter,
       defaultValue:
         'Too many requests. Please try again in {{count}} second(s).',

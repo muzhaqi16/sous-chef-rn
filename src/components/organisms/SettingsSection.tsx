@@ -1,7 +1,7 @@
 import React, { type ReactNode } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { SettingRow, SettingRowProps } from '../molecules/SettingRow';
+import { SettingRow, SettingRowProps } from './SettingRow';
 import { Text } from '#components/atoms/Text';
 
 export interface SettingsSectionProps {
@@ -33,11 +33,11 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
   return (
     <View style={styles.section}>
       <View style={styles.header}>
-        <Text size="xs" weight="semibold" tone="secondary" style={styles.title}>
+        <Text role="label" tone="secondary" style={styles.title}>
           {title}
         </Text>
         {description ? (
-          <Text tone="tertiary" style={styles.description}>
+          <Text role="caption" tone="tertiary" style={styles.description}>
             {description}
           </Text>
         ) : null}
@@ -85,18 +85,17 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       variant: {
         card: { marginBottom: theme.spacing.md, marginTop: theme.spacing.md },
-        // The component's default `Text size="xs" weight="semibold"` is the CARD
-        // variant's scale; the inset header is 13px/bold, so it overrides here.
+        // The `label` role is the CARD variant's scale; the inset header is
+        // one step up and bold, so it overrides here — a kit escape hatch.
         inset: {
           letterSpacing: 0.5,
-          fontSize: 13,
+          fontSize: theme.fonts.size.xsPlus,
           fontWeight: theme.fonts.weight.bold,
         },
       },
     },
   },
   description: {
-    fontSize: theme.typography.fontSize.sm - 1,
     marginTop: theme.spacing.xs,
   },
   body: {
@@ -110,8 +109,8 @@ const styles = StyleSheet.create(theme => ({
         },
         inset: {
           marginTop: theme.spacing.sm,
-          borderTopWidth: 1,
-          borderBottomWidth: 1,
+          borderTopWidth: theme.borderWidth.hairline,
+          borderBottomWidth: theme.borderWidth.hairline,
           borderColor: theme.colors.border,
         },
       },

@@ -12,16 +12,15 @@ import Animated, {
   FadeInDown,
   FadeOutUp,
 } from 'react-native-reanimated';
-import { TIMING } from '#constants/animations';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
 import { useHomeManagement } from '#features/home/hooks/useHomeManagement';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
-import { useInviteUserModal } from '#/hooks/useInviteUserModal';
-import { BaseInput } from '#/components/atoms/BaseInput/BaseInput';
-import { Button } from '#components/atoms/Button';
+import { useInviteUserModal } from '#features/home/hooks/useInviteUserModal';
+import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
+import { Button } from '#components/molecules/Button';
 import { toastService } from '#/services/toastService';
 import { HomeStats } from '#features/home/components/HomeStats';
 import { CreateHomeForm } from '#features/home/components/CreateHomeForm';
@@ -29,12 +28,15 @@ import { HomeCard } from '#features/home/components/HomeCard';
 import {
   getInvitableRoles,
   canInviteToHome,
-} from '#/utils/permissions/homePermissions';
+} from '#features/home/utils/homePermissions';
 import { commonStyles } from '#/styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
+import { motion } from '#/theme/foundations/motion';
+import { Screen } from '#components/templates/Screen';
+import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 
 export const HomeManagement: React.FC = () => {
   useScreenTransition('HomeManagement');
@@ -237,24 +239,28 @@ export const HomeManagement: React.FC = () => {
     );
   }
 
+  const headerActions: HeaderAction[] = [
+    {
+      icon: 'add',
+      accessibilityLabel: t('labels.addItem'),
+      onPress: () => setShowCreateForm(true),
+      variant: 'primary',
+      testID: 'home-management-add-button',
+    },
+  ];
+
   return (
     <>
-      <View style={commonStyles.container}>
-        {/* Header */}
-        <Header
-          title={t('homeManagement.title')}
-          centerTitle
-          onBack={goBack}
-          rightActions={[
-            {
-              icon: 'add',
-              onPress: () => setShowCreateForm(true),
-              variant: 'primary',
-              testID: 'home-management-add-button',
-            },
-          ]}
-        />
-
+      <Screen
+        header={{
+          title: t('homeManagement.title'),
+          centerTitle: true,
+          back: goBack,
+          actions: headerActions,
+        }}
+        scroll="list"
+        gutter="none"
+      >
         {/* Stats Section */}
         <HomeStats
           totalHomes={stats.totalHomes}
@@ -265,9 +271,9 @@ export const HomeManagement: React.FC = () => {
         {/* Create/Join Home Form - slides down inline */}
         {!!showCreateForm && (
           <Animated.View
-            entering={FadeInDown.duration(TIMING.SLOW).springify()}
-            exiting={FadeOutUp.duration(TIMING.STANDARD)}
-            layout={LinearTransition.duration(TIMING.SLOW)}
+            entering={FadeInDown.duration(motion.timing.SLOW).springify()}
+            exiting={FadeOutUp.duration(motion.timing.STANDARD)}
+            layout={LinearTransition.duration(motion.timing.SLOW)}
             style={[commonStyles.cardWithShadow, styles.formContainer]}
           >
             {/* Mode Switcher */}
@@ -280,6 +286,7 @@ export const HomeManagement: React.FC = () => {
                 onPress={() => setMode('create')}
               >
                 <Text
+                  role="label"
                   style={[
                     styles.modeButtonText,
                     mode === 'create' && styles.modeButtonTextActive,
@@ -336,8 +343,10 @@ export const HomeManagement: React.FC = () => {
                 )}
                 {!!previewHome && (
                   <View style={styles.previewCard}>
-                    <Text style={styles.previewTitle}>{previewHome.name}</Text>
-                    <Text style={styles.previewSubtitle}>
+                    <Text role="heading" style={styles.previewTitle}>
+                      {previewHome.name}
+                    </Text>
+                    <Text role="caption" style={styles.previewSubtitle}>
                       {t('joinHome.memberCount', {
                         count: previewHome.membersConnection?.totalCount ?? 0,
                       })}
@@ -370,13 +379,13 @@ export const HomeManagement: React.FC = () => {
 
         {/* Homes List */}
         <Animated.View
-          layout={LinearTransition.duration(TIMING.SLOW)}
+          layout={LinearTransition.duration(motion.timing.SLOW)}
           style={[styles.scrollView, { paddingBottom: insets.bottom }]}
         >
           <ScrollView
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
-            contentContainerStyle={{ flexGrow: 1 }}
+            contentContainerStyle={styles.scrollContent}
             refreshControl={
               <PlainScrollRefreshControl
                 refreshing={refreshing}
@@ -429,7 +438,7 @@ export const HomeManagement: React.FC = () => {
             })}
           </ScrollView>
         </Animated.View>
-      </View>
+      </Screen>
       {InviteModalComponent}
     </>
   );
@@ -463,8 +472,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   modeButtonText: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
   },
   modeButtonTextActive: {
@@ -492,20 +499,12 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.xs,
   },
   previewTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   previewSubtitle: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
   },
-  previewDescription: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textPrimary,
-    marginTop: theme.spacing.xs,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
+  scrollContent: {
+    flexGrow: 1,
   },
 }));

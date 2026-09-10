@@ -55,7 +55,9 @@
       "totalEntries_one": "{{count}} registro",
       "totalEntries_other": "{{count}} registros",
       "emptyTitle": "Aún sin uso"
-    }
+    },
+    "shelfLifeBoth": "{{days}} d ({{openedDays}} d una vez abierto)",
+    "shelfLifeOpened": "{{days}} d una vez abierto"
   },
   "pantrySettings": {
     "createTitle": "Crear nueva despensa",
@@ -67,7 +69,6 @@
     "defaultPantry": "Despensa predeterminada",
     "defaultPantryDesc": "Establecer esta como despensa predeterminada de este hogar",
     "itemsInPantry": "Artículos en la despensa",
-    "itemsCount": "{{count}} artículos",
     "deleteWarning": "Eliminar esta despensa quitará permanentemente todos los artículos que contiene. Esta acción no se puede deshacer.",
     "deleteConfirmMessage": "¿Seguro que quieres eliminar esta despensa? Esta acción no se puede deshacer y eliminará todos los artículos.",
     "nameEmptyError": "El nombre de la despensa no puede estar vacío",
@@ -304,8 +305,6 @@
   "pantryScreen": {
     "greetingFallback": "Buenos días",
     "searchPlaceholder": "Busca en tu despensa...",
-    "itemCount_one": "{{count}} artículo",
-    "itemCount_other": "{{count}} artículos",
     "sort": "Ordenar",
     "tabAll": "Todos",
     "tabPantry": "Despensa",
@@ -356,7 +355,9 @@
     "invalidWaste": "Introduce una cantidad de desperdicio válida",
     "stillCalculating": "Calculando la cantidad disponible...",
     "exceedsAvailableConsume": "No puedes consumir más de la cantidad disponible ({{amount}} {{unit}})",
-    "exceedsAvailableWaste": "No puedes desperdiciar más de la cantidad disponible ({{amount}} {{unit}})"
+    "exceedsAvailableWaste": "No puedes desperdiciar más de la cantidad disponible ({{amount}} {{unit}})",
+    "remainingAfter": "Restante: {{amount}} {{unit}}",
+    "exceedsAvailable": "Supera lo disponible ({{amount}} {{unit}})"
   },
   "duplicateItem": {
     "title": "El artículo ya está en la despensa",
@@ -413,5 +414,10 @@
   "batchSection": {
     "viewAll_one": "Ver el lote",
     "viewAll_other": "Ver los {{count}} lotes"
+  },
+  "pantryItemCard": {
+    "remainingAmount": "Quedan {{amount}}",
+    "portionsLeft_one": "Queda {{count}} {{unit}}",
+    "portionsLeft_other": "Quedan {{count}} {{unit}}"
   }
 }

@@ -4,11 +4,12 @@ import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { authService } from '#/services/authService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { authoritativeBiometryName } from './biometryLabel';
 
 /**
  * The three contexts a biometric enrollment card appears in. They differ only in
  * copy, where the password comes from, and what completion does — the UI and
- * `storeCredentials` logic are identical, which is why they live here.
+ * enrolment logic are identical, which is why they live here.
  */
 export type BiometricSetupMode = 'onboarding' | 'postLogin' | 'settings';
 
@@ -20,8 +21,6 @@ interface BiometricInfo {
 interface UseBiometricSetupParams {
   mode: BiometricSetupMode;
   userEmail: string;
-  /** Pre-supplied password (registration password / fresh login password). */
-  presetPassword?: string;
   /** False leaves the card dormant and skips the availability probe. */
   active?: boolean;
   onComplete: (enabled: boolean, declined?: boolean) => void;
@@ -65,14 +64,13 @@ async function loadBiometricSnapshot(
 }
 
 /**
- * Shared by every enrollment surface so copy, the availability probe, the password
- * requirement and the `storeCredentials` call live in one place. Render the
- * result with `BiometricSetupView`.
+ * Shared by every enrollment surface so copy, the availability probe and the
+ * enrolment call live in one place. Render the result with
+ * `BiometricSetupView`.
  */
 export const useBiometricSetup = ({
   mode,
   userEmail,
-  presetPassword,
   active = true,
   onComplete,
 }: UseBiometricSetupParams) => {
@@ -85,16 +83,7 @@ export const useBiometricSetup = ({
   });
   const [checked, setChecked] = useState(false);
   const [isEnabling, setIsEnabling] = useState(false);
-  const [password, setPassword] = useState(presetPassword ?? '');
   const [hasExistingCredentials, setHasExistingCredentials] = useState(false);
-
-  // Adopts a preset password resolving after mount (onboarding reads it from the
-  // keychain). Adjusted during render rather than in an effect — no extra commit.
-  const [lastPreset, setLastPreset] = useState(presetPassword);
-  if (presetPassword !== lastPreset) {
-    setLastPreset(presetPassword);
-    if (presetPassword) setPassword(presetPassword);
-  }
 
   // State is set only from the async callback, never synchronously in the effect
   // body, so this cannot cascade renders.
@@ -121,11 +110,6 @@ export const useBiometricSetup = ({
     }
   }, [active, checked, info.isAvailable, onComplete]);
 
-  // Re-enabling in settings with credentials already stored is a re-auth, not a
-  // store; every other path needs a password to write them.
-  const needsPassword =
-    mode === 'settings' ? !hasExistingCredentials : !presetPassword;
-
   const handleEnable = () => {
     if (isEnabling) return;
 
@@ -147,29 +131,16 @@ export const useBiometricSetup = ({
           return;
         }
 
-        const passwordToUse = presetPassword || password;
-        if (needsPassword && !passwordToUse.trim()) {
-          alertService.alert(
-            t('biometricSetup.passwordRequiredTitle'),
-            mode === 'settings'
-              ? t('biometricSetup.passwordRequiredAccountMessage')
-              : t('biometricSetup.passwordRequiredMessage'),
-          );
-          return;
-        }
-
-        const success = await authService.storeCredentials(
-          userEmail,
-          passwordToUse,
-        );
+        // The live session authorises the enrolment: the server issues a
+        // device-bound credential and the slot takes that, so no password is
+        // read here or anywhere else on this path.
+        const success = await authService.enrolDeviceCredential(userEmail);
         if (success) {
           onComplete(true);
         } else {
           alertService.alert(
             t('biometricSetup.setupFailedTitle'),
-            mode === 'settings'
-              ? t('biometricSetup.setupFailedPasswordMessage')
-              : t('biometricSetup.setupFailedGenericMessage'),
+            t('biometricSetup.setupFailedGenericMessage'),
             [{ text: t('labels.ok'), onPress: () => onComplete(false) }],
           );
         }
@@ -192,14 +163,9 @@ export const useBiometricSetup = ({
     onComplete(false, mode !== 'settings');
   };
 
-  const fallbackType =
-    info.biometryType ||
-    (mode === 'postLogin' ? t('labels.biometric') : t('labels.biometric'));
-  const authTypeLabel =
-    info.biometryType ||
-    (mode === 'postLogin'
-      ? t('labels.biometricAuthentication')
-      : t('labels.biometricAuthentication'));
+  const named = authoritativeBiometryName(info.biometryType);
+  const fallbackType = named ?? t('labels.biometric');
+  const authTypeLabel = named ?? t('labels.biometricAuthentication');
 
   return {
     checking: !checked,
@@ -220,14 +186,6 @@ export const useBiometricSetup = ({
       t('biometricSetup.benefitEnhancedSecurity'),
     ],
     footer: t('biometricSetup.footer'),
-    needsPassword,
-    password,
-    setPassword,
-    passwordLabel:
-      mode === 'settings'
-        ? t('biometricSetup.passwordPromptCurrent')
-        : t('biometricSetup.passwordPromptInitial'),
-    passwordPlaceholder: t('biometricSetup.passwordPlaceholder'),
     isEnabling,
     enableLabel: isEnabling ? t('labels.settingUp') : t('labels.enableNow'),
     skipLabel:

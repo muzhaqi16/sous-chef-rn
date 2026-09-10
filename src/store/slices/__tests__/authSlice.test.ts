@@ -1,14 +1,20 @@
 import { createTestStore } from '#/test-utils/createTestStore';
 import type { AuthUserInput } from '#store/slices/authSlice';
+import { registerTokenRefreshBridge } from '#store/tokenRefreshBridge';
 
 // Mock external dependencies that authSlice imports
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
-const {
-  scheduleTokenRefresh,
-  cancelTokenRefresh,
-} = require('../../../apollo/links/tokenScheduler');
+// The slice reaches the scheduler through the bridge Apollo registers at client
+// init; here the test registers it, which is also what proves the wiring.
+const schedule = jest.fn();
+const cancel = jest.fn();
+registerTokenRefreshBridge({
+  schedule,
+  cancel,
+  refreshNow: jest.fn(() => Promise.resolve()),
+});
 
 const testUser = {
   id: 'user-1',
@@ -54,6 +60,52 @@ describe('authSlice', () => {
       expect(store.getState().user?.email).toBe('test@example.com');
     });
 
+    describe('the tutorials setting', () => {
+      // A session end resets it to `true` so a shared device does not inherit
+      // the previous account's answer, and `useAppSettings` — the only other
+      // seeder — mounts on the App Settings screen alone. Login is therefore
+      // the moment the real answer has to land, or a coach mark fires at
+      // someone who turned tutorials off and is then marked seen.
+      it('seeds a disabled setting from the login payload', () => {
+        const store = createTestStore();
+        store.getState().setShowTutorials(true);
+
+        store
+          .getState()
+          .setAuth(
+            { ...testUser, settings: { showTutorials: false } },
+            'a',
+            'r',
+          );
+
+        expect(store.getState().showTutorials).toBe(false);
+      });
+
+      it('seeds an enabled setting too', () => {
+        const store = createTestStore();
+        store.getState().setShowTutorials(false);
+
+        store
+          .getState()
+          .setAuth(
+            { ...testUser, settings: { showTutorials: true } },
+            'a',
+            'r',
+          );
+
+        expect(store.getState().showTutorials).toBe(true);
+      });
+
+      it('leaves the current value alone when the payload carries none', () => {
+        const store = createTestStore();
+        store.getState().setShowTutorials(false);
+
+        store.getState().setAuth(testUser, 'a', 'r');
+
+        expect(store.getState().showTutorials).toBe(false);
+      });
+    });
+
     it('flattens profile fields from GraphQL response', () => {
       const store = createTestStore();
       const userWithProfile = {
@@ -88,10 +140,7 @@ describe('authSlice', () => {
     it('schedules token refresh', () => {
       const store = createTestStore();
       store.getState().setAuth(testUser, 'access-tk', 'r');
-      expect(scheduleTokenRefresh).toHaveBeenCalledWith(
-        'access-tk',
-        expect.any(Function),
-      );
+      expect(schedule).toHaveBeenCalledWith('access-tk');
     });
 
     it('clears isAutoLoggingIn', () => {
@@ -140,10 +189,7 @@ describe('authSlice', () => {
     it('schedules refresh for new access token', () => {
       const store = createTestStore();
       store.getState().setTokens({ accessToken: 'new' });
-      expect(scheduleTokenRefresh).toHaveBeenCalledWith(
-        'new',
-        expect.any(Function),
-      );
+      expect(schedule).toHaveBeenCalledWith('new');
     });
   });
 
@@ -178,7 +224,7 @@ describe('authSlice', () => {
     it('cancels token refresh', () => {
       const store = createTestStore();
       store.getState().clearAuth();
-      expect(cancelTokenRefresh).toHaveBeenCalled();
+      expect(cancel).toHaveBeenCalled();
     });
   });
 
@@ -256,7 +302,7 @@ describe('authSlice', () => {
       jest.clearAllMocks();
       const store = createTestStore();
       store.getState().setTokens({ refreshToken: 'new-refresh' });
-      expect(scheduleTokenRefresh).not.toHaveBeenCalled();
+      expect(schedule).not.toHaveBeenCalled();
     });
   });
 

@@ -11,7 +11,7 @@ import {
   AddItemsToShoppingListFromRecipeDocument,
   GetShoppingListsLiteForRecipeDocument,
 } from '../useRecipeDetail.generated';
-import type { RecipeIngredient as ExternalRecipeIngredient } from '#/services/recipeApi/types';
+import type { RecipeIngredient as ExternalRecipeIngredient } from '#/services/spoonacular/types';
 import { useRecipeShoppingList } from '../useRecipeShoppingList';
 
 jest.mock('#store/useAppStore', () => ({
@@ -23,6 +23,12 @@ jest.mock('#store/useAppStore', () => ({
 const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
 const mockToastInfo = jest.fn();
+// The hook reads only the preferred unit system from settings; the real hook
+// calls useUser, which this suite replaces with a partial store mock.
+jest.mock('#features/profile/hooks/useAppSettings', () => ({
+  useAppSettings: () => ({ settings: { preferredUnitSystem: 'METRIC' } }),
+}));
+
 jest.mock('#/services/toastService', () => ({
   toastService: {
     success: (...args: unknown[]) => mockToastSuccess(...args),
@@ -128,7 +134,10 @@ async function renderForSingleAdd({
 // --- external (Spoonacular) single-ingredient branch ------------------------
 
 const addItemsMock = (
-  member: { kind: 'success' } | { kind: 'error-union' } | { kind: 'transport' },
+  member:
+    | { kind: 'success'; itemId?: string }
+    | { kind: 'error-union' }
+    | { kind: 'transport' },
 ): MockedResponse => {
   if (member.kind === 'transport') {
     return {
@@ -150,7 +159,19 @@ const addItemsMock = (
           member.kind === 'success'
             ? {
                 __typename: 'AddItemsToShoppingListPayload',
-                results: [],
+                results: member.itemId
+                  ? [
+                      {
+                        __typename: 'BatchAddShoppingListItemResult',
+                        index: 0,
+                        success: true,
+                        item: {
+                          __typename: 'ShoppingListItem',
+                          id: member.itemId,
+                        },
+                      },
+                    ]
+                  : [],
                 summary: {
                   __typename: 'BatchOperationSummary',
                   succeeded: 1,
@@ -242,6 +263,59 @@ describe('useRecipeShoppingList — handleAddSingleIngredient (external branch)'
     );
 
     expect(cache.extract()).toHaveProperty('ShoppingListItem:gen-id-1');
+  });
+
+  it('counts an added row ONCE in the list stats', async () => {
+    // The optimistic add counts the row; the mutation's reconcile only re-wires
+    // the edge. Counting in both drifts `ShoppingList.totalItems` upwards by one
+    // per add — invisible on the list screen, which reads the connection, and
+    // visible in the list selector, which reads the stat.
+    const cache = makeCache();
+
+    const { result } = await renderForSingleAdd({
+      isBackendRecipe: false,
+      operationMocks: [addItemsMock({ kind: 'success', itemId: 'gen-id-1' })],
+      cache,
+    });
+
+    await act(async () => {
+      result.current.handleAddSingleIngredient(externalIngredient({ id: 11 }));
+    });
+
+    await waitFor(() =>
+      expect(result.current.addedIngredients.has(11)).toBe(true),
+    );
+
+    const list = cache.extract()['ShoppingList:sl-1'] as {
+      totalItems: number;
+    };
+    expect(list.totalItems).toBe(1);
+  });
+
+  it('withdraws the optimistic row and its count when the server merges it', async () => {
+    // A catalog merge answers with the EXISTING row's id: the optimistic line
+    // never became a row of its own, so its count goes back with it.
+    const cache = makeCache();
+
+    const { result } = await renderForSingleAdd({
+      isBackendRecipe: false,
+      operationMocks: [addItemsMock({ kind: 'success', itemId: 'sli-server' })],
+      cache,
+    });
+
+    await act(async () => {
+      result.current.handleAddSingleIngredient(externalIngredient({ id: 12 }));
+    });
+
+    await waitFor(() =>
+      expect(result.current.addedIngredients.has(12)).toBe(true),
+    );
+
+    const extracted = cache.extract();
+    expect(extracted).not.toHaveProperty('ShoppingListItem:gen-id-1');
+    expect(
+      (extracted['ShoppingList:sl-1'] as { totalItems: number }).totalItems,
+    ).toBe(0);
   });
 });
 

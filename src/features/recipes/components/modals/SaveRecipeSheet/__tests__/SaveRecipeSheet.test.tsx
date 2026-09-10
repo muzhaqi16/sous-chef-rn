@@ -27,7 +27,7 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#components/molecules/TagInput', () => ({
+jest.mock('#features/recipes/components/TagInput', () => ({
   TagInput: ({
     tags,
     placeholder,

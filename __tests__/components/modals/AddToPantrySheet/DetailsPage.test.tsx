@@ -14,7 +14,7 @@ jest.mock('../../../../src/components/atoms/BottomSheetKeyboardAwareScrollView',
     children?: React.ReactNode;
   }) => children,
 }));
-jest.mock('../../../../src/components/molecules/FormInput', () => ({
+jest.mock('../../../../src/components/atoms/FormInput', () => ({
   FormInput: (props: { label?: string }) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;
@@ -32,7 +32,7 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
     return <Text>{props.label}</Text>;
   },
 }));
-jest.mock('../../../../src/components/molecules/FieldRow', () => ({
+jest.mock('../../../../src/components/atoms/FieldRow', () => ({
   FieldRow: ({ children }: { children?: React.ReactNode }) => children,
 }));
 

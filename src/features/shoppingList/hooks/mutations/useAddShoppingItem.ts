@@ -12,7 +12,7 @@ import {
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
   buildAddItemsReconcileUpdate,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+} from '#features/shoppingList/cache/items';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { generateEntityId } from '#/utils/generateEntityId';

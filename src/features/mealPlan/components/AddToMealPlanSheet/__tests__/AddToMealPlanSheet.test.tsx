@@ -12,7 +12,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
   BottomSheetModal: ({ children }: { children?: React.ReactNode }) => children,
 }));
 
-jest.mock('#components/atoms/BottomSheetHeader', () => ({
+jest.mock('#components/molecules/BottomSheetHeader', () => ({
   BottomSheetHeader: ({
     title,
     onCancel,
@@ -79,7 +79,7 @@ jest.mock('#features/mealPlan/hooks/useMealPlanCalendar', () => ({
   })),
 }));
 
-jest.mock('#components/molecules/WeekStrip', () => ({
+jest.mock('#features/mealPlan/components/WeekStrip', () => ({
   WeekStrip: () => {
     const { Text } = require('react-native');
     return require('react').createElement(Text, null, 'WeekStrip');

@@ -88,6 +88,13 @@ const KEPT_ON_PURPOSE: Record<string, string> = {
     'whether ANY account has biometric credentials enrolled; the credentials ' +
     'are keyed by email and removed for the account signing out',
   showBiometricSetup: 'transient prompt flag, no account data',
+  // The budget these hold off is the SERVER's, and it is per device, not per
+  // account — it does not reset because somebody signed out. Neither key names
+  // an account: one is a deadline, the other a count.
+  biometricRetryAt:
+    'wall-clock deadline for the next device-credential exchange; names no account',
+  biometricAttempts:
+    'consecutive refusal count behind that deadline; names no account',
 
   // Keyed by user id: the previous person's entry is unreachable without
   // signing in as them again, and it is what makes onboarding progress and
@@ -95,6 +102,10 @@ const KEPT_ON_PURPOSE: Record<string, string> = {
   // per-account UI flags — no names, items, or messages.
   userPreferences: 'Record keyed by user id; per-account UI flags only',
   userNavigationStates: 'Record keyed by user id; per-account UI flags only',
+  featureHintsShown:
+    'Record keyed by `<user id>:<feature id>`; the same account signing back ' +
+    'in should not be shown every coach mark again',
+  loginCounts: 'Record keyed by user id; a count, and nothing else',
 
   // Catalog data warmed for offline autocomplete. Identical for every account
   // and independent of who was signed in; clearing it costs offline

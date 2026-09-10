@@ -9,8 +9,6 @@
     "cantDeleteDefaultMessage": "Set another location as default first.",
     "cantDeleteTitle": "Cannot Delete Location",
     "cantDeleteWithItems": "\"{{name}}\" has {{description}}. Move or remove them first.",
-    "itemSingular": "{{count}} item",
-    "itemPlural": "{{count}} items",
     "subLocationSingular": "{{count}} sub-location",
     "subLocationPlural": "{{count}} sub-locations",
     "gotIt": "Got It",
@@ -77,7 +75,6 @@
     "hintText": "You can edit details later in Settings > Storage Locations"
   },
   "addItemSheet": {
-    "addManually": "Add Manually",
     "more": "More",
     "allAdded": "All added",
     "dismiss": "Dismiss suggestion",
@@ -100,7 +97,9 @@
     "emptyTitle": "No suggestions yet",
     "emptyPantrySubtext": "Add items to your pantry to get personalized suggestions",
     "emptyShoppingListSubtext": "Add items to your list and they'll appear here for quick re-adding",
-    "addToPantry": "Add to Pantry"
+    "addToPantry": "Add to Pantry",
+    "addManuallyWithTerm": "Add \"{{term}}\" manually",
+    "noMatchesAddManually": "No matches. Add \"{{term}}\" manually"
   },
   "storageLocationSheet": {
     "editTitle": "Edit Storage Location",
@@ -335,7 +334,8 @@
     "quantityUnit": "Quantity & Unit",
     "quantityStock": "Quantity & Stock",
     "quantityRequired": "Quantity *",
-    "quantityCurrent": "Current Quantity"
+    "quantityCurrent": "Current Quantity",
+    "placeholderBrand": "e.g., Kellogg's"
   },
   "folderPicker": {
     "selectFolder": "Select Folder",
@@ -400,7 +400,8 @@
     "typeMoreToAddBrand": "Continue typing to add \"{{term}}\" as a custom brand",
     "typeMoreToAddStore": "Continue typing to add \"{{term}}\" as a custom store",
     "typeAtLeastTwo": "Type at least 2 characters to search",
-    "tryDifferentTerm": "Try a different search term"
+    "tryDifferentTerm": "Try a different search term",
+    "typeMoreToAddCategory": "Continue typing to use \"{{term}}\" as a custom category"
   },
   "unitEntryList": {
     "title": "Units",
@@ -412,9 +413,7 @@
   },
   "storageLocationCard": {
     "default": "Default",
-    "insideParent": "Inside {{parent}}",
-    "itemCount_one": "{{count}} item",
-    "itemCount_other": "{{count}} items"
+    "insideParent": "Inside {{parent}}"
   },
   "itemSubtitle": {
     "percentRemaining": "({{percent}}% remaining)",

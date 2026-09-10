@@ -2,14 +2,14 @@ import React, { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { StackActions, useNavigation } from '@react-navigation/native';
+import { StackActions } from '@react-navigation/native';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { useQuery } from '@apollo/client/react';
-import { Header } from '#components/molecules/Header';
-import { ErrorState } from '#components/atoms/ErrorState';
+import { ErrorState } from '#components/molecules/ErrorState';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
-import { ResolveShareLinkDocument } from '#features/home/screens/JoinByLinkScreen.generated';
+import { useResolveShareLink } from '#features/home/hooks/useResolveShareLink';
 import { ShareLinkTargetType } from '#/graphql/generated/schemaTypes';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { Screen } from '#components/templates/Screen';
 
 /**
  * Entry point for a link whose type is unknown up front (`join/:code`):
@@ -21,15 +21,10 @@ export const JoinByLinkScreen: React.FC<
   StaticScreenProps<{ code?: string }>
 > = ({ route }) => {
   const { t } = useTranslation();
-  const navigation = useNavigation();
+  const { navigation } = useAppNavigation();
   const code = route.params?.code ?? '';
 
-  const { data, loading } = useQuery(ResolveShareLinkDocument, {
-    variables: { code },
-    skip: !code,
-    fetchPolicy: 'cache-and-network',
-  });
-  const result = data?.resolveShareLink ?? null;
+  const { link: result, loading } = useResolveShareLink(code);
 
   // Guard against double-dispatch if `result` re-emits (cache→network) before
   // this screen unmounts. A ref (mutated only in the effect, never read during
@@ -58,12 +53,15 @@ export const JoinByLinkScreen: React.FC<
   const invalid = !!code && !loading && !result;
 
   return (
-    <View style={styles.container}>
-      <Header
-        title={t('joinLink.title')}
-        onBack={() => navigation.goBack()}
-        centerTitle
-      />
+    <Screen
+      header={{
+        title: t('joinLink.title'),
+        back: () => navigation.goBack(),
+        centerTitle: true,
+      }}
+      scroll="none"
+      gutter="none"
+    >
       {invalid ? (
         <ErrorState
           icon="alert-circle-outline"
@@ -81,7 +79,7 @@ export const JoinByLinkScreen: React.FC<
           <SousChefLoader size="small" showBrand={false} />
         </View>
       )}
-    </View>
+    </Screen>
   );
 };
 

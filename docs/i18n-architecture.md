@@ -132,6 +132,34 @@ per-context keys (`labels.default` → `Predeterminado`,
 `storageLocationCard.default` → `Predeterminada`); that is the
 grammatical-role case above.
 
+**An interpolated entity noun takes a frame with nothing agreeing with it.**
+Two slots name an entity at run time: `{{resource}}`, fed the
+`errors.resourceNames` map keyed by GraphQL typename, and `{{entity}}`, fed a
+bare noun. The sentence is fixed at translation time and the noun is not, so any
+article or participle attached to it is right for about half the entities:
+
+```
+es  "No se pudo encontrar la receta. …haya sido eliminado o movido."  ✗
+it  "La ricetta non è stato trovato."                                  ✗
+es  "Invitación actualizado"                                           ✗
+es  "Tu cambio en el la despensa…"   (frame added a second article)    ✗
+it  "La tua modifica al L'articolo…" (al = a + il)                     ✗
+```
+
+The frame is written **per locale**, because the labels differ in shape: es, it
+and sq labels carry their own article (`la despensa`, `L'articolo`), so those
+frames supply none; English labels are bare (`pantry item`), so its frame
+supplies "the". Where a participle is unavoidable, lead with the label and a
+colon so the participle agrees with a fixed noun instead
+(`{{resource}}: la tua modifica è stata sostituita…`). Spanish `en` is safe
+before either gender; `a` and `de` are not, because they contract with `el`.
+
+`__tests__/i18n/entityLabelAgreement.test.ts` fails a determiner immediately
+before a slot, and fails any new interpolation site until it is added to that
+test's `REVIEWED_SLOTS` with a note. Grammar itself is not checkable — a
+participle may correctly agree with some other noun — so the test forces the
+reading rather than attempting the judgement.
+
 ## Guards that exist today
 
 | guard | catches |
@@ -146,7 +174,40 @@ grammatical-role case above.
 | `__tests__/i18n/numberNounConcatenation.test.ts` | `${count} ${t('noun')}` shapes and literal `'s'` appends |
 | `__tests__/i18n/pluralCategories.test.ts` | a locale missing a CLDR plural category it needs |
 | `__tests__/i18n/addresseeGender.test.ts` | copy inflected for the reader's gender |
+| `__tests__/i18n/entityLabelAgreement.test.ts` | a determiner before an interpolated entity noun, and unreviewed new slots |
 | `__tests__/i18n/enumKeyCoverage.test.ts` + `composedKeyNamespaces.test.ts` | runtime-composed key namespaces with holes |
 
 None of them proves completeness. A string reaching JSX through a variable is
 invisible to all of them — that is the gap pseudolocalization would close.
+
+## Right-to-left: the cost, recorded
+
+The four shipped locales (en, es, it, sq) are all left-to-right, so nothing in
+the app has ever been laid out for RTL. This section records what adding one
+would cost, so the decision is made against a number rather than an impression.
+**No migration is planned; do not treat this as a worklist.**
+
+| what | count | why it matters |
+| --- | --- | --- |
+| `marginLeft` / `marginRight` | 124 | a physical edge; RTL wants `marginStart`/`marginEnd` |
+| `paddingLeft` / `paddingRight` | 14 | same |
+| absolute `left:` / `right:` | 61 | positioned chrome — badges, close buttons, overlay handles |
+| `textAlign: 'left' \| 'right'` | 2 | `'auto'` follows the writing direction |
+| `marginStart` / `marginEnd` etc. | 0 | nothing uses the logical properties today |
+| `I18nManager` references | 0 | the direction is never read, so nothing branches on it |
+
+Two things the numbers do not show, and which dominate the real cost:
+
+- **Icons that encode direction.** A back chevron, a disclosure arrow and a
+  progress indicator all have to mirror; a play button and a logo must not.
+  Nothing in the tree distinguishes them today.
+- **Gestures.** Swipe-to-delete opens from the trailing edge, which flips.
+  `SwipeableItem`'s `leftActions`/`rightActions` are named for physical sides,
+  so the descriptors themselves would need renaming to leading/trailing —
+  and that name reaches `BaseItemCard`, `ItemCard` and `ItemList`.
+
+The honest order if it is ever taken on: rename the swipe descriptors to
+leading/trailing first (it is the one API change), then codemod the 138 margin
+and padding sites to the logical properties, then audit the 61 absolute
+positions by hand, then the icons. The `textAlign` pair and `I18nManager`
+plumbing are an afternoon; the icons are not.

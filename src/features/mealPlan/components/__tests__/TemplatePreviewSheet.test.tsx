@@ -12,7 +12,7 @@ jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
   useSharedBottomSheetConfigs: () => ({ damping: 80, stiffness: 500 }),
 }));
 
-jest.mock('#components/molecules/FormInput', () => {
+jest.mock('#components/atoms/FormInput', () => {
   const RN = require('react-native');
   const R = require('react');
   return {

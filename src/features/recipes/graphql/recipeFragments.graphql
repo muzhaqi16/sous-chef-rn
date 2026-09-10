@@ -42,6 +42,7 @@ fragment RecipeReviewFragment on RecipeReview {
   user {
     id
     email
+    displayName
     profile {
       id
       displayName

@@ -19,26 +19,27 @@ import {
   SearchBar,
   type SearchBarAction,
 } from '#components/molecules/SearchBar';
-import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
-import { TabMainScreen } from '#components/templates/TabMainScreen';
 import { Icon } from '#/utils/iconUtils';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { RecipeSkeleton } from '#features/recipes/components/skeletons/RecipeSkeleton';
-import { PaginationFooter } from '#components/organisms/PaginationFooter';
-import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
+import { RecipeItemSkeleton } from '#features/recipes/components/skeletons/RecipeItemSkeleton';
+import { PaginationFooter } from '#components/atoms/PaginationFooter';
+import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import {
   useTutorialSequence,
   type TutorialStep,
 } from '#hooks/ui/useTutorialSequence';
 import { useTranslation } from '#/i18n';
-import { IngredientSelectorSheet } from './RecipeSearch/IngredientSelectorSheet';
+import { IngredientSelectorSheet } from '#features/recipes/components/recipeSearch/IngredientSelectorSheet';
 import { useRecipeScreen } from '#features/recipes/hooks/useRecipeScreen';
-import { RecipeFilterSheet } from './RecipeFilterSheet';
+import { RecipeFilterSheet } from '#features/recipes/components/RecipeFilterSheet';
 import { ActiveFilterChipsRow } from '#features/recipes/components/ActiveFilterChipsRow';
 import { Text } from '#components/atoms/Text';
 import type { Translate } from '#/i18n/types';
+import { Screen } from '#components/templates/Screen';
+import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 
 // ── Recipe tutorial steps (titles/subtitles resolved at usage via t()) ──
 const getRecipeTutorialSteps = (t: Translate): TutorialStep[] => [
@@ -273,7 +274,7 @@ const RecipeMainInner: React.FC = () => {
           icon: 'restaurant',
           onPress: openIngredientSelector,
           color: hasIngredientSelection
-            ? theme.colors.white
+            ? theme.colors.onPrimary
             : theme.colors.primary,
           backgroundColor: hasIngredientSelection
             ? theme.colors.primary
@@ -374,7 +375,7 @@ const RecipeMainInner: React.FC = () => {
             />
             {screen.activeFilterCount > 0 ? (
               <View style={styles.filterCountBadge} testID="filter-count-badge">
-                <Text style={styles.filterCountBadgeText}>
+                <Text role="caption" style={styles.filterCountBadgeText}>
                   {String(screen.activeFilterCount)}
                 </Text>
               </View>
@@ -391,12 +392,16 @@ const RecipeMainInner: React.FC = () => {
     return (
       <View style={styles.suggestedHeader}>
         <View style={styles.suggestedTextContainer}>
-          <Text size="lg" weight="semibold">
+          <Text role="heading">
             {isPantry
               ? t('recipes.basedOnPantry')
               : t('recipes.needInspiration')}
           </Text>
-          <Text size="sm" tone="secondary" style={styles.suggestedSubtitle}>
+          <Text
+            role="caption"
+            tone="secondary"
+            style={styles.suggestedSubtitle}
+          >
             {isPantry
               ? t('recipes.recipesYouCanMake')
               : t('recipes.recipeIdeasToTry')}
@@ -423,7 +428,7 @@ const RecipeMainInner: React.FC = () => {
     if (!screen.showSearchResults) return null;
     return (
       <View style={styles.searchResultsHeader}>
-        <Text size="sm" weight="semibold" tone="secondary">
+        <Text role="label" tone="secondary">
           {t(
             screen.searchResults.length === 1
               ? 'recipes.resultSingular'
@@ -482,7 +487,7 @@ const RecipeMainInner: React.FC = () => {
   );
 
   return (
-    <TabMainScreen testID="recipes-screen">
+    <Screen testID="recipes-screen" scroll="list" gutter="none">
       {/* A search in flight always shows the skeleton so the tap gets instant
           feedback (and any stale prior results are replaced); discovery's
           initial load only skeletons when there's nothing on screen yet. */}
@@ -490,10 +495,10 @@ const RecipeMainInner: React.FC = () => {
       (screen.discovery.loading &&
         !screen.showSearchResults &&
         screen.items.length === 0) ? (
-        <>
+        <View style={styles.loadingGutter}>
           {recipeListHeader}
           <RecipeSkeleton />
-        </>
+        </View>
       ) : (
         <ItemList
           items={screen.items}
@@ -523,7 +528,7 @@ const RecipeMainInner: React.FC = () => {
                 screen.pantryLoadingMore
               }
               itemCount={screen.items.length}
-              SkeletonComponent={RecipeSkeleton}
+              SkeletonComponent={RecipeItemSkeleton}
               skeletonCount={2}
             />
           }
@@ -575,7 +580,7 @@ const RecipeMainInner: React.FC = () => {
           }}
         />
       ) : null}
-    </TabMainScreen>
+    </Screen>
   );
 };
 
@@ -584,12 +589,17 @@ const noop = () => {};
 const RecipeMainFallback: React.FC = () => {
   const { t } = useTranslation();
   return (
-    <TabMainScreen testID="recipes-screen">
-      <TabScreenHeader
-        label={t('recipes.mainSubtitle')}
-        title={t('labels.recipes')}
-      />
-      <View style={styles.searchBarContainer}>
+    <Screen
+      testID="recipes-screen"
+      header={{
+        variant: 'tab',
+        label: t('recipes.mainSubtitle'),
+        title: t('labels.recipes'),
+      }}
+      scroll="list"
+      gutter="none"
+    >
+      <View style={styles.loadingGutter}>
         <SearchBar
           value=""
           onChangeText={noop}
@@ -597,9 +607,9 @@ const RecipeMainFallback: React.FC = () => {
           showSearchIcon
           editable={false}
         />
+        <RecipeSkeleton />
       </View>
-      <RecipeSkeleton />
-    </TabMainScreen>
+    </Screen>
   );
 };
 
@@ -611,7 +621,14 @@ export const RecipeMain: React.FC = () => (
 );
 
 const styles = StyleSheet.create(theme => ({
-  searchBarContainer: { paddingHorizontal: theme.spacing['3'] },
+  // No inset: this one renders INSIDE the list's content container, which
+  // already carries the gutter for everything it holds.
+  searchBarContainer: {},
+  // The loading branch renders chrome and skeleton bare under `gutter="none"`,
+  // unlike the loaded branch where the list's content container insets them.
+  loadingGutter: {
+    paddingHorizontal: theme.layout.pageGutter,
+  },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -624,8 +641,9 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
-    marginHorizontal: theme.spacing['3'],
-    marginVertical: theme.spacing.xs,
+    // The row rhythm, so this header sits in the list's spacing rather than a
+    // tighter one of its own.
+    marginVertical: theme.layout.rowGap,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
   },
@@ -644,8 +662,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
-    marginHorizontal: theme.spacing['3'],
-    marginTop: theme.spacing.sm,
+    marginVertical: theme.layout.rowGap,
   },
   filterIconWrapper: {
     // Anchors the absolutely-positioned count badge to the icon bounds
@@ -665,9 +682,8 @@ const styles = StyleSheet.create(theme => ({
   },
   filterCountBadgeText: {
     color: theme.colors.onPrimary,
-    fontSize: 10,
-    fontWeight: '700',
-    lineHeight: 12,
+    fontSize: theme.fonts.size['3xs'],
+    fontWeight: theme.fonts.weight.bold,
   },
   pressed: { opacity: theme.opacity.pressed },
 }));

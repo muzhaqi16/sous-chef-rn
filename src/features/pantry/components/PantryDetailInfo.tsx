@@ -3,7 +3,7 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import { InfoRow } from '#components/molecules/InfoRow';
+import { InfoRow } from '#components/atoms/InfoRow';
 
 const ThemedConditionInfoRow = withUnistyles(InfoRow);
 import { Icon } from '#/utils/iconUtils';
@@ -14,10 +14,11 @@ import {
   PantryDetailInfo_PantryItemFragmentDoc,
   type PantryDetailInfo_PantryItemFragment,
 } from './PantryDetailInfo.generated';
+import { resolveCurrency, usePreferredCurrency } from '#/domain/money';
 import {
   formatCondition,
   formatAcquisitionMethod,
-  formatCurrency,
+  formatCostOrNull,
   formatDate,
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
@@ -31,6 +32,7 @@ interface PantryDetailInfoProps {
   netWeightText: string | null;
   remainingNetWeightText: string | null;
   quantityBreakdownText: string | null;
+  portionsLeftText: string | null;
   packageBreakdownText: string | null;
   shelfLifeDays: number | null | undefined;
   shelfLifeOpenedDays: number | null | undefined;
@@ -48,6 +50,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   netWeightText,
   remainingNetWeightText,
   quantityBreakdownText,
+  portionsLeftText,
   packageBreakdownText,
   shelfLifeDays,
   shelfLifeOpenedDays,
@@ -55,6 +58,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   pricing,
 }) => {
   const { t } = useTranslation();
+  const preferredCurrency = usePreferredCurrency();
   // Per-entity cache subscription: re-renders only when this PantryItem's
   // fields change. Falls back to the source prop on cache miss so the
   // component renders correctly under test fixtures + tolerates stale state.
@@ -85,6 +89,19 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   const purchaseTotal = fromBatch
     ? fromBatch.totalCost
     : item.purchase?.totalPrice;
+  // The item's own currency denominates its cost rows; a purchase read off the
+  // Purchase record carries its own, which can differ from what the stack is in.
+  const itemCurrency = resolveCurrency(item.costCurrency, preferredCurrency);
+  // A batch figure is denominated by the batch. Falling back to the item's
+  // currency here would read the account's whenever the batches disagree —
+  // which is exactly when they were bought in different currencies.
+  const batchCurrency = fromBatch?.currency ?? item.costCurrency;
+  const purchaseCurrency = fromBatch
+    ? resolveCurrency(batchCurrency, preferredCurrency)
+    : resolveCurrency(item.purchase?.currency, preferredCurrency);
+  // An amount whose denomination cannot be established is withheld rather than
+  // shown under an assumed one.
+  const purchaseTotalIsDenominated = !fromBatch || !!batchCurrency;
 
   return (
     <>
@@ -108,12 +125,13 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           labelStyle={styles.labelText}
           containerStyle={styles.rowContainer}
         >
-          <Text size="base" weight="medium" style={styles.valueText}>
+          <Text role="bodyStrong" style={styles.valueText}>
             {netWeightText}
           </Text>
           {!!item.lastUsedAt && !!onCorrectWeight && (
             <AppPressable
               onPress={onCorrectWeight}
+              accessibilityLabel={t('correctWeight.title')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={styles.correctWeightButton}
             >
@@ -146,6 +164,17 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           containerStyle={styles.rowContainer}
         />
       )}
+      {!!portionsLeftText && (
+        <InfoRow
+          label={t('labels.portions')}
+          value={portionsLeftText}
+          icon="pie-chart-outline"
+          showColon={false}
+          labelStyle={styles.labelText}
+          valueStyle={styles.valueText}
+          containerStyle={styles.rowContainer}
+        />
+      )}
       {/* Package Details Row */}
       {!!packageBreakdownText && (
         <InfoRow
@@ -164,10 +193,15 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           label={t('pantryItemDetail.fields.shelfLife')}
           value={
             shelfLifeOpenedDays != null && shelfLifeDays != null
-              ? `${shelfLifeDays}d (${shelfLifeOpenedDays}d once opened)`
+              ? t('pantryItemDetail.shelfLifeBoth', {
+                  days: shelfLifeDays,
+                  openedDays: shelfLifeOpenedDays,
+                })
               : shelfLifeDays != null
-              ? `${shelfLifeDays} days`
-              : `${shelfLifeOpenedDays}d once opened`
+              ? t('labels.durationDays', { count: shelfLifeDays })
+              : t('pantryItemDetail.shelfLifeOpened', {
+                  days: shelfLifeOpenedDays,
+                })
           }
           icon="timer-outline"
           showColon={false}
@@ -249,14 +283,14 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         />
       )}
       {/* Cost Per Unit Row */}
-      {!!formatCurrency(costPerUnit) && (
+      {!!formatCostOrNull(costPerUnit, itemCurrency) && (
         <InfoRow
           label={t(
             isAveraged
               ? 'labels.avgCostPerUnit'
               : 'pantryItemDetail.fields.costPerUnit',
           )}
-          value={formatCurrency(costPerUnit)}
+          value={formatCostOrNull(costPerUnit, itemCurrency)}
           icon="cash-outline"
           showColon={false}
           labelStyle={styles.labelText}
@@ -265,10 +299,10 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         />
       )}
       {/* Total Cost Row */}
-      {!!formatCurrency(item.totalCost) && (
+      {!!formatCostOrNull(item.totalCost, itemCurrency) && (
         <InfoRow
           label={t('labels.stockValue')}
-          value={formatCurrency(item.totalCost)}
+          value={formatCostOrNull(item.totalCost, itemCurrency)}
           icon="wallet-outline"
           showColon={false}
           labelStyle={styles.labelText}
@@ -310,8 +344,10 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           )}
           // The TOTAL, not the unit price the Cost/Unit row above already shows.
           value={`${formatDate(purchaseDate)}${
-            purchaseTotal != null && purchaseTotal > 0
-              ? ` · ${formatCurrency(purchaseTotal)}`
+            purchaseTotal != null &&
+            purchaseTotal > 0 &&
+            purchaseTotalIsDenominated
+              ? ` · ${formatCostOrNull(purchaseTotal, purchaseCurrency)}`
               : ''
           }`}
           icon="receipt-outline"
@@ -338,30 +374,23 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         <View style={styles.notesSection}>
           <View style={styles.notesHeader}>
             <Icon name="document-text-outline" size={16} tone="textSecondary" />
-            <Text
-              size="sm"
-              weight="medium"
-              tone="secondary"
-              style={styles.notesLabel}
-            >
+            <Text role="label" tone="secondary" style={styles.notesLabel}>
               {t('pantryItemDetail.notes')}
             </Text>
           </View>
-          <Text size="base" style={styles.notesText}>
-            {item.storageNotes}
-          </Text>
+          <Text style={styles.notesText}>{item.storageNotes}</Text>
         </View>
       )}
       {/* Tags Section */}
       {!!item.tags && item.tags.length > 0 && (
         <View style={styles.tagsSection}>
-          <Text size="sm" tone="secondary" style={styles.tagsLabel}>
+          <Text role="caption" tone="secondary" style={styles.tagsLabel}>
             {t('pantryItemDetail.tags')}
           </Text>
           <View style={styles.tagsContainer}>
             {item.tags.map(tag => (
               <View key={tag} style={styles.tagChip}>
-                <Text size="sm" weight="medium" tone="accent">
+                <Text role="label" tone="accent">
                   {tag}
                 </Text>
               </View>
@@ -386,23 +415,18 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
 const styles = StyleSheet.create(theme => ({
   rowContainer: {
     paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.divider,
   },
   labelText: {
     color: theme.colors.textSecondary,
   },
   valueText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   correctWeightButton: {
     marginLeft: theme.spacing.sm,
     padding: theme.spacing.xs,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
   valueError: {
     color: theme.colors.error,

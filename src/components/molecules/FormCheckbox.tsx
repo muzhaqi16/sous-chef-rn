@@ -36,17 +36,14 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
             disabled && styles.disabledCheckbox,
           ]}
         >
-          {!!checked && <Icon name="checkmark" size={18} tone="white" />}
+          {!!checked && <Icon name="checkmark" size={18} tone="onPrimary" />}
         </View>
-        <Text
-          size="base"
-          style={[styles.label, disabled && styles.disabledLabel]}
-        >
+        <Text style={[styles.label, disabled && styles.disabledLabel]}>
           {label}
         </Text>
       </AppPressable>
       {error ? (
-        <Text size="sm" tone="error" style={styles.errorText}>
+        <Text role="caption" tone="error" style={styles.errorText}>
           {error}
         </Text>
       ) : null}
@@ -67,12 +64,12 @@ const styles = StyleSheet.create(theme => ({
     height: 24,
     borderRadius: theme.radii.xs,
     borderCurve: 'continuous',
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     borderColor: theme.colors.border,
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing['3'],
+    marginRight: theme.spacing.base,
   },
   checkboxChecked: {
     borderColor: theme.colors.primary,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import type { ItemCard as ItemCardComponent } from '../ItemCard';
-import type { EmptyStateProps } from '#components/atoms/EmptyState';
+import type { EmptyStateProps } from '#components/molecules/EmptyState';
 import { ItemList } from '../ItemList';
 
 type ItemCardProps = React.ComponentProps<typeof ItemCardComponent>;
@@ -52,7 +52,7 @@ jest.mock('../ItemCard', () => {
   };
 });
 
-jest.mock('#components/atoms/EmptyState', () => {
+jest.mock('#components/molecules/EmptyState', () => {
   const { Text } = require('react-native');
   return {
     EmptyState: ({

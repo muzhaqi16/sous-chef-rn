@@ -17,7 +17,15 @@ fragment useMoveToPantry_pantryItem on PantryItem {
   # without a second fetch. `totalCost` is `costPerUnit x actualQuantity`.
   costPerUnit
   totalCost
+  # What totalCost and costPerUnit are denominated in. Null when they are, and
+  # when the costed batches disagree about currency. Read rather than assumed:
+  # a cost recorded in euros stays euros whatever the account prefers now.
+  costCurrency {
+    id
+    code
+  }
   version
+  createdAt
   updatedAt
   storageState
   expiresAt
@@ -27,6 +35,13 @@ fragment useMoveToPantry_pantryItem on PantryItem {
   lastUsedAt
   netWeight
   remainingNetWeight
+  portionUnitId
+  portionUnit {
+    id
+    name
+    symbol
+  }
+  remainingPortions
   activeBatchCount
   earliestBatchExpiration
   item {
@@ -41,6 +56,8 @@ fragment useMoveToPantry_pantryItem on PantryItem {
     id
     name
     symbol
+    type
+    displayAsFraction
   }
   netWeightUnit {
     id
@@ -51,5 +68,36 @@ fragment useMoveToPantry_pantryItem on PantryItem {
     id
     name
     type
+  }
+  packageBreakdown {
+    count
+    contentUnit {
+      id
+      name
+      symbol
+    }
+    perUnitNetWeight
+    perUnitNetWeightUnit {
+      id
+      name
+      symbol
+    }
+    totalNetWeight
+  }
+  quantityBreakdown {
+    fullPackages
+    looseContentUnits
+    contentUnit {
+      id
+      name
+      symbol
+    }
+    totalContentUnits
+    remainingWeight
+    remainingWeightUnit {
+      id
+      name
+      symbol
+    }
   }
 }

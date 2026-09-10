@@ -64,8 +64,8 @@ describe('useStorageLocationAutocomplete', () => {
 
     expect(result.current.displayItems).toHaveLength(5);
     // Default (Fridge) should be first
-    expect(result.current.displayItems[0].name).toBe('Fridge');
-    expect(result.current.displayItems[0].isDefault).toBe(true);
+    expect(result.current.displayItems[0]!.name).toBe('Fridge');
+    expect(result.current.displayItems[0]!.isDefault).toBe(true);
   });
 
   it('filters locations by name match', () => {
@@ -121,12 +121,12 @@ describe('useStorageLocationAutocomplete', () => {
 
     const items = result.current.displayItems;
     // Fridge is default, should be first
-    expect(items[0].isDefault).toBe(true);
+    expect(items[0]!.isDefault).toBe(true);
     // Rest should be alphabetically sorted
     const nonDefault = items.slice(1);
     for (let i = 0; i < nonDefault.length - 1; i++) {
       expect(
-        nonDefault[i].name.localeCompare(nonDefault[i + 1].name),
+        nonDefault[i]!.name.localeCompare(nonDefault[i + 1]!.name),
       ).toBeLessThanOrEqual(0);
     }
   });

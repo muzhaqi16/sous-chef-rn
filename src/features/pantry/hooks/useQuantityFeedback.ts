@@ -2,11 +2,12 @@ import { useConversionPreview } from './useConversionPreview';
 import type { PantryActionSharedState } from '#features/pantry/components/modals/PantryActionModal';
 
 interface QuantityFeedbackResult {
-  /** Conversion preview (text, loading state, raw converted value) */
+  /** Conversion preview (text, loading state, raw value, server certainty) */
   conversion: {
     previewText: string | null;
     previewLoading: boolean;
     convertedValue: number | null;
+    confidence: number | null;
   };
   /** Remaining quantity after subtracting input (null if no valid input) */
   remaining: number | null;

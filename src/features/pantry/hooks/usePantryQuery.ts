@@ -19,7 +19,7 @@ import {
   useIsHomeSelectionReady,
   useSetIsPantryQueryComplete,
 } from '#store/useAppStore';
-import { PAGE_SIZE } from '#/constants/pagination';
+import { PAGE_SIZE } from '#features/pantry/constants/pagination';
 
 /**
  * Direct fields the screen-level hooks need, plus an opaque
@@ -136,6 +136,9 @@ export function usePantryQuery(
       itemsOrderBy: itemsOrderBy ?? undefined,
     },
     cursorVariableName: 'itemsCursor',
+    // A cursor restored from device storage can outlive the encoding that made
+    // it; re-reading page one is the only way forward when the server refuses.
+    restart: refetch,
   });
 
   const pantryStorageLocations = storageLocations.nodes;

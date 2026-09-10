@@ -7,7 +7,7 @@ import {
   userEvent,
 } from '@testing-library/react-native';
 import { QuantityEditSheet } from '../QuantityEditSheet';
-import type { HeaderAction } from '#/components/atoms/HeaderActionIcon';
+import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 
 type QuantityEditSheetProps = React.ComponentProps<typeof QuantityEditSheet>;
 type QuantityEditSheetItem = NonNullable<QuantityEditSheetProps['item']>;
@@ -43,7 +43,7 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#/components/molecules/Header', () => ({
+jest.mock('#components/organisms/Header', () => ({
   Header: ({
     title,
     rightActions,
@@ -94,7 +94,7 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
   },
 }));
 
-jest.mock('#/components/atoms/Chip', () => {
+jest.mock('#features/shoppingList/components/Chip', () => {
   const { Text, Pressable } = require('react-native');
   return ({
     label,
@@ -119,11 +119,6 @@ jest.mock('#components/atoms/BottomSheetFormScrollView', () => ({
     const { View } = require('react-native');
     return <View testID="form-scroll-view">{children}</View>;
   },
-}));
-
-jest.mock('#/utils/formatQuantity', () => ({
-  formatQuantity: jest.fn((v: number) => String(v)),
-  formatQuantityAsFraction: jest.fn((v: number) => String(v)),
 }));
 
 const makeItem = (
@@ -364,6 +359,39 @@ describe('QuantityEditSheet', () => {
   it('does not render chips when itemUnits is empty', () => {
     render(<QuantityEditSheet {...defaultProps} />);
     expect(screen.queryByTestId('chip-cups')).toBeNull();
+  });
+
+  describe('a quantity the user did not touch', () => {
+    // The display formatter snaps within a 0.02 tolerance, so the seeded text
+    // is an APPROXIMATION of the stored value. Writing it back would store the
+    // approximation, and repeating that drifts the quantity a little each time
+    // — on a value the user never edited.
+    it('cannot be saved, so the display approximation never reaches the server', async () => {
+      const user = userEvent.setup();
+      // 0.34 is inside the tolerance of 1/3, so it seeds the field as "1/3".
+      renderWithInit({
+        ...defaultProps,
+        item: makeItem({ quantity: 0.34 }),
+      });
+
+      await user.press(screen.getByTestId('header-action-0'));
+
+      expect(defaultProps.onSave).not.toHaveBeenCalled();
+    });
+
+    it('becomes saveable once the user changes it, and sends what they typed', async () => {
+      const user = userEvent.setup();
+      renderWithInit({
+        ...defaultProps,
+        item: makeItem({ quantity: 0.34 }),
+      });
+
+      await user.press(screen.getByTestId('quantity-edit-value'));
+      fireEvent.changeText(screen.getByTestId('quantity-edit-input'), '0.5');
+      await user.press(screen.getByTestId('header-action-0'));
+
+      expect(defaultProps.onSave).toHaveBeenCalledWith('0.5', 'cups', 'unit-1');
+    });
   });
 
   it('handles save call via header action', async () => {

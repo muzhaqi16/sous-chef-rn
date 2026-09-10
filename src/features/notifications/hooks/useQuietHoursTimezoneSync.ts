@@ -7,7 +7,7 @@ import {
 } from '#operations/user/user.generated';
 import { useUser } from '#store/useAppStore';
 import { snapshotFields } from '#/apollo/utils/localFirstFields';
-import { getDeviceTimezone } from '#/utils/notifications/quietHours';
+import { getDeviceTimezone } from '#features/notifications/utils/quietHours';
 import { logger } from '#/utils/environment';
 import {
   applySettingsUpdate,

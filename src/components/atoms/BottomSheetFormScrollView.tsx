@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ScrollViewProps } from 'react-native';
 import type { KeyboardAwareScrollViewProps } from 'react-native-keyboard-controller';
-import { BottomSheetKeyboardAwareScrollView } from './BottomSheetKeyboardAwareScrollView';
+import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { BottomSheetInputProvider } from '#context/BottomSheetInputContext';
 
 type Props = ScrollViewProps &

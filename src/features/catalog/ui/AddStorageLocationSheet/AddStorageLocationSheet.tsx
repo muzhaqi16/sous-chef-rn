@@ -2,17 +2,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { BottomSheetView } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   ThemedActivityIndicator,
   ThemedBottomSheetTextInput,
   type ThemedBottomSheetTextInputRef,
 } from '#components/atoms/themedComponents';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StorageType } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
+import { Divider } from '#components/atoms/Divider';
+import { Sheet } from '#components/templates/Sheet';
 
 /** Module-level async wrapper to keep try-catch out of the component body (React Compiler). */
 async function executeCreateLocation(
@@ -42,11 +41,6 @@ export const AddStorageLocationSheet: React.FC<
   AddStorageLocationSheetProps
 > = ({ visible, onClose, onCreateLocation, creating = false }) => {
   const { t } = useTranslation();
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['35%'],
-  });
   const inputRef = useRef<ThemedBottomSheetTextInputRef>(null);
 
   const [name, setName] = useState('');
@@ -109,80 +103,81 @@ export const AddStorageLocationSheet: React.FC<
   styles.useVariants({ error: !!error });
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps} index={0}>
-      <BottomSheetView style={[styles.content, contentContainerStyle]}>
-        {/* Header with Cancel/Create */}
-        <View style={styles.header}>
-          <AppPressable
-            onPress={handleCancel}
-            style={styles.headerButton}
-            accessibilityRole="button"
-            accessibilityLabel={t('labels.cancel')}
-          >
-            <Text size="md" tone="secondary">
-              {t('labels.cancel')}
-            </Text>
-          </AppPressable>
+    <Sheet
+      mode="view"
+      visible={visible}
+      onDismiss={onClose}
+      snapPoints={['35%']}
+      contentContainerStyle={styles.content}
+    >
+      {/* Header with Cancel/Create */}
+      <View style={styles.header}>
+        <AppPressable
+          onPress={handleCancel}
+          style={styles.headerButton}
+          accessibilityRole="button"
+          accessibilityLabel={t('labels.cancel')}
+        >
+          <Text tone="secondary">{t('labels.cancel')}</Text>
+        </AppPressable>
 
-          <Text size="lg" weight="semibold" align="center" style={styles.title}>
-            {t('labels.addLocation')}
-          </Text>
+        <Text role="heading" align="center" style={styles.title}>
+          {t('labels.addLocation')}
+        </Text>
 
-          <AppPressable
-            onPress={handleCreate}
-            style={styles.headerButton}
-            accessibilityRole="button"
-            accessibilityLabel={t('labels.create')}
-            disabled={isCreateDisabled}
-          >
-            {creating ? (
-              <ThemedActivityIndicator size="small" />
-            ) : (
-              <Text
-                size="md"
-                weight="semibold"
-                align="right"
-                tone={isCreateDisabled ? 'tertiary' : 'accent'}
-              >
-                {t('labels.create')}
-              </Text>
-            )}
-          </AppPressable>
-        </View>
-
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* Input Field */}
-        <View style={styles.inputContainer}>
-          <Text size="sm" weight="medium" tone="secondary" style={styles.label}>
-            {t('addStorageLocation.locationName')}
-          </Text>
-
-          <ThemedBottomSheetTextInput
-            ref={inputRef}
-            style={styles.input}
-            defaultValue={name}
-            onChangeText={handleNameChange}
-            placeholder={t('addStorageLocation.namePlaceholder')}
-            autoCapitalize="words"
-            autoCorrect={false}
-            maxLength={50}
-            returnKeyType="done"
-            onSubmitEditing={handleCreate}
-          />
-          {!!error && (
-            <Text size="sm" tone="error" style={styles.errorText}>
-              {error}
+        <AppPressable
+          onPress={handleCreate}
+          style={styles.headerButton}
+          accessibilityRole="button"
+          accessibilityLabel={t('labels.create')}
+          disabled={isCreateDisabled}
+        >
+          {creating ? (
+            <ThemedActivityIndicator size="small" />
+          ) : (
+            <Text
+              role="bodyStrong"
+              align="right"
+              tone={isCreateDisabled ? 'tertiary' : 'accent'}
+            >
+              {t('labels.create')}
             </Text>
           )}
+        </AppPressable>
+      </View>
 
-          <Text size="xs" tone="tertiary" style={styles.hint}>
-            {t('addStorageLocation.hintText')}
+      {/* Divider */}
+      <Divider style={styles.dividerGap} />
+
+      {/* Input Field */}
+      <View style={styles.inputContainer}>
+        <Text role="label" tone="secondary" style={styles.label}>
+          {t('addStorageLocation.locationName')}
+        </Text>
+
+        <ThemedBottomSheetTextInput
+          ref={inputRef}
+          style={styles.input}
+          defaultValue={name}
+          onChangeText={handleNameChange}
+          placeholder={t('addStorageLocation.namePlaceholder')}
+          autoCapitalize="words"
+          autoCorrect={false}
+          maxLength={50}
+          returnKeyType="done"
+          onSubmitEditing={handleCreate}
+        />
+        {!!error && (
+          <Text role="caption" tone="error" style={styles.errorText}>
+            {error}
           </Text>
-        </View>
-      </BottomSheetView>
-    </BottomSheetModal>
+        )}
+
+        <Text role="caption" tone="tertiary" style={styles.hint}>
+          {t('addStorageLocation.hintText')}
+        </Text>
+      </View>
+    </Sheet>
   );
 };
 
@@ -204,10 +199,8 @@ const styles = StyleSheet.create(theme => ({
   title: {
     flex: 1,
   },
-  divider: {
-    height: 1,
+  dividerGap: {
     marginBottom: theme.spacing.lg,
-    backgroundColor: theme.colors.border,
   },
   inputContainer: {
     marginBottom: theme.spacing.md,
@@ -216,12 +209,12 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.sm,
   },
   input: {
-    fontSize: theme.typography.fontSize.md,
+    ...theme.type.body,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surfaceVariant,
     borderColor: theme.colors.border,

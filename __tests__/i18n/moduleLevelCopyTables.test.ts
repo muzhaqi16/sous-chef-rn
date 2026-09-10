@@ -179,8 +179,8 @@ function scanDeclarations(
     let depth = 0;
     let opened = false;
     for (let i = index; i < lines.length; i++) {
-      if (stopAtFunctionBoundary && FUNCTION_BOUNDARY.test(lines[i])) break;
-      for (const char of lines[i]) {
+      if (stopAtFunctionBoundary && FUNCTION_BOUNDARY.test(lines[i]!)) break;
+      for (const char of lines[i]!) {
         if (char === '{' || char === '[') {
           depth++;
           opened = true;
@@ -191,8 +191,8 @@ function scanDeclarations(
       // the following line, which is how one offender escaped the previous
       // version. Joining unconditionally would report every wrapped hit twice.
       const found =
-        match(lines[i]) ??
-        (DANGLING_PROP.test(lines[i])
+        match(lines[i]!) ??
+        (DANGLING_PROP.test(lines[i]!)
           ? match(`${lines[i]} ${(lines[i + 1] ?? '').trim()}`)
           : null);
       if (found) {

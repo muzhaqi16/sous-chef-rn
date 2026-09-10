@@ -1,9 +1,11 @@
 import {
   BaseDimension,
   ItemType,
+  NetWeightKind,
   StorageState,
 } from '#/graphql/generated/schemaTypes';
 import {
+  buildInitialDataFromSnapshot,
   buildSuggestibleItemChanges,
   type EditableItemSnapshot,
 } from '../suggestItemChanges';
@@ -288,4 +290,35 @@ describe('buildSuggestibleItemChanges', () => {
       'productDetails.primaryUpc',
     ]);
   });
+});
+
+describe('buildInitialDataFromSnapshot — what a net weight measures', () => {
+  it('seeds a PACKAGE weight into the package-size field', () => {
+    const initial = buildInitialDataFromSnapshot(
+      snapshot({ netWeightKind: NetWeightKind.Package }),
+    );
+
+    expect(initial.netWeights).toEqual([
+      { value: 500, unitName: 'gram', unitId: 'unit-g' },
+    ]);
+  });
+
+  it('treats an absent kind as a package size', () => {
+    // What the field meant before the API distinguished the three.
+    const initial = buildInitialDataFromSnapshot(snapshot());
+
+    expect(initial.netWeights).toHaveLength(1);
+  });
+
+  for (const kind of [NetWeightKind.Serving, NetWeightKind.Reference]) {
+    it(`does not present a ${kind} weight as a package size`, () => {
+      // A serving size and a 100g nutrition basis are not package contents;
+      // seeding either would show it as one and submit an edit as one.
+      const initial = buildInitialDataFromSnapshot(
+        snapshot({ netWeightKind: kind }),
+      );
+
+      expect(initial.netWeights).toBeUndefined();
+    });
+  }
 });

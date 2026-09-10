@@ -15,7 +15,7 @@ import { t } from '#/i18n';
 import {
   clearAllPurchasedItemsFromCache,
   clearAllUnpurchasedItemsFromCache,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+} from '#features/shoppingList/cache/connections';
 import { logger } from '#/utils/environment';
 
 // Just the subset of Apollo's mutate options this hook ever passes.

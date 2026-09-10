@@ -18,7 +18,6 @@ import {
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
-import { storage } from '#/storage/mmkv';
 
 export interface AppSettings {
   theme: AppTheme;
@@ -157,20 +156,12 @@ export const useAppSettings = () => {
     );
   };
 
-  // PERFORMANCE: Sync settings to MMKV so startup-path hooks can read them
-  // without triggering the GetUserSettings GraphQL query at startup.
-  // - useShowTutorials reads 'user_show_tutorials' from MMKV
-  // - offlineModeEnabled is mirrored to MMKV by networkSlice.setOfflineModeEnabled
+  // Mirror the server's settings into the store so startup-path hooks read them
+  // without waiting on `GetUserSettings`. The store's own subscribers see a
+  // change immediately, so nothing has to be nudged into re-reading.
   useEffect(() => {
-    if (
-      settings?.showTutorials !== undefined &&
-      storage.getBoolean('user_show_tutorials') !== settings.showTutorials
-    ) {
-      storage.set('user_show_tutorials', settings.showTutorials);
-      // Already-mounted tutorial hooks snapshot this MMKV value at mount and
-      // only re-read on the reset signal — bump it so a server-driven change
-      // (e.g. the account turned tutorials off on another device) reaches them.
-      useStore.getState().bumpTutorialResetGeneration();
+    if (settings?.showTutorials !== undefined) {
+      useStore.getState().setShowTutorials(settings.showTutorials);
     }
     if (settings?.offlineMode !== undefined) {
       useStore.getState().setOfflineModeEnabled(settings.offlineMode);

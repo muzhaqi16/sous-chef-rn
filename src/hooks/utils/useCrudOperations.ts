@@ -13,7 +13,7 @@ import {
   alertVersionConflict,
 } from '#/utils/errorHandlers';
 import {
-  findConflictDataMember,
+  isConflictDataMember,
   findFirstErrorMember,
 } from '#/utils/errors/versionConflict';
 import { validationFieldName } from '#/utils/errors/mutationPayload';
@@ -180,7 +180,7 @@ function createAddOperationImpl<TInput, TResult>(
       // A top-level GraphQL error carries `extensions.code`; its `message` is
       // server-authored English and is never displayed — map the code to
       // localized copy (an absent or unmapped code gets a generic line).
-      const code = result.errors[0].extensions?.code;
+      const code = result.errors[0]?.extensions?.code;
       alertService.alert(
         t('labels.error'),
         typeof code === 'string'
@@ -300,12 +300,8 @@ function createUpdateOperationImpl<TInput, TResult>(
     // branch in `onError` above only fires when Apollo throws, which
     // `errorPolicy: 'all'` avoids — so without this the Refresh action is
     // unreachable for the data-member shape the schema actually returns.
-    const conflict = findConflictDataMember(result.data);
-    if (conflict) {
-      alertVersionConflict({
-        onRefresh: onVersionConflict,
-        customMessage: conflict.message ?? undefined,
-      });
+    if (isConflictDataMember(result.data)) {
+      alertVersionConflict({ onRefresh: onVersionConflict });
       onError?.(new Error(`${operationName}: conflict`));
       return false;
     }

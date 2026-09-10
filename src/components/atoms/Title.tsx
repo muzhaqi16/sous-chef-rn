@@ -10,7 +10,7 @@ interface TitleProps {
 
 export const Title: React.FC<TitleProps> = ({ children, style }) => {
   return (
-    <Text variant="title" style={[styles.title, style]}>
+    <Text role="title" style={[styles.title, style]}>
       {children}
     </Text>
   );

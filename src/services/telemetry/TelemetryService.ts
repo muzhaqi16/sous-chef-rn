@@ -14,7 +14,7 @@ import { HttpTransport } from './transports/HttpTransport';
 import { scrubLogExtra, scrubString } from './scrub';
 import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
-import { getDeviceIdSync } from '#/utils/deviceId';
+import { getDeviceId } from '#/storage/deviceId';
 import { generateId } from '#/utils/generateId';
 import { getVersion, isEmulatorSync } from 'react-native-device-info';
 import { env as buildEnv } from '#/config/env';
@@ -215,8 +215,8 @@ export class TelemetryService {
         // Attribution, applied last so a caller's `extra` cannot shadow it.
         // BODY fields, not Loki stream labels — a label per device or run would
         // multiply the stream count, while a body field stays searchable with
-        // `| json | device_id="..."`.
-        device_id: getDeviceIdSync() ?? 'unknown',
+        // `| json | device_id="..."`. `device_id` is stamped at FLUSH, by which
+        // time it has resolved.
         session_id: SESSION_ID,
         // The commit the build came from; a body field, never a label. `-dirty`
         // means uncommitted changes, so the build is not reproducible.
@@ -520,7 +520,14 @@ export class TelemetryService {
       return;
     }
 
-    const logs = [...this.logBuffer];
+    // Stamped here rather than per entry: before hydration the accessor answers
+    // null, and a literal substitute would pool every launch's earliest logs
+    // into one cross-device bucket that the `device_id=` filter cannot separate.
+    const deviceId = getDeviceId();
+    const logs = this.logBuffer.map(entry => ({
+      ...entry,
+      extra: { ...entry.extra, ...(deviceId ? { device_id: deviceId } : {}) },
+    }));
     this.logBuffer = [];
     this.logFlushInFlight = true;
 
@@ -534,14 +541,15 @@ export class TelemetryService {
       const failures = results
         .map((result, index) => ({
           result,
-          name: availableTransports[index].getName(),
+          name: availableTransports[index]?.getName() ?? 'unknown',
         }))
         .filter(
           (entry): entry is { result: PromiseRejectedResult; name: string } =>
             entry.result.status === 'rejected',
         );
 
-      if (failures.length === 0) {
+      const [firstFailure] = failures;
+      if (!firstFailure) {
         this.noteFlushSuccess(this.logsBackoff, 'logs');
         return;
       }
@@ -559,7 +567,7 @@ export class TelemetryService {
         this.logsBackoff,
         'logs',
         failures.map(f => f.name).join(', '),
-        failures[0].result.reason,
+        firstFailure.result.reason,
         retryable
           ? undefined
           : `dropped ${logs.length} entries (non-retryable)`,
@@ -597,14 +605,15 @@ export class TelemetryService {
       const failures = results
         .map((result, index) => ({
           result,
-          name: availableTransports[index].getName(),
+          name: availableTransports[index]?.getName() ?? 'unknown',
         }))
         .filter(
           (entry): entry is { result: PromiseRejectedResult; name: string } =>
             entry.result.status === 'rejected',
         );
 
-      if (failures.length === 0) {
+      const [firstFailure] = failures;
+      if (!firstFailure) {
         this.metricsRetryPending = false;
         this.noteFlushSuccess(this.metricsBackoff, 'metrics');
         return;
@@ -621,7 +630,7 @@ export class TelemetryService {
         this.metricsBackoff,
         'metrics',
         failures.map(f => f.name).join(', '),
-        failures[0].result.reason,
+        firstFailure.result.reason,
       );
     } finally {
       this.metricFlushInFlight = false;

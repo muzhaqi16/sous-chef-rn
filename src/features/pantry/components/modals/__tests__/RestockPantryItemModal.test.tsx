@@ -36,7 +36,7 @@ jest.mock('#components/molecules/FractionInput', () => ({
     return <Text>{label}</Text>;
   },
 }));
-jest.mock('#components/molecules/FormInput', () => ({
+jest.mock('#components/atoms/FormInput', () => ({
   FormInput: ({ label }: { label: string }) => {
     const { Text } = require('react-native');
     return <Text>{label}</Text>;

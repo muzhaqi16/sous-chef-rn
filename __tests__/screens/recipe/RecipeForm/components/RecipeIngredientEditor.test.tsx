@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { RecipeIngredientEditor } from '../../../../../src/features/recipes/screens/RecipeForm/components/RecipeIngredientEditor';
+import { RecipeIngredientEditor } from '#features/recipes/components/recipeForm/RecipeIngredientEditor';
 
 jest.mock('../../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../../src/apollo/links/refreshToken');
@@ -48,10 +48,10 @@ jest.mock(
     },
   }),
 );
-jest.mock('../../../../../src/components/molecules/FormInput', () => ({
+jest.mock('../../../../../src/components/atoms/FormInput', () => ({
   FormInput: (
     props: React.ComponentProps<
-      typeof import('../../../../../src/components/molecules/FormInput').FormInput
+      typeof import('../../../../../src/components/atoms/FormInput').FormInput
     >,
   ) => {
     const { Text } = require('react-native');
@@ -68,20 +68,20 @@ jest.mock('../../../../../src/components/molecules/EditableCounter', () => ({
     return <Text>{props.label}</Text>;
   },
 }));
-jest.mock('../../../../../src/components/molecules/FieldRow', () => ({
+jest.mock('../../../../../src/components/atoms/FieldRow', () => ({
   FieldRow: (
     props: React.ComponentProps<
-      typeof import('../../../../../src/components/molecules/FieldRow').FieldRow
+      typeof import('../../../../../src/components/atoms/FieldRow').FieldRow
     >,
   ) => {
     const { View } = require('react-native');
     return <View>{props.children}</View>;
   },
 }));
-jest.mock('../../../../../src/components/molecules/Header', () => ({
+jest.mock('../../../../../src/components/organisms/Header', () => ({
   Header: (
     props: React.ComponentProps<
-      typeof import('../../../../../src/components/molecules/Header').Header
+      typeof import('../../../../../src/components/organisms/Header').Header
     >,
   ) => {
     const { Text } = require('react-native');

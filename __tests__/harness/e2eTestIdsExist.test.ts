@@ -117,12 +117,14 @@ const appTestIds = (): {
 
     const source = readFileSync(file, 'utf8');
     for (const m of source.matchAll(/testIDPrefix:\s*'([^']+)'/g)) {
-      configPrefixes.add(m[1]);
+      configPrefixes.add(m[1]!);
     }
-    for (const m of source.matchAll(/testIDPrefix=(?:"([^"]+)"|\{'([^']+)'\})/g)) {
+    for (const m of source.matchAll(
+      /testIDPrefix=(?:"([^"]+)"|\{'([^']+)'\})/g,
+    )) {
       const prefix = m[1] ?? m[2];
-      configPrefixes.add(prefix);
-      prefixes.push(prefix);
+      configPrefixes.add(prefix!);
+      prefixes.push(prefix!);
     }
   }
 
@@ -138,8 +140,10 @@ const appTestIds = (): {
     const source = readFileSync(file, 'utf8');
 
     // Any kebab-case string literal. See the docblock for why this is broad.
-    for (const m of source.matchAll(/['"`]([a-z][a-z0-9]*(?:-[a-z0-9]+)+)['"`]/g)) {
-      exact.add(m[1]);
+    for (const m of source.matchAll(
+      /['"`]([a-z][a-z0-9]*(?:-[a-z0-9]+)+)['"`]/g,
+    )) {
+      exact.add(m[1]!);
     }
 
     // `${config.testIDPrefix}-add-manually-button` and `${testIDPrefix}-delete`
@@ -184,14 +188,12 @@ const appTestIds = (): {
     // `alert-button-0` to pass only because the id also appears, backtick-quoted,
     // in a comment two lines above — which the literal scan picks up. Deleting
     // that prose then fails this test on a testID that renders.
-    for (const m of source.matchAll(
-      /testID=\{(?:[^`{}]*\?\s*)?`([^`]+)`/g,
-    )) {
+    for (const m of source.matchAll(/testID=\{(?:[^`{}]*\?\s*)?`([^`]+)`/g)) {
       const template = m[1];
-      if (!template.includes('${')) continue;
-      if (/\$\{(?:config\.)?testIDPrefix\}/.test(template)) continue;
+      if (!template!.includes('${')) continue;
+      if (/\$\{(?:config\.)?testIDPrefix\}/.test(template!)) continue;
 
-      const literals = template.split(/\$\{[^}]*\}/);
+      const literals = template!.split(/\$\{[^}]*\}/);
       const anchored = literals.some(part => /[a-z]{3}/.test(part));
       if (!anchored) continue;
 
@@ -203,8 +205,8 @@ const appTestIds = (): {
       // One interpolation with a literal either side — the only form that has
       // an unambiguous collapsed twin.
       if (literals.length === 2) {
-        const head = literals[0].replace(/-$/, '');
-        const tail = literals[1].replace(/^-/, '');
+        const head = literals[0]!.replace(/-$/, '');
+        const tail = literals[1]!.replace(/^-/, '');
         if (head && tail) collapsed.add(`${head}-${tail}`);
       }
     }
@@ -235,7 +237,7 @@ const referencedTestIds = (): Array<{ id: string; where: string }> => {
     const rel = relative(ROOT, file);
     for (const m of source.matchAll(/by\.id\(\s*'([^']+)'\s*\)/g)) {
       const line = source.slice(0, m.index).split('\n').length;
-      refs.push({ id: m[1], where: `${rel}:${line}` });
+      refs.push({ id: m[1]!, where: `${rel}:${line}` });
     }
   }
   return refs;

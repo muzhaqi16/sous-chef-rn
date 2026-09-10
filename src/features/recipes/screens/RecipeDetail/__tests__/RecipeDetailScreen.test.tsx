@@ -23,6 +23,12 @@ jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#hooks/performance/useScreenTransition');
 
+// The screen reads only the preferred unit system from settings; the real hook
+// runs its own query and this suite renders without an Apollo provider.
+jest.mock('#features/profile/hooks/useAppSettings', () => ({
+  useAppSettings: () => ({ settings: { preferredUnitSystem: 'METRIC' } }),
+}));
+
 // Mock the hook fully
 jest.mock('../../../hooks/useRecipeDetail', () => ({
   useRecipeDetail: jest.fn(() => ({
@@ -106,7 +112,7 @@ jest.mock('#features/recipes/hooks/usePublishRecipe', () => ({
   })),
 }));
 
-jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
+jest.mock('#components/providers/ScreenErrorBoundary', () => ({
   RecipeDetailErrorBoundary: ({ children }: { children: React.ReactNode }) =>
     children,
 }));
@@ -119,15 +125,17 @@ jest.mock('#components/atoms/BackButton', () => ({
   BackButton: () => 'BackButton',
 }));
 
-jest.mock('#components/templates/BottomSheetAction', () => ({
-  BottomSheetAction: () => null,
-}));
-
-jest.mock('#components/molecules/FolderPicker', () => ({
+jest.mock('#features/recipes/components/FolderPicker', () => ({
   FolderPicker: () => null,
 }));
 
-jest.mock('#components/modals/MarkCookedModal', () => ({
+// The picker pulls in gorhom's scrollable creator through the sheet shell,
+// which this suite's mock set does not stand up.
+jest.mock('#features/shoppingList/ui/ShoppingListPickerSheet', () => ({
+  ShoppingListPickerSheet: () => null,
+}));
+
+jest.mock('#components/organisms/MarkCookedModal', () => ({
   MarkCookedModal: () => null,
 }));
 
@@ -163,7 +171,7 @@ jest.mock('#features/recipes/components/ReviewSection', () => ({
   ReviewSection: () => null,
 }));
 
-jest.mock('../components/IngredientCard', () => ({
+jest.mock('#features/recipes/components/recipeDetail/IngredientCard', () => ({
   IngredientCard: () => null,
 }));
 
@@ -259,6 +267,85 @@ describe('RecipeDetail', () => {
       externalId: '123',
       loading: false,
       error: null,
+      backendError: null,
+      displayData: {
+        title: 'Spaghetti Carbonara',
+        image: 'https://example.com/image.jpg',
+        servings: 4,
+        readyInMinutes: 25,
+        summary: 'A classic Italian dish',
+        ingredients: [
+          { id: 'ing-1', name: 'Pasta', amount: 200, measures: {} },
+        ],
+        instructions: [],
+        vegetarian: false,
+        vegan: false,
+        glutenFree: false,
+        dairyFree: false,
+      },
+      isBackendRecipe: false,
+      backendRecipe: null,
+      saving: false,
+      isSaved: false,
+      handleSaveRecipe: jest.fn(),
+      shoppingLists: [],
+      addingToList: false,
+      addedIngredients: new Set(),
+      handleAddSingleIngredient: jest.fn(),
+      handleAddAllIngredientsToList: jest.fn(),
+      handleAddAllIngredients: jest.fn(),
+      handleListSelected: jest.fn(),
+      listPickerVisible: false,
+      handleSheetDismiss: jest.fn(),
+      cookedModalVisible: false,
+      setCookedModalVisible: jest.fn(),
+      markingAsCooked: false,
+      handleMarkAsCooked: jest.fn(),
+      handleSkipReview: jest.fn(),
+      ingredientMatching: {
+        isSheetVisible: false,
+        editableMatches: [],
+        matchSummary: null,
+        updateMatch: jest.fn(),
+        confirmConsumption: jest.fn(),
+        confirmLoading: false,
+        hasPantry: false,
+        closeSheet: jest.fn(),
+      },
+      showFolderPicker: false,
+      setShowFolderPicker: jest.fn(),
+      updatingFolderTags: false,
+      handleUpdateFolder: jest.fn(),
+      handleUpdateTags: jest.fn(),
+      handleUpdateNotes: jest.fn(),
+      handleUpdateRating: jest.fn(),
+      savedFolder: null,
+      savedTags: [],
+      savedNotes: null,
+      savedRating: null,
+      cookedCount: 0,
+      handleUnfavoriteRecipe: jest.fn(),
+      preloading: false,
+      preloadedRecipe: null,
+    });
+
+    const tree = render(<RecipeDetail />);
+    expect(tree.getAllByText('Spaghetti Carbonara')[0]).toBeTruthy();
+    expect(tree.getByText('A classic Italian dish')).toBeTruthy();
+  });
+
+  it('keeps a cached recipe on screen when the refresh fails', () => {
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
+    useRecipeDetail.mockReturnValue({
+      goBack: jest.fn(),
+      recipeId: null,
+      externalId: '123',
+      loading: false,
+      // Offline, a cached recipe's refresh fails. Checking `error` before
+      // `displayData` blanked the screen and called it "recipe not found".
+      error: 'Network request failed',
       backendError: null,
       displayData: {
         title: 'Spaghetti Carbonara',

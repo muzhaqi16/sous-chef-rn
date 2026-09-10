@@ -55,7 +55,7 @@ jest.mock('#components/molecules/FractionInput', () => ({
     );
   },
 }));
-jest.mock('#components/molecules/FormInput', () => ({
+jest.mock('#components/atoms/FormInput', () => ({
   FormInput: (props: {
     value?: string;
     onChangeText?: (text: string) => void;

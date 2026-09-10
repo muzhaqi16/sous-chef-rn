@@ -7,6 +7,7 @@ import { Icon } from '#utils/iconUtils';
 import { NutritionGoalProgress } from './NutritionGoalProgress';
 import { Text } from '#components/atoms/Text';
 import { type GoalProgress } from '#/graphql/generated/schemaTypes';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
 // Structural prop types — only the fields the card actually renders. Keeps
 // the component reusable across MealPlanMain and MealPlanSettingsSheet
@@ -46,13 +47,11 @@ function MacroStat({
 }) {
   return (
     <View style={statStyles.container}>
-      <Text size="lg" weight="bold">
-        {Math.round(value)}
-      </Text>
-      <Text size="xs" tone="tertiary">
+      <Text role="heading">{Math.round(value)}</Text>
+      <Text role="caption" tone="tertiary">
         {unit}
       </Text>
-      <Text size="xs" tone="secondary" style={statStyles.label}>
+      <Text role="caption" tone="secondary" style={statStyles.label}>
         {label}
       </Text>
     </View>
@@ -71,12 +70,10 @@ export const NutritionSummaryCard: React.FC<NutritionSummaryCardProps> = ({
   return (
     <View style={styles.container}>
       <Pressable onPress={toggle} style={styles.header}>
-        <Text size="md" weight="semibold">
-          {t('nutritionSummary.title')}
-        </Text>
+        <Text role="bodyStrong">{t('nutritionSummary.title')}</Text>
         <View style={styles.headerRight}>
           {!expanded ? (
-            <Text size="sm" tone="secondary">
+            <Text role="caption" tone="secondary">
               {t('nutritionSummary.kcalPerDay', {
                 count: Math.round(nutritionSummary.avgDailyCalories),
               })}
@@ -94,14 +91,9 @@ export const NutritionSummaryCard: React.FC<NutritionSummaryCardProps> = ({
         <View style={styles.body}>
           {/* Daily averages */}
           <View style={styles.section}>
-            <Text
-              size="sm"
-              weight="semibold"
-              tone="secondary"
-              style={styles.sectionTitle}
-            >
+            <SectionHeader variant="overline">
               {t('nutritionSummary.dailyAverages')}
-            </Text>
+            </SectionHeader>
             <View style={styles.macroRow}>
               <MacroStat
                 label={t('labels.calories')}
@@ -128,27 +120,20 @@ export const NutritionSummaryCard: React.FC<NutritionSummaryCardProps> = ({
 
           {/* Plan totals */}
           <View style={styles.section}>
-            <Text
-              size="sm"
-              weight="semibold"
-              tone="secondary"
-              style={styles.sectionTitle}
-            >
+            <SectionHeader variant="overline">
               {t('nutritionSummary.planTotals')}
-            </Text>
+            </SectionHeader>
             <View style={styles.infoRow}>
-              <Text size="sm" tone="secondary">
+              <Text role="caption" tone="secondary">
                 {t('nutritionSummary.totalMeals')}
               </Text>
-              <Text size="sm" weight="medium">
-                {nutritionSummary.totalMeals}
-              </Text>
+              <Text role="label">{nutritionSummary.totalMeals}</Text>
             </View>
             <View style={styles.infoRow}>
-              <Text size="sm" tone="secondary">
+              <Text role="caption" tone="secondary">
                 {t('nutritionSummary.mealsWithNutritionData')}
               </Text>
-              <Text size="sm" weight="medium">
+              <Text role="label">
                 {t('nutritionSummary.coverage', {
                   count: nutritionSummary.mealsWithNutrition,
                   percent: Math.round(nutritionSummary.coveragePercentage),
@@ -156,10 +141,10 @@ export const NutritionSummaryCard: React.FC<NutritionSummaryCardProps> = ({
               </Text>
             </View>
             <View style={styles.infoRow}>
-              <Text size="sm" tone="secondary">
+              <Text role="caption" tone="secondary">
                 {t('nutritionSummary.totalCalories')}
               </Text>
-              <Text size="sm" weight="medium">
+              <Text role="label">
                 {t('nutritionSummary.caloriesValue', {
                   count: Math.round(nutritionSummary.totalCalories),
                 })}
@@ -170,14 +155,9 @@ export const NutritionSummaryCard: React.FC<NutritionSummaryCardProps> = ({
           {/* Goal progress */}
           {!!nutritionGoalProgress && (
             <View style={styles.section}>
-              <Text
-                size="sm"
-                weight="semibold"
-                tone="secondary"
-                style={styles.sectionTitle}
-              >
+              <SectionHeader variant="overline">
                 {t('nutritionSummary.goalProgress')}
-              </Text>
+              </SectionHeader>
               <NutritionGoalProgress
                 overallScore={nutritionGoalProgress.overallScore}
                 caloriesProgress={nutritionGoalProgress.caloriesProgress}
@@ -214,10 +194,6 @@ const styles = StyleSheet.create(theme => ({
   },
   section: {
     gap: theme.spacing.sm,
-  },
-  sectionTitle: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   macroRow: {
     flexDirection: 'row',

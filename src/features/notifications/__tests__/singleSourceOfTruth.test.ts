@@ -125,7 +125,7 @@ describe('the notification feed has one source of truth', () => {
     cache.restore(snapshot);
 
     const after = read(cache);
-    expect(after.me.notificationsConnection.edges[0].node.status).toBe(
+    expect(after.me.notificationsConnection.edges[0]!.node.status).toBe(
       NotificationStatus.Sent,
     );
     expect(after.me.unreadNotificationCount).toBe(2);

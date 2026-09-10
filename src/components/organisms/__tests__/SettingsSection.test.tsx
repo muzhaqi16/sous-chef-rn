@@ -1,9 +1,9 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import type { SettingRowProps } from '../../molecules/SettingRow';
+import type { SettingRowProps } from '../SettingRow';
 import { SettingsSection } from '../SettingsSection';
 
-jest.mock('../../molecules/SettingRow', () => {
+jest.mock('../SettingRow', () => {
   const { Text, View } = require('react-native');
   return {
     SettingRow: ({ item, isFirst, isLast }: SettingRowProps) => (

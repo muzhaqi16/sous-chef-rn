@@ -1,7 +1,8 @@
 import React from 'react';
-import { useNavigation } from '@react-navigation/native';
+
 import type { StaticScreenProps } from '@react-navigation/native';
 import { PantryItemForm } from '#features/pantry/components/form/PantryItemForm';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 
 type PantryItemScreenParams = {
   itemId: string;
@@ -14,7 +15,7 @@ type PantryItemScreenParams = {
 export const PantryItemScreen: React.FC<
   StaticScreenProps<PantryItemScreenParams>
 > = ({ route }) => {
-  const { goBack } = useNavigation();
+  const { goBack } = useAppNavigation();
 
   return <PantryItemForm itemId={route.params.itemId} onSuccess={goBack} />;
 };

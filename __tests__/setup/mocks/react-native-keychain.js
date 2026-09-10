@@ -6,6 +6,7 @@ jest.mock('react-native-keychain', () => ({
   setInternetCredentials: jest.fn(() => Promise.resolve(true)),
   getInternetCredentials: jest.fn(() => Promise.resolve(false)),
   resetInternetCredentials: jest.fn(() => Promise.resolve(true)),
+  getAllGenericPasswordServices: jest.fn(() => Promise.resolve([])),
   ACCESSIBLE: {
     WHEN_UNLOCKED: 'AccessibleWhenUnlocked',
     AFTER_FIRST_UNLOCK: 'AccessibleAfterFirstUnlock',

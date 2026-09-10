@@ -19,7 +19,7 @@ jest.mock('#hooks/auth/useIsLoggedOut', () => ({
   useIsLoggedOut: () => false,
 }));
 
-jest.mock('#/constants/shoppingList', () => ({
+jest.mock('#features/shoppingList/utils/shoppingListConstants', () => ({
   PAGINATION: { ITEMS_PAGE_SIZE: 25 },
 }));
 
@@ -169,8 +169,8 @@ describe('usePaginatedShoppingItems', () => {
     await waitFor(() =>
       expect(result.current.state.purchased.items).toHaveLength(2),
     );
-    expect(result.current.state.unpurchased.items[0].id).toBe('2');
-    expect(result.current.state.unpurchased.items[1].id).toBe('1');
+    expect(result.current.state.unpurchased.items[0]!.id).toBe('2');
+    expect(result.current.state.unpurchased.items[1]!.id).toBe('1');
   });
 
   it('exposes hasMore and totalCount for unpurchased', async () => {

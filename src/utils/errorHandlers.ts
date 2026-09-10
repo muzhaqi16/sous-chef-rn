@@ -9,16 +9,12 @@ import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from './errors/versionConflict';
-import {
-  isInvalidUnitError,
-  getInvalidUnitMessage,
-} from './errors/invalidUnit';
+import { isInvalidUnitError } from './errors/invalidUnit';
 import { errorService, localizedErrorMessage } from '#/services/errorService';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { storeApi } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 import { t } from '#/i18n';
-import { getI18n } from '#/i18n/config';
 
 /**
  * Suppressed ONLY for a network error while `isApiUnavailable` holds — a
@@ -83,7 +79,7 @@ export const alertVersionConflict = (
   const entity = itemName ?? t('labels.item');
 
   alertService.alert(
-    getI18n().t('errors.entityUpdatedTitle', { entity }),
+    t('errors.entityUpdatedTitle', { entity }),
     customMessage || getVersionConflictMessage(),
     [
       { text: t('labels.refresh'), onPress: () => onRefresh?.() },
@@ -159,10 +155,12 @@ export function versionConflictCheck(
 export function invalidUnitCheck(): MutationErrorCheck {
   return {
     detect: error => isInvalidUnitError(error),
-    handle: error => {
+    // The refusal's own `message` is unlocalizable English by construction, and
+    // it names no units that would work — so the copy is ours.
+    handle: () => {
       alertService.alert(
         t('errors.invalidUnitTitle'),
-        getInvalidUnitMessage(error),
+        t('errors.codes.unitInvalid'),
       );
     },
   };

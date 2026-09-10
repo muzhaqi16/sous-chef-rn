@@ -6,7 +6,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import {
   ChipScrollRow,
   type ChipOption,
-} from '#components/atoms/ChipScrollRow';
+} from '#components/molecules/ChipScrollRow';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { FlashList } from '@shopify/flash-list';
@@ -23,16 +23,13 @@ import {
 } from '#features/recipes/hooks/useSavedRecipes';
 import { AddMealSheet_SavedRecipeFragmentDoc } from './AddMealSheet.generated';
 import { CachedImage } from '#components/atoms/CachedImage';
-import {
-  BottomSheetSearchBar,
-  type BottomSheetSearchBarRef,
-} from '#components/molecules/BottomSheetSearchBar';
-import { spoonacularService } from '#services/recipeApi/SpoonacularService';
+import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
+import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
 import {
   transformRecipeForDisplay,
   type TransformedRecipeItem,
   type DietTag,
-} from '#utils/recipeTransform';
+} from '#domain/recipeTransform';
 import { useRecipePreload } from '#features/recipes/hooks/useRecipePreload';
 import {
   useRecipeCacheStore,
@@ -40,7 +37,10 @@ import {
 } from '#features/recipes/store/useRecipeCacheStore';
 import { toastService } from '#/services/toastService';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
-import type { SearchRecipesResult } from '#/services/recipeApi/types';
+import type { SearchRecipesResult } from '#/services/spoonacular/types';
+import { filterByTerm } from '#hooks/search/useLocalSearch';
+import { SectionHeader } from '#components/atoms/SectionHeader';
+import { EmptyState } from '#components/molecules/EmptyState';
 
 interface AddMealSheetProps {
   visible: boolean;
@@ -176,11 +176,11 @@ const SavedRecipeRow: React.FC<SavedRecipeRowProps> = ({
         />
       )}
       <View style={styles.recipeInfo}>
-        <Text style={styles.recipeName} numberOfLines={1}>
+        <Text role="bodyStrong" style={styles.recipeName} numberOfLines={1}>
           {recipe.name}
         </Text>
         {!!(recipe.servings || recipe.totalTimeMinutes) && (
-          <Text style={styles.recipeMeta}>
+          <Text role="caption" style={styles.recipeMeta}>
             {recipe.servings
               ? t('addMealSheet.servings', { count: recipe.servings })
               : ''}
@@ -230,7 +230,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   const { preloadRecipe } = useRecipePreload();
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
-  const searchBarRef = useRef<BottomSheetSearchBarRef>(null);
+  const searchBarRef = useRef<SearchBarRef>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Reset state when sheet opens
@@ -283,7 +283,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
 
   const handleSelectRecipe = (recipeId: string) => {
     onAddRecipe(recipeId, selectedMealType);
-    ref.current?.dismiss();
+    onClose();
   };
 
   const handleAddCustomMeal = () => {
@@ -291,7 +291,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     const trimmed = (searchBarRef.current?.getValue() ?? searchQuery).trim();
     if (!trimmed) return;
     onAddCustomMeal(trimmed, selectedMealType);
-    ref.current?.dismiss();
+    onClose();
   };
 
   const handleSelectSpoonacularRecipe = (item: TransformedRecipeItem) => {
@@ -314,7 +314,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
         });
         if (preloaded) {
           onAddRecipe(preloaded.id, selectedMealType);
-          ref.current?.dismiss();
+          onClose();
         } else {
           toastService.error(t('addMealSheet.addRecipeFailed'));
         }
@@ -338,13 +338,9 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
 
   // Filtering moved up from the row so the list's item count matches what is
   // actually rendered — a virtualized list can't absorb rows that return null.
-  const filteredRecipes = hasQuery
-    ? recipes.filter(savedRecipe =>
-        savedRecipe.recipe.name
-          .toLowerCase()
-          .includes(searchQuery.trim().toLowerCase()),
-      )
-    : recipes;
+  const filteredRecipes = filterByTerm(recipes, searchQuery, [
+    r => r.recipe.name,
+  ]);
 
   const mealTypeOptions: ChipOption<MealType>[] = MEAL_TYPES.map(
     ({ type, labelKey }) => ({ key: type, label: t(labelKey) }),
@@ -358,7 +354,9 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     >
       <View style={[styles.content, contentContainerStyle]}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>{t('labels.addAMeal')}</Text>
+          <Text role="heading" style={styles.headerTitle}>
+            {t('labels.addAMeal')}
+          </Text>
         </View>
 
         {/* Meal type selector */}
@@ -373,7 +371,8 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
 
         {/* Search input */}
         <View style={styles.searchBarWrapper}>
-          <BottomSheetSearchBar
+          <SearchBar
+            showSearchIcon
             ref={searchBarRef}
             placeholder={t('addMealSheet.searchPlaceholder')}
             onChangeText={handleDebouncedSearch}
@@ -418,7 +417,11 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                   style={styles.customMealRow}
                 >
                   <Icon name="add-circle-outline" size={24} tone="primary" />
-                  <Text style={styles.customMealText} numberOfLines={1}>
+                  <Text
+                    role="bodyStrong"
+                    style={styles.customMealText}
+                    numberOfLines={1}
+                  >
                     {t('addMealSheet.addCustom', { query: searchQuery.trim() })}
                   </Text>
                 </AppPressable>
@@ -429,9 +432,12 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                   results that follow; with no matches there's no section to
                   label, so it drops out. */}
               {filteredRecipes.length > 0 ? (
-                <Text style={styles.sectionHeader}>
+                <SectionHeader
+                  variant="overline"
+                  style={styles.sectionHeaderSpacing}
+                >
                   {t('addMealSheet.yourRecipes')}
-                </Text>
+                </SectionHeader>
               ) : null}
             </>
           }
@@ -441,7 +447,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
               {hasQuery && (searchingApi || spoonacularResults.length > 0) ? (
                 <>
                   {searchingApi ? (
-                    <View style={styles.loadingContainer}>
+                    <View style={styles.centeredSpinner}>
                       <PrimaryActivityIndicator size="small" />
                     </View>
                   ) : null}
@@ -473,7 +479,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                           <View style={styles.dietTagsRow}>
                             {item.dietTags.map(tag => (
                               <View key={tag} style={styles.dietTag}>
-                                <Text style={styles.dietTagText}>
+                                <Text role="label" style={styles.dietTagText}>
                                   {t(DIET_TAG_LABEL_KEYS[tag])}
                                 </Text>
                               </View>
@@ -497,22 +503,20 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
 
               {/* Empty state */}
               {!hasQuery && recipes.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyText}>
-                    {t('addMealSheet.noSavedRecipes')}
-                  </Text>
-                </View>
+                <EmptyState
+                  size="compact"
+                  title={t('addMealSheet.noSavedRecipes')}
+                />
               ) : null}
 
               {hasQuery &&
               filteredRecipes.length === 0 &&
               !searchingApi &&
               spoonacularResults.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyText}>
-                    {t('addMealSheet.noResults')}
-                  </Text>
-                </View>
+                <EmptyState
+                  size="compact"
+                  title={t('addMealSheet.noResults')}
+                />
               ) : null}
             </>
           }
@@ -531,8 +535,6 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: theme.spacing.sm,
   },
   headerTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
   },
   mealTypeScroll: {
@@ -551,37 +553,24 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.xl,
   },
-  sectionHeader: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
-    paddingVertical: theme.spacing.sm,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
   customMealRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
     gap: theme.spacing.sm,
   },
   customMealText: {
     flex: 1,
-    fontSize: theme.fonts.size.md,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
   },
   recipeItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
   recipeImage: {
     width: 44,
@@ -595,12 +584,9 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
   },
   recipeName: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   recipeMeta: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: 2,
   },
@@ -611,26 +597,20 @@ const styles = StyleSheet.create(theme => ({
   },
   dietTag: {
     backgroundColor: theme.colors.surfaceVariant,
-    paddingHorizontal: theme.spacing.xs + 2,
+    paddingHorizontal: theme.spacing.xsPlus,
     paddingVertical: 1,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
   },
   dietTagText: {
-    fontSize: theme.fonts.size.xs,
     color: theme.colors.textTertiary,
-    fontWeight: theme.fonts.weight.medium,
   },
-  loadingContainer: {
-    paddingVertical: theme.spacing.md,
+  sectionHeaderSpacing: {
+    paddingVertical: theme.spacing.sm,
+  },
+  centeredSpinner: {
     alignItems: 'center',
-  },
-  emptyState: {
-    paddingVertical: theme.spacing.xl,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textSecondary,
+    justifyContent: 'center',
+    paddingVertical: theme.spacing['3xl'],
   },
 }));

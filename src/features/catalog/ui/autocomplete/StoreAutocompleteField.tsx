@@ -6,8 +6,8 @@ import {
   type StoreItem,
 } from '#features/catalog/hooks/useStoreAutocomplete';
 import { Text } from '#components/atoms/Text';
-import { GenericAutocompleteField } from '#components/molecules/AutocompleteField/GenericAutocompleteField';
-import { AutocompleteRow } from '#components/molecules/AutocompleteField/AutocompleteRow';
+import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
+import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
 
 interface StoreAutocompleteFieldProps {
   variant: 'inline' | 'modal';
@@ -86,7 +86,7 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
         onSearchChange={store.handleSearchTermChange}
       />
       {helperText ? (
-        <Text size="sm" tone="tertiary" style={styles.helper}>
+        <Text role="caption" tone="tertiary" style={styles.helper}>
           {helperText}
         </Text>
       ) : null}

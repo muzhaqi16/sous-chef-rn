@@ -1,14 +1,16 @@
 'use no memo';
 
 import React from 'react';
-import { screen } from '@testing-library/react-native';
+import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
+import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { FilteredPantryItems } from '../FilteredPantryItems';
 
 // Structural shape consumed by the screen via the mocked `usePantryManagement`.
 type MockPantryItem = {
   id: string;
+  /** The CATALOG item id — deliberately unlike `id`, which is the PantryItem. */
+  itemId: string;
   itemName: string;
   quantity: number;
   unit: { symbol: string } | null;
@@ -41,7 +43,42 @@ jest.mock(
   }),
 );
 
-jest.mock('#features/pantry/hooks/usePantryPermissions');
+// The cart is gated on the SELECTED SHOPPING LIST's permission, not the
+// pantry's — it writes to that list.
+jest.mock('#features/shoppingList/hooks/useShoppingListDetails', () => ({
+  useShoppingListDetails: () => ({ shoppingList: { id: 'list-1' } }),
+}));
+let mockListCanAddItems = true;
+let mockListResolved = true;
+jest.mock('#features/shoppingList/hooks/useShoppingListPermissions', () => ({
+  useShoppingListPermissions: () => ({
+    canAddItems: mockListCanAddItems,
+    canRemoveItems: true,
+    canEditItems: true,
+    canMarkPurchased: true,
+    resolved: mockListResolved,
+  }),
+}));
+
+let mockSelectedListId: string | null = 'list-1';
+jest.mock('#store/useAppStore', () => {
+  const actual = jest.requireActual('#store/useAppStore');
+  return {
+    ...actual,
+    useSelectedShoppingListId: () => mockSelectedListId,
+  };
+});
+
+type AddToList = (
+  itemId: string,
+  display: { itemName: string; unitId?: string },
+) => Promise<string>;
+const mockAddToList = jest.fn<ReturnType<AddToList>, Parameters<AddToList>>(
+  () => Promise.resolve('ok'),
+);
+jest.mock('#features/pantry/hooks/useAddPantryItemToShoppingList', () => ({
+  useAddPantryItemToShoppingList: () => ({ addToList: mockAddToList }),
+}));
 
 jest.mock('#features/pantry/hooks/useCurrentPantry', () => ({
   useCurrentPantry: () => ({
@@ -50,16 +87,34 @@ jest.mock('#features/pantry/hooks/useCurrentPantry', () => ({
   }),
 }));
 
-jest.mock('#features/pantry/hooks/useAddLowStockToShoppingList', () => ({
-  useAddLowStockToShoppingList: () => ({
-    addLowStockToShoppingList: jest.fn(),
-    loading: false,
+// The sheet needs a bottom-sheet host and navigation context this render has
+// no use for; the recipe screen's test stubs it the same way.
+jest.mock('#features/shoppingList/ui/ShoppingListPickerSheet', () => ({
+  ShoppingListPickerSheet: () => null,
+}));
+
+jest.mock('#features/shoppingList/hooks/useShoppingListsLite', () => ({
+  useShoppingListsLite: () => ({ lists: [], loading: false }),
+}));
+
+const mockOpenForAll = jest.fn();
+const mockOpenForRow = jest.fn();
+jest.mock('#features/pantry/hooks/useLowStockListPicker', () => ({
+  useLowStockListPicker: () => ({
+    pickerVisible: false,
+    busy: false,
+    openForAll: mockOpenForAll,
+    openForRow: mockOpenForRow,
+    handleListSelected: jest.fn(),
+    handleCreateListAndAdd: jest.fn(),
+    dismissPicker: jest.fn(),
   }),
 }));
 
 const mockLowStockItems = [
   {
     id: 'ls1',
+    itemId: 'catalog-ls1',
     itemName: 'Eggs',
     quantity: 2,
     unit: { symbol: 'pcs' },
@@ -67,6 +122,7 @@ const mockLowStockItems = [
   },
   {
     id: 'ls2',
+    itemId: 'catalog-ls2',
     itemName: 'Butter',
     quantity: 1,
     unit: { symbol: 'stk' },
@@ -86,6 +142,7 @@ sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
 const mockExpiringItems = [
   {
     id: 'ex1',
+    itemId: 'catalog-ex1',
     itemName: 'Milk',
     quantity: 1,
     unit: { symbol: 'gal' },
@@ -94,6 +151,7 @@ const mockExpiringItems = [
   },
   {
     id: 'ex2',
+    itemId: 'catalog-ex2',
     itemName: 'Yogurt',
     quantity: 2,
     unit: { symbol: 'cups' },
@@ -105,6 +163,7 @@ const mockExpiringItems = [
 const mockExpiredItems = [
   {
     id: 'exp1',
+    itemId: 'catalog-exp1',
     itemName: 'Salmon',
     quantity: 1,
     unit: { symbol: 'steak' },
@@ -141,7 +200,7 @@ jest.mock('#features/pantry/hooks/usePantryManagement', () => ({
   },
 }));
 
-jest.mock('#components/molecules/Header', () => ({
+jest.mock('#components/organisms/Header', () => ({
   Header: ({
     title,
     rightActions,
@@ -160,7 +219,7 @@ jest.mock('#components/molecules/Header', () => ({
     );
   },
 }));
-jest.mock('#components/molecules/SwipeableItem/SwipeableItem', () => ({
+jest.mock('#components/organisms/SwipeableItem/SwipeableItem', () => ({
   SwipeableItem: ({
     children,
     onPress,
@@ -201,6 +260,36 @@ describe('FilteredPantryItems', () => {
     mockHasResult = true;
   });
 
+  // Cart visibility has ONE rule: a known permission refusal. A per-mode flag
+  // beside it would hide the cart on the screens where a re-buy is most likely
+  // — something expiring today — so there is none, and this pins that.
+  describe('the cart is offered in every mode', () => {
+    const MODES = [
+      ['lowStock', () => mockLowStockItems],
+      ['expiring', () => mockExpiringItems],
+      ['expired', () => mockExpiredItems],
+    ] as const;
+
+    it.each(MODES)('%s offers the cart', (mode, rows) => {
+      mockAllItems = rows();
+      renderWithApollo(<FilteredPantryItems route={makeRoute(mode)} />);
+      expect(
+        screen.queryAllByLabelText('Add to Shopping List').length,
+      ).toBeGreaterThan(0);
+    });
+
+    it.each(MODES)('%s withholds the cart on a known refusal', (mode, rows) => {
+      mockAllItems = rows();
+      mockListCanAddItems = false;
+      try {
+        renderWithApollo(<FilteredPantryItems route={makeRoute(mode)} />);
+        expect(screen.queryAllByLabelText('Add to Shopping List')).toEqual([]);
+      } finally {
+        mockListCanAddItems = true;
+      }
+    });
+  });
+
   describe('lowStock mode', () => {
     it('renders the title', () => {
       renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
@@ -210,6 +299,57 @@ describe('FilteredPantryItems', () => {
     it('shows add-all button in header', () => {
       renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
       expect(screen.getByTestId('add-all-low-stock')).toBeTruthy();
+    });
+
+    it('offers no cart when the user may not add to the selected list', () => {
+      // Gating on the PANTRY's permission offered a viewer of the list a
+      // control the server refuses every time.
+      mockListCanAddItems = false;
+      try {
+        renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+        expect(screen.queryAllByLabelText('Add to Shopping List')).toEqual([]);
+      } finally {
+        mockListCanAddItems = true;
+      }
+    });
+
+    // No list chosen is not a refusal — it is not an answer. Withholding the
+    // cart there removes the only affordance that can say which list to pick,
+    // and the screen's own prompt for that becomes unreachable.
+    it('still offers the cart when no shopping list has been chosen', () => {
+      mockSelectedListId = null;
+      mockListResolved = false;
+      mockListCanAddItems = false;
+      try {
+        renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+
+        expect(
+          screen.queryAllByLabelText('Add to Shopping List').length,
+        ).toBeGreaterThan(0);
+      } finally {
+        mockSelectedListId = 'list-1';
+        mockListResolved = true;
+        mockListCanAddItems = true;
+      }
+    });
+
+    it('sends the CATALOG item id to the shopping list, not the row id', async () => {
+      // `item: { itemId }` is an @oneOf ItemRefInput the server resolves as a
+      // catalog Item. Sending the PantryItem's own id is refused every time,
+      // for every user — a control that never works rather than one that
+      // sometimes fails.
+      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+
+      fireEvent.press(screen.getAllByLabelText('Add to Shopping List')[0]!);
+
+      await waitFor(() => expect(mockAddToList).toHaveBeenCalled());
+      // The fixtures give every row a catalog id unlike its own, so passing
+      // the row id through is visible rather than coincidentally equal. The
+      // list id leads: a row adds to the list already selected.
+      const [sentListId, sentId] = mockAddToList.mock.calls[0]!;
+      expect(sentListId).toBe('list-1');
+      expect(sentId).toBe(`catalog-${mockLowStockItems[0]!.id}`);
+      expect(sentId).not.toBe(mockLowStockItems[0]!.id);
     });
 
     it('renders low stock item names', () => {
@@ -283,9 +423,11 @@ describe('FilteredPantryItems', () => {
       expect(screen.getByText('Expiring Items')).toBeTruthy();
     });
 
-    it('does not show add-all button in header', () => {
+    // Something expiring today is the most likely re-buy on the screen; the
+    // per-mode flag that hid this had no stated reason.
+    it('shows the add-all button in header', () => {
       renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
-      expect(screen.queryByTestId('add-all-low-stock')).toBeNull();
+      expect(screen.queryByTestId('add-all-low-stock')).not.toBeNull();
     });
 
     it('renders expiring item names', () => {

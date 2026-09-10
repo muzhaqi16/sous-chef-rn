@@ -28,6 +28,7 @@ import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import { useSheetBackdropOpacity } from '#hooks/useSheetBackdropOpacity';
 import { ActionTrayScrollContext } from './ActionTrayScrollContext';
 import type { ActionTrayProps, ActionTrayRef } from './types';
+import { useTranslation } from '#/i18n';
 
 // Detached sheets float this far above the screen bottom. The pinned footer takes
 // NO `bottomInset` of its own — the detached container already lifts the whole
@@ -53,6 +54,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     },
     ref,
   ) => {
+    const { t } = useTranslation();
     const bottomSheetRef = useRef<BottomSheetModal>(null);
     const scrollRef = useRef<BottomSheetScrollViewMethods>(null);
     const [mounted, setMounted] = useState(false);
@@ -160,14 +162,18 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       hasHeader ? (
         <View style={styles.header}>
           {title ? (
-            <Text size="lg" weight="semibold" tone="primary">
+            <Text role="heading" tone="primary">
               {title}
             </Text>
           ) : null}
           <View style={styles.fill} />
           {!!headerRight && headerRight}
           {showCloseButton ? (
-            <AppPressable onPress={handleDismiss} style={styles.closeButton}>
+            <AppPressable
+              onPress={handleDismiss}
+              style={styles.closeButton}
+              accessibilityLabel={t('labels.close')}
+            >
               <Icon name="close" size={16} tone="textSecondary" />
             </AppPressable>
           ) : null}
@@ -252,17 +258,9 @@ const styles = UnistylesStyleSheet.create(theme => ({
     marginHorizontal: '2.5%', // Creates 95% width centered
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.borderLight,
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: -2,
-        blurRadius: 8,
-        spreadDistance: 0,
-        color: `${theme.colors.textPrimary}1A`,
-      },
-    ],
+    ...theme.shadows.trayTop,
   },
   background: {
     backgroundColor: theme.colors.surface,
@@ -307,7 +305,7 @@ const styles = UnistylesStyleSheet.create(theme => ({
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderTopWidth: 1,
+    borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.borderLight,
     borderBottomLeftRadius: theme.radii.xl,
     borderBottomRightRadius: theme.radii.xl,

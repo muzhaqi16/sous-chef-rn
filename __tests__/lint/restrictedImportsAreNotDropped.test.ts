@@ -52,7 +52,38 @@ const ALLOWED_DROPS: Record<string, string[]> = {
     '@gorhom/bottom-sheet#BottomSheetTextInput',
     '#hooks/useBottomSheetBackdropClaim#*',
   ],
-  '**/__tests__/**/*.{ts,tsx}': ['react-native#TextInput'],
+  '**/__tests__/**/*.{ts,tsx}': [
+    'react-native#TextInput',
+    'react-native#ActivityIndicator',
+    '#/i18n/config#getI18n',
+    'react-native-permissions#*',
+    'react-native-turbo-image#*',
+    // A test asserting on what device storage HOLDS has to read it.
+    '#storage/mmkv#*',
+    '#/storage/mmkv#*',
+  ],
+  'src/hooks/navigation/useAppNavigation.ts': [
+    '@react-navigation/native#useNavigation',
+  ],
+  // The ONE read of the preference. Reanimated collapses its own animations, so
+  // this exists only for what a zero duration cannot stop: a loop's resting
+  // state, an ambient illustration.
+  'src/hooks/animations/useMotionEnabled.ts': [
+    'react-native-reanimated#useReducedMotion',
+  ],
+  'src/components/molecules/Loading.tsx': ['react-native#ActivityIndicator'],
+  // Device storage's writers.
+  'src/apollo/**/*.{ts,tsx}': ['#storage/mmkv#*', '#/storage/mmkv#*'],
+  // This file IS the wrapper: it composes the raw scroller with the input
+  // context, which is the whole reason every other sheet is banned from it.
+  'src/components/atoms/BottomSheetFormScrollView.tsx': [
+    '#components/atoms/BottomSheetKeyboardAwareScrollView#*',
+  ],
+  'src/services/permissions/PermissionService.ts': [
+    'react-native-permissions#*',
+    'react-native-turbo-image#*',
+    '@react-native-vector-icons/ionicons#*',
+  ],
 };
 
 const base = config.rules[RULE];
@@ -67,22 +98,22 @@ const activeOverrides = config.overrides.filter(
 describe('no-restricted-imports overrides', () => {
   it('finds the rule and the overrides that redeclare it', () => {
     // A config that stopped declaring the rule would pass every check below.
-    expect(bannedPairs(base).length).toBeGreaterThan(10);
+    expect(bannedPairs(base!).length).toBeGreaterThan(10);
     expect(activeOverrides.length).toBeGreaterThan(1);
   });
 
   it('reads both halves of the rule, so neither can be dropped unseen', () => {
     // Each half alone is a scan that passes identically whether its contract
     // holds or its array was emptied.
-    expect(base[1].paths.length).toBeGreaterThan(0);
-    expect(base[1].patterns.length).toBeGreaterThan(0);
-    expect(bannedPairs(base).some(p => p.includes('*Fragments.generated'))).toBe(
-      true,
-    );
+    expect(base![1].paths.length).toBeGreaterThan(0);
+    expect(base![1].patterns.length).toBeGreaterThan(0);
+    expect(
+      bannedPairs(base!).some(p => p.includes('*Fragments.generated')),
+    ).toBe(true);
   });
 
   it('bans a raw TextInput, which is what makes an input themed by default', () => {
-    expect(bannedPairs(base)).toEqual(
+    expect(bannedPairs(base!)).toEqual(
       expect.arrayContaining([
         'react-native#TextInput',
         '@gorhom/bottom-sheet#BottomSheetTextInput',
@@ -91,12 +122,12 @@ describe('no-restricted-imports overrides', () => {
   });
 
   it('keeps every base ban in every override that redeclares the rule', () => {
-    const baseBans = bannedPairs(base);
+    const baseBans = bannedPairs(base!);
 
     const dropped = activeOverrides.flatMap(override => {
       const files = [override.files].flat();
       const allowed = files.flatMap(f => ALLOWED_DROPS[f] ?? []);
-      const kept = new Set(bannedPairs(override.rules[RULE]));
+      const kept = new Set(bannedPairs(override.rules[RULE]!));
 
       return baseBans
         .filter(ban => !kept.has(ban) && !allowed.includes(ban))

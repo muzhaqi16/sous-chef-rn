@@ -1,55 +1,34 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { useQuery } from '@apollo/client/react';
 import type { StaticScreenProps } from '@react-navigation/native';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
 import {
-  GetItemPurchaseHistoryDocument,
-  type GetItemPurchaseHistoryQuery,
-} from '#features/shoppingList/graphql/shoppingList.generated';
-import { errorService } from '#/services/errorService';
+  useItemPurchaseHistory,
+  type PurchaseItem,
+} from '#features/shoppingList/hooks/useItemPurchaseHistory';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 
-import { useDataState } from '#hooks/data/useDataState';
-import {
-  PurchaseHistoryProvider,
-  usePurchaseHistoryContext,
-} from './PurchaseHistoryContext';
 import { Text } from '#components/atoms/Text';
 import { PaginatedHistoryScreen } from '#components/templates/PaginatedHistoryScreen';
-import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
+import { formatCurrency } from '#/utils/formatters/number';
+import { usePreferredCurrency } from '#/domain/money';
+import { formatDateTime } from '#/utils/formatters/date';
 
 const keyExtractor = (item: { id: string }) => item.id;
-
-const PAGE_SIZE = 30;
 
 type RouteParams = {
   itemId: string;
   itemName: string;
 };
 
-/**
- * Derived from the query rather than restated beside it, so it cannot disagree
- * with the schema (`user.email` is nullable — self-or-admin only).
- */
-type PurchaseItem = NonNullable<
-  GetItemPurchaseHistoryQuery['shoppingListItem']
->['purchasesConnection']['edges'][number]['node'];
-
 // An `undefined` locale makes Intl use the device's own, so the field order
 // follows the reader rather than forcing US month-day.
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  return formatDateTime(date);
 };
 
 // null for a missing/zero amount, so the row is omitted rather than showing
@@ -59,36 +38,51 @@ const formatDate = (dateString: string) => {
 const formatPrice = (
   amount: number | null | undefined,
   currencyCode: string | null | undefined,
+  preferredCurrency: string,
 ): string | null => {
-  if (amount == null || amount <= 0) return null;
-  return formatCurrency(amount, currencyCode ?? DEFAULT_CURRENCY);
+  // Only an ABSENT price has nothing to show. A price recorded as zero is a
+  // price somebody entered — a comped or free line — and it is counted in the
+  // totals below, so suppressing its own row would disagree with them.
+  if (amount == null) return null;
+  return formatCurrency(amount, currencyCode ?? preferredCurrency);
 };
 
-type PurchaseHistoryItemProps = ListRenderItemInfo<PurchaseItem>;
+type PurchaseHistoryItemProps = ListRenderItemInfo<PurchaseItem> & {
+  totalCount: number;
+};
 
 const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
   item: purchase,
   index,
+  totalCount,
 }) => {
   const { t } = useTranslation();
-  const { totalCount } = usePurchaseHistoryContext();
-  const priceText = formatPrice(purchase.totalPrice, purchase.currency.code);
+  const preferredCurrency = usePreferredCurrency();
+  const priceText = formatPrice(
+    purchase.totalPrice,
+    purchase.currency.code,
+    preferredCurrency,
+  );
   // At quantity 1 the per-unit price IS the total. Every other quantity gets
   // the rate — a fractional one most of all.
   const perUnitText =
     purchase.quantity !== 1
-      ? formatPrice(purchase.unitPrice, purchase.currency.code)
+      ? formatPrice(
+          purchase.unitPrice,
+          purchase.currency.code,
+          preferredCurrency,
+        )
       : null;
 
   return (
     <View style={[styles.purchaseCard, commonStyles.shadow]}>
       <View style={styles.purchaseHeader}>
         <View style={styles.purchaseNumber}>
-          <Text size="xs" weight="bold" style={styles.purchaseNumberText}>
+          <Text role="label" style={styles.purchaseNumberText}>
             #{totalCount - index}
           </Text>
         </View>
-        <Text size="sm" weight="medium" style={styles.purchaseDate}>
+        <Text role="label" style={styles.purchaseDate}>
           {formatDate(purchase.purchaseDate)}
         </Text>
       </View>
@@ -97,10 +91,14 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
         <View style={styles.purchaseSummaryRow}>
           <View style={styles.purchaseInlineGroup}>
             <Icon name="cube-outline" size={18} tone="iconSecondary" />
-            <Text size="sm" tone="secondary" style={styles.purchaseDetailLabel}>
+            <Text
+              role="caption"
+              tone="secondary"
+              style={styles.purchaseDetailLabel}
+            >
               {t('purchaseHistory.quantityLabel')}
             </Text>
-            <Text size="sm" weight="medium">
+            <Text role="label">
               {purchase.quantity} {purchase.unitSymbol}
             </Text>
           </View>
@@ -109,18 +107,16 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
             <View style={styles.purchaseInlineGroup}>
               <Icon name="pricetag-outline" size={18} tone="iconSecondary" />
               <Text
-                size="sm"
+                role="caption"
                 tone="secondary"
                 style={styles.purchaseDetailLabel}
               >
                 {t('purchaseHistory.priceLabel')}
               </Text>
               <View style={styles.purchasePriceCell}>
-                <Text size="sm" weight="medium">
-                  {priceText}
-                </Text>
+                <Text role="label">{priceText}</Text>
                 {!!perUnitText && (
-                  <Text size="xs" tone="secondary">
+                  <Text role="caption" tone="secondary">
                     {t(
                       purchase.unitSymbol
                         ? 'purchaseAmountSheet.perUnitOfHint'
@@ -136,12 +132,16 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
 
         <View style={styles.purchaseDetailRow}>
           <Icon name="person-outline" size={18} tone="iconSecondary" />
-          <Text size="sm" tone="secondary" style={styles.purchaseDetailLabel}>
+          <Text
+            role="caption"
+            tone="secondary"
+            style={styles.purchaseDetailLabel}
+          >
             {t('purchaseHistory.purchasedBy')}
           </Text>
           {/* displayName -> email -> "Someone": `email` is null for anyone but
               the caller themself, and a profile is optional. */}
-          <Text size="sm" weight="medium" style={styles.purchaseDetailValue}>
+          <Text role="label" style={styles.purchaseDetailValue}>
             {purchase.user.profile?.displayName ||
               purchase.user.email ||
               t('labels.someone')}
@@ -156,9 +156,11 @@ const PurchaseHistoryItem = PurchaseHistoryItemComponent;
 
 const getPurchaseItemType = () => 'item';
 
-const renderItem = (info: ListRenderItemInfo<PurchaseItem>) => (
-  <PurchaseHistoryItem {...info} />
-);
+// A factory so the row gets the count as a prop and `renderItem` still has one
+// identity per count, not one per screen render.
+const makeRenderItem =
+  (totalCount: number) => (info: ListRenderItemInfo<PurchaseItem>) =>
+    <PurchaseHistoryItem {...info} totalCount={totalCount} />;
 
 const PurchaseHistoryHeader: React.FC<{
   totalCount: number;
@@ -168,24 +170,24 @@ const PurchaseHistoryHeader: React.FC<{
   const { t } = useTranslation();
   return (
     <View style={styles.statsContainer}>
-      <Text size="md">
+      <Text>
         {t('purchaseHistory.totalPurchases')}{' '}
-        <Text weight="bold" style={styles.statsValue}>
+        <Text role="bodyStrong" style={styles.statsValue}>
           {totalCount}
         </Text>
       </Text>
       {!!totalSpent && (
-        <Text size="md" style={styles.statsRow}>
+        <Text style={styles.statsRow}>
           {t('purchaseHistory.totalSpent')}{' '}
-          <Text weight="bold" style={styles.statsValue}>
+          <Text role="bodyStrong" style={styles.statsValue}>
             {totalSpent}
           </Text>
         </Text>
       )}
       {!!averageSpent && (
-        <Text size="md" style={styles.statsRow}>
+        <Text style={styles.statsRow}>
           {t('purchaseHistory.averagePrice')}{' '}
-          <Text weight="bold" style={styles.statsValue}>
+          <Text role="bodyStrong" style={styles.statsValue}>
             {averageSpent}
           </Text>
         </Text>
@@ -200,100 +202,52 @@ export const PurchaseHistoryScreen: React.FC<
   const { t } = useTranslation();
   const { itemId, itemName } = route.params;
 
-  // On demand: ItemDetail carries only the summary, and a frequently re-bought
-  // item runs past one page.
-  const { data, loading, error, refetch, fetchMore, networkStatus } = useQuery(
-    GetItemPurchaseHistoryDocument,
-    {
-      variables: { itemId, first: PAGE_SIZE },
-      notifyOnNetworkStatusChange: true,
-      // NOT the app-wide `'all'`: a field error inside the non-null
-      // `purchasesConnection` nulls `shoppingListItem`, and `'all'` WRITES that
-      // null onto `ROOT_QUERY.shoppingListItem({id})` — the field ItemDetail
-      // reads — where it sticks (the redirect fires only on `undefined`) and
-      // persists to MMKV. The cost of `'none'` is losing a partial page.
-      errorPolicy: 'none',
-    },
+  const { purchases, totalCount, state, loadMore, isFetchingMore, retry } =
+    useItemPurchaseHistory(itemId);
+  const preferredCurrency = usePreferredCurrency();
+
+  // Priced purchases only. A price is NULL when it was never observed — a line
+  // moved to the pantry without one — which is unknown, not zero, and averaging
+  // it in would drag the mean toward zero. A price RECORDED as zero is a price
+  // somebody entered and belongs in both figures.
+  const pricedPurchases = purchases.filter(
+    (p): p is typeof p & { totalPrice: number } => p.totalPrice != null,
   );
-
-  const connection = data?.shoppingListItem?.purchasesConnection;
-  const purchases: PurchaseItem[] =
-    connection?.edges?.map(edge => edge.node) ?? [];
-
-  const totalCount = connection?.totalCount ?? purchases.length;
-  const hasNextPage = connection?.pageInfo?.hasNextPage ?? false;
-  const endCursor = connection?.pageInfo?.endCursor ?? null;
-  // networkStatus 3 = fetchMore in flight.
-  const loadingMore = networkStatus === 3;
-
-  const loadMore = () => {
-    if (!hasNextPage || !endCursor || loading || loadingMore) return;
-    // fetchMore rejects on network/GraphQL errors; catch it so a failed page
-    // doesn't surface as an unhandled promise rejection.
-    void fetchMore({
-      variables: { itemId, first: PAGE_SIZE, after: endCursor },
-    }).catch(error =>
-      errorService.reportError(error, {
-        operation: 'PurchaseHistory.loadMore',
-      }),
-    );
-  };
-
-  // A failed read is not an empty history: rendering both as the empty state
-  // advises buying something the user may already own, exactly when the app
-  // cannot know. `useDataState` also splits offline out of error.
-  const state = useDataState({
-    loading,
-    error,
-    hasResult: data !== undefined,
-    isEmpty: purchases.length === 0,
-  });
-
-  const handleRetry = () => {
-    // Under `errorPolicy: 'none'` a failed refetch REJECTS rather than
-    // resolving with the error, so this catch runs on an ordinary failure too.
-    void refetch().catch(refetchError =>
-      errorService.reportError(refetchError, {
-        operation: 'PurchaseHistory.retry',
-      }),
-    );
-  };
-
-  // Priced purchases only — auto-recorded ones would drag the average to 0.
-  const pricedPurchases = purchases.filter(p => p.totalPrice > 0);
   const currencyCode = pricedPurchases[0]?.currency.code;
   const spent = pricedPurchases.reduce((sum, p) => sum + p.totalPrice, 0);
-  const totalSpent = formatPrice(spent, currencyCode);
+  const totalSpent = formatPrice(spent, currencyCode, preferredCurrency);
   const averageSpent = pricedPurchases.length
-    ? formatPrice(spent / pricedPurchases.length, currencyCode)
+    ? formatPrice(
+        spent / pricedPurchases.length,
+        currencyCode,
+        preferredCurrency,
+      )
     : null;
 
   return (
-    <PurchaseHistoryProvider value={{ totalCount }}>
-      <PaginatedHistoryScreen
-        title={t('labels.purchaseHistory')}
-        subtitle={itemName}
-        items={purchases}
-        state={state}
-        onRetry={handleRetry}
-        onEndReached={loadMore}
-        isFetchingMore={loadingMore}
-        keyExtractor={keyExtractor}
-        renderItem={renderItem}
-        getItemType={getPurchaseItemType}
-        summary={
-          <PurchaseHistoryHeader
-            totalCount={totalCount}
-            totalSpent={totalSpent}
-            averageSpent={averageSpent}
-          />
-        }
-        emptyIcon="receipt-outline"
-        emptyTitle={t('purchaseHistory.emptyTitle')}
-        emptyDescription={t('purchaseHistory.emptySubtitle')}
-        componentName="PurchaseHistoryScreen"
-      />
-    </PurchaseHistoryProvider>
+    <PaginatedHistoryScreen
+      title={t('labels.purchaseHistory')}
+      subtitle={itemName}
+      items={purchases}
+      state={state}
+      onRetry={retry}
+      onEndReached={loadMore}
+      isFetchingMore={isFetchingMore}
+      keyExtractor={keyExtractor}
+      renderItem={makeRenderItem(totalCount)}
+      getItemType={getPurchaseItemType}
+      summary={
+        <PurchaseHistoryHeader
+          totalCount={totalCount}
+          totalSpent={totalSpent}
+          averageSpent={averageSpent}
+        />
+      }
+      emptyIcon="receipt-outline"
+      emptyTitle={t('purchaseHistory.emptyTitle')}
+      emptyDescription={t('purchaseHistory.emptySubtitle')}
+      componentName="PurchaseHistoryScreen"
+    />
   );
 };
 
@@ -304,7 +258,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     marginBottom: theme.spacing.md,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.info,
   },
   statsValue: {
@@ -317,7 +271,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     padding: theme.spacing.md,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     marginVertical: theme.spacing.sm,
     borderColor: theme.colors.border,
   },
@@ -326,7 +280,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     marginBottom: theme.spacing.sm,
     paddingBottom: theme.spacing.sm,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   purchaseNumber: {

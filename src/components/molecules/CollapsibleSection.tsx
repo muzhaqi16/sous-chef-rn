@@ -27,7 +27,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   return (
     <>
       <AppPressable style={styles.header} onPress={onToggle}>
-        <Text size="base" weight="semibold">
+        <Text role="bodyStrong">
           {title}
           {count != null ? ` (${count})` : ''}
         </Text>
@@ -53,7 +53,7 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       expanded: {
         true: {
-          borderBottomWidth: 1,
+          borderBottomWidth: theme.borderWidth.hairline,
           borderBottomColor: theme.colors.border,
         },
         false: {},

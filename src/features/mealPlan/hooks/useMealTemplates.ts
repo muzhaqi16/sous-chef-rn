@@ -65,6 +65,7 @@ export function useMealTemplates(
     selector: d => d.mealTemplates,
     loading,
     fetchMore,
+    refetch,
   });
 
   // `search` and `category` are live controls, so every combination is its own

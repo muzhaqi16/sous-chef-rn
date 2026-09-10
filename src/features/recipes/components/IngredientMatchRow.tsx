@@ -25,10 +25,15 @@ interface IngredientMatchRowProps {
 type BadgeColor = 'success' | 'warning' | 'error';
 
 /** Key paths — module-level table, resolved by the row that renders it. */
+const MISSING_BADGE: { labelKey: string; color: BadgeColor } = {
+  labelKey: 'labels.missing',
+  color: 'error',
+};
+
 const BADGE_CONFIG: Record<string, { labelKey: string; color: BadgeColor }> = {
   available: { labelKey: 'labels.available', color: 'success' },
   partial: { labelKey: 'labels.partial', color: 'warning' },
-  missing: { labelKey: 'labels.missing', color: 'error' },
+  missing: MISSING_BADGE,
 };
 
 /**
@@ -43,7 +48,7 @@ const AvailabilityBadge: React.FC<{
   styles.useVariants({ badgeColor });
   return (
     <View style={styles.badge}>
-      <Text size="xs" weight="semibold" style={styles.badgeText}>
+      <Text role="label" style={styles.badgeText}>
         {children}
       </Text>
     </View>
@@ -58,7 +63,7 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
   const { t } = useTranslation();
   const { match, ingredient, adjustedQuantity, isIncluded } = editableMatch;
   const status = getAvailabilityStatus(match);
-  const badge = BADGE_CONFIG[status];
+  const badge = BADGE_CONFIG[status] ?? MISSING_BADGE;
   const isOptional = ingredient.isOptional;
 
   return (
@@ -66,8 +71,7 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
       <View style={styles.content}>
         <View style={styles.topRow}>
           <Text
-            size="base"
-            weight="medium"
+            role="bodyStrong"
             style={[styles.name, !isIncluded && styles.textExcluded]}
             numberOfLines={1}
           >
@@ -79,7 +83,7 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
         </View>
 
         {!!match.matchedPantryItem && (
-          <Text size="sm" tone="secondary" numberOfLines={1}>
+          <Text role="caption" tone="secondary" numberOfLines={1}>
             {t('ingredientMatch.matchedPantryItem', {
               name: match.matchedPantryItem.itemName,
               amount: `${match.matchedPantryItem.quantity}${
@@ -93,7 +97,7 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
 
         <View style={styles.bottomRow}>
           <View style={styles.quantityRow}>
-            <Text size="sm" tone="secondary">
+            <Text role="caption" tone="secondary">
               {t('ingredientMatch.qtyLabel')}
             </Text>
             <ThemedTextInput
@@ -109,12 +113,13 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
               editable={isIncluded}
             />
             {!!match.suggestedUnit?.symbol && (
-              <Text size="sm" tone="secondary">
+              <Text role="caption" tone="secondary">
                 {match.suggestedUnit.symbol}
               </Text>
             )}
           </View>
           <BaseSwitch
+            accessibilityLabel={ingredient.name}
             value={isIncluded}
             onValueChange={value => onUpdate(index, { isIncluded: value })}
           />
@@ -130,7 +135,7 @@ const styles = StyleSheet.create(theme => ({
   row: {
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
   rowExcluded: {
@@ -187,11 +192,11 @@ const styles = StyleSheet.create(theme => ({
     minWidth: 60,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
-    fontSize: theme.fonts.size.sm,
+    ...theme.type.caption,
     color: theme.colors.textPrimary,
     textAlign: 'center',
   },

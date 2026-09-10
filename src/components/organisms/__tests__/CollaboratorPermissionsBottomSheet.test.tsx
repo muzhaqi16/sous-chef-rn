@@ -18,7 +18,7 @@ jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#components/atoms/BottomSheetHeader', () => ({
+jest.mock('#components/molecules/BottomSheetHeader', () => ({
   BottomSheetHeader: ({
     title,
     cancelLabel,
@@ -157,9 +157,9 @@ describe('CollaboratorPermissionsBottomSheet', () => {
     });
     const switches = screen.getAllByRole('switch');
     act(() => {
-      fireEvent(switches[0], 'valueChange', false);
+      fireEvent(switches[0]!, 'valueChange', false);
     });
     // The switch flips optimistically before the mutation resolves.
-    await waitFor(() => expect(switches[0].props.value).toBe(false));
+    await waitFor(() => expect(switches[0]!.props.value).toBe(false));
   });
 });

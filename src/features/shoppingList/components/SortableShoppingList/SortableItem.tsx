@@ -9,22 +9,18 @@ import { useFragment } from '@apollo/client/react';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
-import { SwipeableItem } from '#/components/molecules/SwipeableItem/SwipeableItem';
-import { ListItem } from '#/components/molecules/ListItem';
-import { AnimatedCheckbox } from '#/components/atoms/AnimatedCheckbox';
-import { QuantityBadge } from '#/components/atoms/QuantityBadge';
-import { CachedImage } from '#/components/atoms/CachedImage';
+import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
+import { ListItem } from '#components/molecules/ListItem';
+import { AnimatedCheckbox } from '#features/shoppingList/components/AnimatedCheckbox';
+import { QuantityBadge } from '#features/shoppingList/components/QuantityBadge';
+import { CachedImage } from '#components/atoms/CachedImage';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#utils/iconUtils';
 
-import { HIT_SLOP } from '#/constants/touch';
+import { HIT_SLOP } from '#features/shoppingList/constants/touch';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
-import {
-  standardEasing,
-  staggeredEntryAnimation,
-  TIMING,
-} from '#constants/animations';
-import { useStaggeredEntry } from '#context/StaggeredEntryContext';
+import { staggeredEntryAnimation } from '#constants/animations';
+import { useStaggeredEntry } from '#features/shoppingList/context/StaggeredEntryContext';
 import {
   useShoppingListTutorialState,
   useShoppingListTutorialActions,
@@ -34,12 +30,13 @@ import { resolveImageUrl } from '#utils/imageUtils';
 import { SortableItem_ItemFragmentDoc } from './SortableItem.generated';
 import { useSortableListActions } from './SortableListActionsContext';
 import { useItemSwipeActions } from '#components/organisms/itemSwipeActionsContext';
-import { resolveRowActions } from '#components/molecules/SwipeableItem/commonActions';
+import { resolveRowActions } from '#components/organisms/SwipeableItem/commonActions';
 import {
   useShoppingListRowOptions,
   useSortableListTheme,
 } from './SortableListThemeContext';
 import type { ShoppingListRowItem } from './types';
+import { motion } from '#/theme/foundations/motion';
 
 /**
  * The row subscribes to its own entity via `useFragment(SortableItem_item)` and
@@ -73,7 +70,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     if (entryDelay <= 0) return undefined;
     return FadeIn.delay(entryDelay)
       .duration(staggeredEntryAnimation.duration)
-      .easing(standardEasing.factory());
+      .easing(motion.easing.standard.factory());
   })();
 
   const screenWidth = themeColors?.screenWidth ?? 375;
@@ -81,7 +78,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
     itemId: rowItem?.id ?? '',
     slideDistance: screenWidth,
-    duration: TIMING.MODERATE,
+    duration: motion.timing.MODERATE,
   });
 
   const { t } = useTranslation();
@@ -97,11 +94,10 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     onBeforeRowRemoved,
   } = actions;
 
-  const {
-    canRemoveItems = true,
-    canEditItems = true,
-    canMarkPurchased = true,
-  } = permissions;
+  // Both are required, so there is no absent answer to have an opinion about.
+  // The swipe descriptors come from the screen rather than the actions bag, so
+  // these two are gated here; every handler is withheld upstream instead.
+  const { canRemoveItems, canEditItems } = permissions;
 
   // Interactive tutorial — only the first row, and only on its steps.
   const tutorial = useShoppingListTutorialState();
@@ -132,7 +128,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   // FlashList slot during initial restore.
   const itemName = data?.itemName ?? '';
   const category = data?.category ?? null;
-  const subtitle = category?.split(',')[0].trim() || undefined;
+  const subtitle = category?.split(',')[0]?.trim() || undefined;
   const quantity = data?.quantity ?? 0;
   const quantityInput = data?.quantityInput ?? null;
   const unitDisplay = data?.unitName || data?.unit?.symbol || undefined;
@@ -270,6 +266,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           }}
           style={styles.moveToPantryButton}
           hitSlop={HIT_SLOP}
+          accessibilityLabel={t('moveToPantry.title')}
           testID={`shopping-list-item-${itemId}-move-to-pantry`}
         >
           <Icon name="archive-outline" size={24} color={themeColors?.primary} />
@@ -285,8 +282,11 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           quantity={quantity}
           quantityInput={quantityInput}
           unit={unitDisplay}
+          // The handler is withheld from a viewer who may not edit, so its
+          // absence is the gate — the sheet it opens is fully interactive and
+          // its Save arms as soon as the value changes.
           onPress={() => onQuantityPress?.(itemId)}
-          disabled={isPurchased}
+          disabled={isPurchased || !onQuantityPress}
           isPurchased={isPurchased}
           themeColors={themeColors}
         />
@@ -315,12 +315,13 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   })();
 
   const checkboxElement = (() => {
-    if (!onTogglePurchase || !canMarkPurchased) return null;
+    if (!onTogglePurchase) return null;
 
     const checkbox = (
       <AnimatedCheckbox
         checked={isPurchased}
         itemId={itemId}
+        accessibilityLabel={itemName}
         onPress={() => {
           // A tap toggles with default values; the row then moves to the other
           // tab, so slide it out first and toggle after. Recording actual
@@ -353,14 +354,14 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   // An empty cell rather than nothing, so the FlashList slot stays stable while
   // the fragment hydrates (or the recycled cell has no backing row).
   if (!rowItem || (!complete && !data)) {
-    return <View style={styles.container} />;
+    return <View style={commonStyles.rowWrapper} />;
   }
 
   // One Animated.View carries both the entry animation and the slide style.
   return (
     <Animated.View
       entering={entering}
-      style={[styles.container, animatedSlideStyle]}
+      style={[commonStyles.rowWrapper, animatedSlideStyle]}
     >
       {isTutorialItemCardTarget ? (
         <View
@@ -381,7 +382,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
         // details otherwise. The tutorial advances when that sheet CLOSES
         // (ShoppingListModalsContext), not here where it has only just opened.
         onLongPress={
-          !isPurchased && canMarkPurchased && onTogglePurchase
+          !isPurchased && onTogglePurchase
             ? () => onTogglePurchase(itemId, { withDetails: true })
             : onItemPress
             ? () => onItemPress(itemId)
@@ -418,15 +419,8 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    marginHorizontal: theme.spacing['3'],
-    marginVertical: theme.spacing.xs,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-  },
   moveToPantryButton: {
     padding: theme.spacing.xs,
-    marginLeft: theme.spacing.sm,
   },
   rightElementContainer: {
     flexDirection: 'row',

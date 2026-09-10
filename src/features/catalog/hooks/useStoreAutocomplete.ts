@@ -1,8 +1,8 @@
 import { useLazyQuery } from '@apollo/client/react';
 import { SearchStoresDocument } from '#operations/store/store.generated';
-import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
+import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { useAppStore, useIsOnline } from '#store/useAppStore';
-import { filterByName } from '#/utils/arrayUtils';
+import { filterByName } from '#features/catalog/utils/arrayUtils';
 
 export type StoreItem = {
   id: string;

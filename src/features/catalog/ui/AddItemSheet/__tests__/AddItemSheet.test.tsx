@@ -24,14 +24,18 @@ jest.mock('#hooks/useBottomSheetBackHandler', () => ({
   useBottomSheetBackHandler: jest.fn(),
 }));
 
-// Mock BottomSheetSearchBar
-jest.mock('#components/molecules/BottomSheetSearchBar', () => {
+// Mock SearchBar
+jest.mock('#components/molecules/SearchBar', () => {
   const R = require('react');
   const RN = require('react-native');
   return {
-    BottomSheetSearchBar: R.forwardRef(
+    SearchBar: R.forwardRef(
       (
-        props: { placeholder?: string; onChangeText?: (text: string) => void },
+        props: {
+          placeholder?: string;
+          onChangeText?: (text: string) => void;
+          rightActions?: Array<{ icon: string; onPress: () => void }>;
+        },
         ref: React.Ref<unknown>,
       ) => {
         R.useImperativeHandle(ref, () => ({
@@ -41,11 +45,23 @@ jest.mock('#components/molecules/BottomSheetSearchBar', () => {
           getValue: jest.fn(() => 'search value'),
           setValue: jest.fn(),
         }));
-        return R.createElement(RN.TextInput, {
-          testID: 'search-bar',
-          placeholder: props.placeholder,
-          onChangeText: props.onChangeText,
-        });
+        return R.createElement(
+          RN.View,
+          null,
+          R.createElement(RN.TextInput, {
+            testID: 'search-bar',
+            placeholder: props.placeholder,
+            onChangeText: props.onChangeText,
+          }),
+          // The barcode affordance now lives here rather than on a card below.
+          ...(props.rightActions ?? []).map(action =>
+            R.createElement(RN.Pressable, {
+              key: action.icon,
+              testID: `search-bar-${action.icon}`,
+              onPress: action.onPress,
+            }),
+          ),
+        );
       },
     ),
   };
@@ -53,11 +69,19 @@ jest.mock('#components/molecules/BottomSheetSearchBar', () => {
 
 // Mock ItemSuggestionsList. The report footer is exposed as a pressable so the
 // morph to the report step can be driven without the real list's data shape.
-jest.mock('#components/molecules/ItemSuggestionsList', () => {
+jest.mock('#features/catalog/ui/ItemSuggestionsList', () => {
   const R = require('react');
   const RN = require('react-native');
   return {
-    ItemSuggestionsList: ({ onReportItem }: { onReportItem?: () => void }) =>
+    ItemSuggestionsList: ({
+      onReportItem,
+      onAddManually,
+      testIDPrefix,
+    }: {
+      onReportItem?: () => void;
+      onAddManually: () => void;
+      testIDPrefix: string;
+    }) =>
       R.createElement(
         RN.View,
         { testID: 'item-suggestions-list' },
@@ -65,33 +89,16 @@ jest.mock('#components/molecules/ItemSuggestionsList', () => {
           testID: 'report-item-footer',
           onPress: onReportItem,
         }),
-      ),
-  };
-});
-
-// Mock ActionCard
-jest.mock('#components/molecules/ActionCard', () => {
-  const R = require('react');
-  const RN = require('react-native');
-  return {
-    ActionCard: (props: {
-      testID?: string;
-      label?: string;
-      onPress?: () => void;
-    }) =>
-      R.createElement(
-        RN.Pressable,
-        {
-          testID: props.testID || `action-${props.label}`,
-          onPress: props.onPress,
-        },
-        R.createElement(RN.Text, {}, props.label),
+        R.createElement(RN.Pressable, {
+          testID: `${testIDPrefix}-add-manually-button`,
+          onPress: onAddManually,
+        }),
       ),
   };
 });
 
 // Mock SuggestionListItem
-jest.mock('#components/molecules/SuggestionListItem', () => {
+jest.mock('#features/catalog/components/SuggestionListItem', () => {
   const R = require('react');
   const RN = require('react-native');
   return {
@@ -107,15 +114,21 @@ jest.mock('#components/molecules/SuggestionListItem', () => {
 // Mock useItemAutocomplete
 const mockHandleSearchTermChange = jest.fn();
 const mockResetAutocomplete = jest.fn();
+const mockSearchTerm = { current: '' };
 jest.mock('#features/catalog/hooks/useItemAutocomplete', () => ({
   useItemAutocomplete: jest.fn(() => ({
-    searchTerm: '',
+    searchTerm: mockSearchTerm.current,
     displayItems: [],
     isLoading: false,
     handleSearchTermChange: mockHandleSearchTermChange,
     reset: mockResetAutocomplete,
   })),
 }));
+
+/** Two characters is what `hasSearchQuery` needs to show the results step. */
+const withSearchTerm = (term: string) => {
+  mockSearchTerm.current = term;
+};
 
 // Mock useAddItemSheetState
 jest.mock('../useAddItemSheetState', () => ({
@@ -210,6 +223,7 @@ describe('AddItemSheet', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSearchTerm.current = '';
   });
 
   it('renders the sheet title', () => {
@@ -222,10 +236,14 @@ describe('AddItemSheet', () => {
     expect(screen.getByTestId('search-bar')).toBeTruthy();
   });
 
-  it('renders action buttons when no search results', () => {
+  it('offers scanning from the search bar, not a separate card', () => {
     render(<AddItemSheet {...defaultProps} />);
-    expect(screen.getByText('Scan Barcode')).toBeTruthy();
-    expect(screen.getByText('Add Manually')).toBeTruthy();
+    expect(screen.getByTestId('search-bar-barcode-outline')).toBeTruthy();
+    expect(
+      screen.queryByTestId(
+        `${pantrySheetConfig.testIDPrefix}-add-manually-button`,
+      ),
+    ).toBeNull();
   });
 
   it('renders empty state when no suggestions', () => {
@@ -300,20 +318,23 @@ describe('AddItemSheet', () => {
 
   it('calls onAddManually with search value', async () => {
     const user = userEvent.setup();
+    withSearchTerm('mil');
     render(<AddItemSheet {...defaultProps} />);
 
-    const addManuallyBtn = screen.getByText('Add Manually');
-    await user.press(addManuallyBtn);
+    await user.press(
+      screen.getByTestId(
+        `${pantrySheetConfig.testIDPrefix}-add-manually-button`,
+      ),
+    );
 
     expect(defaultProps.onAddManually).toHaveBeenCalledWith('search value');
   });
 
-  it('calls onScanPress when scan button is pressed', async () => {
+  it('calls onScanPress when the search bar barcode action is pressed', async () => {
     const user = userEvent.setup();
     render(<AddItemSheet {...defaultProps} />);
 
-    const scanBtn = screen.getByText('Scan Barcode');
-    await user.press(scanBtn);
+    await user.press(screen.getByTestId('search-bar-barcode-outline'));
 
     expect(defaultProps.onScanPress).toHaveBeenCalled();
   });
@@ -343,6 +364,7 @@ describe('AddItemSheet', () => {
 
   it('morphs to the in-place details step when Add Manually is pressed', async () => {
     const user = userEvent.setup();
+    withSearchTerm('mil');
     render(
       <AddItemSheet
         {...defaultProps}

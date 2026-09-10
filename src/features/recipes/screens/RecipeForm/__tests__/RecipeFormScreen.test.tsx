@@ -19,29 +19,53 @@ jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#/utils/finallyHelpers');
 
-jest.mock('../components/RecipeBasicFields', () => ({
-  RecipeBasicFields: () => null,
+// The three field components render their refusal so the screen test can see
+// WHERE each message landed, which an alert-based check could not tell apart.
+jest.mock('#features/recipes/components/recipeForm/RecipeBasicFields', () => ({
+  RecipeBasicFields: ({
+    errors,
+  }: {
+    errors?: { name?: { message?: string } };
+  }) => {
+    const { Text } = require('react-native');
+    return errors?.name?.message ? <Text>{errors.name.message}</Text> : null;
+  },
 }));
-jest.mock('../components/RecipeCategoryFields', () => ({
-  RecipeCategoryFields: () => null,
+jest.mock(
+  '#features/recipes/components/recipeForm/RecipeCategoryFields',
+  () => ({
+    RecipeCategoryFields: () => null,
+  }),
+);
+jest.mock(
+  '#features/recipes/components/recipeForm/RecipeIngredientList',
+  () => ({
+    RecipeIngredientList: ({ error }: { error?: string }) => {
+      const { Text } = require('react-native');
+      return error ? <Text>{error}</Text> : null;
+    },
+  }),
+);
+jest.mock(
+  '#features/recipes/components/recipeForm/RecipeIngredientEditor',
+  () => ({
+    RecipeIngredientEditor: require('react').forwardRef(() => null),
+  }),
+);
+jest.mock('#features/recipes/components/recipeForm/RecipeStepList', () => ({
+  RecipeStepList: ({ error }: { error?: string }) => {
+    const { Text } = require('react-native');
+    return error ? <Text>{error}</Text> : null;
+  },
 }));
-jest.mock('../components/RecipeIngredientList', () => ({
-  RecipeIngredientList: () => null,
-}));
-jest.mock('../components/RecipeIngredientEditor', () => ({
-  RecipeIngredientEditor: require('react').forwardRef(() => null),
-}));
-jest.mock('../components/RecipeStepList', () => ({
-  RecipeStepList: () => null,
-}));
-jest.mock('../components/RecipeStepEditor', () => ({
+jest.mock('#features/recipes/components/recipeForm/RecipeStepEditor', () => ({
   RecipeStepEditor: require('react').forwardRef(() => null),
 }));
-jest.mock('../components/RecipeTagsSection', () => ({
+jest.mock('#features/recipes/components/recipeForm/RecipeTagsSection', () => ({
   RecipeTagsSection: () => null,
 }));
-jest.mock('#components/organisms/FormModal', () => ({
-  FormModal: ({
+jest.mock('#components/templates/FormScreen', () => ({
+  FormScreen: ({
     children,
     onSave,
     title,
@@ -93,18 +117,24 @@ describe('RecipeFormScreen', () => {
     expect(getByText('Edit Recipe')).toBeTruthy();
   });
 
-  it('shows validation error on save with empty form', async () => {
+  // A field the user can fix is reported ON the field. An alert covers the form,
+  // and a dismissed alert cannot say which input it meant.
+  it('reports an empty form on its fields, not through an alert', async () => {
     const user = userEvent.setup();
-    const { getByTestId } = renderWithApollo(
+    const { getByTestId, findByText } = renderWithApollo(
       <RecipeFormScreen {...defaultProps} />,
     );
 
     await user.press(getByTestId('save-button'));
 
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Validation Error',
-      expect.any(String),
-    );
+    expect(await findByText('Recipe name is required')).toBeTruthy();
+    expect(
+      await findByText('At least one ingredient is required'),
+    ).toBeTruthy();
+    expect(
+      await findByText('At least one instruction step is required'),
+    ).toBeTruthy();
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 
   it('renders with test ID', () => {

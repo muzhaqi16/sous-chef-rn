@@ -26,7 +26,7 @@ jest.mock('@react-navigation/native', () => ({
   },
 }));
 
-jest.mock('#components/molecules/Header', () => ({ Header: () => null }));
+jest.mock('#components/organisms/Header', () => ({ Header: () => null }));
 
 const makeRoute = (code?: string) => ({
   key: 'JoinByLink-1',

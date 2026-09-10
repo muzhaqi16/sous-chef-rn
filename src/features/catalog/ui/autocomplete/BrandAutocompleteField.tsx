@@ -4,8 +4,8 @@ import {
   useBrandAutocomplete,
   type BrandItem,
 } from '#features/catalog/hooks/useBrandAutocomplete';
-import { GenericAutocompleteField } from '#components/molecules/AutocompleteField/GenericAutocompleteField';
-import { AutocompleteRow } from '#components/molecules/AutocompleteField/AutocompleteRow';
+import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
+import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
 
 interface BrandAutocompleteFieldProps {
   variant: 'inline' | 'modal';

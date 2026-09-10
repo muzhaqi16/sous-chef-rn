@@ -78,6 +78,34 @@ Re-check:
 grep -n "absoluteY + inputHeight\|bottomOffset = " node_modules/react-native-keyboard-controller/src/components/KeyboardAwareScrollView/index.tsx
 ```
 
+### A keyboard-aware scrollable cannot size a sheet
+
+**Claim:** `KeyboardAwareScrollView` inside an `enableDynamicSizing` sheet grows
+the sheet by the keyboard's height. Focusing a field then opens a band of blank
+sheet and scrolls the header off the top.
+
+**Verified against `react-native-keyboard-controller@1.22.4` +
+`@gorhom/bottom-sheet@5.2.14`.** The scrollable pads its own content to lift the
+focused input clear of the keyboard — `ScrollViewWithBottomPadding` in `insets`
+mode (the default), a spacer view in `layout` mode. Gorhom's dynamic sizing takes
+the sheet's height from the scrollable's reported CONTENT size, so that padding
+is measured as content, and the sheet grows by exactly the padding meant to
+scroll under the keyboard. Gorhom's own `keyboardBehavior: 'interactive'` has
+already lifted the sheet, so the room is being made twice.
+
+Re-check:
+
+```
+grep -n "bottomPadding\|paddingBottom" node_modules/react-native-keyboard-controller/src/components/ScrollViewWithBottomPadding/index.tsx
+grep -n "mode = \"insets\"" node_modules/react-native-keyboard-controller/src/components/KeyboardAwareScrollView/index.tsx
+```
+
+A sheet sized to its own content uses `BottomSheetView` (or gorhom's
+`BottomSheetScrollView`) and lets gorhom do the lifting;
+`BottomSheetFormScrollView` belongs in a sheet with FIXED snap points, where the
+height it reports changes nothing. `PurchaseAmountSheet` and `QuantityEditSheet`
+are the worked pair.
+
 ### RNGH v3 handlers survive a native scroll takeover
 
 **Claim:** a `ReanimatedSwipeable` row inside a plain RN `ScrollView` opens while
@@ -837,3 +865,179 @@ left the read incomplete — the exact case its own comment says it fixed.
 Ask the cache instead of walking the value: a strict `readFragment` of the
 selection returns `null` when the cache cannot satisfy it, which is Apollo's own
 notion of completeness and therefore the one the later read will use.
+
+### Reanimated applies reduce motion itself
+
+**Claim:** `withTiming`, `withSpring`, `withRepeat` and the entering/exiting
+builders already honour the OS "reduce motion" setting with no config and no
+call-site branch. A branch is needed only for motion a zero duration cannot
+stop — a loop's resting state, an ambient illustration, a shimmer.
+
+**Verified 2026-09-03 against `react-native-reanimated@4.6.0`.**
+`getReduceMotionFromConfig` in `animation/utilCommon.js` reads
+`!config || config === ReduceMotion.System ? isReduceMotionOnUI.value : …`, so
+an animation that passes no `reduceMotion` resolves to the device setting;
+`timing.js`, `spring/spring.js` and `repeat.js` each pass their config through
+`getReduceMotionForAnimation`, and `BaseAnimationBuilder` initialises
+`reduceMotionV = ReduceMotion.System`.
+
+This is why `src/theme/foundations/motion.ts` holds one set of tokens rather
+than a reduced twin of each: reducing them in the app would duplicate what the
+library does a layer below, and the duplicate is what goes stale.
+
+Re-check:
+
+```
+node scripts/probe-reanimated-reduce-motion.mjs
+```
+
+`src/hooks/animations/useMotionEnabled.ts` is the single `useReducedMotion`
+read, for the loop cases.
+
+### The image picker hands back a cache `file://`, and its head is sliceable
+
+**Claim:** reading an image's leading bytes with `fetch(uri)` → `blob.slice(0, n)`
+→ `FileReader.readAsDataURL` works for every URI this app's picker produces, and
+`content://` never arises. The upload confirm step verifies the object's magic
+bytes against the extension its key was minted for, so the presign must ask for
+the type the BYTES are, not the type the picker or the file name reports.
+
+**Verified on device 2026-09-04, SM-S908U1 (Android 16, API 36), against
+`react-native-image-picker@8.2.1` + RN 0.86.3 (Hermes).** Picking a photo
+through the Android Photo Picker returned
+
+```
+file:///data/user/0/dev.souschef.app/cache/rn_image_picker_lib_temp_<uuid>.png
+```
+
+— the library COPIES the selection into the app's own cache, so the app always
+reads a path it owns and no media permission is involved (the app declares
+neither `READ_MEDIA_IMAGES` nor `READ_EXTERNAL_STORAGE`). Against that URI:
+`blob.size` 99, `head.size` 12 — the slice really is bounded, not a whole-file
+read — and the decoded bytes were `89 50 4E 47 0D 0A 1A 0A 00 00 00 0D`, the PNG
+signature plus the IHDR length.
+
+Three things that do NOT work, each of which reads as the same
+`Network request failed` and so cannot be told apart by its message:
+
+- `fetch` on a `data:` URI.
+- `fetch` on a `file://` outside the app's sandbox (`/sdcard/Download/...`).
+- `fetch` on a MediaStore `content://` **for an app holding no media
+  permission** — which is why the sniffer must degrade to the reported type
+  rather than refuse, even though this app never sees one.
+
+**`global` is not bound in every Hermes scope.** `global.atob` threw
+`Property 'global' doesn't exist` on this device while bare `atob` resolved, so
+`bytesFromDataUrl` uses the bare form. The failure would have been silent: the
+sniffer reads a throw as "unreadable" and falls back to the picker's type.
+
+Re-check: connect the debugger (`argent-metro-debugger`) and evaluate
+
+```js
+(async () => {
+  const res = await fetch(PICKED_URI);          // from the picker's response
+  const head = (await res.blob()).slice(0, 12);
+  const url = await new Promise(r => {
+    const fr = new FileReader();
+    fr.onloadend = () => r(String(fr.result));
+    fr.readAsDataURL(head);
+  });
+  const bin = atob(url.slice(url.indexOf(',') + 1));
+  return Array.from({ length: 12 }, (_, i) => bin.charCodeAt(i));
+})()
+```
+
+Guarded by `src/utils/__tests__/imageValidation.test.ts` (`sniffImageMimeType`).
+
+### fraction.js's float constructor costs a quarter-second on device
+
+**Claim:** `new Fraction(<float>)` runs a continued-fraction search whose cost
+depends on how near the value is to a rational it cannot represent exactly. A
+value that is a float32 echo of a repeating fraction drives it to its
+denominator bound. Seeding from an integer numerator/denominator pair is exact
+rational arithmetic instead, and produces identical output.
+
+**Verified 2026-09-07 against `fraction.js@5.3.4`, in the app's own Hermes
+runtime on an SM-S908U1** (Android 16, 96 Hz panel → 10.4 ms frame budget),
+debug bundle with the CDP debugger attached. Microseconds per call:
+
+| value | `new Fraction(v).simplify(0.02)` | `new Fraction(Math.round(v*1e6), 1e6).simplify(0.02)` |
+| --- | --- | --- |
+| `0.33333334` | **273,534** | 36 |
+| `0.66666667` | **290,297** | 70 |
+| `4.6` | **17,843** | 53 |
+| `1.1` | **9,051** | 17 |
+| `0.93` | 263 | 99 |
+| `2.7` | 73 | 62 |
+| `1/3` exact, `0.5`, `1.25` | 15–19 | 15–35 |
+
+The control rules out a debugger tax: 5,000,000 iterations of `s += i % 7` on
+the same runtime took 351 ms — 70 ns per iteration, ordinary Hermes-on-device
+speed. Both columns come from the same build, so the ratio holds; the absolute
+figures are an upper bound for a release bundle.
+
+`0.33333334` is not a contrived value: `src/utils/formatQuantity.ts` names it,
+because the API stores `1/3` and echoes back the float32. `4.6` and `1.1` are
+ordinary typed quantities, and each exceeds a whole frame in one call. The path
+is per-row — `QuantityBadge`, `QuantityDisplay`, `PantryItemCard` — and FlashList
+rebinds cells continuously while scrolling.
+
+Output is unchanged across the verified set, the fraction-vs-decimal choice
+included; `src/utils/__tests__/formatQuantity.test.ts` pins every value.
+
+Re-check: connect the debugger (`argent-metro-debugger`), serve
+`node_modules/fraction.js/dist/fraction.js` over a reverse-forwarded port, then
+evaluate
+
+```js
+fetch('http://localhost:8099/fraction.js').then(r => r.text()).then(src => {
+  const mod = { exports: {} };
+  new Function('module', 'exports', src)(mod, mod.exports);
+  globalThis.__Frac = mod.exports;
+});
+// then, in a second evaluate:
+(() => {
+  const F = globalThis.__Frac, now = () => performance.now();
+  const t0 = now();
+  for (let i = 0; i < 2; i++) new F(0.33333334).simplify(0.02);
+  return Math.round((now() - t0) * 1000 / 2); // microseconds per call
+})()
+```
+
+### An Android biometric cancel is indistinguishable from an invalidated key by code
+
+**Claim:** react-native-keychain rejects a user CANCEL and a permanently
+invalidated key with the same `code`. Only the message tells them apart, and
+treating the code as proof of invalidation deletes a user's stored credentials
+when they tap the prompt's negative button.
+
+**Verified 2026-09-07 against `react-native-keychain@10.0.0`, on an SM-S908U1**
+with three fingerprints enrolled. Enrolled biometric sign-in, then called
+`loadCredentials()` and tapped the prompt's "Use manual login". The rejection:
+
+```json
+{
+  "code": "E_CRYPTO_FAILED",
+  "name": "com.oblador.keychain.exceptions.CryptoFailedException",
+  "message": "code: 13, msg: Use manual login"
+}
+```
+
+`13` is androidx `BiometricPrompt.ERROR_NEGATIVE_BUTTON`.
+`ResultHandlerInteractiveBiometric.onAuthenticationError` formats EVERY androidx
+outcome as `CryptoFailedException("code: $errorCode, msg: $errString")`, and
+`KeychainModule` rejects all of them as `E_CRYPTO_FAILED` — so cancel, lockout,
+timeout and a genuinely unusable key are one code. A key invalidated by an
+enrolment change is thrown from the cipher path instead and reaches JS through
+`CryptoFailedException.reThrowOnError`'s `"Wrapped error: …"`, with no `code: <n>`.
+
+`src/storage/keychain.ts` therefore treats the `code: <n>` marker as proof the
+failure came from the prompt, and keeps the credentials. After the cancel above,
+`hasCredentials()` returned `true` and `getLastBiometricEmail()` still returned
+the account — the slot, its indicator and the remembered address all survived.
+
+Re-check: the format string is pinned by
+`src/storage/__tests__/keychainAndroidErrors.library.test.ts` against the
+installed Kotlin. On device, connect the debugger and call
+`getGenericPassword({ service, authenticationPrompt })`, tap the negative
+button, and read the rejection's `code`/`name`/`message`.

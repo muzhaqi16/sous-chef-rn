@@ -85,7 +85,7 @@ function parseOtlpBody(call: [string, { body: string }]): OtlpBody {
 }
 
 function getOtlpMetrics(body: OtlpBody): OtlpMetric[] {
-  return body.resourceMetrics[0].scopeMetrics[0].metrics;
+  return body.resourceMetrics[0]!.scopeMetrics[0]!.metrics;
 }
 
 function findMetric(metrics: OtlpMetric[], name: string): OtlpMetric {
@@ -289,7 +289,7 @@ describe('HttpTransport', () => {
       await transport.sendMetrics(makeMetrics());
 
       const body = parseOtlpBody(mockFetch.mock.calls[0]);
-      const resource = body.resourceMetrics[0].resource;
+      const resource = body.resourceMetrics[0]!.resource;
 
       const attrs = Object.fromEntries(
         resource.attributes.map(a => [a.key, a.value.stringValue]),
@@ -323,7 +323,7 @@ describe('HttpTransport', () => {
       expect(counter.sum.isMonotonic).toBe(true);
       expect(counter.sum.aggregationTemporality).toBe(2); // CUMULATIVE
       expect(counter.sum.dataPoints).toHaveLength(1);
-      expect(counter.sum.dataPoints[0].asDouble).toBe(3);
+      expect(counter.sum.dataPoints[0]!.asDouble).toBe(3);
     });
 
     it('serializes gauges as OTLP Gauge', async () => {
@@ -346,7 +346,7 @@ describe('HttpTransport', () => {
       expect(gauge).toBeDefined();
       expect(gauge.gauge).toBeDefined();
       expect(gauge.gauge.dataPoints).toHaveLength(1);
-      expect(gauge.gauge.dataPoints[0].asDouble).toBe(1024);
+      expect(gauge.gauge.dataPoints[0]!.asDouble).toBe(1024);
     });
 
     it('serializes histograms as OTLP Histogram with correct bucket counts', async () => {
@@ -386,9 +386,9 @@ describe('HttpTransport', () => {
       expect(histogram.histogram.aggregationTemporality).toBe(2); // CUMULATIVE
 
       const dp = histogram.histogram.dataPoints[0];
-      expect(dp.count).toBe('3');
-      expect(dp.sum).toBe(390); // 15 + 75 + 300
-      expect(dp.explicitBounds).toEqual([
+      expect(dp!.count).toBe('3');
+      expect(dp!.sum).toBe(390); // 15 + 75 + 300
+      expect(dp!.explicitBounds).toEqual([
         10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000,
       ]);
 
@@ -396,7 +396,7 @@ describe('HttpTransport', () => {
       // 15 → bucket[1] (10, 25]
       // 75 → bucket[3] (50, 100]
       // 300 → bucket[5] (250, 500]
-      const counts = dp.bucketCounts.map(Number);
+      const counts = dp!.bucketCounts.map(Number);
       expect(counts).toHaveLength(11);
       expect(counts[0]).toBe(0); // (-Inf, 10]
       expect(counts[1]).toBe(1); // (10, 25] → 15
@@ -422,7 +422,7 @@ describe('HttpTransport', () => {
       const body = parseOtlpBody(mockFetch.mock.calls[0]);
       const metrics = getOtlpMetrics(body);
       const counter = findMetric(metrics, 'test_metric_total');
-      expect(counter.sum.dataPoints[0].asDouble).toBe(10);
+      expect(counter.sum.dataPoints[0]!.asDouble).toBe(10);
     });
 
     it('re-sends the cumulative snapshot on a later flush (does not clear on success)', async () => {
@@ -440,7 +440,7 @@ describe('HttpTransport', () => {
       const body = parseOtlpBody(mockFetch.mock.calls[0]);
       const metrics = getOtlpMetrics(body);
       const gauge = findMetric(metrics, 'test_metric_total');
-      expect(gauge.gauge.dataPoints[0].asDouble).toBe(5);
+      expect(gauge.gauge.dataPoints[0]!.asDouble).toBe(5);
     });
 
     it('sends nothing when no metrics have ever been recorded', async () => {
@@ -477,7 +477,7 @@ describe('HttpTransport', () => {
       const body = parseOtlpBody(mockFetch.mock.calls[0]);
       const metrics = getOtlpMetrics(body);
       const gauge = findMetric(metrics, 'test_metric_total');
-      expect(gauge.gauge.dataPoints[0].asDouble).toBe(5);
+      expect(gauge.gauge.dataPoints[0]!.asDouble).toBe(5);
     });
 
     it('throws retryable on a fetch rejection so the service backs off and retries', async () => {
@@ -535,7 +535,7 @@ describe('HttpTransport', () => {
       // Should be one metric with two data points
       const httpRequests = metrics.filter(m => m.name === 'http_requests');
       expect(httpRequests).toHaveLength(1);
-      expect(httpRequests[0].sum.dataPoints).toHaveLength(2);
+      expect(httpRequests[0]!.sum.dataPoints).toHaveLength(2);
     });
 
     it('includes auth header', async () => {
@@ -579,7 +579,8 @@ describe('HttpTransport', () => {
       const body = parseOtlpBody(mockFetch.mock.calls[0]);
       const metrics = getOtlpMetrics(body);
       const histogram = findMetric(metrics, 'timing_ms');
-      const counts = histogram.histogram.dataPoints[0].bucketCounts.map(Number);
+      const counts =
+        histogram.histogram.dataPoints[0]!.bucketCounts.map(Number);
 
       expect(counts[0]).toBe(1); // 10 → (-Inf, 10]
       expect(counts[9]).toBe(1); // 10000 → (5000, 10000]
@@ -604,12 +605,12 @@ describe('HttpTransport', () => {
       const histogram = findMetric(getOtlpMetrics(body), 'coverage_ratio');
       const dp = histogram.histogram.dataPoints[0];
 
-      expect(dp.explicitBounds).toEqual([
+      expect(dp!.explicitBounds).toEqual([
         0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
       ]);
-      expect(dp.sum).toBe(0.85);
-      expect(dp.count).toBe('1');
-      const counts = dp.bucketCounts.map(Number);
+      expect(dp!.sum).toBe(0.85);
+      expect(dp!.count).toBe('1');
+      const counts = dp!.bucketCounts.map(Number);
       expect(counts).toHaveLength(11); // 10 bounds + overflow
       expect(counts[8]).toBe(1); // 0.85 ≤ 0.9 → bucket index 8
     });

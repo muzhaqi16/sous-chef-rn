@@ -38,7 +38,7 @@ import {
   MyShoppingListsEventsDocument,
   type GetShoppingListItemsFilteredQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { removeFromPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
+import { removeFromPantryItemsCache } from '#features/pantry/cache/items';
 import { removeFromShoppingListItemsCache } from '#features/shoppingList/hooks/mutations/utils';
 
 const mockedSchema = addMocksToSchema({

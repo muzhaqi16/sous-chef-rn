@@ -4,11 +4,12 @@ import { View } from 'react-native';
 import { Controller, type Control } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
-import { FormInput } from '#components/molecules/FormInput';
+import { FormInput } from '#components/atoms/FormInput';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
-import { FieldRow } from '#components/molecules/FieldRow';
+import { FieldRow } from '#components/atoms/FieldRow';
 import type { PantryItemFormData } from './PantryItemForm';
 import { localizeNumericHint } from '#/utils/formatters/number';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 
 interface NetWeightSectionProps {
   control: Control<PantryItemFormData>;
@@ -29,8 +30,10 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
   const { t } = useTranslation();
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{t('labels.netWeight')}</Text>
-      <Text style={styles.sectionDescription}>
+      <SectionHeader style={styles.sectionTitleSpacing}>
+        {t('labels.netWeight')}
+      </SectionHeader>
+      <Text role="caption" style={styles.sectionDescription}>
         {t('labels.netWeightIsUsedForConsumptionTrackingAndIsOptional')}
       </Text>
       <View
@@ -75,7 +78,9 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
         </FieldRow>
       </View>
       {!!isWeightLocked && (
-        <Text style={styles.lockedHint}>{t('itemForm.netWeightLocked')}</Text>
+        <Text role="caption" style={styles.lockedHint}>
+          {t('itemForm.netWeightLocked')}
+        </Text>
       )}
     </View>
   );
@@ -85,17 +90,7 @@ const styles = StyleSheet.create(theme => ({
   section: {
     marginBottom: theme.spacing.lg,
   },
-  sectionTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
   sectionDescription: {
-    fontSize: theme.fonts.size.sm,
     fontStyle: 'italic',
     color: theme.colors.textTertiary,
     marginBottom: theme.spacing.sm,
@@ -104,8 +99,13 @@ const styles = StyleSheet.create(theme => ({
     opacity: theme.opacity.disabled,
   },
   lockedHint: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.textTertiary,
     fontStyle: 'italic',
+  },
+  sectionTitleSpacing: {
+    marginBottom: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
+    borderBottomWidth: theme.borderWidth.hairline,
+    borderBottomColor: theme.colors.border,
   },
 }));

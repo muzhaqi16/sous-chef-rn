@@ -18,10 +18,10 @@ import {
   withTiming,
   withDelay,
   cancelAnimation,
-  useReducedMotion,
-  Easing,
 } from 'react-native-reanimated';
 import { Text } from '#components/atoms/Text';
+import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
+import { motion } from '#/theme/foundations/motion';
 
 // Colors for the grocery bag illustration
 const COLORS = {
@@ -35,7 +35,7 @@ const COLORS = {
   leaves: '#66BB6A',
   leavesDark: '#43A047',
   banner: '#FFF3E0',
-  bannerText: '#F97416',
+  bannerText: '#F58234',
 };
 
 // Size configurations
@@ -47,81 +47,48 @@ const SIZES = {
 
 /** Build all Skia path objects for a given size configuration. */
 function buildPaths(cx: number, cy: number, scale: number) {
-  const baguette = Skia.Path.Make();
-  baguette.moveTo(cx - 25 * scale, cy - 45 * scale);
-  baguette.quadTo(
-    cx - 30 * scale,
-    cy - 55 * scale,
-    cx - 20 * scale,
-    cy - 70 * scale,
-  );
-  baguette.quadTo(
-    cx - 15 * scale,
-    cy - 80 * scale,
-    cx - 10 * scale,
-    cy - 75 * scale,
-  );
-  baguette.quadTo(
-    cx - 5 * scale,
-    cy - 65 * scale,
-    cx - 15 * scale,
-    cy - 45 * scale,
-  );
-  baguette.close();
+  const baguette = Skia.PathBuilder.Make()
+    .moveTo(cx - 25 * scale, cy - 45 * scale)
+    .quadTo(cx - 30 * scale, cy - 55 * scale, cx - 20 * scale, cy - 70 * scale)
+    .quadTo(cx - 15 * scale, cy - 80 * scale, cx - 10 * scale, cy - 75 * scale)
+    .quadTo(cx - 5 * scale, cy - 65 * scale, cx - 15 * scale, cy - 45 * scale)
+    .close()
+    .detach();
 
-  const line1 = Skia.Path.Make();
-  line1.moveTo(cx - 22 * scale, cy - 55 * scale);
-  line1.lineTo(cx - 14 * scale, cy - 52 * scale);
+  const line1 = Skia.PathBuilder.Make()
+    .moveTo(cx - 22 * scale, cy - 55 * scale)
+    .lineTo(cx - 14 * scale, cy - 52 * scale)
+    .detach();
 
-  const line2 = Skia.Path.Make();
-  line2.moveTo(cx - 20 * scale, cy - 62 * scale);
-  line2.lineTo(cx - 12 * scale, cy - 59 * scale);
+  const line2 = Skia.PathBuilder.Make()
+    .moveTo(cx - 20 * scale, cy - 62 * scale)
+    .lineTo(cx - 12 * scale, cy - 59 * scale)
+    .detach();
 
-  const line3 = Skia.Path.Make();
-  line3.moveTo(cx - 17 * scale, cy - 69 * scale);
-  line3.lineTo(cx - 11 * scale, cy - 67 * scale);
+  const line3 = Skia.PathBuilder.Make()
+    .moveTo(cx - 17 * scale, cy - 69 * scale)
+    .lineTo(cx - 11 * scale, cy - 67 * scale)
+    .detach();
 
-  const leaf1 = Skia.Path.Make();
-  leaf1.moveTo(cx + 20 * scale, cy - 40 * scale);
-  leaf1.quadTo(
-    cx + 30 * scale,
-    cy - 60 * scale,
-    cx + 25 * scale,
-    cy - 70 * scale,
-  );
-  leaf1.quadTo(
-    cx + 20 * scale,
-    cy - 65 * scale,
-    cx + 15 * scale,
-    cy - 50 * scale,
-  );
-  leaf1.close();
+  const leaf1 = Skia.PathBuilder.Make()
+    .moveTo(cx + 20 * scale, cy - 40 * scale)
+    .quadTo(cx + 30 * scale, cy - 60 * scale, cx + 25 * scale, cy - 70 * scale)
+    .quadTo(cx + 20 * scale, cy - 65 * scale, cx + 15 * scale, cy - 50 * scale)
+    .close()
+    .detach();
 
-  const leaf2 = Skia.Path.Make();
-  leaf2.moveTo(cx + 30 * scale, cy - 35 * scale);
-  leaf2.quadTo(
-    cx + 45 * scale,
-    cy - 50 * scale,
-    cx + 40 * scale,
-    cy - 60 * scale,
-  );
-  leaf2.quadTo(
-    cx + 35 * scale,
-    cy - 55 * scale,
-    cx + 25 * scale,
-    cy - 40 * scale,
-  );
-  leaf2.close();
+  const leaf2 = Skia.PathBuilder.Make()
+    .moveTo(cx + 30 * scale, cy - 35 * scale)
+    .quadTo(cx + 45 * scale, cy - 50 * scale, cx + 40 * scale, cy - 60 * scale)
+    .quadTo(cx + 35 * scale, cy - 55 * scale, cx + 25 * scale, cy - 40 * scale)
+    .close()
+    .detach();
 
-  const stem = Skia.Path.Make();
-  stem.moveTo(cx + 5 * scale, cy - 68 * scale);
-  stem.quadTo(
-    cx + 8 * scale,
-    cy - 73 * scale,
-    cx + 12 * scale,
-    cy - 71 * scale,
-  );
-  stem.quadTo(cx + 8 * scale, cy - 69 * scale, cx + 5 * scale, cy - 68 * scale);
+  const stem = Skia.PathBuilder.Make()
+    .moveTo(cx + 5 * scale, cy - 68 * scale)
+    .quadTo(cx + 8 * scale, cy - 73 * scale, cx + 12 * scale, cy - 71 * scale)
+    .quadTo(cx + 8 * scale, cy - 69 * scale, cx + 5 * scale, cy - 68 * scale)
+    .detach();
 
   return {
     baguettePath: baguette,
@@ -162,15 +129,15 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
   const baguetteY = useSharedValue(0);
   const tomatoY = useSharedValue(0);
   const leavesY = useSharedValue(0);
-  const reducedMotion = useReducedMotion();
+  const motionEnabled = useMotionEnabled();
 
   // Start animations on mount with staggered timing (all on UI thread)
   useLayoutEffect(() => {
-    if (reducedMotion) return;
+    if (!motionEnabled) return;
 
     const bounceConfig = {
       duration: 600,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+      easing: motion.easing.standard,
     };
 
     const bounce = (amplitude: number) =>
@@ -197,7 +164,7 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
       cancelAnimation(tomatoY);
       cancelAnimation(leavesY);
     };
-  }, [baguetteY, tomatoY, leavesY, reducedMotion]);
+  }, [baguetteY, tomatoY, leavesY, motionEnabled]);
 
   // Derived transforms for Skia
   const baguetteTransform = useDerivedValue(() => [
@@ -232,16 +199,11 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
     <View style={componentStyles.container}>
       {!!showBrand && (
         <View style={componentStyles.brandContainer}>
-          <Text
-            size="2xl"
-            weight="bold"
-            tone="primary"
-            style={componentStyles.brandTitle}
-          >
+          <Text role="title" tone="primary" style={componentStyles.brandTitle}>
             Sous Chef
           </Text>
           <Text
-            size="sm"
+            role="caption"
             tone="secondary"
             style={componentStyles.brandSubtitle}
           >
@@ -349,7 +311,11 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
           },
         ]}
       >
-        <Text weight="bold" align="center" style={componentStyles.bannerText}>
+        <Text
+          role="bodyStrong"
+          align="center"
+          style={componentStyles.bannerText}
+        >
           {resolvedMessage.toUpperCase()}
         </Text>
       </View>
@@ -399,13 +365,13 @@ const componentStyles = StyleSheet.create(theme => ({
     variants: {
       size: {
         small: {
-          fontSize: theme.typography.fontSize['2xs'] * SIZES.small.scale,
+          ...theme.type.caption,
         },
         medium: {
-          fontSize: theme.typography.fontSize['2xs'] * SIZES.medium.scale,
+          ...theme.type.caption,
         },
         large: {
-          fontSize: theme.typography.fontSize['2xs'] * SIZES.large.scale,
+          ...theme.type.caption,
         },
       },
     },

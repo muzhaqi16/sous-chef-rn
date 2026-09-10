@@ -1,9 +1,12 @@
+import type { ScrollViewProps } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
 /**
- * RNGH's ScrollView, for FlashLists whose rows carry RNGH gestures. A native
- * scroll takeover fires `cancelAllLegacyHandlers()`, which spares the v3
- * detectors `ReanimatedSwipeable` uses — its pan then accumulates travel across
- * the scroll and opens rows at any `dragOffset`. An RNGH scrollable arbitrates.
+ * The app's RNGH scroll host — FlashList's `renderScrollComponent` and a
+ * standalone scroller alike. A native scroll takeover spares the v3 detectors
+ * rows use, whose pan then opens them mid-scroll at any `dragOffset`; and RN
+ * turns `nestedScrollEnabled` on under a `refreshControl`, parking the spinner.
  */
-export const SwipeAwareScrollComponent = ScrollView;
+export const SwipeAwareScrollComponent = (props: ScrollViewProps) => (
+  <ScrollView nestedScrollEnabled={false} {...props} />
+);

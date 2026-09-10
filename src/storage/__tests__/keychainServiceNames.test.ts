@@ -1,6 +1,7 @@
 import {
   CREDENTIALS_INDICATOR_SERVICE,
   DEFAULT_SERVICE,
+  DEVICE_ID_SERVICE,
   LAST_BIOMETRIC_EMAIL_KEY,
   SESSION_TOKENS_SERVICE,
   TEMP_REGISTRATION_SERVICE,
@@ -29,6 +30,7 @@ describe('keychain service names', () => {
       'dev.souschef.app.temp.registration',
     );
     expect(SESSION_TOKENS_SERVICE).toBe('dev.souschef.app.session.tokens');
+    expect(DEVICE_ID_SERVICE).toBe('dev.souschef.app.device.id');
   });
 
   it('keeps the biometric-email key off the namespace', () => {

@@ -1,17 +1,17 @@
 import type { NormalizedCacheObject } from '@apollo/client';
-import { storage, isStorageReady } from '#storage/mmkv';
+import { storage, isStorageReady, isRecoveryStorage } from '#storage/mmkv';
 import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
 
 const CACHE_STORAGE_KEY = 'apollo-cache-v1';
 const CACHE_VERSION_KEY = 'apollo-cache-version';
 /**
- * The SHAPE of a persisted blob, not the app that wrote it — keying on app
- * version would purge the cache on every update. Bump by hand when a `cache.ts`
- * change makes persisted data unsafe; `cacheSchemaVersion.test.ts` fails on any
- * edit to that file until the decision has been made.
+ * The SHAPE of a persisted blob, not the app that wrote it. Bump by hand for a
+ * `cache.ts` change that makes old data unsafe, OR a server change that
+ * redefines what persisted data means — retired ids and rewritten values parse
+ * cleanly and are still wrong. `cacheSchemaVersion.test.ts` pins it.
  */
-const CURRENT_CACHE_VERSION = 'shape-1';
+const CURRENT_CACHE_VERSION = 'shape-2';
 
 /**
  * Keys from a retired split-blob scheme. Kept so `load()` can migrate an install
@@ -23,18 +23,22 @@ const LEGACY_SPLIT_KEYS = [
   'apollo-cache-v1-deferred',
 ];
 
+/** Freshly allocated by every `extract()`, so its reference is never stable. */
+const META_KEY = '__META';
+
 /**
  * Identity per top-level key, not value: `extract()` returns the store's own
- * objects, so an untouched entity keeps its reference. Must scan the WHOLE
- * cache — writers report only `ROOT_QUERY`, whose `__ref`s are unchanged when a
- * refetch updates entities in place, so a per-key check reads as "no change".
+ * objects, so an untouched entity keeps its reference. Scans the WHOLE cache —
+ * writers report only `ROOT_QUERY`, whose `__ref`s are unchanged when a refetch
+ * updates entities in place, so a per-key check reads as "no change".
  */
 function hasCacheChanged(
   cache: NormalizedCacheObject,
   snapshot: NormalizedCacheObject,
 ): boolean {
-  const keys = Object.keys(cache);
-  if (keys.length !== Object.keys(snapshot).length) return true;
+  const keys = Object.keys(cache).filter(k => k !== META_KEY);
+  const snapshotKeys = Object.keys(snapshot).filter(k => k !== META_KEY);
+  if (keys.length !== snapshotKeys.length) return true;
   for (const key of keys) {
     if (cache[key] !== snapshot[key]) return true;
   }
@@ -45,6 +49,12 @@ class ApolloCachePersistence {
   private saveTimeout: ReturnType<typeof setTimeout> | null = null;
   private idleCallbackId: number | null = null;
   private readonly debounceMs = 3000; // Wait 3s before saving to reduce writes during burst operations
+  /**
+   * The window while no tab screen is focused. Wider than `debounceMs` because
+   * a detail screen's writes are fewer and `cache.extract()` is the cost; still
+   * finite, so a kill on that screen loses at most this window.
+   */
+  private readonly pausedDebounceMs = 10000;
   private paused = false;
   private pendingWhilePaused = false;
   private pausedExtractor: (() => NormalizedCacheObject) | null = null;
@@ -130,17 +140,13 @@ class ApolloCachePersistence {
   }
 
   /**
-   * Pause cache persistence.
-   * While paused, scheduleExtractAndSave calls are suppressed.
-   * Call resume() to re-enable and flush any pending save.
+   * Slows persistence while no tab screen is focused; never stops it. A write on
+   * a pushed screen is as durable as one on a tab root, so this only widens the
+   * debounce — a suspension installing no timer leaves `flushPending` nothing to
+   * flush and loses the screen's writes to an app kill.
    */
   pause(): void {
     this.paused = true;
-    // Cancel any pending save so it doesn't fire during the pause
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-      this.saveTimeout = null;
-    }
   }
 
   /**
@@ -157,6 +163,8 @@ class ApolloCachePersistence {
       this.pendingWhilePaused = false;
       const extractor = this.pausedExtractor;
       this.pausedExtractor = null;
+      // Re-schedules at the tighter window; the wide one is still pending and
+      // is cleared by the re-schedule.
       this.scheduleExtractAndSave(extractor);
     } else {
       this.pendingWhilePaused = false;
@@ -169,10 +177,14 @@ class ApolloCachePersistence {
    * one extract happens per window rather than one per cache operation.
    */
   scheduleExtractAndSave(extractor: () => NormalizedCacheObject): void {
+    // The cache holds server data — names, emails, household membership. On the
+    // unencrypted recovery instance the session may continue, but none of that
+    // may reach disk. Returning BEFORE the debounce also leaves no timer to
+    // fire after the decision was made.
+    if (isRecoveryStorage()) return;
     if (this.paused) {
       this.pendingWhilePaused = true;
       this.pausedExtractor = extractor;
-      return;
     }
     // Clear existing timeout
     if (this.saveTimeout) {
@@ -180,64 +192,67 @@ class ApolloCachePersistence {
     }
 
     // Debounce saves to avoid excessive writes
-    this.saveTimeout = setTimeout(() => {
-      // PERFORMANCE: Use requestIdleCallback to run serialization when JS thread is idle
-      // This prevents blocking UI interactions and list rendering
-      const serialize = () => {
-        try {
-          const t0 = performance.now();
-          // Extract cache data lazily - only runs once after debounce
-          const cache = extractor();
-          const tExtract = performance.now();
+    this.saveTimeout = setTimeout(
+      () => {
+        // PERFORMANCE: Use requestIdleCallback to run serialization when JS thread is idle
+        // This prevents blocking UI interactions and list rendering
+        const serialize = () => {
+          try {
+            const t0 = performance.now();
+            // Extract cache data lazily - only runs once after debounce
+            const cache = extractor();
+            const tExtract = performance.now();
 
-          // Skip serialization when nothing in the cache actually changed.
-          if (
-            this.lastPersistedSnapshot &&
-            !hasCacheChanged(cache, this.lastPersistedSnapshot)
-          ) {
-            if (__DEV__) {
-              logger.debug('💾 [CachePersist] skipped — cache unchanged');
+            // Skip serialization when nothing in the cache actually changed.
+            if (
+              this.lastPersistedSnapshot &&
+              !hasCacheChanged(cache, this.lastPersistedSnapshot)
+            ) {
+              if (__DEV__) {
+                logger.debug('💾 [CachePersist] skipped — cache unchanged');
+              }
+              return;
             }
-            return;
-          }
 
-          const cacheString = JSON.stringify(cache);
-          const tStringify = performance.now();
-          const sizeKB = Math.round(cacheString.length / 1024);
+            const cacheString = JSON.stringify(cache);
+            const tStringify = performance.now();
+            const sizeKB = Math.round(cacheString.length / 1024);
 
-          storage.set(CACHE_STORAGE_KEY, cacheString);
-          storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
-          this.removeLegacySplitCache();
-          this.lastPersistedSnapshot = cache;
+            storage.set(CACHE_STORAGE_KEY, cacheString);
+            storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
+            this.removeLegacySplitCache();
+            this.lastPersistedSnapshot = cache;
 
-          // Persisted-cache size and serialize cost are release signals — they
-          // bear on cold start — so they report from every build. Only the
-          // human-readable breadcrumb stays dev-gated.
-          Telemetry.histogram('cache_persist_extract_ms', tExtract - t0);
-          Telemetry.histogram(
-            'cache_persist_stringify_ms',
-            tStringify - tExtract,
-          );
-          Telemetry.gauge('cache_persist_size_kb', sizeKB);
-
-          if (__DEV__) {
-            const extractMs = (tExtract - t0).toFixed(2);
-            const stringifyMs = (tStringify - tExtract).toFixed(2);
-            const totalMs = (tStringify - t0).toFixed(2);
-            logger.debug(
-              `💾 [CachePersist] extract=${extractMs}ms stringify=${stringifyMs}ms total=${totalMs}ms size=${sizeKB}KB entities=${
-                Object.keys(cache).length
-              }`,
+            // Persisted-cache size and serialize cost are release signals — they
+            // bear on cold start — so they report from every build. Only the
+            // human-readable breadcrumb stays dev-gated.
+            Telemetry.histogram('cache_persist_extract_ms', tExtract - t0);
+            Telemetry.histogram(
+              'cache_persist_stringify_ms',
+              tStringify - tExtract,
             );
-          }
-        } catch (error) {
-          logger.error('💾 Cache: Failed to persist cache:', error);
-        }
-      };
+            Telemetry.gauge('cache_persist_size_kb', sizeKB);
 
-      // Defer serialization to when the JS thread is idle
-      this.idleCallbackId = requestIdleCallback(serialize);
-    }, this.debounceMs);
+            if (__DEV__) {
+              const extractMs = (tExtract - t0).toFixed(2);
+              const stringifyMs = (tStringify - tExtract).toFixed(2);
+              const totalMs = (tStringify - t0).toFixed(2);
+              logger.debug(
+                `💾 [CachePersist] extract=${extractMs}ms stringify=${stringifyMs}ms total=${totalMs}ms size=${sizeKB}KB entities=${
+                  Object.keys(cache).length
+                }`,
+              );
+            }
+          } catch (error) {
+            logger.error('💾 Cache: Failed to persist cache:', error);
+          }
+        };
+
+        // Defer serialization to when the JS thread is idle
+        this.idleCallbackId = requestIdleCallback(serialize);
+      },
+      this.paused ? this.pausedDebounceMs : this.debounceMs,
+    );
   }
 
   /**
@@ -261,7 +276,15 @@ class ApolloCachePersistence {
    * invisible until the queue replays. A no-op when nothing is pending.
    */
   flushPending(extractor: () => NormalizedCacheObject): void {
-    if (this.saveTimeout == null && this.idleCallbackId == null) return;
+    if (
+      this.saveTimeout == null &&
+      this.idleCallbackId == null &&
+      !this.pendingWhilePaused
+    ) {
+      return;
+    }
+    this.pendingWhilePaused = false;
+    this.pausedExtractor = null;
     if (this.idleCallbackId != null) {
       cancelIdleCallback(this.idleCallbackId);
       this.idleCallbackId = null;
@@ -276,6 +299,7 @@ class ApolloCachePersistence {
    * @param cache - Normalized cache object from cache.extract()
    */
   saveImmediate(cache: NormalizedCacheObject): void {
+    if (isRecoveryStorage()) return;
     // Clear pending debounced save
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);
@@ -416,3 +440,12 @@ class ApolloCachePersistence {
  * Singleton instance for global access
  */
 export const apolloCachePersistence = new ApolloCachePersistence();
+
+/**
+ * Cancel a pending debounced write. Called on sign-out, so the last few seconds
+ * of the previous account's cache never reach disk.
+ */
+export function cancelCachePersistence(): void {
+  apolloCachePersistence.cancel();
+  logger.info('🛑 Apollo: Cache persistence timer cancelled');
+}

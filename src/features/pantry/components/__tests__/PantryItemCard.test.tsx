@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { makeCache } from '#/apollo/cache';
-import { screen, within } from '@testing-library/react-native';
+import { screen } from '@testing-library/react-native';
 import {
   renderWithApollo,
   toFragmentRef,
@@ -27,7 +27,7 @@ jest.mock('#/constants/animations', () => ({
   },
 }));
 
-jest.mock('#components/molecules/BaseItemCard/BaseItemCard', () => {
+jest.mock('#features/pantry/components/BaseItemCard/BaseItemCard', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
@@ -54,7 +54,7 @@ jest.mock('#components/molecules/BaseItemCard/BaseItemCard', () => {
   };
 });
 
-jest.mock('#components/molecules/BaseItemCard/CardLeftSlot', () => {
+jest.mock('#features/pantry/components/BaseItemCard/CardLeftSlot', () => {
   const RN = require('react-native');
   return {
     CardLeftSlot: ({
@@ -71,7 +71,7 @@ jest.mock('#components/molecules/BaseItemCard/CardLeftSlot', () => {
   };
 });
 
-jest.mock('#components/molecules/BaseItemCard/CardContent', () => {
+jest.mock('#features/pantry/components/BaseItemCard/CardContent', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
@@ -91,7 +91,7 @@ jest.mock('#components/molecules/BaseItemCard/CardContent', () => {
   };
 });
 
-jest.mock('#components/molecules/BaseItemCard/CardRightSlot', () => {
+jest.mock('#features/pantry/components/BaseItemCard/CardRightSlot', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
@@ -143,6 +143,8 @@ interface BuildItemOverrides {
     remainingWeightUnit: { id: string; name: string; symbol: string } | null;
   } | null;
   activeBatchCount?: number;
+  remainingPortions?: number | null;
+  portionUnit?: { id: string; name: string; symbol: string } | null;
 }
 
 function buildItem(
@@ -153,6 +155,11 @@ function buildItem(
     id: overrides.id ?? 'pantry-1',
     itemName: overrides.itemName ?? 'Milk',
     quantity: overrides.quantity ?? 2,
+    portionUnitId: overrides.portionUnit?.id ?? null,
+    portionUnit: overrides.portionUnit
+      ? { __typename: 'Unit', ...overrides.portionUnit }
+      : null,
+    remainingPortions: overrides.remainingPortions ?? null,
     expiresAt: overrides.expiresAt ?? null,
     storageState: StorageState.Refrigerated,
     lastUsedAt: null,
@@ -272,15 +279,12 @@ describe('PantryItemCard', () => {
     expect(screen.getByText('Kitchen Cabinet')).toBeTruthy();
   });
 
-  it('places storage location under the item name when there is no expiry', () => {
+  it('shows the storage location whether or not there is an expiry', () => {
     renderCard({ storageLocationName: 'Freezer' });
-    // With no expiry, the location fills the empty left line-2 slot (under the
-    // name) instead of stacking a third row on the right.
-    const content = screen.getByTestId('card-content');
-    expect(within(content).getByText('Freezer')).toBeTruthy();
+    expect(screen.getByText('Freezer')).toBeTruthy();
   });
 
-  it('drops storage location when both an expiry and a detail line are present (two-row cap)', () => {
+  it('keeps every slot with its own owner when several values compete', () => {
     const expires = new Date();
     expires.setDate(expires.getDate() + 3);
     renderCard({
@@ -295,10 +299,12 @@ describe('PantryItemCard', () => {
         remainingWeightUnit: null,
       },
     });
-    // Left shows the expiry, right shows the breakdown — location is dropped so
-    // the row never exceeds two lines.
+    // The status slot takes the expiry and the location keeps its own; the
+    // breakdown has no slot on the row and belongs to the detail screen. No
+    // value displaces another.
     expect(screen.getAllByText(/day/i).length).toBeGreaterThan(0);
-    expect(screen.queryByText('Freezer')).toBeNull();
+    expect(screen.getByText('Freezer')).toBeTruthy();
+    expect(screen.queryByText(/gallon/i)).toBeNull();
   });
 
   it('does not render default storage tab labels as location', () => {
@@ -354,23 +360,6 @@ describe('PantryItemCard', () => {
     // The image slot is always rendered; it shows a consistent placeholder
     // tile when no image is available, so rows stay aligned.
     expect(screen.getByTestId('card-left-image')).toBeTruthy();
-  });
-
-  it('renders quantity breakdown text when quantityBreakdown is set', () => {
-    renderCard({
-      quantityBreakdown: {
-        fullPackages: 2,
-        looseContentUnits: 0,
-        contentUnit: { id: 'gal', name: 'gallon', symbol: 'gal' },
-        totalContentUnits: 2,
-        remainingWeight: null,
-        remainingWeightUnit: null,
-      },
-    });
-    // The exact formatting is owned by formatQuantityBreakdown; assert any
-    // breakdown-style text renders.
-    const breakdowns = screen.queryAllByText(/2/);
-    expect(breakdowns.length).toBeGreaterThan(0);
   });
 
   it('wraps in SlideAnimatedWrapper when onItemDelete action is available', () => {

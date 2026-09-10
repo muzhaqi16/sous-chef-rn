@@ -52,14 +52,10 @@ export const SpotlightTooltip: React.FC<SpotlightTooltipProps> = ({
         ]}
       />
 
-      <Text size="lg" weight="bold" style={styles.tooltipTitle}>
+      <Text role="heading" style={styles.tooltipTitle}>
         {title}
       </Text>
-      {subtitle ? (
-        <Text size="md" tone="secondary">
-          {subtitle}
-        </Text>
-      ) : null}
+      {subtitle ? <Text tone="secondary">{subtitle}</Text> : null}
       {totalSteps != null && stepIndex != null && totalSteps > 1 ? (
         <View style={styles.stepIndicator}>
           {Array.from({ length: totalSteps }, (_, i) => (
@@ -82,13 +78,13 @@ export const SpotlightTooltip: React.FC<SpotlightTooltipProps> = ({
       stepIndex != null &&
       stepIndex >= totalSteps - 1 ? (
         <Pressable onPress={onDismiss} style={styles.nextButton} hitSlop={8}>
-          <Text size="md" weight="medium" tone="accent">
+          <Text role="bodyStrong" tone="accent">
             {t('labels.done')}
           </Text>
         </Pressable>
       ) : onNext ? (
         <Pressable onPress={onNext} style={styles.nextButton} hitSlop={8}>
-          <Text size="md" weight="medium" tone="accent">
+          <Text role="bodyStrong" tone="accent">
             {t('labels.next')} ›
           </Text>
         </Pressable>
@@ -104,15 +100,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
     padding: theme.spacing.lg,
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 4,
-        blurRadius: 12,
-        spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.3)',
-      },
-    ],
+    ...theme.shadows.lg,
   },
   arrow: {
     position: 'absolute',

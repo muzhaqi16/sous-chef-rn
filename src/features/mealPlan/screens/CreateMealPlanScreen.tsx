@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 
 import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
+import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
+import { localizedErrorMessage } from '#/services/errorService';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
-import { FormModal } from '#components/organisms/FormModal';
-import { FormInput } from '#components/molecules/FormInput';
-import { FormTextArea } from '#components/molecules/FormTextArea';
+import { FormScreen } from '#components/templates/FormScreen';
+import { FormInput } from '#components/atoms/FormInput';
+import { FormTextArea } from '#components/atoms/FormTextArea';
 import { FormSelect } from '#components/molecules/FormSelect';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
@@ -26,6 +30,13 @@ import { MealPlanType } from '#/graphql/generated/schemaTypes';
 import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { Text } from '#components/atoms/Text';
 import type { Translate } from '#/i18n/types';
+import { logValidationErrors } from '#/utils/validation/common';
+import {
+  createMealPlanDefaults,
+  createMealPlanSchema,
+  PERSONAL_VALUE,
+  type CreateMealPlanFormValues,
+} from './createMealPlanFormConfig';
 
 const PLAN_TYPES = [MealPlanType.Weekly, MealPlanType.Monthly];
 
@@ -48,31 +59,21 @@ function computeEndDate(startDate: Date, planType: MealPlanType): Date {
   }
 }
 
-const PERSONAL_VALUE = '__personal__';
-
 export const CreateMealPlanScreen: React.FC = () => {
   const { t } = useTranslation();
   const { goBack } = useAppNavigation();
   const { createMealPlan, creating } = useMealPlanActions();
-  const {
-    createPlanFromTemplate,
-    creatingFromTemplate,
-    isApiUnavailable: templateActionsUnavailable,
-  } = useMealTemplateActions();
+  const { createPlanFromTemplate, creatingFromTemplate } =
+    useMealTemplateActions();
   const { homes } = useHomeQuery();
   const { profile: dietaryProfile } = useDietaryProfile();
   const selectedHomeId = useSelectedHomeId();
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [planType, setPlanType] = useState<MealPlanType>(MealPlanType.Weekly);
-  const [startDate, setStartDate] = useState<Date | null>(new Date());
-  const [servings, setServings] = useState('2');
-  const [budget, setBudget] = useState('');
-  const [trackNutrition, setTrackNutrition] = useState(false);
-  const [homeSelection, setHomeSelection] = useState<string>(
-    selectedHomeId ?? PERSONAL_VALUE,
-  );
+  const { control, handleSubmit } = useForm<CreateMealPlanFormValues>({
+    resolver: yupResolver(createMealPlanSchema),
+    defaultValues: createMealPlanDefaults(selectedHomeId),
+    mode: 'onTouched',
+  });
 
   const homeOptions = (() => {
     const opts = [{ label: t('mealPlan.personal'), value: PERSONAL_VALUE }];
@@ -105,29 +106,24 @@ export const CreateMealPlanScreen: React.FC = () => {
     servings?: number;
   }) => {
     const result = await createPlanFromTemplate(config);
-    if (result?.__typename === 'CreateMealPlanPayload') {
+    if (result) {
       setTemplatePreviewVisible(false);
       setSelectedTemplate(null);
       goBack();
     }
   };
 
-  const handleSave = async () => {
-    if (!name.trim()) {
-      alertService.alert(
-        t('mealPlan.nameRequiredTitle'),
-        t('mealPlan.nameRequiredMessage'),
-      );
-      return;
-    }
-    if (!startDate) {
-      alertService.alert(
-        t('mealPlan.startDateRequiredTitle'),
-        t('mealPlan.startDateRequiredMessage'),
-      );
-      return;
-    }
-
+  const onValid = async ({
+    name,
+    description,
+    planType,
+    startDate,
+    servings,
+    budget,
+    trackNutrition,
+    homeSelection,
+  }: CreateMealPlanFormValues) => {
+    if (!startDate) return;
     const endDate = computeEndDate(startDate, planType);
     const homeId = homeSelection !== PERSONAL_VALUE ? homeSelection : undefined;
     const descriptionValue = description.trim() || undefined;
@@ -155,98 +151,152 @@ export const CreateMealPlanScreen: React.FC = () => {
     try {
       result = await createMealPlan(createMealPlanOptions);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : t('mealPlan.failedToCreate');
-      alertService.alert(t('labels.error'), errorMessage);
+      alertService.alert(
+        t('labels.error'),
+        localizedErrorMessage(error, t('mealPlan.failedToCreate')),
+      );
     }
     // `false` means the mutation threw — the onError above already alerted.
     if (!result) return;
 
-    if (result?.__typename === 'CreateMealPlanPayload') {
+    if (result) {
       goBack();
     } else {
-      const message =
-        result && 'message' in result
-          ? result.message
-          : t('mealPlan.failedToCreate');
-      alertService.alert(t('labels.error'), message);
+      // Resolved from the refusal's CODE, never `result.message` — that is
+      // unlocalizable English by construction, so a Spanish user read the
+      // server's own wording.
+      alertService.alert(
+        t('labels.error'),
+        localizedRefusalMessage(result, t('mealPlan.failedToCreate')),
+      );
     }
   };
 
   return (
-    <FormModal
+    <FormScreen
       title={t('labels.createMealPlan')}
       onClose={goBack}
-      onSave={handleSave}
+      onSave={handleSubmit(onValid, logValidationErrors)}
       loading={creating}
       testID="create-meal-plan-screen"
     >
-      <FormInput
-        label={t('mealPlan.name')}
-        value={name}
-        onChangeText={setName}
-        placeholder={t('mealPlan.namePlaceholder')}
-        required
-        testID="meal-plan-name-input"
+      <Controller
+        control={control}
+        name="name"
+        render={({ field, fieldState }) => (
+          <FormInput
+            label={t('mealPlan.name')}
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            error={fieldState.error?.message}
+            placeholder={t('mealPlan.namePlaceholder')}
+            required
+            testID="meal-plan-name-input"
+          />
+        )}
       />
 
-      <FormTextArea
-        label={t('mealPlan.description')}
-        value={description}
-        onChangeText={setDescription}
-        placeholder={t('mealPlan.descriptionPlaceholder')}
-        testID="meal-plan-description-input"
+      <Controller
+        control={control}
+        name="description"
+        render={({ field }) => (
+          <FormTextArea
+            label={t('mealPlan.description')}
+            value={field.value}
+            onChangeText={field.onChange}
+            placeholder={t('mealPlan.descriptionPlaceholder')}
+            testID="meal-plan-description-input"
+          />
+        )}
       />
 
-      <SegmentedControl
-        label={t('mealPlan.planType')}
-        options={PLAN_TYPES}
-        value={planType}
-        onChange={setPlanType}
-        formatLabel={getPlanTypeFormatter(t)}
-        required
+      <Controller
+        control={control}
+        name="planType"
+        render={({ field }) => (
+          <SegmentedControl
+            label={t('mealPlan.planType')}
+            options={PLAN_TYPES}
+            value={field.value}
+            onChange={field.onChange}
+            formatLabel={getPlanTypeFormatter(t)}
+            required
+          />
+        )}
       />
 
-      <DatePickerField
-        label={t('labels.startDate')}
-        value={startDate}
-        onChange={setStartDate}
-        minimumDate={new Date()}
-        required
+      <Controller
+        control={control}
+        name="startDate"
+        render={({ field, fieldState }) => (
+          <DatePickerField
+            label={t('labels.startDate')}
+            value={field.value}
+            onChange={field.onChange}
+            error={fieldState.error?.message}
+            minimumDate={new Date()}
+            required
+          />
+        )}
       />
 
-      <EditableCounter
-        label={t('labels.defaultServings')}
-        value={servings}
-        onChangeText={setServings}
-        min={1}
-        step={1}
+      <Controller
+        control={control}
+        name="servings"
+        render={({ field }) => (
+          <EditableCounter
+            label={t('labels.defaultServings')}
+            value={field.value}
+            onChangeText={field.onChange}
+            min={1}
+            step={1}
+          />
+        )}
       />
 
-      <FormInput
-        label={t('mealPlan.budgetAmount')}
-        value={budget}
-        onChangeText={setBudget}
-        placeholder={t('mealPlan.budgetPlaceholder')}
-        keyboardType="numeric"
-        testID="meal-plan-budget-input"
+      <Controller
+        control={control}
+        name="budget"
+        render={({ field }) => (
+          <FormInput
+            label={t('mealPlan.budgetAmount')}
+            value={field.value}
+            onChangeText={field.onChange}
+            placeholder={t('mealPlan.budgetPlaceholder')}
+            keyboardType="numeric"
+            testID="meal-plan-budget-input"
+          />
+        )}
       />
 
       {!!dietaryProfile && (
-        <FormCheckbox
-          label={t('labels.trackNutritionGoals')}
-          checked={trackNutrition}
-          onPress={() => setTrackNutrition(prev => !prev)}
+        <Controller
+          control={control}
+          name="trackNutrition"
+          render={({ field }) => (
+            <FormCheckbox
+              label={t('labels.trackNutritionGoals')}
+              checked={field.value}
+              onPress={() => field.onChange(!field.value)}
+            />
+          )}
         />
       )}
 
       {homeOptions.length > 1 && (
-        <FormSelect
-          label={t('mealPlan.shareWith')}
-          value={homeSelection}
-          onValueChange={setHomeSelection}
-          options={homeOptions}
-          placeholder={t('mealPlan.personal')}
+        <Controller
+          control={control}
+          name="homeSelection"
+          render={({ field }) => (
+            <FormSelect
+              label={t('mealPlan.shareWith')}
+              value={field.value}
+              onValueChange={field.onChange}
+              options={homeOptions}
+              placeholder={t('mealPlan.personal')}
+            />
+          )}
         />
       )}
 
@@ -263,7 +313,7 @@ export const CreateMealPlanScreen: React.FC = () => {
           size={18}
           color={createFromTemplateStyles.linkIcon.color}
         />
-        <Text size="base" weight="medium" tone="accent">
+        <Text role="bodyStrong" tone="accent">
           {t('mealPlan.orCreateFromTemplate')}
         </Text>
       </Pressable>
@@ -285,9 +335,8 @@ export const CreateMealPlanScreen: React.FC = () => {
         }}
         onConfirm={handleCreateFromTemplate}
         confirmLoading={creatingFromTemplate}
-        disabled={templateActionsUnavailable}
       />
-    </FormModal>
+    </FormScreen>
   );
 };
 

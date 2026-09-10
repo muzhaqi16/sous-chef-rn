@@ -4,11 +4,12 @@ import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { detailsPageBaseStyles } from './detailsPageStyles';
-import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
-import { FormInput } from '#components/molecules/FormInput';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
+import { FormInput } from '#components/atoms/FormInput';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
-import { FieldRow } from '#components/molecules/FieldRow';
+import { FieldRow } from '#components/atoms/FieldRow';
+import { DropdownStack } from '#components/atoms/DropdownStack';
 import { Text } from '#components/atoms/Text';
 import { localizeNumericHint } from '#/utils/formatters/number';
 
@@ -81,7 +82,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
 }) => {
   const { t } = useTranslation();
   return (
-    <BottomSheetKeyboardAwareScrollView
+    <BottomSheetFormScrollView
       key="details"
       style={styles.page}
       contentContainerStyle={[
@@ -91,8 +92,8 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      {/* Quantity + Unit */}
-      <View style={{ zIndex: 10 }}>
+      <DropdownStack>
+        {/* Quantity + Unit */}
         <FieldRow>
           <EditableCounter
             label={t('labels.quantity')}
@@ -113,109 +114,125 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
             testID="add-pantry-item-unit-picker"
           />
         </FieldRow>
-      </View>
-      {/* Net Weight */}
-      <View style={{ zIndex: 5 }}>
-        <FieldRow containerStyle={{ marginBottom: 4 }}>
-          <FormInput
-            label={t('labels.netWeight')}
-            value={pantryNetWeight}
-            onChangeText={setPantryNetWeight}
-            // The all-or-nothing rule reports on BOTH halves of the pair; only
-            // the unit half was rendered, and FIELD_PAGE navigates here for a
-            // message that had nowhere to appear.
-            error={pantryNetWeightError}
-            placeholder={localizeNumericHint(t('labels.eG145'))}
-            keyboardType="decimal-pad"
-            useBottomSheetInput
-            inputStyle={{ height: 44 }}
-          />
-          <UnitAutocompleteField
-            variant="inline"
-            label={t('storageLocationForm.unit')}
-            error={pantryNetWeightUnitError}
-            value={pantryNetWeightUnit}
-            onChangeText={setPantryNetWeightUnit}
-            onUnitSelected={handlePantryNetWeightUnitSelected}
-            placeholder={t('labels.ozGMl')}
-          />
-        </FieldRow>
-        <Text size="sm" tone="secondary" style={styles.netWeightHint}>
-          {t('labels.netWeightIsUsedForConsumptionTrackingAndIsOptional')}
-        </Text>
-      </View>
-      {/* Package Details - Progressive Disclosure */}
-      <View style={styles.section}>
-        <AppPressable
-          onPress={() => setShowPackageDetails(!showPackageDetails)}
-          style={styles.toggleButton}
-        >
-          <Text size="md" weight="medium" tone="accent">
-            {showPackageDetails
-              ? t('addToPantry.hidePackageDetails')
-              : t('addToPantry.addPackageDetails')}
-          </Text>
-        </AppPressable>
-
-        {!!showPackageDetails && (
-          <View style={styles.packageDetailsContainer}>
-            <Text size="sm" tone="secondary" style={styles.sectionDescription}>
-              {t('addToPantry.packageHint')}
-            </Text>
-
-            {/* Package Size */}
+        {/* Net Weight */}
+        <View>
+          <FieldRow containerStyle={styles.netWeightRow}>
             <FormInput
-              label={t('addToPantry.qtyPerPackage')}
-              value={packageSize}
-              onChangeText={setPackageSize}
-              placeholder={t('labels.eG12')}
+              label={t('labels.netWeight')}
+              value={pantryNetWeight}
+              onChangeText={setPantryNetWeight}
+              // The all-or-nothing rule reports on BOTH halves of the pair; only
+              // the unit half was rendered, and FIELD_PAGE navigates here for a
+              // message that had nowhere to appear.
+              error={pantryNetWeightError}
+              placeholder={localizeNumericHint(t('labels.eG145'))}
               keyboardType="decimal-pad"
               useBottomSheetInput
+              inputStyle={styles.netWeightInput}
             />
+            <UnitAutocompleteField
+              variant="inline"
+              label={t('storageLocationForm.unit')}
+              error={pantryNetWeightUnitError}
+              value={pantryNetWeightUnit}
+              onChangeText={setPantryNetWeightUnit}
+              onUnitSelected={handlePantryNetWeightUnitSelected}
+              placeholder={t('labels.ozGMl')}
+            />
+          </FieldRow>
+          <Text role="caption" tone="secondary" style={styles.netWeightHint}>
+            {t('labels.netWeightIsUsedForConsumptionTrackingAndIsOptional')}
+          </Text>
+        </View>
+        {/* Package Details - Progressive Disclosure */}
+        <View style={styles.section}>
+          <AppPressable
+            onPress={() => setShowPackageDetails(!showPackageDetails)}
+            style={styles.toggleButton}
+          >
+            <Text role="bodyStrong" tone="accent">
+              {showPackageDetails
+                ? t('addToPantry.hidePackageDetails')
+                : t('addToPantry.addPackageDetails')}
+            </Text>
+          </AppPressable>
 
-            {/* Content Unit */}
-            <View style={[styles.section, { zIndex: 10 }]}>
-              <UnitAutocompleteField
-                variant="inline"
-                label={t('addToPantry.contentUnit')}
-                value={contentUnit}
-                onChangeText={setContentUnit}
-                onUnitSelected={handleContentUnitSelected}
-                placeholder={t('labels.eGCanBottle')}
-              />
-            </View>
+          {!!showPackageDetails && (
+            <View style={styles.packageDetailsContainer}>
+              <Text
+                role="caption"
+                tone="secondary"
+                style={styles.sectionDescription}
+              >
+                {t('addToPantry.packageHint')}
+              </Text>
 
-            {/* Net Weight + Weight Unit */}
-            <View style={{ zIndex: 1 }}>
-              <FieldRow>
+              <DropdownStack>
+                {/* Package Size */}
                 <FormInput
-                  label={t('addToPantry.weightPerUnit')}
-                  value={itemNetWeight}
-                  onChangeText={setItemNetWeight}
-                  placeholder={t('addToPantry.weightPerUnitPlaceholder')}
+                  label={t('addToPantry.qtyPerPackage')}
+                  value={packageSize}
+                  onChangeText={setPackageSize}
+                  placeholder={t('labels.eG12')}
                   keyboardType="decimal-pad"
-                  error={itemNetWeightError}
                   useBottomSheetInput
                 />
-                <UnitAutocompleteField
-                  variant="inline"
-                  label={t('labels.weightUnit')}
-                  value={weightUnit}
-                  onChangeText={setWeightUnit}
-                  onUnitSelected={handleWeightUnitSelected}
-                  placeholder={t('addToPantry.contentWeightUnitPlaceholder')}
-                  error={weightUnitError}
-                />
-              </FieldRow>
+
+                {/* Content Unit */}
+                <View style={styles.section}>
+                  <UnitAutocompleteField
+                    variant="inline"
+                    label={t('addToPantry.contentUnit')}
+                    value={contentUnit}
+                    onChangeText={setContentUnit}
+                    onUnitSelected={handleContentUnitSelected}
+                    placeholder={t('labels.eGCanBottle')}
+                  />
+                </View>
+
+                {/* Net Weight + Weight Unit */}
+                <View>
+                  <FieldRow>
+                    <FormInput
+                      label={t('addToPantry.weightPerUnit')}
+                      value={itemNetWeight}
+                      onChangeText={setItemNetWeight}
+                      placeholder={t('addToPantry.weightPerUnitPlaceholder')}
+                      keyboardType="decimal-pad"
+                      error={itemNetWeightError}
+                      useBottomSheetInput
+                    />
+                    <UnitAutocompleteField
+                      variant="inline"
+                      label={t('labels.weightUnit')}
+                      value={weightUnit}
+                      onChangeText={setWeightUnit}
+                      onUnitSelected={handleWeightUnitSelected}
+                      placeholder={t(
+                        'addToPantry.contentWeightUnitPlaceholder',
+                      )}
+                      error={weightUnitError}
+                    />
+                  </FieldRow>
+                </View>
+              </DropdownStack>
             </View>
-          </View>
-        )}
-      </View>
-    </BottomSheetKeyboardAwareScrollView>
+          )}
+        </View>
+      </DropdownStack>
+    </BottomSheetFormScrollView>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
+  // The hint below carries the rest of the gap.
+  netWeightRow: {
+    marginBottom: theme.spacing.xs,
+  },
+  // Matches the unit picker beside it.
+  netWeightInput: {
+    height: theme.sizes.input.md,
+  },
   ...detailsPageBaseStyles(theme),
   sectionDescription: {
     marginBottom: theme.spacing.md,

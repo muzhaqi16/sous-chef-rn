@@ -58,11 +58,11 @@ jest.mock('#features/pantry/hooks/usePantryAnalytics', () => ({
   }),
 }));
 
-jest.mock('#components/molecules/Header', () => ({
+jest.mock('#components/organisms/Header', () => ({
   Header: ({
     title,
   }: React.ComponentProps<
-    typeof import('#components/molecules/Header').Header
+    typeof import('#components/organisms/Header').Header
   >) => {
     const { View, Text } = require('react-native');
     return (
@@ -72,19 +72,19 @@ jest.mock('#components/molecules/Header', () => ({
     );
   },
 }));
-jest.mock('#components/analytics/DateRangeFilter', () => ({
+jest.mock('#features/pantry/components/analytics/DateRangeFilter', () => ({
   DateRangeFilter: () => {
     const { View } = require('react-native');
     return <View testID="date-range-filter" />;
   },
 }));
-jest.mock('#components/analytics/AnalyticsSummaryCard', () => ({
+jest.mock('#features/pantry/components/analytics/AnalyticsSummaryCard', () => ({
   AnalyticsSummaryCard: ({
     title,
     value,
     subtitle,
   }: React.ComponentProps<
-    typeof import('#components/analytics/AnalyticsSummaryCard').AnalyticsSummaryCard
+    typeof import('#features/pantry/components/analytics/AnalyticsSummaryCard').AnalyticsSummaryCard
   >) => {
     const { View, Text } = require('react-native');
     return (
@@ -96,12 +96,12 @@ jest.mock('#components/analytics/AnalyticsSummaryCard', () => ({
     );
   },
 }));
-jest.mock('#components/analytics/ChartSection', () => ({
+jest.mock('#features/pantry/components/analytics/ChartSection', () => ({
   ChartSection: ({
     title,
     children,
   }: React.ComponentProps<
-    typeof import('#components/analytics/ChartSection').ChartSection
+    typeof import('#features/pantry/components/analytics/ChartSection').ChartSection
   >) => {
     const { View, Text } = require('react-native');
     return (
@@ -112,23 +112,23 @@ jest.mock('#components/analytics/ChartSection', () => ({
     );
   },
 }));
-jest.mock('#components/charts/TrendLineChart', () => ({
+jest.mock('#features/pantry/components/charts/TrendLineChart', () => ({
   TrendLineChart: () => null,
 }));
-jest.mock('#components/charts/BreakdownPieChart', () => ({
+jest.mock('#features/pantry/components/charts/BreakdownPieChart', () => ({
   BreakdownPieChart: () => null,
 }));
-jest.mock('#components/charts/TopItemsBarChart', () => ({
+jest.mock('#features/pantry/components/charts/TopItemsBarChart', () => ({
   TopItemsBarChart: () => null,
 }));
-jest.mock('#components/molecules/TabView/TabView', () => ({
+jest.mock('#features/pantry/components/TabView/TabView', () => ({
   TabView: ({
     routes,
     renderScene,
   }: {
-    routes: import('#components/molecules/TabView/TabView').TabRoute[];
+    routes: import('#features/pantry/components/TabView/TabView').TabRoute[];
     renderScene: (props: {
-      route: import('#components/molecules/TabView/TabView').TabRoute;
+      route: import('#features/pantry/components/TabView/TabView').TabRoute;
     }) => React.ReactNode;
   }) => {
     const { View, Text } = require('react-native');

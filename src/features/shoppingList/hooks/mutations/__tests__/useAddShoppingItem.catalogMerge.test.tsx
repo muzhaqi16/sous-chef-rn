@@ -24,12 +24,16 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   safeEvict: jest.fn(),
 }));
-// Keep the REAL adoptServerShoppingListItemId / revertOptimisticShoppingListItem
+// Keep the REAL reconcileShoppingItemCreateUpdate / revertOptimisticShoppingListItem
 // so the catalog-merge eviction path runs through to the (mocked) safeEvict that
 // these assertions watch; stub only the writers.
-jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/shoppingListCacheUpdaters'),
+jest.mock('#features/shoppingList/cache/connections', () => ({
+  ...jest.requireActual('#features/shoppingList/cache/connections'),
   addNewItemToShoppingListCache: jest.fn(),
+}));
+
+jest.mock('#features/shoppingList/cache/items', () => ({
+  ...jest.requireActual('#features/shoppingList/cache/items'),
   addOptimisticShoppingListItem: jest.fn(),
   createOptimisticShoppingListItem: jest.fn((id: string) => ({
     __typename: 'ShoppingListItem',
@@ -93,7 +97,7 @@ const echoMock = (): MockedResponse => ({
   result: (vars: { input: { items: { id: string }[] } }) => ({
     data: {
       addItemsToShoppingList: batchPayload(
-        payloadItem(vars.input.items[0].id),
+        payloadItem(vars.input.items[0]!.id),
         false,
       ),
     },

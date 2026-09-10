@@ -10,6 +10,7 @@ import {
   CreateItemDocument,
 } from '#operations/item/item.generated';
 import { useSearchResults } from '../useSearchResults';
+import { useStore } from '#store';
 
 // Partial item-node shapes for mock connection edges. Kept as a loose record
 // because the fixtures deliberately omit required Item fields (type,
@@ -43,9 +44,11 @@ jest.mock('#features/barcode/store/barcodeScannerStore', () => ({
   })),
 }));
 
+const mockUploadItemImages = jest.fn(async () => []);
 jest.mock('#hooks/useImageUpload', () => ({
   useImageUpload: jest.fn(() => ({
     uploadItemImage: jest.fn(),
+    uploadItemImages: mockUploadItemImages,
   })),
 }));
 
@@ -375,8 +378,6 @@ describe('useSearchResults', () => {
     }
 
     it('stores plural images and calls CreateItem mutation', async () => {
-      const { storage } = require('#/storage/mmkv');
-
       const { result } = renderHookWithApollo(
         () => useSearchResults('1234567890'),
         { operationMocks: [createItemMock()] },
@@ -391,15 +392,16 @@ describe('useSearchResults', () => {
         });
       });
 
-      expect(storage.set).toHaveBeenCalledWith(
-        'temp_pending_item_images',
+      // Held in the store until the create returns an id to attach them to,
+      // then handed to the batch upload and cleared.
+      expect(mockUploadItemImages).toHaveBeenCalledWith(
+        [{ uri: 'file://image.jpg' }],
         expect.any(String),
       );
+      expect(useStore.getState().pendingItemImages).toBeNull();
     });
 
-    it('uses singular selectedImage for backward compat', async () => {
-      const { storage } = require('#/storage/mmkv');
-
+    it('takes a singular selectedImage as a one-image batch', async () => {
       const { result } = renderHookWithApollo(
         () => useSearchResults('1234567890'),
         { operationMocks: [createItemMock()] },
@@ -412,8 +414,8 @@ describe('useSearchResults', () => {
         });
       });
 
-      expect(storage.set).toHaveBeenCalledWith(
-        'temp_pending_item_image',
+      expect(mockUploadItemImages).toHaveBeenCalledWith(
+        [{ uri: 'file://single.jpg' }],
         expect.any(String),
       );
     });

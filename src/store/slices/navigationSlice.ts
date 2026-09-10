@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { RootState } from '../index';
+import type { RootState } from '../index';
 
 /**
  * A deep-link intent queued while hydrating or logged out, replayed by
@@ -35,6 +35,8 @@ interface UserNavigationState {
   lastLoginTimestamp?: number;
   rememberMeChoice?: boolean;
   hasCompletedOnboarding?: boolean;
+  /** The device-region currency default has been applied once for this account. */
+  currencyDefaultApplied?: boolean;
   onboardingStartedAt?: number;
   onboardingCompletedAt?: number;
   skippedOnboardingSteps?: string[];

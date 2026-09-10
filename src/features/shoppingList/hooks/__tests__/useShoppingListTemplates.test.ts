@@ -2,6 +2,7 @@ import { waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetShoppingListTemplatesDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { COPYABLE_ITEM_LIMIT } from '#features/shoppingList/cache/copySource';
 import { useShoppingListTemplates } from '../useShoppingListTemplates';
 
 function buildTemplate(
@@ -26,7 +27,7 @@ function buildTemplate(
 const templatesMock: MockedResponse = {
   request: {
     query: GetShoppingListTemplatesDocument,
-    variables: { first: 50 },
+    variables: { first: 50, copyableItemLimit: COPYABLE_ITEM_LIMIT },
   },
   result: {
     data: {

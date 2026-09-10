@@ -17,8 +17,6 @@ import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 
 import type { Theme } from '#/theme/themes';
 
-import { BackButton } from './BackButton';
-import { IconButton } from './IconButton';
 import { Icon } from '#utils/iconUtils';
 
 // Shared withUnistyles wrappers for third-party components taking theme-derived
@@ -154,11 +152,27 @@ export const PrimaryActivityIndicator = withUnistyles(
   }),
 );
 
-/** Spinner colored white — for use on dark / colored backgrounds. */
-export const WhiteActivityIndicator = withUnistyles(
+/** Spinner colored by `textSecondary` — for a spinner beside secondary copy. */
+export const MutedActivityIndicator = withUnistyles(
   ActivityIndicator,
   theme => ({
-    color: theme.colors.white,
+    color: theme.colors.textSecondary,
+  }),
+);
+
+/** Spinner colored by `error` — for a failure state's own spinner. */
+export const ErrorActivityIndicator = withUnistyles(
+  ActivityIndicator,
+  theme => ({
+    color: theme.colors.error,
+  }),
+);
+
+/** Spinner colored by `success` — for a confirmation in progress. */
+export const SuccessActivityIndicator = withUnistyles(
+  ActivityIndicator,
+  theme => ({
+    color: theme.colors.success,
   }),
 );
 
@@ -186,14 +200,6 @@ export const PlainScrollRefreshControl = withUnistyles(
 
 /** Theme-reactive Icon wrapper: re-renders so derived `tone`/`color` stay in sync. */
 export const ThemedIcon = withUnistyles(Icon);
-
-/** Theme-reactive IconButton wrapper. */
-export const ThemedIconButton = withUnistyles(IconButton);
-
-/** BackButton tinted with `theme.colors.textPrimary`. */
-export const ThemedBackButton = withUnistyles(BackButton, theme => ({
-  color: theme.colors.textPrimary,
-}));
 
 /** Theme-reactive SafeAreaView. safe-area-context's is third-party, so the babel
  * plugin does not bind it to the ShadowTree and a theme-derived background

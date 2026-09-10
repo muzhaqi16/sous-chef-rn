@@ -1,0 +1,24 @@
+# What a template copy reads out of the cache. `GetMealTemplate` already writes
+# exactly this shape, so a template the user has opened can be duplicated or
+# laid onto dates with the API unreachable.
+fragment useMealTemplateActions_template on MealTemplate {
+  id
+  name
+  description
+  category
+  durationDays
+  defaultServings
+  tags
+  homeId
+  items {
+    id
+    dayOffset
+    mealType
+    servings
+    notes
+    customMealName
+    recipe {
+      id
+    }
+  }
+}

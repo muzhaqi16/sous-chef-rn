@@ -8,6 +8,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Badge } from '#components/atoms/Badge';
 import type { RowThemeColors } from '#components/atoms/rowTheme';
 import { Text } from '#components/atoms/Text';
+import { commonStyles } from '#/styles/commonStyles';
+import { rowType } from '#/theme/foundations/type';
 
 interface ListItemProps {
   children?: React.ReactNode;
@@ -53,8 +55,8 @@ const ListItemComponent: React.FC<ListItemProps> = ({
 
   if (children) {
     return (
-      <View style={styles.container}>
-        <View style={styles.contentContainer}>{children}</View>
+      <View style={commonStyles.rowSurface}>
+        <View style={commonStyles.rowContent}>{children}</View>
       </View>
     );
   }
@@ -66,15 +68,13 @@ const ListItemComponent: React.FC<ListItemProps> = ({
       )}
       {leftElement}
       {!!leftIcon && (
-        <View style={styles.leftIcon}>
-          <ThemedIcon
-            name={leftIcon}
-            size={24}
-            uniProps={theme => ({
-              color: overrideIconColor ?? theme.colors.textSecondary,
-            })}
-          />
-        </View>
+        <ThemedIcon
+          name={leftIcon}
+          size={24}
+          uniProps={theme => ({
+            color: overrideIconColor ?? theme.colors.textSecondary,
+          })}
+        />
       )}
       <View style={styles.content}>
         <ListItemTitle
@@ -116,9 +116,9 @@ const ListItemComponent: React.FC<ListItemProps> = ({
       .join(', ');
 
     return (
-      <View style={styles.container}>
+      <View style={commonStyles.rowSurface}>
         <AppPressable
-          style={styles.contentContainer}
+          style={[commonStyles.rowClip, commonStyles.rowContent]}
           onPress={onPress}
           accessibilityRole="button"
           accessibilityLabel={accessibilityLabel}
@@ -132,8 +132,8 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.contentContainer}>{content}</View>
+    <View style={commonStyles.rowSurface}>
+      <View style={commonStyles.rowContent}>{content}</View>
     </View>
   );
 };
@@ -152,6 +152,7 @@ const ListItemTitle: React.FC<{
   styles.useVariants({ purchased });
   return (
     <Text
+      role={rowType.title}
       style={styles.title}
       numberOfLines={numberOfLines}
       ellipsizeMode="tail"
@@ -167,7 +168,12 @@ const ListItemSubtitle: React.FC<{
 }> = ({ purchased, children }) => {
   styles.useVariants({ purchased });
   return (
-    <Text style={styles.subtitle} numberOfLines={1} ellipsizeMode="tail">
+    <Text
+      role={rowType.subtitle}
+      style={styles.subtitle}
+      numberOfLines={1}
+      ellipsizeMode="tail"
+    >
       {children}
     </Text>
   );
@@ -184,37 +190,15 @@ const ListItemSubtitleSlot: React.FC<{
 export const ListItem = ListItemComponent;
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    borderRadius: theme.radii.lg,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-  },
-  contentContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.sm,
-    // `minHeight`, not a fixed height, so a 2-line title can grow rather than be
-    // clipped; FlashList v2 handles variable row heights natively.
-    minHeight: theme.sizes.itemCard.compact.height,
-    gap: theme.spacing.sm, // Better spacing between elements
-  },
   checkboxContainer: {
-    marginRight: theme.spacing.xs, // Reduced since gap provides base spacing
     justifyContent: 'center',
-    flexShrink: 0, // Prevent checkbox from being compressed when no image exists
-  },
-  leftIcon: {
-    marginRight: theme.spacing['3'],
+    // Never compressed when the row has no image.
+    flexShrink: 0,
   },
   content: {
     flex: 1,
   },
   title: {
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
     variants: {
       purchased: {
@@ -227,9 +211,8 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   subtitle: {
-    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
+    marginTop: theme.layout.rowTextGap,
     variants: {
       purchased: {
         true: {
@@ -240,7 +223,7 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   subtitleContainer: {
-    marginTop: theme.spacing.xs,
+    marginTop: theme.layout.rowTextGap,
     variants: {
       purchased: {
         true: {
@@ -248,8 +231,5 @@ const styles = StyleSheet.create(theme => ({
         },
       },
     },
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

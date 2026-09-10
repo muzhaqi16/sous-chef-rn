@@ -3,7 +3,7 @@ import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import type { BarcodeSource } from '#/types/navigation';
+import type { BarcodeSource } from '#features/barcode/types';
 
 export interface ScannerContext {
   source: BarcodeSource;

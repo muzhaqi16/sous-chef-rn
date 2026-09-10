@@ -8,6 +8,7 @@ import { PantrySettings } from './PantrySettings';
 import { NutritionScreen } from './NutritionScreen';
 import { PantryBatchHistoryScreen } from './PantryBatchHistoryScreen';
 import { PantryUsageHistoryScreen } from './PantryUsageHistoryScreen';
+import { motion } from '#/theme/foundations/motion';
 
 // Lazy so Skia + victory-native are not in the startup bundle.
 const PantryAnalytics = React.lazy(() =>
@@ -16,7 +17,7 @@ const PantryAnalytics = React.lazy(() =>
 
 const detailScreenOptions = {
   fullScreenGestureEnabled: true,
-  animationDuration: 250,
+  animationDuration: motion.timing.MODERATE,
 };
 
 /**

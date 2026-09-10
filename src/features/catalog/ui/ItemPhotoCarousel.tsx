@@ -255,7 +255,7 @@ const PhotoPage: React.FC<{
       {photo.status === ItemImageStatus.Pending && (
         <View style={styles.pendingBadge} pointerEvents="none">
           <Icon name="time-outline" size={12} color="#fff" />
-          <Text size="xs" weight="medium" style={styles.pendingText}>
+          <Text role="label" style={styles.pendingText}>
             {t('itemPhotos.pendingReview')}
           </Text>
         </View>
@@ -343,7 +343,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   pendingText: {
-    color: theme.colors.white,
+    color: theme.colors.onScrim,
   },
   dotsContainer: {
     flexDirection: 'row',
@@ -380,7 +380,7 @@ const styles = StyleSheet.create(theme => ({
           backgroundColor: theme.colors.primary,
           width: 10,
           height: 10,
-          borderRadius: 5,
+          borderRadius: theme.radii.full,
           borderCurve: 'continuous',
         },
       },

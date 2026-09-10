@@ -86,7 +86,7 @@ describe('DeviceKeyManager', () => {
     it('stores the new key behind a version marker', async () => {
       await DeviceKeyManager.getDeviceEncryptionKey();
 
-      const [, stored] = mockedSetGenericPassword.mock.calls[0];
+      const [, stored] = mockedSetGenericPassword.mock.calls[0]!;
       expect(stored).toMatch(/^v2:/);
     });
 

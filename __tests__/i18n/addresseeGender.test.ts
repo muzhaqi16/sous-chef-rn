@@ -93,7 +93,9 @@ const flatten = (obj: unknown, prefix = ''): Record<string, string> => {
 
 const read = (locale: string) =>
   flatten(
-    JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, `${locale}.json`), 'utf8')),
+    JSON.parse(
+      fs.readFileSync(path.join(LOCALES_DIR, `${locale}.json`), 'utf8'),
+    ),
   );
 
 const isAllowed = (locale: string, key: string) =>
@@ -106,7 +108,7 @@ describe('copy does not inflect for the reader’s gender', () => {
 
     const offenders = Object.entries(strings)
       .filter(([key]) => !isAllowed(locale, key))
-      .filter(([, value]) => patterns.some(p => p.test(value)))
+      .filter(([, value]) => patterns!.some(p => p.test(value)))
       .map(([key, value]) => `${key}: ${JSON.stringify(value)}`);
 
     expect(offenders).toEqual([]);
@@ -127,7 +129,7 @@ describe('copy does not inflect for the reader’s gender', () => {
     ];
 
     const missed = samples.filter(
-      ([locale, text]) => !ADDRESSEE_GENDERED[locale].some(p => p.test(text)),
+      ([locale, text]) => !ADDRESSEE_GENDERED[locale]!.some(p => p.test(text)),
     );
 
     expect(missed).toEqual([]);
@@ -146,7 +148,7 @@ describe('copy does not inflect for the reader’s gender', () => {
     ];
 
     const falsePositives = replacements.filter(([locale, text]) =>
-      ADDRESSEE_GENDERED[locale].some(p => p.test(text)),
+      ADDRESSEE_GENDERED[locale]!.some(p => p.test(text)),
     );
 
     expect(falsePositives).toEqual([]);

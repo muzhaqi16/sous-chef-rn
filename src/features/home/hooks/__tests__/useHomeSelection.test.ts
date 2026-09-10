@@ -7,8 +7,8 @@ import {
 import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { createMockHomeNode } from '#/test-utils/mockFactories';
+import { ErrorCode, MembershipRole } from '#/graphql/generated/schemaTypes';
+import type { GetHomesQuery } from '#operations/home/home.generated';
 import { useHomeSelection } from '../useHomeSelection';
 import { useDefaultHomeSyncStore } from '#features/home/store/useDefaultHomeSyncStore';
 
@@ -52,6 +52,69 @@ jest.mock('#/utils/finallyHelpers');
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
+
+// The GetHomes connection-node shape this hook consumes. Derived from the
+// generated query so it stays in sync.
+type MockHomeNode = GetHomesQuery['homes']['edges'][number]['node'];
+
+/** `pantries` is a shorthand: it is written out as a real connection. */
+type MockHomeNodeOverrides = Partial<MockHomeNode> & {
+  pantries?: Array<{ id: string; name?: string; isDefault?: boolean }>;
+};
+
+let mockIdCounter = 0;
+const nextMockId = () => `test-id-${++mockIdCounter}`;
+
+const createMockHomeNode = (
+  overrides?: MockHomeNodeOverrides,
+): MockHomeNode => {
+  const { pantries, ...rest } = overrides ?? {};
+  const pantriesConnection = pantries
+    ? {
+        __typename: 'PantryConnection' as const,
+        totalCount: pantries.length,
+        edges: pantries.map(pantry => ({
+          __typename: 'PantryEdge' as const,
+          node: {
+            __typename: 'Pantry' as const,
+            id: pantry.id,
+            name: pantry.name ?? 'Test Pantry',
+            isDefault: pantry.isDefault ?? false,
+          },
+        })),
+      }
+    : undefined;
+
+  return {
+    __typename: 'Home',
+    id: nextMockId(),
+    name: 'Test Home',
+    isDefault: false,
+    version: 1,
+    myMembership: {
+      __typename: 'Membership',
+      id: nextMockId(),
+      role: MembershipRole.Member,
+      canManageHome: true,
+      canViewPantry: true,
+      canEditPantry: true,
+      canAddItems: true,
+      canRemoveItems: true,
+      canInviteOthers: true,
+    },
+    pantriesConnection: {
+      __typename: 'PantryConnection',
+      totalCount: 0,
+      edges: [],
+    },
+    membersConnection: {
+      __typename: 'MembershipConnection',
+      totalCount: 0,
+    },
+    ...rest,
+    ...(pantriesConnection ? { pantriesConnection } : {}),
+  };
+};
 
 const createHomes = () => [
   createMockHomeNode({

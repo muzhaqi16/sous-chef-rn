@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
-import { Button } from '#components/atoms/Button';
+import { Button } from '#components/molecules/Button';
 import { ActionTray } from '#components/templates/ActionTray/ActionTray';
 import type { ActionTrayRef } from '#components/templates/ActionTray/types';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -84,9 +84,7 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
               }
             }}
           >
-            <Text size="base" style={styles.optionText}>
-              {opt.label}
-            </Text>
+            <Text style={styles.optionText}>{opt.label}</Text>
             {activeValue === opt.value && (
               <Icon name="checkmark" size={20} tone="primary" />
             )}
@@ -101,8 +99,8 @@ const styles = StyleSheet.create(theme => ({
   option: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing['3'],
-    borderBottomWidth: 1,
+    paddingVertical: theme.spacing.base,
+    borderBottomWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.divider,
   },
   optionText: {

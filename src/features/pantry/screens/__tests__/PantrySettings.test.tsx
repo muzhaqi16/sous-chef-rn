@@ -64,27 +64,30 @@ jest.mock('#features/pantry/utils/optimisticPantry', () => ({
   restorePantryToHomeCache: jest.fn(),
 }));
 
-jest.mock('#components/molecules/ScreenHeader', () => ({
-  ScreenHeader: ({
-    title,
-    rightElement,
+jest.mock('#components/templates/Screen', () => ({
+  Screen: ({
+    header,
+    children,
   }: {
-    title?: string;
-    rightElement?: React.ReactNode;
+    header?: { title?: string; rightElement?: React.ReactNode };
+    children: React.ReactNode;
   }) => {
     const { View, Text } = require('react-native');
     return (
-      <View testID="screen-header">
-        <Text>{title}</Text>
-        {rightElement}
+      <View>
+        <View testID="screen-header">
+          <Text>{header?.title}</Text>
+          {header?.rightElement}
+        </View>
+        {children}
       </View>
     );
   },
 }));
-jest.mock('#components/atoms/Loading', () => ({
-  LoadingInline: () => null,
+jest.mock('#components/molecules/Loading', () => ({
+  Loading: () => null,
 }));
-jest.mock('#components/molecules/InfoRow', () => ({
+jest.mock('#components/atoms/InfoRow', () => ({
   InfoRow: ({ label, value }: { label?: string; value?: string }) => {
     const { View, Text } = require('react-native');
     return (
@@ -95,7 +98,7 @@ jest.mock('#components/molecules/InfoRow', () => ({
     );
   },
 }));
-jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
+jest.mock('#components/molecules/BaseInput/BaseInput', () => ({
   BaseInput: ({
     label,
     ...props

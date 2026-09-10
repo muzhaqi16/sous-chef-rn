@@ -2,7 +2,7 @@ import { useCurrentHome } from '#features/pantry/hooks/useCurrentHome';
 import {
   getPantryPermissions,
   type PantryPermissions,
-} from '#utils/permissions/pantryPermissions';
+} from '#features/pantry/utils/pantryPermissions';
 
 /**
  * Used while the home's membership is unknown. "Unknown" is deliberately not

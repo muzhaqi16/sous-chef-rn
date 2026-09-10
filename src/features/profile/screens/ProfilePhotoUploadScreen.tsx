@@ -1,11 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { t as tGlobal } from '#/i18n';
-import { View, Image, Dimensions, Platform } from 'react-native';
-import {
-  ThemedBackButton,
-  ThemedSafeAreaView,
-} from '#components/atoms/themedComponents';
+import { View, Dimensions } from 'react-native';
+import { BackButton } from '#components/atoms/BackButton';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { useFocusEffect } from '@react-navigation/native';
@@ -19,19 +16,21 @@ import {
   CameraOptions,
   ImageLibraryOptions,
 } from 'react-native-image-picker';
-import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   validateImageFile,
   ImageValidationError,
 } from '#utils/imageValidation';
 import { imageErrorMessage, useImageUpload } from '#hooks/useImageUpload';
-import { ImageFile } from '#components/molecules/ImagePicker';
-import { storage } from '#/storage/mmkv';
+import type { ImageFile } from '#/types/media';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
+import { PermissionService } from '#services/permissions/PermissionService';
+import { useStore } from '#store';
+import { LocalImage } from '#components/atoms/LocalImage';
+import { Screen } from '#components/templates/Screen';
 
 const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
   mediaType: 'photo' as MediaType,
@@ -44,47 +43,22 @@ const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
 const { width: screenWidth } = Dimensions.get('window');
 const AVATAR_SIZE = Math.min(screenWidth * 0.6, 250);
 
-/** Module-level function for reading any cropped image left behind by ImageCropScreen.
- *  Extracted to avoid try/catch inside useFocusEffect (React Compiler bailout). */
-function readPendingCroppedImage(): ImageFile | null {
-  try {
-    const storedCroppedImage = storage.getString('temp_cropped_image');
-    if (!storedCroppedImage) return null;
-    const croppedImageFile = JSON.parse(storedCroppedImage) as ImageFile;
-    storage.remove('temp_cropped_image');
-    return croppedImageFile;
-  } catch (error) {
-    errorService.reportError(error, {
-      operation: 'ProfilePhotoUpload.readCroppedImage',
-    });
-    // Clean up potentially corrupted data
-    try {
-      storage.remove('temp_cropped_image');
-    } catch {
-      // ignore
-    }
-    return null;
-  }
-}
-
 /** Module-level function for camera permission request.
  *  Extracted to avoid try-catch with conditional inside component body (React Compiler bailout). */
 async function requestCameraAndLaunch(
   handleImageResponse: (response: ImagePickerResponse) => void,
 ): Promise<void> {
-  const permission =
-    Platform.OS === 'ios' ? PERMISSIONS.IOS.CAMERA : PERMISSIONS.ANDROID.CAMERA;
-  const result = await request(permission);
-  if (result === RESULTS.GRANTED) {
+  const result = await PermissionService.request('camera');
+  if (result === 'granted') {
     launchCamera(DEFAULT_OPTIONS, handleImageResponse);
-  } else if (result === RESULTS.DENIED) {
+  } else if (result === 'denied') {
     alertService.alert(
       tGlobal('profile.cameraPermissionDeniedTitle'),
       tGlobal(
         'labels.cameraPermissionIsRequiredToTakePhotosPleaseEnableItInYourDeviceSettings',
       ),
     );
-  } else if (result === RESULTS.BLOCKED) {
+  } else if (result === 'blocked') {
     alertService.alert(
       tGlobal('profile.cameraPermissionBlockedTitle'),
       tGlobal('profile.cameraPermissionBlockedMessage'),
@@ -108,20 +82,13 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
   const [croppedImage, setCroppedImage] = useState<ImageFile | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Check for cropped image from MMKV when screen comes into focus
+  // Collect whatever the crop screen left, once.
   useFocusEffect(() => {
-    const pending = readPendingCroppedImage();
+    const pending = useStore.getState().takePendingCroppedImage();
     if (pending) {
       setCroppedImage(pending);
     }
   });
-
-  // Clean up MMKV on unmount
-  useEffect(() => {
-    return () => {
-      storage.remove('temp_cropped_image');
-    };
-  }, []);
 
   const handleImageResponse = (response: ImagePickerResponse) => {
     if (response.didCancel || response.errorCode || !response.assets?.[0]) {
@@ -215,20 +182,20 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
   };
 
   return (
-    <ThemedSafeAreaView style={styles.container} edges={['left', 'right']}>
+    <Screen scroll="list" gutter="none">
       <View style={styles.content}>
         <View style={styles.header}>
-          <ThemedBackButton
+          <BackButton
             onPress={goBack}
             style={styles.headerBack}
             disabled={isUploading}
           />
-          <Text size="3xl" weight="bold" align="center" style={styles.title}>
+          <Text role="display" align="center" style={styles.title}>
             {t('profile.uploadYourPhoto')}
           </Text>
         </View>
 
-        <Text size="base" weight="medium" align="center" tone="secondary">
+        <Text role="bodyStrong" align="center" tone="secondary">
           {croppedImage
             ? t('profile.photoReadyToUpload')
             : selectedImage
@@ -239,10 +206,9 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
         <View style={styles.avatar}>
           <View style={styles.avatarPreview}>
             {croppedImage || selectedImage ? (
-              <Image
-                source={{ uri: croppedImage?.uri || selectedImage?.uri }}
+              <LocalImage
+                uri={(croppedImage?.uri || selectedImage?.uri) ?? ''}
                 style={styles.avatarImage}
-                resizeMode="cover"
               />
             ) : (
               <Icon tone="textSecondary" name="person" size={100} />
@@ -253,6 +219,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
           {!!selectedImage && !croppedImage && (
             <AppPressable
               onPress={handleCropImage}
+              accessibilityLabel={t('a11y.cropPhoto')}
               style={styles.cropIconButton}
               disabled={isUploading}
             >
@@ -268,12 +235,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
               style={styles.btn}
               disabled={isUploading}
             >
-              <Text
-                size="lg"
-                lineHeight="relaxed"
-                weight="semibold"
-                style={styles.btnText}
-              >
+              <Text role="heading" style={styles.btnText}>
                 {isUploading
                   ? t('loading.uploading')
                   : t('profile.uploadPhoto')}
@@ -286,9 +248,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
               disabled={isUploading}
             >
               <Text
-                size="lg"
-                lineHeight="relaxed"
-                weight="semibold"
+                role="heading"
                 tone="accent"
                 style={styles.btnSecondaryText}
               >
@@ -303,12 +263,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
               style={styles.btn}
               disabled={isUploading}
             >
-              <Text
-                size="lg"
-                lineHeight="relaxed"
-                weight="semibold"
-                style={styles.btnText}
-              >
+              <Text role="heading" style={styles.btnText}>
                 {t('labels.takePhoto')}
               </Text>
             </AppPressable>
@@ -318,19 +273,14 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
               style={styles.btnSecondary}
               disabled={isUploading}
             >
-              <Text
-                size="lg"
-                lineHeight="relaxed"
-                weight="semibold"
-                style={styles.btnSecondaryText}
-              >
+              <Text role="heading" style={styles.btnSecondaryText}>
                 {t('profile.selectPhoto')}
               </Text>
             </AppPressable>
           </View>
         )}
       </View>
-    </ThemedSafeAreaView>
+    </Screen>
   );
 };
 
@@ -347,14 +297,14 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: theme.spacing.md,
   },
   title: {
-    marginBottom: theme.spacing.xs + 2,
+    marginBottom: theme.spacing.xsPlus,
     flex: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: theme.spacing['3'],
+    marginBottom: theme.spacing.base,
     paddingTop: theme.spacing.sm,
   },
   headerBack: {
@@ -379,7 +329,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderRadius: AVATAR_SIZE / 2,
     borderCurve: 'continuous',
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     borderStyle: 'dashed',
     overflow: 'hidden',
     backgroundColor: theme.colors.surface,
@@ -402,7 +352,7 @@ const styles = StyleSheet.create(theme => ({
     ...theme.shadows.md,
   },
   buttonContainer: {
-    gap: theme.spacing['3'],
+    gap: theme.spacing.base,
   },
   btn: {
     flexDirection: 'row',
@@ -410,9 +360,9 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderRadius: theme.radii.pill,
     borderCurve: 'continuous',
-    paddingVertical: theme.spacing.sm + 2,
+    paddingVertical: theme.spacing.smPlus,
     paddingHorizontal: theme.spacing.lg,
-    borderWidth: 1,
+    borderWidth: theme.borderWidth.hairline,
     backgroundColor: theme.colors.primary,
   },
   btnText: {
@@ -424,9 +374,9 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderRadius: theme.radii.pill,
     borderCurve: 'continuous',
-    paddingVertical: theme.spacing.sm + 2,
+    paddingVertical: theme.spacing.smPlus,
     paddingHorizontal: theme.spacing.lg,
-    borderWidth: 2,
+    borderWidth: theme.borderWidth.medium,
     backgroundColor: 'transparent',
     borderColor: theme.colors.primary,
   },

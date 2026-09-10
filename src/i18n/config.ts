@@ -22,7 +22,9 @@ type ResourceNode = { [key: string]: string | ResourceNode };
  * falls through to `fallbackLng`, so an Italian user reading a count of
  * 1,000,000 sees English. Only fills what is absent.
  */
-function completePluralCategories(resources: Record<string, ResourceNode>) {
+function completePluralCategories<T extends Record<string, ResourceNode>>(
+  resources: T,
+): T {
   for (const [locale, tree] of Object.entries(resources)) {
     const needed = neededPluralCategories(locale);
     if (needed.length === 0) continue;

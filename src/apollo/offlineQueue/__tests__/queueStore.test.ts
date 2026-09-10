@@ -95,7 +95,7 @@ describe('QueueStore', () => {
 
       const result = store.getMutationsForUser('user-1');
       expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('add-1');
+      expect(result[0]!.id).toBe('add-1');
     });
 
     it('evicts the oldest terminal entry at capacity, preserving PENDING ops', () => {
@@ -194,8 +194,8 @@ describe('QueueStore', () => {
         const result = store.getMutationsForUser('user-1');
         expect(result).toHaveLength(1);
         // The second (latest) mutation should win
-        expect(result[0].id).toBe('move-2');
-        expect(result[0].variables.input.afterId).toBe('y');
+        expect(result[0]!.id).toBe('move-2');
+        expect(result[0]!.variables.input.afterId).toBe('y');
       });
 
       it('does not coalesce move mutations for different items', () => {
@@ -383,9 +383,9 @@ describe('QueueStore', () => {
 
       const pending = store.getPendingMutationsForUser('user-1');
       expect(pending).toHaveLength(3);
-      expect(pending[0].id).toBe('p2');
-      expect(pending[1].id).toBe('p3');
-      expect(pending[2].id).toBe('p1');
+      expect(pending[0]!.id).toBe('p2');
+      expect(pending[1]!.id).toBe('p3');
+      expect(pending[2]!.id).toBe('p1');
     });
   });
 

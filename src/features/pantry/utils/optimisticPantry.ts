@@ -6,7 +6,7 @@
  */
 
 import { gql, type ApolloCache, type Reference } from '@apollo/client';
-import { PAGE_SIZE } from '#/constants/pagination';
+import { PAGE_SIZE } from '#features/pantry/constants/pagination';
 import { safeEvict, type ConnectionData } from '#/apollo/utils/cacheUpdaters';
 
 export type OptimisticPantry = {

@@ -5,14 +5,14 @@ import { useTranslation } from '#/i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
-import { FormInput } from '#components/molecules/FormInput';
-import { SheetFormHeader } from '#components/molecules/SheetFormHeader';
+import { FormInput } from '#components/atoms/FormInput';
+import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { CategoryAutocompleteField } from '#features/catalog/ui/autocomplete/CategoryAutocompleteField';
 import { BrandAutocompleteField } from '#features/catalog/ui/autocomplete/BrandAutocompleteField';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
 import { EditableCounter } from '#components/molecules/EditableCounter';
-import { FieldRow } from '#components/molecules/FieldRow';
+import { FieldRow } from '#components/atoms/FieldRow';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { CategoryType } from '#/graphql/generated/schemaTypes';
 import {
@@ -25,7 +25,7 @@ import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppin
 import { useAddShoppingItem } from '#features/shoppingList/hooks/mutations/useAddShoppingItem';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { handleMutationError } from '#/utils/errorHandlers';
-import { makeIdNameHandler } from '#components/modals/makeIdNameHandler';
+import { makeIdNameHandler } from '#components/organisms/makeIdNameHandler';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { logValidationErrors } from '#/utils/validation/common';
 
@@ -150,14 +150,14 @@ export const ShoppingListDetailsStep: React.FC<
 
   return (
     <View style={styles.container} testID="add-shopping-item-details">
-      <SheetFormHeader
+      <BottomSheetHeader
         title={t('labels.addItem')}
         cancelLabel={t('labels.cancel')}
-        saveLabel={t('labels.add')}
+        confirmLabel={t('labels.add')}
         onCancel={onClose}
-        onSave={handleSave}
+        onConfirm={handleSave}
         saving={saving}
-        submitTestID="add-shopping-item-submit-button"
+        confirmTestID="add-shopping-item-submit-button"
       />
 
       <BottomSheetFormScrollView

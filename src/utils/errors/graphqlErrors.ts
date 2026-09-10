@@ -5,7 +5,7 @@
  */
 
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 
 export class GraphQLDomainError extends Error {
   override readonly name = 'GraphQLDomainError';
@@ -49,6 +49,7 @@ export function getTopLevelGraphQLError(
     return null;
   }
   const first = error.errors[0];
+  if (!first) return null;
   return {
     code: String(first.extensions?.code ?? ''),
     message: String(first.message ?? ''),
@@ -66,4 +67,16 @@ const RESOURCE_ACCESS_LOST_CODES = new Set<string>([ErrorCode.Forbidden]);
 export function isResourceAccessLostError(error: unknown): boolean {
   const top = getTopLevelGraphQLError(error);
   return top !== null && RESOURCE_ACCESS_LOST_CODES.has(top.code);
+}
+
+/**
+ * True when the server refused a page request's CURSOR. Keyed on the code plus
+ * the cursor the caller SENT — never the message, never the argument's name.
+ * Wider than a cursor: the API refuses every pagination argument with
+ * VALIDATION_FAILED and no field, so one bounded restart is what caps it.
+ */
+export function isDeadCursorError(error: unknown, cursor: unknown): boolean {
+  if (cursor == null || cursor === '') return false;
+  const top = getTopLevelGraphQLError(error);
+  return top?.code === TopLevelErrorCode.ValidationFailed;
 }

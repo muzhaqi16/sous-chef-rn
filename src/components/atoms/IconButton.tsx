@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import { IconLibrary, Icon } from '#/utils/iconUtils';
+import { IconLibrary, Icon, type IconTone } from '#/utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
 import { Pressable } from '#components/atoms/themedComponents';
 import { borderlessRipple } from '#constants/ripple';
@@ -23,7 +23,12 @@ export interface IconButtonProps {
   accessibilityRole?: 'button' | 'imagebutton';
   /** icon size variant (default 'md') */
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
-  /** icon color (defaults to theme.colors.iconPrimary) */
+  /**
+   * Named colour role. `tone` is how a caller asks for a theme colour, so a
+   * themed icon button needs no `withUnistyles` wrapper of its own.
+   */
+  tone?: IconTone;
+  /** A colour the theme does not name — a brand tint, a photo overlay. */
   color?: string;
   /** extra styling on the Pressable */
   style?: StyleProp<ViewStyle>;
@@ -41,6 +46,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
   accessibilityHint,
   accessibilityRole = 'button',
   size = 'md',
+  tone,
   color,
   style,
   library,
@@ -71,11 +77,10 @@ export const IconButton: React.FC<IconButtonProps> = ({
       <UniIcon
         library={library}
         name={name}
+        tone={disabled ? 'iconDisabled' : tone ?? 'iconPrimary'}
         uniProps={theme => ({
           size: theme.sizes.icon[size],
-          color: disabled
-            ? theme.colors.iconDisabled
-            : color ?? theme.colors.iconPrimary,
+          ...(color && !disabled ? { color } : {}),
         })}
       />
     </Pressable>

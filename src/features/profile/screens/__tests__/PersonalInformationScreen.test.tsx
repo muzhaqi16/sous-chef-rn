@@ -264,7 +264,7 @@ describe('PersonalInformationScreen', () => {
       );
 
       await waitFor(() => expect(fired).toHaveLength(1));
-      const sent = fired[0].input as { profileVisibility: string };
+      const sent = fired[0]!.input as { profileVisibility: string };
       expect(Object.values(ProfileVisibility)).toContain(
         sent.profileVisibility,
       );

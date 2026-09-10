@@ -1,46 +1,44 @@
 import React, { createContext, useContext, type ReactNode } from 'react';
+import { createActionsContext } from '#hooks/utils/createActionsContext';
 import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { MoveToPantryModal } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal';
 import { AddToShoppingListSheet } from '#features/shoppingList/components/AddToShoppingListSheet/AddToShoppingListSheet';
 import { QuantityEditSheet } from '#features/shoppingList/components/QuantityEditSheet/QuantityEditSheet';
 import { PurchaseAmountSheet } from '#features/shoppingList/components/PurchaseAmountSheet/PurchaseAmountSheet';
-import {
-  useAddItemSheet,
-  type UseAddItemSheetResult,
-} from '#features/shoppingList/hooks/useAddItemSheet';
-import {
-  useQuantityEditModal,
-  type UseQuantityEditModalResult,
-} from '#features/shoppingList/hooks/useQuantityEditModal';
+import { useAddItemSheet } from '#features/shoppingList/hooks/useAddItemSheet';
+import { useQuantityEditModal } from '#features/shoppingList/hooks/useQuantityEditModal';
 import {
   usePurchaseAmountModal,
-  type UsePurchaseAmountModalResult,
   type RecordPurchaseAmounts,
 } from '#features/shoppingList/hooks/usePurchaseAmountModal';
-import {
-  useMoveToPantryModal,
-  type UseMoveToPantryModalResult,
-} from '#features/shoppingList/hooks/useMoveToPantryModal';
+import { useMoveToPantryModal } from '#features/shoppingList/hooks/useMoveToPantryModal';
 import { useShoppingListTutorialActions } from '#features/shoppingList/context/ShoppingListTutorialContext';
 
-interface ShoppingListModalsContextValue {
-  addItemSheet: UseAddItemSheetResult;
-  quantityEdit: UseQuantityEditModalResult;
-  purchaseAmount: UsePurchaseAmountModalResult;
-  moveToPantry: UseMoveToPantryModalResult;
+/**
+ * The four sheets are opened from all over the screen and read back in exactly
+ * one place, so they are two contexts: stable commands, and the single boolean
+ * that place needs. Handing out the hook results instead gave a tab scene a
+ * value whose identity changed every time any sheet opened.
+ */
+interface ShoppingListModalActions {
+  openAddItemSheet: () => void;
+  openQuantityEdit: (itemId: string) => void;
+  openPurchaseAmount: (itemId: string) => void;
+  openMoveToPantry: (itemId: string) => void;
 }
 
-const ShoppingListModalsContext =
-  createContext<ShoppingListModalsContextValue | null>(null);
+const {
+  Provider: ShoppingListModalActionsProvider,
+  useActions: useShoppingListModalActions,
+} = createActionsContext<ShoppingListModalActions>('ShoppingListModalsContext');
 
-export function useShoppingListModals() {
-  const context = useContext(ShoppingListModalsContext);
-  if (!context) {
-    throw new Error(
-      'useShoppingListModals must be used within ShoppingListModalsProvider',
-    );
-  }
-  return context;
+export { useShoppingListModalActions };
+
+const AnySheetVisibleContext = createContext(false);
+
+/** True while any of the four sheets is on screen. */
+export function useAnyShoppingListSheetVisible(): boolean {
+  return useContext(AnySheetVisibleContext);
 }
 
 interface ShoppingListModalsProviderProps {
@@ -88,16 +86,24 @@ export function ShoppingListModalsProvider({
     items,
   });
 
-  const value: ShoppingListModalsContextValue = {
-    addItemSheet,
-    quantityEdit,
-    purchaseAmount,
-    moveToPantry,
+  const actions: ShoppingListModalActions = {
+    openAddItemSheet: addItemSheet.open,
+    openQuantityEdit: quantityEdit.openForItem,
+    openPurchaseAmount: purchaseAmount.openForItem,
+    openMoveToPantry: moveToPantry.openForItem,
   };
 
+  const anyVisible =
+    addItemSheet.visible ||
+    quantityEdit.visible ||
+    purchaseAmount.visible ||
+    moveToPantry.visible;
+
   return (
-    <ShoppingListModalsContext.Provider value={value}>
-      {children}
+    <ShoppingListModalActionsProvider actions={actions}>
+      <AnySheetVisibleContext.Provider value={anyVisible}>
+        {children}
+      </AnySheetVisibleContext.Provider>
 
       <MoveToPantryModal
         visible={moveToPantry.visible}
@@ -140,6 +146,6 @@ export function ShoppingListModalsProvider({
         }}
         loading={purchaseAmount.isLoading}
       />
-    </ShoppingListModalsContext.Provider>
+    </ShoppingListModalActionsProvider>
   );
 }

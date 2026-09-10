@@ -4,7 +4,7 @@ import { registerSessionScopedStore } from '#store/sessionScopedStores';
 import { immer } from 'zustand/middleware/immer';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '#/storage/mmkv';
-import type { RecipeInformation } from '#/services/recipeApi/types';
+import type { RecipeInformation } from '#/services/spoonacular/types';
 
 interface CachedSuggestion {
   recipes: RecipeInformation[];
@@ -66,8 +66,8 @@ export const useRecipeSuggestionsStore = create<RecipeSuggestionsState>()(
       clearExpiredCache: () => {
         const now = Date.now();
         set(state => {
-          for (const key of Object.keys(state.cache)) {
-            if (now - state.cache[key].cachedAt > CACHE_TTL_MS) {
+          for (const [key, entry] of Object.entries(state.cache)) {
+            if (now - entry.cachedAt > CACHE_TTL_MS) {
               delete state.cache[key];
             }
           }

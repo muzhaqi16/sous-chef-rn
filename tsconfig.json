@@ -3,6 +3,7 @@
   "include": ["**/*.ts", "**/*.tsx", "index.js"],
   "exclude": ["**/node_modules", "**/Pods", "e2e", "__tests__"],
   "compilerOptions": {
+    "noUncheckedIndexedAccess": true,
     "types": ["react-native", "jest", "node"],
     "moduleSuffixes": [".ios", ".android", ".native", ""],
     "paths": {
@@ -15,6 +16,8 @@
       "#constants/*": ["./src/constants/*"],
       "#config": ["./src/config"],
       "#context": ["./src/context"],
+      "#domain": ["./src/domain"],
+      "#domain/*": ["./src/domain/*"],
       "#context/*": ["./src/context/*"],
       "#features": ["./src/features"],
       "#features/*": ["./src/features/*"],

@@ -1,28 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { alertService } from '#/services/alertService';
-import {
-  useApolloClient,
-  useFragment,
-  useMutation,
-  useQuery,
-} from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
-import {
-  AddItemToShoppingListDocument,
-  UpdateShoppingListItemDocument,
-  GetShoppingListItemDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+import { useShoppingListItemWrites } from '#features/shoppingList/hooks/useShoppingListItemWrites';
 import { ItemSuggestion, CategoryType } from '#/graphql/generated/schemaTypes';
-import { UseShoppingListItemForm_ItemFragmentDoc } from '#features/shoppingList/hooks/useShoppingListItemForm.generated';
-import { FormModal } from '#components/organisms/FormModal';
-import { FormInput } from '#components/molecules/FormInput';
+import { FormScreen } from '#components/templates/FormScreen';
+import { FormInput } from '#components/atoms/FormInput';
 import { ItemAutocompleteField } from '#features/catalog/ui/autocomplete/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { CategoryAutocompleteField } from '#features/catalog/ui/autocomplete/CategoryAutocompleteField';
 import { BrandAutocompleteField } from '#features/catalog/ui/autocomplete/BrandAutocompleteField';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
 import { EditableCounter } from '#components/molecules/EditableCounter';
-import { FieldRow } from '#components/molecules/FieldRow';
+import { FieldRow } from '#components/atoms/FieldRow';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
@@ -32,12 +21,6 @@ import {
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
 import type { StaticScreenProps } from '@react-navigation/native';
-import {
-  addOptimisticShoppingListItem,
-  createOptimisticShoppingListItem,
-  reconcileShoppingCreate,
-  buildAddItemsReconcileUpdate,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
 import { Controller } from 'react-hook-form';
 import { logValidationErrors } from '#/utils/validation/common';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
@@ -45,11 +28,8 @@ import {
   handleMutationError,
   versionConflictCheck,
 } from '#/utils/errorHandlers';
-import { errorService } from '#/services/errorService';
 import { validationFieldName } from '#/utils/errors/mutationPayload';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { generateEntityId } from '#/utils/generateEntityId';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { localizeNumericHint } from '#/utils/formatters/number';
 
@@ -64,7 +44,6 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 }) => {
   const { t } = useTranslation();
   const navigation = useAppNavigation();
-  const client = useApolloClient();
   const { listId, itemId } = route.params;
   // Extract initialItemName (only present when navigating from AddItem route)
   const initialItemName =
@@ -104,44 +83,10 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   // Store version for optimistic concurrency control (strict version checking)
   const itemVersionRef = useRef<number | undefined>(undefined);
 
-  // GraphQL hooks
-  const { data } = useQuery(GetShoppingListItemDocument, {
-    variables: { id: itemId || '' },
-    skip: !isEdit,
-  });
-
-  // The form hook owns its own narrow fragment (`useShoppingListItemForm_item`).
-  // useFragment subscribes this screen to the entity's cache record so edits
-  // made elsewhere flow back in without a refetch.
-  const itemFragmentRef = data?.shoppingListItem ?? null;
-  const itemFragmentResult = useFragment({
-    fragment: UseShoppingListItemForm_ItemFragmentDoc,
-    fragmentName: 'useShoppingListItemForm_item',
-    from: itemFragmentRef,
-  });
-  const itemData =
-    itemFragmentRef && itemFragmentResult.complete
-      ? itemFragmentResult.data
-      : null;
-
-  const [addItem] = useMutation(AddItemToShoppingListDocument, {
-    // Reconcile the server response with the item written into the cache before
-    // the create fired.
-    update: buildAddItemsReconcileUpdate({ listId }),
-    onError: error => {
-      errorService.reportError(error, {
-        operation: 'ShoppingListItem.addItem',
-      });
-    },
-  });
-
-  const [updateItem] = useMutation(UpdateShoppingListItemDocument, {
-    onError: error => {
-      errorService.reportError(error, {
-        operation: 'ShoppingListItem.updateItem',
-      });
-    },
-  });
+  const { itemData, createItem, updateItem } = useShoppingListItemWrites(
+    listId,
+    isEdit ? itemId : undefined,
+  );
 
   // Populate form when editing existing item
   useEffect(() => {
@@ -219,28 +164,22 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
           // Only send changed fields - sends raw quantityInput string
           const input = buildDirtyInput();
-          const result = await updateItem({
-            variables: {
-              input: {
-                ...input,
-                id: itemId,
-                // Include version for strict version checking (optimistic concurrency control)
-                version: itemVersion,
-              },
-            },
+          const outcome = await updateItem({
+            ...input,
+            id: itemId,
+            // Strict version checking (optimistic concurrency control).
+            version: itemVersion,
           });
 
-          // 'queued' carries `updateShoppingListItem: null` — a payload check
-          // alone reads that offline save as a refusal.
-          if (classifyCreateResult(result) !== 'rejected') {
+          if (outcome.status !== 'rejected') {
             navigation.goBack();
-          } else if (result.data) {
+          } else if (outcome.data) {
             // A refusal that names a field gets copy for that field — this
             // mutation carries `brand`, `netWeight`, `unit` and `storage` in
             // one call, so "couldn't update" alone does not say which was
             // refused. Localized, keyed off `field`; the server's own message
             // is English and is not shown (see `validationFieldName`).
-            const refusedField = validationFieldName(result.data);
+            const refusedField = validationFieldName(outcome.data);
             const generic = t('shoppingListScreens.serverNotUpdated', {
               action: t('shoppingListScreens.updated'),
             });
@@ -261,81 +200,49 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           return;
         }
 
-        // Generate the item's id and write it into the cache before firing, so it
-        // shows immediately and stays if the create is queued offline (the queue
-        // replays it later, keyed by this id).
-        const id = generateEntityId();
         const netWeightValue = parseNetWeightInput();
         const brandName = brand.trim();
-        const optimisticItem = createOptimisticShoppingListItem(id, {
-          shoppingListId: listId,
-          itemName,
-          quantity: parseDecimalInput(quantityInput) || 1,
-          quantityInput,
-          unitName: unit || null,
-          category: category || null,
-          unitId: 'unit' in unitData ? unitData.unit.unitId : undefined,
-        });
-        try {
-          addOptimisticShoppingListItem(client.cache, listId, optimisticItem);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Add Shopping List Item (optimistic)',
-          });
-        }
 
-        const result = await addItem({
-          variables: {
-            input: {
-              shoppingListId: listId,
-              items: [
-                {
-                  id,
-                  item: { itemName },
-                  // Send raw string - server accepts FlexibleQuantity ("1/3", "1 1/4", "0.5", etc.)
-                  quantity: quantityInput,
-                  ...unitData,
-                  notes,
-                  category,
-                  ...(estimatedPrice && {
-                    pricing: {
-                      estimatedPrice: parseDecimalInput(estimatedPrice),
-                    },
-                  }),
-                  // Always send priority (0/1/2) so "low" (0) persists — matches
-                  // the in-sheet add path and lets an edit lower priority back to
-                  // low.
-                  priority,
-                  ...(storeId && {
-                    storePrefs: { preferredStoreId: storeId },
-                  }),
-                  ...((brandId || brandName) && {
-                    brand: {
-                      ...(brandId && { brandId }),
-                      ...(brandName && { brandName }),
-                    },
-                  }),
-                  // Both or neither: the schema refuses a weight without a
-                  // resolved unit id, so reaching here with one and not the
-                  // other is not possible.
-                  ...(netWeightValue !== undefined &&
-                    netWeightUnitId && {
-                      netWeight: {
-                        netWeight: netWeightValue,
-                        netWeightUnitId,
-                      },
-                    }),
-                },
-              ],
-            },
+        const outcome = await createItem(
+          {
+            shoppingListId: listId,
+            itemName,
+            quantity: parseDecimalInput(quantityInput) || 1,
+            quantityInput,
+            unitName: unit || null,
+            category: category || null,
+            unitId: 'unit' in unitData ? unitData.unit.unitId : undefined,
           },
-          context: { localFirst: true },
-        });
+          {
+            item: { itemName },
+            // Raw string: the server accepts FlexibleQuantity ("1/3", "1 1/4").
+            quantity: quantityInput,
+            ...unitData,
+            notes,
+            category,
+            ...(estimatedPrice && {
+              pricing: { estimatedPrice: parseDecimalInput(estimatedPrice) },
+            }),
+            // Always sent (0/1/2) so "low" persists, and so an edit can lower
+            // priority back to it.
+            priority,
+            ...(storeId && { storePrefs: { preferredStoreId: storeId } }),
+            ...((brandId || brandName) && {
+              brand: {
+                ...(brandId && { brandId }),
+                ...(brandName && { brandName }),
+              },
+            }),
+            // Both or neither: the schema refuses a weight without a resolved
+            // unit id, so reaching here with one and not the other cannot happen.
+            ...(netWeightValue !== undefined &&
+              netWeightUnitId && {
+                netWeight: { netWeight: netWeightValue, netWeightUnitId },
+              }),
+          },
+        );
 
-        if (
-          reconcileShoppingCreate(client.cache, listId, id, result) ===
-          'reverted'
-        ) {
+        if (outcome === 'reverted') {
           // The server refused the create — the reconciler fully reverted the
           // optimistic item (entity + list-stat scalars a bare evict would leave
           // inflated); surface the failure.
@@ -372,7 +279,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   const modalTestID = isEdit ? 'edit-item-modal' : 'add-item-modal';
 
   return (
-    <FormModal
+    <FormScreen
       title={isEdit ? t('labels.editItem') : t('labels.addItem')}
       onClose={() => navigation.goBack()}
       // Wrapped in an arrow so the whole submit — including this body's read
@@ -554,6 +461,6 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         multiline
         numberOfLines={3}
       />
-    </FormModal>
+    </FormScreen>
   );
 };

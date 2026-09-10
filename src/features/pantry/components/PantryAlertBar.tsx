@@ -50,8 +50,8 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
       >
         <View style={styles.statLink}>
           <ThemedGroceryBasket width={16} height={16} />
-          <Text size="sm" weight="medium" tone="secondary">
-            {t('pantryScreen.itemCount', { count: stats.totalItems })}
+          <Text role="label" tone="secondary">
+            {t('labels.itemCount', { count: stats.totalItems })}
           </Text>
         </View>
 
@@ -66,7 +66,7 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
             })}
           >
             <Icon name="alert-circle-outline" size={14} tone="expired" />
-            <Text size="sm" weight="medium" style={styles.expiredText}>
+            <Text role="label" style={styles.expiredText}>
               {stats.expiredCount}
             </Text>
           </AppPressable>
@@ -81,8 +81,8 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
               count: stats.expiringCount,
             })}
           >
-            <Icon name="time-outline" size={14} tone="warning" />
-            <Text size="sm" weight="medium" tone="warning">
+            <Icon name="time-outline" size={14} tone="expiring" />
+            <Text role="label" style={styles.expiringText}>
               {stats.expiringCount}
             </Text>
           </AppPressable>
@@ -98,7 +98,7 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
             })}
           >
             <Icon name="trending-down-outline" size={14} tone="warning" />
-            <Text size="sm" weight="medium" tone="warning">
+            <Text role="label" tone="warning">
               {stats.lowStockCount}
             </Text>
           </AppPressable>
@@ -123,7 +123,7 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
             hitSlop={8}
             testID="pantry-sort-button"
           >
-            <Text size="sm" weight="medium" style={styles.sortLabel}>
+            <Text role="label" style={styles.sortLabel}>
               {sortLabel}
             </Text>
           </AppPressable>
@@ -165,5 +165,10 @@ const styles = StyleSheet.create(theme => ({
   },
   expiredText: {
     color: theme.colors.expiration.expiredText,
+  },
+  // The same token the row's expiry text uses, so a chip and the rows it
+  // counts cannot read as different states.
+  expiringText: {
+    color: theme.colors.expiration.warningText,
   },
 }));

@@ -1,0 +1,18 @@
+fragment InviteCard_invite on HomeInvite {
+  id
+  role
+  home {
+    id
+    name
+  }
+  inviter {
+    id
+    email
+    displayName
+    profile {
+      id
+      displayName
+      avatar
+    }
+  }
+}

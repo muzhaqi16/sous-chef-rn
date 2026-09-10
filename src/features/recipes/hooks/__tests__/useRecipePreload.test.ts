@@ -12,12 +12,12 @@ import {
   MySavedRecipesDocument,
   type MySavedRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
-import type { RecipeInformation } from '#/services/recipeApi/types';
-import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
+import type { RecipeInformation } from '#/services/spoonacular/types';
+import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
 import { useRecipePreload, type PreloadedRecipe } from '../useRecipePreload';
 import { makeCache } from '#/apollo/cache';
 
-jest.mock('#/services/recipeApi/SpoonacularService', () => ({
+jest.mock('#/services/spoonacular/SpoonacularService', () => ({
   spoonacularService: { getRecipePriceBreakdown: jest.fn() },
 }));
 
@@ -227,7 +227,7 @@ describe('useRecipePreload', () => {
 
     const dirty = makeSpoonacularRecipe(777);
     dirty.extendedIngredients = [
-      { ...dirty.extendedIngredients[0], name: 'pasta $1.50' },
+      { ...dirty.extendedIngredients[0]!, name: 'pasta $1.50' },
     ];
 
     const { result } = renderHookWithApollo(() => useRecipePreload(), {
@@ -242,7 +242,7 @@ describe('useRecipePreload', () => {
     const sent = fired[0] as {
       input: { ingredients: Array<{ name: string }> };
     };
-    expect(sent.input.ingredients[0].name).toBe('pasta');
+    expect(sent.input.ingredients[0]!.name).toBe('pasta');
     expect(sent.input.ingredients.every(i => !/\$\s*\d/.test(i.name))).toBe(
       true,
     );
@@ -289,7 +289,7 @@ describe('useRecipePreload', () => {
         }>;
       };
     };
-    const source = sent.input.ingredients[0].externalSources[0];
+    const source = sent.input.ingredients[0]!.externalSources[0];
     expect(source).toEqual(
       expect.objectContaining({
         source: ExternalSource.Spoonacular,
@@ -298,14 +298,14 @@ describe('useRecipePreload', () => {
       }),
     );
     // Mirror carries the verbatim upstream name and the image FILENAME (no URL).
-    expect(source.spoonacular).toEqual(
+    expect(source!.spoonacular).toEqual(
       expect.objectContaining({ id: 1, name: 'pasta', image: 'pasta.jpg' }),
     );
-    expect(source.spoonacular.image).not.toMatch(/^https?:\/\//);
-    expect(source.spoonacular.measures.us.unitShort).toBe('oz');
+    expect(source!.spoonacular.image).not.toMatch(/^https?:\/\//);
+    expect(source!.spoonacular.measures.us.unitShort).toBe('oz');
     // Per-ingredient nutrition joined from the recipe response (id 1) — no
     // extra Spoonacular call.
-    expect(source.spoonacular.nutrition?.nutrients).toEqual([
+    expect(source!.spoonacular.nutrition?.nutrients).toEqual([
       { name: 'Calories', amount: 320, unit: 'kcal', percentOfDailyNeeds: 16 },
     ]);
   });
@@ -316,7 +316,7 @@ describe('useRecipePreload', () => {
     // Ingredient id 999 has no entry in nutrition.ingredients (only id 1).
     const recipe = makeSpoonacularRecipe();
     recipe.extendedIngredients = [
-      { ...recipe.extendedIngredients[0], id: 999 },
+      { ...recipe.extendedIngredients[0]!, id: 999 },
     ];
 
     const { result } = renderHookWithApollo(() => useRecipePreload(), {
@@ -335,7 +335,7 @@ describe('useRecipePreload', () => {
       };
     };
     expect(
-      sent.input.ingredients[0].externalSources[0].spoonacular.nutrition,
+      sent.input.ingredients[0]!.externalSources[0]!.spoonacular.nutrition,
     ).toBeUndefined();
   });
 
@@ -385,7 +385,7 @@ describe('useRecipePreload', () => {
       };
     };
     expect(
-      sent.input.ingredients[0].externalSources[0].spoonacular.estimatedCost,
+      sent.input.ingredients[0]!.externalSources[0]!.spoonacular.estimatedCost,
     ).toEqual({ value: 187.5, unit: 'US Cents' });
   });
 

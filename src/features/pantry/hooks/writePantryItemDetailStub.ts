@@ -32,7 +32,7 @@ import {
   WritePantryItemDetailStub_UnitRefFragmentDoc,
 } from './writePantryItemDetailStub.generated';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
-import { localItemIdFor } from '#/apollo/utils/pantryCacheUpdaters';
+import { localItemIdFor } from '#features/pantry/cache/items';
 
 /** The detail-only facts a create site can supply. All optional. */
 export interface PantryItemDetailStubFields {

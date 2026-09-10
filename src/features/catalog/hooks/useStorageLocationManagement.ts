@@ -24,7 +24,7 @@ import {
 } from '#/apollo/utils/localFirstFields';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
-import { useBlocksCacheMissQueries } from '#hooks/app/useBlocksCacheMissQueries';
+import { useBlocksCacheMissQueries } from '#features/catalog/hooks/useBlocksCacheMissQueries';
 import { t } from '#/i18n';
 import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 import { errorService } from '#/services/errorService';

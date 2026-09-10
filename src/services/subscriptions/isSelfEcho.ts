@@ -5,7 +5,7 @@
  * for unstamped envelopes: it also drops events from the user's OTHER devices.
  */
 
-import { getDeviceIdSync } from '#/utils/deviceId';
+import { getDeviceId } from '#/storage/deviceId';
 
 interface EchoFields {
   actorUserId?: string | null;
@@ -18,7 +18,7 @@ export function isSelfEcho(
 ): boolean {
   const originator = payload.originatorClientId;
   if (originator) {
-    const deviceId = getDeviceIdSync();
+    const deviceId = getDeviceId();
     return deviceId !== null && originator === deviceId;
   }
 

@@ -21,6 +21,11 @@ export const sizes = {
     xl: 48,
     '2xl': 64,
   },
+  chip: {
+    // A member chip holds an initial or a short name; the floor keeps a row of
+    // them even when one label is a single character.
+    minWidth: 60,
+  },
   listImage: {
     width: 60,
     height: 60,

@@ -7,6 +7,8 @@
     "subtitleHasList": "Invite others to your shopping list (optional)",
     "nothingToShare": "Nothing to share yet",
     "nothingToShareDesc": "You need to create a home or shopping list first to invite others. You can invite people later from settings.",
+    "offlineTitle": "Invites need a connection",
+    "offlineDescription": "Inviting someone sends them a link only the server can create. Continue for now and invite people from home settings once you are back online.",
     "noInvitesYet": "No invitations added yet",
     "noInvitesYetDesc": "Add email addresses above to invite members",
     "invitingPersonSingular": "Inviting {{count}} person:",
@@ -53,7 +55,10 @@
     "roleLabel": "Role: {{role}}",
     "descriptionLabel": "Description:",
     "acceptFailed": "Failed to accept invitation. Please try again.",
-    "declineFailed": "Failed to decline invitation. Please try again."
+    "declineFailed": "Failed to decline invitation. Please try again.",
+    "unavailableHere": "Open this invitation from its notification, or the email we sent you, to accept it.",
+    "wrongAccountTitle": "Signed in as a different account",
+    "wrongAccount": "This invitation was sent to someone else. Sign in with the invited account to accept it."
   },
   "homeManagement": {
     "title": "My Homes",

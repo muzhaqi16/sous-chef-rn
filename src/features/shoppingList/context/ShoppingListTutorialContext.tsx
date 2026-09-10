@@ -6,11 +6,11 @@ import React, {
   useRef,
   type ReactNode,
 } from 'react';
-import { storage } from '#/storage/mmkv';
-import { useShowTutorials } from '#hooks/settings/useShowTutorials';
+import { useShowTutorials } from '#store/useAppStore';
 import { useUserId } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
+import { storeApi } from '#store';
 
 // Key shape shared with useFeatureHint / resetAllFeatureHints.
 const HINT_PREFIX = 'feature_hint_shown_';
@@ -31,9 +31,13 @@ function buildStorageKey(userId: string | undefined, featureId: string) {
 // Read on mount AND on a reset signal, so resetAllFeatureHints (Settings →
 // "Reset to Defaults") clearing the flags replays the tutorial.
 function readCompletedFromStorage(userId: string | undefined): boolean {
-  if (storage.getBoolean(buildStorageKey(userId, FEATURE_ID))) return true;
+  if (
+    storeApi.getState().featureHintsShown[buildStorageKey(userId, FEATURE_ID)]
+  )
+    return true;
   for (const oldId of OLD_TUTORIAL_IDS) {
-    if (storage.getBoolean(buildStorageKey(userId, oldId))) return true;
+    if (storeApi.getState().featureHintsShown[buildStorageKey(userId, oldId)])
+      return true;
   }
   return false;
 }
@@ -229,7 +233,9 @@ export function ShoppingListTutorialProvider({
   useEffect(() => {
     if (!hasStarted) return;
     for (const oldId of OLD_TUTORIAL_IDS) {
-      storage.set(buildStorageKey(userIdRef.current, oldId), true);
+      storeApi
+        .getState()
+        .markFeatureHintShown(buildStorageKey(userIdRef.current, oldId));
     }
   }, [hasStarted]);
 
@@ -248,12 +254,15 @@ export function ShoppingListTutorialProvider({
   const markComplete = () => {
     // This tutorial's own flag only: the user-controlled "Show Tutorials"
     // setting gates every screen and must not be flipped here.
-    storage.set(buildStorageKey(userIdRef.current, FEATURE_ID), true);
+    storeApi
+      .getState()
+      .markFeatureHintShown(buildStorageKey(userIdRef.current, FEATURE_ID));
     // The standalone swipe hint must not fire on its own afterwards.
-    storage.set(
-      buildStorageKey(userIdRef.current, 'shopping_list_swipe'),
-      true,
-    );
+    storeApi
+      .getState()
+      .markFeatureHintShown(
+        buildStorageKey(userIdRef.current, 'shopping_list_swipe'),
+      );
     setIsCompleted(true);
     setCurrentStep(ShoppingListTutorialStep.COMPLETED);
   };
@@ -349,7 +358,9 @@ export function ShoppingListTutorialProvider({
   const skipAll = () => {
     markComplete();
     for (const oldId of OLD_TUTORIAL_IDS) {
-      storage.set(buildStorageKey(userIdRef.current, oldId), true);
+      storeApi
+        .getState()
+        .markFeatureHintShown(buildStorageKey(userIdRef.current, oldId));
     }
   };
 

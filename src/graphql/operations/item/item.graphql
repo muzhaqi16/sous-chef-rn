@@ -142,7 +142,12 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: ID) {
   }
 }
 
-query GetOnboardingItems($filters: ItemFilters, $orderBy: ItemOrderBy, $first: Int, $after: String) {
+query GetOnboardingItems(
+  $filters: ItemFilters
+  $orderBy: ItemOrderBy
+  $first: Int
+  $after: String
+) {
   items(filters: $filters, orderBy: $orderBy, first: $first, after: $after) {
     edges {
       cursor
@@ -260,40 +265,6 @@ query AutocompleteCategories($input: AutocompleteCategoryInput!) {
       name
       type
       icon
-    }
-    totalCount
-  }
-}
-
-query GetPopularItems($first: Int = 10) {
-  items(orderBy: { popularity: DESC }, first: $first) {
-    edges {
-      node {
-        id
-        name
-        imageUrl
-        popularity
-        displayUnit {
-          id
-          name
-          symbol
-          type
-        }
-        brands {
-          brand {
-            id
-            name
-          }
-        }
-        categories {
-          isPrimary
-          category {
-            id
-            name
-            type
-          }
-        }
-      }
     }
     totalCount
   }

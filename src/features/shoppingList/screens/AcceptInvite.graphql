@@ -4,6 +4,7 @@ fragment AcceptInvite_shoppingListInvite on ShoppingListCollaborator {
   invitedBy {
     id
     email
+    displayName
     profile {
       id
       displayName
@@ -45,6 +46,7 @@ fragment AcceptInvite_homeInvite on HomeInvite {
   inviter {
     id
     email
+    displayName
     profile {
       id
       displayName

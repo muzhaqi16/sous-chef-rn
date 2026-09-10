@@ -34,7 +34,7 @@ describe('module aliases have one source', () => {
   it('every top-level src folder has an alias', () => {
     const targets = new Set(
       Object.values(tsconfigPaths())
-        .map(([target]) => target.replace(/\/?\*$/, '').replace(/^\.\//, ''))
+        .map(([target]) => target!.replace(/\/?\*$/, '').replace(/^\.\//, ''))
         .filter(target => target.startsWith('src/'))
         .map(target => target.slice('src/'.length)),
     );

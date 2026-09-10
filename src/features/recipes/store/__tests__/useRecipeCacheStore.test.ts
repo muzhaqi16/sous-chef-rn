@@ -3,7 +3,7 @@ import {
   textSearchCacheKey,
   ingredientCacheKey,
 } from '../useRecipeCacheStore';
-import type { SearchRecipesResult } from '#/services/recipeApi/types';
+import type { SearchRecipesResult } from '#/services/spoonacular/types';
 
 const sampleResults: SearchRecipesResult[] = [
   {

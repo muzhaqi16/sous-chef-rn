@@ -37,7 +37,7 @@ jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({
   useTabScreenLifecycle: jest.fn(),
 }));
 
-jest.mock('../ShoppingListMainContent', () => ({
+jest.mock('#features/shoppingList/components/ShoppingListMainContent', () => ({
   ShoppingListMainContent: () => {
     const { View, Text } = require('react-native');
     return (
@@ -48,7 +48,7 @@ jest.mock('../ShoppingListMainContent', () => ({
   },
 }));
 
-jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
+jest.mock('#components/providers/ScreenErrorBoundary', () => ({
   ShoppingListErrorBoundary: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
   ),

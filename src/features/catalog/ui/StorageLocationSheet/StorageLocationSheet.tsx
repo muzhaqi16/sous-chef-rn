@@ -2,11 +2,8 @@ import React, { useRef } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import {
   StorageLocationForm,
   type StorageLocationFormRef,
@@ -15,6 +12,8 @@ import {
 import { Text } from '#components/atoms/Text';
 
 import { StorageLocation } from '#/graphql/generated/schemaTypes';
+import { Divider } from '#components/atoms/Divider';
+import { Sheet } from '#components/templates/Sheet';
 
 /**
  * The subset of {@link StorageLocation} fields the sheet actually reads to
@@ -58,11 +57,6 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
   isSubmitting = false,
 }) => {
   const { t } = useTranslation();
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['80%', '95%'],
-  });
   const formRef = useRef<StorageLocationFormRef>(null);
 
   const handleSubmit = async (data: StorageLocationFormValues) => {
@@ -83,62 +77,60 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
   const saveText = isEditing ? t('labels.update') : t('labels.create');
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps} index={0}>
-      <BottomSheetScrollView
-        style={styles.content}
-        contentContainerStyle={contentContainerStyle}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <AppPressable
-            onPress={onClose}
-            style={styles.headerButton}
-            accessibilityRole="button"
-            accessibilityLabel={t('labels.cancel')}
-            disabled={isSubmitting}
-          >
-            <Text size="md" tone="secondary">
-              {t('labels.cancel')}
+    <Sheet
+      mode="action"
+      visible={visible}
+      onDismiss={onClose}
+      snapPoints={['80%', '95%']}
+      style={styles.content}
+    >
+      {/* Header */}
+      <View style={styles.header}>
+        <AppPressable
+          onPress={onClose}
+          style={styles.headerButton}
+          accessibilityRole="button"
+          accessibilityLabel={t('labels.cancel')}
+          disabled={isSubmitting}
+        >
+          <Text tone="secondary">{t('labels.cancel')}</Text>
+        </AppPressable>
+
+        <Text role="heading" align="center" style={styles.title}>
+          {title}
+        </Text>
+
+        <AppPressable
+          onPress={handleHeaderSave}
+          style={styles.headerButton}
+          accessibilityRole="button"
+          accessibilityLabel={saveText}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <ThemedActivityIndicator size="small" />
+          ) : (
+            <Text role="bodyStrong" align="right" tone="accent">
+              {saveText}
             </Text>
-          </AppPressable>
+          )}
+        </AppPressable>
+      </View>
 
-          <Text size="lg" weight="semibold" align="center" style={styles.title}>
-            {title}
-          </Text>
+      {/* Divider */}
+      <Divider style={styles.dividerGap} />
 
-          <AppPressable
-            onPress={handleHeaderSave}
-            style={styles.headerButton}
-            accessibilityRole="button"
-            accessibilityLabel={saveText}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <ThemedActivityIndicator size="small" />
-            ) : (
-              <Text size="md" weight="semibold" align="right" tone="accent">
-                {saveText}
-              </Text>
-            )}
-          </AppPressable>
-        </View>
-
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* Form */}
-        <StorageLocationForm
-          ref={formRef}
-          initialData={initialData}
-          onSubmit={handleSubmit}
-          onCancel={onClose}
-          isSubmitting={isSubmitting}
-          availableLocations={availableLocations}
-          hideActions
-        />
-      </BottomSheetScrollView>
-    </BottomSheetModal>
+      {/* Form */}
+      <StorageLocationForm
+        ref={formRef}
+        initialData={initialData}
+        onSubmit={handleSubmit}
+        onCancel={onClose}
+        isSubmitting={isSubmitting}
+        availableLocations={availableLocations}
+        hideActions
+      />
+    </Sheet>
   );
 };
 
@@ -161,10 +153,8 @@ const styles = StyleSheet.create(theme => ({
   title: {
     flex: 1,
   },
-  divider: {
-    height: 1,
+  dividerGap: {
     marginBottom: theme.spacing.lg,
-    backgroundColor: theme.colors.border,
   },
   pressed: {
     opacity: theme.opacity.pressed,

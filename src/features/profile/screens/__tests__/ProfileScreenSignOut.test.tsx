@@ -6,7 +6,7 @@ import type { SettingsSectionProps } from '#components/organisms/SettingsSection
 import type {
   ActionTrayProps,
   ActionTrayRef,
-} from '#/components/templates/ActionTray/types';
+} from '#components/templates/ActionTray/types';
 import { Telemetry } from '#/services/telemetry';
 import { ProfileScreen } from '../ProfileScreen';
 
@@ -107,7 +107,7 @@ jest.mock('#/services/telemetry', () => ({
 
 jest.mock('#/utils/iconUtils', () => ({ Icon: 'Icon' }));
 
-jest.mock('#components/organisms/ProfileHeader', () => {
+jest.mock('#features/profile/components/ProfileHeader', () => {
   const { View } = require('react-native');
   return { ProfileHeader: () => <View testID="profile-header" /> };
 });
@@ -139,7 +139,7 @@ jest.mock('#components/organisms/SettingsSection', () => {
   };
 });
 
-jest.mock('#/components/templates/ActionTray/ActionTray', () => {
+jest.mock('#components/templates/ActionTray/ActionTray', () => {
   const R = require('react');
   const RN = require('react-native');
   const ActionTray = R.forwardRef(function MockActionTray(

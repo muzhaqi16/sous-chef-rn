@@ -17,7 +17,7 @@ import {
   addPantryItemLocally,
   removePantryItemLocally,
   revertOptimisticPantryItem,
-} from '../pantryCacheUpdaters';
+} from '#features/pantry/cache/items';
 
 const PANTRY = gql`
   query SeedPantry($id: ID!) {

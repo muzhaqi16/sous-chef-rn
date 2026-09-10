@@ -35,8 +35,11 @@ jest.mock('#/apollo/links/refreshToken');
 
 const mockGoBack = jest.fn();
 jest.mock('@react-navigation/native', () => ({
+  // The screen goes through useAppNavigation, whose goBack guards on
+  // canGoBack — so the stand-in has to answer that too.
   useNavigation: jest.fn(() => ({
     goBack: mockGoBack,
+    canGoBack: () => true,
   })),
   useRoute: jest.fn(() => ({
     params: { token: 'invite-token' },
@@ -51,7 +54,7 @@ jest.mock('#/services/alertService', () => ({
 
 jest.mock('#/utils/finallyHelpers');
 
-jest.mock('#components/molecules/Header', () => ({
+jest.mock('#components/organisms/Header', () => ({
   Header: () => null,
 }));
 
@@ -167,15 +170,14 @@ function homeTokenMock(
 
 function buildAcceptShoppingListInviteMock(token: string): MockedResponse {
   return {
-    request: { query: AcceptShoppingListInviteDocument, variables: { token } },
+    request: {
+      query: AcceptShoppingListInviteDocument,
+      variables: { input: { token } },
+    },
     result: {
       data: {
         acceptShoppingListInvite: {
-          __typename: 'ShoppingListCollaboratorPayload',
-          success: true,
-          message: 'OK',
-          code: 'SUCCESS',
-          collaborator: null,
+          __typename: 'AcceptShoppingListInvitePayload',
         },
       },
     },
@@ -183,17 +185,30 @@ function buildAcceptShoppingListInviteMock(token: string): MockedResponse {
   };
 }
 
+function buildRefusedShoppingListInviteMock(
+  token: string,
+  typename: 'NotFoundError' | 'ForbiddenError' | 'ConflictError',
+): MockedResponse {
+  return {
+    request: {
+      query: AcceptShoppingListInviteDocument,
+      variables: { input: { token } },
+    },
+    result: { data: { acceptShoppingListInvite: { __typename: typename } } },
+    maxUsageCount: 10,
+  };
+}
+
 function buildAcceptHomeInviteMock(token: string): MockedResponse {
   return {
-    request: { query: AcceptHomeInviteDocument, variables: { token } },
+    request: {
+      query: AcceptHomeInviteDocument,
+      variables: { input: { token } },
+    },
     result: {
       data: {
         acceptHomeInvite: {
-          __typename: 'MembershipPayload',
-          success: true,
-          message: 'OK',
-          code: 'SUCCESS',
-          membership: null,
+          __typename: 'AcceptHomeInvitePayload',
         },
       },
     },
@@ -203,15 +218,14 @@ function buildAcceptHomeInviteMock(token: string): MockedResponse {
 
 function buildDeclineShoppingListInviteMock(token: string): MockedResponse {
   return {
-    request: { query: DeclineShoppingListInviteDocument, variables: { token } },
+    request: {
+      query: DeclineShoppingListInviteDocument,
+      variables: { input: { token } },
+    },
     result: {
       data: {
         declineShoppingListInvite: {
-          __typename: 'ShoppingListCollaboratorPayload',
-          success: true,
-          message: 'OK',
-          code: 'SUCCESS',
-          collaborator: null,
+          __typename: 'DeclineShoppingListInvitePayload',
         },
       },
     },
@@ -221,15 +235,14 @@ function buildDeclineShoppingListInviteMock(token: string): MockedResponse {
 
 function buildDeclineHomeInviteMock(token: string): MockedResponse {
   return {
-    request: { query: DeclineHomeInviteDocument, variables: { token } },
+    request: {
+      query: DeclineHomeInviteDocument,
+      variables: { input: { token } },
+    },
     result: {
       data: {
         declineHomeInvite: {
-          __typename: 'HomeInvitePayload',
-          success: true,
-          message: 'OK',
-          code: 'SUCCESS',
-          homeInvite: null,
+          __typename: 'DeclineHomeInvitePayload',
         },
       },
     },
@@ -239,7 +252,10 @@ function buildDeclineHomeInviteMock(token: string): MockedResponse {
 
 function buildAcceptShoppingListInviteErrorMock(token: string): MockedResponse {
   return {
-    request: { query: AcceptShoppingListInviteDocument, variables: { token } },
+    request: {
+      query: AcceptShoppingListInviteDocument,
+      variables: { input: { token } },
+    },
     error: new Error('Network error'),
     maxUsageCount: 10,
   };
@@ -249,7 +265,10 @@ function buildDeclineShoppingListInviteErrorMock(
   token: string,
 ): MockedResponse {
   return {
-    request: { query: DeclineShoppingListInviteDocument, variables: { token } },
+    request: {
+      query: DeclineShoppingListInviteDocument,
+      variables: { input: { token } },
+    },
     error: new Error('Failed'),
     maxUsageCount: 10,
   };
@@ -490,6 +509,51 @@ describe('AcceptInvite', () => {
         expect.any(Array),
       ),
     );
+  });
+
+  // Refusals arrive as union members of a 200 response, so nothing throws and
+  // `result.error` is undefined. A screen that reads neither reports success.
+  describe('when the server refuses the deep-linked invite', () => {
+    const refusalCase = async (
+      typename: 'NotFoundError' | 'ForbiddenError' | 'ConflictError',
+    ) => {
+      const user = userEvent.setup();
+      const tree = renderWithApollo(<AcceptInvite />, {
+        operationMocks: [
+          shoppingTokenMock(
+            buildShoppingListInvite({ shoppingListName: 'My List' }),
+          ),
+          homeTokenMock(null),
+          buildRefusedShoppingListInviteMock(TOKEN, typename),
+        ],
+      });
+      await waitFor(() => expect(tree.getByText('Accept')).toBeTruthy());
+      await user.press(tree.getByText('Accept'));
+      await waitFor(() => expect(alertService.alert).toHaveBeenCalled());
+      return jest.mocked(alertService.alert).mock.calls;
+    };
+
+    it.each(['NotFoundError', 'ForbiddenError', 'ConflictError'] as const)(
+      'does not claim success on %s',
+      async typename => {
+        const calls = await refusalCase(typename);
+        expect(calls.flat()).not.toContain(
+          'Shopping list invitation accepted!',
+        );
+      },
+    );
+
+    it("explains a revoked or spent invite in the reader's language", async () => {
+      const calls = await refusalCase('NotFoundError');
+      expect(calls.flat()).toContain(
+        'This invitation is no longer available. It may have been used, declined, or expired.',
+      );
+    });
+
+    it('names the account mismatch only for a permission refusal', async () => {
+      const calls = await refusalCase('ForbiddenError');
+      expect(calls.flat()).toContain('Signed in as a different account');
+    });
   });
 
   it('calls acceptHomeInvite on accept for home invite', async () => {

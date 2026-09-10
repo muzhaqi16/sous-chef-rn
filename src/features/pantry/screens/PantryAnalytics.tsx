@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { commonStyles } from '#/styles/commonStyles';
-import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { usePantryAnalytics } from '#features/pantry/hooks/usePantryAnalytics';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
-import { TabView, TabRoute } from '#components/molecules/TabView/TabView';
-import { DateRangeFilter } from '#components/analytics/DateRangeFilter';
+import { TabView, TabRoute } from '#features/pantry/components/TabView/TabView';
+import { DateRangeFilter } from '#features/pantry/components/analytics/DateRangeFilter';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { UsageTab, WasteTab, LedgerTab } from './PantryAnalyticsTabs';
+import { UsageTab } from '#features/pantry/components/analyticsTabs/UsageTab';
+import { WasteTab } from '#features/pantry/components/analyticsTabs/WasteTab';
+import { LedgerTab } from '#features/pantry/components/analyticsTabs/LedgerTab';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { Screen } from '#components/templates/Screen';
 
 type PantryAnalyticsProps = StaticScreenProps<{
   pantryId: string;
@@ -101,14 +101,20 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
   };
 
   return (
-    <View style={commonStyles.container}>
-      <Header title={t('pantryAnalytics.title')} onBack={goBack} centerTitle />
-
+    <Screen
+      header={{
+        title: t('pantryAnalytics.title'),
+        back: goBack,
+        centerTitle: true,
+      }}
+      scroll="none"
+      gutter="none"
+    >
       {/* Date Range Filter */}
       <DateRangeFilter selected={dateRange} onSelect={setDateRange} />
 
       {/* Tab View */}
       <TabView routes={routes} renderScene={renderScene} />
-    </View>
+    </Screen>
   );
 };

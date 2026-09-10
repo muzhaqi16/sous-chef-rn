@@ -4,18 +4,16 @@ import { useTranslation } from '#/i18n';
 import { t as tGlobal } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { format, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
-import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
-import { TabMainScreen } from '#components/templates/TabMainScreen';
-import { OfflineStatusPill } from '#components/atoms/OfflineStatusPill';
+import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
 import { useIsOfflineBannerVisible } from '#hooks/app/useIsOfflineBannerVisible';
-import { WeekStrip } from '#components/molecules/WeekStrip';
+import { WeekStrip } from '#features/mealPlan/components/WeekStrip';
 import { MonthCalendar } from '#features/mealPlan/components/MonthCalendar';
 import { DayMealList } from '#features/mealPlan/components/DayMealList';
 import { CalendarToggleBar } from '#features/mealPlan/components/CalendarToggleBar';
 import { MealPlanEmptyState } from '#features/mealPlan/components/MealPlanEmptyState';
-import { DataStateView } from '#components/molecules/DataStateView';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 import { AddMealSheet } from '#features/mealPlan/components/AddMealSheet';
 import { SaveAsTemplateSheet } from '#features/mealPlan/components/SaveAsTemplateSheet';
@@ -24,7 +22,7 @@ import { TemplatePreviewSheet } from '#features/mealPlan/components/TemplatePrev
 import { GenerateShoppingListSheet } from '#features/mealPlan/components/GenerateShoppingListSheet';
 import { MealPlanSettingsSheet } from '#features/mealPlan/components/MealPlanSettingsSheet';
 import { DuplicatePlanSheet } from '#features/mealPlan/components/DuplicatePlanSheet';
-import { MarkCookedModal } from '#components/modals/MarkCookedModal';
+import { MarkCookedModal } from '#components/organisms/MarkCookedModal';
 import { NutritionSummaryCard } from '#features/mealPlan/components/NutritionSummaryCard';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
@@ -60,6 +58,9 @@ import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mea
 import { toastService } from '#/services/toastService';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { toDateKey } from '#/utils/dateUtils';
+import { Screen } from '#components/templates/Screen';
+import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 
 /**
  * Gates the heavy work behind DeferredScreen: the skeleton paints instantly and
@@ -70,13 +71,18 @@ import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 export const MealPlanMain: React.FC = () => (
   <DeferredScreen
     fallback={
-      <TabMainScreen testID="meal-plan-screen">
-        <TabScreenHeader
-          label={tGlobal('mealPlanMain.label')}
-          title={tGlobal('labels.mealPlan')}
-        />
+      <Screen
+        testID="meal-plan-screen"
+        header={{
+          variant: 'tab',
+          label: tGlobal('mealPlanMain.label'),
+          title: tGlobal('labels.mealPlan'),
+        }}
+        scroll="list"
+        gutter="none"
+      >
         <MealPlanSkeleton />
-      </TabMainScreen>
+      </Screen>
     }
     component={MealPlanMainInner}
   />
@@ -132,7 +138,6 @@ const MealPlanMainInner: React.FC = () => {
     createTemplateFromPlan,
     creatingFromTemplate,
     creatingTemplate,
-    isApiUnavailable: templateActionsUnavailable,
   } = useMealTemplateActions();
 
   // Fetch meal plans and resolve active plan
@@ -193,6 +198,11 @@ const MealPlanMainInner: React.FC = () => {
   // Permissions for the active plan
   const permissions = useMealPlanPermissions(activeMealPlan);
 
+  // The active plan in the list's own shape: `activeMealPlan` is the masked
+  // detail read, which is not a `MealPlanDisplayFragment`.
+  const activePlanForDisplay =
+    mealPlans.find(plan => plan.id === activePlanId) ?? null;
+
   // Compute plan date boundaries
   const planStartDate = activeMealPlan?.startDate
     ? parseISO(activeMealPlan.startDate)
@@ -215,18 +225,11 @@ const MealPlanMainInner: React.FC = () => {
     useMealPlanItemActions(activePlanId);
 
   // Shopping list generation
-  const {
-    generateShoppingList,
-    loading: generatingShoppingList,
-    isApiUnavailable: generateShoppingListUnavailable,
-  } = useGenerateShoppingList(activePlanId);
+  const { generateShoppingList, loading: generatingShoppingList } =
+    useGenerateShoppingList(activePlanId);
 
   // Duplicate meal plan
-  const {
-    duplicatePlan,
-    loading: duplicatingPlan,
-    isApiUnavailable: duplicatePlanUnavailable,
-  } = useDuplicateMealPlan();
+  const { duplicatePlan, loading: duplicatingPlan } = useDuplicateMealPlan();
 
   // Delete meal plan
   const { deleteMealPlan, deleting: deletingPlan } = useMealPlanActions();
@@ -235,7 +238,7 @@ const MealPlanMainInner: React.FC = () => {
   const daysWithMeals = (() => {
     const days = new Set<string>();
     items.forEach(item => {
-      days.add(format(new Date(item.date), 'yyyy-MM-dd'));
+      days.add(toDateKey(new Date(item.date)));
     });
     return days;
   })();
@@ -356,7 +359,7 @@ const MealPlanMainInner: React.FC = () => {
     tags?: string[];
   }) => {
     const result = await createTemplateFromPlan(input);
-    if (result?.__typename === 'CreateTemplateFromMealPlanPayload') {
+    if (result) {
       setSaveTemplateVisible(false);
     }
   };
@@ -401,7 +404,7 @@ const MealPlanMainInner: React.FC = () => {
     servings?: number;
   }) => {
     const result = await createPlanFromTemplate(config);
-    if (result?.__typename === 'CreateMealPlanPayload') {
+    if (result) {
       setTemplatePreviewVisible(false);
       setSelectedTemplate(null);
     }
@@ -414,9 +417,7 @@ const MealPlanMainInner: React.FC = () => {
     newEndDate: string;
   }) => {
     const result = await duplicatePlan(input);
-    if (result?.__typename === 'DuplicateMealPlanPayload') {
-      setDuplicateVisible(false);
-    }
+    if (result) setDuplicateVisible(false);
   };
 
   const handleDeletePlan = async (id: string) => {
@@ -437,9 +438,7 @@ const MealPlanMainInner: React.FC = () => {
     shoppingListId?: string;
   }) => {
     const result = await generateShoppingList(options);
-    if (result?.__typename === 'GenerateShoppingListFromMealPlanPayload') {
-      setShoppingListSheetVisible(false);
-    }
+    if (result) setShoppingListSheetVisible(false);
   };
 
   // Cold start with nothing cached: stay on the skeleton until the plan list
@@ -449,13 +448,18 @@ const MealPlanMainInner: React.FC = () => {
   // skeleton never covers content that is already on screen.
   if (plansInitialLoading) {
     return (
-      <TabMainScreen testID="meal-plan-screen">
-        <TabScreenHeader
-          label={t('mealPlanMain.label')}
-          title={t('labels.mealPlan')}
-        />
+      <Screen
+        testID="meal-plan-screen"
+        header={{
+          variant: 'tab',
+          label: t('mealPlanMain.label'),
+          title: t('labels.mealPlan'),
+        }}
+        scroll="list"
+        gutter="none"
+      >
         <MealPlanSkeleton />
-      </TabMainScreen>
+      </Screen>
     );
   }
 
@@ -464,11 +468,16 @@ const MealPlanMainInner: React.FC = () => {
   // the person may already have the very plan they would be recreating.
   if (mealPlans.length === 0) {
     return (
-      <TabMainScreen testID="meal-plan-screen">
-        <TabScreenHeader
-          label={t('mealPlanMain.label')}
-          title={t('labels.mealPlan')}
-        />
+      <Screen
+        testID="meal-plan-screen"
+        header={{
+          variant: 'tab',
+          label: t('mealPlanMain.label'),
+          title: t('labels.mealPlan'),
+        }}
+        scroll="list"
+        gutter="none"
+      >
         {plansState === 'error' || plansState === 'offline' ? (
           <DataStateView state={plansState} onRetry={handleRefresh} />
         ) : (
@@ -495,19 +504,18 @@ const MealPlanMainInner: React.FC = () => {
           }}
           onConfirm={handleCreateFromTemplate}
           confirmLoading={creatingFromTemplate}
-          disabled={templateActionsUnavailable}
           onEdit={id => {
             setTemplatePreviewVisible(false);
             setSelectedTemplate(null);
             toMealTemplateBuilder({ templateId: id });
           }}
         />
-      </TabMainScreen>
+      </Screen>
     );
   }
 
   return (
-    <TabMainScreen testID="meal-plan-screen">
+    <Screen testID="meal-plan-screen" scroll="list" gutter="none">
       <View style={styles.headerRow}>
         <View style={styles.headerContent}>
           <TabScreenHeader
@@ -533,39 +541,23 @@ const MealPlanMainInner: React.FC = () => {
                 {permissions.canGenerateShoppingList ? (
                   <Pressable
                     onPress={() => setShoppingListSheetVisible(true)}
-                    disabled={generateShoppingListUnavailable}
                     hitSlop={8}
                     style={styles.headerActionButton}
                     accessibilityLabel={t(
                       'mealPlanMain.generateShoppingListLabel',
                     )}
                   >
-                    <Icon
-                      name="cart-outline"
-                      size={22}
-                      tone={
-                        generateShoppingListUnavailable
-                          ? 'textSecondary'
-                          : 'primary'
-                      }
-                    />
+                    <Icon name="cart-outline" size={22} tone="primary" />
                   </Pressable>
                 ) : null}
                 {permissions.canSaveAsTemplate ? (
                   <Pressable
                     onPress={handleSaveAsTemplate}
-                    disabled={templateActionsUnavailable}
                     hitSlop={8}
                     style={styles.headerActionButton}
                     accessibilityLabel={t('mealPlanMain.saveAsTemplateLabel')}
                   >
-                    <Icon
-                      name="bookmark-outline"
-                      size={22}
-                      tone={
-                        templateActionsUnavailable ? 'textSecondary' : 'primary'
-                      }
-                    />
+                    <Icon name="bookmark-outline" size={22} tone="primary" />
                   </Pressable>
                 ) : null}
                 <Pressable
@@ -654,12 +646,15 @@ const MealPlanMainInner: React.FC = () => {
       <SaveAsTemplateSheet
         visible={saveTemplateVisible}
         mealPlanId={activePlanId}
-        mealPlanName={currentPlan?.name}
+        // Both from the ACTIVE plan. `currentPlan` is the SELECTED one, and
+        // `useActiveMealPlan` falls back when that is deleted or unshared — so
+        // naming from it builds one plan's template under another's name. The
+        // header already shows `activeMealPlan?.name`.
+        mealPlanName={activeMealPlan?.name}
         homeName={activeMealPlan?.home?.name}
         onClose={() => setSaveTemplateVisible(false)}
         onSave={handleSaveTemplate}
         saving={creatingTemplate}
-        disabled={templateActionsUnavailable}
       />
 
       {/* Template Browser Sheet */}
@@ -679,7 +674,6 @@ const MealPlanMainInner: React.FC = () => {
         }}
         onConfirm={handleCreateFromTemplate}
         confirmLoading={creatingFromTemplate}
-        disabled={templateActionsUnavailable}
       />
 
       {/* Generate Shopping List Sheet */}
@@ -689,7 +683,6 @@ const MealPlanMainInner: React.FC = () => {
         onGenerate={handleGenerateShoppingList}
         loading={generatingShoppingList}
         homeName={activeMealPlan?.home?.name}
-        disabled={generateShoppingListUnavailable}
       />
 
       {/* Settings Sheet */}
@@ -707,11 +700,14 @@ const MealPlanMainInner: React.FC = () => {
       {/* Duplicate Plan Sheet */}
       <DuplicatePlanSheet
         visible={duplicateVisible}
-        mealPlan={currentPlan ?? null}
+        // The ACTIVE plan — the one whose settings opened this sheet, and whose
+        // name the header shows. `currentPlan` is the SELECTED one, which is a
+        // different plan whenever the active-plan fallback has fired, so
+        // duplicating it copies a plan the user is not looking at.
+        mealPlan={activePlanForDisplay}
         onClose={() => setDuplicateVisible(false)}
         onDuplicate={handleDuplicatePlan}
         loading={duplicatingPlan}
-        disabled={duplicatePlanUnavailable}
       />
 
       {/* Mark Cooked Modal */}
@@ -733,7 +729,7 @@ const MealPlanMainInner: React.FC = () => {
         onOpen={handleOverlayOpen}
         onClose={handleOverlayClose}
       />
-    </TabMainScreen>
+    </Screen>
   );
 };
 
@@ -741,6 +737,9 @@ const styles = StyleSheet.create(theme => ({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    // Chrome, outside the list — so this screen owns its gutter rather than
+    // inheriting the list's.
+    paddingHorizontal: theme.layout.pageGutter,
   },
   headerContent: {
     flex: 1,

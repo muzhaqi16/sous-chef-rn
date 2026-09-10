@@ -5,6 +5,7 @@ import {
 } from '@apollo/client/errors';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { isAuthRefusalCode } from '#/utils/authErrorCodes';
+import { VERSION_CONFLICT_CODES } from '#/utils/errors/versionConflict';
 import { isErrorTypename } from '#/utils/errors/mutationPayload';
 import type { QueueError } from './types';
 
@@ -17,16 +18,24 @@ import type { QueueError } from './types';
 export class ReplayRejectedError extends Error {
   readonly payloadTypename: string;
   readonly payloadCode: string | null;
+  /**
+   * `NotFoundError.resource` — which row was missing. A bare `NotFoundError`
+   * cannot be acted on: the pantry item itself being gone and its unit being
+   * gone are the same typename and the same code.
+   */
+  readonly payloadResource: string | null;
 
   constructor(
     payloadTypename: string,
     message: string,
     payloadCode?: string | null,
+    payloadResource?: string | null,
   ) {
     super(message);
     this.name = 'ReplayRejectedError';
     this.payloadTypename = payloadTypename;
     this.payloadCode = payloadCode ?? null;
+    this.payloadResource = payloadResource ?? null;
   }
 }
 
@@ -93,10 +102,37 @@ function readStatusCode(error: unknown): number | undefined {
 }
 
 /**
+ * The logical resource name the API uses for a unit row in `NotFoundError`.
+ * Compared case-insensitively: `resource` is documented as a logical type name
+ * ("e.g. `MealPlan`"), not an enum, so its casing is not part of a contract.
+ */
+const UNIT_RESOURCE = 'unit';
+
+/**
+ * Codes the API documents as shedding load or pacing the caller. Each clears on
+ * its own, so the entry is deferred rather than withdrawn — reverting a write
+ * over one of these discards work the server never refused.
+ */
+const TRANSIENT_SERVER_CODES: readonly string[] = [
+  TopLevelErrorCode.ServiceUnavailable,
+  TopLevelErrorCode.RateLimitExceeded,
+  TopLevelErrorCode.OperationRateLimited,
+];
+
+function isStaleUnitRefusal(error: ReplayRejectedError): boolean {
+  if (error.payloadCode === ErrorCode.UnitInvalid) return true;
+
+  return (
+    error.payloadTypename === 'NotFoundError' &&
+    error.payloadResource?.toLowerCase() === UNIT_RESOURCE
+  );
+}
+
+/**
  * Pure classification of a replay error: `auth` retries after a token refresh,
- * `network`/`server` defer to the next drain, `unknown` fails permanently.
- * Separate from {@link QueueManager}'s stateful retry orchestration so the
- * heuristics are testable in isolation.
+ * `stale-reference` after a vocabulary refresh, `network`/`server` defer to the
+ * next drain, `unknown` fails permanently. Separate from {@link QueueManager}'s
+ * stateful retry orchestration so the heuristics are testable in isolation.
  */
 export function classifyError(error: unknown): QueueError {
   // Classified by typename/code, never by the server-authored free-text message.
@@ -112,6 +148,35 @@ export function classifyError(error: unknown): QueueError {
         retryable: true,
       };
     }
+    // The entity moved on since the write was made. Re-sendable, but only
+    // without the stale `version` the write captured — QueueManager strips it
+    // and re-sends once.
+    if (
+      error.payloadCode !== null &&
+      VERSION_CONFLICT_CODES.includes(error.payloadCode)
+    ) {
+      return {
+        type: 'conflict',
+        message: error.message,
+        code: error.payloadCode,
+        timestamp: Date.now(),
+        retryable: true,
+      };
+    }
+
+    // The write names a unit the vocabulary repair merged away. The write is
+    // fine — its reference went stale — so it is re-sent, not reverted. Both
+    // spellings: a missing row, or a unit the server will not accept.
+    if (isStaleUnitRefusal(error)) {
+      return {
+        type: 'stale-reference',
+        message: error.message,
+        code: error.payloadCode ?? error.payloadTypename,
+        timestamp: Date.now(),
+        retryable: true,
+      };
+    }
+
     return {
       type: 'unknown',
       message: error.message,
@@ -124,6 +189,27 @@ export function classifyError(error: unknown): QueueError {
   const err = (error ?? {}) as { message?: string };
   const message = err.message || String(error);
   const code = readErrorCode(error);
+
+  // The thrown spelling of the same condition as the union member above.
+  if (code && VERSION_CONFLICT_CODES.includes(code)) {
+    return {
+      type: 'conflict',
+      message,
+      code,
+      timestamp: Date.now(),
+      retryable: true,
+    };
+  }
+
+  if (code && TRANSIENT_SERVER_CODES.includes(code)) {
+    return {
+      type: 'server',
+      message,
+      code,
+      timestamp: Date.now(),
+      retryable: true,
+    };
+  }
 
   // Build below the server's minimum: deferred, not failed, so the change
   // survives on disk and syncs once the user updates. `retryable: false` skips

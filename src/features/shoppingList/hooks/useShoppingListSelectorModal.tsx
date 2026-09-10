@@ -166,6 +166,7 @@ export function useShoppingListSelectorModal({
       <View style={styles.deleteHeaderActions}>
         <Pressable
           onPress={handleDeleteSelected}
+          accessibilityLabel={t('labels.delete')}
           disabled={!hasSelection}
           style={
             hasSelection ? styles.deleteButton : styles.deleteButtonDisabled
@@ -178,7 +179,7 @@ export function useShoppingListSelectorModal({
           />
         </Pressable>
         <Pressable onPress={exitDeleteMode}>
-          <Text size="md" weight="semibold" tone="accent">
+          <Text role="bodyStrong" tone="accent">
             {t('labels.cancel')}
           </Text>
         </Pressable>
@@ -241,12 +242,7 @@ export function useShoppingListSelectorModal({
             size={14}
             tone="textTertiary"
           />
-          <Text
-            size="xs"
-            weight="semibold"
-            tone="tertiary"
-            style={styles.sectionHeaderText}
-          >
+          <Text role="label" tone="tertiary" style={styles.sectionHeaderText}>
             {item.title}
           </Text>
         </View>
@@ -280,16 +276,11 @@ export function useShoppingListSelectorModal({
           />
           <ShoppingListAvatar list={list} size={32} />
           <View style={styles.selectorItemInfo}>
-            <Text
-              size="md"
-              weight="semibold"
-              lineHeight="tight"
-              numberOfLines={1}
-            >
+            <Text role="bodyStrong" numberOfLines={1}>
               {list.name}
             </Text>
             {!canDelete && (
-              <Text size="xs" tone="secondary" numberOfLines={1}>
+              <Text role="caption" tone="secondary" numberOfLines={1}>
                 {t('shoppingListSelector.cannotDeleteShared')}
               </Text>
             )}
@@ -307,16 +298,11 @@ export function useShoppingListSelectorModal({
       >
         <ShoppingListAvatar list={list} size={32} />
         <View style={styles.selectorItemInfo}>
-          <Text
-            size="md"
-            weight="semibold"
-            lineHeight="tight"
-            numberOfLines={1}
-          >
+          <Text role="bodyStrong" numberOfLines={1}>
             {list.name}
           </Text>
           {!list._isOwner && (
-            <Text size="xs" tone="secondary" numberOfLines={1}>
+            <Text role="caption" tone="secondary" numberOfLines={1}>
               {t('shoppingListSelector.sharedBy', {
                 name:
                   list.ownerships?.[0]?.user?.profile?.displayName ||
@@ -327,7 +313,7 @@ export function useShoppingListSelectorModal({
           )}
         </View>
         {list.totalItems > 0 && (
-          <Text size="xs" tone="secondary">
+          <Text role="caption" tone="secondary">
             {t('shoppingListSelector.itemsRemaining', {
               remaining: list.totalItems - list.completedItems,
               total: list.totalItems,

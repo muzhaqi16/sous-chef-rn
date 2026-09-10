@@ -3,7 +3,7 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
-import { InlineAutocomplete } from '../../../src/components/molecules/InlineAutocomplete';
+import { InlineAutocomplete } from '#features/catalog/components/InlineAutocomplete';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
