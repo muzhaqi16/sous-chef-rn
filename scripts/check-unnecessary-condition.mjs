@@ -129,10 +129,13 @@ if (process.argv.includes('--self-test')) {
     unlinkSync(probe);
   }
 
+  const listed = found =>
+    found.map(m => `    line ${m.line}: ${m.message}`).join('\n');
+
   if (forced.length !== 1) {
     console.error(
       `\n✗ Self-test failed: the rule reported ${forced.length} finding(s) in ` +
-        `the probe, expected exactly 1.\n\n` +
+        `the probe, expected exactly 1.\n${listed(forced)}\n\n` +
         `  It stopped seeing a function reference in a boolean position — the\n` +
         `  defect this check exists for. A necessary \`??\` must stay unreported.\n`,
     );
@@ -142,7 +145,8 @@ if (process.argv.includes('--self-test')) {
   if (asConfigured.length !== 1) {
     console.error(
       `\n✗ Self-test failed: .eslintrc.js does not apply ${RULE} to a new file\n` +
-        `  under src/ (${asConfigured.length} finding(s), expected 1).\n\n` +
+        `  under src/ (${asConfigured.length} finding(s), expected 1).\n` +
+        `${listed(asConfigured)}\n\n` +
         `  The rule sees the defect, so the scope is what broke. Most likely a\n` +
         `  second overrides block declares the rule: a block REPLACES a rule's\n` +
         `  config rather than merging it, so the later one silently wins.\n`,
