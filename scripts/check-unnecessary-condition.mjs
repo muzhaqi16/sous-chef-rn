@@ -143,6 +143,24 @@ if (process.argv.includes('--self-test')) {
   }
 
   if (asConfigured.length !== 1) {
+    // Which blocks actually reached the probe. A type-aware rule that lands
+    // without `parserOptions.project` is reading an inferred program with
+    // DEFAULT compiler options, which is the shape of this failure.
+    let resolved = '(unavailable)';
+    try {
+      const cfg = await new ESLint({ cwd: REPO_ROOT }).calculateConfigForFile(
+        probe,
+      );
+      resolved = JSON.stringify({
+        project: cfg.parserOptions?.project,
+        tsconfigRootDir: cfg.parserOptions?.tsconfigRootDir,
+        parser: cfg.parser,
+        rule: cfg.rules?.[RULE],
+      });
+    } catch (error) {
+      resolved = `(threw: ${error.message})`;
+    }
+    console.error(`\n  Resolved config for the probe: ${resolved}`);
     console.error(
       `\n✗ Self-test failed: .eslintrc.js does not apply ${RULE} to a new file\n` +
         `  under src/ (${asConfigured.length} finding(s), expected 1).\n` +
