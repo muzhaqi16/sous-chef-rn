@@ -19,7 +19,10 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { AddDerivedItemsToShoppingListDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
+import {
+  AddDerivedItemsToShoppingListDocument,
+  LinkDerivedListToMealPlanDocument,
+} from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { toastService } from '#/services/toastService';
 import { seedCache } from '#/test-utils/apolloMockProvider';
@@ -108,6 +111,18 @@ function addMock() {
   });
 }
 
+function linkMock() {
+  return recordMock(LinkDerivedListToMealPlanDocument, {
+    data: {
+      linkShoppingListToMealPlan: {
+        __typename: 'LinkShoppingListToMealPlanPayload',
+        shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
+      },
+    },
+    partial: true,
+  });
+}
+
 describe('generating a shopping list from a cached meal plan', () => {
   afterEach(() => {
     useStore.setState({ apiReachable: true, isOnline: true });
@@ -156,6 +171,7 @@ describe('generating a shopping list from a cached meal plan', () => {
     useStore.setState({ apiReachable: false });
     const create = createMock();
     const add = addMock();
+    const link = linkMock();
     const cache = seedCache([
       {
         data: plan,
@@ -166,7 +182,7 @@ describe('generating a shopping list from a cached meal plan', () => {
 
     const { result } = renderHookWithApollo(
       () => useGenerateShoppingList(PLAN_ID),
-      { operationMocks: [create.mock, add.mock], cache },
+      { operationMocks: [create.mock, add.mock, link.mock], cache },
     );
 
     const response = await result.current.generateShoppingList({
@@ -191,5 +207,12 @@ describe('generating a shopping list from a cached meal plan', () => {
     expect(items).toHaveLength(2);
     expect(items.map(i => i.quantity)).toEqual([6, 2]);
     expect(items[0]?.recipeContext.mealPlanId).toBe(PLAN_ID);
+
+    // The list records the plan it came from, which the fan-out did inside its
+    // own transaction and a client-assembled list has to say separately.
+    expect(link.fired).toHaveLength(1);
+    expect(link.fired[0]).toMatchObject({
+      input: { id: 'list-1', mealPlanId: PLAN_ID },
+    });
   });
 });

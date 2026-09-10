@@ -40,16 +40,21 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
   const money = useMoney();
   const isBackend = isBackendIngredient(ingredient);
   const ingredientName = ingredient.name || t('labels.unknown');
-  // A not-yet-imported recipe carries both systems, so it can be shown in the
-  // one the reader picked. A persisted one carries whichever single unit the
-  // server resolved, and its amount is stated in that unit.
+  // Both sources answer in the reader's own system. A persisted ingredient is
+  // converted by the server, the only side holding the unit table; a
+  // not-yet-imported one already carries both of Spoonacular's measures. Each
+  // falls back to what it stores when its conversion is unavailable.
+  const converted = isBackend ? ingredient.convertedQuantity : null;
   const measure = isBackend
     ? null
     : preferredMeasure(ingredient.measures, unitSystem);
   const quantity =
-    (isBackend ? ingredient.quantity : measure?.amount ?? ingredient.amount) ||
-    '';
-  const unit = isBackend ? ingredient.unit?.symbol || '' : measure?.unit || '';
+    (isBackend
+      ? converted?.value ?? ingredient.quantity
+      : measure?.amount ?? ingredient.amount) || '';
+  const unit = isBackend
+    ? converted?.unit.symbol || ingredient.unit?.symbol || ''
+    : measure?.unit || '';
   // Backend-only: the estimated ingredient price (US dollars), surfaced on its
   // own line. Never derived from the name — only the dedicated field is shown.
   const estimatedPrice = isBackend ? ingredient.estimatedPrice : null;

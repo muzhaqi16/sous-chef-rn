@@ -8,38 +8,6 @@ Delete a section once the schema carries it.
 Not a design document. It says what the client is trying to do and what it is
 missing, not how the server should model it.
 
-## A shopping list a client derives cannot record the meal plan it came from
-
-**Blocks:** making "generate a shopping list from this meal plan" work offline.
-
-`generateShoppingListFromMealPlan` is a server fan-out: one call reads the
-plan's recipes, aggregates their ingredients, deducts the pantry, creates the
-list and adds every line. Offline the client has none of that, so the client is
-moving to the primitives the same action decomposes into — `createShoppingList`
-followed by `addItemsToShoppingList` — which queue and replay like every other
-offline write.
-
-Two fields the fan-out sets are unreachable that way. `ShoppingList.mealPlanId`
-and `ShoppingList.generatedFromMealPlan` are written inside the fan-out's own
-transaction, and no client-reachable input carries either:
-
-- `CreateShoppingListInput` has `name`, `description`, `homeId`, `isDefault`,
-  `budgetAmount`, `tags`, `id` — no meal plan.
-- `UpdateShoppingListInput` has no meal plan field either.
-- There is no `linkShoppingListToMealPlan` mutation.
-
-`BatchAddShoppingListItemInput.recipeContext` does carry `mealPlanId` per LINE,
-so per-item provenance survives — but `MealPlan.generatedShoppingLists` rolls up
-from the list's own column, not from its items, so it comes back empty. The
-client renders that rollup as a "Generated lists" section on the meal plan
-settings sheet, and for a derived list the section would be empty while the
-lines themselves are correctly marked meal-plan-sourced.
-
-**A sufficient answer:** any client-reachable way to set the link at or after
-creation — a field on the create input, a field on the update input, or a
-dedicated link mutation. The client can send it as a separate queued write if it
-has to; what it cannot do is leave the association unexpressible.
-
 ## Pantry deduction sums quantities across units it never converts
 
 **Affects:** what a derived shopping list has to deliberately not copy.
@@ -125,8 +93,11 @@ an ingredient with no unit — the server's own fan-out does
 `if (!ingredient.itemId || !ingredient.unitId) continue;` — so the server has
 been generating empty lists from these recipes too.
 
-**A sufficient answer:** resolve the unit from the typed mirror the client
-actually sends, and backfill the existing null rows. The source strings were
+The client now sends the flat pair as well, so imports made after that ship
+resolve their unit. What remains is the backfill: every ingredient imported
+between 2026-06-14 and that change still has `unitId: null`.
+
+**A sufficient answer:** backfill the existing null rows. The source strings were
 never lost — the verbatim payload is stored alongside, in the external source's
 `data` column.
 

@@ -143,6 +143,9 @@ function buildOptimisticRecipeEntity(
           estimatedPrice: ing.estimatedPrice ?? null,
           item: null,
           unit: null,
+          // The server converts this against the reader's preferred system, so
+          // a locally created ingredient has none until it comes back.
+          convertedQuantity: null,
           image: null,
           isOptional: ing.isOptional ?? false,
           notes: ing.notes ?? null,

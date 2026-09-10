@@ -5,6 +5,7 @@ import {
 } from '@apollo/client/react';
 import {
   AddDerivedItemsToShoppingListDocument,
+  LinkDerivedListToMealPlanDocument,
   UseGenerateShoppingList_MealPlanFragmentDoc,
 } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import {
@@ -34,9 +35,8 @@ export interface GenerateShoppingListOptions {
 
 /**
  * Builds the list from the cached plan instead of asking the server to fan out,
- * so it works offline. The LIST cannot record which plan produced it — no
- * client-reachable input carries `ShoppingList.mealPlanId`
- * (`docs/api-requests.md`) — but each line names it through `recipeContext`.
+ * so it works offline: a create, a batch add, and a link back to the plan,
+ * every one of them queued and keyed by a client-minted id.
  */
 export function useGenerateShoppingList(mealPlanId: string | null) {
   const client = useApolloClient();
@@ -62,6 +62,8 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     AddDerivedItemsToShoppingListDocument,
     { update: buildAddItemsReconcileUpdate({}) },
   );
+
+  const [linkToPlan] = useMutation(LinkDerivedListToMealPlanDocument);
 
   const generateShoppingList = async (
     options: GenerateShoppingListOptions = {},
@@ -132,6 +134,21 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
       });
     } catch (error) {
       errorService.reportError(error, { operation: 'Generate shopping list' });
+    }
+
+    // Queued like the writes above: the list carries no plan of its own until
+    // this lands, so the plan's generated-lists section fills in on replay.
+    if (!options.shoppingListId) {
+      try {
+        await linkToPlan({
+          variables: { input: { id: listId, mealPlanId } },
+          context: { localFirst: true },
+        });
+      } catch (error) {
+        errorService.reportError(error, {
+          operation: 'Link derived list to meal plan',
+        });
+      }
     }
 
     report({
