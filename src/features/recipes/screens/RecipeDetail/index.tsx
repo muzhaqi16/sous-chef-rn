@@ -30,6 +30,7 @@ import { useForkRecipe } from '#features/recipes/hooks/useForkRecipe';
 import { usePublishRecipe } from '#features/recipes/hooks/usePublishRecipe';
 import { RecipeEnrichment } from '#features/recipes/components/recipeDetail/RecipeEnrichment';
 import { IngredientCard } from '#features/recipes/components/recipeDetail/IngredientCard';
+import { useAppSettings } from '#features/profile/hooks/useAppSettings';
 import { RecipeHeroImage } from '#features/recipes/components/recipeDetail/RecipeHeroImage';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
@@ -51,6 +52,8 @@ const RecipeDetailScreen: React.FC = () => {
 
   const { toRecipeEdit, toRecipeDetail } = useAppNavigation();
   const user = useUser();
+  const { settings } = useAppSettings();
+  const preferredUnitSystem = settings.preferredUnitSystem;
   const { forkRecipe, forking } = useForkRecipe();
   const { setPublished, publishing } = usePublishRecipe();
   const {
@@ -500,6 +503,7 @@ const RecipeDetailScreen: React.FC = () => {
                     ingredient={ingredient}
                     isAdded={addedIngredients.has(ingredient.id)}
                     onPress={() => handleAddSingleIngredient(ingredient)}
+                    unitSystem={preferredUnitSystem}
                   />
                 </React.Fragment>
               ))}

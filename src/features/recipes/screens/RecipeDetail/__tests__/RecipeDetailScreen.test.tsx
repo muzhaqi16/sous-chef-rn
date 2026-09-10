@@ -23,6 +23,12 @@ jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#hooks/performance/useScreenTransition');
 
+// The screen reads only the preferred unit system from settings; the real hook
+// runs its own query and this suite renders without an Apollo provider.
+jest.mock('#features/profile/hooks/useAppSettings', () => ({
+  useAppSettings: () => ({ settings: { preferredUnitSystem: 'METRIC' } }),
+}));
+
 // Mock the hook fully
 jest.mock('../../../hooks/useRecipeDetail', () => ({
   useRecipeDetail: jest.fn(() => ({

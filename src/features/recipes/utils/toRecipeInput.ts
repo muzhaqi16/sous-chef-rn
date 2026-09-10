@@ -109,8 +109,23 @@ export const toRecipeInput = (
           quantity: ing.amount || 0,
           originalString: ing.original,
           sortOrder: idx,
-          // Typed, loss-free Spoonacular mirror — replaces the deprecated flat
-          // spoonacular* fields. The server caches this payload verbatim,
+          // BOTH systems, flat and nested. The server resolves an ingredient's
+          // unit from `usUnit ?? metricUnit` and reads nothing else, so an
+          // import sending only the mirror below is stored with no unit — and
+          // every path needing one (a derived shopping list, the pantry
+          // deduction) then skips the ingredient.
+          usAmount: ing.measures?.us?.amount,
+          usUnit: ing.measures?.us?.unitShort ?? ing.unit,
+          metricAmount: ing.measures?.metric?.amount,
+          metricUnit: ing.measures?.metric?.unitShort,
+          measurements: {
+            usAmount: ing.measures?.us?.amount,
+            usUnit: ing.measures?.us?.unitShort ?? ing.unit,
+            metricAmount: ing.measures?.metric?.amount,
+            metricUnit: ing.measures?.metric?.unitShort,
+          },
+          // Typed, loss-free Spoonacular mirror. The server caches this payload
+          // verbatim,
           // extracts nutrition/cost/units/image/aisle into the catalog, and
           // links the ingredient to an Item asynchronously (fill-if-null).
           // See sous-chef-api docs/architecture/external-ingredient-mirror.md.

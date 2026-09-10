@@ -8,12 +8,17 @@ import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
 import { getSpoonacularIngredientImageUrl } from '#/services/spoonacular/utils';
 import type { DisplayIngredient } from '#features/recipes/hooks/useRecipeData';
+import { preferredMeasure } from '#features/recipes/utils/preferredMeasure';
+import type { UnitSystem } from '#/graphql/generated/schemaTypes';
 import { Card } from '#components/atoms/Card';
 
 interface IngredientCardProps {
   ingredient: DisplayIngredient;
   isAdded: boolean;
   onPress: () => void;
+  /** The reader's preferred system. Only a not-yet-imported recipe can honour
+   *  it: a persisted ingredient carries the one unit the server resolved. */
+  unitSystem: UnitSystem;
 }
 
 // Backend ingredients carry the GraphQL `__typename`; Spoonacular's REST
@@ -29,15 +34,22 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
   ingredient,
   isAdded,
   onPress,
+  unitSystem,
 }) => {
   const { t } = useTranslation();
   const money = useMoney();
   const isBackend = isBackendIngredient(ingredient);
   const ingredientName = ingredient.name || t('labels.unknown');
-  const quantity = (isBackend ? ingredient.quantity : ingredient.amount) || '';
-  const unit = isBackend
-    ? ingredient.unit?.symbol || ''
-    : ingredient.measures?.us?.unitShort || '';
+  // A not-yet-imported recipe carries both systems, so it can be shown in the
+  // one the reader picked. A persisted one carries whichever single unit the
+  // server resolved, and its amount is stated in that unit.
+  const measure = isBackend
+    ? null
+    : preferredMeasure(ingredient.measures, unitSystem);
+  const quantity =
+    (isBackend ? ingredient.quantity : measure?.amount ?? ingredient.amount) ||
+    '';
+  const unit = isBackend ? ingredient.unit?.symbol || '' : measure?.unit || '';
   // Backend-only: the estimated ingredient price (US dollars), surfaced on its
   // own line. Never derived from the name — only the dedicated field is shown.
   const estimatedPrice = isBackend ? ingredient.estimatedPrice : null;
