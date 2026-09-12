@@ -71,6 +71,8 @@ const ALLOWED_DROPS: Record<string, string[]> = {
     'date-fns#formatDuration',
     'date-fns#lightFormat',
   ],
+  // A paged photo carousel: FlashList has no `pagingEnabled`.
+  'src/features/catalog/ui/ItemPhotoCarousel.tsx': ['react-native#FlatList'],
   // The formatters ARE the mechanism the ban points at.
   'src/utils/formatQuantity.ts': [
     'fraction.js#*',
