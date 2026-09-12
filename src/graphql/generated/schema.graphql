@@ -7342,7 +7342,11 @@ type Mutation {
   already-deleted pantry before it could converge.
   """
   deletePantry(input: DeletePantryInput!): DeletePantryResult!
-  """Delete a pantry item (soft delete)."""
+  """
+  Remove a pantry item. Final: the row is destroyed, and what it still held
+  is written to the consumption history, which outlives it. Adding the item
+  again — in any unit — opens a fresh stack.
+  """
   deletePantryItem(input: DeletePantryItemInput!): DeletePantryItemResult!
   """Delete a purchase record."""
   deletePurchase(input: DeletePurchaseInput!): DeletePurchaseResult!
@@ -7642,10 +7646,13 @@ type Mutation {
   """
   Sign one device out, leaving every other device signed in.
   
-  Ends every live session bound to that device, including each token in a
-  rotation lineage that started there. Deliberately narrower than a
-  revoke-all: it does not touch other devices' sessions, their access tokens,
-  or their device credentials.
+  Ends every live session bound to that device: each token in a rotation
+  lineage that started there, that device's stored credential, and the access
+  token it is already holding. A client signing out the device it runs on
+  MUST expect its own next request to be refused.
+  
+  Deliberately narrower than a revoke-all: it does not touch other devices'
+  sessions, their access tokens, or their device credentials.
   """
   revokeDeviceSessions(input: RevokeDeviceSessionsInput!): RevokeDeviceSessionsResult!
   """Send a test notification of a specific type to the current user."""
@@ -8614,7 +8621,6 @@ type Pantry {
   location: String
   metadata: JSON
   name: String!
-  recentlyDeletedItems(limit: Int = 10): [PantryItem!]!
   stats: PantryStats!
   storageLocationsConnection(after: String, before: String, first: Int, last: Int, orderBy: StorageLocationOrderBy): StorageLocationConnection!
   suggestions(expirationDays: Int = 7, limit: Int = 10, sources: [PantrySuggestionSource!]): [PantryItemSuggestion!]!
@@ -9112,7 +9118,7 @@ type PantryItemSuggestion {
   """Item name for display"""
   name: String!
   """
-  Pantry item ID - present for LOW_STOCK, EXPIRING_SOON, and RECENTLY_DELETED sources
+  Pantry item ID - present for LOW_STOCK and EXPIRING_SOON; null for RECENTLY_DELETED, whose stack no longer exists
   """
   pantryItemId: ID
   """Popularity ranking position (for POPULAR source)"""
@@ -9700,23 +9706,46 @@ type Query {
   """List compatible units for an item with conversion metadata."""
   compatibleUnitsForItem(currentUnitId: ID, itemId: ID!): [CompatibleUnit!]!
   """
-  Get ranked consumption-eligible units for a catalog item.
-  Returns units in priority order: the stack's own portion unit → default
-  consume unit → curated → auto measurement → tracking unit → portions.
-  Requires an itemId (catalog item) plus the pantry item's tracking unit context.
+  Ranked consumption-eligible units for a CATALOG item, for previewing what
+  the catalog alone supports.
+  
+  The stack's own measurement profile decides what a real pantry item accepts,
+  so pass as much of it as you hold — or call consumptionUnitsForPantryItem,
+  which reads the whole profile server-side and is what a client wants.
   """
   consumptionUnitsForItem(
+    """The stack's density in g/mL, when it overrides the item's."""
+    densityOverride: Float
     itemId: ID!
+    """
+    The net weight of ONE tracking unit. Without it a stack that records one
+    is read as tracking quantity alone, and the measured units drop out.
+    """
+    netWeight: Float
     netWeightUnitId: ID
     """
     The stack's own portion unit (PantryItem.portionUnitId), when it defines
     one. Pass it and "clove" is offered first for a stack that says a bulb
-    holds ten; omit it and the list is what the catalog alone supports, which
-    is narrower than what createPantryItemUsage accepts for that stack.
+    holds ten.
     """
     portionUnitId: ID
+    """
+    How many portion units one tracking unit holds. Travels with
+    portionUnitId — one without the other defines nothing.
+    """
+    portionsPerTrackingUnit: Float
     trackingUnitId: ID!
   ): [RankedUnit!]!
+  """
+  Ranked units this pantry stack can be consumed in, best first: its own
+  portion unit → the item's default consume unit → curated → the net-weight
+  family → the tracking unit → portions.
+  
+  Every unit returned converts into what the stack measures, so each one is a
+  unit createPantryItemUsage accepts. Re-query after any edit to the stack's
+  unit, net weight, portion definition or density — all four change the answer.
+  """
+  consumptionUnitsForPantryItem(pantryItemId: ID!): [RankedUnit!]!
   """
   Convert quantity between units with item context
   Supports both same-type (cup→tbsp) and cross-type (cup→gram) conversions
@@ -9884,8 +9913,9 @@ type Query {
   """
   resolveShareLink(code: String!): ResolveShareLinkResult
   """
-  Get ranked restock-eligible units for a pantry item.
-  Returns units in priority order: tracking unit → curated retail → auto measurement.
+  Ranked units this pantry stack can be restocked in, best first: the tracking
+  unit → its own portion unit → curated retail units → the net-weight family.
+  Every unit returned converts into what the stack measures.
   """
   restockUnitsForItem(pantryItemId: ID!): [RankedUnit!]!
   """Fetch a single saved recipe by its ID."""

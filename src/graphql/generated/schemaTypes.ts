@@ -7286,7 +7286,11 @@ export type Mutation = {
    * already-deleted pantry before it could converge.
    */
   deletePantry: DeletePantryResult;
-  /** Delete a pantry item (soft delete). */
+  /**
+   * Remove a pantry item. Final: the row is destroyed, and what it still held
+   * is written to the consumption history, which outlives it. Adding the item
+   * again — in any unit — opens a fresh stack.
+   */
   deletePantryItem: DeletePantryItemResult;
   /** Delete a purchase record. */
   deletePurchase: DeletePurchaseResult;
@@ -7586,10 +7590,13 @@ export type Mutation = {
   /**
    * Sign one device out, leaving every other device signed in.
    *
-   * Ends every live session bound to that device, including each token in a
-   * rotation lineage that started there. Deliberately narrower than a
-   * revoke-all: it does not touch other devices' sessions, their access tokens,
-   * or their device credentials.
+   * Ends every live session bound to that device: each token in a rotation
+   * lineage that started there, that device's stored credential, and the access
+   * token it is already holding. A client signing out the device it runs on
+   * MUST expect its own next request to be refused.
+   *
+   * Deliberately narrower than a revoke-all: it does not touch other devices'
+   * sessions, their access tokens, or their device credentials.
    */
   revokeDeviceSessions: RevokeDeviceSessionsResult;
   /** Send a test notification of a specific type to the current user. */
@@ -11289,7 +11296,6 @@ export type Pantry = {
   location: Maybe<Scalars['String']['output']>;
   metadata: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
-  recentlyDeletedItems: Array<PantryItem>;
   stats: PantryStats;
   storageLocationsConnection: StorageLocationConnection;
   suggestions: Array<PantryItemSuggestion>;
@@ -11333,17 +11339,6 @@ export type PantryLedgerAnalyticsArgs = {
   filters?: InputMaybe<AnalyticsFilters>;
   granularity?: InputMaybe<PeriodGranularity>;
   itemId?: InputMaybe<Scalars['ID']['input']>;
-};
-
-
-/**
- * Pantry/storage location for a home.
- * Not cached at the response level: child PantryItem mutations happen frequently and
- * TTL-based caching can't be invalidated mid-window. Server-side coherence is handled
- * via DataLoader + Redis invalidation in resolvers (invalidatePantryItemCache).
- */
-export type PantryRecentlyDeletedItemsArgs = {
-  limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -11899,7 +11894,7 @@ export type PantryItemSuggestion = {
   minQuantity: Maybe<Scalars['Float']['output']>;
   /** Item name for display */
   name: Scalars['String']['output'];
-  /** Pantry item ID - present for LOW_STOCK, EXPIRING_SOON, and RECENTLY_DELETED sources */
+  /** Pantry item ID - present for LOW_STOCK and EXPIRING_SOON; null for RECENTLY_DELETED, whose stack no longer exists */
   pantryItemId: Maybe<Scalars['ID']['output']>;
   /** Popularity ranking position (for POPULAR source) */
   popularityRank: Maybe<Scalars['Int']['output']>;
@@ -12488,12 +12483,24 @@ export type Query = {
   /** List compatible units for an item with conversion metadata. */
   compatibleUnitsForItem: Array<CompatibleUnit>;
   /**
-   * Get ranked consumption-eligible units for a catalog item.
-   * Returns units in priority order: the stack's own portion unit → default
-   * consume unit → curated → auto measurement → tracking unit → portions.
-   * Requires an itemId (catalog item) plus the pantry item's tracking unit context.
+   * Ranked consumption-eligible units for a CATALOG item, for previewing what
+   * the catalog alone supports.
+   *
+   * The stack's own measurement profile decides what a real pantry item accepts,
+   * so pass as much of it as you hold — or call consumptionUnitsForPantryItem,
+   * which reads the whole profile server-side and is what a client wants.
    */
   consumptionUnitsForItem: Array<RankedUnit>;
+  /**
+   * Ranked units this pantry stack can be consumed in, best first: its own
+   * portion unit → the item's default consume unit → curated → the net-weight
+   * family → the tracking unit → portions.
+   *
+   * Every unit returned converts into what the stack measures, so each one is a
+   * unit createPantryItemUsage accepts. Re-query after any edit to the stack's
+   * unit, net weight, portion definition or density — all four change the answer.
+   */
+  consumptionUnitsForPantryItem: Array<RankedUnit>;
   /**
    * Convert quantity between units with item context
    * Supports both same-type (cup→tbsp) and cross-type (cup→gram) conversions
@@ -12661,8 +12668,9 @@ export type Query = {
    */
   resolveShareLink: Maybe<ResolveShareLinkResult>;
   /**
-   * Get ranked restock-eligible units for a pantry item.
-   * Returns units in priority order: tracking unit → curated retail → auto measurement.
+   * Ranked units this pantry stack can be restocked in, best first: the tracking
+   * unit → its own portion unit → curated retail units → the net-weight family.
+   * Every unit returned converts into what the stack measures.
    */
   restockUnitsForItem: Array<RankedUnit>;
   /** Fetch a single saved recipe by its ID. */
@@ -12862,10 +12870,18 @@ export type QueryCompatibleUnitsForItemArgs = {
 
 
 export type QueryConsumptionUnitsForItemArgs = {
+  densityOverride?: InputMaybe<Scalars['Float']['input']>;
   itemId: Scalars['ID']['input'];
+  netWeight?: InputMaybe<Scalars['Float']['input']>;
   netWeightUnitId?: InputMaybe<Scalars['ID']['input']>;
   portionUnitId?: InputMaybe<Scalars['ID']['input']>;
+  portionsPerTrackingUnit?: InputMaybe<Scalars['Float']['input']>;
   trackingUnitId: Scalars['ID']['input'];
+};
+
+
+export type QueryConsumptionUnitsForPantryItemArgs = {
+  pantryItemId: Scalars['ID']['input'];
 };
 
 
