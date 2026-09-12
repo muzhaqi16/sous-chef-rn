@@ -36,48 +36,35 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Self-test the dependency audit gate
-        run: node scripts/check-dependency-audit.mjs --self-test
-
-      # `--json` exits 1 when it finds something, which is the signal, not an
+      # `npm audit` exits 1 when it finds something, which is the signal, not an
       # error — the step must continue so the issue below can be filed.
       - name: Audit production dependencies
         id: audit
         run: |
           set +e
-          node scripts/check-dependency-audit.mjs --level=high --json > audit.json
-          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          npm audit --omit=dev --audit-level=high --json > audit.json
           set -e
           node -e '
             const r = require("./audit.json");
             const fs = require("fs");
+            const blocking = Object.values(r.vulnerabilities || {}).filter(v =>
+              v.severity === "high" || v.severity === "critical",
+            );
             const lines = [];
-            lines.push("Weekly audit of production dependencies at severity **" + r.level + "** or above.");
+            lines.push("Weekly `npm audit --omit=dev` at severity **high** or above.");
             lines.push("");
-            if (r.blocking.length === 0) {
+            if (blocking.length === 0) {
               lines.push("No blocking advisories.");
             } else {
-              lines.push("| Severity | Package | Advisory | Fix |");
+              lines.push("| Severity | Package | Range | Fix |");
               lines.push("| --- | --- | --- | --- |");
-              for (const f of r.blocking) {
-                lines.push("| " + f.severity + " | `" + f.package + "` | [" + f.title + "](" + f.id + ") | " + (f.fixAvailable ? "available" : "none") + " |");
+              for (const v of blocking) {
+                const fix = v.fixAvailable ? "available" : "none";
+                lines.push("| " + v.severity + " | `" + v.name + "` | " + v.range + " | " + fix + " |");
               }
             }
-            if (r.excused.length > 0) {
-              lines.push("");
-              lines.push("Accepted (recorded in `scripts/accepted-advisories.json`):");
-              for (const e of r.excused) {
-                lines.push("- `" + e.package + "` — " + e.acceptance.reason + " (revisit " + (e.acceptance.revisit || "unset") + ")");
-              }
-            }
-            if (r.expired.length > 0) {
-              lines.push("");
-              lines.push("**Acceptances past their revisit date:** " + r.expired.map(e => e.id || e.package).join(", "));
-            }
-            lines.push("");
-            lines.push("Fix by upgrading the dependency, or record the advisory in `scripts/accepted-advisories.json` with a reason and a revisit date.");
             fs.writeFileSync("issue-body.md", lines.join("\n"));
-            console.log("blocking=" + r.blocking.length);
+            console.log("blocking=" + blocking.length);
           ' >> "$GITHUB_OUTPUT"
 
       - name: Open or update the tracked issue

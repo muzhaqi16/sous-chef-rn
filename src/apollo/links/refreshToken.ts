@@ -8,7 +8,7 @@ import {
   isSupersededRefreshCode,
 } from '#/utils/authErrorCodes';
 import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { isSuccessPayload } from '#/utils/errors/mutationPayload';
 import { useStore } from '#store';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
@@ -300,7 +300,11 @@ const performTokenRefresh = async (): Promise<string | null> => {
           `Refresh rejected by the server (${error.code}), triggering logout with cache clear`,
         );
         state.tokenRefreshFailed('auth_rejected');
-        throw new Error('Refresh token expired');
+        // OUR message, the server's CODE. Flattening this to a bare `Error`
+        // loses the code, and the offline queue then classifies a rejected
+        // refresh as an unknown permanent failure and WITHDRAWS the queued
+        // write instead of parking it for the next sign-in.
+        throw new RefreshRejectedError(error.code, 'Refresh token expired');
       }
 
       logger.error(
@@ -342,7 +346,13 @@ const performTokenRefresh = async (): Promise<string | null> => {
         'Refresh token expired (genuine auth error), triggering logout with cache clear',
       );
       state.tokenRefreshFailed('auth_rejected');
-      throw new Error('Refresh token expired');
+      // Coded for the same reason as the branch above: the queue parks an
+      // `auth` failure and withdraws an uncoded one. This path has no code of
+      // its own, so it names the refusal it just classified.
+      throw new RefreshRejectedError(
+        ErrorCode.AuthRefreshTokenInvalid,
+        'Refresh token expired',
+      );
     }
 
     // Unknown error after max retries — preserve auth state, defer refresh

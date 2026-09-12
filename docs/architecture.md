@@ -132,27 +132,19 @@ offline tab preloader. They are not reusable and a sibling app writes its own, s
 they sit outside the kit rather than being excused from its rule.
 
 `src/components/` and `src/hooks/` together are the **kit** — the layer a sibling
-app reuses wholesale. `scripts/check-layer-purity.mjs` holds what the kit may know
-about a feature: an import of `#features/…`, a colocated `.graphql` document, or a
-file named after a domain. Generated-schema-type imports are counted but do not
-fail — that coupling only costs when a sibling app has a different schema.
-
-Both halves are at zero and hold no baseline, so both are invariants.
+app reuses wholesale. It does not import `#features/…` (an
+`import/no-restricted-paths` zone in `.eslintrc.js`), own a `.graphql`
+document, or carry a file named after a domain.
 
 **A module in the shared layers is there because more than one feature uses it.**
-`scripts/check-single-consumer.mjs` resolves every import through the tsconfig
-aliases, attributes each to a feature by path, and follows the reach TRANSITIVELY
-— a hook used only by an atom that only pantry renders belongs to pantry too. It
-went 101 → 0 and holds no baseline either: a module with a single consumer is one
-to move, not a number to record. It supersedes the kernel NAME test, which only
-ever approximated the same question by asking whether a filename looked
-domain-ish.
+Reach counts TRANSITIVELY — a hook used only by an atom that only pantry renders
+belongs to pantry too. A module with a single consumer is one to move.
 
 `src/domain/` is the exception the rule needed: logic several features share, in
 neither a domain-free kit nor one feature's internals. Admission is by the same
 consumer count — two or more features, or it belongs in the one that uses it.
 
-`scripts/check-feature-shape.mjs` ratchets the other half: every feature has
+Every feature has the same shape:
 `manifest.ts` (whose `id` equals its directory name), `screens/`, `hooks/` and
 `components/`, and a feature with more than one screen declares
 `screens/registration.ts`. A `.graphql` document beside its consumer is the
@@ -468,9 +460,8 @@ Chrome is composed once, not per screen.
   `header` (`standard | tab | collapsing | none`, with title, actions, back,
   close, and the offline pill), `scroll` (`none | scroll | form | list`),
   `gutter`, `refresh` and `state`. It never applies the top inset — the
-  navigator does that, and a screen adding its own is the `double-inset` half of
-  `check-screen-scaffold`; a bare `<SafeAreaView>` with no `edges` insets all
-  four sides and is how it usually happens. `scroll: 'list'` supplies the
+  navigator does that; a bare `<SafeAreaView>` with no `edges` insets all
+  four sides and is how a double inset usually happens. `scroll: 'list'` supplies the
   container only: a pull-to-refresh control has to reach the FlashList itself,
   never the scaffold, or RNGH cannot route the scroll gesture into it.
 - **`Sheet`** (`src/components/templates/Sheet.tsx`) is a bottom sheet's shell:
@@ -495,9 +486,6 @@ the prop — a `TextInput`, a shared style module — spreads
 `...theme.type.<role>`. `size`, `weight` and `lineHeight` remain on `Text` as
 kit-only escape hatches; outside `src/components/**` they are a second
 definition of a role that already exists.
-`node scripts/check-typography-roles.mjs` holds both halves: `off-role-text` is
-at zero, and `stylesheet-type` is a shrinking list of the blocks no role
-expresses (a responsive size map, a 10px badge, a Skia draw call).
 
 ### Unistyles 3
 
@@ -565,7 +553,7 @@ src/
 ├── assets/          Bundled images and fonts
 ├── components/      Shared UI in four TIERS: atoms · molecules · organisms ·
 │                    templates, plus providers and performance. A component's
-│                    tier is computed from what it renders (check-component-tier)
+│                    tier follows from what it renders
 ├── config/          Generated env config
 ├── constants/
 ├── context/         App-level React context

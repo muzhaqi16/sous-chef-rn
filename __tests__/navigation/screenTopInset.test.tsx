@@ -16,12 +16,8 @@ import { Text } from '#components/atoms/Text';
  * The top inset is applied by the NAVIGATOR, once per screen, and `Screen`
  * never applies it. Two writers are one status bar of dead space that only
  * shows on a device with a notch — invisible to typecheck, lint and every
- * other test.
- *
- * `check-screen-scaffold` holds the static half: a screen naming `insets.top`
- * or a bare `SafeAreaView` is a finding. What it cannot see is the COMPOSITION
- * — a layout and a template that each apply the inset correctly on their own
- * and twice together. That is what renders here.
+ * other test. A layout and a template can each apply the inset correctly on
+ * their own and twice together, so the COMPOSITION is what renders here.
  */
 
 jest.mock('#components/organisms/Header', () => {

@@ -563,7 +563,7 @@ node scripts/check-startup-origin.mjs
 
 Guarded by that script, which transforms `index.js` with the real plugin and
 asserts the clock module is the first emitted `require` AND that it is
-dependency-free. Wired into `pre-push` and `npm run check:startup-origin`.
+dependency-free. Wired into `pre-commit` and `npm run check:startup-origin`.
 Pinned to a Metro internal path on purpose: if an upgrade moves the plugin the
 check fails loudly, because the guarantee is a property of that transform.
 
@@ -833,6 +833,11 @@ at all on an array-`keyArgs` field. `skipUnmatchedArgVariants` was written that
 way, so it returned "do not skip" for every variant and the cross-home leak it
 exists to prevent — a storage location restored after a refused delete in home A
 appearing in home B's list — was still live under a passing suite.
+`skipUnmatchedFilterVariants` is the same guard for the nested `filters`
+argument, and its consumers (`mealTemplates`, `User.notificationsConnection`)
+are array-`keyArgs` fields, so it has to read the colon form too: both helpers
+share `parseStoreFieldArgs`, and `cacheUpdaters.test.ts` captures the real store
+key off `makeCache()` so a fixture cannot drift from Apollo's form.
 
 Parse by whichever delimiter comes FIRST: the paren form also contains a `:`
 inside its JSON (at index 17 in the sample above), so testing for `:` alone

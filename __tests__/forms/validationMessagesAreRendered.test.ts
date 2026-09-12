@@ -203,8 +203,7 @@ describe('validation messages have a rendering consumer', () => {
  * a `deps` array, which react-hook-form turns into the same `trigger` call.
  *
  * Edit Pantry Item shipped without one and with the unit id it reads held in
- * `useState`, so "Please select a unit" could never clear. `check-form-state`
- * cannot see that: it exempts any file calling `useForm`.
+ * `useState`, so "Please select a unit" could never clear.
  */
 
 /** Every `.ts` under `dir`, recursively, skipping tests and generated code. */

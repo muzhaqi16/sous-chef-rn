@@ -53,6 +53,7 @@ import { client } from '../../client';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { reconnectWebSocket } from '../wsLink';
 import { registerApolloClient } from '#/apollo/clientRegistry';
+import { isAuthRefusalCode } from '#/utils/authErrorCodes';
 
 const mockedJwtDecode = jwtDecode as jest.MockedFunction<typeof jwtDecode>;
 const mockedClient = client as jest.Mocked<typeof client>;
@@ -374,6 +375,35 @@ describe('refreshToken', () => {
       observable.subscribe({
         error: () => {
           expect(mockTokenRefreshFailed).toHaveBeenCalledWith('auth_rejected');
+          done();
+        },
+      });
+    });
+
+    it('rejects with a CODED error so the offline queue parks the write', done => {
+      (mockedUseStore.getState as jest.Mock).mockReturnValue({
+        refreshToken: 'mock-refresh-token',
+        tokenRefreshFailed: jest.fn(),
+        setTokens: jest.fn(),
+        setNeedsTokenRefresh: jest.fn(),
+      });
+      (mockedClient.mutate as jest.Mock).mockRejectedValue({
+        graphQLErrors: [
+          { extensions: { code: 'UNAUTHENTICATED' }, message: 'Token expired' },
+        ],
+      });
+      (mockedIsNetworkError as jest.Mock).mockReturnValue(false);
+
+      const observable = attemptTokenRefresh(
+        mockOperation,
+        createMockForward(),
+      );
+      observable.subscribe({
+        error: (err: { code?: string }) => {
+          // A bare `Error` here classifies `unknown` in the offline queue, which
+          // WITHDRAWS the queued write instead of parking it for the next
+          // sign-in. Observed on an emulator: an offline create was discarded.
+          expect(isAuthRefusalCode(err.code ?? '')).toBe(true);
           done();
         },
       });

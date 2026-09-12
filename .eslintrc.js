@@ -68,8 +68,7 @@ const RESTRICTED_SYNTAX = [
     message:
       'Use filterByTerm / matchesTerm from #hooks/search/useLocalSearch for a list search, or searchUtils for the fuzzy variant. A hand-rolled filter re-decides what an empty term, a null field and whitespace mean.',
   },
-  // Promoted from `check-design-tokens` once its list reached zero: 106 files
-  // each picked their own hairline. A literal is a rule the theme cannot
+  // 106 files each picked their own hairline before `theme.borderWidth` existed. A literal is a rule the theme cannot
   // change, and it is the one visual property that must NOT follow the density
   // setting — which is exactly what `theme.borderWidth` encodes.
   {
@@ -266,9 +265,11 @@ const RESTRICTED_IMPORT_PATHS = [
       'TouchableNativeFeedback',
       'TouchableWithoutFeedback',
       'ActivityIndicator',
+      'FlatList',
+      'SectionList',
     ],
     message:
-      'Use the project re-exports/atoms for app-wide consistency: StyleSheet → "react-native-unistyles"; Text → "#components/atoms/Text" (role/tone typography, where a role carries size, weight and leading together); Pressable → "#components/atoms/themedComponents" (or AppPressable/PressableScale for press feedback, or react-native-gesture-handler\'s Pressable for gesture composition). TextInput → "#components/atoms/themedComponents" (ThemedTextInput carries the theme\'s field color, placeholder, keyboard appearance and caret; a raw one renders dark text on the dark theme). ActivityIndicator → one of the themed spinners in "#components/atoms/themedComponents" (Themed, Muted, Error, Success, OnPrimary, OnError); a raw one renders in the platform\'s default colour rather than the theme\'s. Touchables are deprecated — use Pressable. For RN Text/Pressable *types*, import `type { TextProps, TextStyle, PressableProps }` (type-only imports are fine); for a TextInput ref import `type { ThemedTextInputRef }` from the same atom, because this rule matches the name whether or not the import is type-only.',
+      'Use the project re-exports/atoms for app-wide consistency: FlatList/SectionList → FlashList with an explicit renderScrollComponent (RN lists do not take part in the gesture arbitration swipeable rows need); StyleSheet → "react-native-unistyles"; Text → "#components/atoms/Text" (role/tone typography, where a role carries size, weight and leading together); Pressable → "#components/atoms/themedComponents" (or AppPressable/PressableScale for press feedback, or react-native-gesture-handler\'s Pressable for gesture composition). TextInput → "#components/atoms/themedComponents" (ThemedTextInput carries the theme\'s field color, placeholder, keyboard appearance and caret; a raw one renders dark text on the dark theme). ActivityIndicator → one of the themed spinners in "#components/atoms/themedComponents" (Themed, Muted, Error, Success, OnPrimary, OnError); a raw one renders in the platform\'s default colour rather than the theme\'s. Touchables are deprecated — use Pressable. For RN Text/Pressable *types*, import `type { TextProps, TextStyle, PressableProps }` (type-only imports are fine); for a TextInput ref import `type { ThemedTextInputRef }` from the same atom, because this rule matches the name whether or not the import is type-only.',
   },
   {
     name: 'react',
@@ -291,6 +292,25 @@ const RESTRICTED_IMPORT_PATHS = [
     name: 'react-native-permissions',
     message:
       "Use `PermissionService` from '#services/permissions/PermissionService'. It normalises the platform statuses to granted/denied/blocked/undetermined, treats LIMITED as granted and UNAVAILABLE as blocked, and owns `openSettings()` for the twice-denied case that a re-prompt cannot resolve.",
+  },
+  {
+    name: 'fraction.js',
+    message:
+      'Use formatQuantityForDisplay / formatQuantityAsFraction from \'#/utils/formatQuantity\'. A second fraction table decides its own denominators and precision, so the same 1/3 cup reads as "0.33" on one screen and "0.33333334" on the next.',
+  },
+  {
+    name: 'date-fns',
+    importNames: [
+      'format',
+      'formatDistance',
+      'formatDistanceToNow',
+      'formatDistanceStrict',
+      'formatRelative',
+      'formatDuration',
+      'lightFormat',
+    ],
+    message:
+      "Use the shared formatters in '#/utils/formatters/date' or '#/utils/dateUtils'. A direct format() call takes no locale, so the date stays English after a language change.",
   },
   {
     name: 'react-native-turbo-image',
@@ -514,6 +534,14 @@ module.exports = {
             message:
               'Use renderHookWithApollo / renderWithApollo from __tests__/helpers/apolloMockProvider.tsx instead. Direct jest.mock of @apollo/client/react couples tests to operation names, bypasses the real cache, and breaks under refactors. See CLAUDE.md "Apollo Test Patterns" for the migration recipe + 7 gotchas.',
           },
+          {
+            // Scoped to suites that use the shared helper: a link test wiring
+            // its own client is exercising the link, not the cache.
+            selector:
+              'Program:has(ImportDeclaration[source.value=/apolloMockProvider$/]) NewExpression[callee.name="InMemoryCache"]',
+            message:
+              'Use makeCache() from __tests__/helpers/apolloMockProvider (or let renderWithApollo build it). A bare InMemoryCache has no type policies and no possibleTypes, so the suite exercises a cache the app never runs.',
+          },
         ],
         // Tests reach into private class members via bracket notation
         // (e.g. `manager['privateMethod']`), which is the only type-safe way
@@ -552,25 +580,19 @@ module.exports = {
       // build with typecheck, lint and the full suite green. This rule is what
       // sees that shape.
       //
-      // The baseline is the exclusion list, and it is a debt list that may only
-      // shrink: three quarters of what it records are `?.` and null guards on
+      // `scripts/no-unnecessary-condition.exclusions.json` is a debt list that
+      // may only shrink: three quarters of what it records are `?.` and null guards on
       // GraphQL data that codegen types as non-nullable and the server does not
       // guarantee. A guard is never deleted to satisfy the rule — an entry
       // leaves when the branch is dead or the over-promising type is widened
       // where it is declared. `eslint-comments/no-use` bans disable comments, so
       // the file list is the only exemption there is.
       //
-      // `node scripts/check-unnecessary-condition.mjs` counts PER FILE, which
-      // this cannot: an excluded file is excluded whole, so nothing here would
-      // notice a baselined file getting worse.
-      //
       // Nothing else may declare this rule — an `overrides` block replaces a
       // rule's config rather than merging it, so a second block silently wins.
       files: ['src/**/*.{ts,tsx}'],
       excludedFiles: [
-        ...Object.keys(
-          require('./scripts/check-unnecessary-condition.baseline.json').counts,
-        ),
+        ...require('./scripts/no-unnecessary-condition.exclusions.json'),
         '**/__tests__/**',
         '**/__mocks__/**',
         '**/__perf__/**',
@@ -597,9 +619,7 @@ module.exports = {
       // Covers app code, tests and the Detox suite. `scripts/`, the root config
       // files and `.graphql` stay out: each has a genuine false positive it cannot
       // express, since `no-warning-comments` matches plain substrings —
-      // `device.graphql`'s "used to push notifications" means "used FOR", and
-      // `check-comment-budget.mjs` has to quote these very terms to document
-      // the ban.
+      // `device.graphql`'s "used to push notifications" means "used FOR".
       //
       // `no longer` is the blunt one, and deliberately kept: clearing it from
       // tests took 26 rewords that were not history at all, mostly a test
@@ -949,6 +969,9 @@ module.exports = {
             // A test asserting on what device storage HOLDS has to read it.
             '#storage/mmkv': true,
             '#/storage/mmkv': true,
+            // A test computes its expected value with the raw library.
+            'date-fns': true,
+            'fraction.js': true,
           },
         }),
       },
@@ -1029,6 +1052,33 @@ module.exports = {
           allow: {
             '#components/atoms/BottomSheetKeyboardAwareScrollView': true,
           },
+        }),
+      },
+    },
+    {
+      // A paged photo carousel: no swipeable rows, and FlashList has no
+      // `pagingEnabled`.
+      files: [
+        'src/features/catalog/ui/ItemPhotoCarousel.tsx',
+        'src/features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer.tsx',
+      ],
+      rules: {
+        'no-restricted-imports': restrictedImports({
+          allow: { 'react-native': ['FlatList'] },
+        }),
+      },
+    },
+    {
+      // The formatters ARE the mechanism the ban points at.
+      files: [
+        'src/utils/formatQuantity.ts',
+        'src/utils/fractionUtils.ts',
+        'src/utils/dateUtils.ts',
+        'src/utils/formatters/date.ts',
+      ],
+      rules: {
+        'no-restricted-imports': restrictedImports({
+          allow: { 'fraction.js': true, 'date-fns': true },
         }),
       },
     },
@@ -1218,8 +1268,7 @@ module.exports = {
     // The SHARED-layer direction (src/components, src/hooks reaching into a
     // feature) is not enforced here for graphql/ and top-level hooks/: it has
     // 76 existing edges, and expressing that as `except` clauses would be a
-    // rule that excuses more than it forbids. `scripts/check-layer-purity.mjs`
-    // ratchets those instead — baselined, and only allowed to shrink.
+    // rule that excuses more than it forbids.
     //
     // One zone is needed per feature because "same feature" cannot be
     // expressed as a glob — each zone enumerates what's PRIVATE in that
@@ -1381,7 +1430,7 @@ module.exports = {
           //
           // These zones enforce only the direction, which is the unambiguous
           // half. Whether a given file sits at the right level is a judgement
-          // `check-single-consumer` and the reclassification worklist carry.
+          // the reclassification worklist carries.
           //
           // The two `except` entries are the only upward imports in the tree.
           // They are named rather than the rule relaxed, and they go away when
@@ -1566,13 +1615,6 @@ module.exports = {
           // one: it sits under apollo/ by location, but its job is turning a
           // refusal's `field` and `code` into localized copy, which is
           // presentation.
-          //
-          // The companion half — importing a data-access NAME from
-          // `@apollo/client` — is `check-data-layer-boundary.mjs`, whose
-          // baseline is EMPTY and may only stay so. It lives there rather than
-          // in `no-restricted-imports` because an override covering these globs
-          // would REPLACE the rule for the eight kit files that already carry a
-          // narrower one, silently un-banning what those name.
           {
             target: [
               './src/features/*/screens/**',

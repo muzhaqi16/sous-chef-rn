@@ -38,10 +38,5 @@ The tier is what a component RENDERS, and it is computed rather than agreed:
 A file inside a component FAMILY folder (`SwipeableItem/SwipeActions.tsx`) is
 internal to that family and takes the family's tier; only the entry is placed.
 
-`node scripts/check-component-tier.mjs` holds this, and its baseline is EMPTY —
-which makes it an invariant, not a backlog. The taxonomy was documentation
-before, and documentation drifted: this file's own examples used to contradict
-its own rule.
-
 A component that belongs to exactly one feature does not go in any of these; it
 goes in that feature's own `components/` folder.

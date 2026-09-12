@@ -52,8 +52,7 @@ export const AppPressable: React.FC<AppPressableProps> = ({
     <Pressable
       {...rest}
       // RN already sets `accessible`, so children collapse into one node and
-      // their text is the name; an icon-only one needs a label, which
-      // `check-a11y-names.mjs` requires.
+      // their text is the name; an icon-only one needs an accessibilityLabel.
       accessibilityRole={accessibilityRole ?? (onPress ? 'button' : undefined)}
       onPress={onPress ? handlePress : undefined}
       android_ripple={android_ripple ?? (ripple ? RIPPLE.SUBTLE : undefined)}

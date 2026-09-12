@@ -63,7 +63,6 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
   safeEvict: jest.fn(),
   safeEvictMany: jest.fn(),
-  gcResetResultCache: jest.fn(),
 }));
 
 jest.mock('#/utils/finallyHelpers');

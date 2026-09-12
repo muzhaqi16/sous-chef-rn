@@ -61,6 +61,26 @@ const ALLOWED_DROPS: Record<string, string[]> = {
     // A test asserting on what device storage HOLDS has to read it.
     '#storage/mmkv#*',
     '#/storage/mmkv#*',
+    // A test computes its expected value with the raw library.
+    'fraction.js#*',
+    'date-fns#format',
+    'date-fns#formatDistance',
+    'date-fns#formatDistanceToNow',
+    'date-fns#formatDistanceStrict',
+    'date-fns#formatRelative',
+    'date-fns#formatDuration',
+    'date-fns#lightFormat',
+  ],
+  // The formatters ARE the mechanism the ban points at.
+  'src/utils/formatQuantity.ts': [
+    'fraction.js#*',
+    'date-fns#format',
+    'date-fns#formatDistance',
+    'date-fns#formatDistanceToNow',
+    'date-fns#formatDistanceStrict',
+    'date-fns#formatRelative',
+    'date-fns#formatDuration',
+    'date-fns#lightFormat',
   ],
   'src/hooks/navigation/useAppNavigation.ts': [
     '@react-navigation/native#useNavigation',

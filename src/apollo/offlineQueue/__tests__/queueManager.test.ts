@@ -16,6 +16,7 @@ import {
   ReplayRejectedError,
 } from '../queueErrorPolicy';
 import { makeCache } from '#/apollo/cache';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { Telemetry } from '#/services/telemetry';
 
 // Mock the store module
@@ -719,6 +720,31 @@ describe('QueueManager', () => {
         expect.objectContaining({ mutationId: 'delta-1' }),
       );
       expect(queueStore.removeMutation).toHaveBeenCalledWith('delta-1');
+    });
+
+    it('parks the write when the refresh token is rejected, rather than withdrawing it', async () => {
+      const failureHandler = jest.fn();
+      manager.setFailureHandler(failureHandler);
+      const mutation = makeMutation({
+        id: 'refresh-dead',
+        retryCount: 3,
+        maxRetries: 3,
+      });
+
+      // What `performTokenRefresh` throws once the server refuses the refresh.
+      // Device-observed: flattened to a bare Error it classified `unknown`
+      // and the queued create was withdrawn.
+      const result = await handleMutationError(mutation, {
+        message: 'Refresh token expired',
+        code: ErrorCode.AuthRefreshTokenInvalid,
+      });
+
+      expect(result.success).toBe(false);
+      expect(failureHandler).not.toHaveBeenCalled();
+      expect(queueStore.markMutationFailed).toHaveBeenCalledWith(
+        'refresh-dead',
+        expect.objectContaining({ type: 'auth' }),
+      );
     });
 
     // The API documents each of these as clearing on its own. Withdrawing the

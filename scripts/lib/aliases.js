@@ -52,16 +52,4 @@ const jestModuleNameMapper = () =>
     ]),
   );
 
-/**
- * `[['#components/', 'src/components/'], …]`, longest alias first — the shape a
- * plain prefix-replacing script (`check-dead-modules.mjs`) wants. A hand-kept
- * copy drifts: a module reached only through a missing alias reads as
- * unreferenced, one reached through a stale alias reads as referenced.
- */
-const prefixPairs = () =>
-  bySpecificity(Object.entries(prefixes())).map(([alias, target]) => [
-    alias === '#' ? '#/' : `${alias}/`,
-    `${target.replace(/^\.\//, '')}/`,
-  ]);
-
-module.exports = { babelAliases, jestModuleNameMapper, prefixPairs };
+module.exports = { babelAliases, jestModuleNameMapper };

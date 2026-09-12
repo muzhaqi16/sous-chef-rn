@@ -26,7 +26,7 @@ export type TabAppearance = Record<
  */
 export interface FeatureManifest {
   /** Unique feature identifier. Must equal the directory name under
-   *  `src/features/` — `scripts/check-feature-shape.mjs` enforces it. */
+   *  `src/features/`. */
   id: string;
 
   /**

@@ -9,6 +9,11 @@ import {
   createRemoveFromParentArrayUpdater,
   skipUnmatchedFilterVariants,
   skipUnmatchedArgVariants,
+  setCachedFields,
+  applyOptimisticFragmentPatch,
+  safeEvict,
+  safeEvictMany,
+  adoptServerEntityId,
 } from '../cacheUpdaters';
 import { logger } from '#/utils/environment';
 
@@ -1099,5 +1104,196 @@ describe('skipUnmatchedArgVariants', () => {
   it('skips when the args cannot be parsed', () => {
     expect(skip('storageLocations:{not json')).toBe(true);
     expect(skip('storageLocations({not json)')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Direct cache helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * These five run against a real `makeCache()`, not the mock above: `safeEvict*`
+ * narrow on `instanceof InMemoryCache` and `applyOptimisticFragmentPatch` does a
+ * readFragment/writeFragment round trip, so a double would exercise the branch
+ * the production path never takes.
+ */
+describe('direct cache helpers', () => {
+  const STORAGE_LOCATION = gql`
+    fragment ProbeStorageLocation on StorageLocation {
+      id
+      name
+      updatedAt
+    }
+  `;
+
+  const seedLocation = (
+    cache: ApolloCache,
+    id: string,
+    name = 'Freezer',
+  ): void => {
+    cache.writeFragment({
+      id: `StorageLocation:${id}`,
+      fragment: STORAGE_LOCATION,
+      fragmentName: 'ProbeStorageLocation',
+      data: {
+        __typename: 'StorageLocation',
+        id,
+        name,
+        updatedAt: '2020-01-01T00:00:00.000Z',
+      },
+    });
+  };
+
+  const readLocation = (cache: ApolloCache, id: string) =>
+    cache.readFragment<{ name: string; updatedAt: string }>({
+      id: `StorageLocation:${id}`,
+      fragment: STORAGE_LOCATION,
+      fragmentName: 'ProbeStorageLocation',
+    });
+
+  describe('setCachedFields', () => {
+    it('writes scalar fields onto an existing record', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'loc-1');
+
+      setCachedFields(cache, 'StorageLocation', 'loc-1', { name: 'Pantry' });
+
+      expect(readLocation(cache, 'loc-1')?.name).toBe('Pantry');
+    });
+
+    it('leaves the cache alone for a record it does not hold', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'loc-1');
+      const before = cache.extract();
+
+      setCachedFields(cache, 'StorageLocation', 'absent', { name: 'Pantry' });
+
+      expect(cache.extract()).toEqual(before);
+    });
+  });
+
+  describe('applyOptimisticFragmentPatch', () => {
+    it('writes the patch permanently and hands back a working revert', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'loc-1', 'Freezer');
+
+      const revert = applyOptimisticFragmentPatch(
+        cache,
+        { typename: 'StorageLocation', id: 'loc-1' },
+        { fragment: STORAGE_LOCATION, fragmentName: 'ProbeStorageLocation' },
+        { name: 'Cupboard' },
+        'rename',
+      );
+
+      expect(readLocation(cache, 'loc-1')?.name).toBe('Cupboard');
+      // Not Apollo's optimistic layer: the write outlives a broadcast, which is
+      // what lets it survive a queued mutation.
+      expect(readLocation(cache, 'loc-1')?.updatedAt).not.toBe(
+        '2020-01-01T00:00:00.000Z',
+      );
+
+      revert();
+
+      expect(readLocation(cache, 'loc-1')).toEqual({
+        __typename: 'StorageLocation',
+        id: 'loc-1',
+        name: 'Freezer',
+        updatedAt: '2020-01-01T00:00:00.000Z',
+      });
+    });
+
+    it('writes nothing when the fragment reads incomplete, and its revert no-ops', () => {
+      const cache = makeCache();
+      const before = cache.extract();
+
+      const revert = applyOptimisticFragmentPatch(
+        cache,
+        { typename: 'StorageLocation', id: 'never-cached' },
+        { fragment: STORAGE_LOCATION, fragmentName: 'ProbeStorageLocation' },
+        { name: 'Cupboard' },
+        'rename',
+      );
+
+      expect(cache.extract()).toEqual(before);
+      revert();
+      expect(cache.extract()).toEqual(before);
+    });
+  });
+
+  describe('safeEvict', () => {
+    it('removes the entity from the extract', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'loc-1');
+      expect(cache.extract()).toHaveProperty('StorageLocation:loc-1');
+
+      safeEvict(cache, 'StorageLocation', 'loc-1');
+
+      expect(cache.extract()).not.toHaveProperty('StorageLocation:loc-1');
+    });
+
+    it('does not throw on a cache that is not an InMemoryCache', () => {
+      expect(() =>
+        safeEvict(createMockCache(), 'StorageLocation', 'loc-1'),
+      ).not.toThrow();
+    });
+  });
+
+  describe('safeEvictMany', () => {
+    it('removes every named entity in one pass', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'loc-1');
+      seedLocation(cache, 'loc-2');
+      seedLocation(cache, 'loc-3');
+
+      safeEvictMany(cache, [
+        { typename: 'StorageLocation', id: 'loc-1' },
+        { typename: 'StorageLocation', id: 'loc-3' },
+      ]);
+
+      const extract = cache.extract();
+      expect(extract).not.toHaveProperty('StorageLocation:loc-1');
+      expect(extract).toHaveProperty('StorageLocation:loc-2');
+      expect(extract).not.toHaveProperty('StorageLocation:loc-3');
+    });
+
+    it('does not throw on a cache that is not an InMemoryCache', () => {
+      expect(() =>
+        safeEvictMany(createMockCache(), [
+          { typename: 'StorageLocation', id: 'loc-1' },
+        ]),
+      ).not.toThrow();
+    });
+  });
+
+  describe('adoptServerEntityId', () => {
+    it('evicts the client-id row when the server resolved to a different one', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'client-1');
+      seedLocation(cache, 'server-1');
+
+      adoptServerEntityId(cache, 'StorageLocation', 'server-1', 'client-1');
+
+      const extract = cache.extract();
+      expect(extract).not.toHaveProperty('StorageLocation:client-1');
+      expect(extract).toHaveProperty('StorageLocation:server-1');
+    });
+
+    it('keeps the row when the server echoed the client id back', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'client-1');
+
+      adoptServerEntityId(cache, 'StorageLocation', 'client-1', 'client-1');
+
+      expect(cache.extract()).toHaveProperty('StorageLocation:client-1');
+    });
+
+    it('keeps the row when no client id was minted', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'server-1');
+
+      adoptServerEntityId(cache, 'StorageLocation', 'server-1', null);
+
+      expect(cache.extract()).toHaveProperty('StorageLocation:server-1');
+    });
   });
 });

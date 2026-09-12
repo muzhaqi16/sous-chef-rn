@@ -18,7 +18,7 @@ jest.mock('#/apollo/client', () => ({
     mutate: (...args: unknown[]) => mockMutate(...args),
     query: (...args: unknown[]) => mockQuery(...args),
   },
-  cancelCachePersistence: jest.fn(),
+  restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
 
