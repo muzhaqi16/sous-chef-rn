@@ -395,6 +395,33 @@ describe('useHomeSelection', () => {
       );
     });
 
+    it('re-points the pantry to the new home when the write is queued offline', async () => {
+      // Switching home must move the pantry with it. Left behind, the pantry
+      // screen reads the previous home's pantry and every write made from it
+      // is parented to the wrong home.
+      mockStoreState.selectedHomeId = 'home-1';
+      mockStoreState.selectedPantryId = 'pantry-1';
+
+      const { result } = renderHookWithApollo(
+        () =>
+          useHomeSelection({
+            homes: createHomes(),
+            remoteDefaultHomeId: null,
+          }),
+        { operationMocks: [queuedMock().mock] },
+      );
+
+      await act(async () => {
+        await result.current.setDefaultHome('home-2');
+      });
+
+      // home-2's default pantry, not home-1's.
+      expect(mockStoreState.setHomeAndPantry).toHaveBeenCalledWith(
+        'home-2',
+        'pantry-3',
+      );
+    });
+
     it('calls mutation and updates state on success', async () => {
       mockStoreState.selectedHomeId = 'home-1';
       mockStoreState.selectedPantryId = 'pantry-1';

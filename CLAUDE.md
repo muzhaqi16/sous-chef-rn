@@ -721,8 +721,9 @@ place and they read it.
   inside a sheet — or sit on an allowlist with a reason, so a new list cannot ship
   without the decision being made. `SwipeableItem`'s `dragOffset` (16dp) is defence in
   depth only, and takes one positive number because `dragOffsetFromRight` throws in
-  `__DEV__` unless non-positive. Verified 2026-08-24 vs
-  `react-native-gesture-handler@3.2.1`:
+  `__DEV__` unless non-positive. Verified 2026-09-12 vs
+  `react-native-gesture-handler@3.3.0` — re-check:
+  `node scripts/probe-rngh-nested-scroll.mjs`;
   `docs/verified-library-behaviour.md#rngh-v3-handlers-survive-a-native-scroll-takeover`.
 - **That list's pull-to-refresh must pass an EXPLICIT RNGH `RefreshControl`** —
   `refreshControl={<ThemedRefreshControl … />}`, never a bare
@@ -739,22 +740,28 @@ place and they read it.
   until pushed back up by hand, while every list passing an explicit control was
   fine. A plain RN scrollable host takes `PlainScrollRefreshControl` instead;
   pick by host. The `withUnistyles` wrapper is transparent to either (the gesture
-  crosses by reference). Verified 2026-08-24 on device vs
-  `react-native-gesture-handler@3.2.1` + `@shopify/flash-list@2.3.2` +
+  crosses by reference). Verified 2026-09-12 on device vs
+  `react-native-gesture-handler@3.3.0` + `@shopify/flash-list@2.3.2` +
   `react-native-unistyles@3.3.0` — re-check:
   `node scripts/probe-withunistyles-prop-passthrough.mjs`; guarded by
   `__tests__/gestures/flashListScrollComponents.test.ts`, which derives its file
   list from the tree so a new list cannot ship the mismatch.
 - **The rule is about the HOST, not about FlashList.** A standalone RNGH
   scroller offering pull-to-refresh renders `SwipeAwareScrollComponent` too,
-  never a hand-rolled `<ScrollView>` from RNGH: RN forces `nestedScrollEnabled`
+  never a hand-rolled `<ScrollView>` from RNGH: RN turns `nestedScrollEnabled`
   on under a `refreshControl` (facebook/react-native#55189), which lets RNGH's
   `SwipeRefreshLayoutHook` fail the handler mid-pull, and androidx ignores the
   ACTION_CANCEL that follows — so the Android spinner parks where the finger
   stopped and only a pull past the trigger retracts it. The meal plan shipped
   that way while every FlashList was fine, because the prop lives in the shared
   module and a hand-rolled host never reaches it. Verified 2026-09-05 on device;
-  guarded by the same test.
+  guarded by the same test. RNGH ≥3.3.0 carries an upstream fix
+  (`ScrollViewHook.shouldStopNestedScroll`, which gives androidx
+  `onStopNestedScroll` → `finishSpinner()`), so dropping the override is a live
+  candidate — **but it is unmeasured and the override stays until it isn't.**
+  A synthetic hesitant pull does not reproduce the park even on 3.2.1, so only a
+  real-finger A/B can settle it:
+  `docs/verified-library-behaviour.md#rngh-ends-the-nested-scroll-its-scrollview-opens`.
 
 ### Bottom sheets
 
@@ -929,11 +936,22 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   rule fails, which lands after any language change. Never hardcode the
   English string. Pattern: `src/utils/validation/common.ts`.
 - **A cross-field rule needs an explicit `trigger()`.**
-  `setValue(field, v, { shouldValidate: true })` re-validates THAT field only.
-  The all-or-nothing net-weight rule lives on the _unit_ while its inputs are
-  the weight and the unit id, so without
+  `setValue(field, v, { shouldValidate: true })` re-validates THAT field only —
+  with a resolver react-hook-form runs the whole schema but writes back only
+  `errors[name]`. The all-or-nothing net-weight rule lives on the _unit_ while
+  its inputs are the weight and the unit id, so without
   `trigger('netWeightUnit')` typing a weight never raised the message and
   picking a unit never cleared it. Verified on device 2026-08-26.
+  **Where a `Controller` owns the write** the form has no `onChange` to hang
+  that on: declare `rules={{ deps: ['otherField'] }}` instead (`FieldDef.deps`
+  in `DynamicFormFields`), which react-hook-form turns into the same `trigger`
+  call. Same concern, two spellings, picked by who writes the field.
+  **A field a rule READS must live in the form**, not beside it: a resolved
+  autocomplete id kept in `useState` is invisible to the resolver, so its rule
+  can never pass. Held by
+  `__tests__/forms/validationMessagesAreRendered.test.ts`, which derives the
+  schema list from the tree — `check-form-state` cannot see this, since it
+  exempts every file calling `useForm`.
 - **A paged form maps field → page** (`FIELD_PAGE` in
   `addPantryItemFormConfig.ts`) and navigates before reporting, so the message
   is on screen instead of behind a tab the user has to find.

@@ -32,7 +32,8 @@ interface SavedRecipesState {
 }
 
 interface SavedRecipesActions {
-  refetch: () => void;
+  /** Resolves when the refetch settles, so a caller can drive a spinner. */
+  refetch: () => Promise<void>;
   loadMore: () => Promise<void>;
   getRecipeById: (recipeId: string) => SavedRecipeNode | undefined;
   getRecipesByFolder: (folderName: string) => SavedRecipeNode[];
@@ -85,7 +86,9 @@ export function useSavedRecipes(folder?: string | null): UseSavedRecipesResult {
       hasMore: connectionData.hasMore,
     },
     actions: {
-      refetch,
+      refetch: async () => {
+        await refetch();
+      },
       loadMore: connectionData.loadMore,
       getRecipeById: (recipeId: string) =>
         recipes.find(recipe => recipe.recipe.id === recipeId),

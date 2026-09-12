@@ -132,6 +132,15 @@ export const ResetPasswordScreen: React.FC = () => {
 
   const watchedValues = useWatch({ control: form.control });
 
+  // `shouldValidate` re-runs the rule on THIS field only, and the match rule
+  // reports on `confirmPassword` while reading `newPassword`. Submit is gated
+  // on whole-schema `isValid`, so a message left un-run disables the button
+  // with nothing on screen to explain it.
+  const setField = (field: keyof ResetPasswordForm, value: string) => {
+    form.setValue(field, value, { shouldValidate: true });
+    void form.trigger('confirmPassword');
+  };
+
   // Opening a link must not, by itself, end a session — any web page can
   // present one. So the token is checked against the server FIRST, and only a
   // token the server accepts clears the current session (which the reset then
@@ -335,9 +344,7 @@ export const ResetPasswordScreen: React.FC = () => {
             </Text>
             <PasswordInput
               value={watchedValues.newPassword}
-              onChangeText={text =>
-                form.setValue('newPassword', text, { shouldValidate: true })
-              }
+              onChangeText={text => setField('newPassword', text)}
               placeholder={t('auth.newPasswordPlaceholder')}
               errorMessage={form.formState.errors.newPassword?.message}
               editable={!isSubmitting}
@@ -358,9 +365,7 @@ export const ResetPasswordScreen: React.FC = () => {
               ref={confirmPasswordRef}
               returnKeyType="done"
               value={watchedValues.confirmPassword}
-              onChangeText={text =>
-                form.setValue('confirmPassword', text, { shouldValidate: true })
-              }
+              onChangeText={text => setField('confirmPassword', text)}
               placeholder={t('auth.confirmPasswordPlaceholder')}
               errorMessage={form.formState.errors.confirmPassword?.message}
               editable={!isSubmitting}

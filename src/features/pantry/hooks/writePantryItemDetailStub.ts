@@ -33,6 +33,7 @@ import {
 } from './writePantryItemDetailStub.generated';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import { localItemIdFor } from '#features/pantry/cache/items';
+import { releaseEntity } from '#/apollo/utils/cacheUpdaters';
 
 /** The detail-only facts a create site can supply. All optional. */
 export interface PantryItemDetailStubFields {
@@ -241,6 +242,16 @@ export function writePantryItemDetailStub(
 
   const itemId = resolveItemId(pantryItemId, fields.itemId);
   const itemCacheId = cache.identify({ __typename: 'Item', id: itemId });
+
+  if (fields.itemId) {
+    // The catalog id supersedes the stub. Writing the stub retained it, and a
+    // retained root is one `gc()` skips — release it so the note above is true.
+    const stubCacheId = cache.identify({
+      __typename: 'Item',
+      id: localItemIdFor(pantryItemId),
+    });
+    if (stubCacheId) releaseEntity(cache, stubCacheId);
+  }
 
   if (itemCacheId) {
     topUpEntityGroup(

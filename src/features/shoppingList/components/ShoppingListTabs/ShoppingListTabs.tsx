@@ -403,20 +403,23 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
         <ShoppingListDataProvider data={tabData}>
           <View style={styles.tabBody}>
             {showEmptyState ? (
-              <SwipeAwareScrollComponent
-                contentContainerStyle={styles.emptyScrollContent}
-                refreshControl={
-                  onRefresh ? (
-                    <ThemedRefreshControl
-                      refreshing={refreshing || false}
-                      onRefresh={onRefresh}
-                    />
-                  ) : undefined
-                }
-              >
+              <>
+                {/* Outside the scroller, as in the populated branch. */}
                 {renderTabBar()}
-                <EmptyState {...emptyState} />
-              </SwipeAwareScrollComponent>
+                <SwipeAwareScrollComponent
+                  contentContainerStyle={styles.emptyScrollContent}
+                  refreshControl={
+                    onRefresh ? (
+                      <ThemedRefreshControl
+                        refreshing={refreshing || false}
+                        onRefresh={onRefresh}
+                      />
+                    ) : undefined
+                  }
+                >
+                  <EmptyState {...emptyState} />
+                </SwipeAwareScrollComponent>
+              </>
             ) : (
               <TabView
                 navigationState={{ index, routes }}

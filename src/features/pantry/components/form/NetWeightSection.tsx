@@ -15,6 +15,8 @@ interface NetWeightSectionProps {
   control: Control<PantryItemFormData>;
   /** When true, the net-weight inputs are disabled (weight locked after use). */
   isWeightLocked: boolean;
+  /** Re-runs the all-or-nothing rule, which reports on the unit field. */
+  onNetWeightChanged: () => void;
   onNetWeightUnitSelected: (unitId: string | null) => void;
 }
 
@@ -25,6 +27,7 @@ interface NetWeightSectionProps {
 export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
   control,
   isWeightLocked,
+  onNetWeightChanged,
   onNetWeightUnitSelected,
 }) => {
   const { t } = useTranslation();
@@ -48,7 +51,10 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
               <FormInput
                 label={t('labels.netWeight')}
                 value={value || ''}
-                onChangeText={onChange}
+                onChangeText={text => {
+                  onChange(text);
+                  onNetWeightChanged();
+                }}
                 onBlur={onBlur}
                 placeholder={localizeNumericHint(t('labels.eG145'))}
                 keyboardType="decimal-pad"

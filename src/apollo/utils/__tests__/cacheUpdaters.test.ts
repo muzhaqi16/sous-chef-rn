@@ -1,4 +1,5 @@
-import type { ApolloCache } from '@apollo/client';
+import { gql, type ApolloCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import {
   createAddToQueryConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
@@ -202,33 +203,6 @@ describe('createAddToQueryConnectionUpdater', () => {
     expect(result).toBe(existingConnection);
   });
 
-  it('does not update totalCount when updateTotalCount is false', () => {
-    const addToLists = createAddToQueryConnectionUpdater<Entity>(
-      'lists',
-      'List',
-    );
-    const cache = createMockCache();
-
-    addToLists(
-      cache,
-      { id: 'l-1', __typename: 'List' },
-      {
-        updateTotalCount: false,
-      },
-    );
-
-    const helpers = createFieldHelpers();
-    const existingConnection = { edges: [], totalCount: 5 };
-    const result = invokeFieldModifier(
-      cache,
-      'lists',
-      existingConnection,
-      helpers,
-    );
-
-    expect(result.totalCount).toBe(5);
-  });
-
   it('returns existing connection when toReference returns undefined', () => {
     const addToLists = createAddToQueryConnectionUpdater<Entity>(
       'lists',
@@ -251,7 +225,9 @@ describe('createAddToQueryConnectionUpdater', () => {
     expect(result).toBe(existingConnection);
   });
 
-  it('handles empty existing connection object', () => {
+  // A record without `totalCount` never selected it; introducing one would turn
+  // the next query that does select it into a cache hit.
+  it('does not introduce totalCount on a connection that has none', () => {
     const addToLists = createAddToQueryConnectionUpdater<Entity>(
       'lists',
       'List',
@@ -264,7 +240,52 @@ describe('createAddToQueryConnectionUpdater', () => {
     const result = invokeFieldModifier(cache, 'lists', {}, helpers);
 
     expect(result.edges).toHaveLength(1);
-    expect(result.totalCount).toBe(1);
+    expect('totalCount' in result).toBe(false);
+  });
+
+  it('bumps a totalCount the record already holds', () => {
+    const addToLists = createAddToQueryConnectionUpdater<Entity>(
+      'lists',
+      'List',
+    );
+    const cache = createMockCache();
+
+    addToLists(cache, { id: 'l-1', __typename: 'List' });
+
+    const helpers = createFieldHelpers();
+    const result = invokeFieldModifier(
+      cache,
+      'lists',
+      { edges: [], totalCount: 5 },
+      helpers,
+    );
+
+    expect(result.totalCount).toBe(6);
+  });
+
+  // A connection the server returned as `null` is stored as `null`, which the
+  // parameter default does not replace. Apollo reads a modifier returning
+  // `undefined` over it as a delete, so "leave alone" must hand back the null.
+  it('treats a null-stored connection as empty and never deletes it', () => {
+    const addToLists = createAddToQueryConnectionUpdater<Entity>(
+      'lists',
+      'List',
+    );
+    const cache = createMockCache();
+
+    addToLists(cache, { id: 'l-1', __typename: 'List' });
+
+    const added = invokeFieldModifier(
+      cache,
+      'lists',
+      null,
+      createFieldHelpers(),
+    );
+    expect(added.edges).toHaveLength(1);
+
+    const skipping = createFieldHelpers();
+    skipping.toReference.mockReturnValue(undefined);
+    expect(invokeFieldModifier(cache, 'lists', null, skipping)).toBeNull();
   });
 });
 
@@ -354,37 +375,22 @@ describe('createRemoveFromQueryConnectionUpdater', () => {
     expect(cache.gc).not.toHaveBeenCalled();
   });
 
-  it('skips gc when gc is false', () => {
+  it('leaves the connection untouched when no edge matches', () => {
     const remove = createRemoveFromQueryConnectionUpdater('recipes', 'Recipe');
     const cache = createMockCache();
 
-    remove(cache, 'r-1', { evictItem: true, gc: false });
-
-    expect(cache.evict).toHaveBeenCalled();
-    expect(cache.gc).not.toHaveBeenCalled();
-  });
-
-  it('does not update totalCount when updateTotalCount is false', () => {
-    const remove = createRemoveFromQueryConnectionUpdater('recipes', 'Recipe');
-    const cache = createMockCache();
-
-    remove(cache, 'r-1', { updateTotalCount: false });
+    remove(cache, 'r-9');
 
     const helpers = createFieldHelpers();
     helpers.readField.mockReturnValue('r-1');
-
     const existingConnection = {
       edges: [{ node: { __ref: 'Recipe:r-1' } }],
       totalCount: 5,
     };
-    const result = invokeFieldModifier(
-      cache,
-      'recipes',
-      existingConnection,
-      helpers,
-    );
 
-    expect(result.totalCount).toBe(5);
+    expect(
+      invokeFieldModifier(cache, 'recipes', existingConnection, helpers),
+    ).toBe(existingConnection);
   });
 });
 
@@ -570,35 +576,6 @@ describe('createAddToParentConnectionUpdater', () => {
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('Parent entity not found'),
     );
-  });
-
-  it('does not update totalCount when updateTotalCount is false', () => {
-    const add = createAddToParentConnectionUpdater<Entity>(
-      'Pantry',
-      'itemsConnection',
-      'PantryItem',
-    );
-    const cache = createMockCache();
-
-    add(
-      cache,
-      'p-1',
-      { id: 'pi-new', __typename: 'PantryItem' },
-      {
-        updateTotalCount: false,
-      },
-    );
-
-    const helpers = createFieldHelpers();
-    const existing = { edges: [], totalCount: 5 };
-    const result = invokeFieldModifier(
-      cache,
-      'itemsConnection',
-      existing,
-      helpers,
-    );
-
-    expect(result.totalCount).toBe(5);
   });
 
   it('returns existing connection when toReference returns undefined', () => {
@@ -814,20 +791,6 @@ describe('createRemoveFromParentConnectionUpdater', () => {
     expect(cache.evict).not.toHaveBeenCalled();
   });
 
-  it('skips gc when gc is false', () => {
-    const remove = createRemoveFromParentConnectionUpdater(
-      'Pantry',
-      'itemsConnection',
-      'PantryItem',
-    );
-    const cache = createMockCache();
-
-    remove(cache, 'p-1', 'pi-1', { evictItem: true, gc: false });
-
-    expect(cache.evict).toHaveBeenCalled();
-    expect(cache.gc).not.toHaveBeenCalled();
-  });
-
   it('clamps totalCount to 0', () => {
     const remove = createRemoveFromParentConnectionUpdater(
       'Pantry',
@@ -871,30 +834,22 @@ describe('createRemoveFromParentConnectionUpdater', () => {
     );
   });
 
-  it('does not update totalCount when updateTotalCount is false', () => {
+  it('reports whether an edge was removed', () => {
     const remove = createRemoveFromParentConnectionUpdater(
       'Pantry',
       'itemsConnection',
       'PantryItem',
     );
     const cache = createMockCache();
-
-    remove(cache, 'p-1', 'pi-1', { updateTotalCount: false });
-
-    const helpers = createFieldHelpers();
-    helpers.readField.mockReturnValue('pi-1');
-    const existing = {
-      edges: [{ node: { __ref: 'PantryItem:pi-1' } }],
-      totalCount: 10,
-    };
-    const result = invokeFieldModifier(
-      cache,
-      'itemsConnection',
-      existing,
-      helpers,
+    cache.modify.mockImplementation(({ fields }) =>
+      fields.itemsConnection(
+        { edges: [{ node: { __ref: 'PantryItem:pi-1' } }], totalCount: 1 },
+        createFieldHelpers(),
+      ),
     );
 
-    expect(result.totalCount).toBe(10);
+    expect(remove(cache, 'p-1', 'pi-1')).toBe(true);
+    expect(remove(cache, 'p-1', 'pi-9')).toBe(false);
   });
 });
 
@@ -978,20 +933,6 @@ describe('createRemoveFromParentArrayUpdater', () => {
     expect(cache.evict).not.toHaveBeenCalled();
   });
 
-  it('skips gc when gc is false', () => {
-    const remove = createRemoveFromParentArrayUpdater(
-      'Pantry',
-      'items',
-      'PantryItem',
-    );
-    const cache = createMockCache();
-
-    remove(cache, 'p-1', 'pi-1', { evictItem: true, gc: false });
-
-    expect(cache.evict).toHaveBeenCalled();
-    expect(cache.gc).not.toHaveBeenCalled();
-  });
-
   it('warns and returns early when parent not found', () => {
     const remove = createRemoveFromParentArrayUpdater(
       'Pantry',
@@ -1051,6 +992,62 @@ describe('skipUnmatchedFilterVariants', () => {
 
   it('skips when the args cannot be parsed', () => {
     expect(skip('mealTemplates({not json)')).toBe(true);
+    expect(skip('mealTemplates:{not json')).toBe(true);
+  });
+
+  // Both production consumers (`mealTemplates`, `User.notificationsConnection`)
+  // are array-`keyArgs` fields, which Apollo writes in the COLON form. A guard
+  // that only finds `(` never skips a real variant.
+  it('reads the colon form an array-keyArgs field is stored under', () => {
+    expect(skip('mealTemplates:{"filters":{"category":"DINNER"}}')).toBe(false);
+    expect(skip('mealTemplates:{"filters":{"category":"BREAKFAST"}}')).toBe(
+      true,
+    );
+    expect(skip('mealTemplates:{"filters":{"search":"pasta"}}')).toBe(true);
+    expect(skip('mealTemplates:{"filters":{}}')).toBe(false);
+  });
+
+  it('sees the storeFieldName Apollo writes for a real keyArgs field', () => {
+    const cache = makeCache();
+    cache.writeQuery({
+      query: gql`
+        query FilterVariantProbe($filters: MealTemplateFilters) {
+          mealTemplates(filters: $filters) {
+            totalCount
+            edges {
+              node {
+                id
+              }
+            }
+          }
+        }
+      `,
+      variables: { filters: { category: 'DINNER' } },
+      data: {
+        mealTemplates: {
+          __typename: 'MealTemplateConnection',
+          totalCount: 0,
+          edges: [],
+        },
+      },
+    });
+
+    const seen: string[] = [];
+    cache.modify({
+      fields: {
+        mealTemplates(existing, { storeFieldName }) {
+          seen.push(storeFieldName);
+          return existing;
+        },
+      },
+    });
+
+    const [storeFieldName] = seen;
+    expect(storeFieldName).toMatch(/^mealTemplates:\{/);
+    expect(skip(storeFieldName!)).toBe(false);
+    expect(
+      skipUnmatchedFilterVariants({ category: 'LUNCH' })(storeFieldName!),
+    ).toBe(true);
   });
 });
 

@@ -25,7 +25,6 @@ jest.mock('../offline/ApolloCachePersistence', () => ({
     clear: jest.fn(),
     cancel: jest.fn(),
   },
-  cancelCachePersistence: jest.fn(),
 }));
 
 jest.mock('../offline/OptimisticDataPersistence', () => ({
@@ -65,7 +64,6 @@ jest.mock('../links/refreshToken', () => ({
 // ---------------------------------------------------------------------------
 
 import { LogoutCleanup } from '../logoutCleanup';
-import { cancelCachePersistence } from '../offline/ApolloCachePersistence';
 import { cancelTokenRefresh } from '../links/tokenScheduler';
 import { apolloCachePersistence } from '../offline/ApolloCachePersistence';
 import { optimisticDataPersistence } from '../offline/OptimisticDataPersistence';
@@ -115,7 +113,7 @@ describe('LogoutCleanup', () => {
 
     it('cancels cache persistence', async () => {
       await LogoutCleanup.performLogoutCleanup();
-      expect(cancelCachePersistence).toHaveBeenCalled();
+      expect(apolloCachePersistence.cancel).toHaveBeenCalled();
     });
 
     it('stops in-flight queries', async () => {

@@ -88,6 +88,10 @@ import { writeOptimisticRecipe } from '#features/recipes/utils/recipeCacheWriter
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
 import { addToPantryItemsCache } from '#features/pantry/cache/items';
+import {
+  buildOptimisticPantry,
+  writeOptimisticPantry,
+} from '#features/pantry/utils/optimisticPantry';
 import { AddedShoppingListItemFieldsFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import {
@@ -384,6 +388,24 @@ describe('optimistic entity completeness', () => {
     it('seeded pantry reads complete (baseline)', async () => {
       const cache = await seedPantryCache();
       expect(readPantry(cache).complete).toBe(true);
+    });
+
+    // A pantry created OFFLINE has never been fetched, so the optimistic write
+    // is the only thing in the cache. One field short and `GetPantry` returns
+    // nothing at all, which shows as an empty pantry the user cannot add to.
+    it('an optimistic-only pantry reads complete for GetPantry', () => {
+      const cache = makeCache();
+      const pantry = buildOptimisticPantry('pantry-1', {
+        homeId: 'home-1',
+        name: 'Kitchen Pantry',
+        isDefault: true,
+      });
+
+      writeOptimisticPantry(cache, pantry);
+
+      const diff = readPantry(cache);
+      expect(describeMissing(diff.missing)).toBe('none');
+      expect(diff.complete).toBe(true);
     });
 
     it('keeps GetPantry complete after an optimistic add', async () => {

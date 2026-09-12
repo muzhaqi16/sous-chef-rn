@@ -34,6 +34,9 @@ export type FieldDef<T extends FieldValues> = {
   onValueChange?: (value: unknown) => void;
   // For custom rendering logic
   renderValue?: (value: unknown) => string;
+  // Fields whose rules read THIS one. react-hook-form re-validates only the
+  // field that changed, so a rule reporting on a sibling needs naming here.
+  deps?: Path<T>[];
   // For custom value transformation before validation
   transformValue?: (value: unknown) => unknown;
   // Transform only on blur, not on every keystroke
@@ -81,6 +84,7 @@ export function DynamicFormFields<T extends FieldValues>({
           transformValue,
           transformOnBlur,
           testID,
+          deps,
         },
         idx,
       ) => ({
@@ -95,6 +99,7 @@ export function DynamicFormFields<T extends FieldValues>({
         transformValue,
         transformOnBlur,
         testID,
+        deps,
         key: `${String(name)}-${idx}`,
       }),
     );
@@ -115,6 +120,7 @@ export function DynamicFormFields<T extends FieldValues>({
             transformValue,
             transformOnBlur,
             testID,
+            deps,
             key,
           },
           index,
@@ -123,6 +129,7 @@ export function DynamicFormFields<T extends FieldValues>({
             <Controller
               control={control}
               name={name}
+              rules={deps ? { deps } : undefined}
               render={({ field: { onChange, onBlur, value } }) => {
                 // Custom onChange handler that transforms value if needed
                 const handleChange = (newValue: unknown) => {

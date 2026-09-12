@@ -51,6 +51,21 @@ const DEFAULT_CONFIG: QueueConfig = {
 const MAX_CONFLICT_RESENDS = 1;
 
 /**
+ * Drains a single entry may be deferred through before it is withdrawn. A
+ * starting point, not a measured value — `offline_queue_depth` and
+ * `offline_queue_oldest_age_ms` are what tune it.
+ */
+const MAX_DEFERS = 10;
+
+/**
+ * Operations whose queued value is RELATIVE — a delta, or anything cumulative.
+ * Re-sending one against a newer version applies it twice, so a conflict is
+ * reported rather than re-sent. Empty because every queued write currently
+ * sends an absolute value; it is not inferable from the input, so declare here.
+ */
+export const RELATIVE_VALUE_OPERATIONS = new Set<string>();
+
+/**
  * Drops the `version` a write captured when the user acted. Covers the batch
  * shape too: single-add shopping ops send `input.items[]`, each line carrying
  * its own version.
@@ -218,6 +233,10 @@ export class QueueManager {
 
     let succeeded = 0;
     let failed = 0;
+    // Client ids belonging to an entry that did not deliver this drain. Only
+    // entries touching one of them wait; the rest of the queue drains, so a
+    // create→update chain keeps its order without blocking unrelated entities.
+    const blockedIds = new Set<string>();
     for (const mutation of mutations) {
       // Stop replaying the moment the server becomes unreachable — the rest
       // of the queue stays PENDING for the next drain.
@@ -226,18 +245,27 @@ export class QueueManager {
         break;
       }
 
+      const entityIds = this.getAllEntityIds(mutation);
+      if (entityIds.some(id => blockedIds.has(id))) {
+        // Depends on an entry that has not landed; blocked itself, so anything
+        // downstream of IT waits too.
+        for (const id of entityIds) blockedIds.add(id);
+        logger.info(
+          `⏭️ Queue: ${mutation.id} waits behind an undelivered dependency`,
+        );
+        continue;
+      }
+
       try {
         const result = await this.processMutation(mutation);
         if (result.success) succeeded++;
         else failed++;
 
-        // A transient defer left this mutation PENDING; stop the drain so a
-        // later, possibly dependent mutation can't replay ahead of it.
         if (result.deferred) {
+          for (const id of entityIds) blockedIds.add(id);
           logger.info(
-            '🕓 Queue: Mutation deferred (transient), pausing drain to preserve order',
+            '🕓 Queue: Mutation deferred (transient), holding its dependents',
           );
-          break;
         }
       } catch (error) {
         failed++;
@@ -449,6 +477,18 @@ export class QueueManager {
     // current row" — the last-write-wins the API implements. A second conflict
     // is a race the client cannot win; it falls through to revert-and-inform.
     if (queueError.type === 'conflict') {
+      // A cumulative write cannot be re-sent against the server's newer version
+      // without applying twice. The server kept its value; say so and stop.
+      if (RELATIVE_VALUE_OPERATIONS.has(mutation.operationName)) {
+        this.reportOverwrite(mutation);
+        queueStore.removeMutation(mutation.id);
+        return {
+          success: false,
+          mutationId: mutation.id,
+          error: queueError,
+        };
+      }
+
       const conflictCount = (mutation.conflictCount ?? 0) + 1;
       queueStore.updateMutation(mutation.id, { conflictCount });
 
@@ -502,19 +542,32 @@ export class QueueManager {
     // change survives to the next drain rather than being dropped; retryCount
     // resets so that drain gets a fresh attempt.
     if (queueError.type === 'network' || queueError.type === 'server') {
-      queueStore.updateMutation(mutation.id, {
-        status: QueueStatus.PENDING,
-        retryCount: 0,
-      });
-      logger.info(
-        `🕓 Queue: ${mutation.id} deferred (transient ${queueError.type}) — stays PENDING for next drain`,
+      const deferCount = (mutation.deferCount ?? 0) + 1;
+
+      // An entry that never becomes deliverable would otherwise hold its
+      // dependents for good. Past the bound it withdraws through the same path
+      // as any other permanent failure, so the user is told.
+      if (deferCount <= MAX_DEFERS) {
+        queueStore.updateMutation(mutation.id, {
+          status: QueueStatus.PENDING,
+          retryCount: 0,
+          deferCount,
+        });
+        logger.info(
+          `🕓 Queue: ${mutation.id} deferred (transient ${queueError.type}) — stays PENDING for next drain`,
+        );
+        return {
+          success: false,
+          deferred: true,
+          mutationId: mutation.id,
+          error: queueError,
+        };
+      }
+
+      logger.warn(
+        `❌ Queue: ${mutation.id} deferred ${MAX_DEFERS} times without delivering — withdrawing`,
       );
-      return {
-        success: false,
-        deferred: true,
-        mutationId: mutation.id,
-        error: queueError,
-      };
+      queueError.retryable = false;
     }
 
     // Non-retryable (validation / client / 4xx / GraphQL) error, or an auth
@@ -761,11 +814,16 @@ export class QueueManager {
   }
 
   /**
-   * Resolves once no drain is in flight. The reconnect backfill sequences
-   * itself behind this: replayed mutations write their own responses into the
-   * cache, so refetching alongside doubles the burst and races the results.
+   * Resolves once nothing is in flight and nothing is scheduled. It DRAINS
+   * rather than observes: a scheduled drain has no `processingPromise`, so a
+   * caller would read "idle" during `requestDrain`'s debounce and refetch a
+   * server the queued writes have not reached, overwriting their rows.
    */
   async whenIdle(): Promise<void> {
+    this.cancelPendingDrain();
+    // No-ops when offline, empty or already draining — and when it is already
+    // draining it hands back that same promise, which is what we want to await.
+    await this.processQueue().catch(() => {});
     await this.processingPromise?.catch(() => {});
   }
 
@@ -843,4 +901,7 @@ export const queueManager = new QueueManager();
 // `onLogout`'s job, on the deliberate sign-out path.
 registerSessionTeardown('offline-queue', () => {
   queueManager.cancelPendingDrain();
+  // The store is write-through over an in-RAM mirror. Dropping the mirror keeps
+  // it from outliving the blob and answering the next session from memory.
+  queueStore.invalidateCache();
 });

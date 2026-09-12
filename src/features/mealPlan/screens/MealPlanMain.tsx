@@ -1,7 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { t as tGlobal } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseISO } from 'date-fns';
@@ -59,31 +58,33 @@ import { toastService } from '#/services/toastService';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { toDateKey } from '#/utils/dateUtils';
-import { Screen } from '#components/templates/Screen';
-import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
+import { Screen, type ScreenHeaderConfig } from '#components/templates/Screen';
 
-/**
- * Gates the heavy work behind DeferredScreen: the skeleton paints instantly and
- * MealPlanMainInner mounts on the deferred re-render. `tGlobal` here on purpose
- * — subscribing to language changes would re-render this wrapper to flip
- * skeleton labels the inner screen replaces anyway.
- */
+/** The chrome a plan-less Meal Plan shows, before the DeferredScreen gate and
+ *  again while the plan list is still arriving. */
+const MealPlanMainFallback: React.FC = () => {
+  const { t } = useTranslation();
+  return (
+    <Screen
+      testID="meal-plan-screen"
+      header={{
+        variant: 'tab',
+        label: t('mealPlanMain.label'),
+        title: t('labels.mealPlan'),
+      }}
+      scroll="list"
+      gutter="none"
+    >
+      <MealPlanSkeleton />
+    </Screen>
+  );
+};
+
+/** Gates the heavy work behind DeferredScreen: the skeleton paints instantly and
+ *  MealPlanMainInner mounts on the deferred re-render. */
 export const MealPlanMain: React.FC = () => (
   <DeferredScreen
-    fallback={
-      <Screen
-        testID="meal-plan-screen"
-        header={{
-          variant: 'tab',
-          label: tGlobal('mealPlanMain.label'),
-          title: tGlobal('labels.mealPlan'),
-        }}
-        scroll="list"
-        gutter="none"
-      >
-        <MealPlanSkeleton />
-      </Screen>
-    }
+    fallback={<MealPlanMainFallback />}
     component={MealPlanMainInner}
   />
 );
@@ -441,26 +442,19 @@ const MealPlanMainInner: React.FC = () => {
     if (result) setShoppingListSheetVisible(false);
   };
 
+  const tabHeader: ScreenHeaderConfig = {
+    variant: 'tab',
+    label: t('mealPlanMain.label'),
+    title: t('labels.mealPlan'),
+  };
+
   // Cold start with nothing cached: stay on the skeleton until the plan list
   // arrives. Rendering the calendar here would show a week strip and an empty
   // day for a plan that may not exist, then swap to the empty state a moment
   // later. A refetch over existing plans keeps `initialLoading` false, so the
   // skeleton never covers content that is already on screen.
   if (plansInitialLoading) {
-    return (
-      <Screen
-        testID="meal-plan-screen"
-        header={{
-          variant: 'tab',
-          label: t('mealPlanMain.label'),
-          title: t('labels.mealPlan'),
-        }}
-        scroll="list"
-        gutter="none"
-      >
-        <MealPlanSkeleton />
-      </Screen>
-    );
+    return <MealPlanMainFallback />;
   }
 
   // No plans on screen. Which of the three reasons it is decides what to show:
@@ -470,11 +464,7 @@ const MealPlanMainInner: React.FC = () => {
     return (
       <Screen
         testID="meal-plan-screen"
-        header={{
-          variant: 'tab',
-          label: t('mealPlanMain.label'),
-          title: t('labels.mealPlan'),
-        }}
+        header={tabHeader}
         scroll="list"
         gutter="none"
       >
@@ -514,70 +504,63 @@ const MealPlanMainInner: React.FC = () => {
     );
   }
 
-  return (
-    <Screen testID="meal-plan-screen" scroll="list" gutter="none">
-      <View style={styles.headerRow}>
-        <View style={styles.headerContent}>
-          <TabScreenHeader
-            label={t('mealPlanMain.label')}
-            title={activeMealPlan?.name ?? t('labels.mealPlan')}
-            onTitlePress={handleOpenSelector}
-            titleAccessory={
-              <Icon name="chevron-down" size={20} tone="textPrimary" />
-            }
-            offlinePill={false}
-          />
-        </View>
-        {/* Pill lives in the real action cluster so it aligns with the
-            cart/bookmark/settings icons (TabScreenHeader's built-in pill is
-            disabled above). Rendered whenever the pill (offline) or a per-plan
-            action would show, so the pill still appears before a plan is
-            selected without leaving an empty row when online + plan-less. */}
-        {isOfflineVisible || !!activePlanId ? (
-          <View style={styles.headerActions}>
-            <OfflineStatusPill size={22} />
-            {!!activePlanId && (
-              <>
-                {permissions.canGenerateShoppingList ? (
-                  <Pressable
-                    onPress={() => setShoppingListSheetVisible(true)}
-                    hitSlop={8}
-                    style={styles.headerActionButton}
-                    accessibilityLabel={t(
-                      'mealPlanMain.generateShoppingListLabel',
-                    )}
-                  >
-                    <Icon name="cart-outline" size={22} tone="primary" />
-                  </Pressable>
-                ) : null}
-                {permissions.canSaveAsTemplate ? (
-                  <Pressable
-                    onPress={handleSaveAsTemplate}
-                    hitSlop={8}
-                    style={styles.headerActionButton}
-                    accessibilityLabel={t('mealPlanMain.saveAsTemplateLabel')}
-                  >
-                    <Icon name="bookmark-outline" size={22} tone="primary" />
-                  </Pressable>
-                ) : null}
-                <Pressable
-                  onPress={() => setSettingsVisible(true)}
-                  hitSlop={8}
-                  style={styles.headerActionButton}
-                  accessibilityLabel={t('mealPlanMain.planSettingsLabel')}
-                >
-                  <Icon
-                    name="ellipsis-vertical"
-                    size={22}
-                    tone="textSecondary"
-                  />
-                </Pressable>
-              </>
-            )}
-          </View>
-        ) : null}
-      </View>
+  // The pill sits in the real action cluster (the header's built-in one is off
+  // below) so it still shows before a plan is selected, without an empty group.
+  const headerRight =
+    isOfflineVisible || !!activePlanId ? (
+      <>
+        <OfflineStatusPill size={22} />
+        {!!activePlanId && (
+          <>
+            {permissions.canGenerateShoppingList ? (
+              <Pressable
+                onPress={() => setShoppingListSheetVisible(true)}
+                hitSlop={8}
+                style={styles.headerActionButton}
+                accessibilityLabel={t('mealPlanMain.generateShoppingListLabel')}
+              >
+                <Icon name="cart-outline" size={22} tone="primary" />
+              </Pressable>
+            ) : null}
+            {permissions.canSaveAsTemplate ? (
+              <Pressable
+                onPress={handleSaveAsTemplate}
+                hitSlop={8}
+                style={styles.headerActionButton}
+                accessibilityLabel={t('mealPlanMain.saveAsTemplateLabel')}
+              >
+                <Icon name="bookmark-outline" size={22} tone="primary" />
+              </Pressable>
+            ) : null}
+            <Pressable
+              onPress={() => setSettingsVisible(true)}
+              hitSlop={8}
+              style={styles.headerActionButton}
+              accessibilityLabel={t('mealPlanMain.planSettingsLabel')}
+            >
+              <Icon name="ellipsis-vertical" size={22} tone="textSecondary" />
+            </Pressable>
+          </>
+        )}
+      </>
+    ) : undefined;
 
+  return (
+    <Screen
+      testID="meal-plan-screen"
+      header={{
+        ...tabHeader,
+        title: activeMealPlan?.name ?? tabHeader.title,
+        onTitlePress: handleOpenSelector,
+        titleAccessory: (
+          <Icon name="chevron-down" size={20} tone="textPrimary" />
+        ),
+        offlinePill: false,
+        headerRight,
+      }}
+      scroll="list"
+      gutter="none"
+    >
       {/* Calendar view */}
       {calendar.viewMode === 'week' ? (
         <WeekStrip
@@ -734,23 +717,6 @@ const MealPlanMainInner: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    // Chrome, outside the list — so this screen owns its gutter rather than
-    // inheriting the list's.
-    paddingHorizontal: theme.layout.pageGutter,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: theme.spacing.md,
-    paddingRight: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
   headerActionButton: {
     padding: theme.spacing.xs,
   },
