@@ -23,51 +23,17 @@ npm test             # full Jest suite — 668 files, 8060 tests, ~80s, ~3.3GB p
                      # them exhaust 16GB of RAM. Run it unfiltered.
 node scripts/check-compiler-bailouts.mjs         # also in pre-push
 node scripts/check-unistyles-variant-staleness.mjs   # also in pre-push
-node scripts/check-layer-purity.mjs              # also in pre-commit
-node scripts/check-feature-shape.mjs             # also in pre-commit
-node scripts/check-dead-modules.mjs              # also in pre-commit
-node scripts/check-comment-budget.mjs            # also in pre-commit
-node scripts/check-data-layer-boundary.mjs       # also in pre-commit
-node scripts/check-hook-return-types.mjs         # also in pre-push
-node scripts/check-import-cycles.mjs             # also in pre-push
-node scripts/check-single-consumer.mjs           # also in pre-commit
-node scripts/check-form-state.mjs                # also in pre-commit
-node scripts/check-feature-enumeration.mjs       # also in pre-commit
-node scripts/check-canonical-mechanisms.mjs      # also in pre-commit
-node scripts/check-design-tokens.mjs             # also in pre-commit
-node scripts/check-typography-roles.mjs          # also in pre-commit
-node scripts/check-component-tier.mjs            # also in pre-commit
-node scripts/check-screen-scaffold.mjs           # also in pre-commit
-node scripts/check-a11y-names.mjs                # also in pre-commit
-node scripts/check-unnecessary-condition.mjs     # also in PR checks
-node scripts/check-dependency-audit.mjs          # also in PR checks + weekly
+npm run check:dead-modules   # knip: a src/ module with no production importer (pre-push)
+npm run check:import-cycles  # madge: load-time import cycles (pre-push)
+npm run check:audit          # npm audit over production dependencies (CI)
 node scripts/check-bundled-secrets.mjs --self-test
 ```
 
-Each of the thirteen boundary gates takes `--list` (every finding), `--update`
-(re-baseline) and `--self-test` (prove it can still fail). A NON-EMPTY baseline
-is a debt list that may only shrink; an EMPTY one is an invariant, and any
-finding there is a regression to fix:
-
-| Gate                          | Holds                                                                                                                                                                                                                                           | Baseline                                     |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| `check-data-layer-boundary`   | a screen, sheet or cell may not run an operation, hold the client, or write the cache                                                                                                                                                           | 0                                            |
-| `check-hook-return-types`     | a feature hook's return type may not name the data library — its companion, since the screen imports nothing                                                                                                                                    | 0                                            |
-| `check-import-cycles`         | no new LOAD-TIME import cycle; `import type` and `await import()` edges do not count                                                                                                                                                            | 0                                            |
-| `check-single-consumer`       | a module in `components`/`hooks`/`context`/`utils`/`constants` used by exactly one feature belongs to that feature                                                                                                                              | hard rule                                    |
-| `check-form-state`            | a form holds its fields in react-hook-form, not `useState`                                                                                                                                                                                      | 70                                           |
-| `check-feature-enumeration`   | a feature id in a string outside its feature is a place the feature list has to be remembered                                                                                                                                                   | 0                                            |
-| `check-canonical-mechanisms`  | one mechanism per concern — the list primitive, the image component, the modal surface, the date formatter, the quantity formatter, device storage, the device identity. The full concern table, gates included, is § One mechanism per concern | 0                                            |
-| `check-design-tokens`         | a visual property is a token, not a literal; a kit concept is not restyled in a feature                                                                                                                                                         | 0 failing / 9 colour + 161 icon-size tracked |
-| `check-typography-roles`      | text is set by a named role, not by size and weight                                                                                                                                                                                             | 21                                           |
-| `check-component-tier`        | a kit component sits in the tier its composition puts it in                                                                                                                                                                                     | 0                                            |
-| `check-screen-scaffold`       | a screen's chrome comes from `Screen`, and nobody applies the top inset twice                                                                                                                                                                   | 4 chrome / 0 double-inset                    |
-| `check-a11y-names`            | a control with an `onPress` and no text child carries an `accessibilityLabel`                                                                                                                                                                   | 0                                            |
-| `check-unnecessary-condition` | a condition the types say cannot matter — chiefly a function read without calling it                                                                                                                                                            | 208 files                                    |
-
-When one reaches zero, promote it to a hard `import/no-restricted-paths` zone
-and delete the baseline — the same promotion the kit half of
-`check-layer-purity` already got.
+Those are ALL the whole-tree gates. Every other rule in this file is either an
+ESLint entry (`no-restricted-imports`, `no-restricted-syntax`,
+`import/no-restricted-paths` in `.eslintrc.js`), a Jest test named beside the
+rule, or a convention review holds. Do not add a check script for a rule a
+lint entry or a test can express.
 
 `npm run lint` validates `.graphql` files against
 `src/graphql/generated/schema.graphql` (`fields-on-correct-type` and
@@ -77,7 +43,7 @@ codegen batch failure. The schema reaches the parser as
 option and errors at PARSE time if it is still there, which reads as every
 document failing rather than as a config problem. Pre-commit runs `lint-staged`
 plus the five sub-second whole-tree checks; pre-push runs `typecheck`,
-`check:compiler-bailouts`, `check:unistyles-variants`, `check:hook-return-types`
+`check:compiler-bailouts`, `check:unistyles-variants`, `check:dead-modules`
 and `check:import-cycles` concurrently, then a codegen drift check — and skips
 all of it for a tag-only push, which carries no new commits.
 Full command reference: `docs/development.md`.
@@ -99,23 +65,19 @@ Directory map and module walkthrough: `docs/architecture.md`. The short form:
 - `src/components/` — shared UI in four TIERS: `atoms/`, `molecules/`,
   `organisms/`, `templates/`, plus `providers/` and `performance/`. There is no
   `base/`, `charts/`, `modals/`, `navigation/` or `settings/`. A component's
-  tier is computed from what it RENDERS, not chosen —
-  `node scripts/check-component-tier.mjs` holds it, and
+  tier follows from what it RENDERS, not from taste —
   `src/components/atoms/README.md` states the rule. Feature-private UI stays in
   `src/features/<name>/components/` (e.g. the pantry form lives in
   `src/features/pantry/components/form/`).
 - `src/hooks/` and `src/components/` hold ONLY what more than one feature
   uses; a hook owned by one feature lives in that feature. Together they are
   the **kit** — the layer a sibling app reuses wholesale, so it must not import
-  `#features/*`, own a `.graphql` document, or carry a file named after a
-  domain. `node scripts/check-layer-purity.mjs` holds it: the baseline is EMPTY,
-  which makes it an invariant rather than a debt — it went 76 → 0, so any entry
-  is a regression to fix. Schema-type imports are counted, not failed. The same
-  script also scans the **kernel** (`src/apollo/`, `src/store/`, `src/utils/`, …)
-  for modules NAMED after a feature; that concern is at zero too. Only the name
-  test runs there: the kernel's feature imports are load-bearing (offline queue,
-  i18n bundling, the subscription layer) and are governed by the `.eslintrc.js`
-  zone instead. Per-feature nav stacks are exempt by design.
+  `#features/*` (an `import/no-restricted-paths` zone holds that), own a
+  `.graphql` document, or carry a file named after a domain. The **kernel**
+  (`src/apollo/`, `src/store/`, `src/utils/`, …) carries no module NAMED after a
+  feature either; its feature IMPORTS are load-bearing (offline queue, i18n
+  bundling, the subscription layer) and governed by the same `.eslintrc.js`
+  zones. Per-feature nav stacks are exempt by design.
 - `src/features/catalog/` — the grocery `Item`, its pickers, and storage
   locations. The one feature with a PUBLIC component directory (`ui/`): its
   pickers are domain UI that two features consume, so they belong in neither a
@@ -133,8 +95,7 @@ Directory map and module walkthrough: `docs/architecture.md`. The short form:
   belongs in the one that uses it.
 - `src/components/templates/` — the page-level scaffolding every screen is
   built from: `Screen` (chrome, scroll mode, gutter, state), `Sheet` (the bottom
-  sheet shell) and `FormScreen`. A screen does not assemble its own header, and
-  `node scripts/check-screen-scaffold.mjs` holds that.
+  sheet shell) and `FormScreen`. A screen does not assemble its own header.
 - `src/apollo/` client, links, offline queue, cache persistence ·
   `src/store/` Zustand slices + reset manager · `src/i18n/` config + locales ·
   `src/services/`, `src/navigation/`, `src/theme/`, `src/utils/`.
@@ -152,18 +113,18 @@ irregular ones are `#/*` → `src/*`, `#operations` → `src/graphql/operations`
 `#/test-utils/*` → `__tests__/helpers/*`. Use aliases over relative paths.
 
 **No dead modules.** A module under `src/` with no PRODUCTION importer fails
-`node scripts/check-dead-modules.mjs`. An import inside a test does not count,
-and neither does a `jest.mock()` — a test for dead code is dead with it, so
-delete both. The baseline is empty and stays empty. A module reached some other
-way (Detox reaches components by testID string, never by import) is covered by
+`npm run check:dead-modules` (knip, configured in `knip.json`). An import inside
+a test does not count, and neither does a `jest.mock()` — a test for dead code
+is dead with it, so delete both. A module loaded by the app shell rather than by
+an import (a manifest, a platform twin, the startup clock) is listed as an
+`entry` there. A module reached some other way (Detox reaches components by
+testID string, never by import) is covered by
 `__tests__/harness/e2eTestIdsExist.test.ts`.
 
 **Feature shape** — every feature has `manifest.ts` (its `id` equals the
 directory name), `screens/`, `hooks/` and `components/`, and one with more than
-one screen declares `screens/registration.ts`. Ratcheted by
-`node scripts/check-feature-shape.mjs`, whose baseline is also EMPTY — every
-feature has the same shape. A `.graphql` document beside its consumer is the
-convention, NOT a deviation.
+one screen declares `screens/registration.ts`. A `.graphql` document beside its
+consumer is the convention, NOT a deviation.
 
 **Feature API boundary** — public surface of a feature: `screens/`,
 `manifest.ts`, top-level `hooks/` files, and `<feature>Fragments.generated.ts`
@@ -211,19 +172,20 @@ scoping.
 - `Unmasked<>` appears ONLY as an `optimisticResponse` callback return type;
   never `@unmask`. HKT registration: `src/types/apollo-masking.d.ts`.
 - **A condition the types say cannot matter is a lint error**
-  (`@typescript-eslint/no-unnecessary-condition`, on for `src/**` minus
-  `scripts/check-unnecessary-condition.baseline.json`). It earns its place on one
+  (`@typescript-eslint/no-unnecessary-condition`, on for `src/**` minus the
+  files in `scripts/no-unnecessary-condition.exclusions.json`, a debt list that
+  may only shrink). It earns its place on one
   shape nothing else catches: a method read without calling it.
   `!Environment.isProduction` disabled Detox launch-arg injection in every build
   with typecheck, lint and the full suite green — TypeScript's own TS2774 is
   emitted from an `if` condition, a ternary condition and the left operand of
   `&&`/`||` only, and `!fn` types as `boolean`, which has no call signatures.
 - **Never delete a runtime guard to satisfy that rule.** Three quarters of the
-  633 baselined findings are `?.` and null guards on data codegen types as
+  excluded findings are `?.` and null guards on data codegen types as
   non-nullable and the server does not guarantee. Delete a branch that is dead,
   or widen the over-promising type where it is DECLARED — never with a cast, and
   never at the call site. A guard that is neither stays, and its file stays in
-  the baseline.
+  the exclusion list.
 - **`noUncheckedIndexedAccess` is on**, so `arr[0]`, `record[key]` and a regex
   capture group each read as `T | undefined` and a guard on one is necessary
   rather than noise. Prefer a binding and a guard —
@@ -260,31 +222,24 @@ belongs in git.
   one of them 350 lines away. Use `{@link other}` instead of "the function
   above/below", which goes stale on a reorder.
 
-Two enforcers, split by what they can see. **Vocabulary** is
-`no-warning-comments` in `.eslintrc.js` — an error, so it lands in the editor —
-covering `src/**` and `__tests__/**`, tests included. **Volume** is
-`node scripts/check-comment-budget.mjs` (pre-commit and CI) over production
-`src` only, since a test comment explaining why a case exists is worth its
-length; its baseline is EMPTY, so any finding is a regression. Tool directives —
-`@ts-expect-error`, generated-file banners, `@deprecated`, `@internal` — are
-never counted and never removed. `scripts/`, the root config files and
-`.graphql` are outside the vocabulary rule: each has a phrase it would flag
-wrongly.
+**Vocabulary** is enforced: `no-warning-comments` in `.eslintrc.js` — an
+error, so it lands in the editor — covering `src/**` and `__tests__/**`.
+`scripts/`, the root config files and `.graphql` are outside it: each has a
+phrase it would flag wrongly. **Volume** is review's job.
 
 ## GraphQL & Apollo
 
 ### The data layer stays out of what renders
 
 **A screen, sheet or list cell gets its data from a hook in its feature's
-`hooks/`.** It does not import `#/apollo/*`, hold the client, or write the
-cache. Two invariants hold the seam and neither can see what the other does:
-`import/no-restricted-paths` bans the `src/apollo/**` import (with
-`alertRejectedMutation` exempt — it lives there by location but resolves
-localized refusal copy, which is presentation), and
-`node scripts/check-hook-return-types.mjs` reads what a hook HANDS BACK, since
-a leaked `ApolloError` or `NetworkStatus` couples a screen that imports
-nothing. A mutate wrapper returns `MutationOutcome<TData>`
-(`src/utils/errors/mutationOutcome.ts`), never Apollo's own result generic.
+`hooks/`.** It does not import `#/apollo/*` or `@apollo/client`'s operation
+hooks, hold the client, or write the cache. `import/no-restricted-paths` bans
+the `src/apollo/**` import (with `alertRejectedMutation` exempt — it lives there
+by location but resolves localized refusal copy, which is presentation). What a
+hook HANDS BACK matters as much as what a screen imports: a leaked `ApolloError`
+or `NetworkStatus` couples a screen that imports nothing. A mutate wrapper
+returns `MutationOutcome<TData>` (`src/utils/errors/mutationOutcome.ts`), never
+Apollo's own result generic.
 
 A hook returns plain values and callbacks: `loading` as a boolean, an outcome
 the caller branches on, named functions. `useFragment` and the masking types
@@ -512,35 +467,31 @@ container that arbitrates gestures, a key the session reset can find). The
 "Held by" column is what fails when you reach past it; a rule with no gate is
 one nobody has been able to express yet, not one that is optional.
 
-| Concern                                   | Mechanism                                                                                         | Held by                                                                                                                                                         |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A list that can grow                      | `FlashList`, with an explicit `renderScrollComponent`                                             | `check-canonical-mechanisms` · `flashListScrollComponents.test.ts`                                                                                              |
-| A remote image                            | `CachedImage` (`LocalImage` for a file or bundled asset)                                          | `check-canonical-mechanisms`                                                                                                                                    |
-| A modal surface                           | `BottomSheetModal` via `useStandardBottomSheet`, or `alertService`                                | `check-canonical-mechanisms` · `no-restricted-syntax` bans `present()`/`dismiss()`                                                                              |
-| Rendering a date                          | the shared formatters in `src/utils` (`formatters/date`, `dateUtils`)                             | `check-canonical-mechanisms`                                                                                                                                    |
-| Rendering a quantity                      | `formatQuantityForDisplay` (`#/utils/formatQuantity`)                                             | `check-canonical-mechanisms` (on the `fraction.js` import)                                                                                                      |
-| Device storage                            | a persisted slice of the Zustand store                                                            | `check-canonical-mechanisms` · `no-restricted-imports` on `#storage/mmkv`                                                                                       |
-| This device's identity                    | `getDeviceId()` sync, `ensureDeviceId()` async (`#/storage/deviceId`)                             | `check-canonical-mechanisms`                                                                                                                                    |
-| A screen's chrome                         | `Screen` (`#components/templates/Screen`)                                                         | `check-screen-scaffold`                                                                                                                                         |
-| A sheet's shell                           | `Sheet` (`#components/templates/Sheet`)                                                           | `bottomSheetShell.test.ts`                                                                                                                                      |
-| A list row                                | `commonStyles.rowWrapper` + `rowSurface` + `rowContent`, its text set by `rowType`                | — (no gate: a row is composed from views, so nothing tells one from any other row of views)                                                                     |
-| A loading indicator                       | `Loading` / `LoadingBranded` (`#components/molecules/Loading`)                                    | `check-canonical-mechanisms`                                                                                                                                    |
-| A toast                                   | `toastService` — in and out of the React tree alike                                               | `no-restricted-syntax` on its arguments                                                                                                                         |
-| Navigating                                | `useAppNavigation`                                                                                | `no-restricted-imports` on `useNavigation`                                                                                                                      |
-| Setting text                              | a typography ROLE (`<Text role="body">`)                                                          | `check-typography-roles`                                                                                                                                        |
-| A colour, radius, z-index or spacing step | a `theme.*` token                                                                                 | `check-design-tokens`                                                                                                                                           |
-| Elevation                                 | a step of `theme.shadows`                                                                         | `check-design-tokens`                                                                                                                                           |
-| A duration, spring or curve               | `theme.motion`                                                                                    | `check-design-tokens` (at or below the 300 ms scale ceiling; above it is a loop's own period)                                                                   |
-| A form's fields                           | react-hook-form + a yup schema beside the form                                                    | `check-form-state`                                                                                                                                              |
-| Searching a loaded list                   | `filterByTerm` / `useLocalSearch` (`#hooks/search/useLocalSearch`)                                | `check-canonical-mechanisms`                                                                                                                                    |
-| Reduce motion                             | nothing — Reanimated applies it itself                                                            | `no-restricted-imports` on `useReducedMotion` · `probe-reanimated-reduce-motion.mjs`                                                                            |
-| Memoization                               | nothing — the React Compiler does it                                                              | `check-compiler-bailouts`                                                                                                                                       |
-| A shared actions bag                      | `createActionsContext`                                                                            | — (no gate: a context holding callbacks is not distinguishable from any other context by shape)                                                                 |
-| Where a value lives                       | Apollo if the server owns it, else a Zustand slice; a context only for what a subtree passes down | — (no gate: the choice is not visible at any one call site — `check-single-consumer` catches a context only one feature reaches, which is a different question) |
-
-When a gate's baseline reaches zero, promote it to an
-`import/no-restricted-paths` or `no-restricted-imports` zone and delete the
-baseline — the same promotion the kit half of `check-layer-purity` already got.
+| Concern                                   | Mechanism                                                                                         | Held by                                                                                         |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| A list that can grow                      | `FlashList`, with an explicit `renderScrollComponent`                                             | `no-restricted-imports` on `FlatList`/`SectionList` · `flashListScrollComponents.test.ts`       |
+| A remote image                            | `CachedImage` (`LocalImage` for a file or bundled asset)                                          | `no-restricted-imports` on `react-native-turbo-image`                                           |
+| A modal surface                           | `BottomSheetModal` via `useStandardBottomSheet`, or `alertService`                                | `no-restricted-syntax` bans `present()`/`dismiss()`                                             |
+| Rendering a date                          | the shared formatters in `src/utils` (`formatters/date`, `dateUtils`)                             | `no-restricted-imports` on `date-fns`'s formatters                                              |
+| Rendering a quantity                      | `formatQuantityForDisplay` (`#/utils/formatQuantity`)                                             | `no-restricted-imports` on `fraction.js`                                                        |
+| Device storage                            | a persisted slice of the Zustand store                                                            | `no-restricted-imports` on `#storage/mmkv`                                                      |
+| This device's identity                    | `getDeviceId()` sync, `ensureDeviceId()` async (`#/storage/deviceId`)                             | `singleDeviceIdentity.test.ts`                                                                  |
+| A screen's chrome                         | `Screen` (`#components/templates/Screen`)                                                         | `screenTopInset.test.tsx` (the double inset); the rest is convention                            |
+| A sheet's shell                           | `Sheet` (`#components/templates/Sheet`)                                                           | `bottomSheetShell.test.ts`                                                                      |
+| A list row                                | `commonStyles.rowWrapper` + `rowSurface` + `rowContent`, its text set by `rowType`                | — (no gate: a row is composed from views, so nothing tells one from any other row of views)     |
+| A loading indicator                       | `Loading` / `LoadingBranded` (`#components/molecules/Loading`)                                    | `no-restricted-imports` on `ActivityIndicator`                                                  |
+| A toast                                   | `toastService` — in and out of the React tree alike                                               | `no-restricted-syntax` on its arguments                                                         |
+| Navigating                                | `useAppNavigation`                                                                                | `no-restricted-imports` on `useNavigation`                                                      |
+| Setting text                              | a typography ROLE (`<Text role="body">`)                                                          | `no-restricted-imports` on RN `Text`; the role prop is convention                               |
+| A colour, radius, z-index or spacing step | a `theme.*` token                                                                                 | `no-restricted-syntax` on border-width literals; the rest is convention                         |
+| Elevation                                 | a step of `theme.shadows`                                                                         | `onFillTextUsesItsToken.test.ts` for on-fill colour; the rest is convention                     |
+| A duration, spring or curve               | `theme.motion`                                                                                    | — (convention; at or below the 300 ms scale ceiling, above it is a loop's own period)           |
+| A form's fields                           | react-hook-form + a yup schema beside the form                                                    | `validationMessagesAreRendered.test.ts`                                                         |
+| Searching a loaded list                   | `filterByTerm` / `useLocalSearch` (`#hooks/search/useLocalSearch`)                                | `no-restricted-syntax` on `.filter(… toLowerCase().includes(…))`                                |
+| Reduce motion                             | nothing — Reanimated applies it itself                                                            | `no-restricted-imports` on `useReducedMotion` · `probe-reanimated-reduce-motion.mjs`            |
+| Memoization                               | nothing — the React Compiler does it                                                              | `no-restricted-imports` on `useMemo`/`useCallback` · `check-compiler-bailouts`                  |
+| A shared actions bag                      | `createActionsContext`                                                                            | — (no gate: a context holding callbacks is not distinguishable from any other context by shape) |
+| Where a value lives                       | Apollo if the server owns it, else a Zustand slice; a context only for what a subtree passes down | — (no gate: the choice is not visible at any one call site)                                     |
 
 ### Screen scaffold and sheet shell
 
@@ -548,9 +499,9 @@ baseline — the same promotion the kit half of `check-layer-purity` already got
   `header` (`standard | tab | collapsing | none`, plus title, actions, back,
   close, offline pill), `scroll` (`none | scroll | form | list`), `gutter`,
   `refresh` and `state`. It NEVER applies the top inset — the navigator does,
-  and a screen adding its own is the `double-inset` half of
-  `node scripts/check-screen-scaffold.mjs`. A bare `<SafeAreaView>` (no `edges`)
-  insets all four sides and is the usual way that happens.
+  and `__tests__/navigation/screenTopInset.test.tsx` renders the composition to
+  prove it lands once. A bare `<SafeAreaView>` (no `edges`) insets all four
+  sides and is the usual way a second one happens.
 - **A sheet's shell is `Sheet`** (`src/components/templates/Sheet.tsx`):
   `view | form | action | list`. `form` supplies both the keyboard offset and
   the input context, so inputs inside resolve to gorhom's
@@ -650,11 +601,9 @@ place and they read it.
   numbers, so `theme.maxFontScaleMultiplier` is the remainder of `MAX_FONT_SCALE`
   and the `Text` atom applies it. `maxFontSizeMultiplier` and
   `allowFontScaling={false}` are `no-restricted-syntax` errors.
-- `node scripts/check-typography-roles.mjs` holds both halves. `off-role-text`
-  is at ZERO — every `<Text>` outside the kit names a role, so any finding is a
-  regression. `stylesheet-type` is a shrinking baseline of 21: the blocks whose
-  type no role expresses (a responsive size map, a 10px badge, a Skia draw
-  call).
+- Every `<Text>` outside the kit names a role. A stylesheet setting type
+  properties itself is the exception, not the pattern: a responsive size map, a
+  10px badge, a Skia draw call.
 
 ### Elevation & on-fill colour
 
@@ -721,8 +670,9 @@ place and they read it.
   inside a sheet — or sit on an allowlist with a reason, so a new list cannot ship
   without the decision being made. `SwipeableItem`'s `dragOffset` (16dp) is defence in
   depth only, and takes one positive number because `dragOffsetFromRight` throws in
-  `__DEV__` unless non-positive. Verified 2026-08-24 vs
-  `react-native-gesture-handler@3.2.1`:
+  `__DEV__` unless non-positive. Verified 2026-09-12 vs
+  `react-native-gesture-handler@3.3.0` — re-check:
+  `node scripts/probe-rngh-nested-scroll.mjs`;
   `docs/verified-library-behaviour.md#rngh-v3-handlers-survive-a-native-scroll-takeover`.
 - **That list's pull-to-refresh must pass an EXPLICIT RNGH `RefreshControl`** —
   `refreshControl={<ThemedRefreshControl … />}`, never a bare
@@ -739,22 +689,28 @@ place and they read it.
   until pushed back up by hand, while every list passing an explicit control was
   fine. A plain RN scrollable host takes `PlainScrollRefreshControl` instead;
   pick by host. The `withUnistyles` wrapper is transparent to either (the gesture
-  crosses by reference). Verified 2026-08-24 on device vs
-  `react-native-gesture-handler@3.2.1` + `@shopify/flash-list@2.3.2` +
+  crosses by reference). Verified 2026-09-12 on device vs
+  `react-native-gesture-handler@3.3.0` + `@shopify/flash-list@2.3.2` +
   `react-native-unistyles@3.3.0` — re-check:
   `node scripts/probe-withunistyles-prop-passthrough.mjs`; guarded by
   `__tests__/gestures/flashListScrollComponents.test.ts`, which derives its file
   list from the tree so a new list cannot ship the mismatch.
 - **The rule is about the HOST, not about FlashList.** A standalone RNGH
   scroller offering pull-to-refresh renders `SwipeAwareScrollComponent` too,
-  never a hand-rolled `<ScrollView>` from RNGH: RN forces `nestedScrollEnabled`
+  never a hand-rolled `<ScrollView>` from RNGH: RN turns `nestedScrollEnabled`
   on under a `refreshControl` (facebook/react-native#55189), which lets RNGH's
   `SwipeRefreshLayoutHook` fail the handler mid-pull, and androidx ignores the
   ACTION_CANCEL that follows — so the Android spinner parks where the finger
   stopped and only a pull past the trigger retracts it. The meal plan shipped
   that way while every FlashList was fine, because the prop lives in the shared
   module and a hand-rolled host never reaches it. Verified 2026-09-05 on device;
-  guarded by the same test.
+  guarded by the same test. RNGH ≥3.3.0 carries an upstream fix
+  (`ScrollViewHook.shouldStopNestedScroll`, which gives androidx
+  `onStopNestedScroll` → `finishSpinner()`), so dropping the override is a live
+  candidate — **but it is unmeasured and the override stays until it isn't.**
+  A synthetic hesitant pull does not reproduce the park even on 3.2.1, so only a
+  real-finger A/B can settle it:
+  `docs/verified-library-behaviour.md#rngh-ends-the-nested-scroll-its-scrollview-opens`.
 
 ### Bottom sheets
 
@@ -929,11 +885,21 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   rule fails, which lands after any language change. Never hardcode the
   English string. Pattern: `src/utils/validation/common.ts`.
 - **A cross-field rule needs an explicit `trigger()`.**
-  `setValue(field, v, { shouldValidate: true })` re-validates THAT field only.
-  The all-or-nothing net-weight rule lives on the _unit_ while its inputs are
-  the weight and the unit id, so without
+  `setValue(field, v, { shouldValidate: true })` re-validates THAT field only —
+  with a resolver react-hook-form runs the whole schema but writes back only
+  `errors[name]`. The all-or-nothing net-weight rule lives on the _unit_ while
+  its inputs are the weight and the unit id, so without
   `trigger('netWeightUnit')` typing a weight never raised the message and
   picking a unit never cleared it. Verified on device 2026-08-26.
+  **Where a `Controller` owns the write** the form has no `onChange` to hang
+  that on: declare `rules={{ deps: ['otherField'] }}` instead (`FieldDef.deps`
+  in `DynamicFormFields`), which react-hook-form turns into the same `trigger`
+  call. Same concern, two spellings, picked by who writes the field.
+  **A field a rule READS must live in the form**, not beside it: a resolved
+  autocomplete id kept in `useState` is invisible to the resolver, so its rule
+  can never pass. Held by
+  `__tests__/forms/validationMessagesAreRendered.test.ts`, which derives the
+  schema list from the tree.
 - **A paged form maps field → page** (`FIELD_PAGE` in
   `addPantryItemFormConfig.ts`) and navigates before reporting, so the message
   is on screen instead of behind a tab the user has to find.
@@ -953,8 +919,8 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   user's own text ("1 1/4"), but the API echoes it back as a stringified float,
   so a 1/3-cup recipe line comes back carrying `"0.33333334"`. Text no parser can
   read ("a pinch") is still kept as written.
-- The fraction math lives in that one module — `check-canonical-mechanisms`
-  fails a `fraction.js` import outside `src/utils`. A field the user TYPES into
+- The fraction math lives in that one module — `no-restricted-imports` fails a
+  `fraction.js` import outside it. A field the user TYPES into
   is seeded by the same function, so a badge and its edit sheet cannot disagree;
   a decimal-only field (`PurchaseAmountSheet`, whose keypad has no `/`) seeds
   from `formatQuantity` instead.
@@ -1265,19 +1231,7 @@ After code changes:
 ```bash
 npm run typecheck && npm run lint && npm test
 npm run check:compiler-bailouts && npm run check:unistyles-variants
-npm run check:layer-purity && npm run check:feature-shape
-npm run check:dead-modules
-npm run check:comment-budget
-npm run check:data-layer-boundary && npm run check:hook-return-types
-npm run check:import-cycles
-npm run check:single-consumer
-npm run check:form-state && npm run check:feature-enumeration
-npm run check:canonical-mechanisms && npm run check:design-tokens
-npm run check:typography-roles
-npm run check:component-tier && npm run check:screen-scaffold
-npm run check:a11y-names
-npm run check:unnecessary-condition
-npm run check:dependency-audit
+npm run check:dead-modules && npm run check:import-cycles
 ```
 
 `check-compiler-bailouts` guards a file COUNT; separately, WHICH function bails
@@ -1289,7 +1243,7 @@ is a regression in the Babel plugin ordering.
 first-render value — a defect neither ESLint nor tsc can see, because it exists
 only in the output of two Babel plugins composed in a particular order. Both run
 in `pre-push` now, so neither depends on being remembered.
-`check:version-sync` (pre-push) keeps `package.json` / `versionName` /
+`check:version-sync` (pre-commit) keeps `package.json` / `versionName` /
 `MARKETING_VERSION` aligned — a drifted platform silently loses the
 version-keyed cache purge and misreports `CLIENT_VERSION`; detail:
 `docs/development.md` § Quality gates.

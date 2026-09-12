@@ -107,7 +107,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     type: string;
   } | null>(null);
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
-  const [netWeightUnitId, setNetWeightUnitId] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState(0);
   const [tagsExpanded, setTagsExpanded] = useState(false);
@@ -190,6 +189,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     formState: { errors, dirtyFields },
     setValue,
     reset,
+    trigger,
   } = useForm<PantryItemFormData>({
     resolver: yupResolver(editItemSchema) as Resolver<PantryItemFormData>,
     defaultValues: getInitialValues(),
@@ -234,9 +234,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         symbol: item.unit.symbol,
         type: item.unit.type ?? null,
       });
-    }
-    if (item.netWeightUnit?.id) {
-      setNetWeightUnitId(item.netWeightUnit.id);
     }
   }
 
@@ -292,8 +289,16 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     }));
   };
 
+  // The all-or-nothing net-weight rule reports on `netWeightUnit` while its
+  // inputs are `netWeight` and `netWeightUnitId`, so writing either half has to
+  // re-run both — `shouldValidate` re-runs only the field it wrote.
+  const revalidateNetWeight = () => {
+    void trigger(['netWeightUnit', 'netWeight']);
+  };
+
   const handleNetWeightUnitSelected = (unitId: string | null) => {
-    setNetWeightUnitId(unitId);
+    setValue('netWeightUnitId', unitId ?? '', { shouldDirty: true });
+    revalidateNetWeight();
   };
 
   const item = existingPantryItem;
@@ -306,7 +311,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     existingPantryItem,
     dirtyFields: dirtyFields as Record<string, unknown>,
     trackingUnit,
-    netWeightUnitId,
+    netWeightUnitId: watchedValues.netWeightUnitId || null,
     selectedLocationId,
     selectedBrandId,
     selectedCategoryId,
@@ -427,6 +432,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
               <NetWeightSection
                 control={control}
                 isWeightLocked={isWeightLocked}
+                onNetWeightChanged={revalidateNetWeight}
                 onNetWeightUnitSelected={handleNetWeightUnitSelected}
               />
             )}

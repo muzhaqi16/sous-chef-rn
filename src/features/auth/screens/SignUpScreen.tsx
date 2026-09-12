@@ -93,6 +93,9 @@ export const SignUpScreen = (): React.JSX.Element => {
             label: t('auth.password'),
             component: PasswordInput,
             props: { testID: 'signup-password-input' },
+            // The match rule reports on `confirmPassword` while reading this
+            // field, so editing this one has to re-run that one.
+            deps: ['confirmPassword'],
           },
           {
             name: 'confirmPassword',

@@ -2,8 +2,9 @@
  * The cache a test gets by default is the cache the app ships.
  *
  * **The migration is done.** Every user of the helper now gets the production
- * cache, and `scripts/check-test-cache-fidelity.mjs` is what keeps it that way.
- * The history below is why the guard exists, not work outstanding.
+ * cache, and a `no-restricted-syntax` ban on `new InMemoryCache()` in tests
+ * (`.eslintrc.js`) keeps it that way. The history below is why the guard
+ * exists, not work outstanding.
  *
  * A bare `InMemoryCache` is not a substitute for it. Production
  * builds `makeCache()` — 1014 lines: 16 `typePolicies` carrying 15 merge
@@ -23,10 +24,8 @@
  *
  * **Only BEHAVIOURAL assertions live here**: they check what the cache DOES, so
  * they survive a refactor of how `makeCache` is composed. The structural half —
- * who may build a bare cache, and which files even count as suites — moved to
- * `scripts/check-test-cache-fidelity.mjs`, which runs in pre-commit rather than
- * only under a full `npm test`, covers every entry point rather than two grep
- * strings, and fails rather than passes when its own scan matches nothing.
+ * who may build a bare cache — is the lint rule, which runs on every staged
+ * test rather than only under a full `npm test`.
  */
 import { gql } from '@apollo/client';
 import { seedCache } from '#/test-utils/apolloMockProvider';

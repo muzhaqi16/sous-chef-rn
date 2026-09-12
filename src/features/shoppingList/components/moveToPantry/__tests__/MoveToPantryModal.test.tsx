@@ -101,11 +101,49 @@ jest.mock('#components/molecules/FractionInput', () => {
 
 jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
   const RN = require('react-native');
+  const R = require('react');
   return {
-    UnitAutocompleteField: () =>
-      require('react').createElement(RN.View, {
-        testID: 'unit-autocomplete',
-      }),
+    // Reproduces the real field's order — the symbol first, then the id, and a
+    // keystroke drops a previous pick. The required-unit rule reports on the
+    // TEXT while reading the id, so only both writes together exercise it.
+    UnitAutocompleteField: ({
+      onChangeText,
+      onUnitSelected,
+      error,
+    }: {
+      onChangeText: (text: string) => void;
+      onUnitSelected?: (unitId: string | null) => void;
+      error?: string;
+    }) =>
+      R.createElement(
+        RN.View,
+        { testID: 'unit-autocomplete' },
+        R.createElement(
+          RN.Pressable,
+          {
+            testID: 'pick-unit',
+            onPress: () => {
+              onChangeText('kg');
+              onUnitSelected?.('unit-kg');
+            },
+          },
+          R.createElement(RN.Text, null, 'Pick kg'),
+        ),
+        R.createElement(
+          RN.Pressable,
+          {
+            testID: 'clear-unit',
+            onPress: () => {
+              onChangeText('');
+              onUnitSelected?.(null);
+            },
+          },
+          R.createElement(RN.Text, null, 'Clear'),
+        ),
+        error
+          ? R.createElement(RN.Text, { testID: 'unit-error' }, error)
+          : null,
+      ),
   };
 });
 
@@ -225,6 +263,20 @@ describe('MoveToPantryModal', () => {
       );
       expect(defaultProps.onConfirm).not.toHaveBeenCalled();
     });
+  });
+
+  it('reports an emptied unit field, not only on confirm', async () => {
+    // The rule reports on the TEXT while reading the id, and the field writes
+    // the text before dropping the id — so the write that empties the field
+    // leaves nothing to re-run it.
+    renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
+
+    fireEvent.press(screen.getByTestId('pick-unit'));
+    fireEvent.press(screen.getByTestId('clear-unit'));
+
+    await waitFor(() => expect(screen.getByTestId('unit-error')).toBeTruthy());
   });
 
   it('renders Move to Pantry title', () => {

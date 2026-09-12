@@ -132,9 +132,7 @@ function initializeClient() {
  * on the next cold start. No-op when nothing is pending.
  */
 export function flushCachePersistence() {
-  apolloCachePersistence.flushPending(
-    () => client.cache.extract() as NormalizedCacheObject,
-  );
+  apolloCachePersistence.flushPending();
 }
 
 /**

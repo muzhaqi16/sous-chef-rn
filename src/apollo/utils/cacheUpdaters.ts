@@ -1,6 +1,7 @@
-import type { ApolloCache, Reference } from '@apollo/client';
+import type { ApolloCache, Cache, Reference } from '@apollo/client';
 import { InMemoryCache } from '@apollo/client';
 import type { TypedDocumentNode } from '@apollo/client';
+import type { ModifierDetails } from '@apollo/client/cache';
 // The GraphQLCodegenDataMasking variant matches what the project's HKT
 // registration (src/types/apollo-masking.d.ts) makes read/writeFragment use.
 import type { GraphQLCodegenDataMasking } from '@apollo/client/masking';
@@ -14,11 +15,67 @@ import { logger } from '#/utils/environment';
  * discarded immediately. Only `InMemoryCache` exposes the option, hence the
  * `instanceof` narrowing — `ApolloCache.gc()`'s abstract signature omits it.
  */
-export function gcResetResultCache(cache: ApolloCache): string[] {
+function gcResetResultCache(cache: ApolloCache): string[] {
   if (cache instanceof InMemoryCache) {
     return cache.gc({ resetResultCache: true });
   }
   return cache.gc();
+}
+
+/**
+ * Drop the retain `writeFragment`/`writeQuery` adds for every id it writes
+ * explicitly. Without it the entity stays a retained root: `gc()` skips it,
+ * `extract()` pins it under `__META.extraRootIds`, and `restore()` re-retains it
+ * on the next launch. `release` is `InMemoryCache`-only, hence the narrowing.
+ */
+export function releaseEntity(cache: ApolloCache, cacheId: string): void {
+  if (!(cache instanceof InMemoryCache)) return;
+  // Each explicit write retains once, so an entity written across several
+  // fragments holds several. `release` returns the remaining count; stopping at
+  // the first would leave it a retained root, which is what `gc()` skips.
+  let retained = cache.release(cacheId);
+  while (retained > 0) {
+    retained = cache.release(cacheId);
+  }
+}
+
+/** Evict one entity, drop its retains and gc. False when the id is unknown. */
+function evictEntity(
+  cache: ApolloCache,
+  typename: string,
+  id: string,
+): boolean {
+  const cacheId = cache.identify({ __typename: typename, id });
+  if (!cacheId) return false;
+  cache.evict({ id: cacheId });
+  releaseEntity(cache, cacheId);
+  gcResetResultCache(cache);
+  return true;
+}
+
+function identifyParent(
+  cache: ApolloCache,
+  typename: string,
+  id: string,
+): string | undefined {
+  const cacheId = cache.identify({ __typename: typename, id });
+  if (!cacheId) {
+    logger.warn(`Parent entity not found in cache: ${typename}:${id}`);
+  }
+  return cacheId;
+}
+
+function tryModify(
+  cache: ApolloCache,
+  label: string,
+  options: Cache.ModifyOptions,
+): boolean {
+  try {
+    return cache.modify(options);
+  } catch (error) {
+    logger.warn(`Cache update failed for ${label}:`, serializeError(error));
+    return false;
+  }
 }
 
 /**
@@ -32,18 +89,15 @@ export type ConnectionData = {
   readonly __ref?: string;
 };
 
-export type InsertPosition = 'start' | 'end';
+/** What a modifier receives: a field the server returned as `null` is stored as `null`. */
+type StoredConnection = ConnectionData | null | undefined;
+type StoredRefs = readonly Reference[] | null | undefined;
 
-export interface AddToArrayOptions {
-  /** Position to insert the item (default: 'start') */
+type InsertPosition = 'start' | 'end';
+
+export interface AddToConnectionOptions {
+  /** Where the new edge goes (default: 'start') */
   position?: InsertPosition;
-  /** Whether to check for duplicates before adding (default: true) */
-  checkDuplicates?: boolean;
-}
-
-export interface AddToConnectionOptions extends AddToArrayOptions {
-  /** Update totalCount field (default: true) */
-  updateTotalCount?: boolean;
   /**
    * Leave a cached variant untouched, matched on its `storeFieldName`. A
    * `cache.modify` write fans out across every `keyArgs` variant of the field,
@@ -52,12 +106,9 @@ export interface AddToConnectionOptions extends AddToArrayOptions {
   skipStoreField?: (storeFieldName: string) => boolean;
 }
 
-export interface RemoveFromArrayOptions {
-  /** Whether to evict the item from cache entirely (default: false) */
+interface RemoveOptions {
+  /** Evict the entity itself (and gc) rather than only dropping its edge. */
   evictItem?: boolean;
-  /** Whether to run garbage collection after eviction (default: true).
-   *  Set to false in multi-delete operations and call cache.gc() once at the end. */
-  gc?: boolean;
 }
 
 /**
@@ -79,6 +130,25 @@ function storeFieldArgs(storeFieldName: string): string | null {
   return null;
 }
 
+type ParsedStoreFieldArgs =
+  | { args: Record<string, unknown> }
+  | { unparseable: true }
+  | null;
+
+/** Null for a variant without arguments; `unparseable` when they are not JSON. */
+function parseStoreFieldArgs(storeFieldName: string): ParsedStoreFieldArgs {
+  const raw = storeFieldArgs(storeFieldName);
+  if (raw === null) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { unparseable: true };
+  }
+  if (!parsed || typeof parsed !== 'object') return null;
+  return { args: parsed as Record<string, unknown> };
+}
+
 /**
  * Skip cached variants whose TOP-LEVEL arguments do not match — for a field keyed
  * on a plain argument (`storageLocations(homeId:)`), where the nested-`filters`
@@ -89,22 +159,23 @@ export function skipUnmatchedArgVariants(
   equals: Record<string, unknown>,
 ): (storeFieldName: string) => boolean {
   return storeFieldName => {
-    const args = storeFieldArgs(storeFieldName);
-    if (args === null) return false;
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(args);
-    } catch {
-      return true;
-    }
-    if (!parsed || typeof parsed !== 'object') return false;
-
-    const actual = parsed as Record<string, unknown>;
+    const parsed = parseStoreFieldArgs(storeFieldName);
+    if (!parsed) return false;
+    if ('unparseable' in parsed) return true;
+    const { args } = parsed;
     return Object.entries(equals).some(
-      ([key, value]) => key in actual && actual[key] !== value,
+      ([key, value]) => key in args && args[key] !== value,
     );
   };
+}
+
+function isActiveFilter(value: unknown): boolean {
+  return (
+    value !== null &&
+    value !== undefined &&
+    value !== '' &&
+    !(Array.isArray(value) && value.length === 0)
+  );
 }
 
 /**
@@ -117,40 +188,104 @@ export function skipUnmatchedFilterVariants(
   equals: Record<string, unknown>,
 ): (storeFieldName: string) => boolean {
   return storeFieldName => {
-    const argsStart = storeFieldName.indexOf('(');
-    if (argsStart === -1) return false;
-
-    const args = storeFieldName.slice(argsStart + 1, -1);
-    if (!args) return false;
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(args);
-    } catch {
-      // Cannot prove the variant matches — skip and let the next read fix it.
-      return true;
-    }
-
-    const filters = (parsed as { filters?: unknown } | null)?.filters;
+    const parsed = parseStoreFieldArgs(storeFieldName);
+    if (!parsed) return false;
+    if ('unparseable' in parsed) return true;
+    const { filters } = parsed.args;
     if (!filters || typeof filters !== 'object') return false;
-
-    return Object.entries(filters).some(([key, value]) => {
-      const isActive =
-        value !== null &&
-        value !== undefined &&
-        value !== '' &&
-        !(Array.isArray(value) && value.length === 0);
-      if (!isActive) return false;
-      return !(key in equals) || equals[key] !== value;
-    });
+    return Object.entries(filters).some(
+      ([key, value]) =>
+        isActiveFilter(value) && (!(key in equals) || equals[key] !== value),
+    );
   };
 }
 
 /**
- * Add an item to a Query root Connection field (edges, not a flat array).
- * `cache.modify` fires for EVERY cached `keyArgs` variant, so an item whose
- * membership depends on filters/orderBy needs `skipStoreField` or a refetch.
- * Edge typename assumes Relay (`Foo` → `FooEdge`); anything else is wrong silently.
+ * Edge typename assumes Relay (`Foo` → `FooEdge`); anything else is wrong
+ * silently. `totalCount` moves only where the record already holds one, so an
+ * add never introduces a count a query then reads as a cache hit.
+ */
+function addEdgeModifier<T extends { id: string }>(
+  newItem: T,
+  itemTypename: string,
+  { position = 'start', skipStoreField }: AddToConnectionOptions,
+) {
+  return (
+    existing: StoredConnection,
+    { toReference, readField, storeFieldName }: ModifierDetails,
+  ) => {
+    // Every "leave alone" path returns `existing` as is: Apollo reads an
+    // `undefined` over a stored `null` as a delete.
+    if (skipStoreField?.(storeFieldName)) return existing;
+    const newItemRef = toReference(newItem, true);
+    if (!newItemRef) return existing;
+
+    const edges = existing?.edges ?? [];
+    if (edges.some(edge => readField('id', edge.node) === newItem.id)) {
+      return existing;
+    }
+
+    const newEdge = {
+      __typename: `${itemTypename}Edge`,
+      node: newItemRef,
+      cursor: '',
+    };
+    const totalCount = existing?.totalCount;
+    return {
+      ...existing,
+      edges: position === 'start' ? [newEdge, ...edges] : [...edges, newEdge],
+      ...(typeof totalCount === 'number' && { totalCount: totalCount + 1 }),
+    };
+  };
+}
+
+function removeEdgeModifier(itemId: string, onRemoved: () => void) {
+  return (existing: StoredConnection, { readField }: ModifierDetails) => {
+    const edges = existing?.edges ?? [];
+    const kept = edges.filter(edge => readField('id', edge.node) !== itemId);
+    if (kept.length === edges.length) return existing;
+    onRemoved();
+    const totalCount = existing?.totalCount;
+    return {
+      ...existing,
+      edges: kept,
+      ...(typeof totalCount === 'number' && {
+        totalCount: Math.max(0, totalCount - 1),
+      }),
+    };
+  };
+}
+
+function addRefModifier<T extends { id: string }>(
+  newItem: T,
+  position: InsertPosition,
+) {
+  return (
+    existing: StoredRefs,
+    { toReference, readField }: ModifierDetails,
+  ) => {
+    const newItemRef = toReference(newItem, true);
+    if (!newItemRef) return existing;
+    const refs = existing ?? [];
+    if (refs.some(ref => readField('id', ref) === newItem.id)) return existing;
+    return position === 'start' ? [newItemRef, ...refs] : [...refs, newItemRef];
+  };
+}
+
+function removeRefModifier(itemId: string, onRemoved: () => void) {
+  return (existing: StoredRefs, { readField }: ModifierDetails) => {
+    const refs = existing ?? [];
+    const kept = refs.filter(ref => readField('id', ref) !== itemId);
+    if (kept.length === refs.length) return existing;
+    onRemoved();
+    return kept;
+  };
+}
+
+/**
+ * Add an item to a Query root Connection field. `cache.modify` fires for EVERY
+ * cached `keyArgs` variant, so an item whose membership depends on filters or
+ * orderBy needs `skipStoreField` or a refetch.
  */
 export function createAddToQueryConnectionUpdater<T extends { id: string }>(
   fieldName: string,
@@ -160,73 +295,17 @@ export function createAddToQueryConnectionUpdater<T extends { id: string }>(
     cache: ApolloCache,
     newItem: T,
     options: AddToConnectionOptions = {},
-  ): boolean => {
-    const {
-      position = 'start',
-      checkDuplicates = true,
-      updateTotalCount = true,
-      skipStoreField,
-    } = options;
-
-    try {
-      return cache.modify({
-        fields: {
-          [fieldName](
-            existingConnection: ConnectionData = {},
-            { toReference, readField, storeFieldName },
-          ) {
-            if (skipStoreField?.(storeFieldName)) return existingConnection;
-
-            const newItemRef = toReference(newItem, true);
-            if (!newItemRef) return existingConnection;
-
-            const existingEdges = existingConnection?.edges || [];
-
-            if (checkDuplicates) {
-              const exists = existingEdges.some(
-                edge => readField('id', edge?.node) === newItem.id,
-              );
-              if (exists) return existingConnection;
-            }
-
-            const newEdge = {
-              __typename: `${itemTypename}Edge`,
-              node: newItemRef,
-              cursor: '', // Will be populated on next fetch
-            };
-
-            const edges =
-              position === 'start'
-                ? [newEdge, ...existingEdges]
-                : [...existingEdges, newEdge];
-
-            const totalCount = updateTotalCount
-              ? (existingConnection?.totalCount || 0) + 1
-              : existingConnection?.totalCount;
-
-            return {
-              ...existingConnection,
-              edges,
-              ...(updateTotalCount && { totalCount }),
-            };
-          },
-        },
-      });
-    } catch (error) {
-      logger.warn(
-        `Cache update failed for adding to ${fieldName}:`,
-        serializeError(error),
-      );
-      return false;
-    }
-  };
+  ): boolean =>
+    tryModify(cache, `adding to ${fieldName}`, {
+      fields: { [fieldName]: addEdgeModifier(newItem, itemTypename, options) },
+    });
 }
 
 /**
  * Remove an item from a Query root Connection field. `evictItem: true` evicts the
  * entity and gcs — the connection's `read` policy then drops the dangling edge and
- * decrements `totalCount` on the next read. `evictItem: false` keeps the entity
- * and filters the edge here instead.
+ * decrements `totalCount` on the next read. Otherwise the edge is filtered here.
+ * Reports whether anything was removed.
  */
 export function createRemoveFromQueryConnectionUpdater(
   fieldName: string,
@@ -235,45 +314,25 @@ export function createRemoveFromQueryConnectionUpdater(
   return (
     cache: ApolloCache,
     itemId: string,
-    options: RemoveFromArrayOptions & { updateTotalCount?: boolean } = {},
-  ): void => {
-    const { evictItem = false, gc = true, updateTotalCount = true } = options;
-
+    { evictItem = false }: RemoveOptions = {},
+  ): boolean => {
     try {
-      if (evictItem) {
-        const cacheId = cache.identify({ __typename: typename, id: itemId });
-        if (!cacheId) return;
-        cache.evict({ id: cacheId });
-        if (gc) {
-          gcResetResultCache(cache);
-        }
-        return;
-      }
-
+      if (evictItem) return evictEntity(cache, typename, itemId);
+      let removed = false;
       cache.modify({
         fields: {
-          [fieldName](existingConnection: ConnectionData = {}, { readField }) {
-            const existingEdges = existingConnection?.edges || [];
-            const edges = existingEdges.filter(
-              edge => readField('id', edge?.node) !== itemId,
-            );
-            const totalCount = updateTotalCount
-              ? Math.max(0, (existingConnection?.totalCount || 0) - 1)
-              : existingConnection?.totalCount;
-
-            return {
-              ...existingConnection,
-              edges,
-              ...(updateTotalCount && { totalCount }),
-            };
-          },
+          [fieldName]: removeEdgeModifier(itemId, () => {
+            removed = true;
+          }),
         },
       });
+      return removed;
     } catch (error) {
       logger.warn(
         `Cache update failed for removing from ${fieldName}:`,
         serializeError(error),
       );
+      return false;
     }
   };
 }
@@ -282,7 +341,7 @@ export function createRemoveFromQueryConnectionUpdater(
  * Add an item to a Connection field nested in a parent entity. With `keyArgs`
  * (e.g. `Pantry.itemsConnection` on `['filters','orderBy']`) `cache.modify` runs
  * for EVERY cached variant and `position` ignores each variant's `orderBy` — scope
- * it with `skipStoreField`. Edge typename assumes Relay (`Foo` → `FooEdge`).
+ * it with `skipStoreField`.
  */
 export function createAddToParentConnectionUpdater<T extends { id: string }>(
   parentTypename: string,
@@ -295,79 +354,50 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
     newItem: T,
     options: AddToConnectionOptions = {},
   ): boolean => {
-    const {
-      position = 'start',
-      checkDuplicates = true,
-      updateTotalCount = true,
-      skipStoreField,
-    } = options;
+    const id = identifyParent(cache, parentTypename, parentId);
+    if (!id) return false;
+    return tryModify(cache, `adding to ${parentTypename}.${connectionField}`, {
+      id,
+      fields: {
+        [connectionField]: addEdgeModifier(newItem, itemTypename, options),
+      },
+    });
+  };
+}
 
+/**
+ * Remove an item from a parent entity's Connection field; the same two modes as
+ * {@link createRemoveFromQueryConnectionUpdater}. Reports whether an edge was
+ * removed, so a caller pairing this with a counter adjusts only on a real change.
+ */
+export function createRemoveFromParentConnectionUpdater(
+  parentTypename: string,
+  connectionField: string,
+  itemTypename: string,
+) {
+  return (
+    cache: ApolloCache,
+    parentId: string,
+    itemId: string,
+    { evictItem = false }: RemoveOptions = {},
+  ): boolean => {
     try {
-      const parentCacheId = cache.identify({
-        __typename: parentTypename,
-        id: parentId,
-      });
-
-      if (!parentCacheId) {
-        logger.warn(
-          `Parent entity not found in cache: ${parentTypename}:${parentId}`,
-        );
-        return false;
-      }
-
-      return cache.modify({
-        id: parentCacheId,
+      if (evictItem) return evictEntity(cache, itemTypename, itemId);
+      const id = identifyParent(cache, parentTypename, parentId);
+      if (!id) return false;
+      let removed = false;
+      cache.modify({
+        id,
         fields: {
-          [connectionField](
-            existingConnection: ConnectionData = {},
-            { readField, toReference, storeFieldName },
-          ) {
-            // `cache.modify` runs this for EVERY cached variant of a keyed field;
-            // without the opt-out a pantry notification lands in the recipes feed.
-            if (skipStoreField?.(storeFieldName)) return existingConnection;
-
-            const newItemRef = toReference(newItem, true);
-
-            if (!newItemRef) return existingConnection;
-
-            const existingEdges = existingConnection?.edges || [];
-
-            if (checkDuplicates) {
-              const exists = existingEdges.some(
-                edge => readField('id', edge?.node) === newItem.id,
-              );
-
-              if (exists) {
-                return existingConnection;
-              }
-            }
-
-            const newEdge = {
-              __typename: `${itemTypename}Edge`,
-              node: newItemRef,
-              cursor: '', // Will be populated on next fetch
-            };
-
-            const edges =
-              position === 'start'
-                ? [newEdge, ...existingEdges]
-                : [...existingEdges, newEdge];
-
-            const totalCount = updateTotalCount
-              ? (existingConnection?.totalCount || 0) + 1
-              : existingConnection?.totalCount;
-
-            return {
-              ...existingConnection,
-              edges,
-              ...(updateTotalCount && { totalCount }),
-            };
-          },
+          [connectionField]: removeEdgeModifier(itemId, () => {
+            removed = true;
+          }),
         },
       });
+      return removed;
     } catch (error) {
       logger.warn(
-        `Cache update failed for adding to ${parentTypename}.${connectionField}:`,
+        `Cache update failed for removing from ${parentTypename}.${connectionField}:`,
         serializeError(error),
       );
       return false;
@@ -388,150 +418,21 @@ export function createAddToParentArrayUpdater<T extends { id: string }>(
     cache: ApolloCache,
     parentId: string,
     newItem: T,
-    options: AddToArrayOptions = {},
+    { position = 'start' }: { position?: InsertPosition } = {},
   ): boolean => {
-    const { position = 'start', checkDuplicates = true } = options;
-
-    try {
-      const parentCacheId = cache.identify({
-        __typename: parentTypename,
-        id: parentId,
-      });
-
-      if (!parentCacheId) {
-        logger.warn(
-          `Parent entity not found in cache: ${parentTypename}:${parentId}`,
-        );
-        return false;
-      }
-
-      return cache.modify({
-        id: parentCacheId,
-        fields: {
-          [arrayField](
-            existingItems: readonly Reference[] = [],
-            { toReference, readField },
-          ) {
-            const newItemRef = toReference(newItem, true);
-
-            if (!newItemRef) return existingItems;
-
-            if (checkDuplicates) {
-              const exists = existingItems.some(
-                itemRef => readField('id', itemRef) === newItem.id,
-              );
-
-              if (exists) return existingItems;
-            }
-
-            return position === 'start'
-              ? [newItemRef, ...existingItems]
-              : [...existingItems, newItemRef];
-          },
-        },
-      });
-    } catch (error) {
-      logger.warn(
-        `Cache update failed for adding to ${parentTypename}.${arrayField}:`,
-        serializeError(error),
-      );
-      return false;
-    }
+    const id = identifyParent(cache, parentTypename, parentId);
+    if (!id) return false;
+    return tryModify(cache, `adding to ${parentTypename}.${arrayField}`, {
+      id,
+      fields: { [arrayField]: addRefModifier(newItem, position) },
+    });
   };
 }
 
 /**
- * Remove an item from a parent entity's Connection field. `evictItem: true` evicts
- * and gcs, letting the connection's `read` policy drop the dangling edge and
- * decrement `totalCount` — self-healing across every keyed variant.
- * `evictItem: false` filters here instead, which runs for every cached variant.
- */
-export function createRemoveFromParentConnectionUpdater(
-  parentTypename: string,
-  connectionField: string,
-  itemTypename: string,
-) {
-  return (
-    cache: ApolloCache,
-    parentId: string,
-    itemId: string,
-    options: RemoveFromArrayOptions & { updateTotalCount?: boolean } = {},
-    // Reports whether an edge was actually removed, so a caller pairing this with
-    // a counter — or `totalCount` — adjusts only on a real membership change.
-  ): boolean => {
-    const { evictItem = false, gc = true, updateTotalCount = true } = options;
-
-    try {
-      if (evictItem) {
-        const cacheId = cache.identify({
-          __typename: itemTypename,
-          id: itemId,
-        });
-        if (!cacheId) return false;
-        cache.evict({ id: cacheId });
-        if (gc) {
-          gcResetResultCache(cache);
-        }
-        return true;
-      }
-
-      const parentCacheId = cache.identify({
-        __typename: parentTypename,
-        id: parentId,
-      });
-
-      if (!parentCacheId) {
-        logger.warn(
-          `Parent entity not found in cache: ${parentTypename}:${parentId}`,
-        );
-        return false;
-      }
-
-      let removed = false;
-
-      cache.modify({
-        id: parentCacheId,
-        fields: {
-          [connectionField](
-            existingConnection: ConnectionData = {},
-            { readField },
-          ) {
-            const existingEdges = existingConnection?.edges || [];
-            const edges = existingEdges.filter(
-              edge => readField('id', edge?.node) !== itemId,
-            );
-            if (edges.length === existingEdges.length)
-              return existingConnection;
-
-            removed = true;
-            const totalCount = updateTotalCount
-              ? Math.max(0, (existingConnection?.totalCount || 0) - 1)
-              : existingConnection?.totalCount;
-
-            return {
-              ...existingConnection,
-              edges,
-              ...(updateTotalCount && { totalCount }),
-            };
-          },
-        },
-      });
-
-      return removed;
-    } catch (error) {
-      logger.warn(
-        `Cache update failed for removing from ${parentTypename}.${connectionField}:`,
-        serializeError(error),
-      );
-      return false;
-    }
-  };
-}
-
-/**
- * Remove an item from a parent entity's flat array field. With `keyArgs` the filter
- * runs for every cached variant — the same caveat as
- * {@link createRemoveFromParentConnectionUpdater}.
+ * Remove an item from a parent entity's flat array field. A flat array has no
+ * `read` policy to drop a dangling ref, so the ref is filtered out even when the
+ * entity is evicted.
  */
 export function createRemoveFromParentArrayUpdater(
   parentTypename: string,
@@ -542,54 +443,28 @@ export function createRemoveFromParentArrayUpdater(
     cache: ApolloCache,
     parentId: string,
     itemId: string,
-    options: RemoveFromArrayOptions = {},
-  ): void => {
-    const { evictItem = false, gc = true } = options;
-
+    { evictItem = false }: RemoveOptions = {},
+  ): boolean => {
     try {
-      const parentCacheId = cache.identify({
-        __typename: parentTypename,
-        id: parentId,
-      });
-
-      if (!parentCacheId) {
-        logger.warn(
-          `Parent entity not found in cache: ${parentTypename}:${parentId}`,
-        );
-        return;
-      }
-
+      const id = identifyParent(cache, parentTypename, parentId);
+      if (!id) return false;
+      let removed = false;
       cache.modify({
-        id: parentCacheId,
+        id,
         fields: {
-          [arrayField](
-            existingItems: readonly Reference[] = [],
-            { readField },
-          ) {
-            return existingItems.filter(
-              itemRef => readField('id', itemRef) !== itemId,
-            );
-          },
+          [arrayField]: removeRefModifier(itemId, () => {
+            removed = true;
+          }),
         },
       });
-
-      if (evictItem) {
-        const itemCacheId = cache.identify({
-          __typename: itemTypename,
-          id: itemId,
-        });
-        if (itemCacheId) {
-          cache.evict({ id: itemCacheId });
-          if (gc) {
-            gcResetResultCache(cache);
-          }
-        }
-      }
+      if (evictItem) evictEntity(cache, itemTypename, itemId);
+      return removed;
     } catch (error) {
       logger.warn(
         `Cache update failed for removing from ${parentTypename}.${arrayField}:`,
         serializeError(error),
       );
+      return false;
     }
   };
 }
@@ -686,26 +561,14 @@ export function applyOptimisticFragmentPatch<TFragment>(
   };
 }
 
-/** Evict one entity and gc(resetResultCache); use instead of evict + gc. */
-/** Retains on one id, bounded so a miscount cannot spin. */
-const MAX_RETAIN_DRAIN = 16;
-
+/** Evict one entity, release its retains and gc; use instead of evict + gc. */
 export function safeEvict(
   cache: ApolloCache,
   typename: string,
   itemId: string,
 ): void {
   try {
-    const cacheId = cache.identify({ __typename: typename, id: itemId });
-    if (!cacheId) return;
-    cache.evict({ id: cacheId });
-    // `evict` drops the record but not the retains `writeFragment` took, which
-    // `extract()` persists. `retain` counts, so drain it.
-    const retaining = cache as { release?: (rootId: string) => number };
-    for (let i = 0; i < MAX_RETAIN_DRAIN; i++) {
-      if (!retaining.release || retaining.release(cacheId) <= 0) break;
-    }
-    gcResetResultCache(cache);
+    evictEntity(cache, typename, itemId);
   } catch (error) {
     logger.warn(
       `Cache eviction failed for ${typename}:${itemId}:`,

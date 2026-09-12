@@ -43,6 +43,9 @@ const OptimisticPantryFragment = gql`
         refrigerated
         frozen
         ambient
+        # GetPantry selects none, and a field this fragment omits is dropped on
+        # write — leaving the pantry incomplete, which reads as no data at all.
+        none
       }
       storageLocationCounts {
         storageLocationId
@@ -55,12 +58,13 @@ const OptimisticPantryFragment = gql`
 `;
 
 /**
- * The no-args itemsConnection variant — `keyArgs: ['filters', 'orderBy']`, both
- * undefined on the default screen, so this writes the storeFieldName it reads.
+ * `keyArgs: ['filters', 'orderBy']` are both undefined on the default screen,
+ * but a selection with NO argument is a DIFFERENT store field from one with
+ * any argument — so this carries `first` to key where the screen reads.
  */
 const PantryEmptyItemsFragment = gql`
   fragment _PantryEmptyItems on Pantry {
-    itemsConnection {
+    itemsConnection(first: 50) {
       totalCount
       pageInfo {
         hasNextPage

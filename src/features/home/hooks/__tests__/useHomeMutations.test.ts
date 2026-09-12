@@ -9,6 +9,7 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { CreateHomeDocument } from '#operations/home/home.generated';
+import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { alertService } from '#/services/alertService';
 import { useHomeMutations } from '../useHomeMutations';
 
@@ -138,6 +139,21 @@ function createHomeMock(home: { id: string; name: string }) {
   });
 }
 
+function createPantryMock(pantry: { id: string; homeId: string }) {
+  return recordMock(CreatePantryDocument, {
+    data: {
+      createPantry: {
+        __typename: 'CreatePantryPayload',
+        pantry: {
+          __typename: 'Pantry',
+          id: pantry.id,
+          homeId: pantry.homeId,
+        },
+      },
+    },
+  });
+}
+
 describe('useHomeMutations', () => {
   it('returns mutation functions and loading states', () => {
     const { result } = renderHookWithApollo(() =>
@@ -191,6 +207,29 @@ describe('useHomeMutations', () => {
       expect(m.fired[0]).toMatchObject({
         input: { name: 'Test', allowJoinCode: false },
       });
+    });
+
+    it('mints the new home a default pantry, since the create asks for none', async () => {
+      // `createDefaultPantry` is forced off, so without this second write a
+      // home made here would have no pantry for any later write to name.
+      const home = createHomeMock({ id: 'new-home', name: 'My Home' });
+      const pantry = createPantryMock({ id: 'new-pantry', homeId: 'new-home' });
+      const { result } = renderHookWithApollo(
+        () => useHomeMutations(createOptions()),
+        { operationMocks: [home.mock, pantry.mock] },
+      );
+
+      await act(async () => {
+        await result.current.createHome('My Home');
+      });
+
+      expect(pantry.fired[0]).toMatchObject({
+        input: { name: 'Kitchen Pantry', isDefault: true },
+      });
+      const pantryInput = (pantry.fired[0] as { input: { homeId: string } })
+        .input;
+      const homeInput = (home.fired[0] as { input: { id: string } }).input;
+      expect(pantryInput.homeId).toBe(homeInput.id);
     });
 
     it('creates the home without a join code when the email is unverified', async () => {

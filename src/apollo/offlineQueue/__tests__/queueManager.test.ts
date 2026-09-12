@@ -1,7 +1,7 @@
 import { Kind } from 'graphql';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import type { StoreObject } from '@apollo/client';
-import { QueueManager } from '../queueManager';
+import { QueueManager, RELATIVE_VALUE_OPERATIONS } from '../queueManager';
 import { queueStore } from '../queueStore';
 import { useStore } from '#store';
 import {
@@ -16,6 +16,7 @@ import {
   ReplayRejectedError,
 } from '../queueErrorPolicy';
 import { makeCache } from '#/apollo/cache';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { Telemetry } from '#/services/telemetry';
 
 // Mock the store module
@@ -67,6 +68,7 @@ jest.mock('../queueStore', () => ({
       authErrors: 0,
     })),
     getMutationsForUser: jest.fn(() => []),
+    invalidateCache: jest.fn(),
   },
 }));
 
@@ -406,9 +408,9 @@ describe('QueueManager', () => {
   });
 
   // -------------------------------------------------------------------------
-  // drain halts on transient defer
+  // a transient defer holds its dependents only
   // -------------------------------------------------------------------------
-  describe('drain halts on transient defer', () => {
+  describe('a transient defer holds its dependents only', () => {
     beforeEach(() => {
       // Device online and the reachability breaker closed — the drain would
       // otherwise keep going; only a per-mutation transient defer should stop it.
@@ -421,7 +423,7 @@ describe('QueueManager', () => {
       manager['validateTokenBeforeReplay'] = jest.fn().mockResolvedValue(true);
     });
 
-    it('stops the drain when a mutation defers, leaving the tail PENDING and in order', async () => {
+    it('holds a dependent behind a deferred entry and drains an unrelated one', async () => {
       // createA fails with a one-off 5xx and is deferred back to PENDING;
       // updateA depends on createA, so replaying it (or createB) ahead of the
       // un-synced createA would be out-of-order.
@@ -459,12 +461,10 @@ describe('QueueManager', () => {
 
       await manager.processQueue();
 
-      // Only createA was attempted; the drain broke before updateA/createB, so
-      // they were never dequeued — they stay PENDING for the next drain, in order.
-      expect(processed).toEqual(['mut-create-a']);
+      // updateA names the id createA mints, so it waits. createB is a different
+      // entity and has no reason to: global FIFO would have stranded it.
+      expect(processed).toEqual(['mut-create-a', 'mut-create-b']);
       expect(processed).not.toContain('mut-update-a');
-      expect(processed).not.toContain('mut-create-b');
-      expect(manager['processMutation']).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -600,6 +600,9 @@ describe('QueueManager', () => {
 
     beforeEach(() => {
       handleMutationError = manager['handleMutationError'].bind(manager);
+      // Module-level and shared: a declaration left behind would change how
+      // every later conflict test resolves.
+      RELATIVE_VALUE_OPERATIONS.clear();
       // Default: online
       mockedGetState.mockReturnValue({
         user: { id: 'user-1' },
@@ -632,8 +635,8 @@ describe('QueueManager', () => {
       const result = await handleMutationError(mutation, error);
 
       expect(result.success).toBe(false);
-      // The defer is signalled to the drain loop so it stops rather than
-      // replaying later (possibly dependent) mutations ahead of this one.
+      // The defer is signalled to the drain loop so it holds this entry's
+      // dependents rather than replaying them ahead of it.
       expect(result.deferred).toBe(true);
       // A transient network error must NOT permanently fail the mutation — it
       // stays PENDING (reset retryCount) for the next drain/recovery.
@@ -644,6 +647,103 @@ describe('QueueManager', () => {
           status: QueueStatus.PENDING,
           retryCount: 0,
         }),
+      );
+    });
+
+    it('withdraws an entry that has deferred more times than the bound allows', async () => {
+      const failureHandler = jest.fn();
+      manager.setFailureHandler(failureHandler);
+      // One short of the bound, so this defer is the one that exhausts it.
+      const mutation = makeMutation({
+        id: 'stuck',
+        retryCount: 3,
+        maxRetries: 3,
+        deferCount: 10,
+      });
+
+      const result = await handleMutationError(mutation, {
+        message: 'Network error',
+      });
+
+      expect(result.deferred).toBeUndefined();
+      expect(queueStore.markMutationFailed).toHaveBeenCalledWith(
+        'stuck',
+        expect.objectContaining({ retryable: false }),
+      );
+      expect(failureHandler).toHaveBeenCalled();
+    });
+
+    it('counts a defer so a repeatedly undeliverable entry approaches the bound', async () => {
+      const mutation = makeMutation({
+        id: 'counting',
+        retryCount: 3,
+        maxRetries: 3,
+        deferCount: 2,
+      });
+
+      const result = await handleMutationError(mutation, {
+        message: 'Network error',
+      });
+
+      expect(result.deferred).toBe(true);
+      expect(queueStore.updateMutation).toHaveBeenCalledWith(
+        'counting',
+        expect.objectContaining({ deferCount: 3 }),
+      );
+    });
+
+    it('reports a relative write overwritten instead of re-sending it', async () => {
+      RELATIVE_VALUE_OPERATIONS.add('AdjustByDelta');
+      const overwriteReporter = jest.fn();
+      manager.setOverwriteReporter(overwriteReporter);
+      const processMutation = jest.spyOn(
+        manager as unknown as {
+          processMutation: (m: QueuedMutation) => Promise<ProcessingResult>;
+        },
+        'processMutation',
+      );
+      const mutation = makeMutation({
+        id: 'delta-1',
+        operationName: 'AdjustByDelta',
+        variables: { input: { id: 'a', version: 3 } },
+      });
+
+      const result = await handleMutationError(
+        mutation,
+        new ReplayRejectedError('ConflictError', 'stale', 'VERSION_CONFLICT'),
+      );
+
+      expect(result.success).toBe(false);
+      // Re-sending a cumulative write against a newer version applies it twice.
+      expect(processMutation).not.toHaveBeenCalled();
+      expect(overwriteReporter).toHaveBeenCalledWith(
+        expect.objectContaining({ mutationId: 'delta-1' }),
+      );
+      expect(queueStore.removeMutation).toHaveBeenCalledWith('delta-1');
+    });
+
+    it('parks the write when the refresh token is rejected, rather than withdrawing it', async () => {
+      const failureHandler = jest.fn();
+      manager.setFailureHandler(failureHandler);
+      const mutation = makeMutation({
+        id: 'refresh-dead',
+        retryCount: 3,
+        maxRetries: 3,
+      });
+
+      // What `performTokenRefresh` throws once the server refuses the refresh.
+      // Device-observed: flattened to a bare Error it classified `unknown`
+      // and the queued create was withdrawn.
+      const result = await handleMutationError(mutation, {
+        message: 'Refresh token expired',
+        code: ErrorCode.AuthRefreshTokenInvalid,
+      });
+
+      expect(result.success).toBe(false);
+      expect(failureHandler).not.toHaveBeenCalled();
+      expect(queueStore.markMutationFailed).toHaveBeenCalledWith(
+        'refresh-dead',
+        expect.objectContaining({ type: 'auth' }),
       );
     });
 
@@ -685,6 +785,50 @@ describe('QueueManager', () => {
   // -------------------------------------------------------------------------
   // Event handlers
   // -------------------------------------------------------------------------
+  describe('whenIdle', () => {
+    beforeEach(() => {
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-1' },
+        accessToken: 'token',
+        isOnline: true,
+      });
+    });
+
+    it('drains a scheduled-but-unfired drain instead of reporting idle', async () => {
+      // An API-only outage never flips `isOnline`, so the replay arrives
+      // through `requestDrain`'s debounce while the reconnect backfill fires on
+      // the reachability edge. Reading "idle" in that gap refetches a server
+      // that has not received the queued writes yet.
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([]);
+      manager.requestDrain(600);
+
+      await manager.whenIdle();
+
+      expect(queueStore.getPendingMutationsForUser).toHaveBeenCalled();
+    });
+
+    it('awaits a drain that is already in flight', async () => {
+      let release: (() => void) | undefined;
+      const replayed = new Promise<void>(resolve => {
+        release = resolve;
+      });
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockImplementation(
+        () => {
+          release?.();
+          return [];
+        },
+      );
+
+      const draining = manager.processQueue();
+      await replayed;
+      await manager.whenIdle();
+      await draining;
+
+      // One drain, not two: an in-flight drain is awaited, never restarted.
+      expect(queueStore.getPendingMutationsForUser).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('event handlers', () => {
     it('onLogout clears queue for user', () => {
       manager.onLogout('user-1');
@@ -2049,6 +2193,9 @@ describe('session teardown step', () => {
     // The entries stay: a rejected refresh token is not the user choosing to
     // discard unsynced work. Only `onLogout` deletes them.
     expect(queueStore.clearQueueForUser).not.toHaveBeenCalled();
+    // The RAM mirror goes, so the next session reads the blob rather than the
+    // previous user's entries still sitting in memory.
+    expect(queueStore.invalidateCache).toHaveBeenCalled();
 
     processQueue.mockRestore();
     jest.useRealTimers();

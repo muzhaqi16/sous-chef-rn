@@ -114,25 +114,29 @@ cancel v3 gesture handlers when a native scrollable takes the touch stream, so t
 row's pan keeps accumulating horizontal travel for the whole drag and crosses any
 threshold eventually.
 
-**Verified against `react-native-gesture-handler@3.2.1`.** The chain:
+**Verified against `react-native-gesture-handler@3.3.0`.** The chain:
 
-1. `ReanimatedSwipeable.tsx:27` imports `GestureDetector` from `'../../v3/detectors'`,
+1. `ReanimatedSwipeable.tsx:28` imports `GestureDetector` from `'../../v3/detectors'`,
    so its pan registers as `ACTION_TYPE_NATIVE_DETECTOR` / `ACTION_TYPE_VIRTUAL_DETECTOR`
    (5 / 6 in `GestureHandler.kt:1034-1035`, assigned in
-   `RNGestureHandlerDetectorView.kt:106,189,227`).
+   `RNGestureHandlerDetectorView.kt:104,187,222`).
 2. A native view grabbing the touch calls
-   `RNGestureHandlerRootHelper.requestDisallowInterceptTouchEvent()` (`:117`), whose
-   only cancellation is `orchestrator.cancelAllLegacyHandlers()`.
-3. `GestureHandlerOrchestrator.kt:371` — docblock: _"Cancels all handlers created
-   using API v1 and v2"_ — matches only action types 1–4. **Types 5 and 6 are not in
-   the list**, so the swipe pan is never cancelled.
+   `RNGestureHandlerRootHelper.requestDisallowInterceptTouchEvent()` (`:119`), which
+   cancels through `orchestrator.cancelAllLegacyHandlers()` and, for a view that opts
+   in, `cancelHandlersOnNativeTouchGrab()` deferred to `onNativeDispatchEnd`.
+3. `GestureHandlerOrchestrator.kt:385` — `cancelAllLegacyHandlers` matches only action
+   types 1–4. **Types 5 and 6 are not in the list**, so the swipe pan is never
+   cancelled. `cancelHandlersOnNativeTouchGrab` (`:395`) is gated on
+   `it is NativeViewGestureHandler`, and the sole override of
+   `shouldCancelOnNativeTouchGrab` is `RNGestureHandlerButtonViewManager.kt:835` — so
+   it covers buttons, not a detector pan.
 
 Distance cannot compensate: `activeOffsetX` is measured from touch-down with no time
 limit and no cancellation, so a long scroll crosses 10, 16, 24 — and the 40 that
 failed for the reporter of upstream
 [#2380](https://github.com/software-mansion/react-native-gesture-handler/issues/2380).
-`ReanimatedSwipeable` also exposes no `failOffsetY` in 2.30.0, 3.1.0, 3.2.1 **or
-`3.3.0-nightly-20260824`**, and the legacy non-Reanimated `Swipeable` is gone in 3.x.
+`ReanimatedSwipeable` also exposes no `failOffsetY` anywhere in 2.30.0 through 3.3.0,
+and the legacy non-Reanimated `Swipeable` is gone in 3.x.
 
 **The fix is to make the scrollable an RNGH handler.**
 `GestureHandlerOrchestrator.makeActive()` (`:234-247`) cancels every handler for which
@@ -200,7 +204,8 @@ non-positive, which is why the component takes one positive number and applies t
 Re-check:
 
 ```
-grep -n "cancelAllLegacyHandlers" -A 12 node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/core/GestureHandlerOrchestrator.kt
+node scripts/probe-rngh-nested-scroll.mjs
+grep -n "cancelAllLegacyHandlers" -A 8 node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/core/GestureHandlerOrchestrator.kt
 grep -rn "renderScrollComponent" src --include=*.tsx
 grep -n -A 12 "requestDisallowInterceptTouchEvent" node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/react/RNGestureHandlerDetectorView.kt
 grep -rn "touchAction" node_modules/react-native-gesture-handler/android/src/main/java   # no hits = still web-only
@@ -212,7 +217,7 @@ grep -rn "touchAction" node_modules/react-native-gesture-handler/android/src/mai
 `RefreshControl` gets no scroll↔refresh arbitration. The prop RNGH uses to wire
 them together is accepted and discarded, silently.
 
-**Verified against `react-native-gesture-handler@3.2.1` +
+**Verified against `react-native-gesture-handler@3.3.0` +
 `react-native-unistyles@3.3.0`.** The chain:
 
 1. `v3/components/GestureComponents.tsx:97-105` — RNGH's `ScrollView` renders
@@ -274,6 +279,64 @@ node scripts/probe-withunistyles-prop-passthrough.mjs
 grep -n "cloneElement" -A 8 node_modules/react-native-gesture-handler/src/v3/components/GestureComponents.tsx
 grep -n -A 14 "const refreshControl = useMemo" node_modules/@shopify/flash-list/src/recyclerview/hooks/useSecondaryProps.tsx
 grep -n -B 4 "'block'" node_modules/react-native-gesture-handler/src/v3/hooks/utils/propsWhiteList.ts
+npx jest __tests__/gestures/flashListScrollComponents.test.ts
+```
+
+### RNGH ends the nested scroll its ScrollView opens
+
+**Claim:** RNGH ends the nested scroll its `ScrollView` opens, which is the
+retraction path androidx's `SwipeRefreshLayout` needs. This is the upstream fix
+for the parked Android refresh spinner — but the app still forces
+`nestedScrollEnabled={false}`, because nothing here has measured the removal.
+
+**Verified against `react-native-gesture-handler@3.3.0` +
+`react-native@0.86.3`.** The chain:
+
+1. `ScrollView.js:1861` — under a `refreshControl` on Android, RN renders
+   `nestedScrollEnabled={props.nestedScrollEnabled ?? true}`, with the comment
+   _"Nested scroll should always be enabled to allow the child scroll view to
+   handle events before passing them to the refresh control parent"_. It is a
+   default, not a force: an explicit `false` survives
+   (facebook/react-native#55189).
+2. The ScrollView opens a nested scroll on DOWN. Once RNGH's
+   `NativeViewGestureHandler` is `STATE_ACTIVE` it feeds touches straight to
+   `onTouchEvent`, bypassing `View.dispatchTouchEvent` — which is what would
+   normally close that nested scroll.
+3. `NativeViewGestureHandler.kt:543-549` — `ScrollViewHook` overrides
+   `shouldStopNestedScroll() = true`, so the handler calls
+   `view.stopNestedScroll()` when the active gesture ends (`:164`, `:212`).
+   androidx's `SwipeRefreshLayout` gets `onStopNestedScroll` → `finishSpinner()`
+   and the indicator retracts.
+
+Without step 3 the spinner has no retraction path: the hook's own mid-pull
+`fail()` dispatches ACTION_CANCEL, and androidx ignores it outright — no
+`finishSpinner()`, `mIsBeingDragged` left true. `SwipeRefreshLayoutHook` does
+not opt into `shouldStopNestedScroll`, so the retraction comes from the child
+ScrollView's handler, over the nested-scroll protocol rather than the touch
+protocol.
+
+**Why the override stays anyway.** `nestedScrollEnabled={false}` in
+`SwipeAwareScrollComponent` keeps the nested-scroll protocol out of the picture
+entirely, which also avoids the park. It costs the nesting step 1 exists to
+provide, so removing it is a real candidate — but a candidate is not a
+measurement, and **a mechanism is not a cause**. A controlled A/B on the meal
+plan (the surface the park shipped on), 3.2.1 vs 3.3.0, both with the override
+removed, could not reproduce the park on EITHER build: five synthetic pull
+profiles, plus `gesture-custom` pulls with a genuine stationary hold mid-gesture
+and a drift-back-before-release, all showed the spinner appear and retract
+cleanly. The spinner is demonstrably reached — it is visible in the frames — so
+the gesture engages the control; what synthetic input does not reproduce is the
+park. That matches the repo's standing finding that this class of gesture bug
+needs a real finger. Until a real-finger A/B says otherwise, the override stays.
+
+`SwipeAwareScrollComponent` is where a change here would land.
+
+Re-check:
+
+```
+node scripts/probe-rngh-nested-scroll.mjs
+grep -n -A 4 "private class ScrollViewHook" node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/core/NativeViewGestureHandler.kt
+grep -n "nestedScrollEnabled" node_modules/react-native/Libraries/Components/ScrollView/ScrollView.js
 npx jest __tests__/gestures/flashListScrollComponents.test.ts
 ```
 
@@ -500,7 +563,7 @@ node scripts/check-startup-origin.mjs
 
 Guarded by that script, which transforms `index.js` with the real plugin and
 asserts the clock module is the first emitted `require` AND that it is
-dependency-free. Wired into `pre-push` and `npm run check:startup-origin`.
+dependency-free. Wired into `pre-commit` and `npm run check:startup-origin`.
 Pinned to a Metro internal path on purpose: if an upgrade moves the plugin the
 check fails loudly, because the guarantee is a property of that transform.
 
@@ -770,6 +833,11 @@ at all on an array-`keyArgs` field. `skipUnmatchedArgVariants` was written that
 way, so it returned "do not skip" for every variant and the cross-home leak it
 exists to prevent — a storage location restored after a refused delete in home A
 appearing in home B's list — was still live under a passing suite.
+`skipUnmatchedFilterVariants` is the same guard for the nested `filters`
+argument, and its consumers (`mealTemplates`, `User.notificationsConnection`)
+are array-`keyArgs` fields, so it has to read the colon form too: both helpers
+share `parseStoreFieldArgs`, and `cacheUpdaters.test.ts` captures the real store
+key off `makeCache()` so a fixture cannot drift from Apollo's form.
 
 Parse by whichever delimiter comes FIRST: the paren form also contains a `:`
 inside its JSON (at index 17 in the sample above), so testing for `:` alone

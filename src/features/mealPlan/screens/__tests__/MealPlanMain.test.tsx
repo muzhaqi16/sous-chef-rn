@@ -248,11 +248,6 @@ describe('MealPlanMain', () => {
     expect(getByTestId('meal-plan-screen')).toBeTruthy();
   });
 
-  it('shows TabScreenHeader in fallback', () => {
-    const tree = renderWithApollo(<MealPlanMain />);
-    expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
-  });
-
   it('renders inner component when DeferredScreen renders component', () => {
     // Override to render the component prop
     mockDeferredScreen.mockImplementation(

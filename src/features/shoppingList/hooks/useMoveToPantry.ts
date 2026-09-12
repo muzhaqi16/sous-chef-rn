@@ -95,10 +95,9 @@ function applyMoveToPantryCacheUpdate(
 ): void {
   const { pantryId, shoppingListItemId, removeFromList, currentListId } = args;
 
-  // The server may return an EXISTING row restocked rather than a new one, so the
-  // returned id can already be in the connection. Keep the updater's default
-  // checkDuplicates on — without it a restock duplicates the edge; Apollo
-  // normalizes the restocked fields onto the existing entity by id.
+  // The server may return an EXISTING row restocked rather than a new one, so
+  // the returned id can already be in the connection; the updater dedupes by id
+  // and Apollo normalizes the restocked fields onto the existing entity.
   const addToPantryCache = createAddToParentConnectionUpdater(
     'Pantry',
     'itemsConnection',

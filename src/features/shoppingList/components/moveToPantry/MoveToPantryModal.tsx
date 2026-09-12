@@ -79,6 +79,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     control,
     handleSubmit,
     setValue,
+    trigger,
     formState: { errors },
   } = useForm<MoveToPantryFormValues>({
     resolver: yupResolver(moveToPantrySchema),
@@ -394,6 +395,10 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                     error={errors.unitValue?.message}
                     onUnitSelected={id => {
                       setValue('unitId', id);
+                      // The rule reports on the TEXT while reading the id, and
+                      // the field clears the id after writing the text — so
+                      // without this the emptied field carries no message.
+                      void trigger('unitValue');
                     }}
                   />
                 </View>

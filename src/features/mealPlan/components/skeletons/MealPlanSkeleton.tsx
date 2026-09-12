@@ -4,98 +4,96 @@ import { StyleSheet } from 'react-native-unistyles';
 import { SkeletonBase } from '#components/atoms/Skeleton/SkeletonBase';
 import { MealPlanItemCardSkeleton } from '#features/mealPlan/components/skeletons/MealPlanItemCardSkeleton';
 import { getScrollClearancePadding } from '#constants/layout';
+import { Icon } from '#utils/iconUtils';
 
-/** Mirrors MealPlanMain's loaded layout, section for section. */
+/** Mirrors MealPlanMain's fixed calendar and scrolling meal sections. */
 export const MealPlanSkeleton: React.FC = () => (
-  <ScrollView
-    contentContainerStyle={styles.container}
-    showsVerticalScrollIndicator={false}
-  >
-    {/* WeekStrip skeleton */}
+  <View style={styles.container}>
     <View style={styles.weekStrip}>
-      {/* Left arrow */}
       <View style={styles.arrowButton}>
-        <SkeletonBase width={16} height={16} borderRadius={4} />
+        <Icon name="chevron-back" size="sm" tone="border" />
       </View>
 
-      {/* 7 day cells */}
       <View style={styles.daysRow}>
         {Array.from({ length: 7 }, (_, index) => (
           <View
             key={index}
             style={[styles.dayItem, index === 2 && styles.dayItemSelected]}
           >
-            <SkeletonBase
-              width={20}
-              height={12}
-              borderRadius={3}
-              style={index === 2 ? styles.selectedBone : undefined}
-            />
-            <View style={styles.dayNumberGap} />
-            <SkeletonBase
-              width={16}
-              height={16}
-              borderRadius={3}
-              style={index === 2 ? styles.selectedBone : undefined}
-            />
+            <View style={styles.dayLabelLine}>
+              <SkeletonBase
+                width={20}
+                height={12}
+                borderRadius={3}
+                style={index === 2 ? styles.selectedBone : undefined}
+              />
+            </View>
+            <View style={styles.dayNumberLine}>
+              <SkeletonBase
+                width={16}
+                height={16}
+                borderRadius={3}
+                style={index === 2 ? styles.selectedBone : undefined}
+              />
+            </View>
+            {index === 2 && <View style={styles.mealDot} />}
           </View>
         ))}
       </View>
 
-      {/* Right arrow */}
       <View style={styles.arrowButton}>
-        <SkeletonBase width={16} height={16} borderRadius={4} />
+        <Icon name="chevron-forward" size="sm" tone="border" />
       </View>
     </View>
 
-    {/* CalendarToggleBar skeleton */}
     <View style={styles.toggleBar}>
       <View style={styles.toggleLine} />
-      <SkeletonBase width={16} height={16} borderRadius={8} />
+      <Icon name="chevron-down" size="xs" tone="border" />
       <View style={styles.toggleLine} />
     </View>
 
-    {/* Nutrition summary header skeleton */}
-    <View style={styles.nutritionHeader}>
-      <SkeletonBase width={140} height={16} borderRadius={4} />
-      <SkeletonBase width={80} height={14} borderRadius={4} />
-    </View>
-
-    {/* Day summary skeleton */}
-    <View style={styles.daySummary}>
-      <SkeletonBase width={130} height={16} borderRadius={4} />
-    </View>
-
-    {/* Meal section 1 (e.g. Breakfast) */}
-    <View style={styles.mealSection}>
-      <View style={styles.sectionHeader}>
-        <SkeletonBase width={60} height={16} borderRadius={4} />
-        <SkeletonBase width={20} height={20} borderRadius={10} />
+    <ScrollView
+      style={styles.list}
+      contentContainerStyle={styles.listContent}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.nutritionHeader}>
+        <View style={styles.headingLine}>
+          <SkeletonBase width={140} height={16} borderRadius={4} />
+        </View>
+        <View style={styles.nutritionHeaderRight}>
+          <SkeletonBase width={80} height={14} borderRadius={4} />
+          <Icon name="chevron-down" size="sm" tone="border" />
+        </View>
       </View>
-      <MealPlanItemCardSkeleton />
-      <MealPlanItemCardSkeleton />
-    </View>
 
-    {/* Meal section 2 (e.g. Lunch) */}
-    <View style={styles.mealSection}>
-      <View style={styles.sectionHeader}>
-        <SkeletonBase width={60} height={16} borderRadius={4} />
-        <SkeletonBase width={20} height={20} borderRadius={10} />
-      </View>
-      <MealPlanItemCardSkeleton />
-    </View>
-  </ScrollView>
+      {Array.from({ length: 4 }, (_, sectionIndex) => (
+        <View key={sectionIndex} style={styles.mealSection}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.headingLine}>
+              <SkeletonBase width={60} height={16} borderRadius={4} />
+            </View>
+            <SkeletonBase width={20} height={20} borderRadius={10} />
+          </View>
+          <MealPlanItemCardSkeleton />
+        </View>
+      ))}
+    </ScrollView>
+  </View>
 );
 
 const styles = StyleSheet.create((theme, rt) => ({
   container: {
-    // Its host renders it bare under `gutter="none"`, and a skeleton stands in
-    // for rows that are inset — so it carries the gutter for everything inside.
+    flex: 1,
+  },
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    // Match DayMealList's gutter; the fixed calendar above spans the screen.
     paddingHorizontal: theme.layout.pageGutter,
     paddingBottom: getScrollClearancePadding(rt.insets.bottom),
   },
-
-  // WeekStrip
   weekStrip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -121,14 +119,26 @@ const styles = StyleSheet.create((theme, rt) => ({
   dayItemSelected: {
     backgroundColor: theme.colors.primary,
   },
-  dayNumberGap: {
-    height: 2,
+  dayLabelLine: {
+    minHeight: theme.type.label.lineHeight,
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  dayNumberLine: {
+    minHeight: theme.type.bodyStrong.lineHeight,
+    justifyContent: 'center',
   },
   selectedBone: {
+    backgroundColor: theme.colors.onPrimary,
     opacity: 0.5,
   },
-
-  // CalendarToggleBar
+  mealDot: {
+    width: 5,
+    height: 5,
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.surface,
+    marginTop: 3,
+  },
   toggleBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -138,30 +148,26 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   toggleLine: {
     flex: 1,
-    height: 1,
+    height: theme.borderWidth.hairline,
     backgroundColor: theme.colors.border,
     maxWidth: 80,
   },
-
-  // Nutrition summary header
   nutritionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
-
-  // Day summary
-  daySummary: {
+  nutritionHeaderRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
+    gap: theme.spacing.xs,
   },
-
-  // Meal sections
+  headingLine: {
+    minHeight: theme.type.bodyStrong.lineHeight,
+    justifyContent: 'center',
+  },
   mealSection: {
     marginBottom: theme.spacing.md,
   },

@@ -22,41 +22,6 @@ export const TAB_FIELDS: Record<PageName, readonly string[]> = {
 
 export const INVENTORY_ADVANCED_FIELDS: readonly string[] = ['tags'];
 
-export const addItemSchema = object({
-  itemName: string().required(msg('errors.itemNameRequired')),
-  quantityInput: string().required(msg('errors.invalidQuantity')),
-  unit: string(), // Tracking unit
-  minQuantity: string(),
-  restockQuantity: string(),
-  // All-or-nothing: `usePantryItemSubmission` drops the weight unless BOTH a
-  // value and a resolved unit id are present, so not refusing the half-filled
-  // pair discards what the user typed with nothing reported.
-  netWeight: string().test(
-    'net-weight-needs-value',
-    msg('errors.field.netWeight'),
-    (value, context) => {
-      if ((value ?? '').trim()) return true;
-      return !context.parent.netWeightUnitId;
-    },
-  ),
-  netWeightUnit: string().test(
-    'net-weight-needs-unit',
-    msg('labels.pleaseSelectAUnitForTheNetWeight'),
-    (_value, context) => {
-      const weight = (context.parent.netWeight ?? '').trim();
-      if (!weight) return true;
-      return Boolean(context.parent.netWeightUnitId);
-    },
-  ),
-  netWeightUnitId: string(),
-  storageState: string().oneOf(Object.values(StorageState)),
-  condition: string().oneOf(Object.values(ItemCondition)),
-  location: string(),
-  notes: string(),
-  category: string(),
-  brand: string(),
-});
-
 export const editItemSchema = object({
   itemName: string(),
   quantityInput: string().required(msg('errors.invalidQuantity')),

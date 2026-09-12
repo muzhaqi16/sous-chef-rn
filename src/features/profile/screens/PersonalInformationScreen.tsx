@@ -18,7 +18,6 @@ import {
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
-import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 
 export const PersonalInformationScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -144,12 +143,7 @@ export const PersonalInformationScreen: React.FC = () => {
   return (
     <ProfileScreenWrapper
       title={t('labels.personalInformation')}
-      refreshControl={
-        <PlainScrollRefreshControl
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-        />
-      }
+      refresh={{ refreshing, onRefresh: handleRefresh }}
     >
       {sections.map((section, index) => (
         <SettingsSection

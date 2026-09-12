@@ -70,7 +70,8 @@ describe('recovery storage keeps data off disk', () => {
 
   describe('the Apollo cache', () => {
     it('is persisted on the encrypted instance', () => {
-      apolloCachePersistence.saveImmediate(cache);
+      apolloCachePersistence.scheduleExtractAndSave(() => cache);
+      apolloCachePersistence.flushPending();
 
       expect(setSpy).toHaveBeenCalled();
       const written = setSpy.mock.calls
@@ -82,9 +83,8 @@ describe('recovery storage keeps data off disk', () => {
     it('is not persisted on the recovery instance', () => {
       recoveryMode.mockReturnValue(true);
 
-      apolloCachePersistence.saveImmediate(cache);
-      apolloCachePersistence.save(cache);
       apolloCachePersistence.scheduleExtractAndSave(() => cache);
+      apolloCachePersistence.flushPending();
 
       expect(setSpy).not.toHaveBeenCalled();
     });

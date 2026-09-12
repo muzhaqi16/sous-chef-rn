@@ -192,10 +192,17 @@ export const createItemSchema = object({
   netWeights: array()
     .of(
       object({
+        // A row the user left blank arrives as `NaN` — the number type rejects
+        // it before `required` is reached, so the message has to be set here
+        // too or yup's untranslated default reaches the screen.
         value: number()
+          .typeError(msg('netWeightValueRequired'))
           .min(0.001, msg('netWeightMin'))
           .required(msg('netWeightValueRequired')),
         unitName: string().required(msg('netWeightUnitRequired')),
+        // The unit the user picked, carried so the server links it directly
+        // instead of re-resolving the name.
+        unitId: string().optional(),
       }),
     )
     .optional(),

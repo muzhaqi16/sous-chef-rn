@@ -70,11 +70,42 @@ jest.mock('../MainDetailsPage', () => ({
 }));
 
 jest.mock('../DetailsPage', () => ({
-  DetailsPage: () => {
-    const { View, Text } = require('react-native');
+  // Exposes the net-weight pair: the all-or-nothing rule reports on the UNIT
+  // while reading the weight and the resolved unit id, so only a test that
+  // writes both halves can see it clear.
+  DetailsPage: ({
+    setPantryNetWeight,
+    handlePantryNetWeightUnitSelected,
+    pantryNetWeightUnitError,
+  }: {
+    setPantryNetWeight: (value: string) => void;
+    handlePantryNetWeightUnitSelected: (
+      unitId: string | null,
+      unitName: string | null,
+    ) => void;
+    pantryNetWeightUnitError?: string;
+  }) => {
+    const { View, Text, Pressable } = require('react-native');
     return (
       <View testID="details-page">
         <Text>Details Page</Text>
+        <Pressable
+          testID="type-net-weight"
+          onPress={() => setPantryNetWeight('500')}
+        >
+          <Text>Type weight</Text>
+        </Pressable>
+        <Pressable
+          testID="pick-net-weight-unit"
+          onPress={() => handlePantryNetWeightUnitSelected('unit-g', 'g')}
+        >
+          <Text>Pick unit</Text>
+        </Pressable>
+        {pantryNetWeightUnitError ? (
+          <Text testID="details-page-unit-error">
+            {pantryNetWeightUnitError}
+          </Text>
+        ) : null}
       </View>
     );
   },
@@ -208,5 +239,32 @@ describe('AddDetailsSheet', () => {
       <AddDetailsSheet {...defaultProps} prefilledItemName="Preloaded Item" />,
     );
     expect(screen.getByText('Add Item Details')).toBeTruthy();
+  });
+});
+
+describe('AddDetailsSheet — the net-weight pair', () => {
+  it('reports a weight typed with no unit on the UNIT field', async () => {
+    const user = userEvent.setup();
+    render(<AddDetailsSheet {...defaultProps} />);
+
+    await user.press(screen.getByTestId('type-net-weight'));
+
+    expect(
+      await screen.findByTestId('details-page-unit-error'),
+    ).toHaveTextContent('Please select a unit for the net weight.');
+  });
+
+  it('clears that message once a unit is picked', async () => {
+    const user = userEvent.setup();
+    render(<AddDetailsSheet {...defaultProps} />);
+
+    await user.press(screen.getByTestId('type-net-weight'));
+    await screen.findByTestId('details-page-unit-error');
+
+    await user.press(screen.getByTestId('pick-net-weight-unit'));
+
+    await waitFor(() =>
+      expect(screen.queryByTestId('details-page-unit-error')).toBeNull(),
+    );
   });
 });

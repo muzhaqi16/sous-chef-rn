@@ -29,7 +29,6 @@ const AUTHORS: Record<string, string> = {
   // `gutter="none"`, where no list content container exists to inset them.
   'src/features/pantry/screens/PantryMain.tsx': 'insets its bare children',
   'src/features/recipes/screens/RecipeMain.tsx': 'insets its bare children',
-  'src/features/mealPlan/screens/MealPlanMain.tsx': 'insets its bare children',
   'src/features/shoppingList/screens/ShoppingListMain.tsx': 'insets its bare children',
   'src/features/shoppingList/components/ShoppingListMainContent.tsx':
     'insets its bare children',

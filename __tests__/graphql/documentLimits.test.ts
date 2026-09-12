@@ -240,6 +240,20 @@ describe('HTTP document limits', () => {
     expect(httpOperations.length).toBeGreaterThan(100);
   });
 
+  // GetMealPlan is the one document carrying a fragment purely so a DERIVE can
+  // read it offline, so its headroom is a design constraint rather than a
+  // measurement: `useGenerateShoppingList_mealPlan` is affordable here and not
+  // inside a mutation payload. Pinned so a widening of either is deliberate.
+  it('GetMealPlan stays at the depth and cost the derive fragment was placed for', () => {
+    const plan = httpOperations.find(o => o.name === 'GetMealPlan');
+    expect(plan).toBeDefined();
+
+    expect({
+      depth: countDepth(plan!.def),
+      cost: Math.round(computeCost(plan!.def)),
+    }).toEqual({ depth: 10, cost: 303 });
+  });
+
   it.each(httpOperations.map(o => [o.name, o]))(
     '%s is within the HTTP depth and cost bounds',
     (_name, operation) => {

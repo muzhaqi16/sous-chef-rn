@@ -15,7 +15,6 @@ import {
   StorageState,
   ItemType,
   type BaseDimension,
-  type ItemUnitInput,
 } from '#/graphql/generated/schemaTypes';
 import {
   MultiImagePicker,
@@ -84,6 +83,69 @@ export type AddItemSubmitPayload = AddItemFormData & {
   selectedImages: SelectedImage[];
 };
 
+/**
+ * Editor rows → the shape `createItemSchema` validates. An entirely empty row
+ * is the one "Add" just created and is dropped; a half-filled one is KEPT so
+ * the schema can refuse it rather than the submit path discarding what the user
+ * typed. A blank weight becomes `NaN`, which the number rule reports.
+ */
+const toNetWeightInputs = (
+  entries: NetWeightEntry[],
+): NonNullable<CreateItemFormData['netWeights']> =>
+  entries
+    .filter(entry => entry.value?.trim() || entry.unitName?.trim())
+    .map(entry => ({
+      value: parseDecimalInput(entry.value),
+      unitName: entry.unitName?.trim() ?? '',
+      ...(entry.unitId ? { unitId: entry.unitId } : {}),
+    }));
+
+/** The rows an edit opens with. Seeds the editor AND the form field: a value
+ *  only the editor holds is dropped from the payload by an untouched save. */
+const seedNetWeightRows = (
+  initialData: AddItemFormInitialData | undefined,
+): NetWeightEntry[] =>
+  (initialData?.netWeights ?? []).map((netWeight, index) => ({
+    id: `nw-initial-${index}`,
+    value: String(netWeight.value),
+    unitName: netWeight.unitName,
+    unitId: netWeight.unitId,
+  }));
+
+/** The first row carries `isDefault`, so order is the declaration. */
+const toUnitInputs = (
+  entries: UnitEntry[],
+): NonNullable<CreateItemFormData['units']> =>
+  entries
+    .filter(entry => entry.unitId || entry.unitName)
+    .map((entry, index) => ({
+      unitId: entry.unitId || undefined,
+      unitName: entry.unitName || undefined,
+      isDefault: index === 0,
+      packageSize: entry.packageSize
+        ? parseDecimalInput(entry.packageSize)
+        : undefined,
+      contentUnitId: entry.contentUnitId || undefined,
+      contentUnitName: entry.contentUnitName || undefined,
+    }));
+
+/**
+ * The first message inside an array field's error tree. The rows are few and
+ * adjacent, and the array error's index stops addressing an editor row once
+ * empty rows are dropped — so the list reports one message, not one per row.
+ */
+const firstMessage = (error: unknown): string | undefined => {
+  if (!error || typeof error !== 'object') return undefined;
+  if ('message' in error && typeof error.message === 'string') {
+    return error.message;
+  }
+  for (const value of Object.values(error)) {
+    const found = firstMessage(value);
+    if (found) return found;
+  }
+  return undefined;
+};
+
 interface AddItemFormProps {
   barcode?: string;
   format?: string;
@@ -123,13 +185,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [unitEntries, setUnitEntries] = useState<UnitEntry[]>([]);
   const [netWeightEntries, setNetWeightEntries] = useState<NetWeightEntry[]>(
-    () =>
-      (initialData?.netWeights ?? []).map((nw, i) => ({
-        id: `nw-initial-${i}`,
-        value: String(nw.value),
-        unitName: nw.unitName,
-        unitId: nw.unitId,
-      })),
+    () => seedNetWeightRows(initialData),
   );
 
   const [currentPage, setCurrentPage] = useState(0);
@@ -154,6 +210,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       upc: '',
       categoryIds: [],
       units: [],
+      netWeights: toNetWeightInputs(seedNetWeightRows(initialData)),
       imageUrl: '',
       tags: [],
       storageState: StorageState.Ambient,
@@ -240,6 +297,24 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     }
   }, [initialData?.upc, setValue]);
 
+  // The editor rows are the form's `netWeights` / `units` fields. Written on
+  // every change rather than at submit: a field the resolver cannot see makes
+  // its rules unreachable, and Save is gated on whole-schema `isValid`.
+  const handleNetWeightEntriesChanged = (entries: NetWeightEntry[]) => {
+    setNetWeightEntries(entries);
+    setValue('netWeights', toNetWeightInputs(entries), {
+      shouldValidate: true,
+    });
+  };
+
+  const handleUnitEntriesChanged = (entries: UnitEntry[]) => {
+    setUnitEntries(entries);
+    setValue('units', toUnitInputs(entries), { shouldValidate: true });
+  };
+
+  const netWeightsError = firstMessage(errors.netWeights);
+  const unitsError = firstMessage(errors.units);
+
   const handleFormSubmit = (data: CreateItemFormData) => {
     let tags: string[] = [];
     if (data.tags) {
@@ -270,28 +345,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       brandName = data.vendor;
     }
 
-    const netWeights = netWeightEntries
-      .filter(entry => entry.value && entry.unitName)
-      .map(entry => ({
-        value: parseDecimalInput(entry.value!),
-        unitName: entry.unitName!,
-        // Pass the resolved unit id when the user picked a known unit, so the
-        // server links it directly instead of re-resolving by name.
-        ...(entry.unitId ? { unitId: entry.unitId } : {}),
-      }));
-
-    const units: ItemUnitInput[] = unitEntries
-      .filter(entry => entry.unitId || entry.unitName)
-      .map((entry, index) => ({
-        unitId: entry.unitId || undefined,
-        unitName: entry.unitName || undefined,
-        isDefault: index === 0,
-        packageSize: entry.packageSize
-          ? parseDecimalInput(entry.packageSize)
-          : undefined,
-        contentUnitId: entry.contentUnitId || undefined,
-        contentUnitName: entry.contentUnitName || undefined,
-      }));
+    const netWeights = data.netWeights ?? [];
+    const units = data.units ?? [];
 
     const allTags =
       tags.length > 0 || systemTags.length > 0
@@ -413,10 +468,15 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
             <View style={styles.section}>
               <NetWeightEntryList
                 entries={netWeightEntries}
-                onEntriesChanged={setNetWeightEntries}
+                onEntriesChanged={handleNetWeightEntriesChanged}
                 disabled={loading}
                 maxEntries={editing ? 1 : undefined}
               />
+              {!!netWeightsError && (
+                <Text role="error" tone="error">
+                  {netWeightsError}
+                </Text>
+              )}
             </View>
             {/* Units are hidden while editing: Item.units can't be round-tripped
                 into UnitEntry rows, so an empty list would read as "remove every
@@ -425,9 +485,14 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
               <View style={styles.section}>
                 <UnitEntryList
                   entries={unitEntries}
-                  onEntriesChanged={setUnitEntries}
+                  onEntriesChanged={handleUnitEntriesChanged}
                   disabled={loading}
                 />
+                {!!unitsError && (
+                  <Text role="error" tone="error">
+                    {unitsError}
+                  </Text>
+                )}
               </View>
             )}
           </DropdownStack>

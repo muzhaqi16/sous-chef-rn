@@ -43,7 +43,7 @@ export const OfflineStatusPill: React.FC<OfflineStatusPillProps> = ({
       <Icon name={iconName} size={size} tone="alertBannerWarning" />
       {pendingCount > 0 && (
         <View style={styles.badge}>
-          <Text role="label" style={styles.badgeText}>
+          <Text role="footnoteStrong" style={styles.badgeText}>
             {pendingCount > 9 ? '9+' : pendingCount}
           </Text>
         </View>
@@ -60,16 +60,17 @@ const styles = StyleSheet.create(theme => ({
   },
   badge: {
     position: 'absolute',
-    top: -6,
-    right: -8,
-    minWidth: 16,
-    height: 16,
+    top: -12,
+    right: -10,
+    minWidth: theme.spacing.mdPlus, // 20
+    minHeight: theme.spacing.mdPlus, // 20
+    paddingVertical: 0,
     paddingHorizontal: 3,
     borderRadius: theme.radii.full,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.warning,
-    borderWidth: theme.borderWidth.medium,
+    borderWidth: theme.borderWidth.hairline, // 1
     borderColor: theme.colors.background,
   },
   badgeText: {

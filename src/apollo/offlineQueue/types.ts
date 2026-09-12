@@ -68,6 +68,9 @@ export interface QueuedMutation {
   /** Version conflicts survived. Absent on entries queued before it existed. */
   conflictCount?: number;
 
+  /** Drains this entry has been deferred through. Absent on older entries. */
+  deferCount?: number;
+
   requiresAuth: boolean;
 }
 
@@ -91,8 +94,8 @@ export interface ProcessingResult {
   mutationId: string;
   error?: QueueError;
   serverResponse?: Record<string, unknown>;
-  // A transient error returned the mutation to PENDING: the drain loop must
-  // stop rather than replay later mutations ahead of this un-synced one.
+  // A transient error returned the mutation to PENDING: the drain loop holds
+  // back the entries that depend on it rather than replaying ahead of it.
   deferred?: boolean;
 }
 

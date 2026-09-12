@@ -1544,9 +1544,12 @@ ever an approximation. Verify the ordering claim with a subscription whose
 **`addNotificationToFeed` must scope its write.** `notificationsConnection` is
 keyed on `filters` and `cache.modify` runs for EVERY cached variant, so the
 `skipStoreField: skipUnmatchedFilterVariants({ category, unreadOnly: true })`
-guard is what keeps a pantry notification out of the recipes feed.
-`createAddToParentConnectionUpdater` accepted that option and ignored it until
-2026-08-23.
+guard is what keeps a pantry notification out of the recipes feed. Both skip
+helpers read both `storeFieldName` forms — the colon form an array-`keyArgs`
+field is stored under and the paren form of an unkeyed one
+(`docs/verified-library-behaviour.md` § Apollo storeFieldName has two serialized
+forms) — and `cacheUpdaters.test.ts` captures the real key off `makeCache()`, so
+a fixture cannot drift from what Apollo writes.
 
 ---
 
@@ -1556,7 +1559,12 @@ guard is what keeps a pantry notification out of the recipes feed.
 
 Use these utilities instead of writing inline `cache.modify()` logic. Connection
 variants handle relay-style `{ edges, pageInfo }` wrappers; Array variants
-handle plain list fields.
+handle plain list fields. Every updater returns whether it changed the cache.
+An add takes `{ position?: 'start' | 'end', skipStoreField? }` (connections) or
+`{ position? }` (arrays) and always dedupes by id; a remove takes
+`{ evictItem? }`, and `evictItem: true` evicts, releases the entity's retains
+and gcs in one pass. `totalCount` moves only where the record already holds
+one, so an add never introduces a count a later query reads as a cache hit.
 
 **Connection-shaped fields** (`edges` + `pageInfo`):
 
@@ -1573,15 +1581,16 @@ handle plain list fields.
 | ------------------------------------ | -------------------------------------------------------- |
 | `createAddToParentArrayUpdater`      | Add item to `parent.arrayField`                          |
 | `createRemoveFromParentArrayUpdater` | Remove item from `parent.arrayField` + optional eviction |
-| `createAddToQueryFieldUpdater`       | Add item to a root-level `Query.arrayField`              |
 
-**Misc helpers in the same file:** `incrementNestedCounter`, `setCachedFields`,
-`createItemEvictor`, `safeEvict`, `safeEvictMany`, `gcResetResultCache`.
+**Misc helpers in the same file:** `safeEvict`, `safeEvictMany`,
+`adoptServerEntityId`, `releaseEntity`, `setCachedFields`,
+`applyOptimisticFragmentPatch`, `skipUnmatchedFilterVariants`,
+`skipUnmatchedArgVariants`.
 
 **Example Usage:**
 
 ```typescript
-import { createAddToParentConnectionUpdater } from '#/apollo/utils';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 
 const addToPantryItemsCache = createAddToParentConnectionUpdater<PantryItem>(
   'Pantry',
@@ -1650,54 +1659,67 @@ The app persists Apollo's normalized cache to MMKV so cold starts paint from cac
 
 Apollo's official guidance recommends [`apollo3-cache-persist`](https://github.com/apollographql/apollo-cache-persist) for cache hydration. We deliberately don't use it:
 
-- **MMKV is synchronous.** `apollo3-cache-persist` is async-only and built for AsyncStorage; with MMKV we can hydrate critical entities synchronously **before** `ApolloClient` is instantiated, eliminating the timing pitfalls documented in [apollo-cache-persist#337](https://github.com/apollographql/apollo-cache-persist/issues/337) (cache appearing empty on first mount despite successful restore).
+- **MMKV is synchronous.** `apollo3-cache-persist` is async-only and built for AsyncStorage; with MMKV the blob is restored synchronously **before** `ApolloProvider` mounts, eliminating the timing pitfalls documented in [apollo-cache-persist#337](https://github.com/apollographql/apollo-cache-persist/issues/337) (cache appearing empty on first mount despite successful restore).
 - **No explicit AC 4.x support statement.** The library's last release (March 2024) targets Apollo Client 3.0; AC 4.x compatibility is incidental, not contractual.
 - **MMKV is already a native dependency.** No additional library or storage abstraction to maintain.
 
-The trade-off: we own ~500 lines of persistence code (`ApolloCachePersistence.ts`) instead of pulling a library. That's worth it for the sync-restore property — without it, the first render would have to wait on `await persistCache()` and paint with an empty cache during the gap.
+The trade-off: we own ~250 lines of persistence code (`ApolloCachePersistence.ts`) instead of pulling a library. That's worth it for the sync-restore property — without it, the first render would have to wait on `await persistCache()` and paint with an empty cache during the gap.
 
-### Two-phase critical/deferred restore
+### One blob, one shape version
 
-Bulk-restoring the entire persisted cache synchronously at module init blocks the JS thread on a large `JSON.parse` (50-200ms for a populated cache). To avoid that, persisted entities are split into two partitions:
+The whole `cache.extract()` result is one JSON string under `apollo-cache-v1`,
+beside a version key holding `CURRENT_CACHE_VERSION`. That version names the
+SHAPE of the blob, not the app that wrote it: bump it by hand for a `cache.ts`
+change that makes old data unsafe, or a server change that redefines what
+persisted data means. `__tests__/apollo/cacheSchemaVersion.test.ts` pins the
+constant and hashes every type-policy module, so a policy edit cannot land
+without the decision. `load()` clears and returns null on any other version, so
+a mismatch costs one cold network paint.
 
-- **Critical** — `ROOT_QUERY`, `User`, `Home`, `UserProfile`, `UserSettings`, `DietaryProfile`, `NotificationPreferences` (~30 entities, ~5ms). Restored synchronously at module init by `initializeClient()` so cache-first queries hit immediately on first render.
-- **Deferred** — everything else (`PantryItem`, `ShoppingListItem`, `Recipe`, etc.). Restored via `requestIdleCallback` after first paint by `apolloCachePersistence.restoreDeferred(client.cache)`, called from a `useEffect` in `App.tsx`.
-
-If a screen mounts before the deferred phase fires, the cache miss falls back to network and renders the first page (20-50 items via pagination). That's an acceptable degradation — the screen still paints fast.
-
-This split is a **custom optimization** — it's not a recognized community pattern. It's justified by measured cold-start blocking on this codebase; don't replicate the pattern elsewhere without similar evidence.
+Restore happens once, in `restorePersistedCache()` (`src/apollo/client.ts`),
+called from `App.tsx` at the hydration boundary — the first point where storage
+is guaranteed ready and `ApolloProvider` has not mounted. `cache.restore()`
+replaces contents wholesale, so it must not run once queries are watching.
 
 ### `apolloCachePersistence` API surface
 
-| Method                                        | Use when                                                                              |
-| --------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `loadCritical()`                              | Synchronously read critical partition at `initializeClient`                           |
-| `load()`                                      | Migration fallback when split-key format is absent                                    |
-| `restoreDeferred(cache)`                      | Schedule idle-callback bulk restore after first paint (called from `App.tsx`)         |
-| `loadDeferred()`                              | Internal — read deferred partition (used by `restoreDeferred`)                        |
-| `save(cache)` / `scheduleExtractAndSave(...)` | Debounced persist after cache writes (wired in `setupCachePersistence`)               |
-| `saveImmediate(cache)`                        | Synchronous flush — use for logout / app termination                                  |
-| `pause()` / `resume()`                        | Suspend persistence during logout transitions                                         |
-| `markDirty(keys)`                             | Mark cache keys as changed for incremental persistence                                |
-| `cancel()`                                    | Abort pending debounced save **and** any in-flight `restoreDeferred` — call on logout |
-| `clear()`                                     | Wipe all persisted cache from MMKV                                                    |
-| `getStats()` / `isValid()`                    | Diagnostics                                                                           |
-| `partitionCache(cache)`                       | Internal — split normalized cache into critical/deferred buckets                      |
+| Method                              | Use when                                                                                                                                  |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `load()`                            | Read the blob at restore; null when absent or of another shape                                                                            |
+| `scheduleExtractAndSave(extractor)` | Debounced persist after every cache write (wired in `setupCachePersistence`); the extractor runs once per window, at idle                 |
+| `flushPending()`                    | Write an owed save now — the app-background transition (`useAppStateLifecycle` → `flushCachePersistence()`); a no-op when nothing is owed |
+| `pause()` / `resume()`              | Widen the debounce (3 s → 10 s) while no tab root is focused (`useTabScreenLifecycle`); never stops it                                    |
+| `cancel()`                          | Drop an owed save — sign-out, so the previous account's last seconds never reach disk                                                     |
+| `clear()`                           | Remove everything a later `load()` could restore — session end, version mismatch, parse failure                                           |
 
-### Lifecycle
+Rules the module holds:
 
-- **Module init** (`src/apollo/client.ts` → `initializeClient`): Phase 1 sync restore via `loadCritical()` (or `load()` migration fallback). Wire `setupCachePersistence(client)` to debounce-persist on every cache write.
-- **App mount** (`App.tsx` useEffect): `apolloCachePersistence.restoreDeferred(client.cache)` schedules Phase 2.
-- **Logout** (`src/apollo/logoutCleanup.ts`): `cancelCachePersistence()` → `apolloCachePersistence.cancel()` (aborts pending save AND any pending deferred restore — important: without this, a deferred restore could fire after `clearStore()` and write stale entities back into the cleared cache).
+- A write is skipped when two extracts match by reference — entity identity per
+  top-level key plus the `__META` pin count. `extract()` returns the store's own
+  objects, so an untouched cache costs no stringify; a refetch that rewrote an
+  entity in place is caught because the scan covers every key, not `ROOT_QUERY`.
+- `__META.extraRootIds` is pruned to ids still in the extract before the write.
+  `restore()` re-retains every id listed, so a pin whose entity is gone would
+  otherwise survive every launch and the list would only grow.
+- Nothing is written while `isRecoveryStorage()` is true: the recovery instance
+  is plaintext. The check runs before the timer AND inside the write, since
+  storage can fall back between the two.
+- The three `cache_persist_*` metrics report from every build
+  (`docs/telemetry-setup.md`); only the human-readable breadcrumb is dev-gated.
 
 ### The `client.cache as InMemoryCache` cast
 
-Apollo Client 4 narrows `ApolloClient.cache` to the abstract `ApolloCache<TCacheShape>`, which doesn't expose `restore()` or `gc()`. Any call boundary that hits those methods has to cast. Keep the cast narrow — currently one production site: `src/apollo/logoutCleanup.ts` (`gc()` after `clearStore()`). The deferred restore path lives inside `apolloCachePersistence` and is no longer a cast boundary callers have to think about. Don't push the cast into application code.
+Apollo Client 4 narrows `ApolloClient.cache` to the abstract `ApolloCache`, which
+doesn't expose `restore()`, `release()` or `gc()`'s options. Keep the cast narrow
+— one production site: `src/apollo/logoutCleanup.ts` (`gc()` after
+`clearStore()`). Helpers that need the concrete class narrow with `instanceof`
+(`releaseEntity` in `cacheUpdaters.ts`) rather than casting. Don't push the cast
+into application code.
 
 ### Adding a new paginated connection
 
 - Use `itemsConnectionFieldPolicy()` or `mergeConnectionByNodeId()`
-  (`src/apollo/utils/cacheUpdaters.ts`) for merge logic.
+  (`src/apollo/cacheFieldPolicies.ts`) for merge logic.
 - Use the `extractNodes()` / `normalizeConnection()` helpers, which return `[]`
   for missing edges.
 - Use a `cache-and-network` → `cache-first` fetch policy so the network fires

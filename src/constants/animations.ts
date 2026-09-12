@@ -2,9 +2,6 @@ import { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import type { SlideAnimationConfig } from '#hooks/animations/types';
 import { motion } from '#/theme/foundations/motion';
 
-// Note: DRAG_ITEM_HEIGHT and other drag constants are in './drag.ts'
-// Import directly: import { DRAG_ITEM_HEIGHT } from '#/constants/drag';
-
 /** Alert modal animation. */
 export const ALERT = {
   ENTER_SCALE_FROM: 0.85,

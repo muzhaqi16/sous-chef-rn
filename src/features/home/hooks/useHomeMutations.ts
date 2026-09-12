@@ -8,6 +8,7 @@ import {
   GetHomesDocument,
 } from '#operations/home/home.generated';
 import { useCreateHome } from '#features/home/hooks/useCreateHome';
+import { useCreatePantry } from '#features/pantry/hooks/useCreatePantry';
 import { readDefaultPantryId } from '#features/home/utils/homePantries';
 import { alertService } from '#/services/alertService';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
@@ -45,6 +46,9 @@ export function useHomeMutations({
   const { createHome: createHomeWrite, creating } = useCreateHome(() => {
     void refetch?.();
   });
+  // `createDefaultPantry` is forced off so no pantry carries a server-minted
+  // id, which makes minting the home's first pantry this caller's job.
+  const { createPantry } = useCreatePantry();
 
   const [deleteHomeMutation, { loading: deleting, client: deleteClient }] =
     useMutation(DeleteHomeDocument, {
@@ -149,9 +153,27 @@ export function useHomeMutations({
       return false;
     }
 
+    await createDefaultPantry(outcome.id);
     adoptNewHome(outcome.id);
     return true;
   };
+
+  /**
+   * Every home needs a pantry, and it is minted here so a pantry write made
+   * before reconnect has a parent it can name. A refusal leaves the home
+   * standing: the pantry can be added from the home's own settings.
+   */
+  async function createDefaultPantry(homeId: string) {
+    try {
+      await createPantry({
+        homeId,
+        name: t('onBoarding.defaultPantryName'),
+        isDefault: true,
+      });
+    } catch (error) {
+      errorService.reportError(error, { operation: 'Create Default Pantry' });
+    }
+  }
 
   /**
    * A first home becomes the selection and the account default. Read from the

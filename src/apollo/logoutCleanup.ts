@@ -1,5 +1,4 @@
 import { getApolloClient } from '#/apollo/clientRegistry';
-import { cancelCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import { InMemoryCache } from '@apollo/client';
 import { useStore } from '#store';
 import { storage } from '#/storage/mmkv';
@@ -75,7 +74,7 @@ export class LogoutCleanup {
       cancelTokenRefresh();
 
       // 2. Cancel pending cache persistence
-      cancelCachePersistence();
+      apolloCachePersistence.cancel();
 
       // 3. Cancel all active subscriptions
       if (cancelSubscriptions) {

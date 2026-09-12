@@ -1,12 +1,8 @@
 import React from 'react';
-import {
-  View,
-  RefreshControl,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from '#/i18n';
+import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -177,7 +173,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
         scrollEventThrottle={16}
         refreshControl={
           onRefresh ? (
-            <RefreshControl
+            <PlainScrollRefreshControl
               refreshing={refreshing ?? false}
               onRefresh={onRefresh}
             />

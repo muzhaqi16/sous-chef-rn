@@ -3,12 +3,8 @@ import {
   View,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
-  ScrollView,
 } from 'react-native';
-import {
-  PlainScrollRefreshControl,
-  ThemedRefreshControl,
-} from '#components/atoms/themedComponents';
+import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 import {
   FlashList,
   type FlashListRef,
@@ -236,6 +232,10 @@ export const ItemList: React.FC<ItemListProps> = ({
     executeRefreshWithFinally(onRefresh, setRefreshing);
   };
 
+  const refreshControl = onRefresh ? (
+    <ThemedRefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+  ) : undefined;
+
   // Bundle actions for context provider
   // A row-removing action needs FlashList told before it fires, or the removal
   // animates from the wrong layout. Applied here to every action the caller
@@ -264,7 +264,7 @@ export const ItemList: React.FC<ItemListProps> = ({
 
   if (items.length === 0 && emptyState) {
     return (
-      <ScrollView
+      <SwipeAwareScrollComponent
         contentContainerStyle={[styles.listContent, emptyContentStyle]}
         onScroll={onScroll}
         onScrollBeginDrag={onScrollBeginDrag}
@@ -276,14 +276,7 @@ export const ItemList: React.FC<ItemListProps> = ({
         // keyboard, forcing a second tap on the search button). Taps on empty
         // space still dismiss the keyboard.
         keyboardShouldPersistTaps="handled"
-        refreshControl={
-          onRefresh ? (
-            <PlainScrollRefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-            />
-          ) : undefined
-        }
+        refreshControl={refreshControl}
       >
         {!!ListHeaderComponent &&
           (typeof ListHeaderComponent === 'function' ? (
@@ -292,7 +285,7 @@ export const ItemList: React.FC<ItemListProps> = ({
             ListHeaderComponent
           ))}
         <EmptyState {...emptyState} />
-      </ScrollView>
+      </SwipeAwareScrollComponent>
     );
   }
 
@@ -318,14 +311,7 @@ export const ItemList: React.FC<ItemListProps> = ({
           // keyboard, forcing a second tap on the search button). Taps on empty
           // space still dismiss the keyboard.
           keyboardShouldPersistTaps="handled"
-          refreshControl={
-            onRefresh ? (
-              <ThemedRefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-              />
-            ) : undefined
-          }
+          refreshControl={refreshControl}
           renderItem={renderItem}
           drawDistance={FLASHLIST_DEFAULTS.fullScreen.drawDistance}
           maintainVisibleContentPosition={MVCP_DISABLED}

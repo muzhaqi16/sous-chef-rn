@@ -46,6 +46,7 @@ import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import type { Translate } from '#/i18n/types';
 import { Screen } from '#components/templates/Screen';
+import { PantryHeader } from '#features/pantry/components/PantryHeader';
 
 function buildPantryTutorialSteps(t: Translate): TutorialStep[] {
   return [
@@ -475,16 +476,13 @@ const PantryMainFallback: React.FC = () => {
     },
   ];
   return (
-    <Screen
-      testID="pantry-screen"
-      header={{
-        variant: 'tab',
-        label: t('pantryScreen.greetingFallback'),
-        title: t('pantryScreen.tabPantry'),
-      }}
-      scroll="list"
-      gutter="none"
-    >
+    // No `header`: the loaded screen has none either — it draws the greeting
+    // inside its list — so the chrome here is the same shape, not a title that
+    // swaps for a greeting a moment later.
+    <Screen testID="pantry-screen" scroll="list" gutter="none">
+      <View style={styles.fallbackHeader}>
+        <PantryHeader householdName={t('pantryHeader.homeFallback')} />
+      </View>
       <View style={styles.gutter}>
         <SearchBar
           value=""
@@ -522,5 +520,11 @@ const styles = StyleSheet.create(theme => ({
   // the page gutter they do not carry themselves.
   gutter: {
     paddingHorizontal: theme.layout.pageGutter,
+  },
+  // The same lead-in and inset `PantryContent` gives the real header.
+  fallbackHeader: {
+    paddingHorizontal: theme.layout.pageGutter,
+    paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.sm,
   },
 }));

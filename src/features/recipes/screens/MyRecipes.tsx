@@ -21,6 +21,8 @@ import { useFlashListPerformance } from '#hooks/performance/useFlashListPerforma
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { useLocalSearch } from '#hooks/search/useLocalSearch';
 import { Screen } from '#components/templates/Screen';
+import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 
 const keyExtractor = (item: MyRecipeNode) => item.id;
 // Every row is the same component, so one recycling pool is correct.
@@ -119,9 +121,9 @@ export const MyRecipes: React.FC = () => {
     }
   };
 
-  const handleRefresh = async () => {
-    await refetch();
-  };
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = () =>
+    executeRefreshWithFinally(() => refetch(), setRefreshing);
 
   const renderItem = ({ item }: { item: MyRecipeNode }) => (
     <MyRecipeCard
@@ -164,8 +166,12 @@ export const MyRecipes: React.FC = () => {
           keyExtractor={keyExtractor}
           getItemType={getItemType}
           renderItem={renderItem}
-          onRefresh={handleRefresh}
-          refreshing={false}
+          refreshControl={
+            <PlainScrollRefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+            />
+          }
           contentContainerStyle={styles.listContent}
           {...FLASHLIST_DEFAULTS.fullScreen}
         />

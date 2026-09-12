@@ -52,7 +52,7 @@ import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { ShoppingListPermissionsProvider } from '#features/shoppingList/context/ShoppingListPermissionsContext';
 import { useDataState } from '#hooks/data/useDataState';
-import { Screen } from '#components/templates/Screen';
+import { Screen, type ScreenHeaderConfig } from '#components/templates/Screen';
 
 /**
  * Inner content component that uses modal context.
@@ -272,6 +272,19 @@ export const ShoppingListMainContent: React.FC<
     </Pressable>
   );
 
+  // One declaration of this screen's tab header. The no-lists branch has no list
+  // to name, so it shows the generic one.
+  const tabHeader: ScreenHeaderConfig = {
+    variant: 'tab',
+    label: t('shoppingListScreen.label'),
+    title: t('labels.shoppingList'),
+  };
+  const selectedListHeader: ScreenHeaderConfig = {
+    ...tabHeader,
+    title: currentList?.name || tabHeader.title,
+    headerRight,
+  };
+
   // SearchBar rendered above tab pills (positioned above TabView in ShoppingListTabs)
   const searchBarHeader = (
     <View style={styles.searchBarContainer}>
@@ -383,11 +396,7 @@ export const ShoppingListMainContent: React.FC<
     return (
       <Screen
         testID="shopping-list-screen"
-        header={{
-          variant: 'tab',
-          label: t('shoppingListScreen.label'),
-          title: t('labels.shoppingList'),
-        }}
+        header={tabHeader}
         scroll="list"
         gutter="none"
       >
@@ -423,12 +432,7 @@ export const ShoppingListMainContent: React.FC<
     return (
       <Screen
         testID="shopping-list-screen"
-        header={{
-          variant: 'tab',
-          label: t('shoppingListScreen.label'),
-          title: currentList?.name || t('labels.shoppingList'),
-          headerRight: headerRight,
-        }}
+        header={selectedListHeader}
         scroll="list"
         gutter="none"
       >
@@ -450,12 +454,7 @@ export const ShoppingListMainContent: React.FC<
   return (
     <Screen
       testID="shopping-list-screen"
-      header={{
-        variant: 'tab',
-        label: t('shoppingListScreen.label'),
-        title: currentList?.name || t('labels.shoppingList'),
-        headerRight: headerRight,
-      }}
+      header={selectedListHeader}
       scroll="list"
       gutter="none"
     >

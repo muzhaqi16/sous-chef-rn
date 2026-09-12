@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useImperativeHandle } from 'react';
-import { View } from 'react-native';
+import { View, type LayoutChangeEvent } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   Pressable,
+  refreshSpinnerOffset,
   ThemedRefreshControl,
 } from '#components/atoms/themedComponents';
 import { getScrollClearancePadding } from '#constants/layout';
@@ -202,6 +203,13 @@ export const PantryContent = React.forwardRef<
     // local render window either; DRAW_DISTANCE alone bounds the mounted set.
     const sortedItems = useServerSort ? items : sortItems(items);
 
+    // Measured, not estimated: the alert bar comes and goes.
+    const [chromeHeight, setChromeHeight] = useState(0);
+    const handleChromeLayout = (event: LayoutChangeEvent) => {
+      const next = Math.round(event.nativeEvent.layout.height);
+      setChromeHeight(prev => (prev === next ? prev : next));
+    };
+
     // A tab switch whose new page is still fetching (server mode only). Cleared
     // only on a true→false `fetching` transition, never when fetching was
     // already false at press time — the Apollo refetch is one render behind.
@@ -392,13 +400,16 @@ export const PantryContent = React.forwardRef<
                     testID="pantry-refresh-control"
                     refreshing={refreshing}
                     onRefresh={onRefresh}
+                    // This screen's chrome scrolls INSIDE the list, so the
+                    // spinner has to clear it as well as its own diameter.
+                    progressViewOffset={refreshSpinnerOffset(chromeHeight)}
                   />
                 ) : undefined
               }
               ListHeaderComponent={
                 // The positioned parent the skeleton flap anchors to
                 // (`top: '100%'`, flush below the chrome).
-                <View>
+                <View onLayout={handleChromeLayout}>
                   <View style={styles.header}>
                     <PantryHeader
                       userName={userName}
@@ -535,7 +546,8 @@ const styles = StyleSheet.create(theme => ({
   },
   header: {
     backgroundColor: theme.colors.background,
-    paddingTop: theme.spacing.base,
+    // The lead-in `Screen`'s `tab` chrome gives every other tab root.
+    paddingTop: theme.spacing.sm,
     paddingBottom: theme.spacing.sm,
   },
   // `stickyHeaderActive` applies while pinned, so the row keeps an opaque

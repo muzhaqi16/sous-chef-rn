@@ -127,6 +127,16 @@ export const ChangePasswordScreen: React.FC = () => {
     );
   };
 
+  // `shouldValidate` re-runs the rule on THIS field only, and both cross-field
+  // rules report elsewhere: the match rule on `confirmPassword`, the
+  // must-differ rule on `newPassword`. Submit is gated on whole-schema
+  // `isValid`, so a message left un-run disables the button with nothing on
+  // screen to explain it.
+  const setField = (field: keyof ChangePasswordForm, value: string) => {
+    form.setValue(field, value, { shouldValidate: true });
+    void form.trigger(['newPassword', 'confirmPassword']);
+  };
+
   const isFormValid = form.formState.isValid;
 
   return (
@@ -155,11 +165,7 @@ export const ChangePasswordScreen: React.FC = () => {
             </Text>
             <PasswordInput
               value={watchedValues.currentPassword}
-              onChangeText={text =>
-                form.setValue('currentPassword', text, {
-                  shouldValidate: true,
-                })
-              }
+              onChangeText={text => setField('currentPassword', text)}
               placeholder={t('changePassword.currentPasswordPlaceholder')}
               errorMessage={form.formState.errors.currentPassword?.message}
               editable={!isSubmitting}
@@ -170,9 +176,7 @@ export const ChangePasswordScreen: React.FC = () => {
             <Text style={styles.label}>{t('auth.newPassword')}</Text>
             <PasswordInput
               value={watchedValues.newPassword}
-              onChangeText={text =>
-                form.setValue('newPassword', text, { shouldValidate: true })
-              }
+              onChangeText={text => setField('newPassword', text)}
               placeholder={t('auth.newPasswordPlaceholder')}
               errorMessage={form.formState.errors.newPassword?.message}
               editable={!isSubmitting}
@@ -185,11 +189,7 @@ export const ChangePasswordScreen: React.FC = () => {
             </Text>
             <PasswordInput
               value={watchedValues.confirmPassword}
-              onChangeText={text =>
-                form.setValue('confirmPassword', text, {
-                  shouldValidate: true,
-                })
-              }
+              onChangeText={text => setField('confirmPassword', text)}
               placeholder={t('auth.confirmPasswordPlaceholder')}
               errorMessage={form.formState.errors.confirmPassword?.message}
               editable={!isSubmitting}

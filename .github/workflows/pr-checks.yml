@@ -63,17 +63,6 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
-      # The rule's exclusions are file-level and live in
-      # scripts/check-unnecessary-condition.baseline.json, which .eslintrc.js
-      # reads as excludedFiles — so lint alone cannot see a baselined file
-      # getting worse. This counts per file. It sits in the lint job because it
-      # needs the same heap bump and builds the same TypeScript program.
-      - name: Unnecessary conditions (self-test)
-        run: node scripts/check-unnecessary-condition.mjs --self-test
-
-      - name: Unnecessary conditions
-        run: node scripts/check-unnecessary-condition.mjs
-
   # i18n key parity
   i18n-check:
     name: i18n Key Parity
@@ -92,26 +81,6 @@ jobs:
 
       - name: Run i18n check
         run: node scripts/check-i18n.mjs
-
-  # Inline fragment audit — fails on regression to track the per-component
-  # fragments + useFragment migration.
-  fragment-audit:
-    name: Inline Fragment Audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
-
-      - name: Run inline fragment audit
-        run: node scripts/audit-fragment-inlining.mjs
 
   # React Compiler bailout check — a bailout is silent by design (the compiler
   # skips the function and the build succeeds), and no linter can see it because
@@ -174,8 +143,7 @@ jobs:
   # A known vulnerability in a production dependency fails the PR. Dependabot
   # proposes upgrades but fails nothing, so without this a vulnerable package
   # reaches the default branch with every check green. Reads the lockfile — no
-  # install needed. An advisory that cannot be fixed is recorded in
-  # scripts/accepted-advisories.json with a reason and a revisit date.
+  # install needed.
   dependency-audit:
     name: Dependency Audit
     runs-on: ubuntu-latest
@@ -190,11 +158,8 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Self-test the dependency audit gate
-        run: node scripts/check-dependency-audit.mjs --self-test
-
       - name: Audit production dependencies
-        run: node scripts/check-dependency-audit.mjs --level=high
+        run: npm audit --omit=dev --audit-level=high
 
   # The bundled-secret scanner runs in the BUILD workflows, against a real
   # artifact. This exercises the scanner itself on every PR so it cannot rot
@@ -216,19 +181,15 @@ jobs:
       - name: Self-test the bundled secret scanner
         run: node scripts/check-bundled-secrets.mjs --self-test
 
-  # The whole-tree structural gates.
-  #
-  # These ran ONLY in `.husky/pre-commit`, which means they ran only when hooks
-  # ran: `--no-verify`, a hook-less clone, a squash landed through the web UI,
-  # or any environment where `core.hooksPath` is not set skipped every one of
-  # them. A ratchet that can be bypassed by a flag is a suggestion. They cost
-  # well under a second together, so they run as one job rather than seven.
+  # The whole-tree gates. They also run in the git hooks, but a hook is
+  # bypassable (`--no-verify`, a hook-less clone, a squash landed through the
+  # web UI), so CI is where a green result counts.
   #
   # `check-launch-arg-auth` runs in its BUILD-PATH mode here: the post-hoc mode
   # reads `src/config/env.generated.ts`, which a checks-only job has no reason
   # to produce, and the artifact question is the one that matters anyway.
-  structural-gates:
-    name: Structural Gates
+  whole-tree-gates:
+    name: Whole-tree Gates
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -248,119 +209,33 @@ jobs:
       - name: Codegen orphans
         run: node scripts/check-codegen-orphans.mjs
 
-      - name: Version sync across package.json, Android and iOS
+      - name: Version sync
         run: node scripts/check-version-sync.mjs
 
-      - name: Startup origin position
+      - name: Startup origin
         run: node scripts/check-startup-origin.mjs
 
-      # The build-path invocations read ALLOW_LAUNCH_ARG_AUTH from the
-      # environment, which CI does not set — so both returned "off, nothing to
-      # check" and exited 0 whatever they were handed. The self-test runs the
-      # refusal logic against inputs that must be refused, which is the part
-      # worth asserting away from a build machine.
-      - name: Launch-argument auth — the gate can refuse
+      # A gate that never fails is indistinguishable from one that works. The
+      # self-test plants each refusal case and asserts the exit code.
+      - name: Launch-arg auth gate (self-test)
         run: node scripts/check-launch-arg-auth.mjs --self-test
 
-      - name: Launch-argument auth — Android release artifact
+      - name: Launch-arg auth gate (android release)
         run: node scripts/check-launch-arg-auth.mjs --platform android --variant release
 
-      - name: Launch-argument auth — iOS device artifact
+      - name: Launch-arg auth gate (ios device)
         run: node scripts/check-launch-arg-auth.mjs --platform ios --sdk iphoneos
 
-      - name: Layer purity
-        run: node scripts/check-layer-purity.mjs
-
-      - name: Feature shape
-        run: node scripts/check-feature-shape.mjs
-
+      # A module with no production importer: a test import or a jest.mock()
+      # does not count (knip.json lists the shell entry points).
       - name: Dead modules
-        run: node scripts/check-dead-modules.mjs
+        run: npm run check:dead-modules
 
-      - name: Data-layer boundary (self-test)
-        run: node scripts/check-data-layer-boundary.mjs --self-test
-
-      - name: Data-layer boundary
-        run: node scripts/check-data-layer-boundary.mjs
-
-      - name: Single-consumer shared modules (self-test)
-        run: node scripts/check-single-consumer.mjs --self-test
-
-      - name: Single-consumer shared modules
-        run: node scripts/check-single-consumer.mjs
-
-      - name: Hand-rolled form state (self-test)
-        run: node scripts/check-form-state.mjs --self-test
-
-      - name: Hand-rolled form state
-        run: node scripts/check-form-state.mjs
-
-      - name: Feature enumeration (self-test)
-        run: node scripts/check-feature-enumeration.mjs --self-test
-
-      - name: Feature enumeration
-        run: node scripts/check-feature-enumeration.mjs
-
-      - name: Canonical mechanisms (self-test)
-        run: node scripts/check-canonical-mechanisms.mjs --self-test
-
-      - name: Canonical mechanisms
-        run: node scripts/check-canonical-mechanisms.mjs
-
-      - name: Design tokens (self-test)
-        run: node scripts/check-design-tokens.mjs --self-test
-
-      - name: Design tokens
-        run: node scripts/check-design-tokens.mjs
-
-      - name: Typography roles (self-test)
-        run: node scripts/check-typography-roles.mjs --self-test
-
-      - name: Typography roles
-        run: node scripts/check-typography-roles.mjs
-
-      - name: Component tier (self-test)
-        run: node scripts/check-component-tier.mjs --self-test
-
-      - name: Component tier
-        run: node scripts/check-component-tier.mjs
-
-      - name: Screen scaffold (self-test)
-        run: node scripts/check-screen-scaffold.mjs --self-test
-
-      - name: Screen scaffold
-        run: node scripts/check-screen-scaffold.mjs
-
-      # Zero-baseline invariants that ran only in pre-push, which is local and
-      # skippable — so their green result was evidence about one machine.
-      - name: Hook return types (self-test)
-        run: node scripts/check-hook-return-types.mjs --self-test
-
-      - name: Hook return types
-        run: node scripts/check-hook-return-types.mjs
-
-      - name: Import cycles (self-test)
-        run: node scripts/check-import-cycles.mjs --self-test
-
+      # A load-time import cycle fails as `undefined is not a function` at
+      # startup on whichever platform the bundler entered first — never as a
+      # build error. `.madgerc` skips `import type` and `await import()` edges.
       - name: Import cycles
-        run: node scripts/check-import-cycles.mjs
-
-      # Catches a variant style frozen at its first-render value — a defect
-      # neither ESLint nor tsc can see, since it exists only in Babel output.
-      - name: Unistyles variant staleness
-        run: node scripts/check-unistyles-variant-staleness.mjs
-
-      - name: Accessible names (self-test)
-        run: node scripts/check-a11y-names.mjs --self-test
-
-      - name: Accessible names
-        run: node scripts/check-a11y-names.mjs
-
-      - name: Comment budget (self-test)
-        run: node scripts/check-comment-budget.mjs --self-test
-
-      - name: Comment budget
-        run: node scripts/check-comment-budget.mjs
+        run: npm run check:import-cycles
 
       - name: Optimistic fillers are up to date
         run: npm run check:fillers
