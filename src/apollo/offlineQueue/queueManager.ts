@@ -113,7 +113,7 @@ const withoutVersion = (variables: OperationVariables): OperationVariables => {
 
 /**
  * Replays offline-queued mutations for the signed-in user: auth-aware,
- * user-scoped, strict FIFO, with bounded retries.
+ * user-scoped, dependency-ordered, with bounded retries.
  */
 export class QueueManager {
   private config: QueueConfig;
@@ -203,10 +203,10 @@ export class QueueManager {
   }
 
   /**
-   * Replay all pending mutations strictly in insertion order. The queue is
-   * append-only from one user's actions, so insertion order IS causal order —
-   * a parent create precedes any dependent referencing its client-minted id.
-   * No grouping or dependency analysis: FIFO is correct by construction.
+   * Replay pending mutations in insertion order, holding back only what
+   * depends on an undelivered entry: a write waits behind the write that
+   * minted its subject OR its parent. A transport-class deferral pauses the
+   * pass; a row-scoped one (DEADLOCK) holds that entry and its dependents.
    */
   private async _processQueueInternal(userId: string): Promise<void> {
     const hasValidToken = await this.validateTokenBeforeReplay();

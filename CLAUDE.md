@@ -174,7 +174,9 @@ scoping.
 - **A condition the types say cannot matter is a lint error**
   (`@typescript-eslint/no-unnecessary-condition`, on for `src/**` minus the
   files in `scripts/no-unnecessary-condition.exclusions.json`, a debt list that
-  may only shrink). It earns its place on one
+  may only shrink — `__tests__/lint/unnecessaryConditionRatchet.test.ts` lints
+  the excluded files with the rule forced on and holds each one at its
+  per-file count in `scripts/no-unnecessary-condition.baseline.json`). It earns its place on one
   shape nothing else catches: a method read without calling it.
   `!Environment.isProduction` disabled Detox launch-arg injection in every build
   with typecheck, lint and the full suite green — TypeScript's own TS2774 is
@@ -239,7 +241,9 @@ by location but resolves localized refusal copy, which is presentation). What a
 hook HANDS BACK matters as much as what a screen imports: a leaked `ApolloError`
 or `NetworkStatus` couples a screen that imports nothing. A mutate wrapper
 returns `MutationOutcome<TData>` (`src/utils/errors/mutationOutcome.ts`), never
-Apollo's own result generic.
+Apollo's own result generic. `__tests__/architecture/hookReturnTypes.test.ts`
+resolves every feature hook's return type through the checker and fails on a
+library type in it or one property down.
 
 A hook returns plain values and callbacks: `loading` as a boolean, an outcome
 the caller branches on, named functions. `useFragment` and the masking types
@@ -488,6 +492,7 @@ one nobody has been able to express yet, not one that is optional.
 | A duration, spring or curve               | `theme.motion`                                                                                    | — (convention; at or below the 300 ms scale ceiling, above it is a loop's own period)           |
 | A form's fields                           | react-hook-form + a yup schema beside the form                                                    | `validationMessagesAreRendered.test.ts`                                                         |
 | Searching a loaded list                   | `filterByTerm` / `useLocalSearch` (`#hooks/search/useLocalSearch`)                                | `no-restricted-syntax` on `.filter(… toLowerCase().includes(…))`                                |
+| An icon-only control's name               | `accessibilityLabel` (RN names a pressable from its text children)                                | `no-restricted-syntax` on a pressable with `onPress` and no text or expression child               |
 | Reduce motion                             | nothing — Reanimated applies it itself                                                            | `no-restricted-imports` on `useReducedMotion` · `probe-reanimated-reduce-motion.mjs`            |
 | Memoization                               | nothing — the React Compiler does it                                                              | `no-restricted-imports` on `useMemo`/`useCallback` · `check-compiler-bailouts`                  |
 | A shared actions bag                      | `createActionsContext`                                                                            | — (no gate: a context holding callbacks is not distinguishable from any other context by shape) |

@@ -222,6 +222,15 @@ const RESTRICTED_SYNTAX = [
     message:
       'Do not use `as unknown` (typically the `x as unknown as T` double-cast) — it fully defeats type checking and hides real errors. Fix the data flow or use a single honest assertion.',
   },
+  // An icon-only control reaches VoiceOver/TalkBack as "button" and nothing
+  // else. RN names a pressable from its text children, so only the shape with
+  // NO text and NO expression child anywhere inside it is nameless.
+  {
+    selector:
+      'JSXElement[openingElement.name.name=/^(AppPressable|Pressable|TouchableOpacity|TouchableHighlight)$/]:has(JSXOpeningElement > JSXAttribute[name.name="onPress"]):not(:has(JSXOpeningElement > JSXAttribute[name.name=/^(accessibilityLabel|aria-label|accessible)$/])):not(:has(JSXElement > JSXExpressionContainer)):not(:has(JSXElement[openingElement.name.name=/Text$/])):not(:has(JSXElement[openingElement.name.property.name="Text"])):not(:has(JSXText[value=/\\S/]))',
+    message:
+      'A control with no text child needs an `accessibilityLabel` — a screen reader announces it as "button" and nothing else. Give it a label, put a `<Text>` in it, or mark it `accessible={false}` if it is decorative.',
+  },
 ];
 
 /**

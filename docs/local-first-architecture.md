@@ -156,11 +156,16 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
   enqueue). Cumulative-op idempotency rides on `input.idempotencyKey` inside the persisted variables, not
   on the context. The store also exposes `subscribe()` + `getPendingCount()` (`useSyncExternalStore`-compatible)
   so UI — the offline banner's pending-changes count — reads live queue state without polling.
-- **`queueManager`** replays **strictly in insertion order** — the queue is append-only from one
-  user's actions, so insertion order IS causal order: a parent create (offline-created
-  list/pantry/plan) always lands before any dependent referencing its client-minted id, with no
-  grouping or dependency analysis. Move-coalescing happens at **enqueue time** in
-  `queueStore.addMutation` (latest move per item wins). Retries use exponential backoff + jitter;
+- **`queueManager`** replays **in insertion order, holding back only dependents** — the queue is
+  append-only from one user's actions, so insertion order IS causal order, and an entry the server
+  did not accept holds back every later entry that names its subject or its parent
+  (`PARENT_REFERENCE_KEYS`: the home a pantry joins, the pantry or list an item joins, …) while
+  unrelated entries continue. A transport-class deferral (unreachable, 5xx, pacing,
+  `CLIENT_UPGRADE_REQUIRED`) pauses the pass instead, since every later entry would meet it too;
+  only a row-scoped one (DEADLOCK) lets the rest replay. Nothing counts passes: the sole lifetime
+  bound on a pending entry is `expireStalePending`'s 90-day age horizon. Move-coalescing happens at
+  **enqueue time** in `queueStore.addMutation` (latest move per item wins). Retries use exponential
+  backoff + jitter;
   an auth error forces ONE token refresh and then retries through the same bounded counter (a
   failed refresh → AUTH_ERROR + failure handler — never an unbounded auth-retry loop). Triggers:
   `useOnlineQueueSync` (offline→online), `useAppStateLifecycle` (background→active), `onUserChange`,
@@ -365,7 +370,7 @@ query-blocking, orthogonal to connectivity.
   `storageLocationsConnection(first: PAGE_SIZE.COMPACT)` variants, plus the home's `pantries` /
   `pantriesConnection` membership, and the `Query.pantry` cache redirect serves by-id reads — so a
   pantry created offline is immediately usable and items added to it queue behind its create
-  (strict FIFO replay orders the pantry create before its items).
+  (the drain holds an item behind the create of the pantry it names).
 - **Shopping list update / delete / clear** (`useUpdateShoppingList`, `useDeleteShoppingList`,
   `useClearShoppingListItems`) — update merges over a snapshot; delete removes edge + entity up front
   and restores the snapshot on rejection; clear keeps its eager cache eviction and refetches on a
@@ -417,10 +422,10 @@ This is **enforced in code**, not just convention: `queueLink` only queues allow
 a network error so the hook's normal error path shows a truthful failure and nothing ghost-replays.
 
 **Out of current scope (own server work pending):** profile (name / avatar / dietary profile — the
-*settings* half is local-first, see above). Replay is strictly FIFO
-for the whole queue, so dependents queued behind a parent-entity create (items in a new list, meals
-in a new plan, meals referencing a new recipe, items in a new pantry) always replay after their
-parent exists — ordering is correct by construction, no special-casing.
+*settings* half is local-first, see above). Replay is insertion-ordered and dependency-aware, so
+dependents queued behind a parent-entity create (items in a new list, meals in a new plan, meals
+referencing a new recipe, items in a new pantry) replay only after their parent has landed — the
+drain reads the parent reference off the input, so no per-feature special-casing.
 
 ## 11. Server contract (verified)
 

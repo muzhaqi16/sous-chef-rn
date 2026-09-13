@@ -37,7 +37,8 @@ jobs:
           node-version: "22"
 
       # `npm audit` exits 1 when it finds something, which is the signal, not an
-      # error — the step must continue so the issue below can be filed.
+      # error — the step must continue so the issue below can be filed. An
+      # audit that could not run also exits 1; the node step tells them apart.
       - name: Audit production dependencies
         id: audit
         run: |
@@ -46,6 +47,13 @@ jobs:
           set -e
           node -e '
             const r = require("./audit.json");
+            // npm writes {"error":…} to stdout and exits 1 when the audit could
+            // not run (registry down, ENOLOCK). That document has no
+            // `vulnerabilities`, and counting it as clean would close the issue.
+            if (r.error || !r.vulnerabilities) {
+              console.error("npm audit did not run: " + JSON.stringify(r.error ?? r));
+              process.exit(1);
+            }
             const fs = require("fs");
             const blocking = Object.values(r.vulnerabilities || {}).filter(v =>
               v.severity === "high" || v.severity === "critical",
