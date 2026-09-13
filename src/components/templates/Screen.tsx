@@ -148,6 +148,7 @@ export const Screen: React.FC<ScreenProps> = ({
             styles.scrollContent,
             { paddingBottom: insets.bottom },
           ]}
+          showsVerticalScrollIndicator={false}
           // Stated, not inherited: KeyboardAwareScrollView supplies no default
           // and RN's is `never`, which spends the first tap on dismissing the
           // keyboard instead of on the control the person aimed at.
@@ -168,6 +169,7 @@ export const Screen: React.FC<ScreenProps> = ({
             { paddingBottom: insets.bottom },
           ]}
           contentInsetAdjustmentBehavior="automatic"
+          showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps={KEYBOARD_PERSIST_TAPS}
           keyboardDismissMode={KEYBOARD_DISMISS_MODE}
           refreshControl={plainRefresh}
