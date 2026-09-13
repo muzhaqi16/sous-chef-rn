@@ -137,9 +137,11 @@ export const PantrySettings: React.FC<
             tags: ['user-created'],
           });
           if (outcome.status === 'rejected') {
+            // The refusal's code picks the localized line; the caller's copy
+            // is the fallback — never the server's own message.
             alertRejectedMutation(
               outcome.result,
-              outcome.rejectionMessage ?? t('pantrySettings.createFailed'),
+              t('errors.createPantryFailed'),
             );
             return;
           }
@@ -160,7 +162,7 @@ export const PantrySettings: React.FC<
           t('labels.error'),
           pantryId
             ? t('errors.saveSettingsFailed')
-            : t('pantrySettings.createFailed'),
+            : t('errors.createPantryFailed'),
         );
       },
     );

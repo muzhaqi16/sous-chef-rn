@@ -72,7 +72,6 @@
     "deleteWarning": "Fshirja e këtij qilari do të heqë përgjithmonë të gjithë artikujt brenda tij. Ky veprim nuk mund të zhbëhet.",
     "deleteConfirmMessage": "Vërtet dëshiron ta fshish këtë qilar? Ky veprim nuk mund të zhbëhet dhe do të heqë të gjithë artikujt.",
     "nameEmptyError": "Emri i qilarit nuk mund të jetë bosh",
-    "createFailed": "Nuk u krijua dot qilari",
     "loadErrorTitle": "Gabim ngarkimi qilari",
     "loadErrorMessage": "Nuk u ngarkuan dot të dhënat. Provoje sërish.",
     "userCreatedDescription": "Qilar i krijuar nga përdoruesi"

@@ -72,7 +72,6 @@
     "deleteWarning": "Eliminar esta despensa quitará permanentemente todos los artículos que contiene. Esta acción no se puede deshacer.",
     "deleteConfirmMessage": "¿Seguro que quieres eliminar esta despensa? Esta acción no se puede deshacer y eliminará todos los artículos.",
     "nameEmptyError": "El nombre de la despensa no puede estar vacío",
-    "createFailed": "No se pudo crear la despensa",
     "loadErrorTitle": "Error al cargar la despensa",
     "loadErrorMessage": "No se pudieron cargar los datos. Inténtalo de nuevo.",
     "userCreatedDescription": "Despensa creada por el usuario"

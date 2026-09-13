@@ -72,7 +72,6 @@
     "deleteWarning": "Eliminare questa dispensa rimuoverà permanentemente tutti gli articoli al suo interno. Questa azione non può essere annullata.",
     "deleteConfirmMessage": "Vuoi davvero eliminare questa dispensa? Questa azione non può essere annullata e rimuoverà tutti gli articoli.",
     "nameEmptyError": "Il nome della dispensa non può essere vuoto",
-    "createFailed": "Impossibile creare la dispensa",
     "loadErrorTitle": "Errore caricamento dispensa",
     "loadErrorMessage": "Impossibile caricare i dati. Riprova.",
     "userCreatedDescription": "Dispensa creata dall'utente"
