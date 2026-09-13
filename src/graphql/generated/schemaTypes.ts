@@ -11937,7 +11937,7 @@ export type PantryItemSuggestion = {
   minQuantity: Maybe<Scalars['Float']['output']>;
   /** Item name for display */
   name: Scalars['String']['output'];
-  /** Pantry item ID - present for LOW_STOCK and EXPIRING_SOON; null for RECENTLY_DELETED, whose stack no longer exists */
+  /** Pantry item ID - present for LOW_STOCK, EXPIRING_SOON and RECENTLY_DELETED, where it names the removed stack restorePantryItem takes */
   pantryItemId: Maybe<Scalars['ID']['output']>;
   /** Popularity ranking position (for POPULAR source) */
   popularityRank: Maybe<Scalars['Int']['output']>;
@@ -12526,12 +12526,10 @@ export type Query = {
   /** List compatible units for an item with conversion metadata. */
   compatibleUnitsForItem: Array<CompatibleUnit>;
   /**
-   * Ranked consumption-eligible units for a CATALOG item, for previewing what
-   * the catalog alone supports.
-   *
-   * The stack's own measurement profile decides what a real pantry item accepts,
-   * so pass as much of it as you hold — or call consumptionUnitsForPantryItem,
-   * which reads the whole profile server-side and is what a client wants.
+   * Ranked consumption-eligible units for a CATALOG item, from whatever part of
+   * a stack's measurement profile the caller passes. A netWeight,
+   * portionsPerTrackingUnit or densityOverride of zero or less is refused.
+   * @deprecated Use consumptionUnitsForPantryItem instead.
    */
   consumptionUnitsForItem: Array<RankedUnit>;
   /**
@@ -12711,11 +12709,17 @@ export type Query = {
    */
   resolveShareLink: Maybe<ResolveShareLinkResult>;
   /**
-   * Ranked units this pantry stack can be restocked in, best first: the tracking
-   * unit → its own portion unit → curated retail units → the net-weight family.
-   * Every unit returned converts into what the stack measures.
+   * The list restockUnitsForPantryItem returns.
+   * @deprecated Use restockUnitsForPantryItem instead.
    */
   restockUnitsForItem: Array<RankedUnit>;
+  /**
+   * Ranked units this pantry stack can be restocked in, best first: the tracking
+   * unit → its own portion unit → curated retail units → the net-weight family.
+   * Every unit returned converts into what the stack measures, so each one is a
+   * unit restockPantryItem accepts.
+   */
+  restockUnitsForPantryItem: Array<RankedUnit>;
   /** Fetch a single saved recipe by its ID. */
   savedRecipe: Maybe<SavedRecipe>;
   /** List all folder names the user has organized saved recipes into. */
@@ -13215,6 +13219,11 @@ export type QueryResolveShareLinkArgs = {
 
 
 export type QueryRestockUnitsForItemArgs = {
+  pantryItemId: Scalars['ID']['input'];
+};
+
+
+export type QueryRestockUnitsForPantryItemArgs = {
   pantryItemId: Scalars['ID']['input'];
 };
 
@@ -16440,7 +16449,7 @@ export enum TopLevelErrorCode {
   SubscriptionLimitExceeded = 'SUBSCRIPTION_LIMIT_EXCEEDED',
   /** No credentials were presented. Apollo's standard code, which clients already branch on. */
   Unauthenticated = 'UNAUTHENTICATED',
-  /** The unit is not valid for the requested operation. Carries no machine-readable list of the units that would be: a mutation reports this as a ValidationError union member, which has no extensions, and the message names the acceptable alternatives in prose. To present them as options, re-query consumptionUnitsForItem or restockUnitsForItem. */
+  /** The unit is not valid for the requested operation. The message states why — curation, no conversion route, a fact the food does not record, or a measure the stack cannot express. Carries no machine-readable list of the units that would be: a mutation reports this as a ValidationError union member, which has no extensions, and the message names the acceptable alternatives in prose. To present them as options, re-query consumptionUnitsForPantryItem or restockUnitsForPantryItem. */
   UnitInvalid = 'UNIT_INVALID',
   ValidationFailed = 'VALIDATION_FAILED',
   ValidationUniqueConstraint = 'VALIDATION_UNIQUE_CONSTRAINT',
