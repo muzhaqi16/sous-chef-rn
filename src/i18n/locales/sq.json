@@ -62,6 +62,7 @@
     "deleteItemFailed": "Nuk u fshi dot artikulli",
     "fetchItemFailed": "Nuk u morën dot detajet e artikullit",
     "createHomeFailed": "Nuk u krijua dot shtëpia",
+    "createPantryFailed": "Nuk u krijua dot qilari",
     "updateHomeFailed": "Nuk u përditësua dot shtëpia",
     "setDefaultHomeFailed": "Nuk u caktua dot shtëpia e parazgjedhur",
     "updateHomeNameFailed": "Nuk u përditësua dot emri i shtëpisë",

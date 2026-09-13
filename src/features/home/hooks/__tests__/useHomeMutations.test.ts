@@ -1,4 +1,4 @@
-import { act } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
 import type {
   CreateOperationConfig,
@@ -230,6 +230,65 @@ describe('useHomeMutations', () => {
         .input;
       const homeInput = (home.fired[0] as { input: { id: string } }).input;
       expect(pantryInput.homeId).toBe(homeInput.id);
+    });
+
+    it('stays creating until the default pantry has settled', async () => {
+      // The home resolves at once; the pantry's request is held open. The
+      // submit control reads `creating`, so a second tap during that window
+      // must find it disabled — a duplicate home is what it would create.
+      const home = createHomeMock({ id: 'new-home', name: 'My Home' });
+      const pantry = createPantryMock({ id: 'new-pantry', homeId: 'new-home' });
+      pantry.mock.delay = 200;
+      const { result } = renderHookWithApollo(
+        () => useHomeMutations(createOptions()),
+        { operationMocks: [home.mock, pantry.mock] },
+      );
+
+      let settled = false;
+      await act(async () => {
+        void result.current.createHome('My Home').then(() => {
+          settled = true;
+        });
+        await Promise.resolve();
+      });
+      await waitFor(() => expect(home.fired).toHaveLength(1));
+      expect(settled).toBe(false);
+      expect(result.current.creating).toBe(true);
+
+      await waitFor(() => expect(settled).toBe(true));
+      expect(result.current.creating).toBe(false);
+    });
+
+    it('reports a refused default pantry and keeps the home', async () => {
+      // A refusal resolves as a union member; it never throws, so a `catch`
+      // around the create sees nothing and the user would learn of the missing
+      // pantry only from an empty pantry tab.
+      const home = createHomeMock({ id: 'new-home', name: 'My Home' });
+      const refused = recordMock(CreatePantryDocument, {
+        data: {
+          createPantry: {
+            __typename: 'ForbiddenError',
+            message: 'Pantries are capped on this plan',
+          },
+        },
+      });
+      const { result } = renderHookWithApollo(
+        () => useHomeMutations(createOptions()),
+        { operationMocks: [home.mock, refused.mock] },
+      );
+
+      let created: boolean | undefined;
+      await act(async () => {
+        created = await result.current.createHome('My Home');
+      });
+
+      expect(created).toBe(true);
+      expect(refused.fired).toHaveLength(1);
+      // The caller's LOCALIZED copy, never the server's English message.
+      expect(alertService.alert).toHaveBeenCalledWith(
+        expect.any(String),
+        'Failed to create pantry',
+      );
     });
 
     it('creates the home without a join code when the email is unverified', async () => {

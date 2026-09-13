@@ -208,10 +208,12 @@ describe('first home becomes the default', () => {
     // `setHomeAndPantry` / `setIsHomeSelectionReady` are written ONLY by
     // `setDefaultHome` — the auto-select effect fires the mutation directly and
     // touches neither. Asserting on them is what stops this test passing via
-    // that effect rather than via the path it means to cover.
+    // that effect rather than via the path it means to cover. The pantry is
+    // the client-minted default: adoption reads it from the cache before its
+    // own request has settled.
     expect(mockStoreState.setHomeAndPantry).toHaveBeenCalledWith(
       mintedId,
-      null,
+      expect.any(String),
     );
     expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(false);
     expect(alertService.alert).not.toHaveBeenCalled();

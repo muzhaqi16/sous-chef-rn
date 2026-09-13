@@ -62,6 +62,7 @@
     "deleteItemFailed": "Impossibile eliminare l'articolo",
     "fetchItemFailed": "Impossibile recuperare i dettagli dell'articolo",
     "createHomeFailed": "Impossibile creare la casa",
+    "createPantryFailed": "Impossibile creare la dispensa",
     "updateHomeFailed": "Impossibile aggiornare la casa",
     "setDefaultHomeFailed": "Impossibile impostare la casa predefinita",
     "updateHomeNameFailed": "Impossibile aggiornare il nome della casa",

@@ -48,7 +48,7 @@ export function useHomeMutations({
   });
   // `createDefaultPantry` is forced off so no pantry carries a server-minted
   // id, which makes minting the home's first pantry this caller's job.
-  const { createPantry } = useCreatePantry();
+  const { createPantry, creating: creatingPantry } = useCreatePantry();
 
   const [deleteHomeMutation, { loading: deleting, client: deleteClient }] =
     useMutation(DeleteHomeDocument, {
@@ -153,8 +153,12 @@ export function useHomeMutations({
       return false;
     }
 
-    await createDefaultPantry(outcome.id);
+    // The pantry is in the cache before its request leaves (the create writes
+    // it first), so adoption needs nothing from the round trip. The return DOES
+    // wait for it: the form closes and its button re-enables on this promise.
+    const pantrySettled = createDefaultPantry(outcome.id);
     adoptNewHome(outcome.id);
+    await pantrySettled;
     return true;
   };
 
@@ -164,14 +168,14 @@ export function useHomeMutations({
    * standing: the pantry can be added from the home's own settings.
    */
   async function createDefaultPantry(homeId: string) {
-    try {
-      await createPantry({
-        homeId,
-        name: t('onBoarding.defaultPantryName'),
-        isDefault: true,
-      });
-    } catch (error) {
-      errorService.reportError(error, { operation: 'Create Default Pantry' });
+    // A refusal RESOLVES as `rejected` (errorPolicy 'all'); nothing throws.
+    const outcome = await createPantry({
+      homeId,
+      name: t('onBoarding.defaultPantryName'),
+      isDefault: true,
+    });
+    if (outcome.status === 'rejected') {
+      alertRejectedMutation(outcome.result, t('errors.createPantryFailed'));
     }
   }
 
@@ -223,7 +227,9 @@ export function useHomeMutations({
   return {
     createHome,
     deleteHome,
-    creating,
+    // The default pantry's round trip is part of creating a home: the submit
+    // control stays disabled until both have settled.
+    creating: creating || creatingPantry,
     deleting,
   };
 }

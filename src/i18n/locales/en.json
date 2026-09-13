@@ -62,6 +62,7 @@
     "deleteItemFailed": "Failed to delete item",
     "fetchItemFailed": "Failed to fetch item details",
     "createHomeFailed": "Failed to create home",
+    "createPantryFailed": "Failed to create pantry",
     "updateHomeFailed": "Failed to update home",
     "setDefaultHomeFailed": "Failed to set default home",
     "updateHomeNameFailed": "Failed to update home name",
