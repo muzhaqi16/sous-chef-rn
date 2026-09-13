@@ -77,8 +77,9 @@ export type ScreenProps = ScreenBaseProps &
 /**
  * The one screen scaffold. It NEVER applies the top inset — the navigator's
  * `screenLayout` already does, and applying it twice is what pushed six profile
- * screens down by a status bar. The bottom inset is applied only for fixed
- * content, since a scroll view gets it from its own content inset.
+ * screens down by a status bar. The bottom inset is applied to every mode:
+ * `contentInsetAdjustmentBehavior` supplies it on iOS only, and under Android
+ * gesture navigation a scroll view's last row otherwise sits under the bar.
  */
 export const Screen: React.FC<ScreenProps> = ({
   children,
@@ -143,7 +144,10 @@ export const Screen: React.FC<ScreenProps> = ({
     if (scroll === 'form') {
       return (
         <ThemedKeyboardAwareScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom },
+          ]}
           // Stated, not inherited: KeyboardAwareScrollView supplies no default
           // and RN's is `never`, which spends the first tap on dismissing the
           // keyboard instead of on the control the person aimed at.
@@ -159,7 +163,10 @@ export const Screen: React.FC<ScreenProps> = ({
       return (
         <ScrollView
           style={styles.body}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom },
+          ]}
           contentInsetAdjustmentBehavior="automatic"
           keyboardShouldPersistTaps={KEYBOARD_PERSIST_TAPS}
           keyboardDismissMode={KEYBOARD_DISMISS_MODE}
