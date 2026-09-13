@@ -30,7 +30,7 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { graphql, print, Kind, type DocumentNode } from 'graphql';
+import { graphql, parse, print, Kind, type DocumentNode } from 'graphql';
 import type { SelectionSetNode, FragmentDefinitionNode } from 'graphql';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { addMocksToSchema } from '@graphql-tools/mock';
@@ -254,7 +254,8 @@ function flattenSelection(
       }
     } else if (selection.kind === Kind.FRAGMENT_SPREAD) {
       const fragment = fragmentsByName.get(selection.name.value);
-      if (!fragment) throw new Error(`unresolved spread ${selection.name.value}`);
+      if (!fragment)
+        throw new Error(`unresolved spread ${selection.name.value}`);
       const guard = `${prefix}|${selection.name.value}`;
       if (seen.has(guard)) continue;
       seen.add(guard);
@@ -266,10 +267,27 @@ function flattenSelection(
         seen,
       );
     } else if (selection.kind === Kind.INLINE_FRAGMENT) {
-      flattenSelection(selection.selectionSet, fragmentsByName, prefix, out, seen);
+      flattenSelection(
+        selection.selectionSet,
+        fragmentsByName,
+        prefix,
+        out,
+        seen,
+      );
     }
   }
   return out;
+}
+
+/**
+ * `flattenSelection` skips `__typename`, so a selection of only that flattens to
+ * nothing, and an empty side compares clean against anything.
+ */
+function expectSelected(count: number, label: string): void {
+  expect({ label, selectedFields: count }).not.toEqual({
+    label,
+    selectedFields: 0,
+  });
 }
 
 const fragmentsOf = (document: DocumentNode) =>
@@ -328,9 +346,15 @@ function findConnectionNode(
         selection.name.value === connectionField
       ) {
         found ??= findFieldSelection(
-          { kind: Kind.DOCUMENT, definitions: [
-            { ...document.definitions[0]!, selectionSet: selection.selectionSet },
-          ] } as DocumentNode,
+          {
+            kind: Kind.DOCUMENT,
+            definitions: [
+              {
+                ...document.definitions[0]!,
+                selectionSet: selection.selectionSet,
+              },
+            ],
+          } as DocumentNode,
           'node',
         );
       }
@@ -364,7 +388,7 @@ function expectWriterCoversReader(
     findFieldSelection(writerDocument, writerField),
     fragmentsOf(writerDocument),
   );
-  expect(required.size).toBeGreaterThan(5);
+  expectSelected(required.size, label);
   expect({
     label,
     missing: [...required].filter(field => !written.has(field)).sort(),
@@ -391,7 +415,7 @@ function expectWriterCoversReaderField(
     findFieldSelection(writerDocument, writerField),
     fragmentsOf(writerDocument),
   );
-  expect(required.size).toBeGreaterThan(5);
+  expectSelected(required.size, label);
   expect({
     label,
     missing: [...required].filter(field => !written.has(field)).sort(),
@@ -417,41 +441,36 @@ function expectWritersAgree(
     ].sort();
   const left = fieldsOf(a);
   const right = fieldsOf(b);
-  expect(left.length).toBeGreaterThan(5);
+  expectSelected(left.length, a.label);
   expect({
     [`only in ${a.label}`]: left.filter(field => !right.includes(field)),
     [`only in ${b.label}`]: right.filter(field => !left.includes(field)),
   }).toEqual({ [`only in ${a.label}`]: [], [`only in ${b.label}`]: [] });
 }
 
-/** Asserts one fragment file's field list is a superset of another's. */
+/** Asserts one `Notification` fragment selects everything another does. */
 function expectWriterCovers(writerFragment: string, readerFragment: string) {
+  const sources = [
+    'src/features/notifications/hooks/useNotifications.graphql',
+    'src/features/notifications/hooks/useNotificationsOnLaunch.graphql',
+  ];
   const fieldsOf = (fragmentName: string): string[] => {
-    const sources = [
-      'src/features/notifications/hooks/useNotifications.graphql',
-      'src/features/notifications/hooks/useNotificationsOnLaunch.graphql',
-    ];
     for (const relative of sources) {
-      const source = fs.readFileSync(
-        path.join(__dirname, '..', '..', relative),
-        'utf8',
+      const document = parse(
+        fs.readFileSync(path.join(__dirname, '..', '..', relative), 'utf8'),
       );
-      const marker = `fragment ${fragmentName} on Notification {`;
-      if (!source.includes(marker)) continue;
-      return source
-        .slice(source.indexOf(marker))
-        .split('}')[0]!
-        .split('\n')
-        .slice(1)
-        .map(line => line.replace(/#.*$/, '').trim())
-        .filter(Boolean)
-        .sort();
+      const fragment = fragmentsOf(document).get(fragmentName);
+      if (fragment) {
+        return [
+          ...flattenSelection(fragment.selectionSet, fragmentsOf(document)),
+        ].sort();
+      }
     }
     throw new Error(`fragment ${fragmentName} not found`);
   };
   const readerFields = fieldsOf(readerFragment);
   const writerFields = fieldsOf(writerFragment);
-  expect(readerFields.length).toBeGreaterThan(5);
+  expectSelected(readerFields.length, readerFragment);
   expect(readerFields.filter(field => !writerFields.includes(field))).toEqual(
     [],
   );
@@ -1479,8 +1498,14 @@ describe('optimistic entity completeness', () => {
       // it, because a created list is never a template.
       for (const [readerLabel, reader] of [
         ['GetShoppingListsLite', GetShoppingListsLiteDocument],
-        ['GetShoppingListsLiteForRecipe', GetShoppingListsLiteForRecipeDocument],
-        ['GetShoppingListsLiteForMealPlan', GetShoppingListsLiteForMealPlanDocument],
+        [
+          'GetShoppingListsLiteForRecipe',
+          GetShoppingListsLiteForRecipeDocument,
+        ],
+        [
+          'GetShoppingListsLiteForMealPlan',
+          GetShoppingListsLiteForMealPlanDocument,
+        ],
       ] as const) {
         expectWriterCoversReader(
           CreateShoppingListDocument,

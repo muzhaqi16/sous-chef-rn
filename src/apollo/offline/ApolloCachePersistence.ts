@@ -20,12 +20,6 @@ const LEGACY_SPLIT_KEYS = [
 /** Freshly allocated by every `extract()`, so its reference is never stable. */
 const META_KEY = '__META';
 const DEBOUNCE_MS = 3000;
-/**
- * The window while no tab screen is focused: wider, because a detail screen's
- * writes are fewer and `cache.extract()` is the cost; still finite, so a kill
- * on that screen loses at most this window.
- */
-const PAUSED_DEBOUNCE_MS = 10000;
 
 type Extractor = () => NormalizedCacheObject;
 
@@ -77,7 +71,6 @@ function pruneExtraRootIds(cache: NormalizedCacheObject): void {
 class ApolloCachePersistence {
   private saveTimeout: ReturnType<typeof setTimeout> | null = null;
   private idleCallbackId: number | null = null;
-  private paused = false;
   /** Non-null exactly while a write is owed; `persist` and `cancel` clear it. */
   private pendingExtractor: Extractor | null = null;
   private lastPersistedSnapshot: NormalizedCacheObject | null = null;
@@ -128,30 +121,13 @@ class ApolloCachePersistence {
     if (isRecoveryStorage()) return;
     this.pendingExtractor = extractor;
     this.clearHandles();
-    this.saveTimeout = setTimeout(
-      () => {
-        this.saveTimeout = null;
-        this.idleCallbackId = requestIdleCallback(() => {
-          this.idleCallbackId = null;
-          this.persist();
-        });
-      },
-      this.paused ? PAUSED_DEBOUNCE_MS : DEBOUNCE_MS,
-    );
-  }
-
-  /** Widens the debounce while no tab screen is focused; never stops it. */
-  pause(): void {
-    this.paused = true;
-  }
-
-  /** A save still waiting on the wide window is re-armed at the tight one. */
-  resume(): void {
-    if (!this.paused) return;
-    this.paused = false;
-    if (this.saveTimeout !== null && this.pendingExtractor) {
-      this.scheduleExtractAndSave(this.pendingExtractor);
-    }
+    this.saveTimeout = setTimeout(() => {
+      this.saveTimeout = null;
+      this.idleCallbackId = requestIdleCallback(() => {
+        this.idleCallbackId = null;
+        this.persist();
+      });
+    }, DEBOUNCE_MS);
   }
 
   /**

@@ -781,7 +781,7 @@ from its docstring — recorded here so the question is not re-litigated.
 
 It **rewrites `network-only` and `cache-and-network` to `cache-first`** and
 nothing else (`core/QueryManager.js`, `fetchObservableWithInfo`). It is a
-*freshness* knob; `offlineModeLink` is a *network gate*. They overlap only on
+_freshness_ knob; `offlineModeLink` is a _network gate_. They overlap only on
 the cache-HIT branch, which already works.
 
 Four specifics that make adoption a regression:
@@ -799,7 +799,7 @@ Four specifics that make adoption a regression:
 - **It is not reactive.** It is a plain mutable field with no notification path,
   so flipping it mid-session does not affect anything already mounted. Note the
   symmetry with the paragraph above: `useOfflinePresetPolicy` was removed for
-  being *too* reactive (the cascade); this fails for not being reactive at all.
+  being _too_ reactive (the cascade); this fails for not being reactive at all.
   Neither is a network gate.
 
 #### Why NOT `extensions`-based provenance in the connection merge
@@ -818,7 +818,7 @@ provenance instead. It cannot work:
   own watched-query write, which passes the SERVER's `result.extensions`; there
   is no per-query cache-write extensions option. `writeFragment` — used by the
   optimistic seeding paths — has no `extensions` option at all.
-- **Staleness.** The guard exists for the race where a refetch lands *after* an
+- **Staleness.** The guard exists for the race where a refetch lands _after_ an
   offline create was enqueued. Read at merge time it is always current; any set
   marshalled into `extensions` is snapshotted before that enqueue.
 
@@ -1688,7 +1688,6 @@ replaces contents wholesale, so it must not run once queries are watching.
 | `load()`                            | Read the blob at restore; null when absent or of another shape                                                                            |
 | `scheduleExtractAndSave(extractor)` | Debounced persist after every cache write (wired in `setupCachePersistence`); the extractor runs once per window, at idle                 |
 | `flushPending()`                    | Write an owed save now — the app-background transition (`useAppStateLifecycle` → `flushCachePersistence()`); a no-op when nothing is owed |
-| `pause()` / `resume()`              | Widen the debounce (3 s → 10 s) while no tab root is focused (`useTabScreenLifecycle`); never stops it                                    |
 | `cancel()`                          | Drop an owed save — sign-out, so the previous account's last seconds never reach disk                                                     |
 | `clear()`                           | Remove everything a later `load()` could restore — session end, version mismatch, parse failure                                           |
 
@@ -1884,9 +1883,9 @@ This project uses Apollo Client `~4.1.7`. AC 4.0 introduced several new hooks an
 | `useSuspenseQuery`      | Suspense-compatible query hook (works with React `<Suspense>`)                                                         | Available, **not adopted** (see rationale below)                                                                                                  |
 | `useBackgroundQuery`    | Trigger queries in parent, read in child via `useReadQuery`                                                            | Available, **not adopted**                                                                                                                        |
 | `useReadQuery`          | Read data from a `useBackgroundQuery` queryRef in a child component                                                    | Available, **not adopted** (companion to `useBackgroundQuery`)                                                                                    |
-| `useFragment`           | Subscribe to a specific fragment in cache without a query                                                              | **Adopted.** See [Fragment Composition & Data Masking](#fragment-composition--data-masking) for the full pattern.                                        |
+| `useFragment`           | Subscribe to a specific fragment in cache without a query                                                              | **Adopted.** See [Fragment Composition & Data Masking](#fragment-composition--data-masking) for the full pattern.                                 |
 | `dataState`             | Discriminated union on query results (`{status: 'loading' \| 'error' \| 'complete', data?}`) for type-safe data access | Available, not adopted (would require widespread refactor)                                                                                        |
-| `dataMasking: true`     | Strips fragment fields from parent query results so children must use `useFragment`                                    | **Enabled.** See [Fragment Composition & Data Masking](#fragment-composition--data-masking) for the colocated-fragment convention.                       |
+| `dataMasking: true`     | Strips fragment fields from parent query results so children must use `useFragment`                                    | **Enabled.** See [Fragment Composition & Data Masking](#fragment-composition--data-masking) for the colocated-fragment convention.                |
 | `apollo3-cache-persist` | Apollo's recommended cache persistence library                                                                         | **Not adopted** — see [Cache Persistence & Restoration](#cache-persistence--restoration) for the MMKV-based custom implementation and the reasons |
 
 #### AC 4.0 New Concepts
