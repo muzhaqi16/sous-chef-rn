@@ -1,11 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View } from 'react-native';
 import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
-import {
-  PrimaryActivityIndicator,
-  PlainScrollRefreshControl,
-} from '#components/atoms/themedComponents';
+import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   LinearTransition,
@@ -13,7 +10,6 @@ import Animated, {
   FadeOutUp,
 } from 'react-native-reanimated';
 
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
 import { useHomeManagement } from '#features/home/hooks/useHomeManagement';
@@ -42,7 +38,6 @@ export const HomeManagement: React.FC = () => {
   useScreenTransition('HomeManagement');
   const { t } = useTranslation();
   const { goBack, toHomeDetail } = useAppNavigation();
-  const insets = useSafeAreaInsets();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [mode, setMode] = useState<'create' | 'join'>('create');
@@ -258,7 +253,8 @@ export const HomeManagement: React.FC = () => {
           back: goBack,
           actions: headerActions,
         }}
-        scroll="list"
+        scroll="scroll"
+        refresh={{ refreshing, onRefresh: handleRefresh }}
         gutter="none"
       >
         {/* Stats Section */}
@@ -377,66 +373,52 @@ export const HomeManagement: React.FC = () => {
           </Animated.View>
         )}
 
-        {/* Homes List */}
-        <Animated.View
-          layout={LinearTransition.duration(motion.timing.SLOW)}
-          style={[styles.scrollView, { paddingBottom: insets.bottom }]}
-        >
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            contentContainerStyle={styles.scrollContent}
-            refreshControl={
-              <PlainScrollRefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-              />
-            }
-          >
-            {/* NOTE: Per-item entering + LinearTransition layout animations on
+        {/* Homes List — the page scrolls as one; the stats and the form above
+            are small enough that pinning them only shortens the list. */}
+        <Animated.View layout={LinearTransition.duration(motion.timing.SLOW)}>
+          {/* NOTE: Per-item entering + LinearTransition layout animations on
                 a `.map()`-rendered list are acceptable here because the home
                 list is bounded (typically <10 items). For longer lists, prefer
                 a single FlashList `itemLayoutAnimation` or stagger-gate the
                 entering animations after the first render — see
                 js-animations-reanimated.md for the long-list pattern. */}
-            {sortedHomes.map((home, index) => {
-              const userCanInvite = home.myMembership
-                ? canInviteToHome(
-                    home.myMembership.role,
-                    home.myMembership.canInviteOthers,
-                  )
-                : false;
-              // deleteHome is @requireAccess(Home, OWNER) server-side — the
-              // OWNER role, not the canManageHome flag (which ADMINs hold by
-              // default). Gating on the flag showed ADMINs a Delete that could
-              // only ever return FORBIDDEN.
-              const userCanDelete = home.myMembership?.role === 'OWNER';
+          {sortedHomes.map((home, index) => {
+            const userCanInvite = home.myMembership
+              ? canInviteToHome(
+                  home.myMembership.role,
+                  home.myMembership.canInviteOthers,
+                )
+              : false;
+            // deleteHome is @requireAccess(Home, OWNER) server-side — the
+            // OWNER role, not the canManageHome flag (which ADMINs hold by
+            // default). Gating on the flag showed ADMINs a Delete that could
+            // only ever return FORBIDDEN.
+            const userCanDelete = home.myMembership?.role === 'OWNER';
 
-              return (
-                <Animated.View
-                  key={home.id}
-                  entering={FadeInDown.delay(index * 50).springify()}
-                  layout={LinearTransition.duration(600)
-                    .springify()
-                    .damping(30)
-                    .stiffness(180)
-                    .mass(1.5)}
-                >
-                  <HomeCard
-                    homeRef={home}
-                    isDefault={home.id === remoteDefaultHomeId}
-                    isHighlighted={home.id === highlightedHomeId}
-                    canInvite={userCanInvite}
-                    canDelete={userCanDelete}
-                    onPress={handleViewHomeDetail}
-                    onSetDefault={handleSetDefault}
-                    onInvite={inviteUserPrompt}
-                    onDelete={deleteHome}
-                  />
-                </Animated.View>
-              );
-            })}
-          </ScrollView>
+            return (
+              <Animated.View
+                key={home.id}
+                entering={FadeInDown.delay(index * 50).springify()}
+                layout={LinearTransition.duration(600)
+                  .springify()
+                  .damping(30)
+                  .stiffness(180)
+                  .mass(1.5)}
+              >
+                <HomeCard
+                  homeRef={home}
+                  isDefault={home.id === remoteDefaultHomeId}
+                  isHighlighted={home.id === highlightedHomeId}
+                  canInvite={userCanInvite}
+                  canDelete={userCanDelete}
+                  onPress={handleViewHomeDetail}
+                  onSetDefault={handleSetDefault}
+                  onInvite={inviteUserPrompt}
+                  onDelete={deleteHome}
+                />
+              </Animated.View>
+            );
+          })}
         </Animated.View>
       </Screen>
       {InviteModalComponent}
@@ -445,9 +427,6 @@ export const HomeManagement: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  scrollView: {
-    flex: 1,
-  },
   formContainer: {
     marginHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
@@ -503,8 +482,5 @@ const styles = StyleSheet.create(theme => ({
   },
   previewSubtitle: {
     color: theme.colors.textSecondary,
-  },
-  scrollContent: {
-    flexGrow: 1,
   },
 }));
