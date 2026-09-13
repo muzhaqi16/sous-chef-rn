@@ -60,17 +60,19 @@ const styles = StyleSheet.create(theme => ({
   },
   badge: {
     position: 'absolute',
-    top: -12,
-    right: -10,
-    minWidth: theme.spacing.mdPlus, // 20
-    minHeight: theme.spacing.mdPlus, // 20
+    // Steps, not literals: the badge's size follows density, so its anchor
+    // must too or it drifts into the icon at the spacious setting.
+    top: -theme.spacing.base,
+    right: -theme.spacing.smPlus,
+    minWidth: theme.spacing.mdPlus,
+    minHeight: theme.spacing.mdPlus,
     paddingVertical: 0,
-    paddingHorizontal: 3,
+    paddingHorizontal: theme.spacing.xs,
     borderRadius: theme.radii.full,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.warning,
-    borderWidth: theme.borderWidth.hairline, // 1
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.background,
   },
   badgeText: {
