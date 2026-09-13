@@ -18,6 +18,7 @@ import {
 import { makeCache } from '#/apollo/cache';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { Telemetry } from '#/services/telemetry';
+import { SessionError } from '#/utils/errors/sessionError';
 
 // Mock the store module
 jest.mock('#store', () => ({
@@ -2099,6 +2100,42 @@ describe('QueueManager', () => {
         expect(queueStore.markMutationFailed).toHaveBeenCalledWith(
           'auth-fail-h',
           expect.objectContaining({ type: 'auth' }),
+        );
+      });
+
+      it('parks the write when the refresh itself throws a coded session error', async () => {
+        // The refresh path rejects with its own coded error — no refresh token
+        // stored, a malformed refresh response — and that error is what the
+        // replay sees. Coded, it classifies `auth` and parks; a bare Error
+        // here would classify `unknown` and destroy the local change.
+        const { proactiveTokenRefresh } = require('../../links/refreshToken');
+        (proactiveTokenRefresh as jest.Mock).mockResolvedValue(null);
+        const handler = jest.fn();
+        manager.setFailureHandler(handler);
+        const handleMutationError =
+          manager['handleMutationError'].bind(manager);
+
+        jest.useRealTimers();
+        await handleMutationError(
+          makeMutation({
+            id: 'session-throw',
+            operationName: 'UpdateShoppingList',
+            variables: { input: { id: 'list-12' } },
+          }),
+          new SessionError(
+            ErrorCode.AuthRefreshTokenInvalid,
+            'No refresh token available',
+          ),
+        );
+        jest.useFakeTimers();
+
+        expect(handler).not.toHaveBeenCalled();
+        expect(queueStore.markMutationFailed).toHaveBeenCalledWith(
+          'session-throw',
+          expect.objectContaining({ type: 'auth', retryable: true }),
+        );
+        expect(queueStore.removeMutation).not.toHaveBeenCalledWith(
+          'session-throw',
         );
       });
 

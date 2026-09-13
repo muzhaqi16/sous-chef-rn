@@ -6,6 +6,8 @@ import { getDeviceId } from '#/storage/deviceId';
 import { isTokenExpired, isTokenExpiringSoon } from '#/utils/tokenExpiry';
 import { proactiveTokenRefresh } from './refreshToken';
 import { logger } from '#/utils/environment';
+import { SessionError } from '#/utils/errors/sessionError';
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 
 // Pre-request token validation buffer (5 minutes before expiry)
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
@@ -40,7 +42,12 @@ export const authLink = new SetContextLink(
       !allowDuringLogout &&
       LogoutCleanup.shouldSkipOperation(operation.operationName)
     ) {
-      throw new Error('Operation cancelled due to logout process');
+      // Coded so the offline queue parks this write instead of withdrawing it:
+      // the session ending is not the server refusing the write.
+      throw new SessionError(
+        TopLevelErrorCode.Unauthenticated,
+        'Operation cancelled due to logout process',
+      );
     }
 
     // Always include the API key for all requests

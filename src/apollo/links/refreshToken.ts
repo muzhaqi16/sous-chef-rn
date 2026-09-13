@@ -8,6 +8,7 @@ import {
   isSupersededRefreshCode,
 } from '#/utils/authErrorCodes';
 import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
+import { SessionError } from '#/utils/errors/sessionError';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { isSuccessPayload } from '#/utils/errors/mutationPayload';
 import { useStore } from '#store';
@@ -192,7 +193,10 @@ const retryWithSuccessorToken = async (
       'Refresh token was superseded but no successor was stored, deferring token refresh',
     );
     state.tokenRefreshFailed('unknown');
-    throw new Error('Refresh token superseded with no successor available');
+    throw new SessionError(
+      ErrorCode.AuthRefreshTokenSuperseded,
+      'Refresh token superseded with no successor available',
+    );
   }
 
   if (refreshState.retryCount >= REFRESH_CONFIG.MAX_RETRIES) {
@@ -200,7 +204,10 @@ const retryWithSuccessorToken = async (
       'Refresh token superseded repeatedly, deferring token refresh',
     );
     state.tokenRefreshFailed('unknown');
-    throw new Error('Refresh token superseded after max retries');
+    throw new SessionError(
+      ErrorCode.AuthRefreshTokenSuperseded,
+      'Refresh token superseded after max retries',
+    );
   }
 
   logger.info(
@@ -216,7 +223,13 @@ const performTokenRefresh = async (): Promise<string | null> => {
   if (!refreshToken) {
     logger.error('Token refresh failed: No refresh token available');
     state.setNeedsTokenRefresh(true);
-    throw new Error('No refresh token available');
+    // INVALID, not MISSING: `isAuthRefusalCode` unions session-ending,
+    // refreshable and superseded — `AUTH_REFRESH_TOKEN_MISSING` is in none of
+    // them, so it would classify `unknown` and withdraw the queued write.
+    throw new SessionError(
+      ErrorCode.AuthRefreshTokenInvalid,
+      'No refresh token available',
+    );
   }
 
   refreshState.lastRefreshTime = Date.now();
@@ -253,7 +266,13 @@ const performTokenRefresh = async (): Promise<string | null> => {
       throw new RefreshRejectedError(payload.code, payload.message);
     }
     if (!payload?.accessToken || !payload?.refreshToken) {
-      throw new Error('Invalid refresh response: Missing tokens');
+      // A refresh that returned no tokens cannot continue the session. Coded
+      // so a queued write parks rather than being destroyed by a malformed
+      // response the server never judged it on.
+      throw new SessionError(
+        ErrorCode.AuthRefreshTokenInvalid,
+        'Invalid refresh response: Missing tokens',
+      );
     }
 
     const { accessToken: newToken, refreshToken: newRefreshToken } = payload;
