@@ -427,18 +427,11 @@ query GetPantryLedgerAnalytics(
   }
 }
 
-query ConsumptionUnitsForItem(
-  $itemId: ID!
-  $trackingUnitId: ID!
-  $netWeightUnitId: ID
-  $portionUnitId: ID
-) {
-  consumptionUnitsForItem(
-    itemId: $itemId
-    trackingUnitId: $trackingUnitId
-    netWeightUnitId: $netWeightUnitId
-    portionUnitId: $portionUnitId
-  ) {
+# Per STACK, not per catalog item: the server reads the whole measurement
+# profile (net weight, portion definition, density), so every unit returned is
+# one createPantryItemUsage accepts for this row.
+query ConsumptionUnitsForPantryItem($pantryItemId: ID!) {
+  consumptionUnitsForPantryItem(pantryItemId: $pantryItemId) {
     unit {
       id
       name

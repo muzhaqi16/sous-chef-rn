@@ -62,7 +62,10 @@ const entityUpdatedTitle = (
  * the picker refetches. `schema.graphql` directs clients here: the refusal
  * carries no list of units that WOULD work, and this query answers exactly that.
  */
-const RANKED_UNIT_FIELDS = ['consumptionUnitsForItem', 'restockUnitsForItem'];
+const RANKED_UNIT_FIELDS = [
+  'consumptionUnitsForPantryItem',
+  'restockUnitsForItem',
+];
 
 export function usePantryItemActions({
   removeItem,

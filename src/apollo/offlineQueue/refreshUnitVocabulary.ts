@@ -7,7 +7,7 @@ const UNIT_ROOT_FIELDS = [
   'units',
   'unitBySymbol',
   'searchUnits',
-  'consumptionUnitsForItem',
+  'consumptionUnitsForPantryItem',
   'restockUnitsForItem',
 ];
 

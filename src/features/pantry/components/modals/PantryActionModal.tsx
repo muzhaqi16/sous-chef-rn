@@ -119,12 +119,10 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     defaultCommonFractions,
     loading: unitsLoading,
   } = useOperationUnits({
-    itemId: pantryItem?.itemId,
     pantryItemId: pantryItem?.id,
     trackingUnitId: pantryItem?.unit?.id,
     trackingUnitType: pantryItem?.unit?.type,
     netWeightUnitId: pantryItem?.netWeightUnit?.id,
-    portionUnitId: pantryItem?.portionUnitId,
     operation,
   });
 

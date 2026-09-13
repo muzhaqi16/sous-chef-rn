@@ -165,10 +165,10 @@
       "body": "mutation ConfirmRecipeConsumption($input: ConfirmRecipeConsumptionInput!) {\n  confirmRecipeConsumption(input: $input) {\n    __typename\n    ... on ConfirmRecipeConsumptionPayload {\n      converged\n      totalConsumed\n      totalFailed\n      cookingLog {\n        id\n        servingsMade\n        notes\n        cookedAt\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
-      "id": "6e7c4f40ea991b7eef4d59b7ecfa73819ea41604af04caec6c74eebbd5aa6722",
-      "name": "ConsumptionUnitsForItem",
+      "id": "9911a47dd412a7b7de63cedac4fef9ef7d35a6c7d65642e51284226a40f6fc26",
+      "name": "ConsumptionUnitsForPantryItem",
       "type": "query",
-      "body": "query ConsumptionUnitsForItem($itemId: ID!, $trackingUnitId: ID!, $netWeightUnitId: ID, $portionUnitId: ID) {\n  consumptionUnitsForItem(\n    itemId: $itemId\n    trackingUnitId: $trackingUnitId\n    netWeightUnitId: $netWeightUnitId\n    portionUnitId: $portionUnitId\n  ) {\n    unit {\n      id\n      name\n      symbol\n      type\n      unitRole\n      commonFractions\n      displayAsFraction\n      hasStandardCountFactor\n      __typename\n    }\n    rank\n    source\n    defaultIncrement\n    commonFractions\n    isWholeContainer\n    __typename\n  }\n}"
+      "body": "query ConsumptionUnitsForPantryItem($pantryItemId: ID!) {\n  consumptionUnitsForPantryItem(pantryItemId: $pantryItemId) {\n    unit {\n      id\n      name\n      symbol\n      type\n      unitRole\n      commonFractions\n      displayAsFraction\n      hasStandardCountFactor\n      __typename\n    }\n    rank\n    source\n    defaultIncrement\n    commonFractions\n    isWholeContainer\n    __typename\n  }\n}"
     },
     {
       "id": "3791f37a5cb8cf13deddb8913b044960351be5787cba241a1a02a710af6cdd94",

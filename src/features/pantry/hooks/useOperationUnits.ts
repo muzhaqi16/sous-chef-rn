@@ -3,9 +3,9 @@ import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 import type { PickableUnit } from '#features/pantry/components/unitPickerTypes';
 import {
-  ConsumptionUnitsForItemDocument,
+  ConsumptionUnitsForPantryItemDocument,
   RestockUnitsForItemDocument,
-  type ConsumptionUnitsForItemQuery,
+  type ConsumptionUnitsForPantryItemQuery,
   type RestockUnitsForItemQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import {
@@ -52,17 +52,11 @@ export interface RankedUnitGroup {
 }
 
 interface UseOperationUnitsOptions {
-  itemId: string | undefined;
   pantryItemId: string | undefined;
   trackingUnitId: string | undefined;
   trackingUnitType: UnitType | undefined;
+  /** Preferred as the default unit for a dual-tracked stack; not a query input. */
   netWeightUnitId?: string | null;
-  /**
-   * The stack's own portion unit. Without it the list is what the CATALOG
-   * supports, which is narrower than what `createPantryItemUsage` accepts for
-   * a stack that defines its own portion ("1 bulb = 10 cloves").
-   */
-  portionUnitId?: string | null;
   operation: PantryOperation;
 }
 
@@ -86,7 +80,7 @@ const TYPE_ORDER: UnitType[] = [
 ];
 
 type ApiRankedUnit =
-  | ConsumptionUnitsForItemQuery['consumptionUnitsForItem'][number]
+  | ConsumptionUnitsForPantryItemQuery['consumptionUnitsForPantryItem'][number]
   | RestockUnitsForItemQuery['restockUnitsForItem'][number];
 
 function toRankedUnitInfo(
@@ -176,12 +170,10 @@ function toSelectedUnitInfo(unit: RankedUnitInfo): SelectedUnitInfo {
 }
 
 export function useOperationUnits({
-  itemId,
   pantryItemId,
   trackingUnitId,
   trackingUnitType,
   netWeightUnitId,
-  portionUnitId,
   operation,
 }: UseOperationUnitsOptions): UseOperationUnitsResult {
   const { t } = useTranslation();
@@ -189,15 +181,11 @@ export function useOperationUnits({
     operation === PantryOperation.Consume ||
     operation === PantryOperation.Waste;
 
-  // Consumption query (for consume & waste operations)
-  const consumptionResult = useQuery(ConsumptionUnitsForItemDocument, {
-    variables: {
-      itemId: itemId!,
-      trackingUnitId: trackingUnitId!,
-      netWeightUnitId,
-      portionUnitId,
-    },
-    skip: !isConsumption || !itemId || !trackingUnitId,
+  // Consume and waste: keyed by the STACK so the server reads its whole
+  // measurement profile — the client holds only part of it.
+  const consumptionResult = useQuery(ConsumptionUnitsForPantryItemDocument, {
+    variables: { pantryItemId: pantryItemId! },
+    skip: !isConsumption || !pantryItemId,
   });
 
   // Restock query
@@ -207,7 +195,7 @@ export function useOperationUnits({
   });
 
   const rawUnits = isConsumption
-    ? consumptionResult.data?.consumptionUnitsForItem ?? []
+    ? consumptionResult.data?.consumptionUnitsForPantryItem ?? []
     : restockResult.data?.restockUnitsForItem ?? [];
   const loading = isConsumption
     ? consumptionResult.loading
