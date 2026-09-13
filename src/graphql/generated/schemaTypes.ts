@@ -1183,6 +1183,7 @@ export enum ChangeType {
   /** The stack's portion definition or density override was edited */
   MeasurementProfile = 'MEASUREMENT_PROFILE',
   QuantityUpdated = 'QUANTITY_UPDATED',
+  Restored = 'RESTORED',
   WeightCorrected = 'WEIGHT_CORRECTED'
 }
 
@@ -7287,9 +7288,13 @@ export type Mutation = {
    */
   deletePantry: DeletePantryResult;
   /**
-   * Remove a pantry item. Final: the row is destroyed, and what it still held
-   * is written to the consumption history, which outlives it. Adding the item
-   * again — in any unit — opens a fresh stack.
+   * Remove a pantry item. Reversible: the stack stops being held and leaves the
+   * pantry's inventory, keeping its quantity, batches, costs and change history
+   * so restorePantryItem can put it back. It moves no stock, so it writes no
+   * consumption record and changes no usage or waste total.
+   *
+   * There is no client-facing permanent delete — destroying a stack is
+   * adminPurgePantryItems.
    */
   deletePantryItem: DeletePantryItemResult;
   /** Delete a purchase record. */
@@ -7582,6 +7587,13 @@ export type Mutation = {
   restockPantryItem: RestockPantryItemResult;
   /** Restore a soft-deleted item */
   restoreItem: RestoreItemResult;
+  /**
+   * Put back a pantry item removed by deletePantryItem, with the batches
+   * retired alongside it. Refused with ConflictError when the stack is not
+   * removed, and with DuplicatePantryItemError when the pantry already holds
+   * that item in that unit.
+   */
+  restorePantryItem: RestorePantryItemResult;
   /**
    * Revoke one device credential. The device's current session is unaffected -
    * this ends the ability to sign back in on it, not the session running on it.
@@ -9764,6 +9776,19 @@ export type MutationRestoreItemArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationRestorePantryItemArgs = {
+  input: RestorePantryItemInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationRevokeDeviceCredentialArgs = {
   input: RevokeDeviceCredentialInput;
 };
@@ -11296,6 +11321,13 @@ export type Pantry = {
   location: Maybe<Scalars['String']['output']>;
   metadata: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
+  /**
+   * Every stack removed from this pantry, most recently removed first. Each can
+   * be put back with restorePantryItem, which refuses when the pantry already
+   * holds that item in that unit. Bounded field: limit defaults to 10 and is
+   * clamped server-side to a maximum of 50.
+   */
+  recentlyDeletedItems: Array<PantryItem>;
   stats: PantryStats;
   storageLocationsConnection: StorageLocationConnection;
   suggestions: Array<PantryItemSuggestion>;
@@ -11339,6 +11371,17 @@ export type PantryLedgerAnalyticsArgs = {
   filters?: InputMaybe<AnalyticsFilters>;
   granularity?: InputMaybe<PeriodGranularity>;
   itemId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+/**
+ * Pantry/storage location for a home.
+ * Not cached at the response level: child PantryItem mutations happen frequently and
+ * TTL-based caching can't be invalidated mid-window. Server-side coherence is handled
+ * via DataLoader + Redis invalidation in resolvers (invalidatePantryItemCache).
+ */
+export type PantryRecentlyDeletedItemsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -14359,6 +14402,23 @@ export type RestoreItemPayload = {
  */
 export type RestoreItemResult = ConflictError | ForbiddenError | NotFoundError | RestoreItemPayload | ValidationError;
 
+export type RestorePantryItemInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type RestorePantryItemPayload = {
+  __typename: 'RestorePantryItemPayload';
+  pantry: Maybe<Pantry>;
+  pantryItem: PantryItem;
+};
+
+/**
+ * Result of RestorePantryItem. Select on RestorePantryItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type RestorePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | RestorePantryItemPayload | ValidationError;
+
 export enum RestrictionSeverity {
   Allergy = 'ALLERGY',
   Goal = 'GOAL',
@@ -17233,7 +17293,7 @@ export type UpdatePantryItemQuantityResult = ConflictError | ForbiddenError | No
  * success case; every other member is a business error carrying a message.
  * Always include a __typename so the variant can be discriminated.
  */
-export type UpdatePantryItemResult = ConflictError | ForbiddenError | NotFoundError | UpdatePantryItemPayload | ValidationError;
+export type UpdatePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | UpdatePantryItemPayload | ValidationError;
 
 export type UpdatePantryPayload = {
   __typename: 'UpdatePantryPayload';

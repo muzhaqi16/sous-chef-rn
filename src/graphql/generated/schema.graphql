@@ -1450,6 +1450,7 @@ enum ChangeType {
   """The stack's portion definition or density override was edited"""
   MEASUREMENT_PROFILE
   QUANTITY_UPDATED
+  RESTORED
   WEIGHT_CORRECTED
 }
 
@@ -7343,9 +7344,13 @@ type Mutation {
   """
   deletePantry(input: DeletePantryInput!): DeletePantryResult!
   """
-  Remove a pantry item. Final: the row is destroyed, and what it still held
-  is written to the consumption history, which outlives it. Adding the item
-  again — in any unit — opens a fresh stack.
+  Remove a pantry item. Reversible: the stack stops being held and leaves the
+  pantry's inventory, keeping its quantity, batches, costs and change history
+  so restorePantryItem can put it back. It moves no stock, so it writes no
+  consumption record and changes no usage or waste total.
+  
+  There is no client-facing permanent delete — destroying a stack is
+  adminPurgePantryItems.
   """
   deletePantryItem(input: DeletePantryItemInput!): DeletePantryItemResult!
   """Delete a purchase record."""
@@ -7638,6 +7643,13 @@ type Mutation {
   restockPantryItem(input: RestockPantryItemInput!): RestockPantryItemResult!
   """Restore a soft-deleted item"""
   restoreItem(input: RestoreItemInput!): RestoreItemResult!
+  """
+  Put back a pantry item removed by deletePantryItem, with the batches
+  retired alongside it. Refused with ConflictError when the stack is not
+  removed, and with DuplicatePantryItemError when the pantry already holds
+  that item in that unit.
+  """
+  restorePantryItem(input: RestorePantryItemInput!): RestorePantryItemResult!
   """
   Revoke one device credential. The device's current session is unaffected -
   this ends the ability to sign back in on it, not the session running on it.
@@ -8621,6 +8633,13 @@ type Pantry {
   location: String
   metadata: JSON
   name: String!
+  """
+  Every stack removed from this pantry, most recently removed first. Each can
+  be put back with restorePantryItem, which refuses when the pantry already
+  holds that item in that unit. Bounded field: limit defaults to 10 and is
+  clamped server-side to a maximum of 50.
+  """
+  recentlyDeletedItems(limit: Int = 10): [PantryItem!]!
   stats: PantryStats!
   storageLocationsConnection(after: String, before: String, first: Int, last: Int, orderBy: StorageLocationOrderBy): StorageLocationConnection!
   suggestions(expirationDays: Int = 7, limit: Int = 10, sources: [PantrySuggestionSource!]): [PantryItemSuggestion!]!
@@ -10974,6 +10993,22 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union RestoreItemResult = ConflictError | ForbiddenError | NotFoundError | RestoreItemPayload | ValidationError
+
+input RestorePantryItemInput {
+  id: ID!
+}
+
+type RestorePantryItemPayload {
+  pantry: Pantry
+  pantryItem: PantryItem!
+}
+
+"""
+Result of RestorePantryItem. Select on RestorePantryItemPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union RestorePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | RestorePantryItemPayload | ValidationError
 
 enum RestrictionSeverity {
   ALLERGY
@@ -13692,7 +13727,7 @@ Result of UpdatePantryItem. Select on UpdatePantryItemPayload for the
 success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
-union UpdatePantryItemResult = ConflictError | ForbiddenError | NotFoundError | UpdatePantryItemPayload | ValidationError
+union UpdatePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | UpdatePantryItemPayload | ValidationError
 
 type UpdatePantryPayload {
   home: Home
