@@ -129,12 +129,20 @@ export const ChangePasswordScreen: React.FC = () => {
 
   // `shouldValidate` re-runs the rule on THIS field only, and both cross-field
   // rules report elsewhere: the match rule on `confirmPassword`, the
-  // must-differ rule on `newPassword`. Submit is gated on whole-schema
-  // `isValid`, so a message left un-run disables the button with nothing on
-  // screen to explain it.
+  // must-differ rule on `newPassword`. Those re-run only for a sibling the
+  // user has reached — a "required" under a field they have not typed in is
+  // feedback on nothing they did. Submit still waits on whole-schema `isValid`.
   const setField = (field: keyof ChangePasswordForm, value: string) => {
     form.setValue(field, value, { shouldValidate: true });
-    void form.trigger(['newPassword', 'confirmPassword']);
+    if (field !== 'newPassword' && form.getValues('newPassword') !== '') {
+      void form.trigger('newPassword');
+    }
+    if (
+      field !== 'confirmPassword' &&
+      form.getValues('confirmPassword') !== ''
+    ) {
+      void form.trigger('confirmPassword');
+    }
   };
 
   const isFormValid = form.formState.isValid;

@@ -133,12 +133,14 @@ export const ResetPasswordScreen: React.FC = () => {
   const watchedValues = useWatch({ control: form.control });
 
   // `shouldValidate` re-runs the rule on THIS field only, and the match rule
-  // reports on `confirmPassword` while reading `newPassword`. Submit is gated
-  // on whole-schema `isValid`, so a message left un-run disables the button
-  // with nothing on screen to explain it.
+  // reports on `confirmPassword` while reading `newPassword`. It re-runs only
+  // once the confirmation has been reached — a mismatch under an empty field
+  // is feedback on nothing the user did. Submit still waits on `isValid`.
   const setField = (field: keyof ResetPasswordForm, value: string) => {
     form.setValue(field, value, { shouldValidate: true });
-    void form.trigger('confirmPassword');
+    if (field === 'newPassword' && form.getValues('confirmPassword') !== '') {
+      void form.trigger('confirmPassword');
+    }
   };
 
   // Opening a link must not, by itself, end a session — any web page can

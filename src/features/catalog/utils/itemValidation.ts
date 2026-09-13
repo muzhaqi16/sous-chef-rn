@@ -51,6 +51,7 @@ export const shelfLifeDaysRule = number()
   .transform((value, originalValue) =>
     String(originalValue).trim() === '' ? undefined : value,
   )
+  .typeError(msg('wholeNumber'))
   .integer(msg('wholeNumber'))
   .min(1, msg('shelfLifeMin'))
   .max(3650, msg('shelfLifeMax', { count: 10 }))
@@ -61,6 +62,7 @@ export const shelfLifeOpenedDaysRule = number()
   .transform((value, originalValue) =>
     String(originalValue).trim() === '' ? undefined : value,
   )
+  .typeError(msg('wholeNumber'))
   .integer(msg('wholeNumber'))
   .min(1, msg('shelfLifeOpenedMin'))
   .max(3650, msg('shelfLifeOpenedMax', { count: 10 }))
@@ -94,12 +96,18 @@ export const unitsRule = array()
       unitId: string().optional(),
       unitName: string().optional(),
       isDefault: boolean().default(false),
-      packageSize: number().min(0.001).optional(),
+      packageSize: number()
+        .typeError(msg('greaterThanZero'))
+        .min(0.001, msg('greaterThanZero'))
+        .optional(),
       contentUnitId: string().optional(),
       contentUnitName: string().optional(),
       retailUnit: boolean().optional(),
       packageDescription: string().optional(),
-      conversionRatio: number().min(0.001).optional(),
+      conversionRatio: number()
+        .typeError(msg('greaterThanZero'))
+        .min(0.001, msg('greaterThanZero'))
+        .optional(),
     }),
   )
   .optional();
@@ -217,6 +225,7 @@ export const createItemSchema = object({
     .transform((value, originalValue) =>
       String(originalValue).trim() === '' ? undefined : value,
     )
+    .typeError(msg('greaterThanZero'))
     .min(0.001, msg('greaterThanZero'))
     .optional(),
   defaultConsumeUnitId: string().optional(),

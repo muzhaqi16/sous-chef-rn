@@ -19,6 +19,14 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
+jest.mock('#/utils/deviceLocale', () => ({
+  ...jest.requireActual('#/utils/deviceLocale'),
+  getDeviceDecimalSeparator: jest.fn(() => '.'),
+}));
+const { getDeviceDecimalSeparator } = jest.requireMock(
+  '#/utils/deviceLocale',
+) as { getDeviceDecimalSeparator: jest.Mock };
+
 jest.mock('#features/catalog/components/MultiImagePicker', () => ({
   MultiImagePicker: () => null,
 }));
@@ -122,6 +130,38 @@ describe('AddItemForm — net weight rows', () => {
 });
 
 describe('AddItemForm — an edit that leaves the net weight alone', () => {
+  afterEach(() => {
+    getDeviceDecimalSeparator.mockReturnValue('.');
+  });
+
+  it('round-trips a three-decimal weight on a comma-separator device', async () => {
+    // Seeded as "1.816" on a device that reads "." as a thousands group, the
+    // untouched save re-parsed the stored value a thousand times larger.
+    getDeviceDecimalSeparator.mockReturnValue(',');
+    const user = userEvent.setup();
+    const onSubmit = jest.fn();
+    render(
+      <AddItemForm
+        {...defaultProps}
+        onSubmit={onSubmit}
+        mode="directEdit"
+        initialData={{
+          name: 'Rice',
+          netWeights: [{ value: 1.816, unitName: 'kg', unitId: 'unit-kg' }],
+        }}
+      />,
+    );
+
+    const save = screen.getByText('Save Changes');
+    await waitFor(() => expect(save).not.toBeDisabled());
+    await user.press(save);
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    expect(onSubmit.mock.calls[0]?.[0]?.netWeights).toEqual([
+      { value: 1.816, unitName: 'kg', unitId: 'unit-kg' },
+    ]);
+  });
+
   it('still carries the seeded weight into the payload', async () => {
     const user = userEvent.setup();
     const onSubmit = jest.fn();

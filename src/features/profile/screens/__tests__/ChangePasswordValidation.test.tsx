@@ -58,8 +58,25 @@ const CONFIRM = 'password-input-Confirm your new password';
 
 const confirmError = () =>
   screen.getByTestId(CONFIRM).props.accessibilityHint as string | undefined;
+const newError = () =>
+  screen.getByTestId(NEW).props.accessibilityHint as string | undefined;
 
 describe('ChangePasswordScreen — cross-field rules', () => {
+  it('shows nothing under fields the user has not reached', async () => {
+    // The sibling rules re-run on every keystroke; a "required" under a field
+    // the user has not typed in yet is feedback on nothing they did.
+    const user = userEvent.setup();
+    renderWithApollo(<ChangePasswordScreen />, { operationMocks: [] });
+
+    await user.type(screen.getByTestId(CURRENT), 'O');
+    await waitFor(() =>
+      expect(screen.getByTestId(CURRENT).props.value).toBe('O'),
+    );
+
+    expect(newError()).toBeUndefined();
+    expect(confirmError()).toBeUndefined();
+  });
+
   it('clears the mismatch once the new password is edited to match', async () => {
     const user = userEvent.setup();
     renderWithApollo(<ChangePasswordScreen />, { operationMocks: [] });

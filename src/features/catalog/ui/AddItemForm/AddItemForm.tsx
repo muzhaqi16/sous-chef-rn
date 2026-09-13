@@ -37,6 +37,7 @@ import { Text } from '#components/atoms/Text';
 import { logValidationErrors } from '#utils/validation/common';
 import { BarcodeInfo } from './BarcodeInfo';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { formatNumberForInput } from '#/utils/formatters/number';
 import {
   type PageName,
   PAGES,
@@ -101,13 +102,15 @@ const toNetWeightInputs = (
     }));
 
 /** The rows an edit opens with. Seeds the editor AND the form field: a value
- *  only the editor holds is dropped from the payload by an untouched save. */
+ *  only the editor holds is dropped from the payload by an untouched save.
+ *  Seeded in the DEVICE separator — `parseDecimalInput` reads it back with
+ *  that separator, and on a comma device a "." is a thousands group. */
 const seedNetWeightRows = (
   initialData: AddItemFormInitialData | undefined,
 ): NetWeightEntry[] =>
   (initialData?.netWeights ?? []).map((netWeight, index) => ({
     id: `nw-initial-${index}`,
-    value: String(netWeight.value),
+    value: formatNumberForInput(netWeight.value),
     unitName: netWeight.unitName,
     unitId: netWeight.unitId,
   }));
