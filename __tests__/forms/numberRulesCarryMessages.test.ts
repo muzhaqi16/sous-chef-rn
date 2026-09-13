@@ -20,15 +20,13 @@ interface RuleShape {
   internalTests?: { typeError?: { OPTIONS?: { message?: unknown } } };
 }
 
-const DEFAULTS = new Set<unknown>([
-  defaultLocale.number.min,
-  defaultLocale.number.max,
-  defaultLocale.number.moreThan,
-  defaultLocale.number.lessThan,
-  defaultLocale.number.positive,
-  defaultLocale.number.integer,
-  defaultLocale.mixed.notType,
-]);
+/** Every library default a number rule can fall back to. */
+const DEFAULTS = new Set<unknown>(
+  [
+    ...Object.values(defaultLocale.number ?? {}),
+    defaultLocale.mixed?.notType,
+  ].filter(Boolean),
+);
 
 /**
  * Rules no typed text can reach. `priority` is written by a select, so its
