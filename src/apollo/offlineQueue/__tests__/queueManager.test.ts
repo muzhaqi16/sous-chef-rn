@@ -1,7 +1,7 @@
 import { Kind } from 'graphql';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import type { StoreObject } from '@apollo/client';
-import { QueueManager, RELATIVE_VALUE_OPERATIONS } from '../queueManager';
+import { QueueManager } from '../queueManager';
 import { queueStore } from '../queueStore';
 import { useStore } from '#store';
 import {
@@ -406,6 +406,54 @@ describe('QueueManager', () => {
         'end:mut-pantry',
       ]);
     });
+
+    it('holds an item behind the deferred create of the list it names', async () => {
+      // The item's own id is fresh; only its `shoppingListId` ties it to the
+      // deferred create. Sent anyway, the server refuses it as NotFound and the
+      // refusal withdraws the row — a parent reference is a dependency too.
+      const createList = makeMutation({
+        id: 'mut-create-list',
+        operationName: 'CreateShoppingList',
+        variables: { input: { id: 'list-1', name: 'Offline list' } },
+      });
+      const addA = makeMutation({
+        id: 'mut-add-a',
+        operationName: 'AddItemToShoppingList',
+        variables: {
+          input: { shoppingListId: 'list-1', items: [{ id: 'item-a' }] },
+        },
+      });
+      const unrelatedPantryAdd = makeMutation({
+        id: 'mut-pantry',
+        operationName: 'CreatePantryItem',
+        variables: { input: { id: 'pantry-item-1' } },
+      });
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
+        createList,
+        addA,
+        unrelatedPantryAdd,
+      ]);
+      const processed: string[] = [];
+      manager['processMutation'] = jest.fn(
+        async (mutation: QueuedMutation): Promise<ProcessingResult> => {
+          processed.push(mutation.id);
+          if (mutation.id === 'mut-create-list') {
+            return {
+              success: false,
+              deferred: true,
+              deferralScope: 'entry',
+              mutationId: mutation.id,
+            };
+          }
+          return { success: true, mutationId: mutation.id };
+        },
+      );
+
+      await manager.processQueue();
+
+      expect(processed).toEqual(['mut-create-list', 'mut-pantry']);
+      expect(processed).not.toContain('mut-add-a');
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -454,7 +502,12 @@ describe('QueueManager', () => {
         async (mutation: QueuedMutation): Promise<ProcessingResult> => {
           processed.push(mutation.id);
           if (mutation.id === 'mut-create-a') {
-            return { success: false, deferred: true, mutationId: mutation.id };
+            return {
+              success: false,
+              deferred: true,
+              deferralScope: 'entry',
+              mutationId: mutation.id,
+            };
           }
           return { success: true, mutationId: mutation.id };
         },
@@ -466,6 +519,133 @@ describe('QueueManager', () => {
       // entity and has no reason to: global FIFO would have stranded it.
       expect(processed).toEqual(['mut-create-a', 'mut-create-b']);
       expect(processed).not.toContain('mut-update-a');
+    });
+
+    it('holds a whole parent chain behind a deferred root create', async () => {
+      // The chain `createHome` enqueues: the pantry names the home, the items
+      // name the pantry. None carries the home's id as its own subject.
+      const createHome = makeMutation({
+        id: 'mut-home',
+        operationName: 'CreateHome',
+        variables: { input: { id: 'home-1', name: 'Home' } },
+      });
+      const createPantry = makeMutation({
+        id: 'mut-pantry',
+        operationName: 'CreatePantry',
+        variables: { input: { id: 'pantry-1', homeId: 'home-1' } },
+      });
+      const createItem = makeMutation({
+        id: 'mut-item',
+        operationName: 'CreatePantryItem',
+        variables: { input: { id: 'item-1', pantryId: 'pantry-1' } },
+      });
+      const batchItems = makeMutation({
+        id: 'mut-batch',
+        operationName: 'CreatePantryItems',
+        variables: {
+          input: { items: [{ id: 'item-2', pantryId: 'pantry-1' }] },
+        },
+      });
+      const unrelated = makeMutation({
+        id: 'mut-other',
+        operationName: 'CreateShoppingList',
+        variables: { input: { id: 'list-9' } },
+      });
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
+        createHome,
+        createPantry,
+        createItem,
+        batchItems,
+        unrelated,
+      ]);
+      const processed: string[] = [];
+      manager['processMutation'] = jest.fn(
+        async (mutation: QueuedMutation): Promise<ProcessingResult> => {
+          processed.push(mutation.id);
+          if (mutation.id === 'mut-home') {
+            return {
+              success: false,
+              deferred: true,
+              deferralScope: 'entry',
+              mutationId: mutation.id,
+            };
+          }
+          return { success: true, mutationId: mutation.id };
+        },
+      );
+
+      await manager.processQueue();
+
+      expect(processed).toEqual(['mut-home', 'mut-other']);
+    });
+
+    it('pauses the drain on a server-side deferral instead of trying every entry', async () => {
+      // Three unrelated entries and an API answering 503: a loop that
+      // continues past the first spends a full retry cycle on every entry.
+      // An unmapped operation, so the replay reaches the client as-is.
+      const entries = ['a', 'b', 'c'].map(id =>
+        makeMutation({
+          id: `mut-${id}`,
+          operationName: 'UpdateHome',
+          variables: { input: { id } },
+          maxRetries: 3,
+        }),
+      );
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue(
+        entries,
+      );
+      mockClient.mutate.mockRejectedValue({
+        message: 'Response not successful: Received status code 503',
+        networkError: { statusCode: 503 },
+      });
+
+      jest.useRealTimers();
+      await manager.processQueue();
+      jest.useFakeTimers();
+
+      expect(mockClient.mutate).toHaveBeenCalledTimes(1 + 3);
+      expect(queueStore.updateMutation).toHaveBeenCalledWith(
+        'mut-a',
+        expect.objectContaining({ status: QueueStatus.PENDING }),
+      );
+      expect(queueStore.updateMutation).not.toHaveBeenCalledWith(
+        'mut-b',
+        expect.anything(),
+      );
+      expect(queueStore.markMutationFailed).not.toHaveBeenCalled();
+      mockClient.mutate.mockReset();
+    });
+
+    it('lets unrelated entries past a row-scoped deferral', async () => {
+      const entries = ['a', 'b', 'c'].map(id =>
+        makeMutation({
+          id: `mut-${id}`,
+          operationName: 'CreatePantryItem',
+          variables: { input: { id } },
+        }),
+      );
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue(
+        entries,
+      );
+      const processed: string[] = [];
+      manager['processMutation'] = jest.fn(
+        async (mutation: QueuedMutation): Promise<ProcessingResult> => {
+          processed.push(mutation.id);
+          if (mutation.id === 'mut-a') {
+            return {
+              success: false,
+              deferred: true,
+              deferralScope: 'entry',
+              mutationId: mutation.id,
+            };
+          }
+          return { success: true, mutationId: mutation.id };
+        },
+      );
+
+      await manager.processQueue();
+
+      expect(processed).toEqual(['mut-a', 'mut-b', 'mut-c']);
     });
   });
 
@@ -603,7 +783,6 @@ describe('QueueManager', () => {
       handleMutationError = manager['handleMutationError'].bind(manager);
       // Module-level and shared: a declaration left behind would change how
       // every later conflict test resolves.
-      RELATIVE_VALUE_OPERATIONS.clear();
       // Default: online
       mockedGetState.mockReturnValue({
         user: { id: 'user-1' },
@@ -651,76 +830,81 @@ describe('QueueManager', () => {
       );
     });
 
-    it('withdraws an entry that has deferred more times than the bound allows', async () => {
+    it('keeps deferring a transport failure however many drains it takes', async () => {
+      // Drains run on every foreground, reconnect and successful write, so a
+      // count of them says nothing about whether the entry will ever deliver.
+      // The only lifetime bound is the store's age horizon.
       const failureHandler = jest.fn();
       manager.setFailureHandler(failureHandler);
-      // One short of the bound, so this defer is the one that exhausts it.
       const mutation = makeMutation({
         id: 'stuck',
         retryCount: 3,
         maxRetries: 3,
-        deferCount: 10,
       });
 
-      const result = await handleMutationError(mutation, {
-        message: 'Network error',
-      });
+      for (let drain = 0; drain < 20; drain++) {
+        const result = await handleMutationError(mutation, {
+          message: 'Network error',
+        });
+        expect(result.deferred).toBe(true);
+      }
 
-      expect(result.deferred).toBeUndefined();
-      expect(queueStore.markMutationFailed).toHaveBeenCalledWith(
+      expect(queueStore.markMutationFailed).not.toHaveBeenCalled();
+      expect(failureHandler).not.toHaveBeenCalled();
+      expect(queueStore.removeMutation).not.toHaveBeenCalled();
+      expect(queueStore.updateMutation).toHaveBeenLastCalledWith(
         'stuck',
-        expect.objectContaining({ retryable: false }),
+        expect.objectContaining({ status: QueueStatus.PENDING }),
       );
-      expect(failureHandler).toHaveBeenCalled();
     });
 
-    it('counts a defer so a repeatedly undeliverable entry approaches the bound', async () => {
+    it.each([
+      ['a network error', { message: 'Network error' }, 'transport'],
+      [
+        'a 503',
+        {
+          message: 'Response not successful',
+          networkError: { statusCode: 503 },
+        },
+        'transport',
+      ],
+      [
+        'SERVICE_UNAVAILABLE',
+        new CombinedGraphQLErrors({
+          errors: [
+            { message: 'Refused', extensions: { code: 'SERVICE_UNAVAILABLE' } },
+          ],
+        }),
+        'transport',
+      ],
+      [
+        'CLIENT_UPGRADE_REQUIRED',
+        new CombinedGraphQLErrors({
+          errors: [
+            {
+              message: 'Update required',
+              extensions: { code: 'CLIENT_UPGRADE_REQUIRED' },
+            },
+          ],
+        }),
+        'transport',
+      ],
+      [
+        'DEADLOCK',
+        new ReplayRejectedError('ConflictError', 'deadlock', 'DEADLOCK'),
+        'entry',
+      ],
+    ])('scopes the deferral for %s', async (_label, error, scope) => {
       const mutation = makeMutation({
-        id: 'counting',
+        id: `scope-${scope}`,
         retryCount: 3,
         maxRetries: 3,
-        deferCount: 2,
       });
 
-      const result = await handleMutationError(mutation, {
-        message: 'Network error',
-      });
+      const result = await handleMutationError(mutation, error);
 
       expect(result.deferred).toBe(true);
-      expect(queueStore.updateMutation).toHaveBeenCalledWith(
-        'counting',
-        expect.objectContaining({ deferCount: 3 }),
-      );
-    });
-
-    it('reports a relative write overwritten instead of re-sending it', async () => {
-      RELATIVE_VALUE_OPERATIONS.add('AdjustByDelta');
-      const overwriteReporter = jest.fn();
-      manager.setOverwriteReporter(overwriteReporter);
-      const processMutation = jest.spyOn(
-        manager as unknown as {
-          processMutation: (m: QueuedMutation) => Promise<ProcessingResult>;
-        },
-        'processMutation',
-      );
-      const mutation = makeMutation({
-        id: 'delta-1',
-        operationName: 'AdjustByDelta',
-        variables: { input: { id: 'a', version: 3 } },
-      });
-
-      const result = await handleMutationError(
-        mutation,
-        new ReplayRejectedError('ConflictError', 'stale', 'VERSION_CONFLICT'),
-      );
-
-      expect(result.success).toBe(false);
-      // Re-sending a cumulative write against a newer version applies it twice.
-      expect(processMutation).not.toHaveBeenCalled();
-      expect(overwriteReporter).toHaveBeenCalledWith(
-        expect.objectContaining({ mutationId: 'delta-1' }),
-      );
-      expect(queueStore.removeMutation).toHaveBeenCalledWith('delta-1');
+      expect(result.deferralScope).toBe(scope);
     });
 
     it('parks the write when the refresh token is rejected, rather than withdrawing it', async () => {
@@ -948,6 +1132,50 @@ describe('QueueManager', () => {
       expect(queueStore.updateMutation).toHaveBeenCalledWith('conflict-1', {
         conflictCount: 1,
       });
+    });
+
+    it('reports a conflict instead of re-sending an input that requires a version', async () => {
+      // `AdjustPantryItemQuantityInput.version` is `Int!` and the operation has
+      // no Sync twin: a version-free re-send would be refused as malformed and
+      // that 400 would withdraw the write under the generic copy.
+      const failureHandler = jest.fn();
+      manager.setFailureHandler(failureHandler);
+      const mutation = makeMutation({
+        id: 'conflict-int-bang',
+        operationName: 'AdjustPantryItemQuantity',
+        variables: { input: { id: 'item-7', newQuantity: 2, version: 4 } },
+      });
+      mockClient.mutate.mockResolvedValueOnce({
+        data: {
+          adjustPantryItemQuantity: {
+            __typename: 'ConflictError',
+            code: 'VERSION_CONFLICT',
+            message: 'Version conflict',
+          },
+        },
+      });
+
+      jest.useRealTimers();
+      const result = await processMutation(mutation);
+      jest.useFakeTimers();
+
+      expect(result.success).toBe(false);
+      expect(mockClient.mutate).toHaveBeenCalledTimes(1);
+      expect(queueStore.markMutationFailed).toHaveBeenCalledWith(
+        'conflict-int-bang',
+        expect.objectContaining({ type: 'conflict', retryable: false }),
+      );
+      expect(failureHandler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mutationId: 'conflict-int-bang',
+          error: expect.objectContaining({ type: 'conflict' }),
+        }),
+      );
+      expect(Telemetry.increment).toHaveBeenCalledWith(
+        'offline_queue_conflicts_total',
+        1,
+        { operation: 'AdjustPantryItemQuantity' },
+      );
     });
 
     it('withdraws a write that conflicts again without its version', async () => {

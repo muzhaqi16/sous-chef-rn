@@ -945,6 +945,20 @@ describe('QueueStore', () => {
       expect(failed?.lastError?.retryable).toBe(false);
     });
 
+    it('keeps an entry one second under the horizon', () => {
+      // The age horizon is the ONLY lifetime bound on a pending write, so its
+      // edge is exact: nothing else ages an entry out.
+      store.addMutation(
+        makeMutation({
+          id: 'edge',
+          createdAt: Date.now() - (90 * 24 * 60 * 60 * 1000 - 1000),
+        }),
+      );
+
+      expect(store.expireStalePending('user-1')).toBe(0);
+      expect(store.getMutation('edge')?.status).toBe(QueueStatus.PENDING);
+    });
+
     it('leaves fresh PENDING entries untouched', () => {
       store.addMutation(makeMutation({ id: 'fresh-1' }));
       store.addMutation(

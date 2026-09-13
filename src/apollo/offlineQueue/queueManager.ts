@@ -13,7 +13,7 @@ import {
   type FailureHandler,
   type OverwriteReporter,
 } from './types';
-import { convertToSyncMutation } from './convertToSyncMutation';
+import { convertToSyncMutation, hasSyncMapping } from './convertToSyncMutation';
 import { reconcileReplaySuccess } from './queueReplayReconcilers';
 import { proactiveTokenRefresh } from '../links/refreshToken';
 import { refreshUnitVocabulary } from './refreshUnitVocabulary';
@@ -24,6 +24,7 @@ import {
   ReplayRejectedError,
 } from './queueErrorPolicy';
 import { extractMutationPayload } from '#/utils/errors/mutationPayload';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { Telemetry } from '#/services/telemetry';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
@@ -51,19 +52,41 @@ const DEFAULT_CONFIG: QueueConfig = {
 const MAX_CONFLICT_RESENDS = 1;
 
 /**
- * Drains a single entry may be deferred through before it is withdrawn. A
- * starting point, not a measured value — `offline_queue_depth` and
- * `offline_queue_oldest_age_ms` are what tune it.
+ * Queued operations that replay their ORIGINAL document against an input whose
+ * `version` is non-null. A version-free re-send of one is refused as malformed,
+ * so the conflict is reported instead. Pinned to the SDL by
+ * `__tests__/apollo/queueVersionRequirement.test.ts`.
  */
-const MAX_DEFERS = 10;
+export const VERSION_REQUIRED_OPERATIONS: ReadonlySet<string> = new Set([
+  'AdjustPantryItemQuantity',
+  'AdjustPantryItemWeight',
+  'UpdateShoppingList',
+  'UpdateHome',
+]);
 
 /**
- * Operations whose queued value is RELATIVE — a delta, or anything cumulative.
- * Re-sending one against a newer version applies it twice, so a conflict is
- * reported rather than re-sent. Empty because every queued write currently
- * sends an absolute value; it is not inferable from the input, so declare here.
+ * Input keys that name the PARENT a queued write attaches to. A deferred
+ * parent holds these children back; the keys stay out of
+ * {@link QueueManager.getAllEntityIds} so a refused child never evicts its parent.
  */
-export const RELATIVE_VALUE_OPERATIONS = new Set<string>();
+export const PARENT_REFERENCE_KEYS: readonly string[] = [
+  'homeId',
+  'appliesToHomeId',
+  'pantryId',
+  'shoppingListId',
+  'shoppingListItemId',
+  'afterItemId',
+  'beforeItemId',
+  'storageLocationId',
+  'parentLocationId',
+  'mealPlanId',
+  'mealPlanItemId',
+  'templateId',
+  'recipeIngredientId',
+  'cookingLogId',
+  'targetBatchId',
+  'purchaseId',
+];
 
 /**
  * Drops the `version` a write captured when the user acted. Covers the batch
@@ -246,7 +269,8 @@ export class QueueManager {
       }
 
       const entityIds = this.getAllEntityIds(mutation);
-      if (entityIds.some(id => blockedIds.has(id))) {
+      const dependencyIds = this.getDependencyIds(mutation);
+      if ([...entityIds, ...dependencyIds].some(id => blockedIds.has(id))) {
         // Depends on an entry that has not landed; blocked itself, so anything
         // downstream of IT waits too.
         for (const id of entityIds) blockedIds.add(id);
@@ -262,6 +286,12 @@ export class QueueManager {
         else failed++;
 
         if (result.deferred) {
+          if (result.deferralScope === 'transport') {
+            // The API's own state, not this entry's: every later entry would
+            // meet it too, and each attempt costs a retry cycle.
+            logger.info('🕓 Queue: server-side deferral, pausing the drain');
+            break;
+          }
           for (const id of entityIds) blockedIds.add(id);
           logger.info(
             '🕓 Queue: Mutation deferred (transient), holding its dependents',
@@ -470,32 +500,26 @@ export class QueueManager {
       }
     }
 
-    // The entity changed since the write was made. The captured `version` is
-    // knowingly stale, so re-checking it can only fail again: strip it and
-    // re-send the value the user actually entered, once. `version` is optional
-    // on every input that carries it, and omitting it means "apply against the
-    // current row" — the last-write-wins the API implements. A second conflict
-    // is a race the client cannot win; it falls through to revert-and-inform.
+    // The captured `version` is knowingly stale, so it is stripped and the
+    // user's value re-sent once. That needs a replay document whose input lets
+    // `version` be omitted: a Sync twin, or an original not listed above.
     if (queueError.type === 'conflict') {
-      // A cumulative write cannot be re-sent against the server's newer version
-      // without applying twice. The server kept its value; say so and stop.
-      if (RELATIVE_VALUE_OPERATIONS.has(mutation.operationName)) {
-        this.reportOverwrite(mutation);
-        queueStore.removeMutation(mutation.id);
-        return {
-          success: false,
-          mutationId: mutation.id,
-          error: queueError,
-        };
-      }
-
       const conflictCount = (mutation.conflictCount ?? 0) + 1;
       queueStore.updateMutation(mutation.id, { conflictCount });
 
-      if (conflictCount > MAX_CONFLICT_RESENDS) {
+      const canResendVersionFree =
+        hasSyncMapping(mutation.operationName) ||
+        !VERSION_REQUIRED_OPERATIONS.has(mutation.operationName);
+
+      if (conflictCount > MAX_CONFLICT_RESENDS || !canResendVersionFree) {
         logger.warn(
-          `❌ Queue: ${mutation.id} still conflicts after a version-free re-send`,
+          canResendVersionFree
+            ? `❌ Queue: ${mutation.id} still conflicts after a version-free re-send`
+            : `❌ Queue: ${mutation.id} conflicts and its input requires a version — reporting`,
         );
+        Telemetry.increment('offline_queue_conflicts_total', 1, {
+          operation: mutation.operationName,
+        });
         queueError.retryable = false;
       } else {
         const variables = withoutVersion(mutation.variables);
@@ -540,34 +564,27 @@ export class QueueManager {
 
     // Transient errors that exhausted the in-run retries stay PENDING so the
     // change survives to the next drain rather than being dropped; retryCount
-    // resets so that drain gets a fresh attempt.
+    // resets so that drain gets a fresh attempt. The only lifetime bound is
+    // `queueStore.expireStalePending`'s age horizon.
     if (queueError.type === 'network' || queueError.type === 'server') {
-      const deferCount = (mutation.deferCount ?? 0) + 1;
-
-      // An entry that never becomes deliverable would otherwise hold its
-      // dependents for good. Past the bound it withdraws through the same path
-      // as any other permanent failure, so the user is told.
-      if (deferCount <= MAX_DEFERS) {
-        queueStore.updateMutation(mutation.id, {
-          status: QueueStatus.PENDING,
-          retryCount: 0,
-          deferCount,
-        });
-        logger.info(
-          `🕓 Queue: ${mutation.id} deferred (transient ${queueError.type}) — stays PENDING for next drain`,
-        );
-        return {
-          success: false,
-          deferred: true,
-          mutationId: mutation.id,
-          error: queueError,
-        };
-      }
-
-      logger.warn(
-        `❌ Queue: ${mutation.id} deferred ${MAX_DEFERS} times without delivering — withdrawing`,
+      // DEADLOCK is the one deferral the API scopes to the row; every other
+      // network/server verdict is the API's own state, which pauses the drain.
+      const deferralScope =
+        queueError.code === ErrorCode.Deadlock ? 'entry' : 'transport';
+      queueStore.updateMutation(mutation.id, {
+        status: QueueStatus.PENDING,
+        retryCount: 0,
+      });
+      logger.info(
+        `🕓 Queue: ${mutation.id} deferred (transient ${queueError.type}) — stays PENDING for next drain`,
       );
-      queueError.retryable = false;
+      return {
+        success: false,
+        deferred: true,
+        deferralScope,
+        mutationId: mutation.id,
+        error: queueError,
+      };
     }
 
     // Non-retryable (validation / client / 4xx / GraphQL) error, or an auth
@@ -665,13 +682,16 @@ export class QueueManager {
   }
 
   /**
-   * getEntityId's single candidate plus every `input.items[].id` of a
-   * batch-shaped create, which carries one client-minted id per row.
+   * getEntityId's single candidate, a fork's minted recipe, and every
+   * `input.items[].id` of a batch-shaped create (one client-minted id per row).
    */
   private getAllEntityIds(mutation: QueuedMutation): string[] {
     const ids = new Set<string>();
     const single = this.getEntityId(mutation);
     if (single) ids.add(single);
+    // A fork's subject is the SOURCE recipe; the row it mints is this one.
+    const minted = mutation.variables?.input?.newRecipeId;
+    if (typeof minted === 'string' && minted) ids.add(minted);
 
     const items = mutation.variables?.input?.items;
     if (Array.isArray(items)) {
@@ -679,6 +699,23 @@ export class QueueManager {
         if (typeof item?.id === 'string' && item.id) ids.add(item.id);
       }
     }
+    return [...ids];
+  }
+
+  /** The parents a write attaches to, top-level and per batch row. */
+  private getDependencyIds(mutation: QueuedMutation): string[] {
+    const ids = new Set<string>();
+    const collect = (record: unknown) => {
+      if (!record || typeof record !== 'object') return;
+      for (const key of PARENT_REFERENCE_KEYS) {
+        const value = (record as Record<string, unknown>)[key];
+        if (typeof value === 'string' && value) ids.add(value);
+      }
+    };
+    const input = mutation.variables?.input;
+    collect(input);
+    const items = input?.items;
+    if (Array.isArray(items)) items.forEach(collect);
     return [...ids];
   }
 
