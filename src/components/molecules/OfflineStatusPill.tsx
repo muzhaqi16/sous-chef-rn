@@ -53,17 +53,21 @@ export const OfflineStatusPill: React.FC<OfflineStatusPillProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  // The same action box every header button gets: without it the pill sits
+  // flush against the header's edge and the badge overflows the screen.
   pressable: {
     position: 'relative',
+    padding: theme.spacing.xs,
+    minWidth: theme.sizes.touchTarget.md,
+    minHeight: theme.sizes.touchTarget.md,
     justifyContent: 'center',
     alignItems: 'center',
   },
   badge: {
     position: 'absolute',
-    // Steps, not literals: the badge's size follows density, so its anchor
-    // must too or it drifts into the icon at the spacious setting.
-    top: -theme.spacing.base,
-    right: -theme.spacing.smPlus,
+    // Anchored on the action box's corner, as the header's own badge is.
+    top: -theme.spacing.xs,
+    right: -theme.spacing.xs,
     minWidth: theme.spacing.mdPlus,
     minHeight: theme.spacing.mdPlus,
     paddingVertical: 0,
