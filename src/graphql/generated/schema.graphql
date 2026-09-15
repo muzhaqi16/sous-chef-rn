@@ -50,7 +50,7 @@ opposite axis — an object-type field whose VALUE only admins may read — use
 
 It is NOT an authorization posture and never substitutes for one: a field
 tagged `@adminSurface` MUST still carry `@auth`/`@optionalAuth`/`@public`/
-`@requireAccess`/`@requireMembershipRole`/`@ownerOnly`, and the default-deny
+`@requireAccess`/`@requireMembershipRole`/`@requireSystemRole`/`@ownerOnly`, and the default-deny
 audit (`assertRootFieldsHaveAuthPosture`) rejects a field whose only directive
 is `@adminSurface`. Its only effect is to include an already-authorized,
 already-existing operation in the admin view.
@@ -631,7 +631,11 @@ input AdjustPantryItemQuantityInput {
   """Why the adjustment was made (required for audit trail)"""
   reason: String!
   """
-  Explicit remaining net weight override for full recount scenarios (dual-tracked items only)
+  The remaining net weight a full recount found (dual-tracked items only). On a stack
+  holding batches it is spread over the batches that record a weight, in proportion to
+  what each holds: a lower weight lowers the stack's value at cost, a higher weight does
+  not raise it, and no consumption is recorded. Refused with a ValidationError on this
+  field when no held batch records a weight.
   """
   remainingNetWeight: Float
   """
@@ -3935,6 +3939,11 @@ from a top-level error's `extensions` instead:
 Both are typed by `TopLevelErrorCode`, which names that channel's whole
 vocabulary.
 
+This enum also types the `code` of a per-item failure inside a
+partial-success payload, which reports the same value a union member would
+for the same error. A per-item failure is the one place an internal failure
+arrives in `data`, as `INTERNAL_SERVER_ERROR`; no union member carries it.
+
 A value here without an emitter is a false promise; see the
 `error-code-contract` spec.
 """
@@ -3976,6 +3985,18 @@ enum ErrorCode {
   An idempotency-keyed operation was already applied (a safe replay). Clients should treat this as success, not a hard failure.
   """
   IDEMPOTENT_REPLAY
+  """
+  More was requested from a pantry item than it holds. The failure reports the requested and available quantities where it has them.
+  """
+  INSUFFICIENT_QUANTITY
+  """
+  An unexpected server fault behind one item of a partial-success payload. Reported only on a per-item failure, whose reason is masked in production and carries an errorId.
+  """
+  INTERNAL_SERVER_ERROR
+  """
+  A low-stock item was skipped because it is already on the target shopping list. Reported only on a per-item failure.
+  """
+  ITEM_ALREADY_IN_LIST
   NOT_FOUND
   PANTRY_ITEM_ALREADY_EXISTS
   RESOURCE_ALREADY_EXISTS
@@ -12893,6 +12914,10 @@ enum TopLevelErrorCode {
   The caller is not a member of the home. Distinct from the union member's HOME_ACCESS_DENIED, which a mutation returns.
   """
   HOME_NOT_A_MEMBER
+  """
+  More was requested from a pantry item than it holds. A mutation reports this as a ValidationError union member carrying the same code.
+  """
+  INSUFFICIENT_QUANTITY
   """
   An unexpected server fault. Masked in production, so only the code survives.
   """
