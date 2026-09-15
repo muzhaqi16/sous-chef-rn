@@ -1,4 +1,5 @@
 import { renderHook } from '@testing-library/react-native';
+import { UserRole } from '#/graphql/generated/schemaTypes';
 import {
   useUser,
   useSelectedHomeId,
@@ -18,6 +19,7 @@ import {
   useHomeState,
   usePreferences,
   useNavigationUtils,
+  useNavigationState,
   useSetHomeAndPantry,
   useSetIsHomeSelectionReady,
   useSetIsPantryQueryComplete,
@@ -170,19 +172,19 @@ describe('atomic hooks', () => {
 
 describe('computed hooks', () => {
   it('useIsAdminUser returns true for ADMIN role', () => {
-    updateMockState({ user: { role: 'ADMIN' } });
+    updateMockState({ user: { role: UserRole.Admin } });
     const { result } = renderHook(() => useIsAdminUser());
     expect(result.current).toBe(true);
   });
 
   it('useIsAdminUser returns true for SUPER_ADMIN role', () => {
-    updateMockState({ user: { role: 'SUPER_ADMIN' } });
+    updateMockState({ user: { role: UserRole.SuperAdmin } });
     const { result } = renderHook(() => useIsAdminUser());
     expect(result.current).toBe(true);
   });
 
   it('useIsAdminUser returns false for regular user', () => {
-    updateMockState({ user: { role: 'MEMBER' } });
+    updateMockState({ user: { role: UserRole.User } });
     const { result } = renderHook(() => useIsAdminUser());
     expect(result.current).toBe(false);
   });
@@ -209,6 +211,34 @@ describe('computed hooks', () => {
     updateMockState({ user: null });
     const { result } = renderHook(() => useCanAccessDevTools());
     expect(result.current).toBeFalsy();
+  });
+});
+
+describe('useNavigationState', () => {
+  afterEach(() => updateMockState({ navigationState: 'main_app' }));
+
+  it('returns the stored state while a user is signed in', () => {
+    updateMockState({ navigationState: 'main_app' });
+    const { result } = renderHook(() => useNavigationState());
+    expect(result.current).toBe('main_app');
+  });
+
+  // The stored value catches up in RootNavigator's effect, one commit later;
+  // reading `auth` here is what keeps the signed-in tree from rendering a
+  // signed-out frame while the root stack tears it out.
+  it.each(['main_app', 'verification', 'onboarding', 'biometric_setup'])(
+    'reads auth in the same render the user disappears from %s',
+    navigationState => {
+      updateMockState({ user: null, navigationState });
+      const { result } = renderHook(() => useNavigationState());
+      expect(result.current).toBe('auth');
+    },
+  );
+
+  it('keeps loading before hydration resolves, user or not', () => {
+    updateMockState({ user: null, navigationState: 'loading' });
+    const { result } = renderHook(() => useNavigationState());
+    expect(result.current).toBe('loading');
   });
 });
 

@@ -4,44 +4,63 @@ import { Text } from '#components/atoms/Text';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
-import { Icon } from '#/utils/iconUtils';
+import { useTranslation, type TranslationKey } from '#/i18n';
+import { Icon, type IconName } from '#/utils/iconUtils';
+import { DeletionBlockerType } from '#/graphql/generated/schemaTypes';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { Loading } from '#components/molecules/Loading';
-import {
-  useDeleteAccount,
-  type DeleteAccountResult,
-} from '#features/profile/hooks/useDeleteAccount';
+import { useDeleteAccount } from '#features/profile/hooks/useDeleteAccount';
 import { authService } from '#/services/authService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Screen } from '#components/templates/Screen';
 
+interface BlockerCopy {
+  icon: IconName;
+  reason: TranslationKey;
+  resolutions: TranslationKey[];
+}
+
+const BLOCKER_COPY: Record<DeletionBlockerType, BlockerCopy> = {
+  [DeletionBlockerType.HomeOwnership]: {
+    icon: 'home-outline',
+    reason: 'account.deleteBlocker.homeOwnership.reason',
+    resolutions: [
+      'account.deleteBlocker.homeOwnership.transferOwnership',
+      'account.deleteBlocker.homeOwnership.removeMembers',
+      'account.deleteBlocker.homeOwnership.deleteResource',
+    ],
+  },
+  [DeletionBlockerType.ShoppingList]: {
+    icon: 'cart-outline',
+    reason: 'account.deleteBlocker.shoppingList.reason',
+    resolutions: [
+      'account.deleteBlocker.shoppingList.removeCollaborators',
+      'account.deleteBlocker.shoppingList.deleteResource',
+    ],
+  },
+  [DeletionBlockerType.Other]: {
+    icon: 'alert-circle-outline',
+    reason: 'account.deleteBlocker.other.reason',
+    resolutions: [],
+  },
+};
+
 /** Module-level so the await chain does not bail the screen out of the compiler. */
 async function performDeleteAccount(
-  deleteAccount: () => Promise<DeleteAccountResult>,
+  deleteAccount: () => Promise<boolean>,
   setIsDeleting: (v: boolean) => void,
-  rejectionMessage: string,
 ): Promise<void> {
   setIsDeleting(true);
-  const result = await deleteAccount();
-  // Transport error — already reported by the hook.
-  if (!result) {
-    setIsDeleting(false);
-    return;
-  }
-
-  // A ForbiddenError/ValidationError member resolves WITHOUT throwing under
-  // errorPolicy:'all' — only the success payload logs the user out.
-  if (alertIfRejected(result, rejectionMessage)) {
+  // Only a confirmed delete signs the user out; the hook alerts a failure.
+  if (!(await deleteAccount())) {
     setIsDeleting(false);
     return;
   }
   // The account is gone, so its keychain slot goes with it and the credential
   // is revoked server-side. That is the DEFAULT; the deliberate sign-out is the
   // one that opts out of it — see `LogoutOptions` in authService.
-  authService.logout();
+  await authService.logout();
 }
 
 export const DeleteAccountScreen: React.FC = () => {
@@ -57,7 +76,7 @@ export const DeleteAccountScreen: React.FC = () => {
     canDelete,
     blockers,
     checkingEligibility,
-    eligibilityError,
+    eligibilityErrorMessage,
     refetchEligibility,
     deleteAccount,
   } = useDeleteAccount();
@@ -82,12 +101,9 @@ export const DeleteAccountScreen: React.FC = () => {
         {
           text: t('account.deleteForeverButton'),
           style: 'destructive',
-          onPress: () =>
-            performDeleteAccount(
-              deleteAccount,
-              setIsDeleting,
-              t('account.deleteGenericError'),
-            ),
+          onPress: () => {
+            void performDeleteAccount(deleteAccount, setIsDeleting);
+          },
         },
       ],
     );
@@ -104,7 +120,7 @@ export const DeleteAccountScreen: React.FC = () => {
         {t('account.deleteUnableToCheck')}
       </Text>
       <Text role="body" style={styles.errorText}>
-        {eligibilityError?.message || t('account.deleteGenericError')}
+        {eligibilityErrorMessage}
       </Text>
       <AppPressable
         style={styles.retryButton}
@@ -133,33 +149,38 @@ export const DeleteAccountScreen: React.FC = () => {
         {t('account.deleteBlockedSubtitle')}
       </Text>
 
-      {blockers.map((blocker, index) => (
-        <View key={blocker.resourceId || index} style={styles.blockerCard}>
-          <View style={styles.blockerHeader}>
-            <Icon name="home-outline" size={20} tone="primary" />
-            <Text role="bodyStrong" style={styles.blockerResourceName}>
-              {blocker.resourceName}
+      {blockers.map(blocker => {
+        const copy = BLOCKER_COPY[blocker.type];
+        return (
+          <View key={blocker.resourceId} style={styles.blockerCard}>
+            <View style={styles.blockerHeader}>
+              <Icon name={copy.icon} size={20} tone="primary" />
+              <Text role="bodyStrong" style={styles.blockerResourceName}>
+                {blocker.resourceName}
+              </Text>
+            </View>
+            <Text role="caption" style={styles.blockerMessage}>
+              {t(copy.reason, { name: blocker.resourceName })}
             </Text>
+            {copy.resolutions.length > 0 ? (
+              <View style={styles.resolutionSection}>
+                <Text role="label" style={styles.resolutionTitle}>
+                  {t('account.deleteResolveTitle')}
+                </Text>
+                {copy.resolutions.map(resolution => (
+                  <Text
+                    key={resolution}
+                    role="caption"
+                    style={styles.resolutionOption}
+                  >
+                    • {t(resolution)}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
           </View>
-          <Text role="caption" style={styles.blockerMessage}>
-            {blocker.message}
-          </Text>
-          <View style={styles.resolutionSection}>
-            <Text role="label" style={styles.resolutionTitle}>
-              {t('account.deleteResolveTitle')}
-            </Text>
-            <Text role="caption" style={styles.resolutionOption}>
-              {t('account.deleteResolveTransfer')}
-            </Text>
-            <Text style={styles.resolutionOption}>
-              {t('account.deleteResolveRemoveMembers')}
-            </Text>
-            <Text style={styles.resolutionOption}>
-              {t('account.deleteResolveDeleteHome')}
-            </Text>
-          </View>
-        </View>
-      ))}
+        );
+      })}
 
       <AppPressable style={styles.goBackButton} onPress={goBack}>
         <Text role="bodyStrong" style={styles.goBackButtonText}>
@@ -180,7 +201,7 @@ export const DeleteAccountScreen: React.FC = () => {
       >
         <View style={styles.warningContainer}>
           <Icon name="warning-outline" size={48} tone="error" />
-          <Text role="subheading" style={styles.warningTitle}>
+          <Text role="subheading" tone="danger" style={styles.warningTitle}>
             {t('account.deleteWarningTitle')}
           </Text>
         </View>
@@ -191,25 +212,25 @@ export const DeleteAccountScreen: React.FC = () => {
           </SectionHeader>
           <View style={styles.bulletPoint}>
             <Icon name="close-circle-outline" size={20} tone="error" />
-            <Text role="caption" style={styles.bulletText}>
+            <Text role="body" style={styles.bulletText}>
               {t('account.deleteWipeProfile')}
             </Text>
           </View>
           <View style={styles.bulletPoint}>
             <Icon name="close-circle-outline" size={20} tone="error" />
-            <Text style={styles.bulletText}>
+            <Text role="body" style={styles.bulletText}>
               {t('account.deleteWipePantry')}
             </Text>
           </View>
           <View style={styles.bulletPoint}>
             <Icon name="close-circle-outline" size={20} tone="error" />
-            <Text style={styles.bulletText}>
+            <Text role="body" style={styles.bulletText}>
               {t('account.deleteWipeShoppingLists')}
             </Text>
           </View>
           <View style={styles.bulletPoint}>
             <Icon name="close-circle-outline" size={20} tone="error" />
-            <Text style={styles.bulletText}>
+            <Text role="body" style={styles.bulletText}>
               {t('account.deleteWipePreferences')}
             </Text>
           </View>
@@ -219,11 +240,13 @@ export const DeleteAccountScreen: React.FC = () => {
           <SectionHeader style={styles.sectionTitleSpacing}>
             {t('account.deleteBeforeYouProceed')}
           </SectionHeader>
-          <Text role="caption" style={styles.text}>
+          <Text role="body" style={styles.text}>
             • {t('account.deleteProceedIrreversible')}
           </Text>
-          <Text style={styles.text}>• {t('account.deleteProceedLogout')}</Text>
-          <Text style={styles.text}>
+          <Text role="body" style={styles.text}>
+            • {t('account.deleteProceedLogout')}
+          </Text>
+          <Text role="body" style={styles.text}>
             • {t('account.deleteProceedNoRecovery')}
           </Text>
         </View>
@@ -276,7 +299,7 @@ export const DeleteAccountScreen: React.FC = () => {
       return renderLoadingState();
     }
 
-    if (eligibilityError) {
+    if (eligibilityErrorMessage) {
       return renderErrorState();
     }
 
@@ -312,7 +335,7 @@ const styles = StyleSheet.create(theme => ({
   },
   contentContainer: {
     padding: theme.spacing.lg,
-    paddingBottom: 100,
+    paddingBottom: theme.spacing['4xl'],
   },
   centerContainer: {
     flex: 1,
@@ -417,7 +440,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   warningTitle: {
-    color: theme.colors.error,
     marginTop: theme.spacing.base,
   },
   section: {

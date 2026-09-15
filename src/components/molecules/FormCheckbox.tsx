@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, ViewStyle } from 'react-native';
+import type { ViewStyle } from 'react-native';
+import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -43,7 +44,7 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
         </Text>
       </AppPressable>
       {error ? (
-        <Text role="caption" tone="error" style={styles.errorText}>
+        <Text role="error" tone="error" style={styles.errorText}>
           {error}
         </Text>
       ) : null}

@@ -1,4 +1,9 @@
-import { useApolloClient, useFragment, useQuery } from '@apollo/client/react';
+import {
+  skipToken,
+  useApolloClient,
+  useFragment,
+  useQuery,
+} from '@apollo/client/react';
 import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
@@ -16,12 +21,12 @@ export function useMealPlan(id: string | null) {
   // what keeps the distinction sound, and makes the ack the fetch trigger.
   const isUnconfirmed = useIsCreateUnconfirmed(id);
 
-  const { data, loading, error, refetch } = useQuery(GetMealPlanDocument, {
-    variables: { id: id! },
-    skip: !id || isUnconfirmed,
-  });
+  const { data, loading, error, refetch } = useQuery(
+    GetMealPlanDocument,
+    !id || isUnconfirmed ? skipToken : { variables: { id } },
+  );
 
-  useApolloErrorLogger('GetMealPlan', error);
+  useApolloErrorLogger(GetMealPlanDocument, error);
 
   // Live binding: `liveMealPlan.data` takes a fresh reference on every relevant
   // cache write, `mealPlanItems` membership included. Under `dataMasking` the

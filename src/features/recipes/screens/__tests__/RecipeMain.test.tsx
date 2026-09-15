@@ -68,7 +68,6 @@ jest.mock('#hooks/performance/useCommitTracking', () => ({
 
 jest.mock('#features/recipes/hooks/useRecipeScreen', () => ({
   useRecipeScreen: jest.fn(() => ({
-    userId: null,
     discovery: { mode: 'none', items: [], loading: false, refresh: jest.fn() },
     pantryItems: [],
     hasPantryItems: false,
@@ -91,9 +90,8 @@ jest.mock('#features/recipes/hooks/useRecipeScreen', () => ({
       mealType: null,
       maxReadyTime: null,
     },
-    setActiveFilters: jest.fn(),
+    applyFilters: jest.fn(),
     activeFilterCount: 0,
-    clearFilters: jest.fn(),
     removeFilter: jest.fn(),
     clearFiltersAndSearchAgain: jest.fn(),
     handleTextSearch: jest.fn(),
@@ -201,7 +199,6 @@ function mockScreenWith(overrides: Record<string, unknown>) {
     '#features/recipes/hooks/useRecipeScreen',
   );
   useRecipeScreen.mockReturnValue({
-    userId: null,
     discovery: { mode: 'none', items: [], loading: false, refresh: jest.fn() },
     pantryItems: [],
     hasPantryItems: false,
@@ -224,9 +221,8 @@ function mockScreenWith(overrides: Record<string, unknown>) {
       mealType: null,
       maxReadyTime: null,
     },
-    setActiveFilters: jest.fn(),
+    applyFilters: jest.fn(),
     activeFilterCount: 0,
-    clearFilters: jest.fn(),
     removeFilter: jest.fn(),
     clearFiltersAndSearchAgain: jest.fn(),
     handleTextSearch: jest.fn(),
@@ -613,7 +609,7 @@ describe('RecipeMain', () => {
     expect(capturedEmptyState!.title).toBe('Discover Recipes');
   });
 
-  it('calls handleRefresh from useRecipeScreen on pull-to-refresh', () => {
+  it('calls handleRefresh from useRecipeScreen on pull-to-refresh', async () => {
     mockDeferredScreen.mockImplementation(
       ({ component: Component }: { component: React.ComponentType }) => (
         <Component />
@@ -629,8 +625,8 @@ describe('RecipeMain', () => {
     };
 
     render(<RecipeMain />);
-    act(() => {
-      capturedOnRefresh!();
+    await act(async () => {
+      await capturedOnRefresh!();
     });
     expect(mockRefresh).toHaveBeenCalled();
   });

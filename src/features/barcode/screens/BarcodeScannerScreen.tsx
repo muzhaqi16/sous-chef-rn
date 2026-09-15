@@ -39,7 +39,7 @@ export const BarcodeScannerScreen: React.FC<
 > = ({ route }) => {
   const { t } = useTranslation();
   const { toSearchResults, goBack, navigation } = useAppNavigation();
-  const { source, pantryId, shoppingListId } = route?.params || {};
+  const { source, pantryId, shoppingListId } = route?.params ?? {};
   const devices = useCameraDevices();
   const device = devices.find(d => d.position === 'back');
 
@@ -54,8 +54,7 @@ export const BarcodeScannerScreen: React.FC<
   // barcode state/hooks
   const hasNavigatedRef = useRef(false);
 
-  const { setScannedBarcode, setScanning, resetScanner, isScanning } =
-    useBarcodeScanner();
+  const { setScanning, resetScanner, isScanning } = useBarcodeScanner();
 
   useHiddenStatusBar();
 
@@ -113,7 +112,7 @@ export const BarcodeScannerScreen: React.FC<
       }
       if (active) setHasAskedPermission(true);
     };
-    ask();
+    void ask();
     return () => {
       active = false;
     };
@@ -166,7 +165,6 @@ export const BarcodeScannerScreen: React.FC<
       // Haptic feedback on successful barcode scan
       HapticService.success();
 
-      setScannedBarcode(value);
       toSearchResults({
         barcode: value,
         format,
@@ -347,7 +345,7 @@ const styles = StyleSheet.create(theme => ({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'black',
+    backgroundColor: theme.colors.black,
   },
   camera: { flex: 1 },
   centeredContainer: {
@@ -358,7 +356,7 @@ const styles = StyleSheet.create(theme => ({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'black',
+    backgroundColor: theme.colors.black,
     paddingHorizontal: theme.spacing.lg,
     gap: theme.spacing.md,
   },
@@ -396,7 +394,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    backgroundColor: theme.colors.overlays.dark,
     alignItems: 'center',
     zIndex: theme.zIndex.raised,
     ...theme.shadows.lg,

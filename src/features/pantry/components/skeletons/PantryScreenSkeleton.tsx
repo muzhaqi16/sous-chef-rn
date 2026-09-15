@@ -1,3 +1,4 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -8,7 +9,7 @@ const ITEM_COUNT = 10;
 // Covers only the rows: it reaches the list through `PantryEmptyState` in
 // `ListFooterComponent`, below the header chrome, which stays visible.
 export const PantryScreenSkeleton: React.FC = () => (
-  <View testID="pantry-loading" style={styles.container}>
+  <View testID={pantryTestIDs.loading} style={styles.container}>
     {Array.from({ length: ITEM_COUNT }, (_, index) => (
       <PantryItemSkeleton key={index} />
     ))}

@@ -9,6 +9,7 @@ import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Label } from '#components/atoms/Label';
 import { Text } from '#components/atoms/Text';
 import { Divider } from '#components/atoms/Divider';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 
 /** Tallest the suggestion list is allowed to get; mirrored in `suggestionsContainer`. */
 const DROPDOWN_MAX_HEIGHT = 220;
@@ -219,7 +220,7 @@ export function InlineAutocomplete<T>({
           )}
         </View>
         {error ? (
-          <Text role="caption" tone="error" style={styles.errorText}>
+          <Text role="error" tone="error" style={styles.errorText}>
             {error}
           </Text>
         ) : null}
@@ -258,7 +259,7 @@ export function InlineAutocomplete<T>({
       {!!isReservingSpace && !!reserveDropdownSpace && (
         <View
           collapsable={false}
-          testID="dropdown-spacer"
+          testID={catalogTestIDs.dropdownSpacer}
           style={[styles.dropdownSpacer, { height: dropdownHeight }]}
         />
       )}

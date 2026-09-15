@@ -9,6 +9,7 @@ import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { formatQuantity } from '#utils/formatQuantity';
 import { Card } from '#components/atoms/Card';
+import { barcodeTestIDs } from '#features/barcode/testIDs';
 
 interface Item {
   id: string;
@@ -54,15 +55,21 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
         />
       ) : (
         <View style={styles.placeholderImage}>
-          <Text style={styles.placeholderText}>📦</Text>
+          <Text role="body" style={styles.placeholderText}>
+            📦
+          </Text>
         </View>
       )}
 
       <View style={styles.itemDetails}>
         <Text role="title">{item.name}</Text>
-        {!!item.brandName && <Text tone="secondary">{item.brandName}</Text>}
+        {!!item.brandName && (
+          <Text role="body" tone="secondary">
+            {item.brandName}
+          </Text>
+        )}
         {item.netWeight != null && (
-          <Text tone="secondary">
+          <Text role="body" tone="secondary">
             {formatQuantity(item.netWeight)}
             {item.displayUnit?.name ? ` ${item.displayUnit.name}` : ''}
           </Text>
@@ -85,15 +92,23 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
       {showActions ? (
         <View style={styles.actionsRow}>
           {!!onEditItem && (
-            <Pressable style={styles.actionLink} onPress={onEditItem}>
+            <Pressable
+              style={styles.actionLink}
+              onPress={onEditItem}
+              testID={barcodeTestIDs.productEditAction}
+            >
               <Icon name="create-outline" size={16} tone="primary" />
-              <Text role="label" tone="accent">
+              <Text
+                role="label"
+                tone="accent"
+                testID={barcodeTestIDs.productEditActionLabel}
+              >
                 {editActionLabel ?? t('labels.suggestEdit')}
               </Text>
             </Pressable>
           )}
           {!!onEditItem && !!onCreateVariant && (
-            <Text tone="tertiary" style={styles.actionSeparator}>
+            <Text role="body" tone="tertiary" style={styles.actionSeparator}>
               ·
             </Text>
           )}

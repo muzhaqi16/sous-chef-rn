@@ -1,7 +1,8 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "types": ["jest", "detox", "node", "react-native"]
+    "types": ["jest", "detox", "node", "react-native"],
+    "tsBuildInfoFile": "../node_modules/.cache/tsc/tests.tsbuildinfo"
   },
   "include": [
     "./**/*.ts",

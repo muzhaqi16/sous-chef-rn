@@ -49,7 +49,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const schema = validationSchema || object({ [fieldKey]: string() });
+  const schema = validationSchema ?? object({ [fieldKey]: string() });
 
   const form = useForm({
     resolver: yupResolver(schema),
@@ -63,7 +63,8 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
   }, [visible, initialValue, fieldKey, form]);
 
   const handleSave = (data: FieldValues) => {
-    onSave(data[fieldKey]);
+    const value: unknown = data[fieldKey];
+    onSave(typeof value === 'string' ? value : '');
     onClose();
   };
 
@@ -123,7 +124,9 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
             <View>
               <ThemedBottomSheetTextInput
                 style={styles.input}
-                value={field.value}
+                value={
+                  typeof field.value === 'string' ? field.value : undefined
+                }
                 onChangeText={field.onChange}
                 onBlur={field.onBlur}
                 placeholder={placeholder}
@@ -134,7 +137,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
                 textAlignVertical={multiline ? 'top' : 'center'}
               />
               {!!fieldState.error && (
-                <Text role="caption" tone="error" style={styles.errorText}>
+                <Text role="error" tone="error" style={styles.errorText}>
                   {fieldState.error.message}
                 </Text>
               )}

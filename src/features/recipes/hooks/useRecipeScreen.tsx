@@ -12,18 +12,15 @@ import { useRecipeDiscovery } from '#features/recipes/hooks/useRecipeDiscovery';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { useRecipeFilters } from '#features/recipes/hooks/useRecipeFilters';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import {} from '#features/recipes/graphql/recipe.generated';
-import {} from '#features/recipes/store/useRecipeCacheStore';
-import { useUserId } from '#store/useAppStore';
 import type { IconName } from '#/utils/iconUtils';
-import { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
+import type { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
 import {
   type RecipeFilters,
   DIET_ENUM_TO_SPOONACULAR,
   INTOLERANCE_ENUM_TO_SPOONACULAR,
 } from '#features/recipes/utils/recipeFilterMaps';
 import { isLifestyleDiet } from '#domain/dietary';
-import { type DisplayItem } from '#features/recipes/utils/recipeDisplayTransforms';
+import type { DisplayItem } from '#features/recipes/utils/recipeDisplayTransforms';
 import {
   EMPTY_PAGINATION,
   executeRecipeIngredientSearch,
@@ -39,9 +36,6 @@ import {
 export function useRecipeScreen() {
   const { t } = useTranslation();
   const apiUnavailable = useAppStore(isApiUnavailable);
-
-  // ── User ──
-  const userId = useUserId();
 
   // Apollo client for the imperative local-API search in executeRecipeTextSearch
   const client = useApolloClient();
@@ -164,14 +158,16 @@ export function useRecipeScreen() {
 
   const {
     activeFilters,
-    setActiveFilters,
     activeFilterCount,
-    clearFilters,
+    applyFilters,
     removeFilter,
     clearFiltersAndSearchAgain,
   } = useRecipeFilters({
     profileFilters,
-    onApplyFilters: rerunSearchWithFilters,
+    onApplyFilters: nextFilters => {
+      // A search failure is reported inside the fetch, never thrown.
+      void rerunSearchWithFilters(nextFilters);
+    },
   });
 
   // ── Derived display state ──
@@ -372,7 +368,6 @@ export function useRecipeScreen() {
 
   return {
     // Data
-    userId,
     discovery,
     pantryItems: discovery.pantryItems,
     hasPantryItems: discovery.hasPantryItems,
@@ -404,9 +399,8 @@ export function useRecipeScreen() {
 
     // Filters
     activeFilters,
-    setActiveFilters,
     activeFilterCount,
-    clearFilters,
+    applyFilters,
     removeFilter,
     clearFiltersAndSearchAgain,
 

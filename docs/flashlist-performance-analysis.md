@@ -12,16 +12,16 @@ dispositioned at the end; the paths and numbers in it no longer matched the code
 
 ## How the lists are fed
 
-|                         | Pantry (`PantryContent`)                                                                        | Shopping list (`SortableList`)                                                                                                      |
-| ----------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Query                   | `GetPantry`, one page, `itemsFirst: 100`                                                        | `GetShoppingListItemsFiltered` × 2 (unpurchased / purchased), `first: 25` (`PAGINATION.ITEMS_PAGE_SIZE`), cursor `fetchMore`        |
+|                         | Pantry (`PantryContent`)                                                                                                                                                    | Shopping list (`SortableList`)                                                                                                      |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Query                   | `GetPantry`, one page, `itemsFirst: 100`                                                                                                                                    | `GetShoppingListItemsFiltered` × 2 (unpurchased / purchased), `first: 25` (`PAGINATION.ITEMS_PAGE_SIZE`), cursor `fetchMore`        |
 | Growth on scroll        | None — `sortedItems` goes to FlashList whole. The old client render window was a SECOND virtualization on top of FlashList's own; growing it re-rendered every mounted cell | Server page per `onEndReached`; each append runs cache merge → `useQuery` broadcast → `useConnectionData` → `wrapItems` → FlashList |
-| Row objects             | Apollo nodes passed through; structural sharing keeps unchanged rows `===`                      | `wrapItems` caches rows **per node** (and per tab), so unchanged rows stay `===` across an append                                   |
-| Data → FlashList        | Direct. Never through `useDeferredValue` — see `flashlist-layout-index-race.md`                 | Same                                                                                                                                |
-| `drawDistance`          | **0.5× viewport** (`DRAW_DISTANCE`) — the ONLY bound on mounted cells now                       | 2× viewport                                                                                                                         |
-| `maxItemsInRecyclePool` | 15                                                                                              | 15 (`FLASHLIST_DEFAULTS.fullScreen`)                                                                                                |
-| `CellRendererComponent` | `useFlashListPerformance().CellRendererComponent` (tracks mounted cells, see below)             | Same                                                                                                                                |
-| Row component           | `PantryItemCard`: swipeable + `useFragment`                                                     | `SwipeableListItem`: swipeable + checkbox + image + `useFragment` + slide animation — heavier to mount                              |
+| Row objects             | Apollo nodes passed through; structural sharing keeps unchanged rows `===`                                                                                                  | `wrapItems` caches rows **per node** (and per tab), so unchanged rows stay `===` across an append                                   |
+| Data → FlashList        | Direct. Never through `useDeferredValue` — see `flashlist-layout-index-race.md`                                                                                             | Same                                                                                                                                |
+| `drawDistance`          | **0.5× viewport** (`DRAW_DISTANCE`) — the ONLY bound on mounted cells now                                                                                                   | 2× viewport                                                                                                                         |
+| `maxItemsInRecyclePool` | 15                                                                                                                                                                          | 15 (`FLASHLIST_DEFAULTS.fullScreen`)                                                                                                |
+| `CellRendererComponent` | `useFlashListPerformance().CellRendererComponent` (tracks mounted cells, see below)                                                                                         | Same                                                                                                                                |
+| Row component           | `PantryItemCard`: swipeable + `useFragment`                                                                                                                                 | `SwipeableListItem`: swipeable + checkbox + image + `useFragment` + slide animation — heavier to mount                              |
 
 FlashList decides whether a cell re-renders by `item` identity (`ViewHolder`'s memo
 is `prevProps.item === nextProps.item`) — but it re-renders EVERY mounted cell when
@@ -206,14 +206,14 @@ decompose per phase. React commit counts do NOT track this and will mislead you.
 Measured on an SM-S908U1 (96 Hz panel → **10.4 ms budget**), localRelease, 92
 pantry items, thermal 0, warmed, 119 frames:
 
-| phase | median | p90 |
-| --- | --- | --- |
-| input + animation + layout (UI thread) | **1.5 ms** | 5.2 |
-| ↳ `PerformTraversals` | 0.1 ms | 0.4 |
-| sync UI→Render | 3.5 ms | 5.4 |
-| RenderThread issue draw | 4.9 ms | 7.8 |
-| swap→completed (GPU present) | **6.7 ms** | 8.1 |
-| TOTAL | 17.2 ms | 21.5 |
+| phase                                  | median     | p90  |
+| -------------------------------------- | ---------- | ---- |
+| input + animation + layout (UI thread) | **1.5 ms** | 5.2  |
+| ↳ `PerformTraversals`                  | 0.1 ms     | 0.4  |
+| sync UI→Render                         | 3.5 ms     | 5.4  |
+| RenderThread issue draw                | 4.9 ms     | 7.8  |
+| swap→completed (GPU present)           | **6.7 ms** | 8.1  |
+| TOTAL                                  | 17.2 ms    | 21.5 |
 
 **UI-thread work is 1.5 ms of a 17 ms frame.** Per-row view count and Yoga layout
 live there, so cutting views per row cannot move this number — a hypothesis that
@@ -232,16 +232,16 @@ panel) is GPU-bound and unsolved.
 
 ## Disposition of the earlier investigation's issues
 
-| #   | Then                                                                        | Now                                                                                                                                                                                                     |
-| --- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Append-only merge never prunes; cache grows; cross-screen slowdown          | Merge is authoritative-first-page with a resilience guard (above). The surviving tail is the offline-first cold-start data, by design; deletes remove edges via `cache.modify`. **Closed (by design).** |
-| 2   | `extractItems` rebuilt arrays every render; cascade through the pipeline    | `useConnectionData` → `usePreservedConnection` → `extractNodes` inside compiled hooks; the `SortableList.items` tracker shows one reference change per page. **Closed.**                                |
-| 3   | Cache persistence serialises the whole cache on screen transition           | Pause/resume lives in `useTabScreenLifecycle`; the save now compares top-level keys by identity before any `JSON.stringify`. **Mitigated; not re-measured.**                                            |
-| 4   | `resortEdges` sorts every `itemsConnection` variant on sort-changing events | Still runs once per `storeFieldName` variant (`useShoppingListSubscriptions.ts`). Not implicated in any measurement this round. **Open, low.**                                                          |
-| 5   | No `maxItemsInRecyclePool` on either list                                   | Both lists use `FLASHLIST_DEFAULTS.fullScreen.maxItemsInRecyclePool` (15). **Closed.**                                                                                                                  |
-| 6   | `useDeferredValue` always on for the shopping list                          | Removed from all three lists — it opened the `not enough layouts` crash (`flashlist-layout-index-race.md`); the throughput it hid was issue 2 + per-array rows, fixed instead. **Closed.**              |
-| 7   | Apollo watchers keep running on hidden tabs (`freezeOnBlur`)                | `HomeTabs` deliberately uses `inactiveBehavior: 'none'` — the background work is the accepted price of avoiding multi-second resumes (CLAUDE.md). **Closed (by design).**                               |
-| 8   | Dead `ShoppingList.items` merge policy                                      | Removed. **Closed.**                                                                                                                                                                                    |
+| #   | Then                                                                        | Now                                                                                                                                                                                                          |
+| --- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Append-only merge never prunes; cache grows; cross-screen slowdown          | Merge is authoritative-first-page with a resilience guard (above). The surviving tail is the offline-first cold-start data, by design; deletes remove edges via `cache.modify`. **Closed (by design).**      |
+| 2   | `extractItems` rebuilt arrays every render; cascade through the pipeline    | `useConnectionData` → `usePreservedConnection` → `extractNodes` inside compiled hooks; the `SortableList.items` tracker shows one reference change per page. **Closed.**                                     |
+| 3   | Cache persistence serialises the whole cache on screen transition           | The save compares top-level keys by identity before any `JSON.stringify`; a detail-screen visit serialises once (~178 KB, median ~5 ms, p90 under 8 ms on an SM-S908U1, measured 2026-09-12). **Mitigated.** |
+| 4   | `resortEdges` sorts every `itemsConnection` variant on sort-changing events | Still runs once per `storeFieldName` variant (`useShoppingListSubscriptions.ts`). Not implicated in any measurement this round. **Open, low.**                                                               |
+| 5   | No `maxItemsInRecyclePool` on either list                                   | Both lists use `FLASHLIST_DEFAULTS.fullScreen.maxItemsInRecyclePool` (15). **Closed.**                                                                                                                       |
+| 6   | `useDeferredValue` always on for the shopping list                          | Removed from all three lists — it opened the `not enough layouts` crash (`flashlist-layout-index-race.md`); the throughput it hid was issue 2 + per-array rows, fixed instead. **Closed.**                   |
+| 7   | Apollo watchers keep running on hidden tabs (`freezeOnBlur`)                | `HomeTabs` deliberately uses `inactiveBehavior: 'none'` — the background work is the accepted price of avoiding multi-second resumes (CLAUDE.md). **Closed (by design).**                                    |
+| 8   | Dead `ShoppingList.items` merge policy                                      | Removed. **Closed.**                                                                                                                                                                                         |
 
 ## Instrumentation coverage — a scoped decision, not a backlog
 

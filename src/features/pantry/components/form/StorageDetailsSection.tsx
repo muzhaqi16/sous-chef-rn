@@ -1,23 +1,21 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { Control, FieldErrors } from 'react-hook-form';
+import type { Control, FieldErrors } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
-import {
-  DynamicFormFields,
-  FieldDef,
-} from '#components/molecules/DynamicFormFields';
+import type { FieldDef } from '#components/molecules/DynamicFormFields';
+import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import {
   ChipScrollRow,
   type ChipOption,
 } from '#components/molecules/ChipScrollRow';
 import { DatePickerField } from '#components/molecules/DatePickerField';
-import {
-  StorageState,
+import type {
   ItemCondition,
   StorageLocation,
 } from '#/graphql/generated/schemaTypes';
+import { StorageState } from '#/graphql/generated/schemaTypes';
 import { Label } from '#components/atoms/Label';
 import type { PantryItemFormData } from './PantryItemForm';
 import {

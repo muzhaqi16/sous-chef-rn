@@ -102,14 +102,6 @@ describe('useCollapsibleScroll', () => {
     expect(r.current.isScrolledDown.get()).toBe(false);
   });
 
-  it('tracks the offset even while it leaves the bar alone', () => {
-    const r = setup();
-
-    r.current.scrollHandler(scrollTo(420));
-
-    expect(r.current.scrollY.get()).toBe(420);
-  });
-
   it('reveals the bar when a drag ends with no momentum to follow', () => {
     const r = setup();
     r.current.scrollBeginDragHandler();

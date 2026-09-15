@@ -6,6 +6,7 @@
  */
 import { device, element, by, expect as detoxExpect } from 'detox';
 import { ResetPasswordScreen } from '../../screens/ResetPasswordScreen';
+import { kitTestIDs } from '../../../src/components/testIDs';
 
 // Long enough to clear the screen's client-side format check (>= 10 chars),
 // so we land on the form rather than the "Invalid Reset Link" view.
@@ -58,7 +59,7 @@ describe('Reset password (choose new password)', () => {
     await settle(3000);
 
     // Nothing was sent, so no toast — and the form is still on screen.
-    await detoxExpect(element(by.id('toast-error'))).not.toExist();
+    await detoxExpect(element(by.id(kitTestIDs.toast('error')))).not.toExist();
     await resetScreen.expectScreenVisible();
   });
 
@@ -69,7 +70,7 @@ describe('Reset password (choose new password)', () => {
 
     await settle(3000);
 
-    await detoxExpect(element(by.id('toast-error'))).not.toExist();
+    await detoxExpect(element(by.id(kitTestIDs.toast('error')))).not.toExist();
     await resetScreen.expectScreenVisible();
   });
 });

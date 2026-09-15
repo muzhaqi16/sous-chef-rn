@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { StackActions } from '@react-navigation/native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { ErrorState } from '#components/molecules/ErrorState';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
@@ -21,7 +20,8 @@ export const JoinByLinkScreen: React.FC<
   StaticScreenProps<{ code?: string }>
 > = ({ route }) => {
   const { t } = useTranslation();
-  const { navigation } = useAppNavigation();
+  const { goBack, replaceWithJoinHomeByCode, replaceWithJoinByShareCode } =
+    useAppNavigation();
   const code = route.params?.code ?? '';
 
   const { link: result, loading } = useResolveShareLink(code);
@@ -39,15 +39,11 @@ export const JoinByLinkScreen: React.FC<
     // `replace` (not navigate): this screen is a transparent resolver and must
     // not linger in the back stack once it routes to the per-type join screen.
     if (result.targetType === ShareLinkTargetType.HomeJoin) {
-      navigation.dispatch(
-        StackActions.replace('JoinHomeByCode', { joinCode: code }),
-      );
+      replaceWithJoinHomeByCode(code);
     } else if (result.targetType === ShareLinkTargetType.ListJoin) {
-      navigation.dispatch(
-        StackActions.replace('JoinByShareCode', { shareCode: code }),
-      );
+      replaceWithJoinByShareCode(code);
     }
-  }, [result, code, navigation]);
+  }, [result, code, replaceWithJoinHomeByCode, replaceWithJoinByShareCode]);
 
   // Code resolved to nothing — invalid or expired.
   const invalid = !!code && !loading && !result;
@@ -56,7 +52,7 @@ export const JoinByLinkScreen: React.FC<
     <Screen
       header={{
         title: t('joinLink.title'),
-        back: () => navigation.goBack(),
+        back: goBack,
         centerTitle: true,
       }}
       scroll="none"
@@ -71,7 +67,7 @@ export const JoinByLinkScreen: React.FC<
           alignment="center"
           secondaryAction={{
             label: t('labels.goBack'),
-            onPress: () => navigation.goBack(),
+            onPress: goBack,
           }}
         />
       ) : (

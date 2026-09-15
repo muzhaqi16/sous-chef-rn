@@ -41,9 +41,7 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
 }));
 
 jest.mock('#features/shoppingList/cache/items', () => {
-  const { classifyCreateResult } = jest.requireActual(
-    '#/apollo/utils/classifyCreateResult',
-  );
+  const { settledStatus } = jest.requireActual('#/apollo/utils/settleMutation');
   const revertOptimisticShoppingListItem = jest.fn();
   return {
     revertOptimisticShoppingListItem,
@@ -57,7 +55,7 @@ jest.mock('#features/shoppingList/cache/items', () => {
     // keep/revert decision under test matches production.
     reconcileShoppingCreate: jest.fn(
       (cache: unknown, listId: string, id: string, result: unknown) => {
-        if (classifyCreateResult(result) === 'rejected') {
+        if (settledStatus(result) === 'failed') {
           revertOptimisticShoppingListItem(cache, listId, id);
           return 'reverted';
         }
@@ -346,11 +344,10 @@ describe('usePantryItemDetailActions', () => {
       const refused = recordMock(DeletePantryItemDocument, {
         data: {
           deletePantryItem: {
-            __typename: 'NotFoundError',
-            code: ErrorCode.NotFound,
+            // Not a NotFoundError: a delete answered "not found" is already done.
+            __typename: 'ConflictError',
+            code: ErrorCode.Conflict,
             message: 'Item is referenced by an active meal plan',
-            resource: 'PantryItem',
-            resourceId: 'item-1',
           },
         },
       });
@@ -591,7 +588,43 @@ describe('usePantryItemDetailActions', () => {
       );
     });
 
-    it('calls convertExpiredBatches on batch-discard confirm', () => {
+    it('formats the discarded quantity in the item-discard alert', () => {
+      const { result } = setup({
+        item: {
+          ...baseItem,
+          quantity: 1.25,
+          unit: { ...baseItem.unit, displayAsFraction: true },
+        },
+      });
+
+      act(() => result.current.handleDiscardExpired());
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Discard Expired Item',
+        expect.stringContaining('remaining 1 1/4 cups'),
+        expect.any(Array),
+      );
+    });
+
+    it('rounds to three decimals for a unit that opts out of fractions', () => {
+      const { result } = setup({
+        item: {
+          ...baseItem,
+          quantity: 1.3333334,
+          unit: { ...baseItem.unit, displayAsFraction: false },
+        },
+      });
+
+      act(() => result.current.handleDiscardExpired());
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Discard Expired Item',
+        expect.stringContaining('remaining 1.333 cups'),
+        expect.any(Array),
+      );
+    });
+
+    it('calls convertExpiredBatches on batch-discard confirm', async () => {
       const { result } = setup({
         item: { ...baseItem, activeBatchCount: 2 },
       });
@@ -600,7 +633,7 @@ describe('usePantryItemDetailActions', () => {
 
       const discardButton = (alertService.alert as jest.Mock).mock
         .calls[0][2][1];
-      act(() => discardButton.onPress());
+      await act(async () => discardButton.onPress());
 
       expect(mockConvertExpiredBatches).toHaveBeenCalledWith('item-1');
     });

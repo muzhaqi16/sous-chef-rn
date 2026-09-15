@@ -119,12 +119,10 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     defaultCommonFractions,
     loading: unitsLoading,
   } = useOperationUnits({
-    itemId: pantryItem?.itemId,
     pantryItemId: pantryItem?.id,
-    trackingUnitId: pantryItem?.unit?.id,
-    trackingUnitType: pantryItem?.unit?.type,
+    trackingUnitId: pantryItem?.unit.id,
+    trackingUnitType: pantryItem?.unit.type,
     netWeightUnitId: pantryItem?.netWeightUnit?.id,
-    portionUnitId: pantryItem?.portionUnitId,
     operation,
   });
 
@@ -139,25 +137,20 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   // Same unit both sides makes the tracking count redundant ("1 g (100 g
   // remaining)") — collapse to the net weight alone.
   const isSingleUnitDualTracked =
-    isDualTracked && pantryItem?.unit?.id === pantryItem?.netWeightUnit?.id;
-  const hasContentUnit =
-    isDualTracked &&
-    pantryItem?.packageBreakdown != null &&
-    pantryItem.packageBreakdown.perUnitNetWeight != null &&
-    pantryItem.packageBreakdown.perUnitNetWeight > 0;
+    isDualTracked && pantryItem?.unit.id === pantryItem?.netWeightUnit?.id;
+  const contentBreakdown = isDualTracked ? pantryItem?.packageBreakdown : null;
+  const perUnitNetWeight = contentBreakdown?.perUnitNetWeight ?? null;
+  const hasContentUnit = perUnitNetWeight != null && perUnitNetWeight > 0;
   const contentUnitCount =
     pantryItem?.quantityBreakdown?.totalContentUnits != null
       ? Math.floor(pantryItem.quantityBreakdown.totalContentUnits)
       : hasContentUnit && pantryItem?.remainingNetWeight != null
-      ? Math.floor(
-          pantryItem.remainingNetWeight /
-            pantryItem.packageBreakdown!.perUnitNetWeight!,
-        )
+      ? Math.floor(pantryItem.remainingNetWeight / perUnitNetWeight)
       : 0;
 
   const trackingQuantity = pantryItem?.quantity ?? 0;
-  const trackingUnitSymbol = pantryItem?.unit?.symbol || '';
-  const trackingUnitId = pantryItem?.unit?.id;
+  const trackingUnitSymbol = pantryItem?.unit.symbol || '';
+  const trackingUnitId = pantryItem?.unit.id;
 
   const fallbackUnitSymbol =
     pantryItem?.netWeightUnit?.symbol || trackingUnitSymbol;
@@ -257,32 +250,32 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
           <>
             {/* Item Info */}
             <View style={commonStyles.bottomSheetItemInfo}>
-              <Text style={commonStyles.bottomSheetItemName}>
+              <Text role="heading" style={commonStyles.bottomSheetItemName}>
                 {pantryItem.itemName}
               </Text>
               <View style={commonStyles.bottomSheetItemRow}>
-                <Text style={commonStyles.bottomSheetItemLabel}>
+                <Text role="body" tone="secondary">
                   {resolvedCurrentQuantityLabel}{' '}
                 </Text>
                 <FormattedItemSubtitle
                   quantity={
                     isSingleUnitDualTracked
-                      ? effectiveNetWeight!
+                      ? effectiveNetWeight
                       : pantryItem.quantity
                   }
                   displayAsFraction={
                     isSingleUnitDualTracked
                       ? undefined
-                      : pantryItem.unit?.displayAsFraction
+                      : pantryItem.unit.displayAsFraction
                   }
                   unitSymbol={
                     isSingleUnitDualTracked
                       ? pantryItem.netWeightUnit?.symbol
-                      : pantryItem.unit?.symbol
+                      : pantryItem.unit.symbol
                   }
                 />
                 {!!isDualTracked && !isSingleUnitDualTracked && (
-                  <Text style={commonStyles.bottomSheetItemLabel}>
+                  <Text role="body" tone="secondary">
                     {' '}
                     {t('pantryAction.remainingAmount', {
                       amount: pantryItem.quantityBreakdown
@@ -295,12 +288,12 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
                               pantryItem.quantityBreakdown.contentUnit
                                 ?.symbol || '',
                           })
-                        : hasContentUnit
+                        : contentBreakdown && hasContentUnit
                         ? t('pantryAction.amountWithUnit', {
                             amount: contentUnitCount,
                             unit:
-                              pantryItem.packageBreakdown!.contentUnit.symbol ||
-                              pantryItem.packageBreakdown!.contentUnit.name,
+                              contentBreakdown.contentUnit.symbol ||
+                              contentBreakdown.contentUnit.name,
                           })
                         : t('pantryAction.amountWithUnit', {
                             amount: effectiveNetWeight,

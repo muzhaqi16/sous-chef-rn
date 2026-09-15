@@ -11,6 +11,7 @@ import {
 } from '@react-native-firebase/messaging';
 import { showLocalNotification } from '#/services/notifications/localNotificationHelper';
 import { routeNotificationTap } from '../pushNotificationRouting';
+import { t } from '#/i18n';
 
 jest.mock('#/services/notifications/localNotificationHelper', () => ({
   showLocalNotification: jest.fn().mockResolvedValue(undefined),
@@ -49,7 +50,7 @@ describe('nativePushMessaging', () => {
       expect(mockSetBackgroundHandler).toHaveBeenCalledTimes(1);
     });
 
-    it('displays a data-only message via Notifee', async () => {
+    it('displays a data-only message via Notifee in local copy, not the server text', async () => {
       registerFcmBackgroundHandler();
       const handler = mockSetBackgroundHandler.mock.calls[0][1];
 
@@ -65,8 +66,8 @@ describe('nativePushMessaging', () => {
 
       expect(mockShowLocal).toHaveBeenCalledWith({
         id: 'n1',
-        title: 'Milk expiring',
-        body: 'Use it soon',
+        title: t('pushNotification.title'),
+        body: t('pushNotification.body'),
         data: {
           title: 'Milk expiring',
           body: 'Use it soon',

@@ -18,6 +18,7 @@ import {
   formatNumberForInput,
   localizeNumericHint,
 } from '#/utils/formatters/number';
+import { profileTestIDs } from '#features/profile/testIDs';
 
 interface CookingPreferencesSheetProps {
   visible: boolean;
@@ -59,9 +60,12 @@ export const CookingPreferencesSheet: React.FC<
     label: t(`cookingPreferences.skillLevels.${level}`),
     value: level,
   }));
-  const skillLevelLabel = skillLevel
-    ? t(`cookingPreferences.skillLevels.${skillLevel}`)
-    : t('cookingPreferences.selectSkillLevel');
+  // The API field is a free string, so a stored level outside SKILL_LEVELS
+  // shows as written rather than as a key path.
+  const knownSkillLevel = SKILL_LEVELS.find(level => level === skillLevel);
+  const skillLevelLabel = knownSkillLevel
+    ? t(`cookingPreferences.skillLevels.${knownSkillLevel}`)
+    : skillLevel || t('cookingPreferences.selectSkillLevel');
   const [prepTime, setPrepTime] = useState('');
   const [cookTime, setCookTime] = useState('');
   const [budget, setBudget] = useState('');
@@ -202,14 +206,14 @@ export const CookingPreferencesSheet: React.FC<
           </Text>
           <AppPressable
             haptic
-            testID="cooking-preferences-skill-level-picker"
+            testID={profileTestIDs.cookingPreferencesSkillLevelPicker}
             style={styles.pickerContainer}
             onPress={() => setSkillPickerVisible(true)}
             accessibilityRole="button"
             accessibilityLabel={t('cookingPreferences.skillLevel')}
             accessibilityValue={{ text: skillLevelLabel }}
           >
-            <Text tone={skillLevel ? 'accent' : 'tertiary'}>
+            <Text role="body" tone={skillLevel ? 'accent' : 'tertiary'}>
               {skillLevelLabel}
             </Text>
           </AppPressable>

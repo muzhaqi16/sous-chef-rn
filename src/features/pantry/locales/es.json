@@ -72,7 +72,6 @@
     "deleteWarning": "Eliminar esta despensa quitará permanentemente todos los artículos que contiene. Esta acción no se puede deshacer.",
     "deleteConfirmMessage": "¿Seguro que quieres eliminar esta despensa? Esta acción no se puede deshacer y eliminará todos los artículos.",
     "nameEmptyError": "El nombre de la despensa no puede estar vacío",
-    "createFailed": "No se pudo crear la despensa",
     "loadErrorTitle": "Error al cargar la despensa",
     "loadErrorMessage": "No se pudieron cargar los datos. Inténtalo de nuevo.",
     "userCreatedDescription": "Despensa creada por el usuario"
@@ -177,7 +176,11 @@
     "currentLabel": "Actual: ",
     "newQuantity": "Nueva cantidad",
     "reasonPlaceholder": "¿Por qué se ajusta la cantidad?",
-    "remainingWeightPlaceholder": "Déjalo en blanco para ajustar automáticamente"
+    "remainingWeightPlaceholder": "Déjalo en blanco para ajustar automáticamente",
+    "systemReason": {
+      "stackMerged": "Ajuste tras combinar artículos",
+      "stackPurged": "Retirada administrativa"
+    }
   },
   "recordWaste": {
     "wasteBy": "Desperdiciar por",
@@ -300,7 +303,8 @@
     "acquisitionMethod": "Cómo se adquirió",
     "methodPurchased": "Comprado",
     "methodHomegrown": "De cosecha propia",
-    "methodGifted": "Regalado"
+    "methodGifted": "Regalado",
+    "methodBarcodeScan": "Escaneo de código de barras"
   },
   "pantryScreen": {
     "greetingFallback": "Buenos días",

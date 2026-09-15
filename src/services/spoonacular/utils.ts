@@ -26,7 +26,7 @@ export const transformSpoonacularToRecipeInput = (
   )?.amount;
 
   // Transform instructions to JSON format
-  const instructions = spoonacularRecipe.analyzedInstructions?.[0]?.steps || [];
+  const instructions = spoonacularRecipe.analyzedInstructions?.[0]?.steps ?? [];
 
   return {
     name: spoonacularRecipe.title,
@@ -57,7 +57,7 @@ export const transformSpoonacularToRecipeInput = (
     caloriesPerServing: caloriesPerServing
       ? Math.round(caloriesPerServing)
       : null,
-    nutritionData: spoonacularRecipe.nutrition || null,
+    nutritionData: spoonacularRecipe.nutrition ?? null,
 
     // Tags
     dietaryTags,
@@ -134,63 +134,4 @@ export const calculateRecipeMatchPercentage = (
 ): number => {
   if (totalIngredients === 0) return 0;
   return Math.round((matchedIngredients / totalIngredients) * 100);
-};
-
-/**
- * Format cooking time for display
- */
-export const formatCookingTime = (minutes: number | null): string => {
-  if (!minutes) return 'N/A';
-  if (minutes < 60) return `${minutes} min`;
-
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-
-  if (mins === 0) return `${hours} hr`;
-  return `${hours} hr ${mins} min`;
-};
-
-/**
- * Parse dietary restrictions to Spoonacular diet parameter
- */
-export const parseDietaryRestrictions = (restrictions: string[]): string => {
-  const dietMap: Record<string, string> = {
-    VEGETARIAN: 'vegetarian',
-    VEGAN: 'vegan',
-    GLUTEN_FREE: 'gluten free',
-    DAIRY_FREE: 'dairy free',
-    KETO: 'ketogenic',
-    PALEO: 'paleo',
-    WHOLE30: 'whole30',
-  };
-
-  return restrictions
-    .map(restriction => dietMap[restriction])
-    .filter(Boolean)
-    .join(',');
-};
-
-/**
- * Parse intolerances to Spoonacular format
- */
-export const parseIntolerances = (intolerances: string[]): string => {
-  const intoleranceMap: Record<string, string> = {
-    DAIRY: 'dairy',
-    EGG: 'egg',
-    GLUTEN: 'gluten',
-    GRAIN: 'grain',
-    PEANUT: 'peanut',
-    SEAFOOD: 'seafood',
-    SESAME: 'sesame',
-    SHELLFISH: 'shellfish',
-    SOY: 'soy',
-    SULFITE: 'sulfite',
-    TREE_NUT: 'tree nut',
-    WHEAT: 'wheat',
-  };
-
-  return intolerances
-    .map(intolerance => intoleranceMap[intolerance])
-    .filter(Boolean)
-    .join(',');
 };

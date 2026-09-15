@@ -1,16 +1,6 @@
 // NOTE: babel-plugin-react-compiler swaps the module exports in this project,
 // so optimisticTypes functions are exported from createOptimisticResponse at runtime.
-import {
-  enhanceWithVersion,
-  createOptimisticEntity,
-  type VersionedEntity,
-} from '../createOptimisticResponse';
-
-interface OptimisticShoppingListItem extends VersionedEntity {
-  itemName: string;
-  isPurchased: boolean;
-  quantity: number;
-}
+import { enhanceWithVersion } from '../createOptimisticResponse';
 
 describe('enhanceWithVersion', () => {
   beforeEach(() => {
@@ -81,8 +71,8 @@ describe('enhanceWithVersion', () => {
     const after = new Date().toISOString();
 
     expect(result.updatedAt).not.toBe('2020-01-01T00:00:00.000Z');
-    expect(result.updatedAt! >= before).toBe(true);
-    expect(result.updatedAt! <= after).toBe(true);
+    expect(result.updatedAt >= before).toBe(true);
+    expect(result.updatedAt <= after).toBe(true);
   });
 
   it('throws when currentItem is undefined', () => {
@@ -106,59 +96,5 @@ describe('enhanceWithVersion', () => {
     expect(result.name).toBe('Eggs');
     expect(result.quantity).toBe(6);
     expect(result.__typename).toBe('PantryItem');
-  });
-});
-
-describe('createOptimisticEntity', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('creates an entity with __typename, id, version 1, and updatedAt', () => {
-    const result = createOptimisticEntity('PantryItem', 'temp-123', {
-      name: 'Milk',
-    });
-
-    expect(result.__typename).toBe('PantryItem');
-    expect(result.id).toBe('temp-123');
-    expect(result.version).toBe(1);
-    expect(result.updatedAt).toBeDefined();
-  });
-
-  it('sets updatedAt to a recent ISO timestamp', () => {
-    const before = new Date().toISOString();
-    const result = createOptimisticEntity('Item', 'id-1', {});
-    const after = new Date().toISOString();
-
-    expect(result.updatedAt! >= before).toBe(true);
-    expect(result.updatedAt! <= after).toBe(true);
-  });
-
-  it('includes all provided data fields', () => {
-    const result = createOptimisticEntity<OptimisticShoppingListItem>(
-      'ShoppingListItem',
-      'temp-1',
-      {
-        itemName: 'Butter',
-        isPurchased: false,
-        quantity: 2,
-      },
-    );
-
-    expect(result.itemName).toBe('Butter');
-    expect(result.isPurchased).toBe(false);
-    expect(result.quantity).toBe(2);
-  });
-
-  it('allows data fields to override version and updatedAt', () => {
-    // data is spread last, so it can override defaults
-    const result = createOptimisticEntity('Item', 'id-1', {
-      // Note: because of Omit in the type signature, these can't be directly
-      // typed, but at runtime the spread order means data wins
-    });
-
-    // version and updatedAt are set before ...data spread
-    expect(result.version).toBe(1);
-    expect(result.updatedAt).toBeDefined();
   });
 });

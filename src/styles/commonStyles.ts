@@ -286,9 +286,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
-  bottomSheetHelperTextError: {
-    color: theme.colors.error,
-  },
   bottomSheetOptionContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',

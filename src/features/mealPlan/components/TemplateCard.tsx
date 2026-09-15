@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
+import { TEMPLATE_CATEGORY_LABEL_KEYS } from '#features/mealPlan/utils/mealPlanEnumLabels';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMappingHelper } from '@shopify/flash-list';
@@ -82,8 +83,7 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
         )}
         <View style={styles.categoryBadge}>
           <Text role="label" tone="accent">
-            {template.category.charAt(0) +
-              template.category.slice(1).toLowerCase()}
+            {t(TEMPLATE_CATEGORY_LABEL_KEYS[template.category])}
           </Text>
         </View>
       </View>
@@ -151,9 +151,9 @@ const styles = StyleSheet.create(theme => ({
   homeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: theme.spacing['2xs'],
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: theme.spacing['2xs'],
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surfaceVariant,
@@ -161,7 +161,7 @@ const styles = StyleSheet.create(theme => ({
   categoryBadge: {
     marginLeft: 'auto',
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: theme.spacing['2xs'],
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.primaryLight,
@@ -174,7 +174,7 @@ const styles = StyleSheet.create(theme => ({
   },
   tag: {
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: theme.spacing['2xs'],
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surfaceVariant,

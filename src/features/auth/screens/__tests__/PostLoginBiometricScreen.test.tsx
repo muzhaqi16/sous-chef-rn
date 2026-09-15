@@ -42,7 +42,7 @@ jest.mock('#/services/authService', () => ({
 
 const { authService: mockAuthService } = jest.requireMock(
   '#/services/authService',
-) as { authService: { enrolDeviceCredential: jest.Mock } };
+);
 
 jest.mock('#/utils/finallyHelpers', () => ({
   executeWithLoadingState: async (

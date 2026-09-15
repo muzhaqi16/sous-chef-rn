@@ -14,7 +14,7 @@ import {
   reconcileShoppingListCreate,
   revertOptimisticShoppingList,
 } from '#features/shoppingList/cache/list';
-import { unwrapPayload } from '#/utils/errors/mutationPayload';
+import { appliedPayload, unwrapPayload } from '#/utils/errors/mutationPayload';
 import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
@@ -27,14 +27,8 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
 
   const [mutate, { loading }] = useMutation(CreateShoppingListDocument, {
     update(cache, { data }) {
-      if (
-        data?.createShoppingList?.__typename === 'CreateShoppingListPayload'
-      ) {
-        addShoppingListToQueryCache(
-          cache,
-          data.createShoppingList.shoppingList,
-        );
-      }
+      const created = appliedPayload(data);
+      if (created) addShoppingListToQueryCache(cache, created.shoppingList);
     },
   });
 
@@ -90,11 +84,7 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
 
     if (!optimisticList || reconciled === 'reverted' || payload != null) {
       // Success unwraps the payload; a refusal throws the precise domain error.
-      const success = unwrapPayload(
-        payload,
-        'CreateShoppingListPayload',
-        fallbackErrorMessage,
-      );
+      const success = unwrapPayload(payload, fallbackErrorMessage);
       return success.shoppingList;
     }
 

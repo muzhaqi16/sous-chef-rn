@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { RestrictionSection } from '#features/profile/components/RestrictionSection/RestrictionSection';
@@ -17,7 +17,7 @@ import { logger } from '#/utils/environment';
 
 // Lifestyle dietary choices. Labels are i18n keys resolved via `t()` at render —
 // the enum value stays the stable identity used for selection and persistence.
-const DIETS: { labelKey: string; value: Diet }[] = [
+const DIETS: { labelKey: TranslationKey; value: Diet }[] = [
   { labelKey: 'dietaryProfile.diets.vegetarian', value: Diet.Vegetarian },
   { labelKey: 'dietaryProfile.diets.vegan', value: Diet.Vegan },
   { labelKey: 'recipes.diet.GLUTEN_FREE', value: Diet.GlutenFree },
@@ -40,7 +40,7 @@ const LIFESTYLE_DIETS = DIETS.filter(d => isLifestyleDiet(d.value));
 const CONSTRAINT_DIETS = DIETS.filter(d => !isLifestyleDiet(d.value));
 
 // Allergies and intolerances
-const INTOLERANCES: { labelKey: string; value: Intolerance }[] = [
+const INTOLERANCES: { labelKey: TranslationKey; value: Intolerance }[] = [
   { labelKey: 'recipes.intolerance.DAIRY', value: Intolerance.Dairy },
   { labelKey: 'dietaryProfile.intolerances.egg', value: Intolerance.Egg },
   { labelKey: 'recipes.intolerance.GLUTEN', value: Intolerance.Gluten },
@@ -69,7 +69,7 @@ const INTOLERANCES: { labelKey: string; value: Intolerance }[] = [
 ];
 
 // Nutritional objectives
-const HEALTH_GOALS: { labelKey: string; value: HealthGoal }[] = [
+const HEALTH_GOALS: { labelKey: TranslationKey; value: HealthGoal }[] = [
   { labelKey: 'recipes.healthGoal.LOW_CARB', value: HealthGoal.LowCarb },
   {
     labelKey: 'recipes.healthGoal.HIGH_PROTEIN',
@@ -157,7 +157,7 @@ export const DietaryRestrictionSelector: React.FC<
   // Resolve an option's localized label, falling back to the raw enum value so
   // an unrecognized restriction still renders something readable.
   const labelFor = <T extends string>(
-    options: { labelKey: string; value: T }[],
+    options: { labelKey: TranslationKey; value: T }[],
     value: T,
   ): string => {
     const match = options.find(o => o.value === value);
@@ -165,29 +165,25 @@ export const DietaryRestrictionSelector: React.FC<
   };
 
   // Map existing restrictions to display items
-  const existingLifestyleItems = existingLifestyleRows.map(r => ({
-    id: r.id,
-    label: labelFor(DIETS, r.diet!),
-  }));
+  const existingLifestyleItems = existingLifestyleRows.flatMap(r =>
+    r.diet ? [{ id: r.id, label: labelFor(DIETS, r.diet) }] : [],
+  );
 
-  const existingConstraintItems = existingConstraintRows.map(r => ({
-    id: r.id,
-    label: labelFor(DIETS, r.diet!),
-  }));
+  const existingConstraintItems = existingConstraintRows.flatMap(r =>
+    r.diet ? [{ id: r.id, label: labelFor(DIETS, r.diet) }] : [],
+  );
 
-  const existingIntoleranceItems = existingRestrictions
-    .filter(r => r.intolerance)
-    .map(r => ({
-      id: r.id,
-      label: labelFor(INTOLERANCES, r.intolerance!),
-    }));
+  const existingIntoleranceItems = existingRestrictions.flatMap(r =>
+    r.intolerance
+      ? [{ id: r.id, label: labelFor(INTOLERANCES, r.intolerance) }]
+      : [],
+  );
 
-  const existingGoalItems = existingRestrictions
-    .filter(r => r.healthGoal)
-    .map(r => ({
-      id: r.id,
-      label: labelFor(HEALTH_GOALS, r.healthGoal!),
-    }));
+  const existingGoalItems = existingRestrictions.flatMap(r =>
+    r.healthGoal
+      ? [{ id: r.id, label: labelFor(HEALTH_GOALS, r.healthGoal) }]
+      : [],
+  );
 
   // Prepare available items for sheets. Lifestyle shows all options (including
   // the current pick) so the user can switch; constraints/intolerances/goals
@@ -257,7 +253,7 @@ export const DietaryRestrictionSelector: React.FC<
       return;
     }
 
-    executeWriteWithFinally(
+    void executeWriteWithFinally(
       async () => {
         const replaceIds = existingLifestyleRows.map(r => r.id);
         const success = await onSelectLifestyleDiet(selected, replaceIds);
@@ -283,7 +279,7 @@ export const DietaryRestrictionSelector: React.FC<
       return;
     }
 
-    executeWriteWithFinally(
+    void executeWriteWithFinally(
       async () => {
         const restrictions: RestrictionType[] = selectedConstraintIds.map(
           diet => ({ diet }),
@@ -315,7 +311,7 @@ export const DietaryRestrictionSelector: React.FC<
       return;
     }
 
-    executeWriteWithFinally(
+    void executeWriteWithFinally(
       async () => {
         const restrictions: RestrictionType[] = selectedIntoleranceIds.map(
           intolerance => ({
@@ -349,7 +345,7 @@ export const DietaryRestrictionSelector: React.FC<
       return;
     }
 
-    executeWriteWithFinally(
+    void executeWriteWithFinally(
       async () => {
         const restrictions: RestrictionType[] = selectedGoalIds.map(
           healthGoal => ({

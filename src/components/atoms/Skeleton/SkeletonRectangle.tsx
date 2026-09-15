@@ -1,5 +1,5 @@
 import React from 'react';
-import { ViewStyle } from 'react-native';
+import type { ViewStyle } from 'react-native';
 import { SkeletonBase } from './SkeletonBase';
 
 interface SkeletonRectangleProps {

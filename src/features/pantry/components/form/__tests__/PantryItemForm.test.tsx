@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { makeCache } from '#/apollo/cache';
-import { InMemoryCache } from '@apollo/client';
+import type { InMemoryCache } from '@apollo/client';
 import { screen, userEvent } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetHomeDocument } from '#operations/home/home.generated';
@@ -69,26 +69,63 @@ jest.mock('#components/atoms/FormInput', () => ({
   FormInput: ({
     label,
     placeholder,
+    value,
+    onChangeText,
+    error,
   }: {
     label?: string;
     placeholder?: string;
+    value?: string;
+    onChangeText?: (text: string) => void;
+    error?: string;
   }) => {
     const { TextInput, Text, View } = require('react-native');
     return (
       <View>
         {label ? <Text>{label}</Text> : null}
-        <TextInput placeholder={placeholder} />
+        <TextInput
+          placeholder={placeholder}
+          value={value}
+          onChangeText={onChangeText}
+        />
+        {error ? <Text>{error}</Text> : null}
       </View>
     );
   },
 }));
 
 jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
-  UnitAutocompleteField: ({ label }: { label?: string }) => {
-    const { Text, View } = require('react-native');
+  UnitAutocompleteField: ({
+    label,
+    onChangeText,
+    onUnitSelected,
+    error,
+  }: {
+    label?: string;
+    onChangeText?: (text: string) => void;
+    onUnitSelected?: (
+      unitId: string | null,
+      unitName: string | null,
+      unitType?: string | null,
+      unitSymbol?: string | null,
+    ) => void;
+    error?: string;
+  }) => {
+    const { Text, View, Pressable } = require('react-native');
     return (
       <View testID="unit-autocomplete">
         {label ? <Text>{label}</Text> : null}
+        <Pressable
+          testID="pick-unit"
+          onPress={() => {
+            // The real field's onSelect order: the symbol first, then the id.
+            onChangeText?.('lb');
+            onUnitSelected?.('unit-lb', 'Pound', 'WEIGHT', 'lb');
+          }}
+        >
+          <Text>Pick lb</Text>
+        </Pressable>
+        {error ? <Text>{error}</Text> : null}
       </View>
     );
   },
@@ -180,11 +217,22 @@ jest.mock('../ItemInformationSection', () => ({
 }));
 
 jest.mock('../QuantitySection', () => ({
-  QuantitySection: ({ testID }: { testID?: string }) => {
+  QuantitySection: ({
+    testID,
+    control,
+  }: React.ComponentProps<
+    typeof import('../QuantitySection').QuantitySection
+  >) => {
     const { Text, View } = require('react-native');
+    const { useWatch } = require('react-hook-form');
+    const [quantityInput, minQuantity, restockQuantity] = useWatch({
+      control,
+      name: ['quantityInput', 'minQuantity', 'restockQuantity'],
+    });
     return (
       <View testID={testID || 'quantity-section'}>
         <Text>Quantity</Text>
+        <Text>{`seeded:${quantityInput}|${minQuantity}|${restockQuantity}`}</Text>
       </View>
     );
   },
@@ -330,6 +378,25 @@ describe('PantryItemForm — edit mode', () => {
   });
 });
 
+describe('PantryItemForm — quantity seeds', () => {
+  it('seeds the fraction field with a cooking fraction and the decimal-pad fields rounded to three decimals', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<PantryItemForm itemId="item-1" />, {
+      cache: buildCache({
+        itemId: 'item-1',
+        itemFixture: {
+          quantity: 1.33333334,
+          minQuantity: 0.33333334,
+          restockQuantity: 177.4412,
+        },
+      }),
+    });
+    await screen.findByText('Edit Pantry Item');
+    await user.press(screen.getByText('Inventory'));
+    expect(screen.getByText('seeded:1 1/3|0.333|177.441')).toBeTruthy();
+  });
+});
+
 describe('PantryItemForm — page navigation', () => {
   it('renders all four pages on the PageIndicator', async () => {
     renderWithApollo(<PantryItemForm itemId="item-1" />, {
@@ -340,5 +407,26 @@ describe('PantryItemForm — page navigation', () => {
     expect(screen.getByText('Product')).toBeTruthy();
     expect(screen.getByText('Storage')).toBeTruthy();
     expect(screen.getByText('Inventory')).toBeTruthy();
+  });
+});
+
+describe('PantryItemForm — net weight', () => {
+  it('clears the unit refusal once a unit is picked', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<PantryItemForm itemId="item-1" />, {
+      cache: buildCache({ itemId: 'item-1' }),
+    });
+    await screen.findByText('Edit Pantry Item');
+    await user.press(screen.getByText('Product'));
+
+    await user.type(screen.getByPlaceholderText('e.g., 14.5'), '1');
+    expect(
+      await screen.findByText('Please select a unit for the net weight.'),
+    ).toBeTruthy();
+
+    await user.press(screen.getByTestId('pick-unit'));
+    expect(
+      screen.queryByText('Please select a unit for the net weight.'),
+    ).toBeNull();
   });
 });

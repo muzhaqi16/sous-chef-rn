@@ -8,7 +8,7 @@ import { addDays, differenceInDays, parseISO } from 'date-fns';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { FormInput } from '#components/atoms/FormInput';
 import { Icon } from '#utils/iconUtils';
-import { type MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { Text } from '#components/atoms/Text';
 import {
   formatMonthDay,
@@ -211,7 +211,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   dateSubtext: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   infoCard: {
     flexDirection: 'row',

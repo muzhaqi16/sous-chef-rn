@@ -487,7 +487,7 @@ describe('useBatchMoveToPantry', () => {
 
   /**
    * A null payload with no error is how the offline queue reports a QUEUED
-   * mutation, not a failure — `classifyCreateResult` is the single place that
+   * mutation, not a failure — `settledStatus` is the single place that
    * meaning is encoded. Treating it as a failure only holds for an online-only
    * move, where a null result can mean nothing else.
    */

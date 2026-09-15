@@ -31,7 +31,7 @@ export const ReminderSection: React.FC<ReminderSectionProps> = ({
 
   return (
     <View style={commonStyles.settingsSection}>
-      <Text style={commonStyles.settingsSectionTitle}>
+      <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
         {t('shoppingListScreens.reminderSection')}
       </Text>
 
@@ -49,7 +49,7 @@ export const ReminderSection: React.FC<ReminderSectionProps> = ({
           onPress={handleClearReminder}
         >
           <Icon name="notifications-off-outline" size={20} tone="primary" />
-          <Text tone="accent" style={styles.actionText}>
+          <Text role="body" tone="accent" style={styles.actionText}>
             {t('shoppingListScreens.clearReminder')}
           </Text>
         </Pressable>

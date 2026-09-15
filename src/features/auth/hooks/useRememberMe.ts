@@ -71,9 +71,5 @@ export const useRememberMe = ({ onAccept, onDecline }: RememberMeEvents) => {
     handleRememberMeAccept,
     handleRememberMeDecline,
     showRememberMePrompt,
-
-    // Internal state management
-    setShowRememberMeModal,
-    setPendingCredentials,
   };
 };

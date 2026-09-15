@@ -36,7 +36,7 @@ describe('SelectorContent', () => {
     const { getByText } = render(
       <SelectorContent config={baseConfig} />,
     );
-    expect(getByText('No items available')).toBeTruthy();
+    expect(getByText('No items yet')).toBeTruthy();
   });
 
   it('renders empty state with custom message', () => {

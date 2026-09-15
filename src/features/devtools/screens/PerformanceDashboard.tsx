@@ -42,7 +42,7 @@ export const PerformanceDashboard: React.FC = () => {
     return (
       <ProfileScreenWrapper title={t('labels.performanceDashboard')}>
         <View style={styles.notAvailableContainer}>
-          <Text tone="secondary" align="center">
+          <Text role="body" tone="secondary" align="center">
             {t('performance.notAvailable')}
           </Text>
         </View>

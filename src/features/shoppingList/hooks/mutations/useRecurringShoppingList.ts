@@ -19,21 +19,16 @@ import { readCopyableList } from '#features/shoppingList/cache/copySource';
 import { nextRecurringList } from '#features/shoppingList/utils/nextRecurringList';
 import { useCopyShoppingList } from './useCopyShoppingList';
 import type { RecurringPattern } from '#/graphql/generated/schemaTypes';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { toastService } from '#/services/toastService';
-import { errorService } from '#/services/errorService';
 
 export function useRecurringShoppingList() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [setupMutation, { loading: settingUp }] = useMutation(
-    CreateRecurringShoppingListDocument,
-  );
-  const [cancelMutation, { loading: cancelling }] = useMutation(
-    CancelRecurringDocument,
-  );
+  const [setupMutation] = useMutation(CreateRecurringShoppingListDocument);
+  const [cancelMutation] = useMutation(CancelRecurringDocument);
   const { copyList, copying: generating } = useCopyShoppingList(
     t('shoppingListScreens.failedToGenerateNext'),
   );
@@ -69,35 +64,25 @@ export function useRecurringShoppingList() {
       'Set Recurring',
     );
 
-    let result;
-    try {
-      result = await setupMutation({
-        variables: {
-          input: {
-            id,
-            recurringPattern: pattern,
-            recurringInterval: interval,
+    const settled = await settleMutation(
+      () =>
+        setupMutation({
+          variables: {
+            input: {
+              id,
+              recurringPattern: pattern,
+              recurringInterval: interval,
+            },
           },
-        },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Set Recurring error:',
-      });
-    }
-
-    if (!result) {
-      revert();
-      return false;
-    }
-    if (
-      alertIfRejected(result, t('shoppingListScreens.failedToSetRecurring'))
-    ) {
-      revert();
-      return false;
-    }
-    return true;
+          context: { localFirst: true },
+        }),
+      {
+        document: CreateRecurringShoppingListDocument,
+        fallback: t('shoppingListScreens.failedToSetRecurring'),
+        onFailed: revert,
+      },
+    );
+    return settled.status !== 'failed';
   };
 
   const cancelRecurring = async (id: string): Promise<boolean> => {
@@ -107,29 +92,19 @@ export function useRecurringShoppingList() {
       'Cancel Recurring',
     );
 
-    let result;
-    try {
-      result = await cancelMutation({
-        variables: { input: { id } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Cancel Recurring error:',
-      });
-    }
-
-    if (!result) {
-      revert();
-      return false;
-    }
-    if (
-      alertIfRejected(result, t('shoppingListScreens.failedToCancelRecurring'))
-    ) {
-      revert();
-      return false;
-    }
-    return true;
+    const settled = await settleMutation(
+      () =>
+        cancelMutation({
+          variables: { input: { id } },
+          context: { localFirst: true },
+        }),
+      {
+        document: CancelRecurringDocument,
+        fallback: t('shoppingListScreens.failedToCancelRecurring'),
+        onFailed: revert,
+      },
+    );
+    return settled.status !== 'failed';
   };
 
   const readRecurrence = (id: string) =>
@@ -200,33 +175,31 @@ export function useRecurringShoppingList() {
       { nextRecurringDate },
       'Advance Recurrence',
     );
-    let result;
-    try {
-      result = await setupMutation({
-        variables: {
-          input: {
-            id,
-            recurringPattern,
-            recurringInterval,
-            nextRecurringDate,
+    await settleMutation(
+      () =>
+        setupMutation({
+          variables: {
+            input: {
+              id,
+              recurringPattern,
+              recurringInterval,
+              nextRecurringDate,
+            },
           },
-        },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Advance Recurrence error:',
-      });
-    }
-    if (!result) revert();
+          context: { localFirst: true },
+        }),
+      {
+        document: CreateRecurringShoppingListDocument,
+        fallback: t('shoppingListScreens.failedToSetRecurring'),
+        onFailed: revert,
+      },
+    );
   }
 
   return {
     setRecurring,
     cancelRecurring,
     generateNext,
-    settingUp,
-    cancelling,
     generating,
   };
 }

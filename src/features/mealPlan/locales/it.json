@@ -18,7 +18,9 @@
     "startDateRequiredMessage": "Seleziona una data di inizio.",
     "failedToCreate": "Impossibile creare il piano dei pasti.",
     "needsThePlan": "Apri prima il piano, così i suoi pasti sono disponibili.",
-    "needsTheTemplate": "Apri prima il modello, così i suoi pasti sono disponibili."
+    "needsTheTemplate": "Apri prima il modello, così i suoi pasti sono disponibili.",
+    "daily": "Giornaliero",
+    "custom": "Personalizzato"
   },
   "addMealSheet": {
     "searchPlaceholder": "Cerca ricette o aggiungi un pasto personalizzato...",
@@ -74,7 +76,8 @@
   },
   "addToMealPlan": {
     "title": "Aggiungi al piano pasti",
-    "dateLabel": "Data"
+    "dateLabel": "Data",
+    "morePlans": "Altri piani"
   },
   "duplicatePlan": {
     "duplicating": "Duplicazione in corso...",
@@ -146,7 +149,10 @@
     "emptyPreview": "Nessun pasto in questo modello",
     "day": "Giorno {{day}}",
     "customMeal": "Personalizzato",
-    "metaLine": "{{days}} giorni · {{servings}} porzioni"
+    "metaLine": "{{days}} giorni · {{servings}} porzioni",
+    "duplicateTemplate": "Duplica modello",
+    "deleteTemplate": "Elimina modello",
+    "duplicateNameLabel": "Nome del nuovo modello"
   },
   "mealPlanMain": {
     "label": "Pianifica i tuoi pasti",
@@ -177,7 +183,10 @@
     "failedToSave": "Impossibile salvare il modello",
     "failedToAddItem": "Impossibile aggiungere il pasto",
     "failedToSaveItem": "Impossibile salvare il pasto",
-    "failedToRemoveItem": "Impossibile rimuovere il pasto"
+    "failedToRemoveItem": "Impossibile rimuovere il pasto",
+    "savedRecipe": "Ricetta salvata",
+    "chooseRecipe": "Scegli una ricetta salvata",
+    "changeRecipe": "Cambia ricetta"
   },
   "mealPlanSelector": {
     "title": "Seleziona piano pasti",
@@ -185,7 +194,8 @@
     "createFromTemplate": "Modello",
     "searchPlaceholder": "Cerca piani",
     "filterActive": "Attivi",
-    "personalSubtitle": "Personale"
+    "personalSubtitle": "Personale",
+    "loadMore": "Mostra altri piani"
   },
   "macroTargets": {
     "caloriesRange": "Le calorie devono essere tra {{min}} e {{max}}",
@@ -206,6 +216,7 @@
     "planCreated": "Piano dei pasti creato dal modello!",
     "savedAsTemplate": "Piano dei pasti salvato come modello!",
     "templateDeleted": "Modello eliminato",
-    "templateDuplicated": "Modello duplicato!"
+    "templateDuplicated": "Modello duplicato!",
+    "deleteFailed": "Impossibile eliminare il modello"
   }
 }

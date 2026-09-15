@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';
-import { useTranslation } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
+import { useTranslation, type TranslationKey } from '#/i18n';
+import {
+  Pressable,
+  ThemedActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -26,7 +29,7 @@ interface AddToMealPlanSheetProps {
   initialMealType?: MealType;
 }
 
-const MEAL_TYPE_KEYS: { type: MealType; labelKey: string }[] = [
+const MEAL_TYPE_KEYS: { type: MealType; labelKey: TranslationKey }[] = [
   { type: MealType.Breakfast, labelKey: 'labels.breakfast' },
   { type: MealType.Brunch, labelKey: 'labels.brunch' },
   { type: MealType.Lunch, labelKey: 'labels.lunch' },
@@ -66,10 +69,17 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
     }
   }
 
-  const { addRecipeToMealPlan, adding, hasPlan, mealPlans, activePlanId } =
-    useAddRecipeToMealPlan({ planId: selectedPlanId });
-
-  const activePlan = mealPlans.find(p => p.id === activePlanId) ?? null;
+  const {
+    addRecipeToMealPlan,
+    adding,
+    hasPlan,
+    mealPlans,
+    activePlan,
+    activePlanId,
+    hasMorePlans,
+    loadingMorePlans,
+    loadMorePlans,
+  } = useAddRecipeToMealPlan({ planId: selectedPlanId });
 
   const minDate = activePlan
     ? startOfDay(parseISO(activePlan.startDate))
@@ -116,7 +126,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
           </Text>
         )}
 
-        {hasPlan && mealPlans.length > 1 ? (
+        {hasPlan && (mealPlans.length > 1 || hasMorePlans) ? (
           <>
             <SectionHeader variant="overline" style={styles.sectionLabel}>
               {t('labels.mealPlan')}
@@ -162,6 +172,21 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
                   </Pressable>
                 );
               })}
+              {hasMorePlans ? (
+                <Pressable
+                  onPress={loadMorePlans}
+                  disabled={loadingMorePlans}
+                  style={styles.morePlansChip}
+                >
+                  {loadingMorePlans ? (
+                    <ThemedActivityIndicator size="small" />
+                  ) : (
+                    <Text role="label" tone="accent">
+                      {t('addToMealPlan.morePlans')}
+                    </Text>
+                  )}
+                </Pressable>
+              ) : null}
             </ScrollView>
           </>
         ) : null}
@@ -251,6 +276,15 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
+  morePlansChip: {
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
+    borderWidth: theme.borderWidth.hairline,
+    borderColor: theme.colors.border,
+  },
   planChipSelected: {
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
@@ -263,7 +297,7 @@ const styles = StyleSheet.create(theme => ({
   },
   planChipDate: {
     color: theme.colors.textSecondary,
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   planChipDateSelected: {
     color: theme.colors.onPrimary,

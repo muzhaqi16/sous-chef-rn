@@ -1,6 +1,8 @@
-import React, { RefObject } from 'react';
+import type { RefObject } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
+import { MEAL_PLAN_TYPE_LABEL_KEYS } from '#features/mealPlan/utils/mealPlanEnumLabels';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseISO } from 'date-fns';
 import { formatDateRange } from '#/utils/formatters/date';
@@ -11,10 +13,29 @@ import type {
   ItemSelectorRef,
 } from '#components/organisms/AnimatedItemSelector/types';
 import { SelectorItemContainer } from '#components/organisms/AnimatedItemSelector/SelectorItemContainer';
-import { type MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import { useDebouncedValue } from '#hooks/utils/useDebouncedValue';
+import { useMealPlanList } from '#features/mealPlan/hooks/useMealPlans';
+import {
+  filterMealPlans,
+  hasMealPlanFilter,
+  toMealPlanServerFilters,
+  type MealPlanFilterState,
+} from '#features/mealPlan/utils/mealPlanFilters';
+
+const SEARCH_DEBOUNCE_MS = 300;
+
+interface MealPlanPages {
+  mealPlans: MealPlanDisplayFragment[];
+  hasMore: boolean;
+  loadingMore: boolean;
+  loadMore: () => Promise<void>;
+}
 
 interface UseMealPlanSelectorConfigOptions {
-  mealPlans: MealPlanDisplayFragment[];
+  /** The unfiltered plan list, as far as it has been paged. */
+  plans: MealPlanPages;
+  filters: MealPlanFilterState;
   selectedMealPlanId?: string | null;
   loading: boolean;
   setSelectedMealPlanId: (id: string) => void;
@@ -30,16 +51,13 @@ function formatPlanDateRange(startDate: string, endDate: string): string {
   return formatDateRange(parseISO(startDate), parseISO(endDate));
 }
 
-function formatPlanType(planType: string): string {
-  return planType.charAt(0) + planType.slice(1).toLowerCase();
-}
-
 export function useMealPlanSelectorConfig(
   options: UseMealPlanSelectorConfigOptions,
 ): SelectorConfig<MealPlanDisplayFragment> {
   const { t } = useTranslation();
   const {
-    mealPlans,
+    plans,
+    filters,
     selectedMealPlanId,
     loading,
     setSelectedMealPlanId,
@@ -50,6 +68,26 @@ export function useMealPlanSelectorConfig(
     listHeader,
   } = options;
   const personalLabel = t('mealPlanSelector.personalSubtitle');
+
+  // A filter runs on the server so it reaches every plan, not the loaded pages.
+  const debouncedSearch = useDebouncedValue(filters.search, SEARCH_DEBOUNCE_MS);
+  const serverFilters = toMealPlanServerFilters({
+    ...filters,
+    search: debouncedSearch,
+  });
+  const filtered = useMealPlanList(serverFilters, { skip: !serverFilters });
+  const isFiltering = hasMealPlanFilter(filters);
+
+  // Until the variant for THESE filters answers (typing, first fetch, offline)
+  // the loaded pages stand in. The client pass also drops what a local create
+  // wrote into a variant it does not match.
+  const source: MealPlanPages =
+    isFiltering && filtered.hasResult && debouncedSearch === filters.search
+      ? filtered
+      : plans;
+  const mealPlans = isFiltering
+    ? filterMealPlans(source.mealPlans, filters, new Date())
+    : plans.mealPlans;
 
   const renderMealPlanItem = (
     item: MealPlanDisplayFragment,
@@ -65,7 +103,7 @@ export function useMealPlanSelectorConfig(
           <Text role="bodyStrong">{item.name}</Text>
           <Text role="caption" tone="secondary" style={styles.itemSubtext}>
             {formatPlanDateRange(item.startDate, item.endDate)} ·{' '}
-            {formatPlanType(item.planType)}
+            {t(MEAL_PLAN_TYPE_LABEL_KEYS[item.planType])}
             {` · ${item.home?.name ?? personalLabel}`}
           </Text>
         </View>
@@ -84,6 +122,14 @@ export function useMealPlanSelectorConfig(
     },
     displayProperty: 'name',
     loading,
+    pagination: {
+      hasMore: source.hasMore,
+      loadingMore: source.loadingMore,
+      onLoadMore: () => {
+        void source.loadMore();
+      },
+      loadMoreLabel: t('mealPlanSelector.loadMore'),
+    },
     emptyMessage: t('mealPlanSelector.emptyMessage'),
     listHeader,
     renderCustomItem: renderMealPlanItem,
@@ -116,11 +162,11 @@ export function useMealPlanSelectorConfig(
   };
 }
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create(theme => ({
   itemContent: {
     flex: 1,
   },
   itemSubtext: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
 }));

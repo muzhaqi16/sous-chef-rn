@@ -108,6 +108,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
               {t('folderPicker.deleteConfirm')}
             </Text>
             <Text
+              role="body"
               tone="secondary"
               align="center"
               style={styles.deleteConfirmText}
@@ -195,7 +196,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
                   disabled={folderActionLoading}
                 >
                   <Icon name="trash-outline" size={18} tone="error" />
-                  <Text role="bodyStrong" tone="error">
+                  <Text role="bodyStrong" tone="danger">
                     {t('folderPicker.deleteFolder')}
                   </Text>
                 </AppPressable>

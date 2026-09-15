@@ -4,8 +4,10 @@ import { makeCache } from '#/apollo/cache';
 import { screen, act, fireEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryContent } from '../PantryContent';
-import { PantryItem, StorageState } from '#/graphql/generated/schemaTypes';
+import type { PantryItem } from '#/graphql/generated/schemaTypes';
+import { StorageState } from '#/graphql/generated/schemaTypes';
 import type { EmptyStateProps } from '#components/molecules/EmptyState';
+import { kitTestIDs } from '#components/testIDs';
 import type {
   FilterTabConfig,
   FilterTabsProps,
@@ -401,6 +403,38 @@ describe('PantryContent', () => {
     ).toBeTruthy();
   });
 
+  it('shows the failure with a retry, never the empty state, when the items read failed', () => {
+    const onRetry = jest.fn();
+    render(
+      <PantryContent
+        {...defaultProps}
+        items={[]}
+        searchQuery="milk"
+        onAddItem={jest.fn()}
+        itemsFailure={{ state: 'error', onRetry }}
+      />,
+    );
+    expect(screen.getByTestId(kitTestIDs.stateError)).toBeTruthy();
+    expect(screen.queryByText('Your pantry is empty')).toBeNull();
+    expect(screen.queryByText('No results for "milk"')).toBeNull();
+
+    fireEvent.press(screen.getByText('Try again'));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the no-home state above a failed items read', () => {
+    render(
+      <PantryContent
+        {...defaultProps}
+        items={[]}
+        noHomes={true}
+        itemsFailure={{ state: 'offline', onRetry: jest.fn() }}
+      />,
+    );
+    expect(screen.getByText('No home yet')).toBeTruthy();
+    expect(screen.queryByTestId(kitTestIDs.stateOffline)).toBeNull();
+  });
+
   it('shows search empty state with add action when search query has no results', () => {
     const onAddItem = jest.fn();
     render(
@@ -416,6 +450,29 @@ describe('PantryContent', () => {
       screen.getByText('Would you like to add it to your pantry?'),
     ).toBeTruthy();
     expect(screen.getByText('Add Item')).toBeTruthy();
+  });
+
+  it('shows a skeleton, not "no results", while a server search has not answered', () => {
+    const view = render(
+      <PantryContent
+        {...defaultProps}
+        items={[]}
+        searchQuery="nonexistent"
+        searching
+      />,
+    );
+    expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
+    expect(screen.queryByText('No results for "nonexistent"')).toBeNull();
+
+    view.rerender(
+      <PantryContent
+        {...defaultProps}
+        items={[]}
+        searchQuery="nonexistent"
+        searching={false}
+      />,
+    );
+    expect(screen.getByText('No results for "nonexistent"')).toBeTruthy();
   });
 
   it('shows location-specific empty state when filter is active with existing items and loading is false', () => {
@@ -1006,10 +1063,8 @@ describe('PantryContent', () => {
     });
 
     it('arms the skeleton for a server-mode sort change and lifts it when the re-sorted page lands', () => {
-      const sortingMock = (
-        jest.requireMock('../hooks/usePantrySorting') as {
-          usePantrySorting: jest.Mock;
-        }
+      const sortingMock = jest.requireMock(
+        '../hooks/usePantrySorting',
       ).usePantrySorting;
       const sortingValue = (sortOption: string) => ({
         sortOption,

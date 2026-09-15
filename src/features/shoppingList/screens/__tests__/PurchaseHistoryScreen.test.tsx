@@ -8,6 +8,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { GetItemPurchaseHistoryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { PurchaseHistoryScreen } from '../PurchaseHistoryScreen';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -19,6 +20,9 @@ jest.mock('#utils/iconUtils', () => ({
   },
 }));
 jest.mock('#hooks/navigation/useAppNavigation');
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: jest.fn(() => false),
+}));
 
 type PurchaseNode = {
   __typename: 'Purchase';
@@ -58,7 +62,10 @@ const purchaser = (
     : null,
 });
 
-const historyMock = (nodes: PurchaseNode[]): MockedResponse => ({
+const historyMock = (
+  nodes: PurchaseNode[],
+  hasNextPage = false,
+): MockedResponse => ({
   request: {
     query: GetItemPurchaseHistoryDocument,
     variables: () => true,
@@ -73,8 +80,8 @@ const historyMock = (nodes: PurchaseNode[]): MockedResponse => ({
           edges: nodes.map(node => ({ __typename: 'PurchaseEdge', node })),
           pageInfo: {
             __typename: 'PageInfo',
-            hasNextPage: false,
-            endCursor: null,
+            hasNextPage,
+            endCursor: hasNextPage ? 'cursor-1' : null,
           },
           totalCount: nodes.length,
         },
@@ -117,6 +124,17 @@ const failingMock: MockedResponse = {
 const route = { params: { itemId: '1', itemName: 'Milk' } };
 
 describe('PurchaseHistoryScreen', () => {
+  beforeEach(() => jest.mocked(useIsApiUnavailable).mockReturnValue(false));
+
+  it('says why the list stops when another page exists but the network is withheld', async () => {
+    jest.mocked(useIsApiUnavailable).mockReturnValue(true);
+    renderWithApollo(<PurchaseHistoryScreen route={route} />, {
+      operationMocks: [historyMock([purchase], true)],
+    });
+    expect(await screen.findByText('2 kg')).toBeTruthy();
+    expect(screen.getByText(/nothing more to load/)).toBeTruthy();
+  });
+
   it('renders header with item name', () => {
     renderWithApollo(<PurchaseHistoryScreen route={route} />, {
       operationMocks: [historyMock([purchase])],
@@ -150,6 +168,19 @@ describe('PurchaseHistoryScreen', () => {
     });
     // 2 kg for $5.00 total; the API stores the $2.50 per unit.
     await waitFor(() => expect(screen.getByText('$2.50 per kg')).toBeTruthy());
+  });
+
+  it('renders a fractional purchase quantity as a cooking fraction', async () => {
+    renderWithApollo(<PurchaseHistoryScreen route={route} />, {
+      operationMocks: [
+        historyMock([
+          { ...purchase, id: 'p4', quantity: 1.25 },
+          { ...purchase, id: 'p5', quantity: 177.4412 },
+        ]),
+      ],
+    });
+    await waitFor(() => expect(screen.getByText('1 1/4 kg')).toBeTruthy());
+    expect(screen.getByText('177.441 kg')).toBeTruthy();
   });
 
   it('omits the per-unit line when one unit was bought', async () => {

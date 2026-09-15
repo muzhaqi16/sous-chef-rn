@@ -1,6 +1,9 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import React from 'react';
 import { useTranslation } from '#/i18n';
+import { View } from 'react-native';
 import { EmptyState } from '#components/molecules/EmptyState';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { PantryScreenSkeleton } from '#features/pantry/components/skeletons/PantryScreenSkeleton';
 import { EMPTY_STATE_MIN_HEIGHT } from './pantryDisplay/constants';
 import type { PantryEmptyStateProps } from './pantryDisplay/types';
@@ -19,6 +22,7 @@ export function PantryEmptyState({
   onSelectHome,
   onCreatePantry,
   overallItemCount,
+  failure,
 }: PantryEmptyStateProps) {
   const { t } = useTranslation();
 
@@ -27,7 +31,7 @@ export function PantryEmptyState({
   if (noHomes) {
     return (
       <EmptyState
-        testID="pantry-empty-state"
+        testID={pantryTestIDs.emptyState}
         icon="home-outline"
         title={t('pantryScreen.noHomeTitle')}
         description={t('pantryScreen.noHomeDescription')}
@@ -47,7 +51,7 @@ export function PantryEmptyState({
   if (noHomeSelected) {
     return (
       <EmptyState
-        testID="pantry-empty-state"
+        testID={pantryTestIDs.emptyState}
         icon="home-outline"
         title={t('errors.noHomeSelected')}
         description={t('pantryScreen.noHomeSelectedDescription')}
@@ -67,7 +71,7 @@ export function PantryEmptyState({
   if (noPantries) {
     return (
       <EmptyState
-        testID="pantry-empty-state"
+        testID={pantryTestIDs.emptyState}
         icon="basket-outline"
         title={t('pantryScreen.noPantriesTitle')}
         description={t('pantryScreen.noPantriesDescription')}
@@ -84,12 +88,20 @@ export function PantryEmptyState({
     );
   }
 
+  if (failure) {
+    return (
+      <View style={styles.emptyState}>
+        <DataStateView state={failure.state} onRetry={failure.onRetry} />
+      </View>
+    );
+  }
+
   if (searchQuery) {
     const displayQuery =
       searchQuery.length > 30 ? searchQuery.slice(0, 30) + '...' : searchQuery;
     return (
       <EmptyState
-        testID="pantry-empty-state"
+        testID={pantryTestIDs.emptyState}
         icon="search-outline"
         title={t('empty.noResultsFor', { query: displayQuery })}
         description={t('pantryScreen.searchNoResultsDescription')}
@@ -111,7 +123,7 @@ export function PantryEmptyState({
     const tabName = activeTab?.label ?? t('pantryScreen.tabEmptyFallbackName');
     return (
       <EmptyState
-        testID="pantry-empty-state"
+        testID={pantryTestIDs.emptyState}
         icon="basket-outline"
         title={t('pantryScreen.tabEmptyTitle', { tabName })}
         description={t('pantryScreen.tabEmptyDescription')}
@@ -122,7 +134,7 @@ export function PantryEmptyState({
 
   return (
     <EmptyState
-      testID="pantry-empty-state"
+      testID={pantryTestIDs.emptyState}
       icon="basket-outline"
       title={t('empty.noPantryItems')}
       description={t('pantryScreen.emptySubtitle')}

@@ -1,16 +1,13 @@
-// The duplicate → Restock branch, which reports its outcome to nobody.
-//
-// `restockDuplicate` returns a `MutationOutcome`, and under `errorPolicy: 'all'`
-// a refusal RESOLVES — so an unread outcome flips the button to "Added" and
-// resets the scanner over a restock the server never made. The sibling
-// `addToPantry` call in the same handler branches on its outcome.
+// The duplicate → Restock branch. `restockDuplicate` resolves whether the
+// restock stands — the hook has already told the user when it does not — so a
+// refusal must not flip the button to "Added" or reset the scanner.
 //
 // The feature hook is mocked here rather than driven through Apollo: the branch
 // under test is what the screen does with the outcome, not how the hook
 // produces one.
 
 import React from 'react';
-import { screen, userEvent } from '@testing-library/react-native';
+import { act, screen, userEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { promptPantryDuplicate } from '#domain/pantryItemDuplicate';
 import { alertService } from '#/services/alertService';
@@ -34,7 +31,6 @@ jest.mock('#features/barcode/hooks/useAddScannedItem', () => ({
     addToPantry: (...args: unknown[]) => mockAddToPantry(...args),
     restockDuplicate: (...args: unknown[]) => mockRestockDuplicate(...args),
     forceAddPending: jest.fn(),
-    revertPending: jest.fn(),
     addToShoppingList: jest.fn(),
   }),
 }));
@@ -91,7 +87,10 @@ const pressAddThenRestock = async () => {
   const opts = (promptPantryDuplicate as jest.Mock).mock.lastCall?.[0] as {
     onRestock: () => void;
   };
-  await opts.onRestock();
+  // `onRestock` returns nothing to await; `act` flushes the work it starts.
+  await act(async () => {
+    opts.onRestock();
+  });
 };
 
 beforeEach(() => {
@@ -103,34 +102,20 @@ beforeEach(() => {
 });
 
 describe('restocking a duplicate the scanner found', () => {
-  it('reports a refusal instead of showing it as added', async () => {
-    mockRestockDuplicate.mockResolvedValue({
-      data: {
-        adjustPantryItemQuantity: {
-          __typename: 'ForbiddenError',
-          code: 'FORBIDDEN',
-          message: 'Not allowed',
-        },
-      },
-    });
+  it('does not show a refused restock as added', async () => {
+    mockRestockDuplicate.mockResolvedValue(false);
 
     await pressAddThenRestock();
 
     expect(mockRestockDuplicate).toHaveBeenCalledWith('pantry-item-9');
-    expect(alertService.alert).toHaveBeenCalled();
+    // The hook presents the refusal; the screen adds no second message.
+    expect(alertService.alert).not.toHaveBeenCalled();
     expect(onScanAnother).not.toHaveBeenCalled();
     expect(mockSetPendingPantryScrollToTop).not.toHaveBeenCalled();
   });
 
   it('completes the add when the restock is accepted', async () => {
-    mockRestockDuplicate.mockResolvedValue({
-      data: {
-        adjustPantryItemQuantity: {
-          __typename: 'PantryItemPayload',
-          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-9' },
-        },
-      },
-    });
+    mockRestockDuplicate.mockResolvedValue(true);
 
     await pressAddThenRestock();
 

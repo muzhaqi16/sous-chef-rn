@@ -34,6 +34,7 @@ export const PantryBatchHistoryScreen: React.FC<
     activeCount,
     state,
     loadMore,
+    hasNextPage,
     isFetchingMore,
     retry,
   } = usePantryBatchHistory(pantryItemId);
@@ -57,6 +58,7 @@ export const PantryBatchHistoryScreen: React.FC<
       state={state}
       onRetry={retry}
       onEndReached={loadMore}
+      hasNextPage={hasNextPage}
       isFetchingMore={isFetchingMore}
       keyExtractor={keyExtractor}
       renderItem={renderItem}

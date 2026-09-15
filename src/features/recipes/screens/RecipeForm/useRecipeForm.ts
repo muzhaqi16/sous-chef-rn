@@ -9,7 +9,7 @@ import {
   type HealthGoal,
   type Intolerance,
 } from '#/graphql/generated/schemaTypes';
-import { type RecipeForm_RecipeFragment } from './RecipeForm.generated';
+import type { RecipeForm_RecipeFragment } from './RecipeForm.generated';
 import type {
   IngredientFormState,
   StepFormState,
@@ -33,6 +33,23 @@ function parseCommaTags(raw: string): string[] | undefined {
     .map(tag => tag.trim())
     .filter(Boolean);
   return tags.length > 0 ? tags : undefined;
+}
+
+/**
+ * A stored step is a string, `{ text }` or `{ step }` (untyped JSON). A `text`
+ * that is present wins; a non-scalar one has no readable instruction.
+ */
+function stepInstruction(step: unknown): string {
+  if (typeof step === 'string') return step;
+  if (!step || typeof step !== 'object') return '';
+  const text = 'text' in step ? step.text : null;
+  if (text == null) {
+    return 'step' in step && typeof step.step === 'string' ? step.step : '';
+  }
+  if (typeof text === 'string') return text;
+  return typeof text === 'number' || typeof text === 'boolean'
+    ? String(text)
+    : '';
 }
 
 export function useRecipeForm() {
@@ -293,27 +310,11 @@ export function useRecipeForm() {
         sortOrder: ing.sortOrder ?? 0,
       })),
       steps: Array.isArray(recipe.instructions)
-        ? (recipe.instructions as unknown[]).map(
-            (step: unknown, i: number) => ({
-              id: generateTempId(),
-              instruction:
-                typeof step === 'string'
-                  ? step
-                  : step && typeof step === 'object'
-                  ? String(
-                      ('text' in step
-                        ? (step as { text: unknown }).text
-                        : null) ??
-                        ('step' in step &&
-                        typeof (step as { step: unknown }).step === 'string'
-                          ? (step as { step: string }).step
-                          : null) ??
-                        '',
-                    )
-                  : '',
-              sortOrder: i,
-            }),
-          )
+        ? recipe.instructions.map((step: unknown, i: number) => ({
+            id: generateTempId(),
+            instruction: stepInstruction(step),
+            sortOrder: i,
+          }))
         : [],
       notes: recipe.notes ?? '',
       tips: recipe.tips ?? '',
@@ -329,6 +330,7 @@ export function useRecipeForm() {
     state,
     errors: form.formState.errors,
     handleSubmit: form.handleSubmit,
+    setError: form.setError,
     updateField,
     addIngredient,
     updateIngredient,

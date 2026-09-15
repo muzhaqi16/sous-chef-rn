@@ -1,12 +1,8 @@
 import React from 'react';
-import {
-  View,
-  RefreshControl,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from '#/i18n';
+import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -59,7 +55,7 @@ const NO_HERO_TITLE_FADE_END = 72;
 const HeroChip: React.FC<{ action: HeaderAction }> = ({ action }) => (
   <AppPressable
     onPress={action.onPress}
-    disabled={action.disabled || action.loading}
+    disabled={!!action.disabled || !!action.loading}
     style={styles.chip}
     hitSlop={8}
     testID={action.testID}
@@ -177,7 +173,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
         scrollEventThrottle={16}
         refreshControl={
           onRefresh ? (
-            <RefreshControl
+            <PlainScrollRefreshControl
               refreshing={refreshing ?? false}
               onRefresh={onRefresh}
             />

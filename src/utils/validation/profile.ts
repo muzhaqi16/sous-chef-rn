@@ -1,16 +1,19 @@
 import { object, string } from 'yup';
 import { nameRule, normalizeSmartPunctuation } from './common';
 import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+import { t, type KeyUnder } from '#/i18n';
+import { isOwnKey } from '#utils/isOwnKey';
 
 /**
  * Schemas are built once at module scope, so a message resolved eagerly would
  * freeze whichever language was active at import time. Yup accepts a function
  * and calls it when the rule fails, so the lookup lands after any language
- * change. Same pattern as `validation/item.ts`.
+ * change. Same pattern as `features/catalog/utils/itemValidation.ts`.
  */
-const msg = (key: string, options?: Record<string, unknown>) => (): string =>
-  t(`profileValidation.${key}`, options);
+const msg =
+  (key: KeyUnder<'profileValidation'>, options?: Record<string, unknown>) =>
+  (): string =>
+    t(`profileValidation.${key}`, options);
 
 // display name rule
 const displayNameRule = string()
@@ -82,7 +85,7 @@ const dateOfBirthRule = string()
 // gender rule
 const genderRule = string().oneOf(
   ['male', 'female', 'non-binary', 'other', 'prefer-not-to-say'],
-  'Please select a valid gender',
+  msg('invalidGender'),
 );
 
 // profile visibility rule — derived from the schema so a hand-typed member can
@@ -111,16 +114,13 @@ export const profileFieldSchemas = {
 
 // Function to get validation schema for a specific field (matches your pattern)
 export const getValidationSchemaForField = (fieldKey: string) => {
-  const schema =
-    profileFieldSchemas[fieldKey as keyof typeof profileFieldSchemas];
-
-  if (!schema) {
-    return object({
-      [fieldKey]: string(),
-    });
+  if (isOwnKey(profileFieldSchemas, fieldKey)) {
+    return profileFieldSchemas[fieldKey];
   }
 
-  return schema;
+  return object({
+    [fieldKey]: string(),
+  });
 };
 
 // Complete profile validation schema (for full form validation if needed)

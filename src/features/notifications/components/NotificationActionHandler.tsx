@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
-import { ExpirationAction } from '#/graphql/generated/schemaTypes';
+import { errorService } from '#/services/errorService';
+import type { ExpirationAction } from '#/graphql/generated/schemaTypes';
 import { InvitationAcceptanceModal } from './InvitationAcceptanceModal';
 import type { InvitationData } from '#features/notifications/types';
 import { ExpirationActionSheet } from './ExpirationActionSheet';
@@ -66,8 +67,6 @@ export const NotificationActionHandler: React.FC<
           notification.payload.inviteId ||
           notification.payload.membershipId ||
           '',
-        title: notification.title,
-        description: notification.message,
         inviterName: notification.payload.inviterName,
         entityName:
           notification.payload.homeName || notification.payload.listName || '',
@@ -111,13 +110,13 @@ export const NotificationActionHandler: React.FC<
     action: ExpirationAction,
   ) => {
     if (notification.expirationNotificationId) {
-      syncMarkAction(
+      void syncMarkAction(
         notification.id,
         notification.expirationNotificationId,
         action,
       );
       // Also mark the expiration notification as read on the server
-      syncMarkRead(notification.expirationNotificationId);
+      void syncMarkRead(notification.expirationNotificationId);
     }
     setSelectedExpirationNotification(null);
   };
@@ -134,7 +133,11 @@ export const NotificationActionHandler: React.FC<
         break;
 
       case 'VIEW_EXPIRING_ITEMS':
-        showExpirationActionSheet(notification);
+        void showExpirationActionSheet(notification).catch(error =>
+          errorService.reportError(error, {
+            operation: 'NotificationActionHandler.showExpirationActionSheet',
+          }),
+        );
         break;
 
       default:

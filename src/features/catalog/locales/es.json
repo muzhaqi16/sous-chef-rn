@@ -123,12 +123,7 @@
     "updatedTitle": "Artículo actualizado",
     "updatedBody": "Tus cambios están publicados.",
     "failedBody": "Algo salió mal al enviar tu sugerencia. Inténtalo de nuevo.",
-    "photoNotice": "Las fotos se añaden de inmediato. Los demás cambios los revisa antes un administrador.",
-    "notFoundTitle": "Artículo no encontrado",
-    "notFoundBody": "Este artículo ya no está en el catálogo; es posible que se haya eliminado.",
-    "rejectedTitle": "No se pudo enviar",
-    "failedTitle": "No se pudo enviar",
-    "rateLimitedTitle": "Espera un momento"
+    "photoNotice": "Las fotos se añaden de inmediato. Los demás cambios los revisa antes un administrador."
   },
   "reportItem": {
     "footer": "¿Algún dato incorrecto en estos?",
@@ -142,12 +137,7 @@
     "sentBody": "Gracias: un administrador revisará este artículo.",
     "failedBody": "Algo salió mal al enviar tu informe. Inténtalo de nuevo.",
     "alreadyReportedTitle": "Ya lo informaste",
-    "alreadyReportedBody": "Este artículo ya está marcado y pendiente de que un administrador lo revise, así que no enviamos un duplicado.",
-    "notFoundTitle": "Artículo no encontrado",
-    "notFoundBody": "Este artículo ya no está en el catálogo; es posible que se haya eliminado.",
-    "failedTitle": "No se pudo enviar",
-    "rejectedTitle": "No se pudo enviar",
-    "rateLimitedTitle": "Espera un momento"
+    "alreadyReportedBody": "Este artículo ya está marcado y pendiente de que un administrador lo revise, así que no enviamos un duplicado."
   },
   "addItemForm": {
     "modes": {
@@ -298,10 +288,7 @@
     "setPrimary": {
       "notFoundTitle": "Foto no encontrada",
       "notFoundBody": "Esta foto ya no está en el artículo; puede que se haya eliminado.",
-      "failedBody": "Algo salió mal al actualizar la foto principal. Inténtalo de nuevo.",
-      "rateLimitedTitle": "Espera un momento",
-      "rejectedTitle": "No se pudo establecer la foto",
-      "failedTitle": "No se pudo establecer la foto"
+      "failedBody": "Algo salió mal al actualizar la foto principal. Inténtalo de nuevo."
     },
     "perspective": {
       "front": "Frente",
@@ -427,7 +414,8 @@
   },
   "tagInput": {
     "maxTagsReached_one": "Máximo de {{count}} etiqueta alcanzado",
-    "maxTagsReached_other": "Máximo de {{count}} etiquetas alcanzado"
+    "maxTagsReached_other": "Máximo de {{count}} etiquetas alcanzado",
+    "placeholder": "Añade una etiqueta..."
   },
   "usagePurpose": {
     "ADJUSTMENT": "Inventario ajustado",

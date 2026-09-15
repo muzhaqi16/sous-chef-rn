@@ -7,8 +7,8 @@ import AnimatedScanLine from '#features/barcode/components/AnimatedScanLine';
 interface BarcodeMaskProps {
   width?: number;
   height?: number;
-  edgeColor?: string;
-  backgroundColor?: string;
+  edgeColor: string;
+  backgroundColor: string;
   showAnimatedLine?: boolean;
   lineAnimationDuration?: number;
 }
@@ -16,8 +16,8 @@ interface BarcodeMaskProps {
 const BarcodeMask: React.FC<BarcodeMaskProps> = ({
   width = 280,
   height = 230,
-  edgeColor = '#62B1F6',
-  backgroundColor = 'rgba(0, 0, 0, 0.6)',
+  edgeColor,
+  backgroundColor,
   showAnimatedLine = true,
   lineAnimationDuration = 2000,
 }) => {

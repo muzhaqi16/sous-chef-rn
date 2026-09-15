@@ -29,9 +29,9 @@ jest.mock('#storage/mmkv', () => ({
 jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
   apolloCachePersistence: {
     load: () => mockLoad(),
-    save: jest.fn(),
+    scheduleExtractAndSave: jest.fn(),
+    flushPending: jest.fn(),
     clear: jest.fn(),
-    scheduleSave: jest.fn(),
   },
 }));
 

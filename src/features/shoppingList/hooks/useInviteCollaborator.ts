@@ -2,6 +2,7 @@ import { useMutation } from '@apollo/client/react';
 import { AddCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 
 const addCollaboratorToCache = createAddToParentConnectionUpdater(
   'ShoppingList',
@@ -20,8 +21,8 @@ export function useInviteCollaborator(listId: string) {
     const { data } = await shareList({
       variables: { input: { shoppingListId: listId, email, role } },
       update(cache, { data: updateData }) {
-        const invitePayload = updateData?.inviteToShoppingList;
-        if (invitePayload?.__typename === 'InviteToShoppingListPayload') {
+        const invitePayload = appliedPayload(updateData);
+        if (invitePayload) {
           addCollaboratorToCache(cache, listId, invitePayload.collaborator, {
             position: 'end',
           });

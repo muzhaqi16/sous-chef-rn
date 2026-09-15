@@ -1,12 +1,14 @@
 import React from 'react';
-import { View, RefreshControl, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Icon } from '#utils/iconUtils';
-import { Header, HeaderVariant } from '../organisms/Header';
+import type { Icon } from '#utils/iconUtils';
+import type { HeaderVariant } from '../organisms/Header';
+import { Header } from '../organisms/Header';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { Button } from '#components/molecules/Button';
 import { DetailSection } from '../molecules/DetailSection';
+import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 
 interface TemplateSection {
   title?: string;
@@ -60,7 +62,7 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
         contentContainerStyle={scrollContentStyle}
         refreshControl={
           onRefresh ? (
-            <RefreshControl
+            <PlainScrollRefreshControl
               refreshing={refreshing ?? false}
               onRefresh={onRefresh}
             />

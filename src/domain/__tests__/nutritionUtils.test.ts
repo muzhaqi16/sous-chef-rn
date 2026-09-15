@@ -12,6 +12,10 @@ import {
   getCategoryLabel,
 } from '#domain/nutrition';
 import type { NutrientCategory, NutritionsData } from '#/types/nutrition';
+import { getI18n } from '#/i18n/config';
+
+// The real instance, so the assertions read the copy in en.json.
+const t = getI18n().t;
 
 const mockNutritions: NutritionsData = {
   servingSize: '100g',
@@ -228,11 +232,11 @@ describe('formatCalories', () => {
 
 describe('getNutrientEntries', () => {
   it('returns empty array for null', () => {
-    expect(getNutrientEntries(null)).toEqual([]);
+    expect(getNutrientEntries(null, undefined, t)).toEqual([]);
   });
 
   it('returns entries sorted by category (macro first)', () => {
-    const entries = getNutrientEntries(mockNutritions);
+    const entries = getNutrientEntries(mockNutritions, undefined, t);
     expect(entries.length).toBeGreaterThan(0);
 
     // First entry should be a macro
@@ -250,13 +254,13 @@ describe('getNutrientEntries', () => {
   });
 
   it('scales entries with actual serving grams', () => {
-    const entries = getNutrientEntries(mockNutritions, 200);
+    const entries = getNutrientEntries(mockNutritions, 200, t);
     const protein = entries.find(e => e.key === 'protein');
     expect(protein?.amount).toBe(30); // 15 * 2
   });
 
   it('skips servingSize and servingSizeGrams keys', () => {
-    const entries = getNutrientEntries(mockNutritions);
+    const entries = getNutrientEntries(mockNutritions, undefined, t);
     expect(entries.find(e => e.key === 'servingSize')).toBeUndefined();
     expect(entries.find(e => e.key === 'servingSizeGrams')).toBeUndefined();
   });
@@ -264,7 +268,7 @@ describe('getNutrientEntries', () => {
 
 describe('groupNutrientsByCategory', () => {
   it('groups entries correctly', () => {
-    const entries = getNutrientEntries(mockNutritions);
+    const entries = getNutrientEntries(mockNutritions, undefined, t);
     const grouped = groupNutrientsByCategory(entries);
     expect(grouped.macro?.length).toBeGreaterThan(0);
     expect(grouped.mineral?.length).toBeGreaterThan(0);
@@ -278,6 +282,6 @@ describe('getCategoryLabel', () => {
     ['mineral', 'Minerals'],
     ['other', 'Other'],
   ])('returns %s for %s', (cat, label) => {
-    expect(getCategoryLabel(cat)).toBe(label);
+    expect(getCategoryLabel(cat, t)).toBe(label);
   });
 });

@@ -36,6 +36,7 @@ import {
   ShoppingListTutorialStep,
 } from '#features/shoppingList/context/ShoppingListTutorialContext';
 import { StyleSheet } from 'react-native-unistyles';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
 type ShoppingListTabId = 'shopping' | 'purchased';
 
@@ -168,10 +169,10 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 
   // Filtering here is the fallback; pre-filtered props keep stable references.
   const unpurchasedItems =
-    preFilteredUnpurchased ?? (items?.filter(item => !item.isPurchased) || []);
+    preFilteredUnpurchased ?? items?.filter(item => !item.isPurchased) ?? [];
 
   const purchasedItems =
-    preFilteredPurchased ?? (items?.filter(item => item.isPurchased) || []);
+    preFilteredPurchased ?? items?.filter(item => item.isPurchased) ?? [];
 
   // Array length is the fallback; it only counts the loaded page.
   const unpurchasedCount = totalCountUnpurchased ?? unpurchasedItems.length;
@@ -251,7 +252,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       t('shoppingListTabs.clearPurchasedBody', { count }),
       t('shoppingListTabs.clearAll'),
       () => {
-        onClearAllPurchased?.();
+        void onClearAllPurchased?.();
       },
     );
   };
@@ -276,7 +277,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       t('shoppingListTabs.clearShoppingBody', { count }),
       t('shoppingListTabs.clearAll'),
       () => {
-        onClearAllShopping?.();
+        void onClearAllShopping?.();
       },
     );
   };
@@ -306,7 +307,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       icon: 'archive-outline',
       onPress: handleBatchMoveToPantryWithConfirmation,
       disabled: batchMoveToPantryLoading,
-      testID: 'shopping-list-batch-move-pantry',
+      testID: shoppingListTestIDs.batchMoveToPantryButton,
     });
   }
 
@@ -314,7 +315,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     actionButtons.push({
       label: t('labels.clear'),
       onPress: currentClearHandler,
-      testID: 'shopping-list-clear-all',
+      testID: shoppingListTestIDs.clearAllButton,
     });
   }
 
@@ -403,20 +404,23 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
         <ShoppingListDataProvider data={tabData}>
           <View style={styles.tabBody}>
             {showEmptyState ? (
-              <SwipeAwareScrollComponent
-                contentContainerStyle={styles.emptyScrollContent}
-                refreshControl={
-                  onRefresh ? (
-                    <ThemedRefreshControl
-                      refreshing={refreshing || false}
-                      onRefresh={onRefresh}
-                    />
-                  ) : undefined
-                }
-              >
+              <>
+                {/* Outside the scroller, as in the populated branch. */}
                 {renderTabBar()}
-                <EmptyState {...emptyState} />
-              </SwipeAwareScrollComponent>
+                <SwipeAwareScrollComponent
+                  contentContainerStyle={styles.emptyScrollContent}
+                  refreshControl={
+                    onRefresh ? (
+                      <ThemedRefreshControl
+                        refreshing={refreshing ?? false}
+                        onRefresh={onRefresh}
+                      />
+                    ) : undefined
+                  }
+                >
+                  <EmptyState {...emptyState} />
+                </SwipeAwareScrollComponent>
+              </>
             ) : (
               <TabView
                 navigationState={{ index, routes }}

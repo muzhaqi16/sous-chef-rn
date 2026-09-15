@@ -1,3 +1,4 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useState, useRef } from 'react';
 import {
   useForm,
@@ -14,10 +15,10 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import PagerView from 'react-native-pager-view';
 import { StyleSheet } from 'react-native-unistyles';
 import { usePantryItemSubmission } from '#features/pantry/hooks/usePantryItemSubmission';
+import type { ItemCondition } from '#/graphql/generated/schemaTypes';
+import type { OfferedAcquisitionMethod } from '#features/pantry/utils/itemEnumLabels';
 import {
   StorageState,
-  ItemCondition,
-  AcquisitionMethod,
   type StorageLocation,
 } from '#/graphql/generated/schemaTypes';
 
@@ -29,6 +30,7 @@ import { Text } from '#components/atoms/Text';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { makeIdNameHandler } from '#components/organisms/makeIdNameHandler';
 import { logValidationErrors } from '#/utils/validation/common';
+import { isOwnKey } from '#utils/isOwnKey';
 import {
   addPantryItemSchema,
   addPantryItemDefaults,
@@ -62,17 +64,19 @@ function PageIndicatorItem({
   return (
     <AppPressable
       onPress={onPress}
-      // Indexed, not label-derived: the labels are translated, so a
-      // label-based matcher would pass in English and fail everywhere else.
-      // Without this the later pages of this sheet were unreachable from a
-      // test — the quantity field lives on the Stock page and is inside a
-      // PagerView, so it is UNMOUNTED until the page is selected, which Detox
-      // reports as "No elements found" rather than a visibility timeout.
-      testID={`add-pantry-item-page-${index}`}
+      // Indexed, not label-derived: the labels are translated. A test reaches a
+      // later page's fields through it, since PagerView unmounts unselected pages.
+      testID={pantryTestIDs.addDetailsPage(index)}
       style={indicatorStyles.item}
     >
       <View style={indicatorStyles.dot} />
-      <Text style={indicatorStyles.label}>{label}</Text>
+      <Text
+        role="caption"
+        tone={isActive ? 'accent' : 'secondary'}
+        style={indicatorStyles.label}
+      >
+        {label}
+      </Text>
     </AppPressable>
   );
 }
@@ -123,15 +127,9 @@ const indicatorStyles = StyleSheet.create(theme => ({
     },
   },
   label: {
-    ...theme.type.caption,
-    fontWeight: '400',
-    color: theme.colors.textSecondary,
     variants: {
       active: {
-        true: {
-          color: theme.colors.primary,
-          fontWeight: '600',
-        },
+        true: { fontWeight: theme.fonts.weight.semibold },
       },
     },
   },
@@ -277,7 +275,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   const setStoreName = (v: string) => setField('storeName', v);
   const setStoreId = (v: string | null) => setField('storeId', v);
   const setCostPerUnit = (v: string) => setField('costPerUnit', v);
-  const setAcquisitionMethod = (v: AcquisitionMethod) =>
+  const setAcquisitionMethod = (v: OfferedAcquisitionMethod) =>
     setField('acquisitionMethod', v);
 
   // Store selection (PurchaseInfoInput stores by id; free text isn't sent)
@@ -357,7 +355,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   });
 
   return (
-    <View style={styles.container} testID="add-pantry-item-details-modal">
+    <View style={styles.container} testID={pantryTestIDs.addDetailsModal}>
       <BottomSheetHeader
         title={t('addToPantry.addItemDetails')}
         cancelLabel={t('labels.cancel')}
@@ -370,13 +368,17 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
         onConfirm={() => {
           void handleSubmit(handleConfirm, formErrors => {
             logValidationErrors(formErrors);
-            const firstField = Object.keys(formErrors)[0];
-            const page = FIELD_PAGE[firstField as keyof AddPantryItemFormData];
+            const [firstField] = Object.keys(formErrors);
+            if (firstField === undefined || !isOwnKey(FIELD_PAGE, firstField))
+              return;
+            const page = FIELD_PAGE[firstField];
             if (page !== undefined) handlePageChange(page);
           })();
         }}
         saving={loading}
-        confirmTestID="add-pantry-item-submit-button"
+        cancelTestID={pantryTestIDs.addDetailsCancelButton}
+        confirmTestID={pantryTestIDs.addDetailsSubmitButton}
+        titleTestID={pantryTestIDs.addDetailsTitle}
       />
 
       {/* Page Indicators */}

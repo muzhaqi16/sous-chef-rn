@@ -2,10 +2,8 @@ import {
   ExternalSource,
   type CreateRecipeInput,
 } from '#/graphql/generated/schemaTypes';
-import {
-  RecipeInformation,
-  type RecipePriceBreakdown,
-} from '#/services/spoonacular/types';
+import type { RecipeInformation } from '#/services/spoonacular/types';
+import type { RecipePriceBreakdown } from '#/services/spoonacular/types';
 import { stripPriceFromName } from '#features/recipes/utils/stripPriceFromName';
 
 /** Ingredient names are matched case- and whitespace-insensitively. */
@@ -30,7 +28,7 @@ export const toRecipeInput = (
     spoonacularRecipe.analyzedInstructions?.[0]?.steps?.map(step => ({
       step: step.number,
       text: step.step,
-    })) || [];
+    })) ?? [];
 
   // Per-ingredient nutrition is already present in the recipe response when
   // it's fetched with `includeNutrition: true` (see useRecipeData) — index it

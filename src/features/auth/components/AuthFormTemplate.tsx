@@ -6,16 +6,15 @@ import { scheduleOnRN } from 'react-native-worklets';
 import Animated, { LinearTransition } from 'react-native-reanimated';
 
 import type { FieldValues, Control, FieldErrors } from 'react-hook-form';
-import {
-  DynamicFormFields,
-  FieldDef,
-} from '#components/molecules/DynamicFormFields';
+import type { FieldDef } from '#components/molecules/DynamicFormFields';
+import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
 import { Button } from '#components/molecules/Button';
 import { BackButton } from '#components/atoms/BackButton';
 import { Link } from '#components/atoms/Link';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { motion } from '#/theme/foundations/motion';
+import { authTestIDs } from '#features/auth/testIDs';
 
 interface Props<T extends FieldValues> {
   title: string;
@@ -124,7 +123,7 @@ export function AuthFormTemplate<T extends FieldValues>({
   return (
     <View style={styles.formContainer}>
       <View>
-        <View style={styles.titleRow} testID="auth-title-row">
+        <View style={styles.titleRow} testID={authTestIDs.formTitleRow}>
           {!!onBackPress && (
             <BackButton
               tone="textOnSurfaceVariant"
@@ -138,7 +137,12 @@ export function AuthFormTemplate<T extends FieldValues>({
           </Text>
         </View>
         {subtitle ? (
-          <Text tone="secondary" align="center" style={styles.subtitle}>
+          <Text
+            role="body"
+            tone="secondary"
+            align="center"
+            style={styles.subtitle}
+          >
             {subtitle}
           </Text>
         ) : null}
@@ -190,6 +194,7 @@ export function AuthFormTemplate<T extends FieldValues>({
             style={({ pressed }) => pressed && styles.pressed}
           >
             <Text
+              role="body"
               tone="secondary"
               align="center"
               style={[

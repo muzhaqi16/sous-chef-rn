@@ -112,22 +112,20 @@ describe('useHomeQuery', () => {
     });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.homes).toEqual([]);
-    expect(result.current.error).toBeUndefined();
     expect(result.current.remoteDefaultHomeId).toBeNull();
-    expect(result.current.initialLoading).toBe(false);
   });
 
-  it('clears initialLoading once an empty home list has resolved', async () => {
+  it('has a result once an empty home list has resolved', async () => {
     const { result } = renderHookWithApollo(() => useHomeQuery(), {
       operationMocks: [homesMock([])],
     });
-    expect(result.current.initialLoading).toBe(true);
+    expect(result.current.hasResult).toBe(false);
 
     // A response carrying zero homes is still a response — the screen must
-    // settle to its empty list rather than sitting on the full-screen loader.
+    // settle to its empty list rather than an error.
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.homes).toEqual([]);
-    expect(result.current.initialLoading).toBe(false);
+    expect(result.current.hasResult).toBe(true);
   });
 
   it('returns homes from query data', async () => {
@@ -193,12 +191,13 @@ describe('useHomeQuery', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
   });
 
-  it('exposes error from query', async () => {
+  it('has no result when the first read fails', async () => {
     const { result } = renderHookWithApollo(() => useHomeQuery(), {
       operationMocks: [errorMock('Query failed')],
     });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.homes).toEqual([]);
+    expect(result.current.hasResult).toBe(false);
   });
 
   it('provides a refetch function', async () => {

@@ -11,10 +11,7 @@ import { bootstrapAuthenticatedSession } from '../../helpers/auth';
 import { relaunchToHomeTab } from '../../helpers/flows';
 import { generateItemName } from '../../helpers/data';
 import { TIMEOUTS } from '../../helpers/waitFor';
-
-const NAME_INPUT = 'add-pantry-item-name-input';
-const SUBMIT_BUTTON = 'add-pantry-item-submit-button';
-const CANCEL_BUTTON = 'add-pantry-item-cancel-button';
+import { pantryTestIDs } from '../../../src/features/pantry/testIDs';
 
 describe('Pantry CRUD', () => {
   const pantryScreen = new PantryScreen();
@@ -71,13 +68,15 @@ describe('Pantry CRUD', () => {
 
     it('refuses to submit without a name', async () => {
       await pantryScreen.openAddDetailsForm();
+      // "Add manually" carries the search term into the name field; empty it.
+      await element(by.id(pantryTestIDs.addDetailsNameInput)).replaceText('');
 
-      await element(by.id(SUBMIT_BUTTON)).tap();
+      await element(by.id(pantryTestIDs.addDetailsSubmitButton)).tap();
 
       // The sheet staying open IS the validation result. Asserting on an error
       // dialog would be brittle: the copy is translated, and it is a native
       // alert on one platform and in-app on the other.
-      await waitFor(element(by.id(NAME_INPUT)))
+      await waitFor(element(by.id(pantryTestIDs.addDetailsNameInput)))
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
@@ -87,14 +86,14 @@ describe('Pantry CRUD', () => {
 
     it('closes the details sheet on cancel', async () => {
       await pantryScreen.openAddDetailsForm();
-      await element(by.id(CANCEL_BUTTON)).tap();
+      await element(by.id(pantryTestIDs.addDetailsCancelButton)).tap();
 
-      // Dismissal is the sheet's own Cancel button — `header-back-button`
+      // Dismissal is the sheet's own Cancel button — the header back button
       // belongs to `Header`, which these sheets never render. Deliberately NOT
       // asserting the pantry list is back: cancel drops to the picker sheet that
       // opened this one, and how far the stack unwinds depends on how the two
       // dismiss animations overlap.
-      await waitFor(element(by.id(NAME_INPUT)))
+      await waitFor(element(by.id(pantryTestIDs.addDetailsNameInput)))
         .not.toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
     });
@@ -140,8 +139,8 @@ describe('Pantry CRUD', () => {
       await pantryScreen.expectItemInPantry(itemName);
       // `parseFloat('1 1/4')` is 1, so a row existing proves nothing about the
       // parse — this asserts the value that reached the card.
-      // `formatQuantityDisplay` renders a non-integer under 10 with 2 decimals.
-      await pantryScreen.expectQuantityRendered('1.25 cup');
+      // A cup displays as a cooking fraction (`formatQuantityForDisplay`).
+      await pantryScreen.expectQuantityRendered('1 1/4 cup');
     });
 
     it('accepts a decimal quantity', async () => {
@@ -151,7 +150,8 @@ describe('Pantry CRUD', () => {
       await pantryScreen.addItem(itemName, '0.25', 'kg');
 
       await pantryScreen.expectItemInPantry(itemName);
-      await pantryScreen.expectQuantityRendered('0.25 kg');
+      // Only a unit with `displayAsFraction: false` opts out of fractions.
+      await pantryScreen.expectQuantityRendered('1/4 kg');
     });
 
     it('accepts a long item name', async () => {

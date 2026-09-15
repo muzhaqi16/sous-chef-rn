@@ -6,8 +6,7 @@
 import { gql, type ApolloCache } from '@apollo/client';
 import { List_ListDetailFragmentDoc } from './list.generated';
 import { NEUTRAL_SHOPPING_LIST_DETAIL } from './shoppingListDetailNeutral.generated';
-import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { settledStatus } from '#/apollo/utils/settleMutation';
 import { errorService } from '#/services/errorService';
 import {
   type AddToConnectionOptions,
@@ -201,7 +200,12 @@ export function buildOptimisticShoppingList(
       })
     : null;
 
-  return createOptimisticEntity<OptimisticShoppingList>('ShoppingList', id, {
+  return {
+    __typename: 'ShoppingList',
+    id,
+    // The server owns the version; its response carries the real one.
+    version: 1,
+    updatedAt: new Date().toISOString(),
     name: input.name,
     isDefault: input.isDefault ?? false,
     totalItems: 0,
@@ -221,7 +225,7 @@ export function buildOptimisticShoppingList(
         user,
       },
     ],
-  });
+  };
 }
 
 /**
@@ -325,7 +329,7 @@ export function readShoppingListSnapshot(
 
 /**
  * Reconcile a local-first list create: the keep/revert rule of
- * {@link reconcileShoppingCreate} — `'rejected'` discards, `'created'`/`'queued'`
+ * {@link reconcileShoppingCreate} — `'failed'` discards, `'applied'`/`'queued'`
  * keep, a queued create replaying later keyed by the same `id`.
  */
 export function reconcileShoppingListCreate(
@@ -333,8 +337,8 @@ export function reconcileShoppingListCreate(
   optimisticId: string,
   result: { data?: unknown; error?: unknown } | null | undefined,
 ): 'kept' | 'reverted' {
-  const outcome = classifyCreateResult(result);
-  if (outcome === 'rejected') {
+  const failed = settledStatus(result ?? undefined) === 'failed';
+  if (failed) {
     try {
       revertOptimisticShoppingList(cache, optimisticId);
     } catch (cacheError) {

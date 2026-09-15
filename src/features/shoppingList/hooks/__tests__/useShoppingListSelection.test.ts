@@ -107,7 +107,7 @@ describe('useShoppingListSelection', () => {
     expect(mockSetSelectedShoppingListId).toHaveBeenCalledWith('list-2');
   });
 
-  it('returns defaultList — the list with isDefault flag', () => {
+  it('shows the list with the isDefault flag before any selection', () => {
     const lists = [
       createList({ id: 'list-1' }),
       createList({ id: 'list-2', isDefault: true }),
@@ -115,15 +115,15 @@ describe('useShoppingListSelection', () => {
 
     const { result } = renderHook(() => useShoppingListSelection(lists));
 
-    expect(result.current.defaultList?.id).toBe('list-2');
+    expect(result.current.currentList?.id).toBe('list-2');
   });
 
-  it('returns first list as defaultList when no isDefault flag', () => {
+  it('shows the first list before any selection when none is default', () => {
     const lists = [createList({ id: 'list-1' }), createList({ id: 'list-2' })];
 
     const { result } = renderHook(() => useShoppingListSelection(lists));
 
-    expect(result.current.defaultList?.id).toBe('list-1');
+    expect(result.current.currentList?.id).toBe('list-1');
   });
 
   it('does not auto-select when lists array is empty', () => {

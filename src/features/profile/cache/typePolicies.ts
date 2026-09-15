@@ -1,4 +1,4 @@
-import type { TypePolicies } from '@apollo/client';
+import type { Reference, StoreObject, TypePolicies } from '@apollo/client';
 import { mergeConnectionByNodeId } from '#/apollo/cacheFieldPolicies';
 
 /**
@@ -13,7 +13,13 @@ export const profileTypePolicies: TypePolicies = {
       profile: {
         // Merge profile fields to prevent data loss when partial updates arrive
         // e.g., one query returns {displayName, avatar}, another returns {firstName, lastName}
-        merge(existing, incoming, { mergeObjects }) {
+        merge(
+          existing: StoreObject | Reference | undefined,
+          incoming: StoreObject | Reference,
+          { mergeObjects },
+        ) {
+          // `mergeObjects` hands back `incoming` for an absent `existing`.
+          if (!existing) return incoming;
           return mergeObjects(existing, incoming);
         },
       },

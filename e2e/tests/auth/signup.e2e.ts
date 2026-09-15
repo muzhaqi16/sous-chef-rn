@@ -2,14 +2,17 @@
  * Sign up: happy-path registration, validation errors, and edge cases.
  */
 
-import { element, by, waitFor } from 'detox';
 import { launchAppWithFabricWorkaround } from '../../init';
 import { LandingAuthScreen } from '../../screens/LandingAuthScreen';
 import { LoginScreen } from '../../screens/LoginScreen';
 import { SignUpScreen } from '../../screens/SignUpScreen';
-import { dismissBiometricPromptIfPresent } from '../../helpers/auth';
-import { TIMEOUTS, waitForNetworkIdle, waitForScreen } from '../../helpers/waitFor';
+import {
+  TIMEOUTS,
+  waitForNetworkIdle,
+  waitForScreen,
+} from '../../helpers/waitFor';
 import { generateTestEmail } from '../../helpers/data';
+import { authTestIDs } from '../../../src/features/auth/testIDs';
 
 describe('Sign Up', () => {
   const landingScreen = new LandingAuthScreen();
@@ -43,10 +46,10 @@ describe('Sign Up', () => {
 
   describe('Form Display', () => {
     it('should show all signup form elements', async () => {
-      await signUpScreen.expectVisible('signup-name-input');
-      await signUpScreen.expectVisible('signup-email-input');
-      await signUpScreen.expectVisible('signup-password-input');
-      await signUpScreen.expectVisible('signup-confirm-password-input');
+      await signUpScreen.expectVisible(authTestIDs.signUpNameInput);
+      await signUpScreen.expectVisible(authTestIDs.signUpEmailInput);
+      await signUpScreen.expectVisible(authTestIDs.signUpPasswordInput);
+      await signUpScreen.expectVisible(authTestIDs.signUpConfirmPasswordInput);
       await signUpScreen.expectSubmitVisible();
     });
   });
@@ -139,39 +142,8 @@ describe('Sign Up', () => {
 
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
 
-      // Only real devices with biometric hardware raise this prompt.
-      await dismissBiometricPromptIfPresent();
-
-      // Should navigate to onboarding or home screen
-      let navigatedSuccessfully = false;
-
-      try {
-        await waitForScreen('onboarding-screen', TIMEOUTS.DEFAULT);
-        navigatedSuccessfully = true;
-      } catch {
-        // Not onboarding
-      }
-
-      if (!navigatedSuccessfully) {
-        try {
-          await waitFor(element(by.id('tab-bar')))
-            .toBeVisible()
-            .withTimeout(TIMEOUTS.DEFAULT);
-          navigatedSuccessfully = true;
-        } catch {
-          // Not home
-        }
-      }
-
-      if (!navigatedSuccessfully) {
-        // Check for create home screen (part of onboarding flow)
-        await waitForScreen('create-home-screen', TIMEOUTS.DEFAULT);
-        navigatedSuccessfully = true;
-      }
-
-      if (!navigatedSuccessfully) {
-        throw new Error('Signup did not navigate to onboarding, home, or create-home screen');
-      }
+      // Registration opens no session: the form gives way to code entry.
+      await waitForScreen(authTestIDs.codeVerificationScreen, TIMEOUTS.DEFAULT);
     });
   });
 

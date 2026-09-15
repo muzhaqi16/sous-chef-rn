@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
+import {
+  MEAL_TYPE_LABEL_KEYS,
+  TEMPLATE_CATEGORY_LABEL_KEYS,
+} from '#features/mealPlan/utils/mealPlanEnumLabels';
 import { StyleSheet } from 'react-native-unistyles';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Pressable } from '#components/atoms/themedComponents';
@@ -17,10 +21,13 @@ import { useMealTemplateForEdit } from '#features/mealPlan/hooks/useMealTemplate
 import { TemplateCategory, MealType } from '#/graphql/generated/schemaTypes';
 import { generateId } from '#/utils/generateId';
 import { SectionHeader } from '#components/atoms/SectionHeader';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { logValidationErrors } from '#/utils/validation/common';
+import { AddMealSheet } from '#features/mealPlan/components/AddMealSheet';
 import {
+  changedMealRef,
+  mealRefOf,
   templateDefaults,
   templateItemDefaults,
   templateItemSchema,
@@ -28,6 +35,7 @@ import {
   type TemplateFormValues,
   type TemplateItemFormValues,
 } from './mealTemplateBuilderFormConfig';
+import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 
 const CATEGORY_OPTIONS = [
   TemplateCategory.Weekly,
@@ -49,14 +57,6 @@ const MEAL_TYPE_OPTIONS = [
   MealType.Dessert,
 ];
 
-/** BREAKFAST -> "Breakfast", SPECIAL_DIET -> "Special Diet" (mirrors formatPlanType). */
-function formatEnum(value: string): string {
-  return value
-    .split('_')
-    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
-    .join(' ');
-}
-
 // A meal held in the builder before it becomes a server item (create mode) or
 // mirrored from a loaded template item (edit mode; `serverId` is set).
 interface DraftItem {
@@ -65,6 +65,8 @@ interface DraftItem {
   dayOffset: number;
   mealType: MealType;
   customMealName: string;
+  recipeId: string | null;
+  recipeName: string;
   servings: number;
 }
 
@@ -82,15 +84,13 @@ export const MealTemplateBuilderScreen: React.FC<
     addItem,
     updateItem,
     removeItem,
+    readRecipeName,
     creating,
     updating,
   } = useMealTemplateEditor();
 
-  // Only EDIT mode touches the server per item; in create mode the rows are
-  // local drafts flushed with the template itself, which is local-first. So
-  // being offline blocks editing an existing template's items, and nothing at
-  // all about building a new one.
-
+  // Edit mode writes each item as it is saved; create mode holds drafts until
+  // the template itself is created.
   const { template: loaded } = useMealTemplateForEdit(templateId);
 
   // Two forms on one screen: the template's own metadata, and the sub-form that
@@ -111,6 +111,11 @@ export const MealTemplateBuilderScreen: React.FC<
   });
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editingServerId, setEditingServerId] = useState<string | null>(null);
+  const [recipePickerVisible, setRecipePickerVisible] = useState(false);
+  const [itemRecipeId, itemRecipeName, itemMealType] = useWatch({
+    control: itemForm.control,
+    name: ['itemRecipeId', 'itemRecipeName', 'itemMealType'],
+  });
 
   // An effect, not a render-body adjustment: `reset` notifies every mounted
   // `Controller` synchronously, and a torn-up concurrent render drops it.
@@ -136,6 +141,8 @@ export const MealTemplateBuilderScreen: React.FC<
         dayOffset: item.dayOffset,
         mealType: item.mealType,
         customMealName: item.customMealName ?? '',
+        recipeId: item.recipe?.id ?? null,
+        recipeName: item.recipe?.name ?? '',
         servings: item.servings ?? 2,
       }))
     : draftItems;
@@ -151,38 +158,57 @@ export const MealTemplateBuilderScreen: React.FC<
       itemDay: String(item.dayOffset),
       itemMealType: item.mealType,
       itemName: item.customMealName,
+      itemRecipeId: item.recipeId ?? '',
+      itemRecipeName: item.recipeName,
       itemServings: String(item.servings),
     });
     setEditingKey(item.key);
     setEditingServerId(item.serverId ?? null);
   };
 
+  const handlePickRecipe = (recipeId: string, mealType: MealType) => {
+    itemForm.setValue('itemRecipeId', recipeId);
+    itemForm.setValue('itemRecipeName', readRecipeName(recipeId));
+    itemForm.setValue('itemMealType', mealType);
+    // The recipe satisfies the name rule, so re-run it to clear a stale error.
+    void itemForm.trigger('itemName');
+  };
+
+  const handlePickCustomMeal = (name: string, mealType: MealType) => {
+    itemForm.setValue('itemRecipeId', '');
+    itemForm.setValue('itemRecipeName', '');
+    itemForm.setValue('itemName', name);
+    itemForm.setValue('itemMealType', mealType);
+  };
+
+  const clearRecipe = () => {
+    itemForm.setValue('itemRecipeId', '');
+    itemForm.setValue('itemRecipeName', '');
+  };
+
   // Reaching here means the sub-form's schema passed, so the missing-name rule
   // has already reported itself on the name field.
-  const onValidItem = async ({
-    itemDay: day,
-    itemMealType,
-    itemName,
-    itemServings,
-  }: TemplateItemFormValues) => {
+  const onValidItem = async (values: TemplateItemFormValues) => {
+    const { itemDay: day, itemMealType: mealType, itemServings } = values;
     const dayOffset = parseInt(day) || 0;
     const servings = parseInt(itemServings) || 2;
-    const customMealName = itemName.trim();
 
     if (isEdit && templateId) {
+      const original = items.find(it => it.serverId === editingServerId);
+      const meal = original ? changedMealRef(original, values) : undefined;
       const ok = editingServerId
         ? await updateItem({
             id: editingServerId,
             dayOffset,
-            mealType: itemMealType,
-            meal: { customMealName },
+            mealType,
             servings,
+            ...(meal ? { meal } : {}),
           })
         : await addItem({
             templateId,
             dayOffset,
-            mealType: itemMealType,
-            meal: { customMealName },
+            mealType,
+            meal: mealRefOf(values),
             servings,
           });
       if (ok) resetItemForm();
@@ -196,8 +222,10 @@ export const MealTemplateBuilderScreen: React.FC<
         // React keys, and removing one row would filter out both).
         key: editingKey ?? `draft-${generateId()}`,
         dayOffset,
-        mealType: itemMealType,
-        customMealName,
+        mealType,
+        customMealName: values.itemRecipeId ? '' : values.itemName.trim(),
+        recipeId: values.itemRecipeId || null,
+        recipeName: values.itemRecipeName,
         servings,
       };
       return editingKey
@@ -209,7 +237,7 @@ export const MealTemplateBuilderScreen: React.FC<
 
   const handleRemoveItem = (item: DraftItem) => {
     if (isEdit && item.serverId) {
-      removeItem(item.serverId, templateId);
+      void removeItem(item.serverId, templateId);
     } else {
       setDraftItems(prev => prev.filter(it => it.key !== item.key));
     }
@@ -254,7 +282,10 @@ export const MealTemplateBuilderScreen: React.FC<
       items: draftItems.map(item => ({
         dayOffset: item.dayOffset,
         mealType: item.mealType,
-        meal: { customMealName: item.customMealName },
+        meal: mealRefOf({
+          itemRecipeId: item.recipeId ?? '',
+          itemName: item.customMealName,
+        }),
         servings: item.servings,
       })),
     });
@@ -267,7 +298,7 @@ export const MealTemplateBuilderScreen: React.FC<
       onClose={goBack}
       onSave={templateForm.handleSubmit(onValidTemplate, logValidationErrors)}
       loading={creating || updating}
-      testID="meal-template-builder-screen"
+      testID={mealPlanTestIDs.templateBuilderScreen}
     >
       <Controller
         control={templateForm.control}
@@ -281,7 +312,7 @@ export const MealTemplateBuilderScreen: React.FC<
             error={fieldState.error?.message}
             placeholder={t('mealTemplateBuilder.namePlaceholder')}
             required
-            testID="template-name-input"
+            testID={mealPlanTestIDs.templateNameInput}
           />
         )}
       />
@@ -293,9 +324,9 @@ export const MealTemplateBuilderScreen: React.FC<
           <FormSelect
             label={t('labels.category')}
             value={field.value}
-            onValueChange={value => field.onChange(value as TemplateCategory)}
+            onValueChange={value => field.onChange(value)}
             options={CATEGORY_OPTIONS.map(value => ({
-              label: formatEnum(value),
+              label: t(TEMPLATE_CATEGORY_LABEL_KEYS[value]),
               value,
             }))}
           />
@@ -353,19 +384,26 @@ export const MealTemplateBuilderScreen: React.FC<
         </Text>
       ) : (
         items.map(item => {
-          // Only a row that exists on the server needs a network call to
-          // remove; a local draft row is removed from state either way.
+          const mealName = item.recipeId
+            ? item.recipeName || t('mealTemplateBuilder.savedRecipe')
+            : item.customMealName;
           return (
             <View key={item.key} style={styles.itemRow}>
               <Pressable
                 style={styles.itemInfo}
                 onPress={() => loadItemIntoForm(item)}
+                testID={mealPlanTestIDs.templateItemRow(item.key)}
               >
-                <Text role="label">{item.customMealName}</Text>
+                <View style={styles.itemTitle}>
+                  {!!item.recipeId && (
+                    <Icon name="book-outline" size={14} tone="primary" />
+                  )}
+                  <Text role="label">{mealName}</Text>
+                </View>
                 <Text role="caption" tone="secondary">
                   {t('mealTemplateBuilder.itemSummary', {
                     day: item.dayOffset + 1,
-                    meal: formatEnum(item.mealType),
+                    meal: t(MEAL_TYPE_LABEL_KEYS[item.mealType]),
                     servings: item.servings,
                   })}
                 </Text>
@@ -373,10 +411,10 @@ export const MealTemplateBuilderScreen: React.FC<
               <Pressable
                 onPress={() => handleRemoveItem(item)}
                 accessibilityLabel={t('a11y.removeNamed', {
-                  name: item.customMealName || formatEnum(item.mealType),
+                  name: mealName || t(MEAL_TYPE_LABEL_KEYS[item.mealType]),
                 })}
                 hitSlop={8}
-                testID={`remove-item-${item.key}`}
+                testID={mealPlanTestIDs.templateRemoveItem(item.key)}
               >
                 <Icon name="close-circle" size={22} tone="error" />
               </Pressable>
@@ -387,21 +425,58 @@ export const MealTemplateBuilderScreen: React.FC<
 
       {/* Add / edit meal sub-form */}
       <View style={styles.itemForm}>
-        <Controller
-          control={itemForm.control}
-          name="itemName"
-          render={({ field, fieldState }) => (
-            <FormInput
-              label={t('mealTemplateBuilder.mealName')}
-              value={field.value}
-              onChangeText={field.onChange}
-              onBlur={field.onBlur}
-              error={fieldState.error?.message}
-              placeholder={t('mealTemplateBuilder.mealNamePlaceholder')}
-              testID="item-name-input"
-            />
-          )}
-        />
+        {itemRecipeId ? (
+          <View
+            style={styles.recipeRow}
+            testID={mealPlanTestIDs.templateItemRecipe}
+          >
+            <Icon name="book-outline" size={18} tone="primary" />
+            <Text role="label" style={styles.recipeName} numberOfLines={1}>
+              {itemRecipeName || t('mealTemplateBuilder.savedRecipe')}
+            </Text>
+            <Pressable
+              onPress={clearRecipe}
+              accessibilityLabel={t('a11y.removeNamed', {
+                name: itemRecipeName || t('mealTemplateBuilder.savedRecipe'),
+              })}
+              hitSlop={8}
+              testID={mealPlanTestIDs.templateClearRecipeButton}
+            >
+              <Icon name="close-circle" size={20} tone="textSecondary" />
+            </Pressable>
+          </View>
+        ) : (
+          <Controller
+            control={itemForm.control}
+            name="itemName"
+            render={({ field, fieldState }) => (
+              <FormInput
+                label={t('mealTemplateBuilder.mealName')}
+                value={field.value}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+                error={fieldState.error?.message}
+                placeholder={t('mealTemplateBuilder.mealNamePlaceholder')}
+                testID={mealPlanTestIDs.templateItemNameInput}
+              />
+            )}
+          />
+        )}
+        <Pressable
+          style={({ pressed }) => [
+            styles.chooseRecipeButton,
+            pressed && styles.pressed,
+          ]}
+          onPress={() => setRecipePickerVisible(true)}
+          testID={mealPlanTestIDs.templateChooseRecipeButton}
+        >
+          <Icon name="book-outline" size={18} tone="primary" />
+          <Text role="label" tone="primary">
+            {itemRecipeId
+              ? t('mealTemplateBuilder.changeRecipe')
+              : t('mealTemplateBuilder.chooseRecipe')}
+          </Text>
+        </Pressable>
         <Controller
           control={itemForm.control}
           name="itemMealType"
@@ -409,9 +484,9 @@ export const MealTemplateBuilderScreen: React.FC<
             <FormSelect
               label={t('labels.mealType')}
               value={field.value}
-              onValueChange={value => field.onChange(value as MealType)}
+              onValueChange={value => field.onChange(value)}
               options={MEAL_TYPE_OPTIONS.map(value => ({
-                label: formatEnum(value),
+                label: t(MEAL_TYPE_LABEL_KEYS[value]),
                 value,
               }))}
             />
@@ -452,20 +527,28 @@ export const MealTemplateBuilderScreen: React.FC<
             pressed && styles.pressed,
           ]}
           onPress={itemForm.handleSubmit(onValidItem, logValidationErrors)}
-          testID="submit-item-button"
+          testID={mealPlanTestIDs.templateSubmitItemButton}
         >
           <Icon
             name={editingKey ? 'checkmark' : 'add'}
             size={18}
             tone="primary"
           />
-          <Text tone="primary" style={styles.addMealText}>
+          <Text role="body" tone="primary" style={styles.addMealText}>
             {editingKey
               ? t('mealTemplateBuilder.updateMeal')
               : t('mealTemplateBuilder.addMeal')}
           </Text>
         </Pressable>
       </View>
+
+      <AddMealSheet
+        visible={recipePickerVisible}
+        onClose={() => setRecipePickerVisible(false)}
+        initialMealType={itemMealType}
+        onAddRecipe={handlePickRecipe}
+        onAddCustomMeal={handlePickCustomMeal}
+      />
     </FormScreen>
   );
 };
@@ -489,6 +572,32 @@ const styles = StyleSheet.create(theme => ({
   itemInfo: {
     flex: 1,
     marginRight: theme.spacing.md,
+  },
+  itemTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  recipeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
+    backgroundColor: theme.colors.surfaceVariant,
+  },
+  recipeName: {
+    flex: 1,
+  },
+  chooseRecipeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
   },
   itemForm: {
     marginTop: theme.spacing.md,

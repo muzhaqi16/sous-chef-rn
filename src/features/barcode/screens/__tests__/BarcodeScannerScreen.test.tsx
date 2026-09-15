@@ -25,7 +25,6 @@ jest.mock('#hooks/permissions/usePermission', () => ({
 
 jest.mock('../../hooks/useBarcodeScanner', () => ({
   useBarcodeScanner: jest.fn(() => ({
-    setScannedBarcode: jest.fn(),
     setScanning: jest.fn(),
     resetScanner: jest.fn(),
     isScanning: false,

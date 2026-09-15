@@ -63,11 +63,10 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
     // allowed, so an unverified account is never stuck sharing something.
     if (!isPublic && !requireVerifiedEmail()) return;
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         unwrapPayload(
           await setListPublic(listId, !isPublic),
-          'ShareShoppingListPayload',
           t('shoppingListScreens.failedToUpdateShareSettings'),
         );
       },
@@ -223,7 +222,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.border,
     justifyContent: 'center',
-    paddingHorizontal: 2,
+    paddingHorizontal: theme.spacing['2xs'],
   },
   toggleTrackActive: {
     backgroundColor: theme.colors.primary,

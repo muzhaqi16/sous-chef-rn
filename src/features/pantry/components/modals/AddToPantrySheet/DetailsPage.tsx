@@ -1,3 +1,4 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
@@ -102,7 +103,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
             value={quantityInput}
             onChangeText={setQuantityInput}
             placeholder={t('addToPantry.quantityPlaceholder')}
-            testID="add-pantry-item-quantity-input"
+            testID={pantryTestIDs.addDetailsQuantityInput}
           />
           <UnitAutocompleteField
             variant="inline"
@@ -111,7 +112,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
             onChangeText={setUnit}
             onUnitSelected={handleUnitSelected}
             placeholder={t('labels.pcsDozen')}
-            testID="add-pantry-item-unit-picker"
+            testID={pantryTestIDs.addDetailsUnitPicker}
           />
         </FieldRow>
         {/* Net Weight */}

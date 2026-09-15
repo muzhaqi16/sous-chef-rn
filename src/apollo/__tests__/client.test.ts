@@ -30,7 +30,6 @@ const mockLoad = jest.fn((): Record<string, unknown> | null => null);
 const mockScheduleExtractAndSave = jest.fn();
 const mockCancel = jest.fn();
 const mockClear = jest.fn();
-const mockMarkDirty = jest.fn();
 
 jest.mock('../offline/ApolloCachePersistence', () => ({
   apolloCachePersistence: {
@@ -38,9 +37,7 @@ jest.mock('../offline/ApolloCachePersistence', () => ({
     scheduleExtractAndSave: mockScheduleExtractAndSave,
     cancel: mockCancel,
     clear: mockClear,
-    markDirty: mockMarkDirty,
   },
-  cancelCachePersistence: () => mockCancel(),
 }));
 
 jest.mock('../links/tokenScheduler', () => ({
@@ -128,16 +125,6 @@ describe('Apollo client', () => {
       client.cache.gc();
       expect(mockScheduleExtractAndSave).toHaveBeenCalled();
     }
-  });
-
-  describe('cancelCachePersistence', () => {
-    it('cancels pending persistence', () => {
-      const {
-        cancelCachePersistence,
-      } = require('../offline/ApolloCachePersistence');
-      cancelCachePersistence();
-      expect(mockCancel).toHaveBeenCalled();
-    });
   });
 
   it('client has correct default options', () => {

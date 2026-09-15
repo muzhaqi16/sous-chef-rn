@@ -11,11 +11,6 @@ import { useUpdatePantryItem } from '../useUpdatePantryItem';
 
 jest.mock('#/services/errorService');
 
-jest.mock('#/utils/errors/versionConflict', () => ({
-  handleVersionConflict: jest.fn(() => false),
-  getVersionConflictMessage: jest.fn(() => 'Version conflict'),
-}));
-
 jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
   enhanceWithVersion: jest.fn((item, updates) => ({ ...item, ...updates })),
   buildOptimisticMutationResponse: jest.fn(
@@ -355,9 +350,8 @@ describe('useUpdatePantryItem — local-first cache behavior', () => {
   });
 
   it('tells the user which input the server refused (the unit)', async () => {
-    // Since 2026-08-22 the API resolves a bare `unit.unitSymbol` to a real unit
-    // and refuses the change while batches exist — a ValidationError with
-    // `field: "unit"` (docs/api/breaking-changes.md in the API repo). The edit
+    // The API resolves a bare `unit.unitSymbol` to a real unit and refuses the
+    // change while batches exist — a ValidationError with `field: "unit"`. The edit
     // must snap back AND say which of the four sub-inputs this call carries was
     // refused — in the app's own words, because `message` is English only.
     const cache = seedItem();

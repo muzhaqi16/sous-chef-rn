@@ -3,6 +3,7 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
+import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { EmptyState } from '#components/molecules/EmptyState';
 
 interface DataItem {
@@ -73,7 +74,7 @@ export const TopItemsBarChart: React.FC<TopItemsBarChartProps> = ({
                   />
                 </View>
                 <Text role="caption" tone="secondary" style={styles.barValue}>
-                  {item.value}
+                  {formatQuantityForDisplay(item.value)}
                   {!!showSecondaryValue &&
                     item.secondaryValue !== undefined && (
                       <Text role="body">

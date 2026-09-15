@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CreateItemFormData } from '#features/catalog/utils/itemValidation';
@@ -14,7 +14,8 @@ import { FormTextArea } from '#components/atoms/FormTextArea';
 import { FormNumberInput } from '#features/catalog/components/FormNumberInput';
 import { FormSelect } from '#components/molecules/FormSelect';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
-import { type FieldDef } from '#components/molecules/DynamicFormFields';
+import type { FieldDef } from '#components/molecules/DynamicFormFields';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 // Type-only, so this does not create a runtime cycle with AddItemForm (which
 // imports the field builders below).
 import type { AddItemFormMode } from './AddItemForm';
@@ -46,7 +47,7 @@ export const PAGES: readonly [PageName, ...PageName[]] = [
 ];
 
 /** Page names double as record keys, so the display label is looked up here. */
-export const PAGE_LABEL_KEYS: Record<PageName, string> = {
+export const PAGE_LABEL_KEYS: Record<PageName, TranslationKey> = {
   Basics: 'addItemForm.tabs.basics',
   Product: 'addItemForm.tabs.product',
   Storage: 'labels.storage',
@@ -276,6 +277,7 @@ export const buildTabFieldGroups = (
     placeholder: t('addItemForm.fields.editNote.placeholder'),
     component: FormTextArea,
     props: { numberOfLines: 3, required: true },
+    testID: catalogTestIDs.addItemFormEditNoteInput,
   };
 
   const editing = isEditMode(mode);
@@ -322,7 +324,14 @@ export const buildTabFieldGroups = (
  * Per-mode copy, held as i18n keys rather than text so this stays a static
  * literal the form can index by mode. The caller resolves them with `t`.
  */
-export const MODE_CONFIG = {
+export const MODE_CONFIG: Record<
+  AddItemFormMode,
+  {
+    title: TranslationKey;
+    subtitle: (hasBarcode: boolean) => TranslationKey;
+    buttonLabel: TranslationKey;
+  }
+> = {
   create: {
     title: 'addItemForm.modes.create.title',
     subtitle: (hasBarcode: boolean) =>

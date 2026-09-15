@@ -21,10 +21,6 @@ jest.mock('#utils/iconUtils', () => ({
     return <Text>{name}</Text>;
   },
 }));
-jest.mock('#features/home/utils/inviteFormatters', () => ({
-  formatInviteStatus: (status: string) => status.toLowerCase(),
-  getInviteStatusColor: () => '#FF0000',
-}));
 
 function buildInvite(
   overrides: Partial<{ id: string; status: InviteStatus }> = {},

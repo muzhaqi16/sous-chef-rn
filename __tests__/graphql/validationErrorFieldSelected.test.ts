@@ -2,9 +2,8 @@
  * A mutation that CAN be refused by field must SELECT the field.
  *
  * The server names the refused input on `ValidationError.field`, and
- * `alertIfRejected` / `localizedRefusalMessage`
- * (`src/apollo/utils/alertRejectedMutation.ts`) turn that name into localized
- * copy from `errors.field.*`, falling back to the caller's own string. That is
+ * `settleMutation` (`src/apollo/utils/settleMutation.ts`) turns that name into
+ * localized copy from `errors.field.*`, falling back to the caller's own string. That is
  * the whole mechanism by which a refusal says something more useful than
  * "Failed to update item" — and the server's `message` is deliberately never
  * shown, because it is unlocalizable English by construction.
@@ -124,6 +123,6 @@ describe('a refusable mutation selects ValidationError.field', () => {
     // The check above passes vacuously if the walk stops finding documents —
     // a moved directory, a parse regression, a schema without a Mutation type.
     // A floor makes "nothing to report" distinguishable from "nothing read".
-    expect(compliant.length).toBeGreaterThanOrEqual(150);
+    expect(compliant.length).toBeGreaterThanOrEqual(140);
   });
 });

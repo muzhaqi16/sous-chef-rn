@@ -1,7 +1,46 @@
 import { storage } from '#storage/mmkv';
 import { logger } from '#/utils/environment';
+import type {
+  MealPlanItem,
+  PantryItem,
+  PantryItemBatch,
+  ShoppingListItem,
+} from '#/graphql/generated/schemaTypes';
 
 const OPTIMISTIC_DATA_KEY = 'apollo-optimistic-data-v1';
+
+/** The entities whose fields survive a restart, keyed by generated typename. */
+interface PersistedEntities {
+  MealPlanItem: MealPlanItem;
+  PantryItem: PantryItem;
+  PantryItemBatch: PantryItemBatch;
+  ShoppingListItem: ShoppingListItem;
+}
+
+export type PersistedEntityType = keyof PersistedEntities;
+
+export type PersistedField<T extends PersistedEntityType> = Exclude<
+  keyof PersistedEntities[T],
+  '__typename'
+> &
+  string;
+
+// A key that is not its entity's generated `__typename` types as `never` here.
+type KeyedByTypename = {
+  readonly [K in PersistedEntityType]: PersistedEntities[K]['__typename'] extends K
+    ? K
+    : never;
+};
+const PERSISTED_TYPENAMES: KeyedByTypename = {
+  MealPlanItem: 'MealPlanItem',
+  PantryItem: 'PantryItem',
+  PantryItemBatch: 'PantryItemBatch',
+  ShoppingListItem: 'ShoppingListItem',
+};
+
+export const isPersistedEntityType = (
+  typename: string,
+): typename is PersistedEntityType => typename in PERSISTED_TYPENAMES;
 
 interface OptimisticFieldUpdate {
   entityType: string; // 'ShoppingListItem', 'ShoppingList', 'PantryItem', etc.
@@ -9,6 +48,30 @@ interface OptimisticFieldUpdate {
   field: string;
   value: unknown;
   timestamp: number;
+}
+
+const isFieldUpdate = (value: unknown): value is OptimisticFieldUpdate =>
+  typeof value === 'object' &&
+  value !== null &&
+  'entityType' in value &&
+  typeof value.entityType === 'string' &&
+  'entityId' in value &&
+  typeof value.entityId === 'string' &&
+  'field' in value &&
+  typeof value.field === 'string' &&
+  'timestamp' in value &&
+  typeof value.timestamp === 'number';
+
+/** The stored JSON, keeping only entries in the shape `save` writes. */
+function readPersistedUpdates(
+  parsed: unknown,
+): Record<string, OptimisticFieldUpdate> {
+  const updates: Record<string, OptimisticFieldUpdate> = {};
+  if (typeof parsed !== 'object' || parsed === null) return updates;
+  for (const [key, entry] of Object.entries(parsed)) {
+    if (isFieldUpdate(entry)) updates[key] = entry;
+  }
+  return updates;
 }
 
 /**
@@ -25,10 +88,10 @@ class OptimisticDataPersistence {
   private cache: Record<string, OptimisticFieldUpdate> | null = null;
 
   /** Batched — the write lands on the next microtask. */
-  save(
-    entityType: string,
+  save<T extends PersistedEntityType>(
+    entityType: T,
     entityId: string,
-    field: string,
+    field: PersistedField<T>,
     value: unknown,
   ): void {
     try {
@@ -93,7 +156,10 @@ class OptimisticDataPersistence {
   }
 
   /** Persisted field values for one entity instance, keyed by field name. */
-  get(entityType: string, entityId: string): Record<string, unknown> {
+  get(
+    entityType: PersistedEntityType,
+    entityId: string,
+  ): Record<string, unknown> {
     const all = this.loadAll();
     const updates: Record<string, unknown> = {};
 
@@ -107,16 +173,17 @@ class OptimisticDataPersistence {
   }
 
   /** Every persisted field of an entity type, grouped by entity id. */
-  getAllForType(entityType: string): Map<string, Record<string, unknown>> {
+  getAllForType(
+    entityType: PersistedEntityType,
+  ): Map<string, Record<string, unknown>> {
     const all = this.loadAll();
     const byEntity = new Map<string, Record<string, unknown>>();
 
     Object.entries(all).forEach(([, data]) => {
       if (data.entityType === entityType) {
-        if (!byEntity.has(data.entityId)) {
-          byEntity.set(data.entityId, {});
-        }
-        byEntity.get(data.entityId)![data.field] = data.value;
+        const fields = byEntity.get(data.entityId) ?? {};
+        fields[data.field] = data.value;
+        byEntity.set(data.entityId, fields);
       }
     });
 
@@ -124,10 +191,10 @@ class OptimisticDataPersistence {
   }
 
   /** `save` plus the matching `clear`, for the save-then-mutate pattern. */
-  track(
-    entityType: string,
+  track<T extends PersistedEntityType>(
+    entityType: T,
     entityId: string,
-    field: string,
+    field: PersistedField<T>,
     value: unknown,
   ): () => void {
     this.save(entityType, entityId, field, value);
@@ -135,7 +202,11 @@ class OptimisticDataPersistence {
   }
 
   /** Drops one persisted field, once its mutation has synced. */
-  clear(entityType: string, entityId: string, field: string): void {
+  clear<T extends PersistedEntityType>(
+    entityType: T,
+    entityId: string,
+    field: PersistedField<T>,
+  ): void {
     try {
       const existing = this.loadAll();
       const key = `${entityType}:${entityId}:${field}`;
@@ -163,16 +234,19 @@ class OptimisticDataPersistence {
     }
   }
 
-  /** Drops every persisted field of one entity — deleted, or fully synced. */
+  /**
+   * Drops every persisted field of one entity — deleted, or fully synced.
+   * Takes the typename as read from the cache, which the caller cannot narrow.
+   */
   clearEntity(entityType: string, entityId: string): void {
     try {
       const all = this.loadAll();
-      const filtered = Object.entries(all).reduce((acc, [key, data]) => {
-        if (!(data.entityType === entityType && data.entityId === entityId)) {
-          acc[key] = data;
-        }
-        return acc;
-      }, {} as Record<string, OptimisticFieldUpdate>);
+      const filtered = Object.fromEntries(
+        Object.entries(all).filter(
+          ([, data]) =>
+            !(data.entityType === entityType && data.entityId === entityId),
+        ),
+      );
 
       const clearedCount =
         Object.keys(all).length - Object.keys(filtered).length;
@@ -196,15 +270,14 @@ class OptimisticDataPersistence {
   }
 
   /** Drops every persisted field of an entity type. */
-  clearType(entityType: string): void {
+  clearType(entityType: PersistedEntityType): void {
     try {
       const all = this.loadAll();
-      const filtered = Object.entries(all).reduce((acc, [key, data]) => {
-        if (data.entityType !== entityType) {
-          acc[key] = data;
-        }
-        return acc;
-      }, {} as Record<string, OptimisticFieldUpdate>);
+      const filtered = Object.fromEntries(
+        Object.entries(all).filter(
+          ([, data]) => data.entityType !== entityType,
+        ),
+      );
 
       const clearedCount =
         Object.keys(all).length - Object.keys(filtered).length;
@@ -270,11 +343,12 @@ class OptimisticDataPersistence {
       }
 
       const data = storage.getString(OPTIMISTIC_DATA_KEY);
-      const parsed = data ? JSON.parse(data) : {};
+      const parsed: unknown = data ? JSON.parse(data) : {};
+      const loaded = readPersistedUpdates(parsed);
 
-      this.cache = parsed;
+      this.cache = loaded;
 
-      return parsed;
+      return loaded;
     } catch (error) {
       logger.error('Failed to load optimistic data:', error);
       return {};

@@ -118,7 +118,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
   const handleToggleDietary = () => {
     if (!mealPlan || !dietaryProfile) return;
     const nextLinked = !isDietaryLinked;
-    updateMealPlan(mealPlan.id, {
+    void updateMealPlan(mealPlan.id, {
       dietaryProfileId: nextLinked ? dietaryProfile.id : null,
     });
     if (nextLinked) setShowNutrition(true);
@@ -397,6 +397,6 @@ const actionStyles = StyleSheet.create(theme => ({
     },
   },
   description: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
 }));

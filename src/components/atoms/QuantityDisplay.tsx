@@ -1,10 +1,10 @@
 import React from 'react';
-import { TextStyle, StyleProp } from 'react-native';
+import type { TextStyle, StyleProp } from 'react-native';
 import { Text } from '#components/atoms/Text';
-import { DisplayFormat } from '#/graphql/generated/schemaTypes';
+import type { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import {
   formatQuantityForDisplay,
-  type QuantityNotation,
+  resolveQuantityNotation,
 } from '#/utils/formatQuantity';
 
 interface QuantityDisplayProps {
@@ -18,9 +18,8 @@ interface QuantityDisplayProps {
 }
 
 /**
- * Renders a quantity through `formatQuantityForDisplay`, with the item's
- * `displayFormat` — then the unit's `displayAsFraction` — choosing the
- * notation. Absent both, a cooking fraction wins over a decimal.
+ * Renders a quantity through `formatQuantityForDisplay`, in the notation
+ * {@link resolveQuantityNotation} picks from the item and its unit.
  */
 export const QuantityDisplay: React.FC<QuantityDisplayProps> = ({
   quantity,
@@ -33,7 +32,7 @@ export const QuantityDisplay: React.FC<QuantityDisplayProps> = ({
 }) => {
   const text = formatQuantityForDisplay(quantity, {
     quantityInput,
-    notation: resolveNotation(displayFormat, displayAsFraction),
+    notation: resolveQuantityNotation(displayFormat, displayAsFraction),
   });
 
   if (!text) return <Text style={style}>-</Text>;
@@ -45,20 +44,3 @@ export const QuantityDisplay: React.FC<QuantityDisplayProps> = ({
     </Text>
   );
 };
-
-function resolveNotation(
-  displayFormat: DisplayFormat | null | undefined,
-  displayAsFraction: boolean | null | undefined,
-): QuantityNotation {
-  switch (displayFormat) {
-    case DisplayFormat.Fraction:
-      return 'fraction';
-    case DisplayFormat.Mixed:
-      return 'mixed';
-    case DisplayFormat.Decimal:
-      return 'decimal';
-    default:
-      // Only an explicit `false` — a unit nobody halves — opts out of fractions.
-      return displayAsFraction === false ? 'decimal' : 'mixed';
-  }
-}

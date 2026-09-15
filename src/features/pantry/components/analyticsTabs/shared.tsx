@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -11,6 +11,11 @@ import { TrendLineChart as BaseTrendLineChart } from '#features/pantry/component
 import { TopItemsBarChart as BaseTopItemsBarChart } from '#features/pantry/components/charts/TopItemsBarChart';
 import type { usePantryAnalytics } from '#features/pantry/hooks/usePantryAnalytics';
 import type { Translate } from '#/i18n/types';
+import {
+  UsagePurpose,
+  UsageSource,
+  WasteReason,
+} from '#/graphql/generated/schemaTypes';
 
 // Wrapped only so `uniProps` type-checks at the call sites; no static theme
 // mapping — every theme read happens via `uniProps={t => ({ … })}`.
@@ -35,48 +40,50 @@ export interface SharedTabProps {
   onRefresh: () => void;
 }
 
-export function formatPurpose(purpose: string, t: Translate): string {
-  const map: Record<string, string> = {
-    ADJUSTMENT: 'pantryAnalytics.purposeAdjustment',
-    COOKING: 'pantryAnalytics.purposeCooking',
-    GENERAL: 'labels.general',
-    GIFT: 'usagePurpose.GIFT',
-    MEAL_PREP: 'labels.mealPrep',
-    RESTOCK: 'pantryAnalytics.purposeRestock',
-    SNACK: 'usagePurpose.SNACK',
-    TRANSFER: 'pantryAnalytics.purposeTransfer',
-    WASTE: 'pantryAnalytics.purposeWaste',
+// The server can send an enum member newer than this build's codegen; it has no
+// copy here, so these formatters show it raw.
+export function formatPurpose(purpose: UsagePurpose, t: Translate): string {
+  const map: Record<UsagePurpose, TranslationKey> = {
+    [UsagePurpose.Adjustment]: 'pantryAnalytics.purposeAdjustment',
+    [UsagePurpose.Cooking]: 'pantryAnalytics.purposeCooking',
+    [UsagePurpose.General]: 'labels.general',
+    [UsagePurpose.Gift]: 'usagePurpose.GIFT',
+    [UsagePurpose.MealPrep]: 'labels.mealPrep',
+    [UsagePurpose.Restock]: 'pantryAnalytics.purposeRestock',
+    [UsagePurpose.Snack]: 'usagePurpose.SNACK',
+    [UsagePurpose.Transfer]: 'pantryAnalytics.purposeTransfer',
+    [UsagePurpose.Waste]: 'pantryAnalytics.purposeWaste',
   };
-  return map[purpose] ? t(map[purpose]) : purpose;
+  return purpose in map ? t(map[purpose]) : purpose;
 }
 
-export function formatSource(source: string, t: Translate): string {
-  const map: Record<string, string> = {
-    MANUAL: 'pantryAnalytics.sourceManual',
-    RECIPE_AUTO: 'pantryAnalytics.sourceRecipeAuto',
-    RECIPE_MANUAL: 'pantryAnalytics.sourceRecipeManual',
-    TRANSFER: 'pantryAnalytics.purposeTransfer',
-    WASTE: 'pantryAnalytics.purposeWaste',
+export function formatSource(source: UsageSource, t: Translate): string {
+  const map: Record<UsageSource, TranslationKey> = {
+    [UsageSource.Manual]: 'pantryAnalytics.sourceManual',
+    [UsageSource.RecipeAuto]: 'pantryAnalytics.sourceRecipeAuto',
+    [UsageSource.RecipeManual]: 'pantryAnalytics.sourceRecipeManual',
+    [UsageSource.Transfer]: 'pantryAnalytics.purposeTransfer',
+    [UsageSource.Waste]: 'pantryAnalytics.purposeWaste',
   };
-  return map[source] ? t(map[source]) : source;
+  return source in map ? t(map[source]) : source;
 }
 
-export function formatReason(reason: string, t: Translate): string {
-  const map: Record<string, string> = {
-    BURNT: 'pantryAnalytics.reasonBurnt',
-    COOKING_FAIL: 'labels.cookingFail',
-    EXPIRED: 'pantryAnalytics.reasonExpired',
-    GAVE_AWAY: 'labels.gaveAway',
-    MOLD: 'labels.mold',
-    OTHER: 'itemType.OTHER',
-    OVERSTOCK: 'labels.overstock',
-    PEST: 'labels.pest',
-    SPILLED: 'pantryAnalytics.reasonSpilled',
-    SPOILED: 'pantryAnalytics.reasonSpoiled',
-    TASTE: 'pantryAnalytics.reasonTaste',
-    UNKNOWN_LOSS: 'labels.unknownLoss',
+export function formatReason(reason: WasteReason, t: Translate): string {
+  const map: Record<WasteReason, TranslationKey> = {
+    [WasteReason.Burnt]: 'pantryAnalytics.reasonBurnt',
+    [WasteReason.CookingFail]: 'labels.cookingFail',
+    [WasteReason.Expired]: 'pantryAnalytics.reasonExpired',
+    [WasteReason.GaveAway]: 'labels.gaveAway',
+    [WasteReason.Mold]: 'labels.mold',
+    [WasteReason.Other]: 'itemType.OTHER',
+    [WasteReason.Overstock]: 'labels.overstock',
+    [WasteReason.Pest]: 'labels.pest',
+    [WasteReason.Spilled]: 'pantryAnalytics.reasonSpilled',
+    [WasteReason.Spoiled]: 'pantryAnalytics.reasonSpoiled',
+    [WasteReason.Taste]: 'pantryAnalytics.reasonTaste',
+    [WasteReason.UnknownLoss]: 'labels.unknownLoss',
   };
-  return map[reason] ? t(map[reason]) : reason;
+  return reason in map ? t(map[reason]) : reason;
 }
 
 /**

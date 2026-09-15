@@ -1,16 +1,12 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import {
-  useTheme as useThemePreference,
-  useThemePreferences,
-} from '#store/useAppStore';
-import { useTheme } from '#features/profile/hooks/useTheme';
+import { usePreferences, useThemePreferences } from '#store/useAppStore';
 import {
   ThemePreference,
   DensityPreference,
@@ -20,46 +16,36 @@ import { DENSITY_META, FONT_SCALE_META } from '#/theme/appearanceConfig';
 import { appConfig } from '#/config/appConfig';
 import { Text } from '#components/atoms/Text';
 import { Screen } from '#components/templates/Screen';
+import { colors } from '#/theme/foundations/colors';
 
 const APP_COLORS: {
-  labelKey: string;
+  labelKey: TranslationKey;
   value: string | null;
-  hex: string;
 }[] = [
-  {
-    labelKey: 'appearance.colorDefault',
-    value: null,
-    hex: appConfig.branding.primaryColor,
-  },
+  { labelKey: 'appearance.colorDefault', value: null },
   {
     labelKey: 'storageLocationForm.colorBlue',
-    value: '#2563EB',
-    hex: '#2563EB',
+    value: colors.accentSwatches.blue,
   },
   {
     labelKey: 'storageLocationForm.colorGreen',
-    value: '#16A34A',
-    hex: '#16A34A',
+    value: colors.accentSwatches.green,
   },
   {
     labelKey: 'storageLocationForm.colorPurple',
-    value: '#7C3AED',
-    hex: '#7C3AED',
+    value: colors.accentSwatches.purple,
   },
   {
     labelKey: 'storageLocationForm.colorRed',
-    value: '#DC2626',
-    hex: '#DC2626',
+    value: colors.accentSwatches.red,
   },
   {
     labelKey: 'storageLocationForm.colorTeal',
-    value: '#0D9488',
-    hex: '#0D9488',
+    value: colors.accentSwatches.teal,
   },
   {
     labelKey: 'storageLocationForm.colorPink',
-    value: '#f51aff',
-    hex: '#f51aff',
+    value: colors.accentSwatches.pink,
   },
 ];
 
@@ -72,7 +58,7 @@ const FONT_SCALE_OPTIONS = Object.values(FontScalePreference);
 export default function AppearanceScreen() {
   const { t } = useTranslation();
   const { navigation } = useAppNavigation();
-  const { setLightTheme, setDarkTheme, setSystemTheme } = useTheme();
+  const { theme, setTheme } = usePreferences();
 
   const {
     primaryColorOverride,
@@ -84,8 +70,6 @@ export default function AppearanceScreen() {
     setFontScalePreference,
     setHighContrast,
   } = useThemePreferences();
-
-  const userThemePreference = useThemePreference();
 
   return (
     <Screen
@@ -105,7 +89,7 @@ export default function AppearanceScreen() {
             ThemePreference.DARK,
             ThemePreference.SYSTEM,
           ]}
-          value={userThemePreference}
+          value={theme}
           formatLabel={v =>
             v === ThemePreference.LIGHT
               ? t('appearance.themeLight')
@@ -113,11 +97,7 @@ export default function AppearanceScreen() {
               ? t('appearance.themeDark')
               : t('labels.system')
           }
-          onChange={v => {
-            if (v === ThemePreference.LIGHT) setLightTheme();
-            else if (v === ThemePreference.DARK) setDarkTheme();
-            else setSystemTheme();
-          }}
+          onChange={setTheme}
         />
 
         {/* App Color */}
@@ -131,7 +111,7 @@ export default function AppearanceScreen() {
               accessibilityLabel={t(c.labelKey)}
               style={[
                 styles.colorSwatch,
-                { backgroundColor: c.hex },
+                { backgroundColor: c.value ?? appConfig.branding.primaryColor },
                 (primaryColorOverride ?? null) === c.value &&
                   styles.colorSwatchSelected,
               ]}

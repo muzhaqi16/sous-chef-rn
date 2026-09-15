@@ -7,40 +7,23 @@ import { formatRole } from '#/utils/formatters/roleFormatters';
 import {
   formatInviteStatus,
   getInviteDisplayName,
+  getInviteStatusKey,
 } from '#features/home/utils/inviteFormatters';
 import {
   getMemberDisplayName,
   type Member,
 } from '#/utils/formatters/memberFormatters';
 import { Text } from '#components/atoms/Text';
+import type { MembershipRole } from '#/graphql/generated/schemaTypes';
+import type { HomeCard_HomeFragment } from './HomeCard.generated';
 
-interface ListInvite {
-  id: string;
-  email: string | null;
-  recipientName: string | null;
-  status: string;
-}
-
-type StatusKey = 'pending' | 'accepted' | 'declined' | 'expired';
-
-function getStatusKey(status: string): StatusKey {
-  switch (status) {
-    case 'PENDING':
-      return 'pending';
-    case 'ACCEPTED':
-      return 'accepted';
-    case 'DECLINED':
-      return 'declined';
-    case 'EXPIRED':
-    case 'REVOKED':
-    default:
-      return 'expired';
-  }
-}
+type ListInvite =
+  HomeCard_HomeFragment['invitesConnection']['edges'][number]['node'];
 
 const InviteChip: React.FC<{ invite: ListInvite }> = ({ invite }) => {
-  const statusKey = getStatusKey(invite.status);
-  const displayName = getInviteDisplayName(invite);
+  const { t } = useTranslation();
+  const statusKey = getInviteStatusKey(invite.status);
+  const displayName = getInviteDisplayName(invite, t);
   styles.useVariants({ status: statusKey });
   return (
     <View style={styles.inviteChip}>
@@ -48,7 +31,7 @@ const InviteChip: React.FC<{ invite: ListInvite }> = ({ invite }) => {
         {displayName}
       </Text>
       <Text role="bodyStrong" style={styles.inviteStatus}>
-        {formatInviteStatus(invite.status)}
+        {formatInviteStatus(invite.status, t)}
       </Text>
     </View>
   );
@@ -56,7 +39,7 @@ const InviteChip: React.FC<{ invite: ListInvite }> = ({ invite }) => {
 
 const MemberChip: React.FC<{
   displayName: string;
-  role: string;
+  role: MembershipRole;
   isCurrentUser: boolean;
 }> = ({ displayName, role, isCurrentUser }) => {
   styles.useVariants({ currentUser: isCurrentUser });

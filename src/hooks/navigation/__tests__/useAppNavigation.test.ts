@@ -185,14 +185,6 @@ describe('useAppNavigation', () => {
       act(() => result.current.toLogin());
       expect(mockNavigate).toHaveBeenCalledWith('Auth', { screen: 'Login' });
     });
-
-    it('toEmailVerification passes token at root level', () => {
-      const { result } = renderHook(() => useAppNavigation());
-      act(() => result.current.toEmailVerification('tok123'));
-      expect(mockNavigate).toHaveBeenCalledWith('EmailVerification', {
-        token: 'tok123',
-      });
-    });
   });
 
   it('exposes the raw navigation object as an escape hatch', () => {

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useTranslation } from '#/i18n';
 import { useStorageLocationAutocomplete } from '#features/catalog/hooks/useStorageLocationAutocomplete';
-import { type StorageLocation } from '#/graphql/generated/schemaTypes';
+import type { StorageLocation } from '#/graphql/generated/schemaTypes';
 import { StorageLocationIcon } from '#features/catalog/ui/StorageLocationIcon';
 import { AutocompleteField } from '#features/catalog/components/AutocompleteField/AutocompleteField';
 import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';

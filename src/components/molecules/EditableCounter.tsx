@@ -160,7 +160,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
         </Pressable>
       </View>
       {error ? (
-        <Text role="caption" tone="error" style={styles.errorText}>
+        <Text role="error" tone="error" style={styles.errorText}>
           {error}
         </Text>
       ) : null}

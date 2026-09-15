@@ -27,6 +27,7 @@ import {
 } from '#/storage/deviceId';
 import { registerSessionTeardown } from '#/store/sessionTeardown';
 import { useStore } from '#store';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 
 // Registering THIS device with the server, and telling it to stop on sign-out.
 // Fire-and-forget: a failure here must never block a sign-in.
@@ -36,6 +37,18 @@ import { useStore } from '#store';
  * Revoking OS notifications does not invalidate an FCM token, so the device is
  * the only party that can tell the server to stop treating it as reachable.
  */
+const isJsonInput = (value: unknown): value is JsonInput =>
+  value === null ||
+  typeof value === 'string' ||
+  typeof value === 'number' ||
+  typeof value === 'boolean' ||
+  typeof value === 'object';
+
+function parseJsonInput(raw: string): JsonInput | undefined {
+  const parsed: unknown = JSON.parse(raw);
+  return isJsonInput(parsed) ? parsed : undefined;
+}
+
 function resolvePushTokenWrite(
   permissionGranted: boolean,
   acquired: string | null,
@@ -106,7 +119,7 @@ function buildDeviceInput(
         batteryLevel: deviceInfo.batteryLevel,
         isBatteryCharging: deviceInfo.isBatteryCharging,
         powerState: deviceInfo.powerState
-          ? JSON.parse(deviceInfo.powerState)
+          ? parseJsonInput(deviceInfo.powerState)
           : undefined,
       },
       peripherals: {
@@ -155,14 +168,13 @@ function readDeviceUpdate(result: {
   data?: UpdateDeviceMutation | null;
   error?: unknown;
 }): DeviceUpdateOutcome {
-  const payload = result.data?.updateDevice;
-  if (payload?.__typename === 'UpdateDevicePayload') return { status: 'ok' };
-  if (!payload) return { status: 'failed', error: result.error ?? null };
-  return {
-    status: 'refused',
-    code: payload.code ?? null,
-    message: payload.message ?? null,
-  };
+  if (appliedPayload(result.data)) return { status: 'ok' };
+  // Any other member is a refusal the server resolved, not a success.
+  const refusal = result.data?.updateDevice;
+  if (!refusal || !('code' in refusal)) {
+    return { status: 'failed', error: result.error ?? null };
+  }
+  return { status: 'refused', code: refusal.code, message: refusal.message };
 }
 
 async function updateDevice(
@@ -344,12 +356,10 @@ async function registerDeviceOnce(): Promise<RegistrationOutcome> {
       },
     });
 
-    const registerPayload = result.data?.registerDevice;
-    if (registerPayload?.__typename !== 'RegisterDevicePayload') {
-      const message =
-        registerPayload && 'message' in registerPayload
-          ? registerPayload.message
-          : null;
+    const registerPayload = appliedPayload(result.data);
+    if (!registerPayload) {
+      const refusal = result.data?.registerDevice;
+      const message = refusal && 'message' in refusal ? refusal.message : null;
       logger.error('Device registration failed:', message);
       return 'retry';
     }

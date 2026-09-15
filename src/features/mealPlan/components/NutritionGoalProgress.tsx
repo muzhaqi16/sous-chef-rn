@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { GoalStatus, type GoalProgress } from '#/graphql/generated/schemaTypes';
@@ -14,7 +14,7 @@ interface NutritionGoalProgressProps {
   fatProgress: GoalProgress | null | undefined;
 }
 
-const STATUS_LABEL_KEYS: Record<GoalStatus, string> = {
+const STATUS_LABEL_KEYS: Record<GoalStatus, TranslationKey> = {
   [GoalStatus.OnTarget]: 'nutritionGoal.statusOnTarget',
   [GoalStatus.UnderTarget]: 'nutritionGoal.statusUnder',
   [GoalStatus.OverTarget]: 'nutritionGoal.statusOver',

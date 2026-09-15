@@ -1,6 +1,7 @@
 'use no memo';
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
+import { UsagePurpose } from '#/graphql/generated/schemaTypes';
 import { PantryUsageHistory } from '../PantryUsageHistory';
 import type { UsageRecord } from '../UsageHistoryRow';
 
@@ -16,7 +17,7 @@ const makeRecord = (
     id,
     usedAt: `2024-01-0${id}`,
     quantityUsed: 1,
-    purpose: 'GENERAL',
+    purpose: UsagePurpose.General,
     adjustmentReason: null,
     usageUnit: { symbol: 'L' },
     ...overrides,

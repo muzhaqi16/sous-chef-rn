@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { PressableScale } from '#components/atoms/PressableScale';
 import type { AddButtonProps } from './types';
+import { kitTestIDs } from '#components/testIDs';
 
 export const AddButton: React.FC<AddButtonProps> = ({
   onPress,
@@ -16,7 +17,7 @@ export const AddButton: React.FC<AddButtonProps> = ({
 
   return (
     <PressableScale
-      testID="tab-bar-add-button"
+      testID={kitTestIDs.tabBarAddButton}
       onPress={onPress}
       activeScale={0.9}
       haptic="medium"

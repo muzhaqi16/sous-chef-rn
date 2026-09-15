@@ -43,25 +43,16 @@ export interface ScreenHeaderConfig {
   centerTitle?: boolean;
 }
 
-export interface ScreenProps {
+export interface ScreenRefresh {
+  refreshing: boolean;
+  onRefresh: () => void;
+}
+
+interface ScreenBaseProps {
   children: React.ReactNode;
   header?: ScreenHeaderConfig;
-  /**
-   * `none` is fixed content, `scroll` a plain scroll view, `form` the
-   * keyboard-aware host, and `list` means THE CHILD IS THE SCROLLABLE — a
-   * FlashList or a ScrollView the screen owns, so the scaffold adds no scroll
-   * host and no bottom inset of its own.
-   */
-  scroll?: 'none' | 'scroll' | 'form' | 'list';
   /** Horizontal page inset. `none` is for a screen that bleeds to the edges. */
   gutter?: 'page' | 'none';
-  /**
-   * Pull-to-refresh for `scroll`, `form` and `none`. A `list` screen passes an
-   * RNGH `ThemedRefreshControl` to its own FlashList instead — RNGH's scrollable
-   * routes its scroll gesture only into a control from `createNativeWrapper`,
-   * so the control has to reach the list, not this scaffold.
-   */
-  refresh?: { refreshing: boolean; onRefresh: () => void };
   /**
    * Loading, error, offline and empty all come from here, so a screen cannot
    * implement three of the four and leave a failed fetch reading "nothing yet".
@@ -72,10 +63,23 @@ export interface ScreenProps {
 }
 
 /**
+ * `scroll`: `none` fixed, `scroll` a plain scroll view, `form` keyboard-aware,
+ * `list` means THE CHILD IS THE SCROLLABLE — so `list` takes `refresh?: never`:
+ * only a `createNativeWrapper` control takes RNGH's gesture, so it has to reach
+ * the list, and a dropped `refresh` is otherwise silent.
+ */
+export type ScreenProps = ScreenBaseProps &
+  (
+    | { scroll?: 'none' | 'scroll' | 'form'; refresh?: ScreenRefresh }
+    | { scroll: 'list'; refresh?: never }
+  );
+
+/**
  * The one screen scaffold. It NEVER applies the top inset — the navigator's
  * `screenLayout` already does, and applying it twice is what pushed six profile
- * screens down by a status bar. The bottom inset is applied only for fixed
- * content, since a scroll view gets it from its own content inset.
+ * screens down by a status bar. The bottom inset is applied to every mode:
+ * `contentInsetAdjustmentBehavior` supplies it on iOS only, and under Android
+ * gesture navigation a scroll view's last row otherwise sits under the bar.
  */
 export const Screen: React.FC<ScreenProps> = ({
   children,
@@ -140,7 +144,11 @@ export const Screen: React.FC<ScreenProps> = ({
     if (scroll === 'form') {
       return (
         <ThemedKeyboardAwareScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom },
+          ]}
+          showsVerticalScrollIndicator={false}
           // Stated, not inherited: KeyboardAwareScrollView supplies no default
           // and RN's is `never`, which spends the first tap on dismissing the
           // keyboard instead of on the control the person aimed at.
@@ -156,8 +164,12 @@ export const Screen: React.FC<ScreenProps> = ({
       return (
         <ScrollView
           style={styles.body}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom },
+          ]}
           contentInsetAdjustmentBehavior="automatic"
+          showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps={KEYBOARD_PERSIST_TAPS}
           keyboardDismissMode={KEYBOARD_DISMISS_MODE}
           refreshControl={plainRefresh}

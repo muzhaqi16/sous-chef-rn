@@ -2,20 +2,9 @@ import { useAppStore, useUser } from '#store/useAppStore';
 
 export const useAuthPreferences = () => {
   const user = useUser();
-  const getUserNavigationState = useAppStore(
-    state => state.getUserNavigationState,
-  );
   const setUserNavigationState = useAppStore(
     state => state.setUserNavigationState,
   );
-
-  const shouldShowCredentialPrompt = (userId?: string): boolean => {
-    const targetUserId = userId || user?.id;
-    if (!targetUserId) return false;
-
-    const navState = getUserNavigationState(targetUserId);
-    return !navState?.credentialPromptDeclined;
-  };
 
   const markBiometricDeclined = (userId?: string) => {
     const targetUserId = userId || user?.id;
@@ -57,47 +46,10 @@ export const useAuthPreferences = () => {
     });
   };
 
-  const resetAllPreferences = (userId?: string) => {
-    const targetUserId = userId || user?.id;
-    if (!targetUserId) return;
-
-    setUserNavigationState(targetUserId, {
-      biometricDeclinedPermanently: false,
-      credentialPromptDeclined: false,
-    });
-  };
-
-  const trackCredentialPromptShown = (userId?: string) => {
-    const targetUserId = userId || user?.id;
-    if (!targetUserId) return;
-
-    setUserNavigationState(targetUserId, {
-      lastCredentialPromptShown: Date.now(),
-    });
-  };
-
-  const clearRegistrationPreferences = (userId: string) => {
-    setUserNavigationState(userId, {
-      credentialPromptDeclined: false,
-      biometricDeclinedPermanently: false,
-    });
-  };
-
-  const trackLogout = (userId: string) => {
-    setUserNavigationState(userId, {
-      biometricEnabled: false,
-    });
-  };
-
   return {
-    shouldShowCredentialPrompt,
     markBiometricDeclined,
     markBiometricEnabled,
     markCredentialPromptDeclined,
     resetBiometricDeclination,
-    resetAllPreferences,
-    trackCredentialPromptShown,
-    clearRegistrationPreferences,
-    trackLogout,
   };
 };

@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
+import { kitTestIDs } from '#components/testIDs';
 
 export interface PageIndicatorItem {
   label: string;
@@ -39,7 +40,7 @@ const PageIndicatorItemRow: React.FC<{
     <AppPressable
       // Indexed, not label-derived: the labels are translated, so a test
       // targeting them would pass in English and fail in every other locale.
-      testID={`page-indicator-${index}`}
+      testID={kitTestIDs.pageIndicator(index)}
       onPress={onPress}
       accessibilityRole="tab"
       accessibilityLabel={label}

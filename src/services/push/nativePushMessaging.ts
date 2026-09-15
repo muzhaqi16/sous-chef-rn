@@ -16,6 +16,7 @@ import {
   getInitialNotification,
   type FirebaseMessagingTypes,
 } from '@react-native-firebase/messaging';
+import { t } from '#/i18n';
 import { logger } from '#/utils/environment';
 import { showLocalNotification } from '#/services/notifications/localNotificationHelper';
 import { routeNotificationTap } from './pushNotificationRouting';
@@ -25,6 +26,16 @@ import { routeNotificationTap } from './pushNotificationRouting';
  * Notifee draws them. One WITH a block is drawn by the OS — redrawing it would
  * duplicate the tray entry.
  */
+const stringEntries = (
+  data: FirebaseMessagingTypes.RemoteMessage['data'],
+): Record<string, string> => {
+  const entries: Record<string, string> = {};
+  for (const [key, value] of Object.entries(data ?? {})) {
+    if (typeof value === 'string') entries[key] = value;
+  }
+  return entries;
+};
+
 const toDisplayableNotification = (
   message: FirebaseMessagingTypes.RemoteMessage,
 ): {
@@ -35,15 +46,16 @@ const toDisplayableNotification = (
 } | null => {
   if (message.notification) return null;
 
-  const data = (message.data ?? {}) as Record<string, string>;
-  const title = typeof data.title === 'string' ? data.title : '';
-  const body = typeof data.body === 'string' ? data.body : '';
-  if (!title && !body) return null;
+  // FCM delivers data values as strings; Notifee accepts nothing else.
+  const data = stringEntries(message.data);
+  // A server title or body marks the message as meant to be seen, but its text
+  // is English in every locale, so the tray shows local copy instead.
+  if (!data.title && !data.body) return null;
 
   return {
     id: data.notificationId || message.messageId,
-    title,
-    body,
+    title: t('pushNotification.title'),
+    body: t('pushNotification.body'),
     data,
   };
 };

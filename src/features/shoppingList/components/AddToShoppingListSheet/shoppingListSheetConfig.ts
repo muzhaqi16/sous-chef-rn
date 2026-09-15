@@ -1,10 +1,11 @@
 import type { ShoppingListSuggestionItem } from '#features/shoppingList/hooks/useShoppingListSuggestions';
 import type { AddItemSheetConfig } from '#features/catalog/ui/AddItemSheet/types';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
 export const shoppingListSheetConfig: AddItemSheetConfig<ShoppingListSuggestionItem> =
   {
     titleKey: 'labels.addToShoppingList',
-    testIDPrefix: 'add-shopping-item',
+    testIDPrefix: shoppingListTestIDs.addSheetPrefix,
     placeholderIcon: 'cart-outline',
     searchPlaceholderKey: 'addItemSheet.searchPlaceholder',
     suggestionGroups: [

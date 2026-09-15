@@ -1,19 +1,25 @@
 import { ApolloLink, Observable } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
+import { Kind, OperationTypeNode } from 'graphql';
 import { useStore } from '#store';
 import {
-  isApiUnavailable,
+  isNetworkWithheld,
   blocksCacheMissQueries,
 } from '#store/slices/networkSlice';
 import { logger } from '#/utils/environment';
 import { Telemetry } from '#/services/telemetry';
 import { t } from '#/i18n';
+import { RefreshTokenDocument } from '#operations/auth/auth.generated';
+import { GetUserSettingsDocument } from '#operations/auth/user.generated';
+import { operationNameOf } from '../utils/documentOperation';
 
 /**
  * Must always reach the network, even in offline mode: RefreshToken for token
  * rotation, GetUserSettings so offline mode itself can be toggled off.
  */
-const ALWAYS_ALLOW = ['RefreshToken', 'GetUserSettings'];
+const ALWAYS_ALLOW = [RefreshTokenDocument, GetUserSettingsDocument].map(
+  document => operationNameOf(document),
+);
 
 /**
  * Short-circuits a query's network leg when it is unwanted or doomed. A cache
@@ -24,7 +30,7 @@ const ALWAYS_ALLOW = ['RefreshToken', 'GetUserSettings'];
 export const createOfflineModeLink = () => {
   return new ApolloLink((operation, forward) => {
     const state = useStore.getState();
-    if (!state.offlineModeEnabled && !isApiUnavailable(state)) {
+    if (!isNetworkWithheld(state)) {
       return forward(operation);
     }
 
@@ -38,8 +44,8 @@ export const createOfflineModeLink = () => {
 
     // Only block queries — mutations queue via queueLink, subscriptions manage themselves
     if (
-      definition.kind !== 'OperationDefinition' ||
-      definition.operation !== 'query'
+      definition.kind !== Kind.OPERATION_DEFINITION ||
+      definition.operation !== OperationTypeNode.QUERY
     ) {
       return forward(operation);
     }
@@ -101,10 +107,7 @@ export const createOfflineModeLink = () => {
             // Surfaced to the user verbatim by screens that render
             // `error.message`, so it stays localized and free of internals —
             // the operation name is in the log line above, not here.
-            message: t(
-              'offline.noCachedData',
-              "This isn't available offline yet. Reconnect to load it.",
-            ),
+            message: t('offline.noCachedData'),
           },
         ],
       });

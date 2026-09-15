@@ -4,10 +4,6 @@ import { useTranslation } from '#/i18n';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { StyleSheet } from 'react-native-unistyles';
 import { ValueText } from '../atoms/ValueText';
-import {
-  getInputLabelForField,
-  getPlaceholderForField,
-} from '#utils/inputMapping';
 import { getValidationSchemaForField } from '#/utils/validation/profile';
 import { Icon } from '#/utils/iconUtils';
 import { TextEditBottomSheet } from '#components/organisms/TextEditBottomSheet/TextEditBottomSheet';
@@ -16,6 +12,7 @@ import { RIPPLE } from '#constants/ripple';
 import { Text } from '#components/atoms/Text';
 import { Divider } from '#components/atoms/Divider';
 import { Sheet } from '#components/templates/Sheet';
+import { kitTestIDs } from '#components/testIDs';
 
 /** A single option for a `modal`/`radio` setting row. */
 export interface SettingOption {
@@ -32,6 +29,8 @@ export interface SettingItem {
   subtitle?: string;
   /** `modal` only: a compact form for the row, when the option label is long. */
   valueLabel?: string;
+  /** `text` only: the edit sheet's placeholder. */
+  placeholder?: string;
   disabled?: boolean;
   value?: string | boolean;
   /** `switch` only: a write is in flight, so the control shows a spinner. */
@@ -57,10 +56,6 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   const { t } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
   const [textEditVisible, setTextEditVisible] = useState(false);
-
-  // Get field metadata
-  const inputLabel = getInputLabelForField(item.key);
-  const placeholder = getPlaceholderForField(item.key);
 
   const handlePress = () => {
     if (item.type === 'modal') {
@@ -141,7 +136,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   return (
     <>
       <AppPressable
-        testID={item.testID || `profile-${item.key}-button`}
+        testID={item.testID || kitTestIDs.settingButton(item.key)}
         onPress={isInert ? undefined : handlePress}
         // Selection tick on rows that do something on press. Info rows aren't
         // pressable; switch rows toggle via the switch widget (a row-level
@@ -159,7 +154,9 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         accessibilityRole={item.type === 'info' ? 'text' : 'button'}
         accessibilityLabel={getAccessibilityLabel()}
         accessibilityHint={getAccessibilityHint()}
-        accessibilityState={{ disabled: item.disabled || item.type === 'info' }}
+        accessibilityState={{
+          disabled: !!item.disabled || item.type === 'info',
+        }}
       >
         <View style={styles.row}>
           {item.icon}
@@ -191,7 +188,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
           {item.type === 'switch' && (
             <BaseSwitch
-              testID={item.testID ?? `profile-${item.key}-switch`}
+              testID={item.testID ?? kitTestIDs.settingSwitch(item.key)}
               accessibilityLabel={item.label}
               value={item.value as boolean}
               onValueChange={handleSwitchChange}
@@ -235,9 +232,9 @@ export const SettingRow: React.FC<SettingRowProps> = ({
       {/* Text Edit Bottom Sheet */}
       <TextEditBottomSheet
         visible={textEditVisible}
-        title={inputLabel}
-        label={inputLabel}
-        placeholder={placeholder}
+        title={item.label}
+        label={item.label}
+        placeholder={item.placeholder}
         initialValue={typeof item.value === 'string' ? item.value : ''}
         fieldKey={item.key}
         // @ts-expect-error - yup schema type compatibility

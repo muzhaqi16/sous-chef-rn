@@ -6,6 +6,21 @@ import { getDeviceId } from '#/storage/deviceId';
 import { isTokenExpired, isTokenExpiringSoon } from '#/utils/tokenExpiry';
 import { proactiveTokenRefresh } from './refreshToken';
 import { logger } from '#/utils/environment';
+import { SessionError } from '#/utils/errors/sessionError';
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  LoginDocument,
+  RefreshTokenDocument,
+  RegisterDocument,
+} from '#operations/auth/auth.generated';
+import { operationNameOf } from '../utils/documentOperation';
+
+// Sent without an access token: each runs before a session exists.
+const PUBLIC_OPERATIONS = [
+  RefreshTokenDocument,
+  LoginDocument,
+  RegisterDocument,
+].map(document => operationNameOf(document));
 
 // Pre-request token validation buffer (5 minutes before expiry)
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
@@ -30,17 +45,28 @@ const refreshWithinCeiling = async (): Promise<string | null> => {
   return winner;
 };
 
+// Apollo types every context value `any`; an object is spread as the headers.
+const isHeaderRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 // `allowDuringLogout` is set by a call that belongs to the sign-out itself: it
 // dispatches before `isLoggingOut` is set and resolves after, so without the
 // opt-in the logout cancels its own cleanup.
 export const authLink = new SetContextLink(
-  async ({ headers, allowDuringLogout }, operation) => {
+  async ({ headers: contextHeaders, allowDuringLogout }, operation) => {
+    const headers = isHeaderRecord(contextHeaders) ? contextHeaders : undefined;
+
     // Skip operations during logout to prevent unnecessary auth errors
     if (
       !allowDuringLogout &&
       LogoutCleanup.shouldSkipOperation(operation.operationName)
     ) {
-      throw new Error('Operation cancelled due to logout process');
+      // Coded so the offline queue parks this write instead of withdrawing it:
+      // the session ending is not the server refusing the write.
+      throw new SessionError(
+        TopLevelErrorCode.Unauthenticated,
+        'Operation cancelled due to logout process',
+      );
     }
 
     // Always include the API key for all requests
@@ -52,13 +78,10 @@ export const authLink = new SetContextLink(
     // and an absent header is not an error — the request is unattributed.
     const deviceId = getDeviceId();
 
-    // Operations that don't need authentication
-    const publicOperations = ['RefreshToken', 'Login', 'Register', 'SignUp'];
-
     // Skip auth header for public operations but keep API key
     if (
       operation.operationName &&
-      publicOperations.includes(operation.operationName)
+      PUBLIC_OPERATIONS.includes(operation.operationName)
     ) {
       return {
         headers: {
@@ -115,9 +138,6 @@ export const authLink = new SetContextLink(
       logger.debug(
         '[AuthLink] No access token available for operation:',
         operation.operationName,
-        'isPublic:',
-        operation.operationName &&
-          publicOperations.includes(operation.operationName),
       );
     }
 

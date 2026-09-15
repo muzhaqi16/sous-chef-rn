@@ -14,7 +14,7 @@ import { errorService, localizedErrorMessage } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { commonStyles } from '#/styles/commonStyles';
 import { Screen } from '#components/templates/Screen';
@@ -54,7 +54,10 @@ export const AcceptInvite: React.FC = () => {
    * permission refusal that means it; a spent or revoked invite gets the copy
    * written for that, rather than a sentence naming a cause it did not carry.
    */
-  const reportRefusal = (refusal: InvitationRefusal, fallbackKey: string) => {
+  const reportRefusal = (
+    refusal: InvitationRefusal,
+    fallbackKey: TranslationKey,
+  ) => {
     if (refusal === 'inviteeMismatch') {
       alertService.alert(
         t('invitationAcceptance.wrongAccountTitle'),
@@ -87,7 +90,7 @@ export const AcceptInvite: React.FC = () => {
       return;
     }
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         if (invitationType === 'unknown') {
           alertService.alert(
@@ -144,7 +147,7 @@ export const AcceptInvite: React.FC = () => {
           text: t('labels.decline'),
           style: 'destructive',
           onPress: () => {
-            executeWithLoadingState(
+            void executeWithLoadingState(
               async () => {
                 const outcome = await decline(inviteToken);
                 if (!outcome.ok) {
@@ -185,7 +188,12 @@ export const AcceptInvite: React.FC = () => {
   if (!hasInvite) {
     return (
       <View style={commonStyles.loadingContainer}>
-        <Text align="center" tone="error" style={styles.inviteText}>
+        <Text
+          role="error"
+          align="center"
+          tone="error"
+          style={styles.inviteText}
+        >
           {invitationType === 'unknown'
             ? t('invitationAcceptance.notFound')
             : t('invitationAcceptance.loadingDetails')}
@@ -220,7 +228,12 @@ export const AcceptInvite: React.FC = () => {
           {t('invitationAcceptance.invitedHeading')}
         </Text>
 
-        <Text tone="secondary" align="center" style={styles.inviteText}>
+        <Text
+          role="body"
+          tone="secondary"
+          align="center"
+          style={styles.inviteText}
+        >
           {invitationType === 'home'
             ? t('invitationAcceptance.homeInviteText', {
                 inviter:
@@ -264,7 +277,9 @@ export const AcceptInvite: React.FC = () => {
             <Text role="label" tone="secondary" style={styles.messageLabel}>
               {t('invitationAcceptance.descriptionLabel')}
             </Text>
-            <Text>{shoppingListInviteDisplay?.shoppingList?.description}</Text>
+            <Text role="body">
+              {shoppingListInviteDisplay?.shoppingList?.description}
+            </Text>
           </View>
         )}
 
@@ -338,7 +353,7 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
   },
   inviteRole: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   messageContainer: {
     marginTop: theme.spacing.xl,

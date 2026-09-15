@@ -1,19 +1,36 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { isTranslationKey, useTranslation } from '#/i18n';
+import type { Translate } from '#/i18n/types';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { UsagePurpose } from '#/graphql/generated/schemaTypes';
 import { formatDate } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
+import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 
 export interface UsageRecord {
   id: string;
   usedAt: string;
   quantityUsed: number;
-  purpose: string;
+  purpose: UsagePurpose;
   adjustmentReason?: string | null;
   usageUnit?: { symbol?: string | null } | null;
 }
+
+/**
+ * An adjustment's reason is what a person typed, except for the two the server
+ * writes itself in English; those render as local copy.
+ */
+const adjustmentReasonText = (reason: string, t: Translate): string => {
+  switch (reason) {
+    case 'PANTRY_STACK_PURGED':
+      return t('adjustQuantity.systemReason.stackPurged');
+    case 'stack merge reconciliation':
+      return t('adjustQuantity.systemReason.stackMerged');
+    default:
+      return reason;
+  }
+};
 
 /** One ledger line, shared by the detail summary and the full-history screen. */
 export const UsageHistoryRow: React.FC<{ usage: UsageRecord }> = ({
@@ -23,9 +40,12 @@ export const UsageHistoryRow: React.FC<{ usage: UsageRecord }> = ({
 
   const isAdjustment = usage.purpose === UsagePurpose.Adjustment;
   const isRestock = usage.purpose === UsagePurpose.Restock;
-  // Falls back to the raw value for a purpose the server has but this client's
-  // enum predates; `enumKeyCoverage.test.ts` guards the members we do know.
-  const purposeLabel = t(`usagePurpose.${usage.purpose}`, usage.purpose);
+  // `string`: the wire can carry a purpose this client's enum predates;
+  // `enumKeyCoverage.test.ts` guards the members it does know.
+  const purposeKey: string = `usagePurpose.${usage.purpose}`;
+  const purposeLabel = isTranslationKey(purposeKey)
+    ? t(purposeKey)
+    : t('labels.unknown');
   const quantityPrefix = isAdjustment
     ? usage.quantityUsed >= 0
       ? '+'
@@ -49,7 +69,7 @@ export const UsageHistoryRow: React.FC<{ usage: UsageRecord }> = ({
         )}
         {!!isAdjustment && !!usage.adjustmentReason && (
           <Text role="caption" tone="tertiary" style={styles.adjustmentReason}>
-            {usage.adjustmentReason}
+            {adjustmentReasonText(usage.adjustmentReason, t)}
           </Text>
         )}
       </View>
@@ -58,7 +78,7 @@ export const UsageHistoryRow: React.FC<{ usage: UsageRecord }> = ({
         style={isAdjustment ? styles.adjustmentQuantity : undefined}
       >
         {quantityPrefix}
-        {usage.quantityUsed}
+        {formatQuantityForDisplay(usage.quantityUsed)}
         {usage.usageUnit?.symbol ? ` ${usage.usageUnit.symbol}` : ''}
       </Text>
     </View>

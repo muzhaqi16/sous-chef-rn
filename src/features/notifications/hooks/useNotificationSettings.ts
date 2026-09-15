@@ -10,7 +10,7 @@ import {
   type UpdateNotificationPreferencesInput,
 } from '#/graphql/generated/schemaTypes';
 import type { ApolloCache } from '@apollo/client';
-import { handleMutationError } from '#/utils/errorHandlers';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import {
   snapshotFields,
   type FieldsEntityRef,
@@ -19,6 +19,7 @@ import {
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { computeIsQuietTime } from '#features/notifications/utils/quietHours';
 import { logger } from '#/utils/environment';
+import { t } from '#/i18n';
 
 export interface NotificationSettings {
   // Core toggles
@@ -104,26 +105,6 @@ function toNestedInput(
 }
 
 /**
- * A refusal resolves with a union-error member instead of the payload, so
- * `data` is truthy and `onError` never fires. This logs the server's reason for
- * that case; classification lives in `updateEntityFieldsLocalFirst`.
- */
-function reportRefusal(
-  result: { data?: unknown; error?: unknown } | undefined | null,
-): void {
-  if (!result || result.error) return;
-
-  const data = result.data as
-    | { updateNotificationPreferences?: unknown }
-    | null
-    | undefined;
-  logger.warn(
-    'UpdateNotificationPreferences rejected:',
-    data?.updateNotificationPreferences,
-  );
-}
-
-/**
  * The shared write path: cache first, fire with `localFirst`, revert only on a
  * genuine refusal. Module scope so the quiet-hours timezone effect can reuse it
  * without a per-render dependency that would re-arm it every render. Returns
@@ -146,13 +127,10 @@ export async function applySettingsUpdate({
 }): Promise<boolean> {
   // Convert null to undefined for GraphQL input
   const cleanedUpdates = Object.fromEntries(
-    Object.entries(updates).map(([key, value]) => [
-      key,
-      value === null ? undefined : value,
-    ]),
+    Object.entries(updates).map(([key, value]) => [key, value ?? undefined]),
   );
 
-  const { persisted, result } =
+  const { persisted } =
     await updateEntityFieldsLocalFirst<NotificationSettings>({
       cache,
       entity,
@@ -160,17 +138,26 @@ export async function applySettingsUpdate({
       previous,
       // localFirst: an unreachable API queues the change for replay rather
       // than failing it, so the toggle the user just flipped isn't lost.
-      mutate: () => mutate(toNestedInput(cleanedUpdates)),
+      mutate: async () => {
+        const settled = await settleMutation(
+          () => mutate(toNestedInput(cleanedUpdates)),
+          {
+            document: UpdateNotificationPreferencesDocument,
+            fallback: t('notifications.updateFailed'),
+            // The screen alerts off the returned boolean; the timezone sync logs.
+            present: 'none',
+          },
+        );
+        // A failure travels as `error`, which is what makes the helper revert.
+        return settled.failure
+          ? { error: settled.failure }
+          : { data: settled.data };
+      },
       logLabel: 'Failed to update notification settings',
     });
 
-  // Queued counts as persisted — it replays later. `reportRefusal` logs the
-  // server's reason for the union-error case; the screen shows the alert.
-  if (!persisted) {
-    reportRefusal(result);
-    return false;
-  }
-  return true;
+  // Queued counts as persisted — it replays later.
+  return persisted;
 }
 
 export const useNotificationSettings = (options?: { skip?: boolean }) => {
@@ -193,7 +180,7 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
 
   const preferences = data?.me?.notificationPreferences;
 
-  useApolloErrorLogger('GetNotificationPreferences', error);
+  useApolloErrorLogger(GetNotificationPreferencesDocument, error);
 
   // `User.notificationPreferences` is NULLABLE: an account that has never
   // changed a setting has no row, and the defaults below are then the right
@@ -209,23 +196,12 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
     }
   }, [loading, readUser, skipped, user?.id, error]);
 
+  // The mutation returns the full fragment, so normalization is the whole cache
+  // update. No `optimisticResponse`: callers write permanently before firing,
+  // and an optimistic layer is torn down on completion — offline that
+  // completion is `queueLink`'s null result, which snaps every toggle back.
   const [updatePreferences] = useMutation(
     UpdateNotificationPreferencesDocument,
-    {
-      // The mutation returns the full fragment, so normalization is the whole
-      // cache update. No `optimisticResponse`: callers write permanently before
-      // firing, and an optimistic layer is torn down on completion — offline
-      // that completion is `queueLink`'s null result, which snaps every toggle
-      // back while the change sits queued.
-      onError: error => {
-        // Telemetry only — every caller already surfaces one alert off the
-        // returned boolean, so alerting here too would double up.
-        handleMutationError(error, {
-          operation: 'Update Notification Preferences',
-          showAlert: false,
-        });
-      },
-    },
   );
 
   // PERFORMANCE: Memoize settings object to prevent recreating on every render
@@ -298,7 +274,7 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
   ) =>
     updateMultipleSettings({
       [key]: value,
-    } as Partial<NotificationSettings>);
+    });
 
   const resetToDefaults = async () => {
     const defaultSettings: Partial<NotificationSettings> = {
@@ -345,7 +321,6 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
     error,
     refetch,
     updateNotificationSetting,
-    updateMultipleSettings,
     resetToDefaults,
     isQuietTime,
   };

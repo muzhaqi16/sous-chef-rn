@@ -1,7 +1,8 @@
 import React, { type ReactNode } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { SettingRow, SettingRowProps } from './SettingRow';
+import type { SettingRowProps } from './SettingRow';
+import { SettingRow } from './SettingRow';
 import { Text } from '#components/atoms/Text';
 
 export interface SettingsSectionProps {

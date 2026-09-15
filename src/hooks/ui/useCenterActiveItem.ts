@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type Component } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
-import Animated, {
+import type Animated from 'react-native-reanimated';
+import {
   cancelAnimation,
   scrollTo,
   useAnimatedReaction,

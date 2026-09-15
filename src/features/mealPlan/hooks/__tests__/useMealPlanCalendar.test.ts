@@ -1,13 +1,6 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useMealPlanCalendar } from '../useMealPlanCalendar';
-import {
-  startOfWeek,
-  endOfWeek,
-  isSameDay,
-  format,
-  addWeeks,
-  subWeeks,
-} from 'date-fns';
+import { startOfWeek, isSameDay, addWeeks, subWeeks } from 'date-fns';
 
 // No external mocks needed — this hook is pure date logic
 
@@ -34,46 +27,33 @@ describe('useMealPlanCalendar', () => {
     expect(result.current.weekDays[6]!.getDay()).toBe(0);
   });
 
-  it('dateRange matches current week in week view', () => {
+  it('goToNextWeek advances the shown week by one', () => {
     const { result } = renderHook(() => useMealPlanCalendar());
 
-    const today = new Date();
-    const expectedStart = startOfWeek(today, { weekStartsOn: 1 });
-    const expectedEnd = endOfWeek(today, { weekStartsOn: 1 });
-
-    expect(isSameDay(result.current.dateRange.startDate, expectedStart)).toBe(
-      true,
-    );
-    expect(isSameDay(result.current.dateRange.endDate, expectedEnd)).toBe(true);
-  });
-
-  it('goToNextWeek advances referenceDate by one week', () => {
-    const { result } = renderHook(() => useMealPlanCalendar());
-
-    const initialRef = result.current.referenceDate;
+    const initialMonday = result.current.weekDays[0]!;
 
     act(() => {
       result.current.goToNextWeek();
     });
 
-    const expected = addWeeks(initialRef, 1);
-    expect(isSameDay(result.current.referenceDate, expected)).toBe(true);
+    const expected = addWeeks(initialMonday, 1);
+    expect(isSameDay(result.current.weekDays[0]!, expected)).toBe(true);
   });
 
-  it('goToPrevWeek moves referenceDate back by one week', () => {
+  it('goToPrevWeek moves the shown week back by one', () => {
     const { result } = renderHook(() => useMealPlanCalendar());
 
-    const initialRef = result.current.referenceDate;
+    const initialMonday = result.current.weekDays[0]!;
 
     act(() => {
       result.current.goToPrevWeek();
     });
 
-    const expected = subWeeks(initialRef, 1);
-    expect(isSameDay(result.current.referenceDate, expected)).toBe(true);
+    const expected = subWeeks(initialMonday, 1);
+    expect(isSameDay(result.current.weekDays[0]!, expected)).toBe(true);
   });
 
-  it('selectDate changes both selectedDate and referenceDate', () => {
+  it('selectDate changes the selected date and the shown week', () => {
     const { result } = renderHook(() => useMealPlanCalendar());
 
     const targetDate = new Date(2025, 5, 15); // June 15, 2025
@@ -83,45 +63,12 @@ describe('useMealPlanCalendar', () => {
     });
 
     expect(isSameDay(result.current.selectedDate, targetDate)).toBe(true);
-    expect(isSameDay(result.current.referenceDate, targetDate)).toBe(true);
-  });
-
-  it('goToToday resets to today', () => {
-    const { result } = renderHook(() => useMealPlanCalendar());
-
-    // Move away from today first
-    act(() => {
-      result.current.selectDate(new Date(2025, 0, 1));
-    });
-
-    act(() => {
-      result.current.goToToday();
-    });
-
-    expect(isSameDay(result.current.selectedDate, new Date())).toBe(true);
-  });
-
-  it('formattedMonth matches current reference date', () => {
-    const { result } = renderHook(() => useMealPlanCalendar());
-
-    const expected = format(result.current.referenceDate, 'MMMM yyyy');
-    expect(result.current.formattedMonth).toBe(expected);
-  });
-
-  it('isToday is true when selected date is today', () => {
-    const { result } = renderHook(() => useMealPlanCalendar());
-
-    expect(result.current.isToday).toBe(true);
-  });
-
-  it('isToday is false when selected date is not today', () => {
-    const { result } = renderHook(() => useMealPlanCalendar());
-
-    act(() => {
-      result.current.selectDate(new Date(2025, 0, 1));
-    });
-
-    expect(result.current.isToday).toBe(false);
+    expect(
+      isSameDay(
+        result.current.weekDays[0]!,
+        startOfWeek(targetDate, { weekStartsOn: 1 }),
+      ),
+    ).toBe(true);
   });
 
   describe('with boundaries', () => {
@@ -170,11 +117,11 @@ describe('useMealPlanCalendar', () => {
       expect(result.current.canGoPrevWeek).toBe(false);
 
       // goToPrevWeek should have no effect
-      const refBefore = result.current.referenceDate;
+      const mondayBefore = result.current.weekDays[0]!;
       act(() => {
         result.current.goToPrevWeek();
       });
-      expect(isSameDay(result.current.referenceDate, refBefore)).toBe(true);
+      expect(isSameDay(result.current.weekDays[0]!, mondayBefore)).toBe(true);
     });
   });
 

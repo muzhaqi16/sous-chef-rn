@@ -21,6 +21,8 @@ import {
 import { makeCache } from '#/apollo/cache';
 import { readNotificationStatus } from '#features/notifications/utils/notificationCacheWrites';
 import { useNotifications, useNotificationListener } from '../useNotifications';
+import { handleSubscriptionError } from '#utils/subscriptionErrorHandler';
+import { logger } from '#/utils/environment';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -79,6 +81,7 @@ jest.mock('#/services/notifications/localNotificationHelper', () => ({
 }));
 
 jest.mock('#utils/subscriptionErrorHandler', () => ({
+  ...jest.requireActual<object>('#utils/subscriptionErrorHandler'),
   handleSubscriptionError: jest.fn(),
   clearAllRetryStates: jest.fn(),
 }));
@@ -90,7 +93,6 @@ const mockSyncMarkAllAsRead = jest.fn();
 jest.mock('../useNotificationSync', () => ({
   useNotificationSync: () => ({
     syncMarkAsRead: mockSyncMarkAsRead,
-    syncMarkUnread: jest.fn(),
     syncDelete: mockSyncDelete,
     syncMarkAllAsRead: mockSyncMarkAllAsRead,
     syncClearRead: jest.fn(),
@@ -304,11 +306,11 @@ describe('useNotifications', () => {
     expect(result.current).not.toHaveProperty('unreadCount');
   });
 
-  it('handleMarkAllAsRead calls syncMarkAllAsRead', () => {
+  it('handleMarkAllAsRead calls syncMarkAllAsRead', async () => {
     const { result } = renderHookWithApollo(() => useNotifications());
 
-    act(() => {
-      result.current.handleMarkAllAsRead();
+    await act(async () => {
+      await result.current.handleMarkAllAsRead();
     });
 
     expect(mockSyncMarkAllAsRead).toHaveBeenCalled();
@@ -505,5 +507,47 @@ describe('useNotificationListener', () => {
     });
     expect(mockRegisterFcmTapHandlers).not.toHaveBeenCalled();
     expect(mockRegisterIosPushTapHandlers).not.toHaveBeenCalled();
+  });
+
+  describe('subscription errors', () => {
+    const erroringSubscription = (error: Error): MockedResponse => ({
+      request: { query: NotificationEventsDocument },
+      error,
+    });
+    const warnedAboutSubscription = () =>
+      jest
+        .mocked(logger.warn)
+        .mock.calls.some(
+          ([first]) =>
+            typeof first === 'string' && first.includes('subscription error'),
+        );
+
+    it('does not warn about a socket close, which reconnects on its own', async () => {
+      renderHookWithApollo(() => useNotificationListener(), {
+        operationMocks: [
+          erroringSubscription(new Error('Socket closed with event 1006 ')),
+        ],
+      });
+
+      await waitFor(() => {
+        expect(handleSubscriptionError).toHaveBeenCalled();
+      });
+      expect(warnedAboutSubscription()).toBe(false);
+    });
+
+    it('warns about a server error whose message mentions a connection', async () => {
+      renderHookWithApollo(() => useNotificationListener(), {
+        operationMocks: [
+          erroringSubscription(
+            new Error('Database connection lost while resolving the stream'),
+          ),
+        ],
+      });
+
+      await waitFor(() => {
+        expect(handleSubscriptionError).toHaveBeenCalled();
+      });
+      expect(warnedAboutSubscription()).toBe(true);
+    });
   });
 });

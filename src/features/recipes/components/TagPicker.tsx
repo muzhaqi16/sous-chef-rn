@@ -138,7 +138,9 @@ export const TagPicker: React.FC<TagPickerProps> = ({
       {/* Tags List */}
       {loading ? (
         <View style={styles.centeredSpinner}>
-          <Text tone="secondary">{t('tagPicker.loading')}</Text>
+          <Text role="body" tone="secondary">
+            {t('tagPicker.loading')}
+          </Text>
         </View>
       ) : filteredTags.length > 0 ? (
         <FlashList
@@ -155,13 +157,13 @@ export const TagPicker: React.FC<TagPickerProps> = ({
         />
       ) : tags.length > 0 && searchQuery ? (
         <View style={styles.emptyInset}>
-          <Text tone="secondary" align="center">
+          <Text role="body" tone="secondary" align="center">
             {t('tagPicker.noMatches', { query: searchQuery })}
           </Text>
         </View>
       ) : (
         <View style={styles.emptyInset}>
-          <Text tone="secondary" align="center">
+          <Text role="body" tone="secondary" align="center">
             {t('tagPicker.noTags')}
           </Text>
         </View>

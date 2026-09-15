@@ -19,8 +19,8 @@ import {
   type RecipeCreatedBy,
 } from '#features/recipes/utils/recipeCacheWriters';
 import { forkRecipe as buildFork } from '#features/recipes/utils/forkRecipe';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
@@ -32,11 +32,10 @@ export function useForkRecipe() {
   const user = useUser();
   const [forkMutation, { loading: forking }] = useMutation(ForkRecipeDocument, {
     update: (cache, { data }) => {
-      if (data?.forkRecipe?.__typename === 'ForkRecipePayload') {
-        // Upsert: the pre-fire write already inserted the edge under this same
-        // id, so the server row upgrades it in place.
-        upsertMyRecipesEdge(cache, data.forkRecipe.recipe);
-      }
+      const payload = appliedPayload(data);
+      // Upsert: the pre-fire write already inserted the edge under this same
+      // id, so the server row upgrades it in place.
+      if (payload) upsertMyRecipesEdge(cache, payload.recipe);
     },
   });
 
@@ -78,30 +77,31 @@ export function useForkRecipe() {
       });
     }
 
-    let result;
-    try {
-      result = await forkMutation({
-        variables: { input: { id: recipeId, newRecipeId: id } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Fork Recipe error:',
-      });
-    }
+    const revertCopy = () => {
+      try {
+        revertOptimisticRecipe(client.cache, id);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Revert rejected Recipe fork',
+        });
+      }
+    };
+
+    const settled = await settleMutation(
+      () =>
+        forkMutation({
+          variables: { input: { id: recipeId, newRecipeId: id } },
+          context: { localFirst: true },
+        }),
+      {
+        document: ForkRecipeDocument,
+        fallback: t('recipes.forkFailed'),
+        onFailed: revertCopy,
+      },
+    );
 
     // Online success or queued offline — the fork is in My Recipes either way.
-    if (result && classifyCreateResult(result) !== 'rejected') return id;
-
-    try {
-      revertOptimisticRecipe(client.cache, id);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Revert rejected Recipe fork',
-      });
-    }
-    if (result) alertIfRejected(result, t('recipes.forkFailed'));
-    return null;
+    return settled.status === 'failed' ? null : id;
   };
 
   return { forkRecipe, forking };

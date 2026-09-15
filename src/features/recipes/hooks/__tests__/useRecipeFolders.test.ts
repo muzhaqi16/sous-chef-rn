@@ -1,5 +1,7 @@
 import { waitFor } from '@testing-library/react-native';
+import { useApolloClient } from '@apollo/client/react';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { SavedRecipeFoldersDocument } from '#features/recipes/graphql/recipe.generated';
 import { useRecipeFolders } from '../useRecipeFolders';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -30,11 +32,17 @@ describe('useRecipeFolders', () => {
 
   it('returns empty array when data is empty', async () => {
     const { result } = renderHookWithApollo(
-      () => useRecipeFolders(),
+      () => ({ ...useRecipeFolders(), client: useApolloClient() }),
       withFolders([]),
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await waitFor(() =>
+      expect(
+        result.current.client.cache.readQuery({
+          query: SavedRecipeFoldersDocument,
+        }),
+      ).not.toBeNull(),
+    );
     expect(result.current.folders).toEqual([]);
   });
 

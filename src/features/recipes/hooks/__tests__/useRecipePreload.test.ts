@@ -1,6 +1,7 @@
 import { act } from '@testing-library/react-native';
 import { ErrorCode, ExternalSource } from '#/graphql/generated/schemaTypes';
-import { gql, InMemoryCache } from '@apollo/client';
+import type { InMemoryCache } from '@apollo/client';
+import { gql } from '@apollo/client';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
@@ -178,29 +179,23 @@ describe('useRecipePreload', () => {
   it('starts with default state', () => {
     const { result } = renderHookWithApollo(() => useRecipePreload());
 
-    expect(result.current.preloading).toBe(false);
     expect(result.current.preloadedRecipe).toBeNull();
-    expect(result.current.preloadError).toBeNull();
     expect(result.current.savingToFavorites).toBe(false);
   });
 
   it('preloadRecipe calls upsert mutation and caches result', async () => {
-    const onPreloadSuccess = jest.fn();
-    const { result } = renderHookWithApollo(
-      () => useRecipePreload({ onPreloadSuccess }),
-      {
-        operationMocks: [
-          buildUpsertMock(
-            {
-              id: 'backend-1',
-              name: 'Test Recipe',
-              imageUrl: 'https://example.com/img.jpg',
-            },
-            true,
-          ),
-        ],
-      },
-    );
+    const { result } = renderHookWithApollo(() => useRecipePreload(), {
+      operationMocks: [
+        buildUpsertMock(
+          {
+            id: 'backend-1',
+            name: 'Test Recipe',
+            imageUrl: 'https://example.com/img.jpg',
+          },
+          true,
+        ),
+      ],
+    });
 
     let preloaded!: PreloadedRecipe | null;
     await act(async () => {
@@ -215,7 +210,6 @@ describe('useRecipePreload', () => {
         externalId: '123',
       }),
     );
-    expect(onPreloadSuccess).toHaveBeenCalledWith(preloaded);
     expect(result.current.preloadedRecipe).toEqual(preloaded);
   });
 
@@ -451,27 +445,6 @@ describe('useRecipePreload', () => {
     });
 
     expect(preloaded).toBeNull();
-  });
-
-  it('clearCache resets all state', async () => {
-    const { result } = renderHookWithApollo(() => useRecipePreload(), {
-      operationMocks: [
-        buildUpsertMock({ id: 'b1', name: 'R', imageUrl: null }, true),
-      ],
-    });
-
-    await act(async () => {
-      await result.current.preloadRecipe(makeSpoonacularRecipe(50));
-    });
-
-    expect(result.current.preloadedRecipe).not.toBeNull();
-
-    act(() => {
-      result.current.clearCache();
-    });
-
-    expect(result.current.preloadedRecipe).toBeNull();
-    expect(result.current.preloadError).toBeNull();
   });
 });
 

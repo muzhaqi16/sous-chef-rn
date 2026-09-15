@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
+import { kitTestIDs } from '#components/testIDs';
 
 interface BiometricSetupViewProps {
   iconName: string;
@@ -70,7 +71,7 @@ export const BiometricSetupView: React.FC<BiometricSetupViewProps> = ({
         style={styles.primaryButton}
         onPress={onEnable}
         disabled={isEnabling}
-        testID={testID ? `${testID}-enable` : undefined}
+        testID={testID ? kitTestIDs.biometricEnable(testID) : undefined}
         accessibilityLabel={enableLabel}
       >
         <Text role="bodyStrong" style={styles.primaryButtonText}>
@@ -82,7 +83,7 @@ export const BiometricSetupView: React.FC<BiometricSetupViewProps> = ({
         style={styles.secondaryButton}
         onPress={onSkip}
         disabled={isEnabling}
-        testID={testID ? `${testID}-skip` : undefined}
+        testID={testID ? kitTestIDs.biometricSkip(testID) : undefined}
         accessibilityLabel={skipLabel}
       >
         <Text role="bodyStrong" tone="secondary">

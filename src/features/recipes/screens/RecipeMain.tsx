@@ -39,7 +39,8 @@ import { ActiveFilterChipsRow } from '#features/recipes/components/ActiveFilterC
 import { Text } from '#components/atoms/Text';
 import type { Translate } from '#/i18n/types';
 import { Screen } from '#components/templates/Screen';
-import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
+import { ExternalSource } from '#/graphql/generated/schemaTypes';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 
 // ── Recipe tutorial steps (titles/subtitles resolved at usage via t()) ──
 const getRecipeTutorialSteps = (t: Translate): TutorialStep[] => [
@@ -110,12 +111,12 @@ const RecipeSearchInput = forwardRef<
       onPress: () => onSearch(inputQuery),
       color: theme.colors.primary,
       backgroundColor: theme.colors.surface,
-      testID: 'recipe-main-search-submit',
+      testID: recipesTestIDs.searchSubmit,
     },
   ];
 
   return (
-    <View style={styles.searchBarContainer}>
+    <View style={styles.gutter}>
       <SearchBar
         value={inputQuery}
         onChangeText={setInputQuery}
@@ -124,7 +125,7 @@ const RecipeSearchInput = forwardRef<
         returnKeyType="search"
         placeholder={t('recipes.searchPlaceholder')}
         rightActions={rightActions}
-        testID="recipe-main-search-input"
+        testID={recipesTestIDs.searchInput}
       />
     </View>
   );
@@ -264,7 +265,7 @@ const RecipeMainInner: React.FC = () => {
     const externalId = idStr.startsWith('spoonacular-')
       ? idStr.replace('spoonacular-', '')
       : idStr;
-    toRecipeDetail({ externalSource: 'SPOONACULAR', externalId });
+    toRecipeDetail({ externalSource: ExternalSource.Spoonacular, externalId });
   };
 
   const hasIngredientSelection = screen.selectedIngredients.size > 0;
@@ -374,7 +375,10 @@ const RecipeMainInner: React.FC = () => {
               tone={screen.activeFilterCount > 0 ? 'primary' : 'textSecondary'}
             />
             {screen.activeFilterCount > 0 ? (
-              <View style={styles.filterCountBadge} testID="filter-count-badge">
+              <View
+                style={styles.filterCountBadge}
+                testID={recipesTestIDs.filterCountBadge}
+              >
                 <Text role="caption" style={styles.filterCountBadgeText}>
                   {String(screen.activeFilterCount)}
                 </Text>
@@ -459,18 +463,6 @@ const RecipeMainInner: React.FC = () => {
 
   const recipeListHeader = (
     <>
-      <TabScreenHeader
-        label={t('recipes.mainSubtitle')}
-        title={t('labels.recipes')}
-        headerRight={headerRight}
-      />
-      <RecipeSearchInput
-        ref={searchInputRef}
-        onSearch={screen.handleTextSearch}
-        initialQuery={screen.searchQuery}
-        onClear={screen.clearSearch}
-        extraActions={searchBarExtraActions}
-      />
       {/* Filters only apply to text search (discovery + ingredient search
           can't take them) — only surface the active-filter row when a text
           search drives what's on screen. The header badge stays as the
@@ -487,7 +479,26 @@ const RecipeMainInner: React.FC = () => {
   );
 
   return (
-    <Screen testID="recipes-screen" scroll="list" gutter="none">
+    <Screen
+      testID={recipesTestIDs.recipesScreen}
+      header={{
+        variant: 'tab',
+        label: t('recipes.mainSubtitle'),
+        title: t('labels.recipes'),
+        headerRight,
+      }}
+      scroll="list"
+      gutter="none"
+    >
+      {/* Above the list, not inside it: the spinner drops from the list's top.
+          It carries its own gutter — don't wrap it in another. */}
+      <RecipeSearchInput
+        ref={searchInputRef}
+        onSearch={screen.handleTextSearch}
+        initialQuery={screen.searchQuery}
+        onClear={screen.clearSearch}
+        extraActions={searchBarExtraActions}
+      />
       {/* A search in flight always shows the skeleton so the tap gets instant
           feedback (and any stale prior results are replaced); discovery's
           initial load only skeletons when there's nothing on screen yet. */}
@@ -495,7 +506,7 @@ const RecipeMainInner: React.FC = () => {
       (screen.discovery.loading &&
         !screen.showSearchResults &&
         screen.items.length === 0) ? (
-        <View style={styles.loadingGutter}>
+        <View style={styles.gutter}>
           {recipeListHeader}
           <RecipeSkeleton />
         </View>
@@ -551,7 +562,7 @@ const RecipeMainInner: React.FC = () => {
         visible={filterSheetVisible}
         onRequestClose={() => setFilterSheetVisible(false)}
         activeFilters={screen.activeFilters}
-        setActiveFilters={screen.setActiveFilters}
+        onApplyFilters={screen.applyFilters}
         onSheetChange={handleSheetChange}
         isIngredientSearch={
           screen.selectedIngredients.size > 0 ||
@@ -575,7 +586,8 @@ const RecipeMainInner: React.FC = () => {
               2: openFilterSheet,
               3: openIngredientSelector,
             };
-            actions[tutorial.currentStep!.stepIndex]?.();
+            const step = tutorial.currentStep;
+            if (step) actions[step.stepIndex]?.();
             tutorial.advance();
           }}
         />
@@ -590,7 +602,7 @@ const RecipeMainFallback: React.FC = () => {
   const { t } = useTranslation();
   return (
     <Screen
-      testID="recipes-screen"
+      testID={recipesTestIDs.recipesScreen}
       header={{
         variant: 'tab',
         label: t('recipes.mainSubtitle'),
@@ -599,7 +611,7 @@ const RecipeMainFallback: React.FC = () => {
       scroll="list"
       gutter="none"
     >
-      <View style={styles.loadingGutter}>
+      <View style={styles.gutter}>
         <SearchBar
           value=""
           onChangeText={noop}
@@ -607,6 +619,8 @@ const RecipeMainFallback: React.FC = () => {
           showSearchIcon
           editable={false}
         />
+      </View>
+      <View style={styles.gutter}>
         <RecipeSkeleton />
       </View>
     </Screen>
@@ -621,12 +635,9 @@ export const RecipeMain: React.FC = () => (
 );
 
 const styles = StyleSheet.create(theme => ({
-  // No inset: this one renders INSIDE the list's content container, which
-  // already carries the gutter for everything it holds.
-  searchBarContainer: {},
-  // The loading branch renders chrome and skeleton bare under `gutter="none"`,
-  // unlike the loaded branch where the list's content container insets them.
-  loadingGutter: {
+  // Chrome and skeletons render bare under `gutter="none"`, with no list
+  // content container to inset them, so this screen supplies the gutter.
+  gutter: {
     paddingHorizontal: theme.layout.pageGutter,
   },
   headerActions: {
@@ -649,7 +660,7 @@ const styles = StyleSheet.create(theme => ({
   },
   suggestedTextContainer: { flex: 1 },
   suggestedSubtitle: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   refreshButton: {
     padding: theme.spacing.sm,
@@ -678,7 +689,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 3,
+    paddingHorizontal: theme.spacing['2xsPlus'],
   },
   filterCountBadgeText: {
     color: theme.colors.onPrimary,

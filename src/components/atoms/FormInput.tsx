@@ -1,5 +1,6 @@
 import React from 'react';
-import { TextInputProps, View, ViewStyle } from 'react-native';
+import type { TextInputProps, ViewStyle } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import {
@@ -94,7 +95,7 @@ const styles = StyleSheet.create(theme => ({
         true: { borderColor: theme.colors.error },
       },
       hasTrailing: {
-        true: { paddingRight: 52 },
+        true: { paddingRight: theme.sizes.button.md + theme.spacing.sm },
       },
     },
   },

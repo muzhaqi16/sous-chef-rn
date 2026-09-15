@@ -1,7 +1,7 @@
+import type { NotificationGroups } from '../notificationGrouping';
 import {
   groupNotificationsByDate,
   createNotificationFeedRows,
-  NotificationGroups,
 } from '../notificationGrouping';
 import {
   NotificationCategory,
@@ -18,8 +18,6 @@ function makeNotification(
     type: NotificationType.NewItemAdded,
     category: NotificationCategory.System,
     priority: Priority.Normal,
-    title: 'Test',
-    message: 'Test notification',
     payload: {},
     sentAt: new Date().toISOString(),
     readAt: null,

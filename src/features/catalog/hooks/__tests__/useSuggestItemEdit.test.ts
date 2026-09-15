@@ -63,16 +63,15 @@ const snapshot = (
 
 const form = (
   overrides: Partial<AddItemSubmitPayload> = {},
-): AddItemSubmitPayload =>
-  ({
-    name: 'Skim Milk',
-    type: ItemType.Food,
-    storageState: StorageState.Ambient,
-    tags: [],
-    editReason: NOTE,
-    selectedImages: [],
-    ...overrides,
-  } as AddItemSubmitPayload);
+): AddItemSubmitPayload => ({
+  name: 'Skim Milk',
+  type: ItemType.Food,
+  storageState: StorageState.Ambient,
+  tags: [],
+  editReason: NOTE,
+  selectedImages: [],
+  ...overrides,
+});
 
 const suggestionPayload = (note: string) => ({
   createItemSuggestion: {
@@ -300,7 +299,7 @@ describe('useSuggestItemEdit', () => {
     // Proves OPERATION_RATE_LIMITED is in RATE_LIMIT_CODES — without it this
     // would fall through to the generic failure copy and lose the retryAfter.
     expect(alertService.alert).toHaveBeenCalledWith(
-      'Slow down a moment',
+      "Couldn't send that",
       expect.stringContaining('10 minute'),
     );
   });

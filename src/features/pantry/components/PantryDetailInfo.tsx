@@ -7,7 +7,10 @@ import { InfoRow } from '#components/atoms/InfoRow';
 
 const ThemedConditionInfoRow = withUnistyles(InfoRow);
 import { Icon } from '#/utils/iconUtils';
-import { getUnitDisplayText } from '#utils/formatQuantity';
+import {
+  formatQuantityForDisplay,
+  getUnitDisplayText,
+} from '#utils/formatQuantity';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
 import {
@@ -23,6 +26,7 @@ import {
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 import type { BatchPricingSummary } from '#features/pantry/utils/summarizeBatchPricing';
+import { ItemCondition } from '#/graphql/generated/schemaTypes';
 
 interface PantryDetailInfoProps {
   itemRef:
@@ -71,8 +75,11 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
     ? fragmentResult.data
     : (itemRef as PantryDetailInfo_PantryItemFragment);
 
+  const conditionLabel = formatCondition(item.condition, t);
+  const acquisitionLabel = formatAcquisitionMethod(item.acquisitionMethod, t);
   const isCriticalCondition =
-    item.condition === 'SPOILED' || item.condition === 'EXPIRED';
+    item.condition === ItemCondition.Spoiled ||
+    item.condition === ItemCondition.Expired;
 
   // The server derives both from the active batches; `costPerUnit` is a display
   // rate rounded to cents, so it is never multiplied back — `totalCost` is the
@@ -108,7 +115,9 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Quantity Row */}
       <InfoRow
         label={t('labels.quantity')}
-        value={`${item.quantity} ${getUnitDisplayText(item.unit)}`}
+        value={`${formatQuantityForDisplay(item.quantity)} ${getUnitDisplayText(
+          item.unit,
+        )}`}
         icon="apps-outline"
         showColon={false}
         labelStyle={styles.labelText}
@@ -251,10 +260,10 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         />
       )}
       {/* Condition Row - only show if not GOOD */}
-      {!!formatCondition(item.condition) && (
+      {!!conditionLabel && (
         <ThemedConditionInfoRow
           label={t('labels.condition')}
-          value={formatCondition(item.condition)}
+          value={conditionLabel}
           icon="fitness-outline"
           uniProps={theme => ({
             iconColor: isCriticalCondition
@@ -263,7 +272,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           })}
           valueStyle={[
             isCriticalCondition && styles.valueError,
-            item.condition === 'FAIR' && styles.valueWarning,
+            item.condition === ItemCondition.Fair && styles.valueWarning,
           ]}
           showColon={false}
           labelStyle={styles.labelText}
@@ -271,10 +280,10 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         />
       )}
       {/* Acquired Via Row */}
-      {!!formatAcquisitionMethod(item.acquisitionMethod) && (
+      {!!acquisitionLabel && (
         <InfoRow
           label={t('pantryItemDetail.fields.acquired')}
-          value={formatAcquisitionMethod(item.acquisitionMethod)}
+          value={acquisitionLabel}
           icon="bag-handle-outline"
           showColon={false}
           labelStyle={styles.labelText}
@@ -314,7 +323,9 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {item.minQuantity != null && item.minQuantity > 0 && (
         <InfoRow
           label={t('pantryItemDetail.fields.minStock')}
-          value={`${item.minQuantity} ${item.unit?.name ?? ''}`}
+          value={`${formatQuantityForDisplay(item.minQuantity)} ${
+            item.unit.name
+          }`}
           icon="alert-circle-outline"
           showColon={false}
           labelStyle={styles.labelText}
@@ -326,7 +337,9 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {item.restockQuantity != null && item.restockQuantity > 0 && (
         <InfoRow
           label={t('pantryItemDetail.fields.restockAt')}
-          value={`${item.restockQuantity} ${item.unit?.name ?? ''}`}
+          value={`${formatQuantityForDisplay(item.restockQuantity)} ${
+            item.unit.name
+          }`}
           icon="refresh-outline"
           showColon={false}
           labelStyle={styles.labelText}
@@ -378,7 +391,9 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
               {t('pantryItemDetail.notes')}
             </Text>
           </View>
-          <Text style={styles.notesText}>{item.storageNotes}</Text>
+          <Text role="body" style={styles.notesText}>
+            {item.storageNotes}
+          </Text>
         </View>
       )}
       {/* Tags Section */}

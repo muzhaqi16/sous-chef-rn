@@ -6,6 +6,8 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { DataStateView } from '#components/organisms/DataStateView';
+import { Loading } from '#components/molecules/Loading';
+import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { useDataState } from '#hooks/data/useDataState';
 import { useDeleteRecipe } from '#features/recipes/hooks/useDeleteRecipe';
 import { MyRecipeCard } from '#features/recipes/components/MyRecipeCard';
@@ -14,13 +16,14 @@ import {
   type MyRecipeNode,
 } from '#features/recipes/hooks/useRecipeManagement';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { alertService } from '#services/alertService';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { useLocalSearch } from '#hooks/search/useLocalSearch';
 import { Screen } from '#components/templates/Screen';
+import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 
 const keyExtractor = (item: MyRecipeNode) => item.id;
 // Every row is the same component, so one recycling pool is correct.
@@ -33,10 +36,21 @@ export const MyRecipes: React.FC = () => {
     useAppNavigation();
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Search filters on the device, so a query needs every page.
+  const searchTerm = searchQuery.trim();
   const {
-    state: { recipes: myRecipes, loading, error, hasResult, skipped },
-    actions: { refetch },
-  } = useRecipeManagement();
+    state: {
+      recipes: myRecipes,
+      loading,
+      error,
+      hasResult,
+      skipped,
+      hasMore,
+      isLoadingMore,
+      isLoadingRemainingPages,
+    },
+    actions: { refetch, loadMore },
+  } = useRecipeManagement({ loadAllPages: searchTerm.length > 0 });
 
   // Filtered at the parent, never inside the cell: a virtualized list cannot
   // absorb rows that return null — the cell, its layout slot and its fragment
@@ -75,7 +89,6 @@ export const MyRecipes: React.FC = () => {
   // `dataState` at 'ready' and the list rendered an empty array — a blank
   // screen with no explanation. Offering "create your first recipe" to someone
   // who has ten would be the other half of the same mistake.
-  const searchTerm = searchQuery.trim();
   const emptyProps =
     myRecipes.length > 0
       ? {
@@ -103,24 +116,20 @@ export const MyRecipes: React.FC = () => {
   };
 
   const handleDeleteRecipe = async (id: string) => {
-    const { result } = await deleteRecipe(id);
-    // A rejection means the recipe still exists server-side — alert (a silent
-    // revert would just snap the row back) and refetch to restore the
-    // authoritative list. A queued result keeps the removal and replays later.
-    const wasRejected = alertIfRejected(
-      result,
-      t('recipes.deleteRecipeFailed'),
-    );
-    if (!result || wasRejected) {
-      if (!result) {
-        alertService.alert(t('labels.error'), t('recipes.deleteRecipeFailed'));
-      }
-      await refetch();
-    }
+    // A refusal has been reported and the recipe still exists server-side, so
+    // a refetch restores the list. A queued removal stands and replays later.
+    const deleted = await deleteRecipe(id);
+    if (!deleted) await refetch();
   };
 
-  const handleRefresh = async () => {
-    await refetch();
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = () =>
+    executeRefreshWithFinally(() => refetch(), setRefreshing);
+
+  const handleEndReached = () => {
+    if (hasMore) {
+      void loadMore();
+    }
   };
 
   const renderItem = ({ item }: { item: MyRecipeNode }) => (
@@ -134,7 +143,7 @@ export const MyRecipes: React.FC = () => {
 
   return (
     <Screen
-      testID="my-recipes-screen"
+      testID={recipesTestIDs.myRecipesScreen}
       header={{ title: t('recipes.myRecipesTitle'), back: goBack }}
       scroll="list"
       gutter="none"
@@ -147,7 +156,11 @@ export const MyRecipes: React.FC = () => {
           showSearchIcon
         />
       </View>
-      {dataState !== 'ready' || filteredRecipes.length === 0 ? (
+      {dataState === 'ready' &&
+      filteredRecipes.length === 0 &&
+      isLoadingRemainingPages ? (
+        <Loading size="small" message={t('recipes.myRecipesSearchingAll')} />
+      ) : dataState !== 'ready' || filteredRecipes.length === 0 ? (
         <DataStateView
           state={dataState === 'ready' ? 'empty' : dataState}
           onRetry={handleRefresh}
@@ -164,8 +177,28 @@ export const MyRecipes: React.FC = () => {
           keyExtractor={keyExtractor}
           getItemType={getItemType}
           renderItem={renderItem}
-          onRefresh={handleRefresh}
-          refreshing={false}
+          refreshControl={
+            <PlainScrollRefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+            />
+          }
+          onEndReached={handleEndReached}
+          ListFooterComponent={
+            isLoadingRemainingPages ? (
+              <Loading
+                size="small"
+                message={t('recipes.myRecipesSearchingAll')}
+                style={styles.loadingRemaining}
+              />
+            ) : (
+              <PaginationFooter
+                hasMore={hasMore}
+                isFetchingMore={isLoadingMore}
+                itemCount={filteredRecipes.length}
+              />
+            )
+          }
           contentContainerStyle={styles.listContent}
           {...FLASHLIST_DEFAULTS.fullScreen}
         />
@@ -181,6 +214,9 @@ const styles = StyleSheet.create(theme => ({
   },
   searchBarContainer: {
     paddingHorizontal: theme.spacing.md,
+  },
+  loadingRemaining: {
+    flex: 0,
   },
   listContent: {
     paddingHorizontal: theme.layout.pageGutter,

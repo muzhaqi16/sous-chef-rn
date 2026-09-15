@@ -7,7 +7,7 @@
 
 import { gql, type ApolloCache, type StoreObject } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
-import { classifyCreateResult } from './classifyCreateResult';
+import { settledStatus } from './settleMutation';
 import { errorService } from '#/services/errorService';
 
 /**
@@ -144,10 +144,9 @@ export function snapshotFields<TFields extends object>(
   updates: Partial<TFields>,
 ): Partial<TFields> {
   if (!source) return {};
-  const held = source as Record<string, unknown>;
   const out: Record<string, unknown> = {};
   for (const key of Object.keys(updates)) {
-    if (key in source) out[key] = held[key];
+    if (key in source) out[key] = Reflect.get(source, key);
   }
   return out as Partial<TFields>;
 }
@@ -194,9 +193,8 @@ export async function updateEntityFieldsLocalFirst<TFields extends object>({
     errorService.reportError(error, { operation: logLabel });
   }
 
-  // `classifyCreateResult` treats a null payload with no error as 'queued', so a
-  // queued change keeps its cache write; only 'rejected' reverts.
-  const persisted = classifyCreateResult(result) !== 'rejected';
+  // A queued change keeps its cache write; only a failed one reverts.
+  const persisted = settledStatus(result) !== 'failed';
   if (!persisted) {
     writeEntityFields(cache, entity, previous);
   }

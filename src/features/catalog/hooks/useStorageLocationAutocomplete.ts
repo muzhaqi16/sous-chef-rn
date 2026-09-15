@@ -1,4 +1,4 @@
-import { StorageLocation } from '#/graphql/generated/schemaTypes';
+import type { StorageLocation } from '#/graphql/generated/schemaTypes';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
 
 interface UseStorageLocationAutocompleteOptions {
@@ -54,7 +54,5 @@ export function useStorageLocationAutocomplete({
   return {
     displayItems,
     showAddNew,
-    isLoading: false,
-    isOnline: true,
   };
 }

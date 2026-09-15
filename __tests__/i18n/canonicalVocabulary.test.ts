@@ -28,14 +28,6 @@ const CANONICAL_NAMESPACES = ['errors', 'empty', 'labels', 'dataState'];
  * decision, not a snooze — and it names the exact key pair, so a NEW duplicate
  * cannot hide behind it.
  */
-const COMPOSED_KEY_REASON =
-  '`alertMutationFailure` composes these at runtime as ' +
-  '`${keyPrefix}.${suffix}` from the mutation payload typename, so every ' +
-  'prefix must carry the whole suffix set. Merging four of them onto a ' +
-  'canonical key is exactly the mistake this exemption prevents — no static ' +
-  'scan can see a composed key, and no lint rule caught it. The prefixes are ' +
-  'checked by `composedKeyNamespaces.test.ts`.';
-
 const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
   [
     {
@@ -431,12 +423,12 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
     {
       keys: [
         'pantryItemDetail.batch.expired',
-        'shoppingListScreens.statusExpired',
         'pantryAnalytics.reasonExpired',
         'filteredPantry.expired',
         'recordWaste.reasonExpired',
         'addToPantry.conditionExpired',
         'expiration.expired',
+        'inviteStatus.EXPIRED',
       ],
       reason:
         'The English is one word for two roles: es "Caducado" vs ' +
@@ -444,6 +436,27 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
         'skaduar". One form would be wrong in the other context, so the ' +
         'distinction belongs in the key rather than in a runtime ' +
         'parameter.',
+    },
+    {
+      keys: ['shoppingListScreens.statusInvited', 'inviteStatus.PENDING'],
+      reason:
+        'The English is one word for two roles: a list collaborator who was ' +
+        'invited (es "Invitado") vs an invitation still awaiting an answer ' +
+        '(es "Pendiente"; it "In attesa"; sq "Në pritje").',
+    },
+    {
+      keys: ['performance.used', 'inviteStatus.USED'],
+      reason:
+        'The English is one word for two roles: used memory vs a spent ' +
+        'invitation; es "Usado" vs "Usada". One form would be wrong in the ' +
+        'other context, so the distinction belongs in the key.',
+    },
+    {
+      keys: ['itemType.OTHER', 'nutrition.category.other'],
+      reason:
+        'The English is one word for two roles: an item type vs a section of ' +
+        'nutrients; es "Otro" vs "Otros"; it "Altro" vs "Altri"; sq "Tjetër" ' +
+        'vs "Të tjera". One form would be wrong in the other context.',
     },
     {
       keys: ['shoppingListScreens.membersCount', 'joinHome.memberCount_other'],
@@ -464,6 +477,7 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
       keys: [
         'shoppingListScreens.patternDaily',
         'pantryAnalytics.granularityDaily',
+        'mealPlan.daily',
       ],
       reason:
         'The English is one word for two roles: es "Diariamente" vs ' +
@@ -506,6 +520,7 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
         'storageLocationForm.typeCustom',
         'saveAsTemplate.categoryCustom',
         'templatePreview.customMeal',
+        'mealPlan.custom',
       ],
       reason:
         'The English is one word for two roles: es "Personalizado" vs ' +
@@ -728,14 +743,6 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
         'rather than in a runtime parameter.',
     },
     {
-      keys: ['homeManagement.modeCreate', 'onboardingSteps.CreateHome.title'],
-      reason:
-        'The English is one word for two roles: sq "Krijo Shtëpi" vs ' +
-        '"Krijo shtëpinë". One form would be wrong in the other ' +
-        'context, so the distinction belongs in the key rather than in ' +
-        'a runtime parameter.',
-    },
-    {
       keys: [
         'homeManagement.statsMember_other',
         'homeManagement.cardMembersSectionTitle',
@@ -770,22 +777,6 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
       reason:
         'Same string, but the keys are reached by different mechanisms ' +
         'and cannot be re-pointed at one another.',
-    },
-    {
-      keys: [
-        'suggestItemEdit.rejectedTitle',
-        'suggestItemEdit.failedTitle',
-        'reportItem.rejectedTitle',
-        'reportItem.failedTitle',
-      ],
-      reason: COMPOSED_KEY_REASON,
-    },
-    {
-      keys: [
-        'itemPhotos.setPrimary.rejectedTitle',
-        'itemPhotos.setPrimary.failedTitle',
-      ],
-      reason: COMPOSED_KEY_REASON,
     },
   ];
 
@@ -858,6 +849,7 @@ const RUNTIME_COMPOSED_NAMESPACES = [
   'errors.field',
   'errors.resourceNames',
   'expirationAction.toast',
+  'inviteStatus',
   'itemPhotos.perspective',
   'itemType',
   'itemValidation',
@@ -874,22 +866,8 @@ const RUNTIME_COMPOSED_NAMESPACES = [
   'unitType',
   'usagePurpose',
 ];
-const ALERT_PREFIXES = [
-  'suggestItemEdit',
-  'reportItem',
-  'itemPhotos.setPrimary',
-];
-const ALERT_SUFFIXES = [
-  'notFoundTitle',
-  'notFoundBody',
-  'rejectedTitle',
-  'rateLimitedTitle',
-  'failedTitle',
-  'failedBody',
-];
 const isRuntimeComposed = (key: string) =>
-  RUNTIME_COMPOSED_NAMESPACES.some(ns => key.startsWith(`${ns}.`)) ||
-  ALERT_PREFIXES.some(p => ALERT_SUFFIXES.some(s => key === `${p}.${s}`));
+  RUNTIME_COMPOSED_NAMESPACES.some(ns => key.startsWith(`${ns}.`));
 
 const isComposedCollision = (keys: readonly string[]) =>
   keys.filter(isRuntimeComposed).length > 1;

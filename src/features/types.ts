@@ -1,4 +1,5 @@
 import type { createBottomTabScreen } from '@react-navigation/bottom-tabs';
+import type { TranslationKey } from '#/i18n';
 
 /** Accepts both React components and static navigator objects. */
 type NavigationScreen = Parameters<typeof createBottomTabScreen>[0]['screen'];
@@ -16,7 +17,7 @@ export interface TabIconPair {
  */
 export type TabAppearance = Record<
   string,
-  { icon: TabIconPair; mainScreen: string }
+  { icon: TabIconPair; mainScreen: string; titleKey: TranslationKey }
 >;
 
 /**
@@ -26,7 +27,7 @@ export type TabAppearance = Record<
  */
 export interface FeatureManifest {
   /** Unique feature identifier. Must equal the directory name under
-   *  `src/features/` — `scripts/check-feature-shape.mjs` enforces it. */
+   *  `src/features/`. */
   id: string;
 
   /**
@@ -45,7 +46,7 @@ export interface FeatureManifest {
      * i18n KEY, resolved by `TabItem` at render. A manifest is a module-level
      * constant, so a `t()` here would freeze the label at bootstrap language.
      */
-    titleKey: string;
+    titleKey: TranslationKey;
     /** Deterministic sort order — lower values render first. */
     order: number;
     /** Ionicons names, focused and unfocused. */

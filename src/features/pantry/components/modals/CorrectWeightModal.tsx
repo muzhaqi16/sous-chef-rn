@@ -133,12 +133,12 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
       {!!pantryItem && (
         <>
           <View style={commonStyles.bottomSheetItemInfo}>
-            <Text style={commonStyles.bottomSheetItemName}>
+            <Text role="heading" style={commonStyles.bottomSheetItemName}>
               {pantryItem.itemName}
             </Text>
             {!!currentWeightText && (
               <View style={commonStyles.bottomSheetItemRow}>
-                <Text style={commonStyles.bottomSheetItemLabel}>
+                <Text role="body" tone="secondary">
                   {t('correctWeight.netWeightPrefix')}
                   {currentWeightText}
                 </Text>
@@ -146,20 +146,20 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
             )}
             {!!remainingWeightText && (
               <View style={commonStyles.bottomSheetItemRow}>
-                <Text style={commonStyles.bottomSheetItemLabel}>
+                <Text role="body" tone="secondary">
                   {t('labels.remaining')}
                   {remainingWeightText}
                 </Text>
               </View>
             )}
             <View style={commonStyles.bottomSheetItemRow}>
-              <Text style={commonStyles.bottomSheetItemLabel}>
+              <Text role="body" tone="secondary">
                 {t('correctWeight.quantityLabel')}
               </Text>
               <FormattedItemSubtitle
                 quantity={pantryItem.quantity}
-                displayAsFraction={pantryItem.unit?.displayAsFraction}
-                unitSymbol={pantryItem.unit?.symbol}
+                displayAsFraction={pantryItem.unit.displayAsFraction}
+                unitSymbol={pantryItem.unit.symbol}
               />
             </View>
           </View>

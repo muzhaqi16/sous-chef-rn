@@ -1,6 +1,7 @@
 import { useInviteToHome } from '#features/onboarding/hooks/useInviteToHome';
 import { useAddCollaborator } from '#features/shoppingList/hooks/useAddCollaborator';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { settledStatus } from '#/apollo/utils/settleMutation';
+import { errorService } from '#/services/errorService';
 import {
   CollaboratorRole,
   MembershipRole,
@@ -17,14 +18,18 @@ export interface OnboardingInviteResult {
   refusedCount: number;
 }
 
+/** The collaborator mutation reports through its `onError`; its outcome is read below. */
+const reportCollaboratorFailure = (error: Error) => {
+  errorService.reportError(error, { operation: 'Onboarding invites' });
+};
+
 /**
- * Send the first household invitations. Both underlying mutations pass an
- * `onError`, so a transport failure RESOLVES like a refusal does and no caller
- * can learn from a rejected promise how many addresses actually went out.
+ * Send the first household invitations. Every send RESOLVES, refused or not,
+ * so the count is the only signal of how many addresses actually went out.
  */
-export function useSendOnboardingInvites(onError: (error: Error) => void) {
-  const { inviteToHome } = useInviteToHome(onError);
-  const { addCollaborator } = useAddCollaborator(onError);
+export function useSendOnboardingInvites() {
+  const { inviteToHome } = useInviteToHome();
+  const { addCollaborator } = useAddCollaborator(reportCollaboratorFailure);
 
   const sendInvites = async (
     emails: readonly string[],
@@ -46,17 +51,13 @@ export function useSendOnboardingInvites(onError: (error: Error) => void) {
           shoppingListId,
           email,
           role: CollaboratorRole.Contributor,
-        });
+        }).then(outcome => settledStatus(outcome) !== 'failed');
       }
       return null;
     });
 
-    const outcomes = await Promise.all(sends.filter(send => send !== null));
-    const refusedCount = outcomes.filter(
-      outcome => classifyCreateResult(outcome) === 'rejected',
-    ).length;
-
-    return { refusedCount };
+    const sent = await Promise.all(sends.filter(send => send !== null));
+    return { refusedCount: sent.filter(ok => !ok).length };
   };
 
   return { sendInvites };

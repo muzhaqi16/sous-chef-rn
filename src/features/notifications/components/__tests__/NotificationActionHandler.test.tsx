@@ -84,8 +84,6 @@ function buildNotification(
     type: NotificationType.ExpiryReminder,
     category: NotificationCategory.Pantry,
     priority: Priority.Normal,
-    title: 'Items Expiring Soon',
-    message: 'Milk expires tomorrow',
     payload: { itemName: 'Milk', daysUntilExpiry: 1, pantryItemId: 'item-1' },
     sentAt: '2026-07-01T00:00:00Z',
     isRead: false,

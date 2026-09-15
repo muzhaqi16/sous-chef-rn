@@ -242,6 +242,28 @@ describe('AdjustQuantityModal', () => {
     expect(screen.queryByText('Sugar')).toBeNull();
   });
 
+  it('seeds the new quantity with a cooking fraction for a fraction unit', () => {
+    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
+      cache: makeCache({
+        quantity: 0.33333334,
+        unit: {
+          __typename: 'Unit',
+          id: 'u1',
+          symbol: 'cups',
+          displayAsFraction: true,
+        },
+      }),
+    });
+    expect(screen.getByDisplayValue('1/3')).toBeTruthy();
+  });
+
+  it('seeds a decimal rounded to three places for a unit that opts out of fractions', () => {
+    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
+      cache: makeCache({ quantity: 0.33333334 }),
+    });
+    expect(screen.getByDisplayValue('0.333')).toBeTruthy();
+  });
+
   it('shows current quantity info', () => {
     renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
       cache: makeCache(),

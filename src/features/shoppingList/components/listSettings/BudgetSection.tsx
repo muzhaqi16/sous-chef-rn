@@ -37,7 +37,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
 
   return (
     <View style={commonStyles.settingsSection}>
-      <Text style={commonStyles.settingsSectionTitle}>
+      <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
         {t('shoppingListScreens.budgetSection')}
       </Text>
 
@@ -60,10 +60,10 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
 
       <View style={commonStyles.settingsRow}>
         <View style={commonStyles.settingsRowInfo}>
-          <Text style={commonStyles.settingsRowLabel}>
+          <Text role="bodyStrong">
             {t('shoppingListScreens.priceTrackingLabel')}
           </Text>
-          <Text style={commonStyles.settingsRowDescription}>
+          <Text role="caption" style={commonStyles.settingsRowDescription}>
             {t('shoppingListScreens.priceTrackingDesc')}
           </Text>
         </View>

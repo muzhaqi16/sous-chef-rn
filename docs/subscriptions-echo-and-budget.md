@@ -62,8 +62,7 @@ disables a stream.
 One value identifies this install to the server, and every surface presents it:
 the `x-device-id` header, the socket's `connectionParams.deviceId`,
 `registerDevice(input.deviceId)`, and the issue, exchange and revoke of a device
-credential. `scripts/check-canonical-mechanisms.mjs`'s `device-identity` concern
-fails any other module that mints or persists one.
+credential. No other module mints or persists one.
 
 | | |
 | --- | --- |

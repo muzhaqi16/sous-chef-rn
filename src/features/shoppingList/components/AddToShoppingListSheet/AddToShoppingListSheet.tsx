@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import type { ShoppingListSuggestionItem } from '#features/shoppingList/hooks/useShoppingListSuggestions';
 import {
   useShoppingListSuggestions,
   SHOPPING_SUGGESTIONS_LIMIT,
-  ShoppingListSuggestionItem,
 } from '#features/shoppingList/hooks/useShoppingListSuggestions';
 import { toastService } from '#/services/toastService';
 import { useAddToShoppingList } from '#features/shoppingList/hooks/useAddToShoppingList';
-import {
-  ItemSuggestion,
-  SuggestionSurface,
-} from '#/graphql/generated/schemaTypes';
+import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import { SuggestionSurface } from '#/graphql/generated/schemaTypes';
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import {
@@ -21,7 +19,6 @@ import {
 import { SheetTutorialHint } from '#features/shoppingList/components/SheetTutorialHint';
 import { AddItemSheet } from '#features/catalog/ui/AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '#features/catalog/ui/AddItemSheet/useAddItemSheetState';
-import type { SuggestionsHookResult } from '#features/catalog/ui/AddItemSheet/types';
 import { shoppingListSheetConfig } from '#features/shoppingList/components/AddToShoppingListSheet/shoppingListSheetConfig';
 import { ShoppingListDetailsStep } from './ShoppingListDetailsStep';
 
@@ -64,14 +61,6 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     limit: SHOPPING_SUGGESTIONS_LIMIT,
     skip: !visible || !state.shouldFetch,
   });
-
-  // Adapt suggestions to the expected interface
-  const suggestions: SuggestionsHookResult<ShoppingListSuggestionItem> = {
-    grouped: suggestionsResult.grouped,
-    loading: suggestionsResult.loading,
-    hasSuggestions: suggestionsResult.hasSuggestions,
-    refetch: suggestionsResult.refetch,
-  };
 
   // Dismiss a junk/unwanted suggestion from the SHOPPING surface.
   const { dismissSuggestion } = useSuggestionDismissal(
@@ -186,7 +175,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         <SheetTutorialHint
           variant="inline"
           text={
-            suggestions.hasSuggestions
+            suggestionsResult.state === 'ready'
               ? t('addToShoppingListSheet.tutorialTapPlus')
               : t('addToShoppingListSheet.tutorialTapAddManually')
           }
@@ -214,7 +203,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       contextId={shoppingListId}
       onClose={onClose}
       config={shoppingListSheetConfig}
-      suggestions={suggestions}
+      suggestions={suggestionsResult}
       onQuickAddSearchSuggestion={handleQuickAddSearchSuggestion}
       onQuickAddSuggestion={handleQuickAddSuggestion}
       onDismissSuggestion={handleDismissSuggestion}
@@ -231,7 +220,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         <ShoppingListDetailsStep
           shoppingListId={shoppingListId}
           prefilledItemName={prefilledItemName}
-          refetch={suggestionsResult.refetch}
+          refetch={() => Promise.resolve(suggestionsResult.refetch())}
           onClose={goBack}
           onSuccess={handleAddDetailsSuccess}
         />

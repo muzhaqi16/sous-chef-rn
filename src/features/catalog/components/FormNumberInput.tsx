@@ -1,5 +1,5 @@
 import React from 'react';
-import { TextInputProps, ViewStyle } from 'react-native';
+import type { TextInputProps, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { ThemedTextInput } from '#components/atoms/themedComponents';

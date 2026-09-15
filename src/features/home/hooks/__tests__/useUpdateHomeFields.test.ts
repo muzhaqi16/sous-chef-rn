@@ -6,7 +6,15 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { UpdateHomeDocument } from '#operations/home/home.generated';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { alertService } from '#/services/alertService';
 import { useUpdateHomeFields } from '../useUpdateHomeFields';
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
+
+const FALLBACK = 'Failed to update home';
 
 /**
  * Renaming a home is an absolute field set keyed by its id, so it queues like
@@ -61,7 +69,7 @@ describe('updating a home field', () => {
       const pending = result.current.updateHomeFields(
         { name: 'New Name' },
         { ...readHome(cache), version: 3 },
-        'Save Home Name',
+        FALLBACK,
       );
       // Written before the server has answered anything.
       expect(readHome(cache)?.name).toBe('New Name');
@@ -90,7 +98,7 @@ describe('updating a home field', () => {
               data: {
                 updateHome: {
                   __typename: 'ValidationError',
-                  code: 'VALIDATION_FAILED',
+                  code: ErrorCode.ValidationFailed,
                   message: 'bad',
                   field: 'name',
                 },
@@ -101,15 +109,23 @@ describe('updating a home field', () => {
       },
     );
 
+    let persisted: boolean | undefined;
     await act(async () => {
-      await result.current.updateHomeFields(
+      persisted = await result.current.updateHomeFields(
         { name: 'New Name' },
         { ...readHome(cache), version: 3 },
-        'Save Home Name',
+        FALLBACK,
       );
     });
 
+    expect(persisted).toBe(false);
     expect(readHome(cache)?.name).toBe('Old Name');
+    // Said once, and never in the server's own words.
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+    expect(alertService.alert).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'bad',
+    );
   });
 
   it('clears the join-code flag through the same write', async () => {
@@ -126,7 +142,7 @@ describe('updating a home field', () => {
       await result.current.updateHomeFields(
         { allowJoinCode: false },
         { ...readHome(cache), version: 3 },
-        'Disable Home Join Link',
+        FALLBACK,
       );
     });
 

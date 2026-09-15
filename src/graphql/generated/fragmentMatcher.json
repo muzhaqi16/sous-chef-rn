@@ -1172,6 +1172,14 @@
       "RestoreItemPayload",
       "ValidationError"
     ],
+    "RestorePantryItemResult": [
+      "ConflictError",
+      "DuplicatePantryItemError",
+      "ForbiddenError",
+      "NotFoundError",
+      "RestorePantryItemPayload",
+      "ValidationError"
+    ],
     "RevokeDeviceCredentialResult": [
       "ConflictError",
       "ForbiddenError",
@@ -1424,6 +1432,7 @@
     ],
     "UpdatePantryItemResult": [
       "ConflictError",
+      "DuplicatePantryItemError",
       "ForbiddenError",
       "NotFoundError",
       "UpdatePantryItemPayload",

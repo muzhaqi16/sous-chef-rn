@@ -13,6 +13,7 @@ import {
   formatQuantityBreakdown,
 } from '../usePantryItemTransformation';
 import { getI18n } from '#/i18n/config';
+import { StorageState } from '#/graphql/generated/schemaTypes';
 
 // The real instance (jest.setup.js initializes it), so these assertions still
 // verify the copy in en.json rather than a stub's echo.
@@ -20,22 +21,24 @@ const t = getI18n().t;
 
 describe('formatStorageState', () => {
   it('formats REFRIGERATED as Fridge', () => {
-    expect(formatStorageState('REFRIGERATED', t)).toBe('Fridge');
+    expect(formatStorageState(StorageState.Refrigerated, t)).toBe('Fridge');
   });
   it('formats FROZEN as Freezer', () => {
-    expect(formatStorageState('FROZEN', t)).toBe('Freezer');
+    expect(formatStorageState(StorageState.Frozen, t)).toBe('Freezer');
   });
   it('formats AMBIENT as Dry pantry', () => {
-    expect(formatStorageState('AMBIENT', t)).toBe('Dry pantry');
+    expect(formatStorageState(StorageState.Ambient, t)).toBe('Dry pantry');
   });
   it('formats NONE rather than leaking the raw enum', () => {
-    expect(formatStorageState('NONE', t)).toBe('None');
+    expect(formatStorageState(StorageState.None, t)).toBe('None');
   });
   it('returns empty string for null', () => {
     expect(formatStorageState(null, t)).toBe('');
   });
-  it('returns original string for unknown state', () => {
-    expect(formatStorageState('UNKNOWN', t)).toBe('UNKNOWN');
+  it('labels a member newer than the codegen enum as unknown, never raw', () => {
+    // Arrives as wire JSON, which the generated enum cannot describe.
+    const newerMember: StorageState = JSON.parse('"CRYOGENIC"');
+    expect(formatStorageState(newerMember, t)).toBe('Unknown');
   });
 });
 

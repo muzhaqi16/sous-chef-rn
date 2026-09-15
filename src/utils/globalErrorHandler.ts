@@ -7,6 +7,7 @@
 
 import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
+import { describeValue } from '#/utils/errorSerialization';
 
 /**
  * Install global handlers for:
@@ -49,7 +50,9 @@ export function setupGlobalErrorHandler(): void {
     g.onunhandledrejection = (event: { reason: unknown }) => {
       const reason = event?.reason;
       const message =
-        reason instanceof Error ? reason.message : String(reason ?? 'Unknown');
+        reason instanceof Error
+          ? reason.message
+          : describeValue(reason ?? 'Unknown');
 
       Telemetry.trackError(message, {
         source: 'global_handler',

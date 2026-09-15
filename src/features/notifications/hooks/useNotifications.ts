@@ -25,8 +25,7 @@ import { registerFcmTapHandlers } from '#/services/push/nativePushMessaging';
 import { registerIosPushTapHandlers } from '#/services/push/iosPushMessaging';
 import {
   getNotificationAction,
-  getNotificationDisplayMessage,
-  getNotificationTitle,
+  getNotificationCopy,
 } from '#features/notifications/utils/notificationHelpers';
 import {
   isNotificationPayload,
@@ -35,6 +34,7 @@ import {
 import {
   handleSubscriptionError,
   clearAllRetryStates,
+  isExpectedTransportError,
 } from '#utils/subscriptionErrorHandler';
 import {
   addNotificationToFeed,
@@ -45,6 +45,7 @@ import { useNotificationSettings } from './useNotificationSettings';
 import { useNotificationSync } from './useNotificationSync';
 import { useSubscriptionTransportRecovery } from '#/hooks/subscriptions/useSubscriptionTransportRecovery';
 import { logger } from '#/utils/environment';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { registerSessionTeardown } from '#store/sessionTeardown';
 
 // PERFORMANCE: Grouped selectors with useShallow keep store subscriptions low
@@ -157,6 +158,8 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
         return userPreferences.cookingReminders;
       case NotificationType.RecipeSaved:
         return userPreferences.recipeRecommendations;
+      case NotificationType.ItemDeleted:
+      case NotificationType.NewItemAdded:
       default:
         return true;
     }
@@ -166,8 +169,6 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
     notification: {
       id?: string;
       type?: NotificationType;
-      title?: string;
-      message?: string;
       priority?: Priority;
       payload?: JsonValue | null;
       sentAt?: string;
@@ -205,8 +206,6 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
     const processedNotification = {
       id: notification.id || Date.now().toString(),
       type: resolvedType,
-      title: notification.title || getNotificationTitle(resolvedType),
-      message: notification.message || '',
       category,
       priority: notification.priority ?? Priority.Normal,
       payload,
@@ -242,10 +241,11 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       appStateRef.current !== 'active' &&
       !isQuietTime()
     ) {
-      showLocalNotification({
+      const copy = getNotificationCopy(processedNotification, t);
+      void showLocalNotification({
         id: processedNotification.id,
-        title: processedNotification.title,
-        body: getNotificationDisplayMessage(processedNotification, t),
+        title: copy.title,
+        body: copy.message,
         data: {
           category: processedNotification.category,
           notificationId: processedNotification.id,
@@ -254,27 +254,18 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
     }
   };
 
-  // Error handler - suppresses expected network errors
-  const handleError = (subscriptionName: string, error: Error) => {
-    const errorMessage = error?.message?.toLowerCase() || '';
-    const isSocketClosed = errorMessage.includes('socket closed');
-    const isNetworkError =
-      errorMessage.includes('network') ||
-      errorMessage.includes('connection') ||
-      errorMessage.includes('websocket');
-
-    // Socket closed errors are expected during network transitions - will auto-reconnect
-    if (isSocketClosed || isNetworkError) {
-      return;
+  // Transport churn auto-reconnects; only other failures are warned about.
+  const handleError = (error: Error) => {
+    const subscriptionName = operationNameOf(NotificationEventsDocument);
+    if (!isExpectedTransportError(error)) {
+      logger.warn(`${subscriptionName} subscription error:`, error.message);
     }
-
-    logger.warn(`${subscriptionName} subscription error:`, error.message);
     handleSubscriptionError(subscriptionName, error);
   };
 
   // Consolidated notification stream — CREATED + UPDATED on one subscription,
   // routed by `subtype` (replaces notificationCreated + notificationUpdated).
-  const notificationEventsSkip = config.skip || !user?.id;
+  const notificationEventsSkip = config.skip === true || !user?.id;
   const notificationEvents = useSubscription(NotificationEventsDocument, {
     skip: notificationEventsSkip,
     onData: ({ data }) => {
@@ -332,10 +323,6 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
           {
             id: rawNotification.id,
             type: rawNotification.type,
-            title:
-              rawNotification.title ??
-              getNotificationTitle(rawNotification.type),
-            message: rawNotification.message ?? '',
             priority: rawNotification.priority ?? Priority.Normal,
             payload: rawNotification.payload,
             sentAt: rawNotification.sentAt,
@@ -351,25 +338,25 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
         // Read/dismiss arrive as the dedicated subtypes handled above; the
         // only statuses still delivered as UPDATED are CLICKED and EXPIRED.
         const status = rawNotification.status;
-        if (status === 'CLICKED') {
+        if (status === NotificationStatus.Clicked) {
           writeNotificationStatus(
             client.cache,
             rawNotification.id,
             NotificationStatus.Read,
           );
           reseedUnreadCount();
-        } else if (status === 'EXPIRED') {
+        } else if (status === NotificationStatus.Expired) {
           evictNotification(client.cache, rawNotification.id);
           reseedUnreadCount();
         }
       }
     },
     onError: (error: Error) => {
-      handleError('NotificationEvents', error);
+      handleError(error);
     },
   });
   useSubscriptionTransportRecovery(
-    'NotificationEvents',
+    NotificationEventsDocument,
     notificationEvents,
     notificationEventsSkip,
   );

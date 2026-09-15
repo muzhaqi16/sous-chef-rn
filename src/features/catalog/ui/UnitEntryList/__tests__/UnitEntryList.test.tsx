@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
-import { UnitEntryList, UnitEntry } from '../UnitEntryList';
+import type { UnitEntry } from '../UnitEntryList';
+import { UnitEntryList } from '../UnitEntryList';
 
 jest.mock('#utils/iconUtils', () => ({
   Icon: 'Icon',

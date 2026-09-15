@@ -28,6 +28,12 @@ import {
   getRateLimitMessage,
 } from '#/utils/errors/rateLimit';
 import { logger } from '#/utils/environment';
+import { TimeoutError } from '#/utils/errors/timeoutError';
+import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import {
+  appliedPayload,
+  validationFieldName,
+} from '#/utils/errors/mutationPayload';
 import type { Translate } from '#/i18n/types';
 
 /**
@@ -74,6 +80,7 @@ export const imageErrorMessage = (
       return t('imageUpload.contentMismatchBody');
     case 'UNKNOWN_ERROR':
       return t('imageUpload.unreadableBody');
+    case undefined:
     default:
       return t('imageUpload.failedBody');
   }
@@ -85,12 +92,8 @@ export const imageErrorMessage = (
  * was minted for and reports a mismatch as a field error on `key` — a field the
  * person never filled in, so it needs copy about the FILE they picked.
  */
-function confirmRefusalError(
-  payload: { __typename?: string; field?: string | null } | null | undefined,
-): ImageValidationError {
-  const isByteMismatch =
-    payload?.__typename === 'ValidationError' &&
-    payload.field?.split('.').pop() === 'key';
+function confirmRefusalError(data: unknown): ImageValidationError {
+  const isByteMismatch = validationFieldName(data) === 'key';
   return createImageValidationError(
     isByteMismatch
       ? 'Uploaded bytes do not match the key extension'
@@ -144,7 +147,6 @@ export interface ItemImageUploadOptions extends ImageUploadOptions {
 export const useImageUpload = () => {
   const { t } = useTranslation();
   const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
 
   const activeXhrRef = useRef<XMLHttpRequest | null>(null);
 
@@ -212,12 +214,12 @@ export const useImageUpload = () => {
 
       xhr.onerror = () => {
         activeXhrRef.current = null;
-        reject(new Error('Network request failed during upload'));
+        reject(new NetworkRequestError('Network request failed during upload'));
       };
 
       xhr.ontimeout = () => {
         activeXhrRef.current = null;
-        reject(new Error('Upload request timed out'));
+        reject(new TimeoutError('Upload request timed out', xhr.timeout));
       };
 
       xhr.onabort = () => {
@@ -270,7 +272,6 @@ export const useImageUpload = () => {
     }
 
     setUploading(true);
-    setProgress(0);
 
     // Held in a local runner so the try below contains a single plain call —
     // the React Compiler bails out of this hook when a `?.`/`??`/ternary sits
@@ -323,8 +324,8 @@ export const useImageUpload = () => {
         },
       );
 
-      const uploadPayload = uploadData?.createImageUploadUrl;
-      if (uploadPayload?.__typename !== 'CreateImageUploadUrlPayload') {
+      const uploadPayload = appliedPayload(uploadData);
+      if (!uploadPayload) {
         // Presign has its own per-user ceiling, and it arrives as a top-level
         // GraphQL error rather than a member of the result union — so it
         // lands here with no payload. Without this branch the user is told
@@ -360,7 +361,6 @@ export const useImageUpload = () => {
       onSuccess?.(finalImageUrl);
 
       setUploading(false);
-      setProgress(0);
       return finalImageUrl;
     };
 
@@ -369,7 +369,6 @@ export const useImageUpload = () => {
       result = await runUpload();
     } catch (error) {
       setUploading(false);
-      setProgress(0);
       throw error;
     }
 
@@ -392,11 +391,9 @@ export const useImageUpload = () => {
           const { data } = await confirmProfileUpload({
             variables: { input: { key } },
           });
-          const payload = data?.confirmProfileImageUpload;
-          if (payload?.__typename === 'ConfirmProfileImageUploadPayload') {
-            return payload.url;
-          }
-          throw confirmRefusalError(payload);
+          const payload = appliedPayload(data);
+          if (payload) return payload.url;
+          throw confirmRefusalError(data);
         },
         options,
       );
@@ -431,11 +428,9 @@ export const useImageUpload = () => {
               input: { itemId, key, perspective, makePrimary },
             },
           });
-          const payload = data?.confirmItemImageUpload;
-          if (payload?.__typename === 'ConfirmItemImageUploadPayload') {
-            return payload.url;
-          }
-          throw confirmRefusalError(payload);
+          const payload = appliedPayload(data);
+          if (payload) return payload.url;
+          throw confirmRefusalError(data);
         },
         options,
       );
@@ -524,9 +519,12 @@ export const useImageUpload = () => {
     // a non-success union member — it does not reject. The catch above only
     // fires when a link itself throws. Both outcomes land here, so the failure
     // is reported once, in the one place that sees every failure.
-    const payload = result?.data?.updateProfile;
-    if (payload?.__typename !== 'UpdateProfilePayload') {
-      logger.error('Update profile avatar failed:', result?.error ?? payload);
+    const payload = appliedPayload(result?.data);
+    if (!payload) {
+      logger.error(
+        'Update profile avatar failed:',
+        result?.error ?? result?.data,
+      );
       alertService.alert(
         t('imageUpload.updateFailedTitle'),
         t('imageUpload.avatarUpdateFailedBody'),
@@ -540,35 +538,10 @@ export const useImageUpload = () => {
     return payload.userProfile;
   };
 
-  const updateProfileCoverUrl = async (coverImageUrl: string) => {
-    let result;
-    try {
-      result = await updateProfile({
-        variables: { input: { coverImage: coverImageUrl } },
-      });
-    } catch (error) {
-      logger.error('Update profile cover failed:', error);
-    }
-
-    const payload = result?.data?.updateProfile;
-    if (payload?.__typename !== 'UpdateProfilePayload') {
-      logger.error('Update profile cover failed:', result?.error ?? payload);
-      alertService.alert(
-        t('imageUpload.updateFailedTitle'),
-        t('imageUpload.coverUpdateFailedBody'),
-      );
-      return null;
-    }
-    return payload.userProfile;
-  };
-
   return {
     uploading,
-    progress,
     uploadProfileImage,
-    uploadItemImage,
     uploadItemImages,
     updateProfileAvatarUrl,
-    updateProfileCoverUrl,
   };
 };

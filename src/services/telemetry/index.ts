@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { env as buildEnv } from '#/config/env';
 import { TelemetryService } from './TelemetryService';
-import { LogEntry, TelemetryConfig } from './types';
+import type { LogEntry, TelemetryConfig } from './types';
 import { getVersion } from 'react-native-device-info';
 import { Environment } from '#/utils/environment';
 
@@ -64,9 +64,7 @@ const createTelemetryConfig = (): TelemetryConfig => {
 let telemetryService: TelemetryService | null = null;
 
 function getService(): TelemetryService {
-  if (!telemetryService) {
-    telemetryService = new TelemetryService(createTelemetryConfig());
-  }
+  telemetryService ??= new TelemetryService(createTelemetryConfig());
   return telemetryService;
 }
 
@@ -114,7 +112,7 @@ export const Telemetry = {
     getService().trackScreenView(screenName, properties),
 
   trackError: (error: Error | string, context?: Record<string, unknown>) => {
-    const { component, operation, isFatal, ...rest } = context || {};
+    const { component, operation, isFatal, ...rest } = context ?? {};
     const details = {
       message: typeof error === 'string' ? error : error.message,
       name: typeof error === 'string' ? undefined : error.name,

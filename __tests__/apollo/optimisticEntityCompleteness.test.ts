@@ -30,7 +30,7 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { graphql, print, Kind, type DocumentNode } from 'graphql';
+import { graphql, parse, print, Kind, type DocumentNode } from 'graphql';
 import type { SelectionSetNode, FragmentDefinitionNode } from 'graphql';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { addMocksToSchema } from '@graphql-tools/mock';
@@ -41,6 +41,25 @@ import {
   type CreateRecipeInput,
 } from '#/graphql/generated/schemaTypes';
 import { makeCache } from '#/apollo/cache';
+import { queuedMutationFor } from '#/test-utils/queuedMutation';
+import {
+  GetShoppingListsLiteForRecipeDocument,
+  CreateShoppingListForRecipeDocument,
+} from '#features/recipes/hooks/useRecipeDetail.generated';
+import { GetShoppingListsLiteForMealPlanDocument } from '#features/mealPlan/components/GenerateShoppingListSheet.generated';
+import {
+  GetMealPlansDocument,
+  GetMealPlanDocument,
+  MealPlanForEventDocument,
+  CreateMealPlanDocument,
+  CreateMealPlanItemDocument,
+} from '#features/mealPlan/graphql/mealPlan.generated';
+import {
+  GetMealTemplatesDocument,
+  MealTemplateForEventDocument,
+  CreateMealTemplateDocument,
+} from '#features/mealPlan/graphql/mealTemplate.generated';
+import * as cacheUpdaters from '#/apollo/utils/cacheUpdaters';
 import { convertToSyncMutation } from '#/apollo/offlineQueue/convertToSyncMutation';
 import { QueueStatus } from '#/apollo/offlineQueue/types';
 import {
@@ -57,6 +76,8 @@ import {
   InviteToHomeDocument,
   GetHomeDocument,
   GetHomesDocument,
+  CreateHomeDocument,
+  AcceptHomeInviteDocument,
   type GetHomesQuery,
 } from '#operations/home/home.generated';
 import {
@@ -75,7 +96,9 @@ import {
   GetShoppingListItemsFilteredDocument,
   GetShoppingListDetailsDocument,
   GetShoppingListsLiteDocument,
+  CreateShoppingListDocument,
   AddCollaboratorDocument,
+  ToggleShoppingListItemPurchasedDocument,
   type GetShoppingListItemsFilteredQuery,
   type GetShoppingListsLiteQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -88,6 +111,10 @@ import { writeOptimisticRecipe } from '#features/recipes/utils/recipeCacheWriter
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
 import { addToPantryItemsCache } from '#features/pantry/cache/items';
+import {
+  buildOptimisticPantry,
+  writeOptimisticPantry,
+} from '#features/pantry/utils/optimisticPantry';
 import { AddedShoppingListItemFieldsFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import {
@@ -229,7 +256,8 @@ function flattenSelection(
       }
     } else if (selection.kind === Kind.FRAGMENT_SPREAD) {
       const fragment = fragmentsByName.get(selection.name.value);
-      if (!fragment) throw new Error(`unresolved spread ${selection.name.value}`);
+      if (!fragment)
+        throw new Error(`unresolved spread ${selection.name.value}`);
       const guard = `${prefix}|${selection.name.value}`;
       if (seen.has(guard)) continue;
       seen.add(guard);
@@ -241,10 +269,27 @@ function flattenSelection(
         seen,
       );
     } else if (selection.kind === Kind.INLINE_FRAGMENT) {
-      flattenSelection(selection.selectionSet, fragmentsByName, prefix, out, seen);
+      flattenSelection(
+        selection.selectionSet,
+        fragmentsByName,
+        prefix,
+        out,
+        seen,
+      );
     }
   }
   return out;
+}
+
+/**
+ * `flattenSelection` skips `__typename`, so a selection of only that flattens to
+ * nothing, and an empty side compares clean against anything.
+ */
+function expectSelected(count: number, label: string): void {
+  expect({ label, selectedFields: count }).not.toEqual({
+    label,
+    selectedFields: 0,
+  });
 }
 
 const fragmentsOf = (document: DocumentNode) =>
@@ -303,9 +348,15 @@ function findConnectionNode(
         selection.name.value === connectionField
       ) {
         found ??= findFieldSelection(
-          { kind: Kind.DOCUMENT, definitions: [
-            { ...document.definitions[0]!, selectionSet: selection.selectionSet },
-          ] } as DocumentNode,
+          {
+            kind: Kind.DOCUMENT,
+            definitions: [
+              {
+                ...document.definitions[0]!,
+                selectionSet: selection.selectionSet,
+              },
+            ],
+          } as DocumentNode,
           'node',
         );
       }
@@ -339,41 +390,89 @@ function expectWriterCoversReader(
     findFieldSelection(writerDocument, writerField),
     fragmentsOf(writerDocument),
   );
-  expect(required.size).toBeGreaterThan(5);
+  expectSelected(required.size, label);
   expect({
     label,
     missing: [...required].filter(field => !written.has(field)).sort(),
   }).toEqual({ label, missing: [] });
 }
 
-/** Asserts one fragment file's field list is a superset of another's. */
+/**
+ * The array-field analogue of {@link expectWriterCoversReader}: a plain list
+ * field has no `edges { node }` to descend, so the reader side is the named
+ * field's own selection.
+ */
+function expectWriterCoversReaderField(
+  writerDocument: DocumentNode,
+  writerField: string,
+  readerDocument: DocumentNode,
+  readerField: string,
+  label: string,
+): void {
+  const required = flattenSelection(
+    findFieldSelection(readerDocument, readerField),
+    fragmentsOf(readerDocument),
+  );
+  const written = flattenSelection(
+    findFieldSelection(writerDocument, writerField),
+    fragmentsOf(writerDocument),
+  );
+  expectSelected(required.size, label);
+  expect({
+    label,
+    missing: [...required].filter(field => !written.has(field)).sort(),
+  }).toEqual({ label, missing: [] });
+}
+
+/**
+ * Asserts two writers of the same entity select the identical field set. A
+ * reader comparison catches both drifting below what a screen reads; it does
+ * not catch one being edited and its twin forgotten, which is the shape a
+ * per-feature copy of a mutation actually fails in.
+ */
+function expectWritersAgree(
+  a: { document: DocumentNode; field: string; label: string },
+  b: { document: DocumentNode; field: string; label: string },
+): void {
+  const fieldsOf = (writer: typeof a): string[] =>
+    [
+      ...flattenSelection(
+        findFieldSelection(writer.document, writer.field),
+        fragmentsOf(writer.document),
+      ),
+    ].sort();
+  const left = fieldsOf(a);
+  const right = fieldsOf(b);
+  expectSelected(left.length, a.label);
+  expect({
+    [`only in ${a.label}`]: left.filter(field => !right.includes(field)),
+    [`only in ${b.label}`]: right.filter(field => !left.includes(field)),
+  }).toEqual({ [`only in ${a.label}`]: [], [`only in ${b.label}`]: [] });
+}
+
+/** Asserts one `Notification` fragment selects everything another does. */
 function expectWriterCovers(writerFragment: string, readerFragment: string) {
+  const sources = [
+    'src/features/notifications/hooks/useNotifications.graphql',
+    'src/features/notifications/hooks/useNotificationsOnLaunch.graphql',
+  ];
   const fieldsOf = (fragmentName: string): string[] => {
-    const sources = [
-      'src/features/notifications/hooks/useNotifications.graphql',
-      'src/features/notifications/hooks/useNotificationsOnLaunch.graphql',
-    ];
     for (const relative of sources) {
-      const source = fs.readFileSync(
-        path.join(__dirname, '..', '..', relative),
-        'utf8',
+      const document = parse(
+        fs.readFileSync(path.join(__dirname, '..', '..', relative), 'utf8'),
       );
-      const marker = `fragment ${fragmentName} on Notification {`;
-      if (!source.includes(marker)) continue;
-      return source
-        .slice(source.indexOf(marker))
-        .split('}')[0]!
-        .split('\n')
-        .slice(1)
-        .map(line => line.replace(/#.*$/, '').trim())
-        .filter(Boolean)
-        .sort();
+      const fragment = fragmentsOf(document).get(fragmentName);
+      if (fragment) {
+        return [
+          ...flattenSelection(fragment.selectionSet, fragmentsOf(document)),
+        ].sort();
+      }
     }
     throw new Error(`fragment ${fragmentName} not found`);
   };
   const readerFields = fieldsOf(readerFragment);
   const writerFields = fieldsOf(writerFragment);
-  expect(readerFields.length).toBeGreaterThan(5);
+  expectSelected(readerFields.length, readerFragment);
   expect(readerFields.filter(field => !writerFields.includes(field))).toEqual(
     [],
   );
@@ -384,6 +483,24 @@ describe('optimistic entity completeness', () => {
     it('seeded pantry reads complete (baseline)', async () => {
       const cache = await seedPantryCache();
       expect(readPantry(cache).complete).toBe(true);
+    });
+
+    // A pantry created OFFLINE has never been fetched, so the optimistic write
+    // is the only thing in the cache. One field short and `GetPantry` returns
+    // nothing at all, which shows as an empty pantry the user cannot add to.
+    it('an optimistic-only pantry reads complete for GetPantry', () => {
+      const cache = makeCache();
+      const pantry = buildOptimisticPantry('pantry-1', {
+        homeId: 'home-1',
+        name: 'Kitchen Pantry',
+        isDefault: true,
+      });
+
+      writeOptimisticPantry(cache, pantry);
+
+      const diff = readPantry(cache);
+      expect(describeMissing(diff.missing)).toBe('none');
+      expect(diff.complete).toBe(true);
     });
 
     it('keeps GetPantry complete after an optimistic add', async () => {
@@ -854,7 +971,7 @@ describe('optimistic entity completeness', () => {
       const created = await runAgainstSchema<
         Unmasked<GetShoppingListItemsFilteredQuery>
       >(GetShoppingListItemsFilteredDocument, LIST_VARS);
-      const sample = created.shoppingList!.itemsConnection!.edges![0]!.node!;
+      const sample = created.shoppingList!.itemsConnection.edges[0]!.node;
 
       cache.writeFragment({
         id: 'ShoppingListItem:from-recipe',
@@ -975,8 +1092,7 @@ describe('optimistic entity completeness', () => {
         {
           id: 'queued-1',
           userId: 'user-1',
-          operationName: 'ToggleShoppingListItemPurchased',
-          mutation: { kind: Kind.DOCUMENT, definitions: [] },
+          ...queuedMutationFor(ToggleShoppingListItemPurchasedDocument),
           variables: { input: { id: row!.id, purchased: true } },
           status: QueueStatus.PENDING,
           createdAt: 0,
@@ -989,7 +1105,7 @@ describe('optimistic entity completeness', () => {
       );
 
       const input = syncVariables.input as { item: { shoppingListId: string } };
-      expect(input.item.shoppingListId).toBe(row!.shoppingList!.id);
+      expect(input.item.shoppingListId).toBe(row!.shoppingList.id);
     });
 
     it('keeps GetShoppingListsLite complete after an optimistic list create', async () => {
@@ -1241,9 +1357,39 @@ describe('optimistic entity completeness', () => {
         'covered: InviteToHome is compared below',
       'src/features/shoppingList/hooks/useInviteCollaborator.ts':
         'covered: AddCollaborator is compared below',
+      'src/features/home/hooks/homeCacheUpdaters.ts':
+        'covered: the optimistic home create case above, and CreateHome is compared below',
+      'src/features/notifications/hooks/useInvitationActions.ts':
+        'covered: AcceptHomeInvite is compared below',
+      'src/features/shoppingList/cache/list.ts':
+        'covered: the optimistic list create case above, and CreateShoppingList is compared below against all three lite readers',
+      'src/features/recipes/hooks/useRecipeShoppingList.ts':
+        'covered: CreateShoppingListForRecipe is compared below, and pinned to its twin',
+      'src/features/mealPlan/hooks/useMealPlanActions.ts':
+        'covered: CreateMealPlan is compared below against GetMealPlans',
+      'src/features/mealPlan/hooks/useMealTemplateActions.ts':
+        'covered: CreateMealTemplate is compared below — the same document useMealTemplateEditor writes',
+      'src/features/mealPlan/hooks/useMealTemplateEditor.ts':
+        'covered: writes the same CreateMealTemplate document compared below',
+      'src/features/mealPlan/hooks/useMealPlanItemActions.ts':
+        'covered: CreateMealPlanItem is compared below against the mealPlanItems array GetMealPlan reads',
+      'src/features/mealPlan/hooks/useMealPlanSubscriptions.ts':
+        'covered: both event read-backs (MealPlanForEvent, MealTemplateForEvent) are compared below — it links a bare ref, so completeness rests entirely on the read-back',
     };
 
-    it('names every module that links an entity into a parent connection', () => {
+    // Every way the app links an entity into a collection a screen reads: a
+    // connection on a parent entity, a connection at the query root, or a
+    // plain list field. `Query` is the root one — a regex naming a `Root`
+    // factory that does not exist matched nothing and passed vacuously.
+    const LINKING_FACTORIES = [
+      'createAddToQueryConnectionUpdater',
+      'createAddToParentConnectionUpdater',
+      'createAddToParentArrayUpdater',
+    ];
+
+    const CACHE_UPDATERS_MODULE = 'src/apollo/utils/cacheUpdaters.ts';
+
+    const productionModules = (): string[] => {
       const srcRoot = path.resolve(__dirname, '../../src');
       const walk = (dir: string, out: string[] = []): string[] => {
         for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -1254,17 +1400,40 @@ describe('optimistic entity completeness', () => {
         }
         return out;
       };
-      const linking = walk(srcRoot)
-        .filter(file =>
-          /createAddTo(Parent|Root)ConnectionUpdater/.test(
-            fs.readFileSync(file, 'utf8'),
-          ),
-        )
+      return walk(srcRoot)
         .map(file => path.relative(path.resolve(__dirname, '../..'), file))
-        .filter(rel => rel !== 'src/apollo/utils/cacheUpdaters.ts')
         .sort();
+    };
 
-      expect(linking.length).toBeGreaterThan(5);
+    const callersOf = (factory: string): string[] =>
+      productionModules().filter(
+        rel =>
+          rel !== CACHE_UPDATERS_MODULE &&
+          new RegExp(`\\b${factory}\\b`).test(
+            fs.readFileSync(path.resolve(__dirname, '../..', rel), 'utf8'),
+          ),
+      );
+
+    const linkingModules = (): string[] =>
+      [...new Set(LINKING_FACTORIES.flatMap(callersOf))].sort();
+
+    // A discovery expression that finds nothing reports "every writer is
+    // covered" just as loudly as one that finds them all, so the discovery
+    // has to be falsifiable before its result means anything.
+    it('can still find the writers it claims to enumerate', () => {
+      expect(
+        LINKING_FACTORIES.filter(
+          factory => !(factory in (cacheUpdaters as Record<string, unknown>)),
+        ),
+      ).toEqual([]);
+      expect(
+        LINKING_FACTORIES.filter(factory => callersOf(factory).length === 0),
+      ).toEqual([]);
+    });
+
+    it('names every module that links an entity into a connection or list', () => {
+      const linking = linkingModules();
+
       expect(linking.filter(rel => !(rel in LINKING_MODULES))).toEqual([]);
       expect(
         Object.keys(LINKING_MODULES).filter(rel => !linking.includes(rel)),
@@ -1309,6 +1478,117 @@ describe('optimistic entity completeness', () => {
         GetShoppingListDetailsDocument,
         'ShoppingListCollaborator',
         'collaboratorsConnection',
+      );
+      expectWriterCoversReader(
+        CreateHomeDocument,
+        'home',
+        GetHomesDocument,
+        'Home (createHome)',
+        'homes',
+      );
+      expectWriterCoversReader(
+        AcceptHomeInviteDocument,
+        'home',
+        GetHomesDocument,
+        'Home (acceptHomeInvite)',
+        'homes',
+      );
+      // Three queries read `Query.shoppingLists`, in three features. A creator
+      // covering only its own feature's reader blanks the other two offline.
+      // The templates-only variant is deliberately not here: `list.ts` skips
+      // it, because a created list is never a template.
+      for (const [readerLabel, reader] of [
+        ['GetShoppingListsLite', GetShoppingListsLiteDocument],
+        [
+          'GetShoppingListsLiteForRecipe',
+          GetShoppingListsLiteForRecipeDocument,
+        ],
+        [
+          'GetShoppingListsLiteForMealPlan',
+          GetShoppingListsLiteForMealPlanDocument,
+        ],
+      ] as const) {
+        expectWriterCoversReader(
+          CreateShoppingListDocument,
+          'shoppingList',
+          reader,
+          `ShoppingList (createShoppingList vs ${readerLabel})`,
+          'shoppingLists',
+        );
+        expectWriterCoversReader(
+          CreateShoppingListForRecipeDocument,
+          'shoppingList',
+          reader,
+          `ShoppingList (createShoppingListForRecipe vs ${readerLabel})`,
+          'shoppingLists',
+        );
+      }
+    });
+
+    // The subscription links a bare `{ __typename, id }` after its read-back
+    // has normalized the entity, so what makes the connection readable is the
+    // read-back's selection, not the link.
+    it('the mealPlan writers cover what the list queries read', () => {
+      expectWriterCoversReader(
+        CreateMealPlanDocument,
+        'mealPlan',
+        GetMealPlansDocument,
+        'MealPlan (createMealPlan)',
+        'mealPlans',
+      );
+      expectWriterCoversReader(
+        MealPlanForEventDocument,
+        'mealPlan',
+        GetMealPlansDocument,
+        'MealPlan (event read-back)',
+        'mealPlans',
+      );
+      expectWriterCoversReader(
+        CreateMealTemplateDocument,
+        'mealTemplate',
+        GetMealTemplatesDocument,
+        'MealTemplate (createMealTemplate)',
+        'mealTemplates',
+      );
+      expectWriterCoversReader(
+        MealTemplateForEventDocument,
+        'mealTemplate',
+        GetMealTemplatesDocument,
+        'MealTemplate (event read-back)',
+        'mealTemplates',
+      );
+      expectWriterCoversReaderField(
+        CreateMealPlanItemDocument,
+        'mealPlanItem',
+        GetMealPlanDocument,
+        'mealPlanItems',
+        'MealPlanItem (createMealPlanItem)',
+      );
+    });
+
+    // Two entities are each written by two independent per-feature copies of
+    // the same mutation. They are field-identical today; this is what holds
+    // them that way when one side is edited.
+    it('twin writers of one entity select the same fields', () => {
+      expectWritersAgree(
+        {
+          document: CreateShoppingListDocument,
+          field: 'shoppingList',
+          label: 'CreateShoppingList',
+        },
+        {
+          document: CreateShoppingListForRecipeDocument,
+          field: 'shoppingList',
+          label: 'CreateShoppingListForRecipe',
+        },
+      );
+      expectWritersAgree(
+        { document: CreateHomeDocument, field: 'home', label: 'CreateHome' },
+        {
+          document: AcceptHomeInviteDocument,
+          field: 'home',
+          label: 'AcceptHomeInvite',
+        },
       );
     });
   });

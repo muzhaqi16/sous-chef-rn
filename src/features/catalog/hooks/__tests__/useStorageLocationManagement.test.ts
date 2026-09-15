@@ -272,7 +272,8 @@ describe('useStorageLocationManagement', () => {
       { operationMocks: [buildGetLocationsMock()] },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.initialLoading).toBe(true);
+    await waitFor(() => expect(result.current.locations).toHaveLength(2));
     expect(result.current.initialLoading).toBe(false);
   });
 
@@ -282,7 +283,7 @@ describe('useStorageLocationManagement', () => {
       useStorageLocationManagement(undefined),
     );
 
-    expect(result.current.loading).toBe(false);
+    expect(result.current.initialLoading).toBe(false);
     expect(result.current.locations).toEqual([]);
   });
 
@@ -530,7 +531,7 @@ describe('useStorageLocationManagement', () => {
       { operationMocks: [buildGetLocationsMock()] },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await waitFor(() => expect(result.current.locations).toHaveLength(2));
     expect(typeof result.current.refetch).toBe('function');
   });
 });

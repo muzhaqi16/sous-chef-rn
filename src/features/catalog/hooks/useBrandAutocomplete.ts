@@ -1,3 +1,4 @@
+import { logger } from '#/utils/environment';
 import { useLazyQuery } from '@apollo/client/react';
 import { SearchBrandsDocument } from '#operations/item/item.generated';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
@@ -37,11 +38,13 @@ export function useBrandAutocomplete(
   const isOnline = useIsOnline();
 
   const search = (term: string) => {
-    searchBrands({ variables: { search: term, limit: 20 } });
+    void searchBrands({ variables: { search: term, limit: 20 } }).catch(error =>
+      logger.warn('Brand autocomplete failed', error),
+    );
   };
 
   const getResults = (): BrandItem[] => {
-    const searchedBrands = brandsData?.brands?.edges?.map(e => e.node) || [];
+    const searchedBrands = brandsData?.brands?.edges?.map(e => e.node) ?? [];
     return searchedBrands.map(brand => ({
       id: brand.id,
       name: brand.name,

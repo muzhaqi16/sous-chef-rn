@@ -97,10 +97,8 @@ describe('static feature registry', () => {
 
   it('loads no screen and no component', () => {
     // A `.generated.ts` colocated under `screens/` or `components/` is a typed
-    // DocumentNode with no React in it — the same distinction
-    // `check-data-layer-boundary` draws when it TRACKS operation types rather
-    // than failing them. Loading one costs nothing; loading a screen costs the
-    // component graph.
+    // DocumentNode with no React in it. Loading one costs nothing; loading a
+    // screen costs the component graph.
     const ui = reached.filter(
       f =>
         /(^|\/)(screens|components|ui)(\/|$)/.test(f) &&

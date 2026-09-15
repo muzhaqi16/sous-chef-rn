@@ -62,6 +62,7 @@
     "deleteItemFailed": "Impossibile eliminare l'articolo",
     "fetchItemFailed": "Impossibile recuperare i dettagli dell'articolo",
     "createHomeFailed": "Impossibile creare la casa",
+    "createPantryFailed": "Impossibile creare la dispensa",
     "updateHomeFailed": "Impossibile aggiornare la casa",
     "setDefaultHomeFailed": "Impossibile impostare la casa predefinita",
     "updateHomeNameFailed": "Impossibile aggiornare il nome della casa",
@@ -98,8 +99,10 @@
       "contextPrefix": "Contesto: "
     },
     "rateLimitGeneric": "Troppe richieste. Riprova più tardi.",
-    "rateLimitMinutes": "Troppe richieste. Riprova tra {{count}} minuto/i.",
-    "rateLimitSeconds": "Troppe richieste. Riprova tra {{count}} secondo/i.",
+    "rateLimitMinutes_one": "Troppe richieste. Riprova tra {{count}} minuto.",
+    "rateLimitMinutes_other": "Troppe richieste. Riprova tra {{count}} minuti.",
+    "rateLimitSeconds_one": "Troppe richieste. Riprova tra {{count}} secondo.",
+    "rateLimitSeconds_other": "Troppe richieste. Riprova tra {{count}} secondi.",
     "notFoundGeneric": "L'elemento richiesto non è stato trovato. Potrebbe essere stato eliminato.",
     "notFoundResource": "{{resource}} non si trova. Potrebbe non esistere più.",
     "resourceNames": {
@@ -129,8 +132,6 @@
     "parentContextRequired": "È richiesto il contesto principale",
     "createStorageLocationFailed": "Impossibile creare la posizione di archiviazione",
     "missingRequiredInfo": "Informazioni obbligatorie mancanti",
-    "invalidInput": "Input non valido",
-    "invalidOperation": "Operazione non valida",
     "invalidUnitTitle": "Unità non valida",
     "addItemFailedRetry": "Impossibile aggiungere l'articolo. Riprova.",
     "restockFailedRetry": "Impossibile rifornire l'articolo. Riprova.",
@@ -484,8 +485,8 @@
     "youReAllSet": "Tutto pronto!",
     "durationDays_one": "{{count}} giorno",
     "durationDays_other": "{{count}} giorni",
-    "finish": "Fine",
-    "currency": "Valuta"
+    "currency": "Valuta",
+    "today": "Oggi"
   },
   "instructions": {
     "pointCamera": "Punta la fotocamera su un codice a barre",
@@ -610,7 +611,6 @@
     "profileTooLargeBody": "L'immagine è troppo grande. Le immagini del profilo devono essere inferiori a {{size}} MB.",
     "updateFailedTitle": "Aggiornamento non riuscito",
     "avatarUpdateFailedBody": "Impossibile aggiornare l'avatar del profilo",
-    "coverUpdateFailedBody": "Impossibile aggiornare la copertina del profilo",
     "itemImageUpdateFailedBody": "Impossibile aggiornare l'immagine dell'articolo",
     "itemTooLargeBody": "Immagine troppo grande. Le foto degli articoli devono essere inferiori a {{size}} MB.",
     "unreadableBody": "Non siamo riusciti a leggere questo file immagine. Provane un altro.",
@@ -708,9 +708,6 @@
     "addedToMealPlan": "Aggiunto al piano pasti",
     "mealPlanDuplicated": "Piano pasti duplicato!",
     "itemToggleFailed": "Impossibile aggiornare l'articolo",
-    "selectShoppingListFirst": "Seleziona prima una lista della spesa",
-    "signInToVerifyEmail": "Accedi per completare la verifica della tua email.",
-    "signInToAcceptInvite": "Accedi per accettare questo invito.",
     "folderProtected": "\"{{folder}}\" non può essere rinominata o eliminata",
     "welcomeToEntity": "Ti diamo il benvenuto in {{name}}!",
     "canCollaborateOn": "Ora puoi collaborare su {{name}}",
@@ -719,10 +716,10 @@
     "addedItemsWithSkipped_one": "{{count}} articolo aggiunto alla lista. {{skipped}} erano già presenti.",
     "addedItemsWithSkipped_other": "{{count}} articoli aggiunti alla lista. {{skipped}} erano già presenti.",
     "allLowStockAlreadyListed_one": "L'unico articolo in esaurimento era già nella tua lista",
-    "allLowStockAlreadyListed_other": "Tutti i {{count}} articoli in esaurimento erano già nella tua lista",
-    "verificationLinkInvalid": "Il link di verifica non è valido o è scaduto.",
-    "resetLinkInvalid": "Il link di reimpostazione non è valido o è scaduto.",
-    "invitationLinkInvalid": "L'invito non è valido o è scaduto.",
-    "linkInvalid": "Il link non è valido o è scaduto."
+    "allLowStockAlreadyListed_other": "Tutti i {{count}} articoli in esaurimento erano già nella tua lista"
+  },
+  "pushNotification": {
+    "title": "{{appName}}",
+    "body": "Hai una nuova notifica"
   }
 }

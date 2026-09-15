@@ -72,7 +72,7 @@ export function mergeArrayByIdIntelligent<
     if (id) {
       existingMap.set(id, {
         item,
-        version: readField<number>('version', item) || 0,
+        version: readField<number>('version', item) ?? 0,
         updatedAt: readField<string>('updatedAt', item) || '',
       });
     }
@@ -88,7 +88,7 @@ export function mergeArrayByIdIntelligent<
     if (id) {
       incomingMap.set(id, {
         item,
-        version: readField<number>('version', item) || 0,
+        version: readField<number>('version', item) ?? 0,
         updatedAt: readField<string>('updatedAt', item) || '',
       });
     }
@@ -176,8 +176,8 @@ function shouldPreservePageInfo(
   args: { after?: string | null } | null,
 ): boolean {
   const isBackgroundRefetch = !args?.after;
-  const existingEdgeCount = (existing.edges || []).length;
-  const incomingEdgeCount = (incoming.edges || []).length;
+  const existingEdgeCount = (existing.edges ?? []).length;
+  const incomingEdgeCount = (incoming.edges ?? []).length;
   return (
     isBackgroundRefetch &&
     existingEdgeCount > incomingEdgeCount &&
@@ -199,11 +199,11 @@ function preservePendingEdges(
   const pendingIds = queueStore.getPendingClientIds();
   if (pendingIds.size === 0) return incoming;
   const incomingIds = new Set<string>();
-  for (const edge of incoming.edges || []) {
+  for (const edge of incoming.edges ?? []) {
     const id = readEdgeNodeId(edge, readField);
     if (id) incomingIds.add(id);
   }
-  const preservedEdges = (existing.edges || []).filter(edge => {
+  const preservedEdges = (existing.edges ?? []).filter(edge => {
     const id = readEdgeNodeId(edge, readField);
     return id != null && pendingIds.has(id) && !incomingIds.has(id);
   });
@@ -215,7 +215,7 @@ function preservePendingEdges(
   }
   return {
     ...incoming,
-    edges: [...preservedEdges, ...(incoming.edges || [])],
+    edges: [...preservedEdges, ...(incoming.edges ?? [])],
     totalCount: (incoming.totalCount ?? 0) + preservedEdges.length,
   };
 }
@@ -231,8 +231,8 @@ function mergeAuthoritativeFirstPage(
   incoming: CachedConnection,
   readField: ReadField,
 ): CachedConnection {
-  const incomingEdges = incoming.edges || [];
-  const existingEdges = existing.edges || [];
+  const incomingEdges = incoming.edges ?? [];
+  const existingEdges = existing.edges ?? [];
 
   const authoritativeEmpty = incoming.totalCount === 0;
   if (
@@ -322,13 +322,13 @@ export function mergeConnectionByNodeId(keyArgs: string[] = ['filters']) {
       }
 
       const edgeMap = new Map<string, CachedEdge>();
-      const existingEdges = existing.edges || [];
+      const existingEdges = existing.edges ?? [];
       existingEdges.forEach((edge: CachedEdge) => {
         const id = readEdgeNodeId(edge, readField);
         if (id) edgeMap.set(id, edge);
       });
       const existingCount = edgeMap.size;
-      (incoming.edges || []).forEach((edge: CachedEdge) => {
+      (incoming.edges ?? []).forEach((edge: CachedEdge) => {
         const id = readEdgeNodeId(edge, readField);
         if (id) edgeMap.set(id, edge);
       });
@@ -339,7 +339,7 @@ export function mergeConnectionByNodeId(keyArgs: string[] = ['filters']) {
         logger.debug(
           `📊 [Cache] preserved existing pageInfo (existing=${
             existingEdges.length
-          } incoming=${(incoming.edges || []).length})`,
+          } incoming=${(incoming.edges ?? []).length})`,
         );
       }
 
@@ -426,12 +426,12 @@ export function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
 
       // Append-only: keep existing edges in place, add only new incoming edges
       const existingIds = new Set<string>();
-      for (const edge of existing.edges || []) {
+      for (const edge of existing.edges ?? []) {
         const id = readEdgeNodeId(edge, readField);
         if (id) existingIds.add(id);
       }
 
-      const newEdges = (incoming.edges || []).filter((edge: CachedEdge) => {
+      const newEdges = (incoming.edges ?? []).filter((edge: CachedEdge) => {
         const id = readEdgeNodeId(edge, readField);
         return id && !existingIds.has(id);
       });
@@ -450,8 +450,8 @@ export function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
       if (__DEV__ && keepExistingPageInfo) {
         logger.debug(
           `📊 [Cache] preserved existing pageInfo (existing=${
-            (existing.edges || []).length
-          } incoming=${(incoming.edges || []).length})`,
+            (existing.edges ?? []).length
+          } incoming=${(incoming.edges ?? []).length})`,
         );
       }
 
@@ -483,7 +483,7 @@ export function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
         return { ...incoming, pageInfo, edges: existing.edges };
       }
 
-      let mergedEdges = [...(existing.edges || []), ...newEdges];
+      let mergedEdges = [...(existing.edges ?? []), ...newEdges];
 
       // Evict oldest edges when exceeding the window limit
       if (mergedEdges.length > MAX_WINDOW_EDGES) {

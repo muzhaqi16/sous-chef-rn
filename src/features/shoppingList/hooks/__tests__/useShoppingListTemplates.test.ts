@@ -54,7 +54,7 @@ describe('useShoppingListTemplates', () => {
       operationMocks: [templatesMock],
     });
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await waitFor(() => expect(result.current.templates).toHaveLength(2));
 
     expect(result.current.templates).toEqual([
       { id: 'tpl-1', displayName: 'Weekly Staples', totalItems: 12 },
@@ -62,13 +62,11 @@ describe('useShoppingListTemplates', () => {
     ]);
   });
 
-  it('returns nothing and fires no request when skipped', async () => {
+  it('returns nothing when skipped', () => {
     const { result } = renderHookWithApollo(
       () => useShoppingListTemplates({ skip: true }),
       { operationMocks: [templatesMock] },
     );
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.templates).toEqual([]);
   });

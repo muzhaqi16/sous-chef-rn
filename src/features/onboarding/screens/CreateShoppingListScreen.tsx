@@ -11,7 +11,10 @@ import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { Button } from '#components/molecules/Button';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
 import { useAppStore, useUser, useSelectedHomeId } from '#store/useAppStore';
-import { useOnboardingNavigation } from '#features/onboarding/hooks/useOnboardingNavigation';
+import {
+  useOnboardingNavigation,
+  type OnboardingStepId,
+} from '#features/onboarding/hooks/useOnboardingNavigation';
 import { createShoppingListSchema } from '#features/onboarding/utils/validation';
 import { logValidationErrors } from '#utils/validation/common';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -20,6 +23,7 @@ import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
+import { onboardingTestIDs } from '#features/onboarding/testIDs';
 
 /** Module-level async function for shopping list creation.
  *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
@@ -34,7 +38,7 @@ async function performCreateShoppingList(
   }) => Promise<{ id: string }>,
   selectedHomeId: string | null,
   setSelectedShoppingListId: (id: string) => void,
-  navigateToNextStep: (step: string) => void,
+  navigateToNextStep: (step: OnboardingStepId) => void,
 ): Promise<void> {
   const shoppingList = await createShoppingList({
     name: data.shoppingListName.trim(),
@@ -87,7 +91,7 @@ export const CreateShoppingListScreen = () => {
 
   // Extract nodes from connection type (shoppingLists returns ShoppingListConnection)
   const existingList =
-    lists.find((list: { isDefault: boolean }) => list.isDefault) || lists[0];
+    lists.find((list: { isDefault: boolean }) => list.isDefault) ?? lists[0];
 
   // Form setup
   const form = useForm<FormValues>({
@@ -116,7 +120,7 @@ export const CreateShoppingListScreen = () => {
   const onSubmit = (data: FormValues) => {
     setGraphqlError(null);
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       () =>
         performCreateShoppingList(
           data,
@@ -163,7 +167,7 @@ export const CreateShoppingListScreen = () => {
         title={t('labels.youReAllSet')}
         subtitle={t('onBoarding.shoppingListConfigured')}
         onSkip={() => skipToStep('SelectPantryItems')}
-        testID="onboarding-create-shopping-list-screen"
+        testID={onboardingTestIDs.createShoppingListScreen}
       >
         <View style={styles.existingResourcesContainer}>
           <View style={styles.resourceCard}>
@@ -209,7 +213,7 @@ export const CreateShoppingListScreen = () => {
       title={t('onBoarding.createShoppingListTitle')}
       subtitle={t('onBoarding.createShoppingListSubtitle')}
       onSkip={() => skipToStep('SelectPantryItems')}
-      testID="onboarding-create-shopping-list-screen"
+      testID={onboardingTestIDs.createShoppingListScreen}
     >
       <DynamicFormFields<FormValues>
         fields={[
@@ -234,7 +238,7 @@ export const CreateShoppingListScreen = () => {
       />
 
       {graphqlError ? (
-        <Text tone="error" align="center" style={styles.errorText}>
+        <Text role="error" tone="error" align="center" style={styles.errorText}>
           {graphqlError}
         </Text>
       ) : null}

@@ -22,6 +22,7 @@ function updateMock() {
 jest.mock('#/services/telemetry', () => ({
   Telemetry: {
     trackEvent: jest.fn(),
+    trackError: jest.fn(),
   },
 }));
 
@@ -324,11 +325,9 @@ describe('useQuantityEditModal', () => {
     );
   });
 
-  // The two failure routes must produce exactly ONE message between them.
-  // A resolved transport error already reaches the user through the mutation's
-  // `onError`, so this hook must stay quiet — `alertRejectedMutation` suppresses
-  // precisely the `result.error` case for callers that keep an `onError`.
-  it('does not add a second alert when the failure already went through onError', async () => {
+  // A failure the server gave no verdict on still gets exactly ONE message: the
+  // caller's copy, since there is no code to say anything more specific.
+  it('alerts a transport failure once and keeps the sheet open', async () => {
     const m = recordMock(UpdateShoppingListItemQuantityDocument, {
       error: new Error('network down'),
     });
@@ -347,9 +346,8 @@ describe('useQuantityEditModal', () => {
       await result.current.save('5', null, null);
     });
 
-    // ONE alert, and it is `onError`'s — not a second one from this hook.
     expect(mockAlert).toHaveBeenCalledTimes(1);
-    expect(mockAlert).not.toHaveBeenCalledWith(
+    expect(mockAlert).toHaveBeenCalledWith(
       'Error',
       'Could not adjust the quantity.',
     );

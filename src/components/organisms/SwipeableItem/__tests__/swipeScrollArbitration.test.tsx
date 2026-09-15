@@ -16,7 +16,7 @@ jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
   return {
     __esModule: true,
     default: ({ children, ...props }: { children: React.ReactNode }) => {
-      swipeableProps.push(props as Record<string, unknown>);
+      swipeableProps.push(props);
       return require('react').createElement(View, null, children);
     },
   };

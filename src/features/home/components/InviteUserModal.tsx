@@ -25,7 +25,11 @@ import {
 interface InviteUserModalProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (email: string, role: MembershipRole) => Promise<void> | void;
+  /** Resolves to the localized reason a refused invite was not sent, if any. */
+  onSubmit: (
+    email: string,
+    role: MembershipRole,
+  ) => Promise<string | null | void> | void;
   title?: string;
   submitText?: string;
   cancelText?: string;
@@ -172,10 +176,14 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
 
     setError('');
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
-        await onSubmit(values.email.trim(), values.role);
-        // Only close on success
+        // A refusal stays on screen, inline, with the modal open.
+        const refusal = await onSubmit(values.email.trim(), values.role);
+        if (refusal) {
+          setError(refusal);
+          return;
+        }
         handleClose();
       },
       setIsSubmitting,
@@ -239,7 +247,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
             {/* On the field, not in the submission banner: this is the one the
                 user can correct without dismissing anything. */}
             {errors.email ? (
-              <Text role="caption" style={styles.errorText}>
+              <Text role="error" tone="error" style={styles.errorText}>
                 {errors.email.message}
               </Text>
             ) : null}
@@ -266,7 +274,11 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
             ))}
 
             {/* Error Message */}
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {error ? (
+              <Text role="error" tone="error" style={styles.errorText}>
+                {error}
+              </Text>
+            ) : null}
 
             {/* Action Buttons */}
             <View style={styles.buttonContainer}>
@@ -419,7 +431,6 @@ const styles = StyleSheet.create(theme => ({
   errorText: {
     marginBottom: theme.spacing.base,
     marginTop: theme.spacing.xs,
-    color: theme.colors.error,
   },
   buttonContainer: {
     flexDirection: 'row',

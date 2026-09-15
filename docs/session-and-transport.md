@@ -9,10 +9,9 @@ REAL installed graphql-ws against a fake socket — not this table.
 
 ## Session end
 
-**`authService.logout()` is the only sign-out.** There were two paths clearing
-different subsets, and the profile button used the weaker one — so the previous
-person's notification inbox, scanner history, item-autocomplete LRU and queued
-mutations survived a sign-out on a shared device.
+**`authService.logout()` is the only sign-out.** A second path clearing a
+different subset lets the previous person's notification inbox, scanner history,
+item-autocomplete LRU and queued mutations survive a sign-out on a shared device.
 
 `SESSION_SCOPED_STATE` in `src/store/resetManager.ts` is the single list of
 what a session end removes. `resetStore` applies it in memory and
@@ -38,7 +37,7 @@ That registry exists because the steps live in the Apollo layer while
 `store → resetManager → apollo/client → links → store`. Each module registers
 its own step at module init — `logoutCleanup` the Apollo teardown,
 `queueManager` the drain cancel — the same hand-off `registerApolloClient` and
-`registerTokenRefresh` use. Three things about it are load-bearing:
+`registerTokenRefresh` use. Four things about it are load-bearing:
 
 - **`completeLogout()` must run after `performLogoutCleanup()`.** That latch
   makes `authLink` and `errorLink` refuse every operation; left set, the next
@@ -111,10 +110,27 @@ expired, so an ordinary connect still costs nothing.
 
 **A request is never sent with an access token that has already expired.**
 `authLink` tells "expires in four minutes" from "expired an hour ago": the
-first refreshes ahead without stalling, the second AWAITS the single-flight
-refresh and sends what it returns. Both looked alike under one
-`isTokenExpiringSoon(token, 5min)` call, which is how six concurrent operations
-came to present the same dead JWT and draw six rotations between them.
+first refreshes ahead without stalling, the second awaits
+`proactiveTokenRefresh()` and sends what it returns.
+`isTokenExpiringSoon(token, 5min)` is true for both, so a single call cannot
+tell them apart: collapsed, six concurrent operations present the same dead JWT
+and draw six rotations between them. The refresh itself is single-flight
+(`refreshState` + `refreshQueue` in `src/apollo/links/refreshToken.ts`); the
+REQUESTS are gated on it too.
+
+## Password rules
+
+**A password being SET goes through `newPasswordRule`, not `passwordRule`**
+(`src/utils/validation/common.ts`), and each mirrors the server exactly.
+SETTING one (register, reset, change) is 8–72 characters with a lowercase
+letter, an uppercase letter and a digit — checked locally because a doomed round
+trip spends the rate budget and comes back as an unlocalizable English
+`message`. SIGNING IN reads back a password the account ALREADY has, and the
+server's login schema asserts only non-empty plus the 72 cap (bcrypt's limit,
+not a policy), so `passwordRule` asserts only that too: any extra rule refuses a
+real password, and the reset flow needs the account it cannot reach.
+`src/utils/validation/__tests__/auth.test.ts` § "the password policy for a
+password being SET" pins both halves.
 
 ## WebSocket close codes
 
@@ -125,14 +141,15 @@ and parks a retry while the device is offline (see `awaitDialPermission`, and
 the paragraph below on why `retryWait` cannot hold it). `shouldRetry` is the
 single hook over that loop and answers one question — **is this verdict
 terminal** — reading `src/apollo/links/wsCloseCodes.ts`.
-`shouldAutoReconnect` is folded into it, because it is now the only thing that
+`shouldAutoReconnect` is folded into it, because it is the only thing that
 can stop a re-dial.
 
-**Do NOT add a second backoff beside it.** There was one: a timer whose only
-action was `wsClient.terminate()`, which is `if (connecting) emit('closed')` —
-a no-op once a socket has closed, since graphql-ws clears `connecting` in its
-own close handler. It could interrupt a live connection; it could never dial
-one, so every path that looked like recovery silently wasn't. (Pacing also
+**Do NOT add a second reconnect or backoff loop beside it.** A timer whose
+action is `wsClient.terminate()` does nothing useful: `terminate()` is
+`if (connecting) emit('closed')`, a no-op once a socket has closed, since
+graphql-ws clears `connecting` in its own close handler. It can interrupt a live
+connection but never dial one, so every path that looks like recovery silently
+isn't. (Pacing also
 does not belong in `retryWait`: graphql-ws resets `retries` on every ack and
 skips `retryWait` for close 1000 — pacing lives in `url()`, which every dial
 passes through. Asserted by the "server that accepts then immediately closes"

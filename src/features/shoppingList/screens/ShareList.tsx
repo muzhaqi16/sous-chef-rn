@@ -5,27 +5,26 @@ import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
 
-import { Loading } from '#components/molecules/Loading';
+import { useDataState } from '#hooks/data/useDataState';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useRemoveCollaborator } from '#features/shoppingList/hooks/useRemoveCollaborator';
 import { isShoppingListOwner } from '#features/shoppingList/utils/ownershipHelpers';
 import { useLeaveShoppingList } from '#features/shoppingList/hooks/useLeaveShoppingList';
 import { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';
-import CollaboratorPermissionsBottomSheet, {
-  CollaboratorPermissionsBottomSheetRef,
-} from '#features/shoppingList/components/CollaboratorPermissionsBottomSheet';
+import type { CollaboratorPermissionsBottomSheetRef } from '#features/shoppingList/components/CollaboratorPermissionsBottomSheet';
+import CollaboratorPermissionsBottomSheet from '#features/shoppingList/components/CollaboratorPermissionsBottomSheet';
 import { useUser } from '#store/useAppStore';
 import { Button } from '#components/molecules/Button';
 import { OfflineGate } from '#features/shoppingList/components/OfflineGate';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { CollaboratorMemberCard } from '#features/shoppingList/components/CollaboratorMemberCard';
 import { ShareCodeSection } from '#features/shoppingList/components/ShareCodeSection';
 import { ShareInviteSection } from '#features/shoppingList/components/ShareInviteSection';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Screen } from '#components/templates/Screen';
+import { CollaboratorStatus } from '#/graphql/generated/schemaTypes';
 
 export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   route,
@@ -43,6 +42,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   const {
     shoppingList,
     loading,
+    hasResult,
     isRefetching,
     collaborators,
     ownerships,
@@ -75,8 +75,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
       c.collaboratorId === currentUser?.id,
   );
 
-  const activeCollaborators = collaborators.filter(c =>
-    ['ACCEPTED', 'ACTIVE', 'PENDING'].includes(c.status?.toUpperCase()),
+  const activeCollaborators = collaborators.filter(
+    c =>
+      c.status === CollaboratorStatus.Active ||
+      c.status === CollaboratorStatus.Pending,
   );
 
   const isPublic = !!shoppingList?.isPublic;
@@ -91,11 +93,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
         {
           text: t('labels.remove'),
           style: 'destructive',
-          // No refetch needed: the update() callback removes the collaborator
-          // from the cached connection in place.
-          onPress: async () => {
-            const result = await removeCollaborator(memberId);
-            alertIfRejected(result, t('errors.removeMemberFailed'));
+          // No refetch needed: the hook removes the collaborator from the
+          // cached connection in place, and alerts a refusal itself.
+          onPress: () => {
+            void removeCollaborator(memberId);
           },
         },
       ],
@@ -132,7 +133,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
               return;
             }
 
-            leaveList(currentUserCollaborator.id, {
+            void leaveList(currentUserCollaborator.id, {
               onSuccess: goBack,
               onError: () =>
                 alertService.alert(
@@ -146,12 +147,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
     );
   };
 
-  // Only block the UI on the initial cold load. usePreservedQueryData keeps
-  // shoppingList truthy across refetches, so this avoids the full-screen flash
-  // every time a mutation triggers a refetch.
-  if (loading && !shoppingList) {
-    return <Loading />;
-  }
+  const dataState = useDataState({ loading, hasResult, isEmpty: false });
 
   return (
     <Screen
@@ -162,6 +158,12 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
       }}
       scroll="list"
       gutter="none"
+      state={{
+        value: dataState,
+        onRetry: () => {
+          void refetch();
+        },
+      }}
     >
       <OfflineGate
         message={t('shoppingListScreens.sharingOfflineMessage')}

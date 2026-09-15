@@ -126,8 +126,8 @@ describe('navigationSlice', () => {
   describe('deep link actions', () => {
     it('sets pending deep link action', () => {
       const action: DeepLinkAction = {
-        type: 'email_verification',
-        token: 'abc',
+        type: 'join_home',
+        code: 'HOME123',
         timestamp: Date.now(),
       };
       const store = createTestStore();
@@ -138,8 +138,8 @@ describe('navigationSlice', () => {
     it('clears pending deep link action', () => {
       const store = createTestStore();
       store.getState().setPendingDeepLinkAction({
-        type: 'password_reset',
-        token: 'x',
+        type: 'join_list',
+        code: 'LIST123',
         timestamp: Date.now(),
       });
       store.getState().clearPendingDeepLinkAction();

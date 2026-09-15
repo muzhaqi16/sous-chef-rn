@@ -2,26 +2,18 @@
 
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { logger } from '#/utils/environment';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { RefreshTokenDocument } from '#operations/auth/auth.generated';
+import { OfflineRejectedError } from '#/apollo/offlineQueue/OfflineRejectedError';
+import type { NetworkRequestError } from '#/utils/errors/networkRequestError';
 
 // --- Mocks must be defined before imports ---
 
 jest.mock('#/apollo/links/refreshToken');
-const { attemptTokenRefresh: mockAttemptTokenRefresh, getRefreshState: mockGetRefreshState } =
-  jest.requireMock('#/apollo/links/refreshToken') as { attemptTokenRefresh: jest.Mock; getRefreshState: jest.Mock };
-
-jest.mock('#utils/subscriptionErrorHandler', () => ({
-  isKnownServerError: jest.fn((error: { message?: string }) => {
-    const msg = (error?.message || '').toLowerCase();
-    return msg.includes('known server error');
-  }),
-}));
-
-jest.mock('#/utils/isNetworkError', () => ({
-  isNetworkError: jest.fn((error: { message?: string }) => {
-    const msg = (error?.message || '').toLowerCase();
-    return msg.includes('network') || msg.includes('timeout');
-  }),
-}));
+const {
+  attemptTokenRefresh: mockAttemptTokenRefresh,
+  getRefreshState: mockGetRefreshState,
+} = jest.requireMock('#/apollo/links/refreshToken');
 
 const mockIsInLogoutProcess = jest.fn(() => false);
 jest.mock('#/apollo/logoutCleanup', () => ({
@@ -49,9 +41,7 @@ describe('errorLink.ts', () => {
       operationName: 'TestQuery',
       getContext: jest.fn(() => ({})),
       query: {
-        definitions: [
-          { kind: 'OperationDefinition', operation: 'query' },
-        ],
+        definitions: [{ kind: 'OperationDefinition', operation: 'query' }],
       },
     };
   });
@@ -66,6 +56,9 @@ describe('errorLink.ts', () => {
       forward: jest.Mock;
     };
     let errorHandler: (args: HandlerArgs) => unknown;
+    // The link loads in an isolated registry, so its error classes are that
+    // registry's: `instanceof` against the top-level import would never match.
+    let IsolatedNetworkRequestError: typeof NetworkRequestError;
 
     beforeEach(() => {
       jest.isolateModules(() => {
@@ -78,18 +71,30 @@ describe('errorLink.ts', () => {
           },
         }));
         require('#/apollo/links/errorLink');
+        ({ NetworkRequestError: IsolatedNetworkRequestError } =
+          jest.requireActual<
+            typeof import('#/utils/errors/networkRequestError')
+          >('#/utils/errors/networkRequestError'));
       });
     });
 
     it('returns early when skipErrorLink is in context', () => {
       mockOperation.getContext.mockReturnValue({ skipErrorLink: true });
-      const result = errorHandler({ error: new Error('test'), operation: mockOperation, forward: mockForward });
+      const result = errorHandler({
+        error: new Error('test'),
+        operation: mockOperation,
+        forward: mockForward,
+      });
       expect(result).toBeUndefined();
     });
 
     it('returns early during logout process', () => {
       mockIsInLogoutProcess.mockReturnValue(true);
-      const result = errorHandler({ error: new Error('test'), operation: mockOperation, forward: mockForward });
+      const result = errorHandler({
+        error: new Error('test'),
+        operation: mockOperation,
+        forward: mockForward,
+      });
       expect(result).toBeUndefined();
       mockIsInLogoutProcess.mockReturnValue(false);
     });
@@ -97,35 +102,56 @@ describe('errorLink.ts', () => {
     // The codes the API actually emits (docs/api/errors.md "API Key Errors").
     // API_KEY_REQUIRED and INVALID_API_KEY are deliberately absent: neither is
     // in the server's registry, so nothing sends them.
-    it.each(['API_KEY_MISSING', 'API_KEY_INVALID', 'API_KEY_EXPIRED', 'API_KEY_REVOKED'])(
-      'handles %s as an API key error',
-      code => {
-        const error = new CombinedGraphQLErrors({
-          errors: [{ message: 'Key problem', extensions: { code } }],
-        });
-        errorHandler({ error, operation: mockOperation, forward: mockForward });
-        expect(logger.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
-      },
-    );
+    it.each([
+      'API_KEY_MISSING',
+      'API_KEY_INVALID',
+      'API_KEY_EXPIRED',
+      'API_KEY_REVOKED',
+    ])('handles %s as an API key error', code => {
+      const error = new CombinedGraphQLErrors({
+        errors: [{ message: 'Key problem', extensions: { code } }],
+      });
+      errorHandler({ error, operation: mockOperation, forward: mockForward });
+      expect(logger.error).toHaveBeenCalledWith(
+        'API Key error:',
+        expect.any(String),
+      );
+    });
 
     // Classification is by code alone. Substring-matching "api key" in the
     // message let a refusal whose wording merely mentioned the key fall through
     // to the auth branch and spend a pointless token refresh.
     it('does not treat an unrelated code as an API key error because of its message', () => {
       const error = new CombinedGraphQLErrors({
-        errors: [{ message: 'Please provide an API key for authentication', extensions: { code: 'SOME_CODE' } }],
+        errors: [
+          {
+            message: 'Please provide an API key for authentication',
+            extensions: { code: 'SOME_CODE' },
+          },
+        ],
       });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(logger.error).not.toHaveBeenCalledWith('API Key error:', expect.any(String));
+      expect(logger.error).not.toHaveBeenCalledWith(
+        'API Key error:',
+        expect.any(String),
+      );
       expect(mockAttemptTokenRefresh).not.toHaveBeenCalled();
     });
 
     it('handles FORBIDDEN as resource access error (not auth error)', () => {
       const error = new CombinedGraphQLErrors({
-        errors: [{ message: 'Access denied', extensions: { code: 'FORBIDDEN' } }],
+        errors: [
+          { message: 'Access denied', extensions: { code: 'FORBIDDEN' } },
+        ],
       });
-      const result = errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Access denied'));
+      const result = errorHandler({
+        error,
+        operation: mockOperation,
+        forward: mockForward,
+      });
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Access denied'),
+      );
       expect(mockAttemptTokenRefresh).not.toHaveBeenCalled();
       expect(result).toBeUndefined();
     });
@@ -133,10 +159,19 @@ describe('errorLink.ts', () => {
     it('initiates token refresh on UNAUTHENTICATED error', () => {
       mockAttemptTokenRefresh.mockReturnValue('observable');
       const error = new CombinedGraphQLErrors({
-        errors: [{ message: 'Token expired', extensions: { code: 'UNAUTHENTICATED' } }],
+        errors: [
+          { message: 'Token expired', extensions: { code: 'UNAUTHENTICATED' } },
+        ],
       });
-      const result = errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(mockAttemptTokenRefresh).toHaveBeenCalledWith(mockOperation, mockForward);
+      const result = errorHandler({
+        error,
+        operation: mockOperation,
+        forward: mockForward,
+      });
+      expect(mockAttemptTokenRefresh).toHaveBeenCalledWith(
+        mockOperation,
+        mockForward,
+      );
       expect(result).toBe('observable');
       expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Auth error detected for'),
@@ -168,7 +203,10 @@ describe('errorLink.ts', () => {
     // access-token problem, so none may spend a token refresh.
     it.each([
       ['Your subscription has expired', 'BUSINESS_QUOTA_EXCEEDED'],
-      ['Unauthorized: key lacks the required permission', 'API_KEY_INSUFFICIENT_PERMISSIONS'],
+      [
+        'Unauthorized: key lacks the required permission',
+        'API_KEY_INSUFFICIENT_PERMISSIONS',
+      ],
       ['The provided invalid token was rejected', 'VALIDATION_FAILED'],
       ['jwt malformed', 'BAD_REQUEST'],
     ])('does not refresh on %s (code %s)', (message, code) => {
@@ -180,9 +218,11 @@ describe('errorLink.ts', () => {
     });
 
     it('skips token refresh for RefreshToken operation (avoids infinite loop)', () => {
-      mockOperation.operationName = 'RefreshToken';
+      mockOperation.operationName = operationNameOf(RefreshTokenDocument);
       const error = new CombinedGraphQLErrors({
-        errors: [{ message: 'expired', extensions: { code: 'UNAUTHENTICATED' } }],
+        errors: [
+          { message: 'expired', extensions: { code: 'UNAUTHENTICATED' } },
+        ],
       });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(mockAttemptTokenRefresh).not.toHaveBeenCalled();
@@ -192,13 +232,19 @@ describe('errorLink.ts', () => {
       mockGetRefreshState.mockReturnValue({ isRefreshing: true });
       mockAttemptTokenRefresh.mockReturnValue('observable');
       const error = new CombinedGraphQLErrors({
-        errors: [{ message: 'expired', extensions: { code: 'UNAUTHENTICATED' } }],
+        errors: [
+          { message: 'expired', extensions: { code: 'UNAUTHENTICATED' } },
+        ],
       });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       // Should NOT have the "Auth error detected" warning
-      const authWarning = jest.mocked(logger.warn).mock.calls.find(
-        (call) => typeof call[0] === 'string' && call[0].includes('Auth error detected'),
-      );
+      const authWarning = jest
+        .mocked(logger.warn)
+        .mock.calls.find(
+          call =>
+            typeof call[0] === 'string' &&
+            call[0].includes('Auth error detected'),
+        );
       expect(authWarning).toBeUndefined();
     });
 
@@ -207,7 +253,9 @@ describe('errorLink.ts', () => {
         { kind: 'OperationDefinition', operation: 'subscription' },
       ];
       // Not a CombinedGraphQLErrors or CombinedProtocolErrors
-      const error = { message: 'Known server error' };
+      const error = new Error(
+        'Subscription field must return Async Iterable. Received: true.',
+      );
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Known server error'),
@@ -216,7 +264,7 @@ describe('errorLink.ts', () => {
     });
 
     it('does not re-forward or log network errors (networkStatusLink logs; retryLink owns retries)', () => {
-      const error = { message: 'Network request failed' };
+      const error = new IsolatedNetworkRequestError('Network request failed');
       const result = errorHandler({
         error,
         operation: mockOperation,
@@ -231,9 +279,34 @@ describe('errorLink.ts', () => {
       const networkWarn = jest
         .mocked(logger.warn)
         .mock.calls.find(
-          call => typeof call[0] === 'string' && call[0].includes('Network error'),
+          call =>
+            typeof call[0] === 'string' && call[0].includes('Network error'),
         );
       expect(networkWarn).toBeUndefined();
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it('stays silent on an offline rejection, which never left the device', () => {
+      mockOperation.query.definitions = [
+        { kind: 'OperationDefinition', operation: 'mutation' },
+      ];
+      const result = errorHandler({
+        error: new OfflineRejectedError('UpdateThing'),
+        operation: mockOperation,
+        forward: mockForward,
+      });
+      expect(result).toBeUndefined();
+      expect(mockForward).not.toHaveBeenCalled();
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it('logs a server-side failure whose message mentions the network', () => {
+      const error = new Error('Upstream network timeout');
+      errorHandler({ error, operation: mockOperation, forward: mockForward });
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringContaining('Unexpected error'),
+        'Upstream network timeout',
+      );
     });
 
     it('logs unexpected non-network, non-GraphQL errors', () => {

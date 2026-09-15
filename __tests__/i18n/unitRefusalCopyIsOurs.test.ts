@@ -14,24 +14,14 @@ import { join } from 'path';
  */
 const read = (...p: string[]) => readFileSync(join(...p), 'utf8');
 
-const CONSUMERS = [
-  join('src', 'utils', 'errorHandlers.ts'),
-  join('src', 'features', 'pantry', 'hooks', 'usePantryItemActions.ts'),
-];
-
-it('the unit-refusal helper exposes no server-authored message', () => {
-  const source = read('src', 'utils', 'errors', 'invalidUnit.ts');
-
-  expect(source).not.toMatch(/validUnits/);
-  // A getter here is how the server's sentence reached the screen.
-  expect(source).not.toMatch(/export function get/);
-});
+// Every mutation failure is described in one place.
+const CONSUMERS = [join('src', 'apollo', 'utils', 'settleMutation.ts')];
 
 it('every unit-refusal alert takes its body from the translator', () => {
   for (const file of CONSUMERS) {
     const source = read(file);
     const alerts = [
-      ...source.matchAll(/errors\.invalidUnitTitle'\),\s*([^\n]+)/g),
+      ...source.matchAll(/errors\.invalidUnitTitle'\),\s*body:\s*([^\n]+)/g),
     ].map(m => m[1]!.trim());
 
     // Guards against the scan silently matching nothing.

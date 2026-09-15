@@ -17,13 +17,6 @@ interface RecipeTagsSectionProps {
   onIntolerancesChange: (intolerances: Intolerance[]) => void;
 }
 
-function formatEnumLabel(value: string): string {
-  return value
-    .split('_')
-    .map(w => w.charAt(0) + w.slice(1).toLowerCase())
-    .join(' ');
-}
-
 const ALL_DIETS = Object.values(Diet);
 const ALL_HEALTH_GOALS = Object.values(HealthGoal);
 const ALL_INTOLERANCES = Object.values(Intolerance);
@@ -41,14 +34,11 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
   const [showHealthGoals, setShowHealthGoals] = useState(false);
   const [showIntolerances, setShowIntolerances] = useState(false);
 
-  // Translate enum values via per-value keys, falling back to the formatted
-  // raw value (e.g. "Tree Nut") when no translation is registered.
-  const formatDiet = (value: string) =>
-    t(`recipes.diet.${value}`, formatEnumLabel(value));
-  const formatHealthGoal = (value: string) =>
-    t(`recipes.healthGoal.${value}`, formatEnumLabel(value));
-  const formatIntolerance = (value: string) =>
-    t(`recipes.intolerance.${value}`, formatEnumLabel(value));
+  const formatDiet = (value: Diet) => t(`recipes.diet.${value}`);
+  const formatHealthGoal = (value: HealthGoal) =>
+    t(`recipes.healthGoal.${value}`);
+  const formatIntolerance = (value: Intolerance) =>
+    t(`recipes.intolerance.${value}`);
 
   return (
     <View style={styles.container}>
@@ -59,24 +49,27 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
       {/* Diets */}
       <ChipGroup
         label={t('recipes.diets')}
-        items={diets}
-        formatLabel={formatDiet}
+        chips={diets.map(value => ({ id: value, label: formatDiet(value) }))}
         onPress={() => setShowDiets(true)}
       />
 
       {/* Health Goals */}
       <ChipGroup
         label={t('recipes.healthGoals')}
-        items={healthGoals}
-        formatLabel={formatHealthGoal}
+        chips={healthGoals.map(value => ({
+          id: value,
+          label: formatHealthGoal(value),
+        }))}
         onPress={() => setShowHealthGoals(true)}
       />
 
       {/* Intolerances */}
       <ChipGroup
         label={t('recipes.intolerances')}
-        items={intolerances}
-        formatLabel={formatIntolerance}
+        chips={intolerances.map(value => ({
+          id: value,
+          label: formatIntolerance(value),
+        }))}
         onPress={() => setShowIntolerances(true)}
       />
 
@@ -121,17 +114,11 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
 
 interface ChipGroupProps {
   label: string;
-  items: string[];
-  formatLabel: (value: string) => string;
+  chips: Array<{ id: string; label: string }>;
   onPress: () => void;
 }
 
-const ChipGroup: React.FC<ChipGroupProps> = ({
-  label,
-  items,
-  formatLabel,
-  onPress,
-}) => {
+const ChipGroup: React.FC<ChipGroupProps> = ({ label, chips, onPress }) => {
   const { t } = useTranslation();
   return (
     <AppPressable onPress={onPress} style={styles.chipGroup}>
@@ -139,11 +126,11 @@ const ChipGroup: React.FC<ChipGroupProps> = ({
         {label}
       </Text>
       <View style={styles.chipsRow}>
-        {items.length > 0 ? (
-          items.map(item => (
-            <View key={item} style={styles.chip}>
+        {chips.length > 0 ? (
+          chips.map(chip => (
+            <View key={chip.id} style={styles.chip}>
               <Text role="caption" tone="accent">
-                {formatLabel(item)}
+                {chip.label}
               </Text>
             </View>
           ))

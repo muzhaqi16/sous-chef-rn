@@ -53,11 +53,13 @@ import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { isRefreshableAuthCode } from '#/utils/authErrorCodes';
 import { announceClientUpgradeRequired } from '../../clientUpgradeNotice';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 
 // ---- Pure helper function tests (replicated logic) ----
 
 describe('errorLink helpers', () => {
-  const isResourceAccessError = (code: string) => code === 'FORBIDDEN';
+  // `code` is `string` as in errorLink: `extensions.code` arrives untyped.
+  const isResourceAccessError = (code: string) => code === ErrorCode.Forbidden;
 
   const API_KEY_ERROR_CODES = [
     'API_KEY_MISSING',

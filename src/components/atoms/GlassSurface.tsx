@@ -5,6 +5,7 @@ import {
   LiquidGlassView,
   isLiquidGlassSupported,
 } from '@callstack/liquid-glass';
+import { colors } from '#/theme/foundations/colors';
 
 export interface GlassSurfaceProps {
   /**
@@ -15,10 +16,7 @@ export interface GlassSurfaceProps {
   style?: StyleProp<ViewStyle>;
 }
 
-const DEFAULT_TINT = {
-  light: 'rgba(255, 255, 255, 0.4)',
-  dark: 'rgba(28, 27, 32, 0.4)',
-};
+const DEFAULT_TINT = colors.glass;
 
 /**
  * The liquid-glass fill, or nothing where the platform lacks the material; the

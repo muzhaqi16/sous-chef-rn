@@ -22,24 +22,15 @@ const DIFFICULTIES = [
 ];
 const STATUSES = [RecipeStatus.Draft, RecipeStatus.Published];
 
-function formatEnum(value: string): string {
-  return value
-    .split('_')
-    .map(w => w.charAt(0) + w.slice(1).toLowerCase())
-    .join(' ');
-}
-
 export const RecipeCategoryFields: React.FC<RecipeCategoryFieldsProps> = ({
   state,
   updateField,
 }) => {
   const { t } = useTranslation();
-  // Translate enum values via per-value keys, falling back to the formatted
-  // raw value (e.g. "Very Easy") when no translation is registered.
-  const formatDifficulty = (value: string) =>
-    t(`recipes.difficultyLabel.${value}`, formatEnum(value));
-  const formatStatus = (value: string) =>
-    t(`recipes.recipeStatus.${value}`, formatEnum(value));
+  const formatDifficulty = (value: Difficulty) =>
+    t(`recipes.difficultyLabel.${value}`);
+  const formatStatus = (value: RecipeStatus) =>
+    t(`recipes.recipeStatus.${value}`);
   return (
     <>
       {!!state.difficulty && (

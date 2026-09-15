@@ -123,12 +123,7 @@
     "updatedTitle": "Articolo aggiornato",
     "updatedBody": "Le tue modifiche sono online.",
     "failedBody": "Si è verificato un problema durante l'invio del suggerimento. Riprova.",
-    "photoNotice": "Le foto vengono aggiunte subito. Le altre modifiche vengono prima esaminate da un amministratore.",
-    "notFoundTitle": "Articolo non trovato",
-    "notFoundBody": "Questo articolo non è più nel catalogo: potrebbe essere stato rimosso.",
-    "rejectedTitle": "Impossibile inviare",
-    "failedTitle": "Impossibile inviare",
-    "rateLimitedTitle": "Aspetta un momento"
+    "photoNotice": "Le foto vengono aggiunte subito. Le altre modifiche vengono prima esaminate da un amministratore."
   },
   "reportItem": {
     "footer": "Dettagli sbagliati in uno di questi?",
@@ -142,12 +137,7 @@
     "sentBody": "Grazie: un amministratore esaminerà questo articolo.",
     "failedBody": "Si è verificato un problema durante l'invio della segnalazione. Riprova.",
     "alreadyReportedTitle": "Già segnalato",
-    "alreadyReportedBody": "Questo articolo è già stato segnalato ed è in attesa che un amministratore lo esamini, quindi non abbiamo inviato un duplicato.",
-    "notFoundTitle": "Articolo non trovato",
-    "notFoundBody": "Questo articolo non è più nel catalogo: potrebbe essere stato rimosso.",
-    "failedTitle": "Impossibile inviare",
-    "rejectedTitle": "Impossibile inviare",
-    "rateLimitedTitle": "Aspetta un momento"
+    "alreadyReportedBody": "Questo articolo è già stato segnalato ed è in attesa che un amministratore lo esamini, quindi non abbiamo inviato un duplicato."
   },
   "addItemForm": {
     "modes": {
@@ -298,10 +288,7 @@
     "setPrimary": {
       "notFoundTitle": "Foto non trovata",
       "notFoundBody": "Questa foto non è più sull'articolo: potrebbe essere stata rimossa.",
-      "failedBody": "Si è verificato un problema durante l'aggiornamento della foto principale. Riprova.",
-      "rateLimitedTitle": "Aspetta un momento",
-      "rejectedTitle": "Impossibile impostare la foto",
-      "failedTitle": "Impossibile impostare la foto"
+      "failedBody": "Si è verificato un problema durante l'aggiornamento della foto principale. Riprova."
     },
     "perspective": {
       "front": "Fronte",
@@ -427,7 +414,8 @@
   },
   "tagInput": {
     "maxTagsReached_one": "Raggiunto il massimo di {{count}} tag",
-    "maxTagsReached_other": "Raggiunto il massimo di {{count}} tag"
+    "maxTagsReached_other": "Raggiunto il massimo di {{count}} tag",
+    "placeholder": "Aggiungi un tag..."
   },
   "usagePurpose": {
     "ADJUSTMENT": "Inventario corretto",

@@ -22,7 +22,9 @@ const IngredientItemComponent: React.FC<{
         size={24}
         tone={selected ? 'primary' : 'textSecondary'}
       />
-      <Text style={styles.ingredientText}>{name}</Text>
+      <Text role="body" style={styles.ingredientText}>
+        {name}
+      </Text>
     </AppPressable>
   );
 };

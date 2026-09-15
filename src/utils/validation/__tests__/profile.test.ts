@@ -1,4 +1,5 @@
-import { Schema, ValidationError } from 'yup';
+import type { Schema } from 'yup';
+import { ValidationError } from 'yup';
 import {
   profileFieldSchemas,
   getValidationSchemaForField,
@@ -179,6 +180,11 @@ describe('profile validation', () => {
     it('returns generic schema for unknown field', () => {
       const schema = getValidationSchemaForField('unknownField');
       expect(schema).toBeDefined();
+    });
+
+    it('treats an inherited property name as an unknown field', async () => {
+      const schema = getValidationSchemaForField('toString');
+      await expect(schema.validate({ toString: 'x' })).resolves.toBeTruthy();
     });
   });
 

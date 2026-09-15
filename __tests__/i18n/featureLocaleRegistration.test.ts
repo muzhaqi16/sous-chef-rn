@@ -47,6 +47,22 @@ describe('feature locale registration', () => {
     expect(orphaned).toEqual([]);
   });
 
+  // `localeTypes.ts` is the TYPE the keys are checked against; a feature left
+  // out of it has copy at runtime that no `t()` call can name.
+  it('every feature that ships copy is in the translation key type', () => {
+    const source = fs.readFileSync(
+      path.join(ROOT, 'src', 'i18n', 'localeTypes.ts'),
+      'utf8',
+    );
+    const typed = [
+      ...source.matchAll(/from '#features\/([^/]+)\/locales\/en\.json'/g),
+    ]
+      .map(match => match[1])
+      .sort();
+
+    expect(typed).toEqual([...onDisk].sort());
+  });
+
   it.each(registered.map(name => [name]))(
     '%s registers all four locales',
     feature => {

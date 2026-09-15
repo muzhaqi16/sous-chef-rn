@@ -7,14 +7,19 @@
 import { element, by, waitFor, expect } from 'detox';
 import { bootstrapAuthenticatedSession } from '../helpers/auth';
 import { TIMEOUTS } from '../helpers/waitFor';
+import { kitTestIDs } from '../../src/components/testIDs';
+import { mealPlanTestIDs } from '../../src/features/mealPlan/testIDs';
+import { pantryTestIDs } from '../../src/features/pantry/testIDs';
+import { recipesTestIDs } from '../../src/features/recipes/testIDs';
+import { shoppingListTestIDs } from '../../src/features/shoppingList/testIDs';
 
-/** Tab id → the screen that tab must render. Both sides are real testIDs in
- *  `src/`; a tab that navigates nowhere fails here rather than being skipped. */
+/** Tab id → the screen that tab must render; a tab that navigates nowhere
+ *  fails here rather than being skipped. */
 const TABS: ReadonlyArray<[tab: string, screen: string]> = [
-  ['tab-pantry', 'pantry-screen'],
-  ['tab-shoppinglist', 'shopping-list-screen'],
-  ['tab-recipe', 'recipes-screen'],
-  ['tab-mealplan', 'meal-plan-screen'],
+  [kitTestIDs.tab('Pantry'), pantryTestIDs.screen],
+  [kitTestIDs.tab('ShoppingList'), shoppingListTestIDs.screen],
+  [kitTestIDs.tab('Recipe'), recipesTestIDs.recipesScreen],
+  [kitTestIDs.tab('MealPlan'), mealPlanTestIDs.screen],
 ];
 
 describe('Smoke Tests', () => {
@@ -29,20 +34,20 @@ describe('Smoke Tests', () => {
     // splash is absent: `beforeAll` has already launched and settled the app, so
     // the splash is gone before this line runs — and `not.toBeVisible()` on
     // something absent passes instantly, for any app state, a crash included.
-    await waitFor(element(by.id('tab-bar')))
+    await waitFor(element(by.id(kitTestIDs.tabBar)))
       .toBeVisible()
       .withTimeout(TIMEOUTS.LONG);
   });
 
   it('renders the tab bar with every tab', async () => {
-    await waitFor(element(by.id('tab-bar')))
+    await waitFor(element(by.id(kitTestIDs.tabBar)))
       .toBeVisible()
       .withTimeout(TIMEOUTS.DEFAULT);
 
     for (const [tab] of TABS) {
       await expect(element(by.id(tab))).toExist();
     }
-    await expect(element(by.id('tab-profile'))).toExist();
+    await expect(element(by.id(kitTestIDs.tab('Profile')))).toExist();
   });
 
   it.each(TABS)('navigates to %s and renders %s', async (tab, screen) => {

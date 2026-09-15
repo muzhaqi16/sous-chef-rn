@@ -1,3 +1,4 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
@@ -47,6 +48,7 @@ import {
 } from '#features/pantry/context/FilteredItemsActionsContext';
 import { Text } from '#components/atoms/Text';
 import type { Translate } from '#/i18n/types';
+import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { Screen } from '#components/templates/Screen';
 
@@ -113,7 +115,7 @@ function buildModeConfig(
       filter: item => item.isLowStock,
       subtitle: item =>
         t('filteredPantry.remaining', {
-          quantity: item.quantity,
+          quantity: formatQuantityForDisplay(item.quantity),
           unit: item.unit?.symbol ?? '',
         }).trim(),
       tutorialSteps: [
@@ -228,7 +230,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
       <View style={[commonStyles.card, commonStyles.rowSpaceBetween]}>
         <View style={styles.itemInfo}>
           <Text role="bodyStrong">{item.itemName}</Text>
-          <Text style={[commonStyles.caption, styles.itemDetails]}>
+          <Text role="caption" tone="secondary" style={styles.itemDetails}>
             {subtitleFn(item)}
           </Text>
         </View>
@@ -357,7 +359,7 @@ export const FilteredPantryItems: React.FC<
   // Progressively load all pages so the filter sees every item
   useEffect(() => {
     if (hasMore && !isLoadingMore && !loading) {
-      loadMore();
+      void loadMore();
     }
   }, [hasMore, isLoadingMore, loading, loadMore]);
 
@@ -377,7 +379,7 @@ export const FilteredPantryItems: React.FC<
     rows: () =>
       filteredItems.map(item => ({
         itemId: item.itemId,
-        display: { itemName: item.itemName, unitId: item.unit?.id },
+        display: { itemName: item.itemName, unitId: item.unit.id },
       })),
     homeId: selectedHomeId ?? undefined,
   });
@@ -410,7 +412,7 @@ export const FilteredPantryItems: React.FC<
   });
 
   const handleRefresh = () => {
-    executeRefreshWithFinally(refetch, setRefreshing);
+    void executeRefreshWithFinally(refetch, setRefreshing);
   };
 
   const handleAddToList = async (
@@ -451,7 +453,7 @@ export const FilteredPantryItems: React.FC<
           accessibilityLabel: t('labels.addToShoppingList'),
           onPress: picker.openForAll,
           loading: picker.busy,
-          testID: 'add-all-low-stock',
+          testID: pantryTestIDs.addAllLowStockButton,
           onMeasure: setHeaderCartRect,
         },
       ]

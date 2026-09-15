@@ -2,7 +2,11 @@ import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import { t } from '#/i18n';
 import { parseFractionalInput as parseQuantityInput } from '#/utils/fractionUtils';
-import { StorageState, ItemCondition } from '#/graphql/generated/schemaTypes';
+import type {
+  StorageState,
+  StorageType,
+  ItemCondition,
+} from '#/graphql/generated/schemaTypes';
 import type { UnitSelection } from '#features/pantry/hooks/mutations/types';
 import type { PantryItemForm_PantryItemFragment } from './PantryItemForm.generated';
 
@@ -35,7 +39,11 @@ interface UpdatePantryItemFieldsArgs {
   selectedLocationId: string | null;
   selectedBrandId: string | null;
   trackingUnit?: UnitSelection;
-  selectedStorageLocation: { id: string; name: string; type: string } | null;
+  selectedStorageLocation: {
+    id: string;
+    name: string;
+    type: StorageType;
+  } | null;
   unitSymbol?: string;
 }
 
@@ -59,13 +67,29 @@ export interface UsePantryItemFormSubmitParams {
   selectedLocationId: string | null;
   selectedBrandId: string | null;
   selectedCategoryId: string | null;
-  selectedStorageLocation: { id: string; name: string; type: string } | null;
+  selectedStorageLocation: {
+    id: string;
+    name: string;
+    type: StorageType;
+  } | null;
   /** Mutation primitives. */
   updatePantryItemFields: (args: UpdatePantryItemFieldsArgs) => unknown;
   updateQuantity: (args: UpdateQuantityArgs) => unknown;
   resolveUnitId: (id: string | null, symbol: string) => Promise<string | null>;
   /** Callback after a no-op edit. */
   onSuccess?: () => void;
+}
+
+// react-hook-form marks a dirty array field with an array of flags; every
+// consumer reads a field's entry for truthiness only.
+function toDirtyFlags(
+  dirtyFields: Record<string, unknown>,
+): Record<string, boolean> {
+  const flags: Record<string, boolean> = {};
+  for (const [field, value] of Object.entries(dirtyFields)) {
+    flags[field] = Boolean(value);
+  }
+  return flags;
 }
 
 /**
@@ -106,17 +130,14 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
         return;
       }
 
-      const dirtyFieldsRecord = { ...params.dirtyFields } as Record<
-        string,
-        boolean
-      >;
+      const dirtyFieldsRecord = toDirtyFlags(params.dirtyFields);
 
       if (params.isWeightLocked) {
         delete dirtyFieldsRecord.netWeight;
         delete dirtyFieldsRecord.netWeightUnitId;
       }
 
-      const currentUnitSymbol = currentItem.unit?.symbol || '';
+      const currentUnitSymbol = currentItem.unit.symbol;
       const typedUnit = (data.unit || '').trim();
       if (typedUnit && typedUnit !== currentUnitSymbol) {
         dirtyFieldsRecord.unit = true;

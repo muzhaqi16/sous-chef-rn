@@ -1,0 +1,71 @@
+import { act } from '@testing-library/react-native';
+import { gql } from '@apollo/client';
+import {
+  renderHookWithApollo,
+  seedCache,
+} from '#/test-utils/apolloMockProvider';
+import { alertService } from '#/services/alertService';
+import { useUpdatePantryItemQuantity } from '../useUpdatePantryItemQuantity';
+
+jest.mock('#/services/errorService');
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
+
+const QUANTITY = gql`
+  fragment UpdateQuantityProbe on PantryItem {
+    id
+    quantity
+  }
+`;
+
+const UNIT = {
+  __typename: 'Unit',
+  id: 'unit-1',
+  name: 'piece',
+  symbol: 'pc',
+  type: 'COUNT',
+  displayAsFraction: false,
+};
+
+it('writes and sends nothing for a quantity no parser can read', async () => {
+  const cache = seedCache([
+    {
+      __typename: 'PantryItem',
+      id: 'pi-1',
+      version: 2,
+      quantity: 3,
+      unit: UNIT,
+    },
+  ]);
+  const { result } = renderHookWithApollo(
+    () => useUpdatePantryItemQuantity({}),
+    { cache, operationMocks: [] },
+  );
+
+  act(() => {
+    result.current.updateQuantity({
+      itemId: 'pi-1',
+      quantityInput: 'abc',
+      quantityValue: Number.NaN,
+      unitId: UNIT.id,
+      unitSymbol: UNIT.symbol,
+      trackingUnit: {
+        id: UNIT.id,
+        name: UNIT.name,
+        symbol: UNIT.symbol,
+        type: UNIT.type,
+      },
+    });
+  });
+
+  expect(
+    cache.readFragment<{ quantity: number }>({
+      id: cache.identify({ __typename: 'PantryItem', id: 'pi-1' }),
+      fragment: QUANTITY,
+    })?.quantity,
+  ).toBe(3);
+  // Nothing was sent, so nothing can come back refused.
+  await act(async () => {});
+  expect(alertService.alert).not.toHaveBeenCalled();
+});

@@ -1,6 +1,6 @@
 import { useTranslation } from '#/i18n';
 import React from 'react';
-import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { useItemAutocomplete } from '#features/catalog/hooks/useItemAutocomplete';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';

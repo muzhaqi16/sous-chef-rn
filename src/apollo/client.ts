@@ -119,7 +119,7 @@ function initializeClient() {
   });
 
   // Set up cache persistence
-  setupCachePersistence(client);
+  setupCachePersistence(client, cache);
 
   logger.info('✅ Apollo: Client initialized with cache persistence');
   return client;
@@ -132,9 +132,7 @@ function initializeClient() {
  * on the next cold start. No-op when nothing is pending.
  */
 export function flushCachePersistence() {
-  apolloCachePersistence.flushPending(
-    () => client.cache.extract() as NormalizedCacheObject,
-  );
+  apolloCachePersistence.flushPending();
 }
 
 /**
@@ -143,7 +141,10 @@ export function flushCachePersistence() {
  * and unmaintained — it was only a debounce plus a storage adapter over these
  * same two methods, which `ApolloCachePersistence` provides against MMKV.
  */
-function setupCachePersistence(client: ApolloClient) {
+function setupCachePersistence(
+  client: ApolloClient,
+  cache: ReturnType<typeof makeCache>,
+) {
   // Helper to schedule cache persistence
   // Uses lazy extraction so cache.extract() only runs once after debounce,
   // not on every cache operation (write, evict, modify, gc)
@@ -167,8 +168,8 @@ function setupCachePersistence(client: ApolloClient) {
     return Promise.resolve();
   });
 
-  // Wrap cache methods to persist after operations
-  const cache = client.cache;
+  // Wrap cache methods to persist after operations. The InMemoryCache itself,
+  // not `client.cache`: only it declares gc's `resetResultCache` option.
   const originalWrite = cache.write.bind(cache);
   const originalEvict = cache.evict.bind(cache);
   const originalModify = cache.modify.bind(cache);
@@ -210,11 +211,7 @@ function setupCachePersistence(client: ApolloClient) {
       // can read dangling __ref pointers and crash (production-only because
       // dev mode's loadDevMessages() masks the error).
       const options = { resetResultCache: true, ...gcOptions };
-      // gc's options-param type varies across Apollo versions — assert a
-      // structural callable signature rather than `as any`.
-      const result = (
-        originalGc as (o?: { resetResultCache?: boolean }) => string[]
-      )(options);
+      const result = originalGc(options);
       schedulePersistence();
       return result;
     };

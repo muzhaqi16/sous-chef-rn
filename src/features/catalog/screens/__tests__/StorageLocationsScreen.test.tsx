@@ -39,7 +39,7 @@ jest.mock('#features/catalog/hooks/useStorageLocationManagement', () => ({
     deleteLocation: mockDeleteLocation,
     setDefaultLocation: mockSetDefaultLocation,
     createLocation: mockCreateLocation,
-    error: null,
+    errorMessage: null,
     refetch: mockRefetch,
   })),
 }));
@@ -134,7 +134,7 @@ describe('StorageLocationsScreen', () => {
       deleteLocation: jest.fn(),
       setDefaultLocation: jest.fn(),
       createLocation: jest.fn(),
-      error: null,
+      errorMessage: null,
       refetch: jest.fn(),
     });
 
@@ -155,7 +155,7 @@ describe('StorageLocationsScreen', () => {
       deleteLocation: jest.fn(),
       setDefaultLocation: jest.fn(),
       createLocation: jest.fn(),
-      error: null,
+      errorMessage: null,
       refetch: jest.fn(),
     });
 
@@ -181,7 +181,7 @@ describe('StorageLocationsScreen', () => {
       deleteLocation: jest.fn(),
       setDefaultLocation: jest.fn(),
       createLocation: jest.fn(),
-      error: null,
+      errorMessage: null,
       refetch: jest.fn(),
     });
 
@@ -205,7 +205,7 @@ describe('StorageLocationsScreen', () => {
       deleteLocation: jest.fn(),
       setDefaultLocation: jest.fn(),
       createLocation: jest.fn(),
-      error: { message: 'Network error' },
+      errorMessage: 'Something went wrong. Please try again.',
       refetch: jest.fn(),
     });
 
@@ -213,7 +213,7 @@ describe('StorageLocationsScreen', () => {
       <StorageLocationsScreen route={defaultRoute} />,
     );
     expect(getByText('Something went wrong')).toBeTruthy();
-    expect(getByText('Network error')).toBeTruthy();
+    expect(getByText('Something went wrong. Please try again.')).toBeTruthy();
     expect(getByText('Retry')).toBeTruthy();
   });
 
@@ -230,7 +230,7 @@ describe('StorageLocationsScreen', () => {
       deleteLocation: jest.fn(),
       setDefaultLocation: jest.fn(),
       createLocation: jest.fn(),
-      error: null,
+      errorMessage: null,
       refetch: jest.fn(),
     });
 
@@ -254,7 +254,7 @@ describe('StorageLocationsScreen', () => {
       deleteLocation: mockDeleteLocation,
       setDefaultLocation: mockSetDefaultLocation,
       createLocation: mockCreateLocation,
-      error: null,
+      errorMessage: null,
       refetch: mockRefetch,
     });
 
@@ -287,7 +287,7 @@ describe('StorageLocationsScreen', () => {
       deleteLocation: mockDeleteLocation,
       setDefaultLocation: mockSetDefaultLocation,
       createLocation: mockCreateLocation,
-      error: null,
+      errorMessage: null,
       refetch: mockRefetch,
     });
 
@@ -315,7 +315,7 @@ describe('StorageLocationsScreen', () => {
       deleteLocation: mockDeleteLocation,
       setDefaultLocation: mockSetDefaultLocation,
       createLocation: mockCreateLocation,
-      error: null,
+      errorMessage: null,
       refetch: mockRefetch,
     });
 
@@ -346,7 +346,7 @@ describe('StorageLocationsScreen', () => {
       deleteLocation: mockDeleteLocation,
       setDefaultLocation: mockSetDefaultLocation,
       createLocation: mockCreateLocation,
-      error: null,
+      errorMessage: null,
       refetch: mockRefetch,
     });
 
@@ -372,7 +372,7 @@ describe('StorageLocationsScreen', () => {
       deleteLocation: mockDeleteLocation,
       setDefaultLocation: mockSetDefaultLocation,
       createLocation: mockCreateLocation,
-      error: null,
+      errorMessage: null,
       refetch: mockRefetch,
     });
 
@@ -405,7 +405,7 @@ describe('StorageLocationsScreen', () => {
       deleteLocation: mockDeleteLocation,
       setDefaultLocation: mockSetDefaultLocation,
       createLocation: mockCreateLocation,
-      error: null,
+      errorMessage: null,
       refetch: mockRefetch,
     });
 
@@ -445,7 +445,7 @@ describe('StorageLocationsScreen', () => {
       deleteLocation: mockDeleteLocation,
       setDefaultLocation: mockSetDefaultLocation,
       createLocation: mockCreateLocation,
-      error: null,
+      errorMessage: null,
       refetch: mockRefetch,
     });
 
@@ -483,7 +483,7 @@ describe('StorageLocationsScreen', () => {
       deleteLocation: mockDeleteLocation,
       setDefaultLocation: mockSetDefaultLocation,
       createLocation: mockCreateLocation,
-      error: null,
+      errorMessage: null,
       refetch: mockRefetch,
     });
 

@@ -149,9 +149,9 @@ describe('unconfirmed-create wiring (pantry items)', () => {
    * `RESOURCE_NOT_FOUND` that never retries.
    *
    * Scoped to the retry block rather than the file, which is the granularity the
-   * defect lives at. The block is named by whichever anchor the path uses: the
-   * prompt's own callback where the retry is inline, or the hook function the
-   * prompt calls.
+   * defect lives at. The block starts at the nearest anchor BEFORE the retry: the
+   * prompt's own callback where the retry is inline, or the function the prompt
+   * calls where it is not.
    */
   const retryPaths = creators.filter(file =>
     stripComments(readFileSync(join(process.cwd(), file), 'utf8')).includes(
@@ -163,14 +163,14 @@ describe('unconfirmed-create wiring (pantry items)', () => {
     expect(retryPaths.length).toBeGreaterThanOrEqual(2);
   });
 
-  const RETRY_ANCHORS = ['onAddAnyway', 'forceAddPending'];
+  const RETRY_ANCHORS = ['onAddAnyway', 'addAnyway', 'forceAddPending'];
 
   it.each(retryPaths)('%s re-claims the id on its force-add retry', file => {
     const code = stripComments(readFileSync(join(process.cwd(), file), 'utf8'));
+    const end = code.indexOf('forceAdd: true');
     const start = Math.max(
-      ...RETRY_ANCHORS.map(anchor => code.indexOf(anchor)),
+      ...RETRY_ANCHORS.map(anchor => code.lastIndexOf(anchor, end)),
     );
-    const end = code.indexOf('forceAdd: true', start);
     expect(start).toBeGreaterThanOrEqual(0);
     expect(end).toBeGreaterThan(start);
     expect(code.slice(start, end)).toContain('unconfirmedCreates.mark(');

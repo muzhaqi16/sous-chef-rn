@@ -54,7 +54,7 @@ function fieldPaths(
       continue;
     }
 
-    const field = selection as FieldNode;
+    const field = selection;
     if (field.name.value === '__typename') continue;
 
     const path = prefix ? `${prefix}.${field.name.value}` : field.name.value;

@@ -1,7 +1,9 @@
 import { PROTECTED_RECIPE_FOLDERS } from '#features/recipes/utils/folders';
 import React, { useState } from 'react';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { View, ScrollView } from 'react-native';
 import { useTranslation } from '#/i18n';
+import type { ExternalSource } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { openWebUrl } from '#features/recipes/utils/externalUrl';
 import {
@@ -43,6 +45,7 @@ import { useUser } from '#store/useAppStore';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 
 const IngredientSeparator = () => <View style={styles.ingredientGap} />;
 
@@ -62,7 +65,6 @@ const RecipeDetailScreen: React.FC = () => {
     externalId,
     loading,
     error,
-    backendError,
     displayData,
     isBackendRecipe,
     backendRecipe,
@@ -136,7 +138,7 @@ const RecipeDetailScreen: React.FC = () => {
   };
 
   const handleTogglePublish = () => {
-    if (recipeId) setPublished(recipeId, !displayData?.isPublished);
+    if (recipeId) void setPublished(recipeId, !displayData?.isPublished);
   };
 
   // The source URL comes from the recipe provider or another member, so it is
@@ -185,7 +187,7 @@ const RecipeDetailScreen: React.FC = () => {
     tags?: string[];
     notes?: string;
   }) => {
-    await handleSaveRecipe(options.folder ?? null, options.tags, options.notes);
+    handleSaveRecipe(options.folder ?? null, options.tags, options.notes);
     setShowSaveSheet(false);
   };
 
@@ -208,7 +210,7 @@ const RecipeDetailScreen: React.FC = () => {
             onPress: addToMealPlan.open,
             variant: 'primary',
             accessibilityLabel: t('recipes.addToMealPlanA11y'),
-            testID: 'recipe-mealplan-button',
+            testID: recipesTestIDs.mealPlanButton,
           } satisfies HeaderAction,
         ]
       : []),
@@ -219,7 +221,7 @@ const RecipeDetailScreen: React.FC = () => {
             accessibilityLabel: t('labels.edit'),
             onPress: handleEditRecipe,
             variant: 'primary',
-            testID: 'recipe-edit-button',
+            testID: recipesTestIDs.editButton,
           } satisfies HeaderAction,
           {
             icon: displayData?.isPublished
@@ -231,7 +233,7 @@ const RecipeDetailScreen: React.FC = () => {
             accessibilityLabel: displayData?.isPublished
               ? t('recipes.unpublishA11y')
               : t('recipes.publishA11y'),
-            testID: 'recipe-publish-button',
+            testID: recipesTestIDs.publishButton,
           } satisfies HeaderAction,
         ]
       : []),
@@ -239,11 +241,13 @@ const RecipeDetailScreen: React.FC = () => {
       ? [
           {
             icon: 'git-branch-outline',
-            onPress: handleForkRecipe,
+            onPress: () => {
+              void handleForkRecipe();
+            },
             variant: 'primary',
             loading: forking,
             accessibilityLabel: t('recipes.forkA11y'),
-            testID: 'recipe-fork-button',
+            testID: recipesTestIDs.forkButton,
           } satisfies HeaderAction,
         ]
       : []),
@@ -255,7 +259,7 @@ const RecipeDetailScreen: React.FC = () => {
             onPress: handleFolderPress,
             variant: 'primary',
             disabled: saving || updatingFolderTags,
-            testID: 'recipe-folder-button',
+            testID: recipesTestIDs.folderButton,
           } satisfies HeaderAction,
         ]
       : []),
@@ -269,7 +273,7 @@ const RecipeDetailScreen: React.FC = () => {
             onPress: handleHeartPress,
             tone: 'favorite',
             loading: saving || updatingFolderTags,
-            testID: 'recipe-heart-button',
+            testID: recipesTestIDs.heartButton,
           } satisfies HeaderAction,
         ]
       : []),
@@ -283,7 +287,10 @@ const RecipeDetailScreen: React.FC = () => {
     // Cold load renders inside the template shell so the pinned back chip
     // stays available during a slow fetch, matching the loaded state.
     return (
-      <CollapsingHeroDetail testID="recipe-detail" onBack={goBack}>
+      <CollapsingHeroDetail
+        testID={recipesTestIDs.recipeDetail}
+        onBack={goBack}
+      >
         <View style={styles.centerContainer}>
           <SousChefLoader
             size="small"
@@ -301,7 +308,6 @@ const RecipeDetailScreen: React.FC = () => {
   if (!displayData) {
     const errorMessage =
       error ||
-      backendError?.message ||
       (recipeId && !backendRecipe
         ? t('recipes.recipeNotFoundDb')
         : t('recipes.recipeNotFound'));
@@ -323,7 +329,7 @@ const RecipeDetailScreen: React.FC = () => {
   return (
     <>
       <CollapsingHeroDetail
-        testID="recipe-detail"
+        testID={recipesTestIDs.recipeDetail}
         onBack={goBack}
         actions={headerActions}
         title={displayData.title ?? ''}
@@ -349,12 +355,12 @@ const RecipeDetailScreen: React.FC = () => {
         {/* Recipe Metadata */}
         <View style={styles.metadata}>
           {displayData.servings != null && (
-            <Text role="caption" style={styles.metadataText}>
+            <Text role="caption" tone="secondary">
               🍽️ {t('recipes.servingsCount', { count: displayData.servings })}
             </Text>
           )}
           {!!displayData.readyInMinutes && (
-            <Text style={styles.metadataText}>
+            <Text role="caption" tone="secondary">
               ⏱️{' '}
               {t('labels.min', {
                 count: displayData.readyInMinutes,
@@ -363,7 +369,7 @@ const RecipeDetailScreen: React.FC = () => {
           )}
           {displayData.healthScore != null &&
             !isNaN(displayData.healthScore) && (
-              <Text style={styles.metadataText}>
+              <Text role="caption" tone="secondary">
                 💚 {Math.round(displayData.healthScore)}
                 {t('recipes.percentHealthy')}
               </Text>
@@ -392,10 +398,8 @@ const RecipeDetailScreen: React.FC = () => {
                     tone={cookedCount > 0 ? 'success' : 'textSecondary'}
                   />
                   <Text
-                    style={[
-                      styles.metadataText,
-                      cookedCount > 0 && styles.metadataTextSuccess,
-                    ]}
+                    role="caption"
+                    tone={cookedCount > 0 ? 'success' : 'secondary'}
                   >
                     {cookedCount > 0
                       ? t('recipes.cookedCount', { count: cookedCount })
@@ -435,26 +439,30 @@ const RecipeDetailScreen: React.FC = () => {
           <View style={styles.tags}>
             {!!displayData.vegetarian && (
               <View style={styles.tag}>
-                <Text role="label" style={styles.tagText}>
+                <Text role="label" tone="accent">
                   {t('recipes.vegetarian')}
                 </Text>
               </View>
             )}
             {!!displayData.vegan && (
               <View style={styles.tag}>
-                <Text style={styles.tagText}>{t('recipes.vegan')}</Text>
+                <Text role="label" tone="accent">
+                  {t('recipes.vegan')}
+                </Text>
               </View>
             )}
             {!!displayData.glutenFree && (
               <View style={styles.tag}>
-                <Text style={styles.tagText}>
+                <Text role="label" tone="accent">
                   {t('recipes.diet.GLUTEN_FREE')}
                 </Text>
               </View>
             )}
             {!!displayData.dairyFree && (
               <View style={styles.tag}>
-                <Text style={styles.tagText}>{t('recipes.dairyFree')}</Text>
+                <Text role="label" tone="accent">
+                  {t('recipes.dairyFree')}
+                </Text>
               </View>
             )}
           </View>
@@ -563,7 +571,9 @@ const RecipeDetailScreen: React.FC = () => {
       <MarkCookedModal
         visible={cookedModalVisible}
         recipeName={displayData.title || ''}
-        defaultServings={displayData.servings || 1}
+        defaultServings={
+          displayData.servings === 0 ? 1 : displayData.servings ?? 1
+        }
         onClose={() => setCookedModalVisible(false)}
         onConfirm={handleMarkAsCooked}
         hasPantry={ingredientMatching.hasPantry}
@@ -631,7 +641,13 @@ const RecipeDetailScreen: React.FC = () => {
   );
 };
 
-export const RecipeDetail: React.FC = () => (
+export const RecipeDetail: React.FC<
+  StaticScreenProps<{
+    recipeId?: string;
+    externalSource?: ExternalSource;
+    externalId?: string;
+  }>
+> = () => (
   <RecipeDetailErrorBoundary>
     <RecipeDetailScreen />
   </RecipeDetailErrorBoundary>
@@ -657,12 +673,6 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.md,
     marginBottom: theme.spacing.md,
   },
-  metadataText: {
-    color: theme.colors.textSecondary,
-  },
-  metadataTextSuccess: {
-    color: theme.colors.success,
-  },
   cookedMetadata: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -680,9 +690,6 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
-  },
-  tagText: {
-    color: theme.colors.primary,
   },
   section: {
     marginBottom: theme.spacing.xl,

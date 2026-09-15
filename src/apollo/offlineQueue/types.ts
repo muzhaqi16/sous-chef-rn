@@ -1,4 +1,4 @@
-import { DocumentNode } from 'graphql';
+import type { DocumentNode } from 'graphql';
 import type {
   ApolloCache,
   DefaultContext,
@@ -91,9 +91,12 @@ export interface ProcessingResult {
   mutationId: string;
   error?: QueueError;
   serverResponse?: Record<string, unknown>;
-  // A transient error returned the mutation to PENDING: the drain loop must
-  // stop rather than replay later mutations ahead of this un-synced one.
+  // A transient error returned the mutation to PENDING: the drain loop holds
+  // back the entries that depend on it rather than replaying ahead of it.
   deferred?: boolean;
+  // `transport`: the API's own state (unreachable, 5xx, pacing), so the drain
+  // pauses. `entry`: a verdict scoped to this row (DEADLOCK), so it alone waits.
+  deferralScope?: 'entry' | 'transport';
 }
 
 export interface FailedMutationInfo {

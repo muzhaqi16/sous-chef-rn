@@ -39,7 +39,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
       return (
         <View style={styles.stateContainer}>
           <Icon name="alert-circle-outline" size={40} tone="error" />
-          <Text role="caption" align="center" tone="error">
+          <Text role="error" align="center" tone="error">
             {error}
           </Text>
         </View>

@@ -9,14 +9,21 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { createAuthSlice, AuthState } from '#store/slices/authSlice';
-import { createPreferencesSlice, PreferencesState } from '#store/slices/preferencesSlice';
-import { createNavigationSlice, NavigationState } from '#store/slices/navigationSlice';
-import { createUISlice, UIState } from '#store/slices/uiSlice';
-import { createAppSlice, AppState } from '#store/slices/appSlice';
-import { createNetworkSlice, NetworkState } from '#store/slices/networkSlice';
-import { createTelemetrySlice, TelemetryState } from '#store/slices/telemetrySlice';
-import { RootState } from '#store/index';
+import type { AuthState } from '#store/slices/authSlice';
+import { createAuthSlice } from '#store/slices/authSlice';
+import type { PreferencesState } from '#store/slices/preferencesSlice';
+import { createPreferencesSlice } from '#store/slices/preferencesSlice';
+import type { NavigationState } from '#store/slices/navigationSlice';
+import { createNavigationSlice } from '#store/slices/navigationSlice';
+import type { UIState } from '#store/slices/uiSlice';
+import { createUISlice } from '#store/slices/uiSlice';
+import type { AppState } from '#store/slices/appSlice';
+import { createAppSlice } from '#store/slices/appSlice';
+import type { NetworkState } from '#store/slices/networkSlice';
+import { createNetworkSlice } from '#store/slices/networkSlice';
+import type { TelemetryState } from '#store/slices/telemetrySlice';
+import { createTelemetrySlice } from '#store/slices/telemetrySlice';
+import type { RootState } from '#store/index';
 
 type TestRootState = AuthState &
   PreferencesState &

@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { View, useWindowDimensions } from 'react-native';
-import {
-  TabView as RNTabView,
-  TabBar,
+import type {
   SceneRendererProps,
   NavigationState,
   Route,
 } from 'react-native-tab-view';
+import { TabView as RNTabView, TabBar } from 'react-native-tab-view';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
@@ -52,7 +51,7 @@ const DefaultLazyPlaceholder: React.FC<{ route: TabRoute }> = ({ route }) => {
   return (
     <View style={styles.placeholder}>
       <ThemedActivityIndicator size="large" />
-      <Text tone="secondary">
+      <Text role="body" tone="secondary">
         {t('loading.loadingNamed', { name: route.title })}
       </Text>
     </View>

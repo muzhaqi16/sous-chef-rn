@@ -3,10 +3,17 @@
  */
 
 declare module '*.svg' {
-  import React from 'react';
-  import { SvgProps } from 'react-native-svg';
+  import type React from 'react';
+  import type { SvgProps } from 'react-native-svg';
   const content: React.FC<SvgProps>;
   export default content;
+}
+
+/** Metro resolves a bundled image to its asset id. */
+declare module '*.png' {
+  import type { ImageSourcePropType } from 'react-native';
+  const source: ImageSourcePropType;
+  export default source;
 }
 
 /** @see https://reactnative.dev/docs/global-requestIdleCallback */

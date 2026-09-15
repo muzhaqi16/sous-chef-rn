@@ -5,22 +5,23 @@ import {
   CreateShoppingListItemsFromRecipeDocument,
   CreateShoppingListItemFromRecipeIngredientDocument,
 } from '#features/recipes/graphql/recipe.generated';
-import {
-  type MaterializedRecipe,
-  type DisplayIngredient,
-} from './useRecipeData';
+import type { MaterializedRecipe, DisplayIngredient } from './useRecipeData';
 import {
   AddItemsToShoppingListFromRecipeDocument,
   GetShoppingListsLiteForRecipeDocument,
   CreateShoppingListForRecipeDocument,
 } from './useRecipeDetail.generated';
-import { type BatchAddShoppingListItemInput } from '#/graphql/generated/schemaTypes';
+import type { BatchAddShoppingListItemInput } from '#/graphql/generated/schemaTypes';
 import { useAppStore, useSelectedShoppingListId } from '#store/useAppStore';
 import { extractNodes } from '#/utils/connectionUtils';
 import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import {
+  settleMutation,
+  type SettledFailure,
+} from '#/apollo/utils/settleMutation';
 import { toastService } from '#/services/toastService';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import type { RecipeInformation } from '#/services/spoonacular/types';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -35,7 +36,7 @@ import { logger } from '#/utils/environment';
 import { stripPriceFromName } from '#features/recipes/utils/stripPriceFromName';
 import { preferredMeasure } from '#features/recipes/utils/preferredMeasure';
 import { useAppSettings } from '#features/profile/hooks/useAppSettings';
-import { UnitSystem } from '#/graphql/generated/schemaTypes';
+import type { UnitSystem } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 import type {
   AddItemsToShoppingListInput,
@@ -52,10 +53,10 @@ interface UseRecipeShoppingListOptions {
 type PendingAction = { type: 'all' };
 
 /**
- * Fires the right add-ingredient mutation and reports whether the item landed.
- * Module-level, not inline: its body is full of value blocks, and one inside a
- * try/catch bails the whole hook out of the React Compiler. The caller still
- * invokes it from inside its try.
+ * Fires the right add-ingredient mutation and resolves to the failure when the
+ * item did not land. Module-level, not inline: its body is full of value blocks,
+ * and one inside a try/catch bails the whole hook out of the React Compiler. The
+ * caller still invokes it from inside its try.
  */
 async function addIngredientToList(
   ingredient: DisplayIngredient,
@@ -72,7 +73,10 @@ async function addIngredientToList(
       variables: { input: AddItemsToShoppingListInput };
       context: { localFirst: boolean };
     }): Promise<{ data?: unknown; error?: unknown }>;
-    onRejected: () => void;
+    /** The caller's copy for a refused add. */
+    fallback: string;
+    /** The name a line takes when the ingredient carries none. */
+    unnamedIngredient: string;
     /** The reader's system, so a line is bought in the units they think in. */
     unitSystem: UnitSystem;
     /** Write the row into the cache before firing, so it survives being queued. */
@@ -88,12 +92,13 @@ async function addIngredientToList(
     /** Take the row back when the server refuses it. */
     revertOptimisticRow(rowId: string): void;
   },
-): Promise<boolean> {
+): Promise<SettledFailure | undefined> {
   const {
     isBackendRecipe,
     addRecipeIngredientMutation,
     addItemsToShoppingListMutation,
-    onRejected,
+    fallback,
+    unnamedIngredient,
     unitSystem,
     writeOptimisticRow,
     revertOptimisticRow,
@@ -110,7 +115,7 @@ async function addIngredientToList(
     const unit = 'unit' in ingredient ? ingredient.unit : null;
     const linkedItem = 'item' in ingredient ? ingredient.item : null;
     writeOptimisticRow(rowId, {
-      itemName: ingredient.name || 'Unknown ingredient',
+      itemName: ingredient.name || unnamedIngredient,
       quantity:
         'quantity' in ingredient && typeof ingredient.quantity === 'number'
           ? ingredient.quantity
@@ -120,26 +125,26 @@ async function addIngredientToList(
       itemId: linkedItem?.id,
     });
 
-    const result = await addRecipeIngredientMutation({
-      variables: {
-        input: {
-          id: rowId,
-          recipeIngredientId: String(ingredient.id),
-          shoppingListId,
-        },
+    const settled = await settleMutation(
+      () =>
+        addRecipeIngredientMutation({
+          variables: {
+            input: {
+              id: rowId,
+              recipeIngredientId: String(ingredient.id),
+              shoppingListId,
+            },
+          },
+          context: { localFirst: true },
+        }),
+      {
+        document: CreateShoppingListItemFromRecipeIngredientDocument,
+        fallback,
+        onFailed: () => revertOptimisticRow(rowId),
+        present: 'none',
       },
-      context: { localFirst: true },
-    });
-
-    // This mutation has no onError, so a resolved error-union payload or a
-    // transport error would otherwise fall through to the success toast.
-    // Classify and report once on rejection; 'created'/'queued' confirm.
-    if (classifyCreateResult(result) === 'rejected') {
-      revertOptimisticRow(rowId);
-      onRejected();
-      return false;
-    }
-    return true;
+    );
+    return settled.failure;
   }
 
   if ('amount' in ingredient) {
@@ -147,7 +152,7 @@ async function addIngredientToList(
     // one-element `items` array — there is no separate single-add op.
     const rowId = generateEntityId();
     const itemName = stripPriceFromName(
-      ingredient.name || ingredient.original || 'Unknown ingredient',
+      ingredient.name || ingredient.original || unnamedIngredient,
     );
     // Amount and unit from ONE measure. Taking the unit from `measures.us`
     // while the quantity stayed `ingredient.amount` is what stored a
@@ -165,39 +170,39 @@ async function addIngredientToList(
       unitName: unitName ?? null,
     });
 
-    const result = await addItemsToShoppingListMutation({
-      variables: {
-        input: {
-          shoppingListId,
-          items: [
-            {
-              id: rowId,
-              item: { itemName },
-              quantity,
-              unit: { unitName },
-              storePrefs: ingredient.aisle
-                ? { aisle: ingredient.aisle }
-                : undefined,
+    const storePrefs = ingredient.aisle
+      ? { aisle: ingredient.aisle }
+      : undefined;
+    const settled = await settleMutation(
+      () =>
+        addItemsToShoppingListMutation({
+          variables: {
+            input: {
+              shoppingListId,
+              items: [
+                {
+                  id: rowId,
+                  item: { itemName },
+                  quantity,
+                  unit: { unitName },
+                  storePrefs,
+                },
+              ],
             },
-          ],
-        },
+          },
+          context: { localFirst: true },
+        }),
+      {
+        document: AddItemsToShoppingListFromRecipeDocument,
+        fallback,
+        onFailed: () => revertOptimisticRow(rowId),
+        present: 'none',
       },
-      context: { localFirst: true },
-    });
-
-    // A resolved error-union payload or a transport error must not fall
-    // through to the success toast. Classify: 'created'/'queued' confirm;
-    // 'rejected' reports and returns. The mutation's onError already
-    // toasts on a transport error, so toast here only for the resolved
-    // error-union case — exactly one toast either way.
-    if (classifyCreateResult(result) === 'rejected') {
-      revertOptimisticRow(rowId);
-      if (!result.error) onRejected();
-      return false;
-    }
+    );
+    return settled.failure;
   }
 
-  return true;
+  return undefined;
 }
 
 export function useRecipeShoppingList({
@@ -232,7 +237,7 @@ export function useRecipeShoppingList({
   };
 
   const getShoppingListById = (listId: string) =>
-    shoppingLists.find(list => list.id === listId) || null;
+    shoppingLists.find(list => list.id === listId) ?? null;
 
   const client = useApolloClient();
 
@@ -268,13 +273,8 @@ export function useRecipeShoppingList({
     CreateShoppingListForRecipeDocument,
     {
       update(cache, { data }) {
-        const payload = data?.createShoppingList;
-        if (payload?.__typename === 'CreateShoppingListPayload') {
-          addToShoppingListsCache(cache, payload.shoppingList);
-        }
-      },
-      onError: () => {
-        toastService.error(t('errors.createListFailed'));
+        const payload = appliedPayload(data);
+        if (payload) addToShoppingListsCache(cache, payload.shoppingList);
       },
     },
   );
@@ -283,12 +283,8 @@ export function useRecipeShoppingList({
     CreateShoppingListItemsFromRecipeDocument,
     {
       update: (cache, { data }, { variables }) => {
-        const payload = data?.createShoppingListItemsFromRecipe;
-        if (
-          payload?.__typename !== 'CreateShoppingListItemsFromRecipePayload' ||
-          !variables
-        )
-          return;
+        const payload = appliedPayload(data);
+        if (!payload || !variables) return;
         try {
           const shoppingListId = variables.input.shoppingListId;
           payload.addedItems.forEach(item => {
@@ -300,14 +296,6 @@ export function useRecipeShoppingList({
           });
         }
       },
-      onError: err => {
-        logger.error('Add recipe to shopping list error:', err);
-        const errorMessage =
-          err.message || t('recipes.addIngredientsToListFailed');
-        toastService.error(
-          t('recipes.couldNotAddIngredients', { error: errorMessage }),
-        );
-      },
     },
   );
 
@@ -315,13 +303,8 @@ export function useRecipeShoppingList({
     CreateShoppingListItemFromRecipeIngredientDocument,
     {
       update: (cache, { data }, { variables }) => {
-        const response = data?.createShoppingListItemFromRecipeIngredient;
-        if (
-          response?.__typename !==
-            'CreateShoppingListItemFromRecipeIngredientPayload' ||
-          !variables
-        )
-          return;
+        const response = appliedPayload(data);
+        if (!response || !variables) return;
         try {
           // The row was already written and counted optimistically, so this
           // only re-wires the edge — and withdraws the optimistic row when the
@@ -347,16 +330,8 @@ export function useRecipeShoppingList({
       // Every row here was written and counted by an optimistic add before the
       // mutation fired, so the reconcile re-wires edges without re-counting.
       update: buildAddItemsReconcileUpdate({
-        wrap: { message: 'Cache update failed for addItemsToShoppingList:' },
+        wrap: { operation: 'Cache update failed for addItemsToShoppingList:' },
       }),
-      onError: err => {
-        logger.error('Batch add items to shopping list error:', err);
-        const errorMessage =
-          err.message || t('recipes.addIngredientsToListFailed');
-        toastService.error(
-          t('recipes.couldNotAddIngredients', { error: errorMessage }),
-        );
-      },
     },
   );
 
@@ -370,13 +345,13 @@ export function useRecipeShoppingList({
 
     try {
       const listId = targetList.id;
-      const added = await addIngredientToList(ingredient, listId, {
+      const failure = await addIngredientToList(ingredient, listId, {
         isBackendRecipe,
         addRecipeIngredientMutation,
         addItemsToShoppingListMutation,
         unitSystem,
-        onRejected: () =>
-          toastService.error(t('recipes.addIngredientToListFailed')),
+        fallback: t('recipes.addIngredientToListFailed'),
+        unnamedIngredient: t('recipes.unnamedIngredient'),
         // Written before the mutation fires so the row shows immediately and
         // survives being queued — the `update:` callbacks only run with a
         // server payload, so offline they never fire.
@@ -402,7 +377,10 @@ export function useRecipeShoppingList({
         revertOptimisticRow: rowId =>
           revertOptimisticShoppingListItem(client.cache, listId, rowId),
       });
-      if (!added) return;
+      if (failure) {
+        toastService.error(failure.body);
+        return;
+      }
 
       setAddedIngredients(prev => new Set(prev).add(ingredient.id));
       toastService.success(
@@ -424,23 +402,33 @@ export function useRecipeShoppingList({
       return;
     }
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         if (isBackendRecipe && backendRecipe && recipeId) {
-          const result = await createShoppingListItemsFromRecipeMutation({
-            variables: {
-              input: {
-                recipeId,
-                shoppingListId: listId,
-                servings: backendRecipe.servings,
-              },
+          const settled = await settleMutation(
+            () =>
+              createShoppingListItemsFromRecipeMutation({
+                variables: {
+                  input: {
+                    recipeId,
+                    shoppingListId: listId,
+                    servings: backendRecipe.servings,
+                  },
+                },
+              }),
+            {
+              document: CreateShoppingListItemsFromRecipeDocument,
+              fallback: t('recipes.addIngredientsToListFailed'),
+              present: 'none',
             },
-          });
+          );
+          if (settled.failure) {
+            toastService.error(settled.failure.body);
+            return;
+          }
 
-          const payload = result.data?.createShoppingListItemsFromRecipe;
-          if (
-            payload?.__typename === 'CreateShoppingListItemsFromRecipePayload'
-          ) {
+          const payload = appliedPayload(settled.data);
+          if (payload) {
             const data = payload;
             const allIngredientIds = extractNodes(
               backendRecipe.ingredientsConnection,
@@ -482,7 +470,7 @@ export function useRecipeShoppingList({
                   itemName: stripPriceFromName(
                     ingredient.name ||
                       ingredient.original ||
-                      'Unknown ingredient',
+                      t('recipes.unnamedIngredient'),
                   ),
                 },
                 quantity: measure.amount ?? 0,
@@ -533,21 +521,10 @@ export function useRecipeShoppingList({
             }
           });
 
-          const result = await addItemsToShoppingListMutation({
-            variables: {
-              input: {
-                shoppingListId: listId,
-                items,
-              },
-            },
-            context: { localFirst: true },
-          });
-
           // A refusal resolves under errorPolicy:'all' with no thrown error, so
           // the rows have to be taken back explicitly or they linger until the
-          // next refetch. A QUEUED batch (no data, no error) is not a refusal —
-          // it keeps its rows and replays.
-          if (classifyCreateResult(result) === 'rejected') {
+          // next refetch. A QUEUED batch is not a refusal — it keeps its rows.
+          const revertRows = () => {
             items.forEach(batchItem => {
               if (batchItem.id) {
                 revertOptimisticShoppingListItem(
@@ -557,10 +534,27 @@ export function useRecipeShoppingList({
                 );
               }
             });
+          };
+          const settled = await settleMutation(
+            () =>
+              addItemsToShoppingListMutation({
+                variables: { input: { shoppingListId: listId, items } },
+                context: { localFirst: true },
+              }),
+            {
+              document: AddItemsToShoppingListFromRecipeDocument,
+              fallback: t('recipes.addIngredientsToListFailed'),
+              onFailed: revertRows,
+              present: 'none',
+            },
+          );
+          if (settled.failure) {
+            toastService.error(settled.failure.body);
+            return;
           }
 
-          const payload = result.data?.addItemsToShoppingList;
-          if (payload?.__typename === 'AddItemsToShoppingListPayload') {
+          const payload = appliedPayload(settled.data);
+          if (payload) {
             const data = payload;
             const successfullyAddedIds = data.results
               .filter(r => r.success)
@@ -582,10 +576,9 @@ export function useRecipeShoppingList({
                     listName: resolvedName,
                   }),
             );
-          } else if (!result.error) {
-            // No data and no error → the batch was queued while offline / the API
-            // was unreachable. The items replay later; mark them all added and
-            // confirm so the recipe reflects the request.
+          } else {
+            // Queued while offline / the API was unreachable. The items replay
+            // later; mark them all added and confirm so the recipe reflects it.
             setAddedIngredients(prev => {
               const next = new Set(prev);
               externalRecipe.extendedIngredients.forEach(ing =>
@@ -634,22 +627,31 @@ export function useRecipeShoppingList({
 
     const currentPendingAction = pendingAction;
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
-        const result = await createShoppingListMutation({
-          variables: {
-            input: {
-              name: name.trim(),
-              description: t('recipes.createdFromRecipe'),
-              isDefault: false,
-              tags: ['recipe-created'],
-            },
+        const fallback = t('errors.createShoppingListFailed');
+        const settled = await settleMutation(
+          () =>
+            createShoppingListMutation({
+              variables: {
+                input: {
+                  name: name.trim(),
+                  description: t('recipes.createdFromRecipe'),
+                  isDefault: false,
+                  tags: ['recipe-created'],
+                },
+              },
+            }),
+          {
+            document: CreateShoppingListForRecipeDocument,
+            fallback,
+            present: 'none',
           },
-        });
+        );
 
-        const createPayload = result.data?.createShoppingList;
-        if (createPayload?.__typename !== 'CreateShoppingListPayload') {
-          toastService.error(t('errors.createShoppingListFailed'));
+        const createPayload = appliedPayload(settled.data);
+        if (!createPayload) {
+          toastService.error(settled.failure?.body ?? fallback);
           return;
         }
         const newList = createPayload.shoppingList;

@@ -56,9 +56,6 @@ import { useToggleShoppingItem } from '#features/shoppingList/hooks/mutations/us
 // Peripheral mocks — dependencies of the SUT that have nothing to do with
 // the cache seam under test. Stubbing them keeps the assertion focused on
 // the optimistic + cache-update behavior.
-jest.mock('#/utils/errorHandlers', () => ({
-  handleMutationError: jest.fn(),
-}));
 jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
 }));

@@ -2,7 +2,8 @@ import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { ThemedIcon } from '#components/atoms/themedComponents';
-import { Icon, IconName, IconLibrary } from '#utils/iconUtils';
+import type { IconName, IconLibrary } from '#utils/iconUtils';
+import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { Card } from '#components/atoms/Card';
 
@@ -23,7 +24,8 @@ const trendIconName = (trend?: 'up' | 'down' | 'neutral'): IconName => {
       return 'trending-up';
     case 'down':
       return 'trending-down';
-    default:
+    case 'neutral':
+    case undefined:
       return 'remove-outline';
   }
 };
@@ -128,7 +130,7 @@ const styles = StyleSheet.create(theme => ({
   trendContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: theme.spacing['2xs'],
   },
   trendText: {
     variants: {

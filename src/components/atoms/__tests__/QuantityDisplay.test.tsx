@@ -24,9 +24,14 @@ describe('QuantityDisplay', () => {
     expect(screen.getByText('1 1/2')).toBeTruthy();
   });
 
-  it('trims a quantity no fraction fits to 2 decimals', () => {
+  it('keeps three decimals for a quantity no fraction fits', () => {
     render(<QuantityDisplay quantity={2.456} />);
-    expect(screen.getByText('2.46')).toBeTruthy();
+    expect(screen.getByText('2.456')).toBeTruthy();
+  });
+
+  it('rounds a quantity past three decimals', () => {
+    render(<QuantityDisplay quantity={177.4412} />);
+    expect(screen.getByText('177.441')).toBeTruthy();
   });
 
   it('re-formats the float the API echoes back as quantityInput', () => {

@@ -9,7 +9,7 @@ import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { Icon } from '#utils/iconUtils';
 import { ShoppingListAvatar } from '#features/shoppingList/components/ShoppingListAvatar';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
-import { IconLibrary } from '#/utils/iconUtils';
+import type { IconLibrary } from '#/utils/iconUtils';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
@@ -103,6 +103,34 @@ export function useShoppingListSelectorModal({
     });
   };
 
+  const deleteSelected = async (count: number) => {
+    const idsToDelete = Array.from(selectedForDeletion);
+
+    // Register parent deletions to prevent subscription race conditions
+    idsToDelete.forEach(id => subscriptionService.registerParentDeletion(id));
+
+    let result;
+    try {
+      result = await Promise.all(idsToDelete.map(id => deleteShoppingList(id)));
+    } catch {
+      // Deletion failed — unregister immediately
+      idsToDelete.forEach(id =>
+        subscriptionService.unregisterParentDeletion(id),
+      );
+      toastService.error(t('shoppingListSelector.deleteFailed'));
+    }
+
+    if (!result) return;
+
+    // Clear selection — useShoppingListSelection auto-selects the next list
+    if (currentListId && idsToDelete.includes(currentListId)) {
+      useStore.getState().setSelectedShoppingListId(null);
+    }
+
+    toastService.success(t('shoppingListSelector.deletedToast', { count }));
+    exitDeleteMode();
+  };
+
   const handleDeleteSelected = () => {
     const count = selectedForDeletion.size;
     if (count === 0) return;
@@ -115,38 +143,8 @@ export function useShoppingListSelectorModal({
         {
           text: t('labels.delete'),
           style: 'destructive',
-          onPress: async () => {
-            const idsToDelete = Array.from(selectedForDeletion);
-
-            // Register parent deletions to prevent subscription race conditions
-            idsToDelete.forEach(id =>
-              subscriptionService.registerParentDeletion(id),
-            );
-
-            let result;
-            try {
-              result = await Promise.all(
-                idsToDelete.map(id => deleteShoppingList(id)),
-              );
-            } catch {
-              // Deletion failed — unregister immediately
-              idsToDelete.forEach(id =>
-                subscriptionService.unregisterParentDeletion(id),
-              );
-              toastService.error(t('shoppingListSelector.deleteFailed'));
-            }
-
-            if (!result) return;
-
-            // Clear selection — useShoppingListSelection auto-selects the next list
-            if (currentListId && idsToDelete.includes(currentListId)) {
-              useStore.getState().setSelectedShoppingListId(null);
-            }
-
-            toastService.success(
-              t('shoppingListSelector.deletedToast', { count }),
-            );
-            exitDeleteMode();
+          onPress: () => {
+            void deleteSelected(count);
           },
         },
       ],
@@ -208,10 +206,12 @@ export function useShoppingListSelectorModal({
       .filter(l => l.homeId)
       .forEach(list => {
         const homeId = list.homeId as string;
-        if (!homeGroups.has(homeId)) {
-          homeGroups.set(homeId, []);
+        const group = homeGroups.get(homeId);
+        if (group) {
+          group.push(list);
+        } else {
+          homeGroups.set(homeId, [list]);
         }
-        homeGroups.get(homeId)!.push(list);
       });
 
     homeGroups.forEach((lists, homeId) => {

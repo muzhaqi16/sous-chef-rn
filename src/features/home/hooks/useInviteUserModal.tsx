@@ -1,11 +1,17 @@
 import { useState } from 'react';
 import { InviteUserModal } from '#features/home/components/InviteUserModal';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import type { MembershipRole } from '#/graphql/generated/schemaTypes';
+
+/** Resolves to the localized reason a refused invite was not sent, if any. */
+type InviteSubmit = (
+  email: string,
+  role: MembershipRole,
+) => Promise<string | null | void> | void;
 
 export const useInviteUserModal = () => {
   const [visible, setVisible] = useState(false);
   const [modalConfig, setModalConfig] = useState<{
-    onSubmit: (email: string, role: MembershipRole) => Promise<void> | void;
+    onSubmit: InviteSubmit;
     title?: string;
     allowedRoles?: MembershipRole[];
   }>({
@@ -13,7 +19,7 @@ export const useInviteUserModal = () => {
   });
 
   const show = (config: {
-    onSubmit: (email: string, role: MembershipRole) => Promise<void> | void;
+    onSubmit: InviteSubmit;
     title?: string;
     allowedRoles?: MembershipRole[];
   }) => {
@@ -38,7 +44,6 @@ export const useInviteUserModal = () => {
 
   return {
     show,
-    hide,
     InviteModalComponent,
   };
 };

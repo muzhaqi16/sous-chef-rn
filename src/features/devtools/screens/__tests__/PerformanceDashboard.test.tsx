@@ -32,11 +32,7 @@ jest.mock('#features/devtools/hooks/useFPSMonitor', () => ({
   useFPSMonitor: () => ({
     fps: 58,
     isLowFPS: false,
-    isMonitoring: true,
     stats: mockFPSStats,
-    startMonitoring: jest.fn(),
-    stopMonitoring: jest.fn(),
-    resetStats: jest.fn(),
   }),
 }));
 

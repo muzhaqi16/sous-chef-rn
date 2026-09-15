@@ -20,28 +20,34 @@ import {
   revertOptimisticRecipe,
   type RecipeCreatedBy,
 } from '#features/recipes/utils/recipeCacheWriters';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import {
+  settleMutation,
+  type SettledFailure,
+} from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { errorService } from '#/services/errorService';
+import { useTranslation } from '#/i18n';
 
-/** The refusal payload is carried so the caller can resolve LOCALIZED copy. */
-export interface RecipeWriteOutcome {
-  status: 'ok' | 'rejected';
-  payload: RefusalPayload;
-}
+/** A refused save, as the form shows it: on its field, or as an alert. */
+export type RecipeWriteFailure = SettledFailure;
 
-/** The shape `localizedRefusalMessage` reads, without importing presentation. */
-type RefusalPayload =
-  | { __typename?: string; code?: string | null; field?: string | null }
-  | null
-  | undefined;
+export type RecipeWriteOutcome =
+  | { status: 'ok' }
+  | { status: 'rejected'; failure: RecipeWriteFailure };
+
+const outcomeOf = (
+  failure: RecipeWriteFailure | undefined,
+): RecipeWriteOutcome =>
+  failure ? { status: 'rejected', failure } : { status: 'ok' };
 
 /** The recipe an edit session loads, and the writes the form makes. */
 export function useRecipeFormWrites(recipeId: string | undefined) {
   const client = useApolloClient();
+  const { t } = useTranslation();
 
   const { data: recipeData } = useQuery(GetRecipeDocument, {
-    variables: { id: recipeId! },
+    variables: { id: recipeId ?? '' },
     skip: !recipeId,
   });
   const recipeRef = recipeData?.recipe ?? null;
@@ -64,10 +70,11 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
     CreateRecipeDocument,
     {
       update: (cache, { data }) => {
-        if (data?.createRecipe?.__typename !== 'CreateRecipePayload') return;
+        const payload = appliedPayload(data);
+        if (!payload) return;
         // Upsert: the local-first pre-fire write already inserted the edge
         // under the same client-minted id — the server row replaces it.
-        upsertMyRecipesEdge(cache, data.createRecipe.recipe);
+        upsertMyRecipesEdge(cache, payload.recipe);
       },
     },
   );
@@ -94,23 +101,32 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
       });
     }
 
-    const result = await createRecipeMutation({
-      variables: { input: { ...input, id } },
-      context: { localFirst: true },
-    });
-    // Online success or queued offline — the recipe is in My Recipes either way.
-    if (classifyCreateResult(result) !== 'rejected') {
-      return { status: 'ok', payload: null };
-    }
+    const revertRecipe = () => {
+      try {
+        revertOptimisticRecipe(client.cache, id);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Revert rejected Recipe create',
+        });
+      }
+    };
 
-    try {
-      revertOptimisticRecipe(client.cache, id);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Revert rejected Recipe create',
-      });
-    }
-    return { status: 'rejected', payload: result.data?.createRecipe };
+    // Online success or queued offline — the recipe is in My Recipes either way.
+    const settled = await settleMutation(
+      () =>
+        createRecipeMutation({
+          variables: { input: { ...input, id } },
+          context: { localFirst: true },
+        }),
+      {
+        document: CreateRecipeDocument,
+        fallback: t('recipes.createRecipeFailed'),
+        onFailed: revertRecipe,
+        // The form shows the failure, on its field where it names one.
+        present: 'none',
+      },
+    );
+    return outcomeOf(settled.failure);
   };
 
   /**
@@ -123,35 +139,32 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
     input: Omit<UpdateRecipeInput, 'id'>,
     ingredients: RecipeIngredientInput[],
   ): Promise<RecipeWriteOutcome> => {
-    const [updateResult, ingredientsResult] = await Promise.all([
-      updateRecipeMutation({
-        variables: { input: { ...input, id } },
-        context: { localFirst: true },
-      }),
-      updateRecipeIngredientsMutation({
-        variables: { input: { recipeId: id, ingredients } },
-        context: { localFirst: true },
-      }),
+    const fallback = t('recipes.updateRecipeFailed');
+    const [recipeLeg, ingredientsLeg] = await Promise.all([
+      settleMutation(
+        () =>
+          updateRecipeMutation({
+            variables: { input: { ...input, id } },
+            context: { localFirst: true },
+          }),
+        { document: UpdateRecipeDocument, fallback, present: 'none' },
+      ),
+      settleMutation(
+        () =>
+          updateRecipeIngredientsMutation({
+            variables: { input: { recipeId: id, ingredients } },
+            context: { localFirst: true },
+          }),
+        {
+          document: UpdateRecipeIngredientsDocument,
+          fallback,
+          present: 'none',
+        },
+      ),
     ]);
 
-    // 'queued' (null payload, no error) counts as success — the edit replays on
-    // reconnect.
-    const recipeRejected = classifyCreateResult(updateResult) === 'rejected';
-    const ingredientsRejected =
-      classifyCreateResult(ingredientsResult) === 'rejected';
-    if (!recipeRejected && !ingredientsRejected) {
-      return { status: 'ok', payload: null };
-    }
-
-    // The payload of the leg that was REFUSED. Preferring the recipe's by
-    // presence hands back its SUCCESS payload whenever only the ingredients
-    // were refused, and a success resolves to no localized message.
-    return {
-      status: 'rejected',
-      payload: recipeRejected
-        ? updateResult.data?.updateRecipe
-        : ingredientsResult.data?.updateRecipeIngredients,
-    };
+    // One message, from a leg that was actually refused.
+    return outcomeOf(recipeLeg.failure ?? ingredientsLeg.failure);
   };
 
   return {

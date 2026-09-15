@@ -4,8 +4,9 @@ import {
   snapshotFields,
   updateEntityFieldsLocalFirst,
 } from '#/apollo/utils/localFirstFields';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { gql } from '@apollo/client';
-import type { MutationOutcome } from '#/utils/errors/mutationOutcome';
+import { useTranslation } from '#/i18n';
 
 /** The one field the revert has to be able to read back. */
 const ONBOARDED_FRAGMENT = gql`
@@ -17,18 +18,20 @@ const ONBOARDED_FRAGMENT = gql`
 /**
  * Local-first: `onBoarded` is written to the cached user PERMANENTLY before
  * firing, so onboarding finishes with no network. An absolute set on the
- * caller's own row, so a replay lands the same state. A refusal RESOLVES under
- * `errorPolicy: 'all'`, which is what the screen reads.
+ * caller's own row, so a replay lands the same state. A refusal is alerted
+ * here and reverts the flag.
  */
 export function useCompleteOnboarding(userId: string | undefined) {
+  const { t } = useTranslation();
   const client = useApolloClient();
   const [completeOnboarding] = useMutation(CompleteOnboardingDocument);
 
   return {
-    completeOnboarding: async (): Promise<MutationOutcome> => {
+    /** True when onboarding completed or is queued to. */
+    completeOnboarding: async (): Promise<boolean> => {
       const updates = { onBoarded: true };
       const entity = userId ? { __typename: 'User', id: userId } : undefined;
-      const { result } = await updateEntityFieldsLocalFirst({
+      const { persisted } = await updateEntityFieldsLocalFirst({
         cache: client.cache,
         entity,
         updates,
@@ -43,9 +46,20 @@ export function useCompleteOnboarding(userId: string | undefined) {
           updates,
         ),
         logLabel: 'Complete Onboarding',
-        mutate: () => completeOnboarding({ context: { localFirst: true } }),
+        mutate: async () => {
+          const settled = await settleMutation(
+            () => completeOnboarding({ context: { localFirst: true } }),
+            {
+              document: CompleteOnboardingDocument,
+              fallback: t('onBoarding.completeOnboardingError'),
+            },
+          );
+          // The settled failure stands in for the error, so the revert runs
+          // exactly when a failure was presented.
+          return { data: settled.data, error: settled.failure };
+        },
       });
-      return result ?? {};
+      return persisted;
     },
   };
 }

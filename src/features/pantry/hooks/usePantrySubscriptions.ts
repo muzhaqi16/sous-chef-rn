@@ -164,7 +164,7 @@ export function usePantrySubscriptions(userId?: string) {
   const selectedPantryId = useSelectedPantryId() || undefined;
   const isHomeSelectionReady = useIsHomeSelectionReady();
   const linkExpirationData = useLinkExpirationData();
-  const rejected = useSubscriptionRejected('PantryEvents');
+  const rejected = useSubscriptionRejected(PantryEventsDocument);
 
   const expirationOnData = async (
     notificationId: string,
@@ -198,7 +198,7 @@ export function usePantrySubscriptions(userId?: string) {
   };
 
   const eventHandlers = subscriptionService.register<PantryEventsPayload>({
-    subscriptionName: 'PantryEvents',
+    document: PantryEventsDocument,
     entityType: 'PantryItem',
     enableDeduplication: true,
     userId,
@@ -274,13 +274,17 @@ export function usePantrySubscriptions(userId?: string) {
             );
           }
           break;
+
+        case PantrySubtype.ExpirationNotificationRead:
+          break;
       }
     },
   });
 
   const pantrySkip = !selectedPantryId || !isHomeSelectionReady || rejected;
   const pantryEvents = useSubscription(PantryEventsDocument, {
-    variables: { pantryId: selectedPantryId! },
+    // `skip` holds while there is no pantry, so the empty id is never sent.
+    variables: { pantryId: selectedPantryId ?? '' },
     skip: pantrySkip,
     // The envelope's `node` is only `__typename` + `id` and every handler reads
     // the entity back, so caching it is pure harm: it re-creates a just-evicted
@@ -289,5 +293,9 @@ export function usePantrySubscriptions(userId?: string) {
     fetchPolicy: 'no-cache',
     ...eventHandlers,
   });
-  useSubscriptionTransportRecovery('PantryEvents', pantryEvents, pantrySkip);
+  useSubscriptionTransportRecovery(
+    PantryEventsDocument,
+    pantryEvents,
+    pantrySkip,
+  );
 }

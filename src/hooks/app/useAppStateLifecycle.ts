@@ -7,6 +7,7 @@ import { flushCachePersistence } from '#/apollo/client';
 import { useStore } from '#store';
 import { useIsHydrated } from '#store/useAppStore';
 import { handleTokenRefreshOnResume } from '#store/slices/authSlice';
+import { logger } from '#/utils/environment';
 
 /**
  * The app's one AppState listener. The previous state is tracked in a closure so
@@ -36,19 +37,21 @@ export function useAppStateLifecycle(): void {
             () => useStore.getState().accessToken,
           );
         }
-        queueManager.processQueue();
+        queueManager.processQueue().catch(error => {
+          logger.error('Failed to process queue on resume:', error);
+        });
       } else if (nextAppState === 'background') {
         // Persist recent cache writes before a possible kill, so local-first
         // state paints from disk on cold start.
         flushCachePersistence();
-        Telemetry.flush();
+        // Transport failures are caught and re-buffered inside the flush.
+        void Telemetry.flush();
       }
     };
 
-    const subscription = AppState.addEventListener(
-      'change',
-      handleAppStateChange,
-    );
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      void handleAppStateChange(nextAppState);
+    });
 
     return () => {
       subscription?.remove();

@@ -1,8 +1,7 @@
 /**
  * Local-first: the new status is written to the cache PERMANENTLY before firing —
  * an absolute set keyed by the list id, so a queued replay re-applies it
- * idempotently. There is no mutation `onError`, so `alertIfRejected` is the sole
- * alerter; under `errorPolicy: 'all'` a refusal resolves as data and never throws.
+ * idempotently. A failure reverts the write; a queued one keeps it.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -16,9 +15,8 @@ import {
   type UseCompleteShoppingList_ListFragment,
 } from './useCompleteShoppingList.generated';
 import { ListStatus } from '#/graphql/generated/schemaTypes';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
-import { errorService } from '#/services/errorService';
 
 export function useCompleteShoppingList() {
   const { t } = useTranslation();
@@ -61,37 +59,24 @@ export function useCompleteShoppingList() {
       'Complete Shopping List',
     );
 
-    let result;
-    const completeMutationOptions = {
-      variables: {
-        input: {
-          id,
-          completedShopDate: now,
-          ...(totalCost !== undefined && { totalCost }),
-        },
-      },
-      context: { localFirst: true },
+    const input = {
+      id,
+      completedShopDate: now,
+      ...(totalCost !== undefined && { totalCost }),
     };
-    try {
-      result = await completeMutation(completeMutationOptions);
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Complete Shopping List error:',
-      });
-    }
-
-    if (!result) {
-      // mutate() threw (non-queueable transport failure) — the visible revert is
-      // the feedback; the error is already logged.
-      revert();
-      return false;
-    }
-    if (alertIfRejected(result, t('shoppingListScreens.failedToComplete'))) {
-      revert();
-      return false;
-    }
-    // created (server) or queued (offline) — keep the optimistic write.
-    return true;
+    const settled = await settleMutation(
+      () =>
+        completeMutation({
+          variables: { input },
+          context: { localFirst: true },
+        }),
+      {
+        document: CompleteShoppingListDocument,
+        fallback: t('shoppingListScreens.failedToComplete'),
+        onFailed: revert,
+      },
+    );
+    return settled.status !== 'failed';
   };
 
   const reactivateList = async (id: string): Promise<boolean> => {
@@ -105,27 +90,19 @@ export function useCompleteShoppingList() {
       'Reactivate Shopping List',
     );
 
-    let result;
-    try {
-      result = await reactivateMutation({
-        variables: { input: { id } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Reactivate Shopping List error:',
-      });
-    }
-
-    if (!result) {
-      revert();
-      return false;
-    }
-    if (alertIfRejected(result, t('shoppingListScreens.failedToReactivate'))) {
-      revert();
-      return false;
-    }
-    return true;
+    const settled = await settleMutation(
+      () =>
+        reactivateMutation({
+          variables: { input: { id } },
+          context: { localFirst: true },
+        }),
+      {
+        document: MarkShoppingListActiveDocument,
+        fallback: t('shoppingListScreens.failedToReactivate'),
+        onFailed: revert,
+      },
+    );
+    return settled.status !== 'failed';
   };
 
   return { completeList, reactivateList, completing, reactivating };

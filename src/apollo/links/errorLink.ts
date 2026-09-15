@@ -4,7 +4,7 @@ import {
   CombinedGraphQLErrors,
   CombinedProtocolErrors,
 } from '@apollo/client/errors';
-import type { DefinitionNode } from 'graphql';
+import { Kind, OperationTypeNode, type DefinitionNode } from 'graphql';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { isNetworkError } from '#/utils/isNetworkError';
@@ -19,6 +19,9 @@ import {
 import { CLIENT_VERSION } from '../clientIdentity';
 import { announceClientUpgradeRequired } from '../clientUpgradeNotice';
 import { LogoutCleanup } from '../logoutCleanup';
+import { isOfflineRejectedError } from '../offlineQueue/OfflineRejectedError';
+import { operationNameOf } from '../utils/documentOperation';
+import { RefreshTokenDocument } from '#operations/auth/auth.generated';
 import { attemptTokenRefresh, getRefreshState } from './refreshToken';
 import { logger } from '#/utils/environment';
 import { useStore } from '#store';
@@ -36,15 +39,25 @@ import { useStore } from '#store';
 // the single authorization code, emitted on both channels: as a mutation
 // result-union member (errors-as-data) and as the top-level `extensions.code`
 // on rejected reads.
-const isResourceAccessError = (code: string) => code === ErrorCode.Forbidden;
+// Codes compared below are widened to `string`: `extensions.code` arrives untyped.
+const FORBIDDEN: string = ErrorCode.Forbidden;
+const ACCOUNT_SUSPENDED: string = ErrorCode.AuthAccountSuspended;
+const CLIENT_UPGRADE_REQUIRED: string = TopLevelErrorCode.ClientUpgradeRequired;
+
+const isResourceAccessError = (code: string) => code === FORBIDDEN;
 
 // A suspended, banned or deleted account has valid credentials but may not
 // transact, so it gets its own code rather than a resource-access denial.
 // `AUTH_ACCOUNT_SUSPENDED` is the signal; the prose-`reason` branch covers an
 // older API and can go once every environment serves the code.
 const isAccountInactiveError = (code: string, reason: string) =>
-  code === ErrorCode.AuthAccountSuspended ||
-  /suspended or deleted/i.test(reason);
+  code === ACCOUNT_SUSPENDED || /suspended or deleted/i.test(reason);
+
+// An extension value is unvalidated JSON; only a scalar reads as text.
+const extensionText = (value: unknown, fallback: string): string =>
+  typeof value === 'string' || typeof value === 'number'
+    ? String(value)
+    : fallback;
 
 // The key is baked into the build, so every code here is a build fault, not a
 // recoverable session state. Matched on the exact codes — never message text,
@@ -65,13 +78,14 @@ const isApiKeyError = (code: string) => API_KEY_ERROR_CODES.includes(code);
 // without the permission this operation needs, so the fix is re-provisioning
 // the key, not re-authenticating. `requiredPermission` names what was missing
 // and is never masked, so it stays readable in production.
-const API_KEY_INSUFFICIENT_PERMISSIONS =
+const API_KEY_INSUFFICIENT_PERMISSIONS: string =
   TopLevelErrorCode.ApiKeyInsufficientPermissions;
 
 const isSubscription = (op: Pick<ApolloLink.Operation, 'query'>) =>
   op.query.definitions.some(
     (def: DefinitionNode) =>
-      def.kind === 'OperationDefinition' && def.operation === 'subscription',
+      def.kind === Kind.OPERATION_DEFINITION &&
+      def.operation === OperationTypeNode.SUBSCRIPTION,
   );
 
 export const errorLink = new ErrorLink(({ error, operation, forward }) => {
@@ -92,17 +106,18 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
     }
 
     for (const err of error.errors) {
-      const code = String(err.extensions?.code || '');
+      const code = extensionText(err.extensions?.code, '');
       const message = String(err.message || '');
 
       // The build is below the server's minimum version. Terminal by
       // definition — a retry sends the same version, and a token refresh
       // succeeds and then fails identically — so bail out of the whole handler
       // before anything downstream tries to recover from it.
-      if (code === TopLevelErrorCode.ClientUpgradeRequired) {
+      if (code === CLIENT_UPGRADE_REQUIRED) {
         logger.error(
-          `App version ${CLIENT_VERSION} is below the server minimum (${String(
-            err.extensions?.minimumVersion ?? 'unknown',
+          `App version ${CLIENT_VERSION} is below the server minimum (${extensionText(
+            err.extensions?.minimumVersion,
+            'unknown',
           )}); ${operation.operationName} refused until the app is updated`,
         );
         // Every operation is refused from here on, so the user needs to be told
@@ -119,8 +134,9 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       // Bail out of the whole handler so nothing downstream tries to recover.
       if (code === API_KEY_INSUFFICIENT_PERMISSIONS) {
         logger.error(
-          `API key lacks ${String(
-            err.extensions?.requiredPermission ?? 'a required permission',
+          `API key lacks ${extensionText(
+            err.extensions?.requiredPermission,
+            'a required permission',
           )} for ${
             operation.operationName
           }; the key needs re-provisioning — ${message}`,
@@ -137,7 +153,9 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       // FORBIDDEN and would otherwise `continue` past it. `endSession`, not
       // `clearAuth` — clearing tokens alone leaves this account's entities in
       // the persisted cache for whoever signs in next.
-      if (isAccountInactiveError(code, String(err.extensions?.reason || ''))) {
+      if (
+        isAccountInactiveError(code, extensionText(err.extensions?.reason, ''))
+      ) {
         logger.error(
           `Account inactive (${operation.operationName}) — ending session`,
         );
@@ -166,7 +184,7 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
 
       if (
         isRefreshableAuthCode(code) &&
-        operation.operationName !== 'RefreshToken'
+        operation.operationName !== operationNameOf(RefreshTokenDocument)
       ) {
         // Suppress logging if refresh already in progress to avoid cascade
         if (!isRefreshing) {
@@ -179,10 +197,7 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
     }
   } else if (!CombinedProtocolErrors.is(error)) {
     // Check for known server errors first
-    if (
-      isSubscription(operation) &&
-      isKnownServerError({ message: error.message })
-    ) {
+    if (isSubscription(operation) && isKnownServerError(error)) {
       logger.warn(
         `Known server error for ${operation.operationName}:`,
         error.message,
@@ -193,8 +208,9 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
     // Network errors are neither logged (networkStatusLink sits above retryLink
     // and logs once per operation; this sits below and would log every attempt)
     // nor re-forwarded (retryLink owns retry policy, so forwarding would double
-    // query retries and RE-SEND mutations — a duplicate-write risk).
-    if (isNetworkError(error)) {
+    // query retries and RE-SEND mutations — a duplicate-write risk). An offline
+    // rejection never left the device, and its hook surfaces it.
+    if (isNetworkError(error) || isOfflineRejectedError(error)) {
       return;
     }
 

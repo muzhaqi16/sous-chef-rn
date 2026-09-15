@@ -231,7 +231,7 @@ export const OverlayBackdropProvider: React.FC<
         return id;
       }
 
-      const target = (opts?.opacity as number | undefined) ?? 0.5;
+      const target = opts?.opacity ?? 0.5;
       const sv = makeMutable(0);
       sv.set(withTiming(target, { duration: SHEET.BACKDROP_FADE_IN }));
       const entry: SlotEntry = {
@@ -324,16 +324,16 @@ export const GlobalBackdrop: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
   backdrop: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'black',
+    backgroundColor: theme.colors.black,
   },
   pressable: {
     flex: 1,
   },
-});
+}));

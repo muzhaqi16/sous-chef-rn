@@ -1,6 +1,7 @@
 import React from 'react';
 import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
+import type { Translate } from '#/i18n/types';
 import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -11,7 +12,7 @@ import {
   PantryItemBatchFragmentDoc,
   type PantryItemBatchFragment,
 } from '#features/pantry/graphql/pantryFragments.generated';
-import { formatQuantity } from '#/utils/formatQuantity';
+import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 import { Badge } from '#components/atoms/Badge';
 import { formatMonthDay } from '#/utils/formatters/date';
@@ -24,14 +25,10 @@ interface BatchListItemProps {
 }
 
 /**
- * Takes `t` rather than using the module-level helper: `daysLeft` is a plural
- * key, and only the hook's `t` accepts the `{ count }` option that selects
- * between the _one and _other forms.
+ * Takes the hook's `t` rather than the module-level helper, which does not
+ * re-render on a language change.
  */
-const getExpiryText = (
-  expiresAt: string | null | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string,
-) => {
+const getExpiryText = (expiresAt: string | null | undefined, t: Translate) => {
   if (!expiresAt) return null;
   const now = new Date();
   const expiry = new Date(expiresAt);
@@ -103,14 +100,14 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
         </View>
 
         <Text role="caption" style={styles.quantityText}>
-          {formatQuantity(batch.quantity)} {unitSymbol ?? ''}
+          {formatQuantityForDisplay(batch.quantity)} {unitSymbol ?? ''}
         </Text>
 
         {expiryInfo ? (
           <View style={styles.expiryRow}>
             <Text
               role="caption"
-              tone={expiryInfo.isExpired ? 'error' : 'warning'}
+              tone={expiryInfo.isExpired ? 'danger' : 'warning'}
             >
               {expiryInfo.text}
             </Text>
@@ -228,7 +225,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     gap: theme.spacing.sm,
     marginLeft: theme.spacing.md,
-    paddingTop: 2,
+    paddingTop: theme.spacing['2xs'],
   },
   actionButton: {
     padding: theme.spacing.xs,

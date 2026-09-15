@@ -120,7 +120,7 @@ describe('ListTemplate', () => {
     const CustomList = ({ items: listItems }: { items: TestItem[] }) => (
       <>
         {listItems.map(item => (
-          <Text key={item.id}>{`custom-${item.title}`}</Text>
+          <Text role="body" key={item.id}>{`custom-${item.title}`}</Text>
         ))}
       </>
     );
@@ -131,7 +131,7 @@ describe('ListTemplate', () => {
 
   it('does not show loading empty state when custom component provided', () => {
     const CustomList = ({ emptyState }: { emptyState?: TestEmptyState }) => (
-      <Text>{emptyState?.title || 'custom'}</Text>
+      <Text role="body">{emptyState?.title || 'custom'}</Text>
     );
     render(
       <ListTemplate
@@ -151,7 +151,10 @@ describe('ListTemplate', () => {
 
   it('renders ListHeaderComponent', () => {
     render(
-      <ListTemplate items={items} ListHeaderComponent={<Text>Header</Text>} />,
+      <ListTemplate
+        items={items}
+        ListHeaderComponent={<Text role="body">Header</Text>}
+      />,
     );
     expect(screen.getByText('Header')).toBeTruthy();
   });
@@ -168,7 +171,7 @@ describe('ListTemplate', () => {
       onItemPress: (id: string) => void;
     }) => {
       seen.push(onItemPress);
-      return <Text>custom</Text>;
+      return <Text role="body">custom</Text>;
     };
 
     render(
@@ -204,7 +207,7 @@ describe('ListTemplate', () => {
     const Row = () => {
       const factory = useItemSwipeActions();
       const built = factory?.('row-1');
-      return <Text>{built?.left?.[0]?.key ?? 'no-actions'}</Text>;
+      return <Text role="body">{built?.left?.[0]?.key ?? 'no-actions'}</Text>;
     };
     const Consumer = ({
       itemSwipeActions,
@@ -253,7 +256,7 @@ describe('ListTemplate', () => {
     const seen: Array<unknown> = [];
     const Consumer = ({ itemSwipeActions }: { itemSwipeActions?: unknown }) => {
       seen.push(itemSwipeActions);
-      return <Text>custom</Text>;
+      return <Text role="body">custom</Text>;
     };
 
     render(

@@ -15,6 +15,10 @@ import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
 import { t } from '#/i18n';
 import { appConfig } from '#/config/appConfig';
+import {
+  isDataStoreContention,
+  isKeychainKeyInvalidated,
+} from '#/utils/errors/libraryErrorMessages';
 
 // Derived from `appConfig.identity.keychainNamespace` so a fork sets it once,
 // in one file. The values must stay byte-identical for THIS app: the OS keychain
@@ -65,7 +69,8 @@ const queueOperation = async <T>(operation: () => Promise<T>): Promise<T> => {
     };
 
     operationQueue.push(wrappedOperation);
-    processQueue();
+    // Never rejects: each operation settles its own promise.
+    void processQueue();
   });
 };
 
@@ -89,7 +94,9 @@ const processQueue = async () => {
 
   // Process next operation if any
   if (operationQueue.length > 0) {
-    setImmediate(processQueue);
+    setImmediate(() => {
+      void processQueue();
+    });
   }
 };
 
@@ -187,38 +194,6 @@ export async function saveCredentials(
 }
 
 /**
- * Android reports a `BIOMETRY_CURRENT_SET` entry whose enrolment changed as a
- * permanently invalidated key. iOS removes the item instead, which surfaces as
- * a resolved-but-empty read. Both mean the same thing: this slot can never be
- * unlocked again and must be re-enrolled.
- */
-const INVALIDATED =
-  /Key\s*Permanently\s*Invalidated|BiometryCurrentSet|changed or deleted their auth/i;
-
-// react-native-keychain rejects every `CryptoFailedException` as
-// `E_CRYPTO_FAILED`, and its biometric handler builds one for EVERY androidx
-// outcome — a cancel included — formatted `code: <n>, msg: …`. Only the prompt
-// callback writes that marker, so it means authentication ended without
-// succeeding, which is never the same thing as an unusable key.
-const PROMPT_OUTCOME = /(?:^|\s)code:\s*\d+/;
-
-// The Android bridge spreads one rejection across `code`, `name` and
-// `message`; join them so the signal is read wherever it landed.
-function rejectionText(error: unknown): string {
-  if (error === null || typeof error !== 'object') return String(error);
-  const { code, name, message } = error as Record<string, unknown>;
-  return [code, name, message]
-    .filter((part): part is string => typeof part === 'string')
-    .join(' ');
-}
-
-function isPermanentlyInvalidated(error: unknown): boolean {
-  const text = rejectionText(error);
-  if (PROMPT_OUTCOME.test(text)) return false;
-  return INVALIDATED.test(text);
-}
-
-/**
  * Retrieve a specific account's stored credentials, prompting for biometrics.
  * A slot invalidated by a biometric enrolment change is cleared rather than
  * left behind, so the login screen stops offering a prompt that cannot succeed.
@@ -242,7 +217,7 @@ export async function loadCredentials(
     }
     return { username: creds.username, password: creds.password };
   } catch (error) {
-    if (isPermanentlyInvalidated(error)) {
+    if (isKeychainKeyInvalidated(error)) {
       await discardInvalidatedCredentials(email);
     }
     // Cancellation and transient failures keep the slot: the person can retry.
@@ -290,8 +265,7 @@ export async function hasCredentials(email: string): Promise<boolean> {
       return result;
     } catch (err) {
       // Handle Android DataStore concurrency issue
-      const message = err instanceof Error ? err.message : String(err);
-      if (message.includes('multiple DataStores active')) {
+      if (isDataStoreContention(err)) {
         // Wait a bit and retry once
         await new Promise(resolve => setTimeout(resolve, 100));
         try {

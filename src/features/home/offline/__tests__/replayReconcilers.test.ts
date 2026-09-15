@@ -5,7 +5,7 @@ import {
   writeOptimisticHome,
 } from '#features/home/cache/optimisticHome';
 import { Home_HomeDetailFragmentDoc } from '#features/home/cache/home.generated';
-import { HOME_REPLAY_RECONCILERS } from '../replayReconcilers';
+import { reconcileCreateHomeReplay } from '../replayReconcilers';
 
 /**
  * The membership row is the ONE row a home create cannot key: `CreateHomeInput`
@@ -47,7 +47,7 @@ const readHome = (cache: ReturnType<typeof makeCache>) =>
   });
 
 const replay = (cache: ReturnType<typeof makeCache>, data: unknown) =>
-  HOME_REPLAY_RECONCILERS.CreateHome?.(cache, { input: { id: HOME_ID } }, data);
+  reconcileCreateHomeReplay(cache, { input: { id: HOME_ID } }, data);
 
 const payloadWithMembership = (membershipId: string | null) => ({
   createHome: {

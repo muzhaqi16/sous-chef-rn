@@ -45,7 +45,7 @@ const cachedHomes = (cache: ApolloCache) => {
         if (!existingHomes || !existingHomes.edges) return existingHomes;
 
         existingHomes.edges.forEach((edge: HomeEdge) => {
-          const homeRef = ('node' in edge && edge.node) || edge;
+          const homeRef = 'node' in edge ? edge.node ?? edge : edge;
           if (!homeRef) return;
           const cacheId = cache.identify(homeRef);
           if (cacheId)
@@ -124,8 +124,7 @@ export const restoreDefaultHome = (
     cache.modify({
       id: cacheId,
       fields: {
-        isDefault: (_existing, { DELETE }) =>
-          wasDefault === undefined ? DELETE : wasDefault,
+        isDefault: (_existing, { DELETE }) => wasDefault ?? DELETE,
       },
     });
   });

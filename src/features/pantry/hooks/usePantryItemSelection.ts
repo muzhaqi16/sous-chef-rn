@@ -1,4 +1,9 @@
-import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import {
+  skipToken,
+  useApolloClient,
+  useMutation,
+  useQuery,
+} from '@apollo/client/react';
 import type { ApolloCache } from '@apollo/client';
 import {
   GetPantryDocument,
@@ -75,10 +80,10 @@ function buildIndex(
  */
 export function usePantryItemSelection(pantryId: string | null | undefined) {
   const client = useApolloClient();
-  const { data, loading } = useQuery(GetPantryDocument, {
-    variables: { id: pantryId!, itemsFirst: 100 },
-    skip: !pantryId,
-  });
+  const { data, loading } = useQuery(
+    GetPantryDocument,
+    pantryId ? { variables: { id: pantryId, itemsFirst: 100 } } : skipToken,
+  );
 
   const [createPantryItem] = useMutation(CreatePantryItemDocument);
   const [deletePantryItem] = useMutation(DeletePantryItemDocument);
@@ -111,8 +116,10 @@ export function usePantryItemSelection(pantryId: string | null | undefined) {
     ): Promise<MutationOutcome<DeletePantryItemMutation>> =>
       deletePantryItem({
         variables: { input: { id: pantryItemId } },
-        update: cache =>
-          removeFromPantryItemsCache(cache, pantryId!, pantryItemId),
+        update: cache => {
+          if (pantryId)
+            removeFromPantryItemsCache(cache, pantryId, pantryItemId);
+        },
       }),
   };
 }

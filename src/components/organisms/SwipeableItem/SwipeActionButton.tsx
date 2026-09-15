@@ -13,7 +13,7 @@ import Animated, {
 import { withUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { styles } from '#components/organisms/SwipeableItem/styles';
-import { ActionButtonProps } from '#components/organisms/SwipeableItem/types';
+import type { ActionButtonProps } from '#components/organisms/SwipeableItem/types';
 import { Text } from '#components/atoms/Text';
 
 // `onScrim`, not `onPrimary`: the underlay is `charade.950`, not the brand

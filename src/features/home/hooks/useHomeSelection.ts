@@ -16,7 +16,6 @@ import {
   defaultPantryOf,
   readDefaultPantryId,
 } from '#features/home/utils/homePantries';
-import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 import { useMarkHomeAsDefault } from '#features/home/hooks/useMarkHomeAsDefault';
 import { isDefaultHomeSyncPending } from '#features/home/store/useDefaultHomeSyncStore';
 import {
@@ -91,20 +90,16 @@ export function useHomeSelection({
     setIsHomeSelectionReady(false);
     setHomeAndPantry(homeId, defaultPantryOf(targetHome)?.id ?? null);
 
-    const { status, serverPantry, result } = await markAsDefault(homeId);
+    const { status, serverPantry, failure } = await markAsDefault(homeId);
 
     if (status === 'failed' || status === 'refused') {
       setHomeAndPantry(previousHomeId, previousPantryId);
       setIsHomeSelectionReady(true);
-      alertService.alert(
-        t('labels.error'),
-        status === 'refused'
-          ? localizedRefusalMessage(
-              result?.data?.markHomeAsDefault,
-              t('errors.setDefaultHomeFailed'),
-            )
-          : t('errors.setDefaultHomeFailed'),
-      );
+      const { title, body } = failure ?? {
+        title: t('labels.error'),
+        body: t('errors.setDefaultHomeFailed'),
+      };
+      alertService.alert(title, body);
       return false;
     }
 
@@ -122,7 +117,6 @@ export function useHomeSelection({
   };
 
   return {
-    selectedHomeId,
     setDefaultHome,
     setSelectedHomeId,
     setSelectedPantryId,

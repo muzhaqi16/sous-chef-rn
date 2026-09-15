@@ -1,5 +1,6 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useEffect, useRef, useState, useImperativeHandle } from 'react';
-import { View } from 'react-native';
+import { View, type LayoutChangeEvent } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
@@ -7,11 +8,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   Pressable,
+  refreshSpinnerOffset,
   ThemedRefreshControl,
 } from '#components/atoms/themedComponents';
 import { getScrollClearancePadding } from '#constants/layout';
 import { Icon } from '#utils/iconUtils';
-import { LocationFilter } from '#features/pantry/utils/pantryFilters';
+import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import {
   PantrySortDirection,
   PREFERENCE_DEFAULTS,
@@ -108,7 +110,9 @@ export const PantryContent = React.forwardRef<
       onEndReached,
       refreshing = false,
       loading = false,
+      itemsFailure,
       fetching = false,
+      searching = false,
       serverMode = false,
       noHomeSelected,
       noHomes,
@@ -202,6 +206,13 @@ export const PantryContent = React.forwardRef<
     // local render window either; DRAW_DISTANCE alone bounds the mounted set.
     const sortedItems = useServerSort ? items : sortItems(items);
 
+    // Measured, not estimated: the alert bar comes and goes.
+    const [chromeHeight, setChromeHeight] = useState(0);
+    const handleChromeLayout = (event: LayoutChangeEvent) => {
+      const next = Math.round(event.nativeEvent.layout.height);
+      setChromeHeight(prev => (prev === next ? prev : next));
+    };
+
     // A tab switch whose new page is still fetching (server mode only). Cleared
     // only on a true→false `fetching` transition, never when fetching was
     // already false at press time — the Apollo refetch is one render behind.
@@ -241,7 +252,10 @@ export const PantryContent = React.forwardRef<
     // fast load is never delayed by presentation smoothing.
     const initialSkeletons = awaitingItems || (!hasShownContent && loading);
     const switchSkeletons = switching && fetching;
-    const showSkeletons = initialSkeletons || switchSkeletons;
+    // Until a server search answers, an empty list is not "no results".
+    const searchSkeletons = searching && items.length === 0;
+    const showSkeletons =
+      initialSkeletons || switchSkeletons || searchSkeletons;
 
     // While skeletons show, hand the list only the sticky tabs: chrome and tabs
     // stay visible, and stale rows from a previous tab can't flash through.
@@ -369,7 +383,7 @@ export const PantryContent = React.forwardRef<
               renderScrollComponent={SwipeAwareScrollComponent}
               ref={flashListRef}
               CellRendererComponent={perfCallbacks.CellRendererComponent}
-              testID="pantry-list"
+              testID={pantryTestIDs.list}
               data={listData}
               renderItem={renderPantryListItem}
               keyExtractor={pantryListKeyExtractor}
@@ -389,16 +403,19 @@ export const PantryContent = React.forwardRef<
               refreshControl={
                 onRefresh ? (
                   <ThemedRefreshControl
-                    testID="pantry-refresh-control"
+                    testID={pantryTestIDs.refreshControl}
                     refreshing={refreshing}
                     onRefresh={onRefresh}
+                    // This screen's chrome scrolls INSIDE the list, so the
+                    // spinner has to clear it as well as its own diameter.
+                    progressViewOffset={refreshSpinnerOffset(chromeHeight)}
                   />
                 ) : undefined
               }
               ListHeaderComponent={
                 // The positioned parent the skeleton flap anchors to
                 // (`top: '100%'`, flush below the chrome).
-                <View>
+                <View onLayout={handleChromeLayout}>
                   <View style={styles.header}>
                     <PantryHeader
                       userName={userName}
@@ -417,7 +434,7 @@ export const PantryContent = React.forwardRef<
                       onChangeText={onSearchChange}
                       placeholder={t('pantryScreen.searchPlaceholder')}
                       showSearchIcon={true}
-                      testID="pantry-search-input"
+                      testID={pantryTestIDs.searchInput}
                       innerRightIcon={
                         <View
                           ref={settingsIconRef}
@@ -490,6 +507,7 @@ export const PantryContent = React.forwardRef<
                     onSelectHome={onSelectHome}
                     onCreatePantry={onCreatePantry}
                     overallItemCount={locationCounts.all ?? 0}
+                    failure={itemsFailure}
                   />
                 ) : (
                   <PaginationFooter
@@ -535,7 +553,8 @@ const styles = StyleSheet.create(theme => ({
   },
   header: {
     backgroundColor: theme.colors.background,
-    paddingTop: theme.spacing.base,
+    // The lead-in `Screen`'s `tab` chrome gives every other tab root.
+    paddingTop: theme.spacing.sm,
     paddingBottom: theme.spacing.sm,
   },
   // `stickyHeaderActive` applies while pinned, so the row keeps an opaque

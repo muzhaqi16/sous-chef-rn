@@ -15,10 +15,9 @@ import {
 import { readCopyableList } from '#features/shoppingList/cache/copySource';
 import { listFromTemplate } from '#features/shoppingList/utils/listFromTemplate';
 import { useCopyShoppingList } from './useCopyShoppingList';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
 import { toastService } from '#/services/toastService';
-import { errorService } from '#/services/errorService';
 
 export function useShoppingListTemplate() {
   const { t } = useTranslation();
@@ -47,29 +46,19 @@ export function useShoppingListTemplate() {
         'Mark As Template',
       );
 
-    let result;
-    try {
-      result = await markMutation({
-        variables: { input: { id, templateName, saveItems } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Mark As Template error:',
-      });
-    }
-
-    if (!result) {
-      revert();
-      return false;
-    }
-    if (
-      alertIfRejected(result, t('shoppingListScreens.failedToSaveTemplate'))
-    ) {
-      revert();
-      return false;
-    }
-    return true;
+    const settled = await settleMutation(
+      () =>
+        markMutation({
+          variables: { input: { id, templateName, saveItems } },
+          context: { localFirst: true },
+        }),
+      {
+        document: MarkAsTemplateDocument,
+        fallback: t('shoppingListScreens.failedToSaveTemplate'),
+        onFailed: revert,
+      },
+    );
+    return settled.status !== 'failed';
   };
 
   /**

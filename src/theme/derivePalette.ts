@@ -42,13 +42,21 @@ export function derivePalette(hex: string): DerivedPalette {
     .mode('lch')
     .colors(SHADE_KEYS.length);
 
-  const palette = {} as DerivedPalette;
-  scale.forEach((color, i) => {
-    const key = SHADE_KEYS[i];
-    if (key) palette[key] = color;
-  });
-
-  return palette;
+  // `colors(n)` returns exactly n stops, so the fallback is never read.
+  const shade = (index: number) => scale[index] ?? hex;
+  return {
+    '50': shade(0),
+    '100': shade(1),
+    '200': shade(2),
+    '300': shade(3),
+    '400': shade(4),
+    '500': shade(5),
+    '600': shade(6),
+    '700': shade(7),
+    '800': shade(8),
+    '900': shade(9),
+    '950': shade(10),
+  };
 }
 
 /**

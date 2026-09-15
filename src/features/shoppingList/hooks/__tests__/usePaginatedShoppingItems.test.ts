@@ -228,7 +228,7 @@ describe('usePaginatedShoppingItems', () => {
     await waitFor(() =>
       expect(result.current.state.unpurchased.items).toHaveLength(1),
     );
-    result.current.state.unpurchased.loadMore();
+    await result.current.state.unpurchased.loadMore();
     expect(mockLoadMore).toHaveBeenCalled();
   });
 

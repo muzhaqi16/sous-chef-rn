@@ -1,9 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
 import { ConversionPreview } from '#features/pantry/components/ConversionPreview';
 import { FractionQuickSelect } from '#features/pantry/components/FractionQuickSelect';
-import { formatQuantity } from '#/utils/formatQuantity';
+import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { useTranslation } from '#/i18n';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
@@ -72,19 +71,16 @@ export const QuantityInputFeedback: React.FC<QuantityInputFeedbackProps> = ({
         <View style={commonStyles.bottomSheetInfoRow}>
           {showRemaining ? (
             <Text
-              style={[
-                commonStyles.bottomSheetHelperText,
-                styles.helperTextFlush,
-                remaining < 0 && commonStyles.bottomSheetHelperTextError,
-              ]}
+              role={remaining < 0 ? 'error' : 'caption'}
+              tone={remaining < 0 ? 'error' : 'secondary'}
             >
-              {remaining >= 0
+              {remaining >= 0 || availableInUnit === null
                 ? t('deduction.remainingAfter', {
-                    amount: formatQuantity(remaining),
+                    amount: formatQuantityForDisplay(remaining),
                     unit: activeUnitSymbol,
                   })
                 : t('deduction.exceedsAvailable', {
-                    amount: formatQuantity(availableInUnit!),
+                    amount: formatQuantityForDisplay(availableInUnit),
                     unit: activeUnitSymbol,
                   })}
             </Text>
@@ -101,9 +97,3 @@ export const QuantityInputFeedback: React.FC<QuantityInputFeedbackProps> = ({
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  // The row already spaces its children; the shared helper text's own top
-  // margin would double it.
-  helperTextFlush: { marginTop: 0 },
-});

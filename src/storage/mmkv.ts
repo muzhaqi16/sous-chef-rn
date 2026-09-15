@@ -1,5 +1,5 @@
 import { createMMKV, existsMMKV, type MMKV } from 'react-native-mmkv';
-import { StateStorage } from 'zustand/middleware';
+import type { StateStorage } from 'zustand/middleware';
 import { logger } from '#/utils/environment';
 import {
   DeviceKeyManager,
@@ -183,10 +183,10 @@ export const storage: MMKV = new Proxy({} as MMKV, {
           `Ensure initializeSecureStorage() is called in index.js before any sync storage access.`,
       );
     }
-    const value = Reflect.get(secureStorageInstance, prop);
+    const value: unknown = Reflect.get(secureStorageInstance, prop);
     if (typeof value !== 'function') return value;
     // Preserve jest.fn() identity so tests can assert via toHaveBeenCalledWith.
-    if ((value as { mock?: unknown }).mock != null) return value;
+    if ('mock' in value && value.mock != null) return value;
     return (value as (...args: unknown[]) => unknown).bind(
       secureStorageInstance,
     );

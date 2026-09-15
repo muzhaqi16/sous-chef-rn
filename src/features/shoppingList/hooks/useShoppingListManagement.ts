@@ -15,6 +15,7 @@ export function useShoppingListManagement(currentListId: string | undefined) {
     notFound: listNotFound,
     error: listError,
     loading: detailsLoading,
+    refetch: refetchDetails,
   } = useShoppingListItemsQuery(currentListId);
 
   const {
@@ -25,7 +26,7 @@ export function useShoppingListManagement(currentListId: string | undefined) {
       error: itemsError,
       isTransitioning,
     },
-    actions: { refetch },
+    actions: { refetch: refetchItems },
   } = usePaginatedShoppingItems({
     listId: currentListId,
   });
@@ -44,10 +45,15 @@ export function useShoppingListManagement(currentListId: string | undefined) {
       : 0);
 
   const loading = itemsLoading;
-  const error = listError || itemsError;
+  const error = listError ?? itemsError;
 
-  const { addItem, removeItem, toggleItem, recordPurchase } =
-    useShoppingListItemMutations(currentListId, refetch);
+  const { removeItem, toggleItem, recordPurchase } =
+    useShoppingListItemMutations(currentListId, refetchItems);
+
+  // The permissions and counts a retry or pull-to-refresh must also recover.
+  const refetch = async () => {
+    await Promise.all([refetchDetails(), refetchItems()]);
+  };
 
   // Plain state: the filtering below is PER TAB, so a list-filtering hook was
   // being handed an empty array purely to borrow its query state — and its
@@ -91,7 +97,6 @@ export function useShoppingListManagement(currentListId: string | undefined) {
     searchQuery,
     setSearchQuery,
 
-    addItem,
     removeItem,
     toggleItem,
     recordPurchase,

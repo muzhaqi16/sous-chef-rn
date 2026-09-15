@@ -182,5 +182,13 @@
   "homeRoles": {
     "owner": "Pronar",
     "member": "Anëtar"
+  },
+  "inviteStatus": {
+    "PENDING": "Në pritje",
+    "ACCEPTED": "Pranuar",
+    "DECLINED": "Refuzuar",
+    "EXPIRED": "Skaduar",
+    "REVOKED": "Revokuar",
+    "USED": "Përdorur"
   }
 }

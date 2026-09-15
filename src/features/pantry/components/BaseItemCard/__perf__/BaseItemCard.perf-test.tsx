@@ -1,3 +1,4 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import React from 'react';
 import { View } from 'react-native';
 import { measureRenders } from 'reassure';
@@ -64,7 +65,7 @@ test('BaseItemCard x40 swipeable rows', async () => {
         <BaseItemCard
           key={index}
           itemId={`item-${index}`}
-          testID={`perf-row-${index}`}
+          testID={pantryTestIDs.item(`item-${index}`)}
           onPress={noop}
           leftActions={LEFT_ACTIONS}
           rightActions={RIGHT_ACTIONS}

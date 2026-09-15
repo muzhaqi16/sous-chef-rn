@@ -18,7 +18,6 @@ export enum QueryComplexityErrorType {
  */
 export interface QueryComplexityDetails {
   errorType: QueryComplexityErrorType;
-  message: string;
   maxDepth?: number;
   actualDepth?: number;
   maxFields?: number;
@@ -54,7 +53,7 @@ interface ComplexityErrorLike extends ComplexityErrorEntry {
 /** Narrow an unknown error to the loose complexity-error shape, or null. */
 function toComplexityError(error: unknown): ComplexityErrorLike | null {
   if (typeof error !== 'object' || error === null) return null;
-  return error as ComplexityErrorLike;
+  return error;
 }
 
 /**
@@ -117,22 +116,14 @@ export function getQueryComplexityDetails(
 
   const { code, ...details } = complexityError.extensions;
   const errorType = code as QueryComplexityErrorType;
-  const message = complexityError.message || 'Query complexity limit exceeded';
-
   return {
     errorType,
-    message,
     ...details,
   };
 }
 
-/**
- * Get user-friendly message for query complexity error
- *
- * @param error - Error containing query complexity issue
- * @returns User-friendly error message
- */
-export function getQueryComplexityMessage(error: unknown): string {
+/** What the complexity limit refused, for the log; the user sees `errors.codes.*`. */
+export function describeQueryComplexity(error: unknown): string {
   const details = getQueryComplexityDetails(error);
 
   if (!details) {
@@ -173,10 +164,8 @@ export function handleQueryComplexityError(
   }
 
   const details = getQueryComplexityDetails(error);
-  const message = getQueryComplexityMessage(error);
-
   logger.warn('⚠️ Query complexity error detected:', {
-    message,
+    description: describeQueryComplexity(error),
     details,
     error,
   });
@@ -187,7 +176,12 @@ export function handleQueryComplexityError(
     onRetryWithReducedComplexity
   ) {
     logger.debug('🔄 Retrying with reduced pagination...');
-    onRetryWithReducedComplexity();
+    const retry = onRetryWithReducedComplexity();
+    if (retry instanceof Promise) {
+      retry.catch(retryError =>
+        logger.warn('Retry with reduced pagination failed', retryError),
+      );
+    }
   }
 
   return true;

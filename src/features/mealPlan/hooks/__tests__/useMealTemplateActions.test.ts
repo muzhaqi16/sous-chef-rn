@@ -20,7 +20,10 @@ import {
   CreateMealTemplateDocument,
   DeleteMealTemplateDocument,
 } from '#features/mealPlan/graphql/mealTemplate.generated';
-import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import {
+  CreateMealPlanDocument,
+  CreateMealPlanItemDocument,
+} from '#features/mealPlan/graphql/mealPlan.generated';
 import { UseMealTemplateActions_TemplateFragmentDoc } from '#features/mealPlan/hooks/useMealTemplateActions.generated';
 import { useMealTemplateActions } from '../useMealTemplateActions';
 import {
@@ -92,6 +95,10 @@ const createTemplateMock = () =>
     partial: true,
   });
 
+// Queued: the plan create resolves with a null payload and keeps its local row.
+const queuedPlanMock = () =>
+  recordMock(CreateMealPlanDocument, { data: { createMealPlan: null } });
+
 const createItemMock = () =>
   recordMock(CreateMealPlanItemDocument, {
     data: {
@@ -129,7 +136,7 @@ describe('useMealTemplateActions', () => {
     expect(result.current).toHaveProperty('deleteTemplate');
     expect(result.current).toHaveProperty('duplicateTemplate');
     expect('isApiUnavailable' in result.current).toBe(false);
-    expect(result.current.loading).toBe(false);
+    expect(result.current.creatingFromTemplate).toBe(false);
   });
 
   describe('laying a template onto dates', () => {
@@ -153,7 +160,7 @@ describe('useMealTemplateActions', () => {
       useStore.setState({ apiReachable: false });
       const item = createItemMock();
       const { result } = renderHookWithApollo(() => useMealTemplateActions(), {
-        operationMocks: [item.mock],
+        operationMocks: [queuedPlanMock().mock, item.mock],
         cache: seeded(),
       });
 
@@ -215,6 +222,37 @@ describe('useMealTemplateActions', () => {
         cache.extract()[`MealTemplate:${response?.mealTemplateId}`],
       ).toMatchObject({ name: 'Weeknights (Copy)' });
     });
+
+    it('takes the copy back and claims no success when the create is refused', async () => {
+      const refused = recordMock(CreateMealTemplateDocument, {
+        data: {
+          createMealTemplate: {
+            __typename: 'ValidationError',
+            code: ErrorCode.ValidationFailed,
+            message: 'raw server English',
+          },
+        },
+      });
+      const cache = seeded();
+      const { result } = renderHookWithApollo(() => useMealTemplateActions(), {
+        operationMocks: [refused.mock],
+        cache,
+      });
+
+      const response = await result.current.duplicateTemplate(
+        TEMPLATE_ID,
+        'Weeknights (Copy)',
+      );
+
+      expect(response).toBeNull();
+      expect(toastService.success).not.toHaveBeenCalled();
+      const copies = Object.keys(cache.extract()).filter(
+        key =>
+          key.startsWith('MealTemplate:') &&
+          key !== `MealTemplate:${TEMPLATE_ID}`,
+      );
+      expect(copies).toEqual([]);
+    });
   });
 
   describe('deleting a template', () => {
@@ -240,9 +278,9 @@ describe('useMealTemplateActions', () => {
       const del = recordMock(DeleteMealTemplateDocument, {
         data: {
           deleteMealTemplate: {
-            __typename: 'NotFoundError',
-            code: ErrorCode.NotFound,
-            message: 'Template not found',
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+            message: 'raw server English',
           },
         },
       });

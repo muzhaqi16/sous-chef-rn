@@ -374,7 +374,7 @@ describe('Navigation (RootNavigator)', () => {
   describe('the app_fully_drawn_ms interactive gate', () => {
     const { NativePerformanceService } = jest.requireMock(
       '#services/performance/NativePerformanceService',
-    ) as { NativePerformanceService: { noteInteractiveGate: jest.Mock } };
+    );
 
     it('does not suppress the metric when only the PERSISTED state was a gate', () => {
       // The regression. `navigationState` is persisted and rehydrated before

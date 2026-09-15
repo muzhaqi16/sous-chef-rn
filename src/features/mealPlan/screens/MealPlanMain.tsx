@@ -1,7 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { t as tGlobal } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseISO } from 'date-fns';
@@ -17,8 +16,7 @@ import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 import { AddMealSheet } from '#features/mealPlan/components/AddMealSheet';
 import { SaveAsTemplateSheet } from '#features/mealPlan/components/SaveAsTemplateSheet';
-import { TemplateBrowserSheet } from '#features/mealPlan/components/TemplateBrowserSheet';
-import { TemplatePreviewSheet } from '#features/mealPlan/components/TemplatePreviewSheet';
+import { TemplateSheets } from '#features/mealPlan/components/TemplateSheets';
 import { GenerateShoppingListSheet } from '#features/mealPlan/components/GenerateShoppingListSheet';
 import { MealPlanSettingsSheet } from '#features/mealPlan/components/MealPlanSettingsSheet';
 import { DuplicatePlanSheet } from '#features/mealPlan/components/DuplicatePlanSheet';
@@ -30,60 +28,62 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
-import { useMealPlans } from '#features/mealPlan/hooks/useMealPlans';
+import {
+  useMealPlanDisplay,
+  useMealPlans,
+} from '#features/mealPlan/hooks/useMealPlans';
 import { useActiveMealPlan } from '#features/mealPlan/hooks/useActiveMealPlan';
 import { useMealPlanItemActions } from '#features/mealPlan/hooks/useMealPlanItemActions';
 import { useMealPlanCalendar } from '#features/mealPlan/hooks/useMealPlanCalendar';
 import { useDailyMeals } from '#features/mealPlan/hooks/useDailyMeals';
 import { useMealTemplateActions } from '#features/mealPlan/hooks/useMealTemplateActions';
 import { useMealPlanSelectorConfig } from '#features/mealPlan/hooks/useMealPlanSelectorConfig';
+import { MealPlanFilterBar } from '#features/mealPlan/components/MealPlanFilterBar';
 import {
-  MealPlanFilterBar,
-  filterMealPlans,
   EMPTY_MEAL_PLAN_FILTERS,
   type MealPlanFilterState,
-} from '#features/mealPlan/components/MealPlanFilterBar';
+} from '#features/mealPlan/utils/mealPlanFilters';
 import { useGenerateShoppingList } from '#features/mealPlan/hooks/useGenerateShoppingList';
 import { useDuplicateMealPlan } from '#features/mealPlan/hooks/useDuplicateMealPlan';
 import { useMealPlanPermissions } from '#features/mealPlan/hooks/useMealPlanPermissions';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { MealPlanSkeleton } from '#features/mealPlan/components/skeletons/MealPlanSkeleton';
 import { useAppStore } from '#store/useAppStore';
-import {
-  MealType,
-  type TemplateCategory,
-} from '#/graphql/generated/schemaTypes';
+import type { MealType } from '#/graphql/generated/schemaTypes';
+import type { TemplateCategory } from '#/graphql/generated/schemaTypes';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
-import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { toastService } from '#/services/toastService';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { toDateKey } from '#/utils/dateUtils';
-import { Screen } from '#components/templates/Screen';
-import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
+import { Screen, type ScreenHeaderConfig } from '#components/templates/Screen';
+import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 
-/**
- * Gates the heavy work behind DeferredScreen: the skeleton paints instantly and
- * MealPlanMainInner mounts on the deferred re-render. `tGlobal` here on purpose
- * — subscribing to language changes would re-render this wrapper to flip
- * skeleton labels the inner screen replaces anyway.
- */
+/** The chrome a plan-less Meal Plan shows, before the DeferredScreen gate and
+ *  again while the plan list is still arriving. */
+const MealPlanMainFallback: React.FC = () => {
+  const { t } = useTranslation();
+  return (
+    <Screen
+      testID={mealPlanTestIDs.screen}
+      header={{
+        variant: 'tab',
+        label: t('mealPlanMain.label'),
+        title: t('labels.mealPlan'),
+      }}
+      scroll="list"
+      gutter="none"
+    >
+      <MealPlanSkeleton />
+    </Screen>
+  );
+};
+
+/** Gates the heavy work behind DeferredScreen: the skeleton paints instantly and
+ *  MealPlanMainInner mounts on the deferred re-render. */
 export const MealPlanMain: React.FC = () => (
   <DeferredScreen
-    fallback={
-      <Screen
-        testID="meal-plan-screen"
-        header={{
-          variant: 'tab',
-          label: tGlobal('mealPlanMain.label'),
-          title: tGlobal('labels.mealPlan'),
-        }}
-        scroll="list"
-        gutter="none"
-      >
-        <MealPlanSkeleton />
-      </Screen>
-    }
+    fallback={<MealPlanMainFallback />}
     component={MealPlanMainInner}
   />
 );
@@ -112,9 +112,6 @@ const MealPlanMainInner: React.FC = () => {
   // Template state
   const [saveTemplateVisible, setSaveTemplateVisible] = useState(false);
   const [templateBrowserVisible, setTemplateBrowserVisible] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] =
-    useState<MealTemplateDisplayFragment | null>(null);
-  const [templatePreviewVisible, setTemplatePreviewVisible] = useState(false);
 
   // Shopping list generation state
   const [shoppingListSheetVisible, setShoppingListSheetVisible] =
@@ -133,12 +130,7 @@ const MealPlanMainInner: React.FC = () => {
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [duplicateVisible, setDuplicateVisible] = useState(false);
 
-  const {
-    createPlanFromTemplate,
-    createTemplateFromPlan,
-    creatingFromTemplate,
-    creatingTemplate,
-  } = useMealTemplateActions();
+  const { createTemplateFromPlan, creatingTemplate } = useMealTemplateActions();
 
   // Fetch meal plans and resolve active plan
   const {
@@ -150,7 +142,10 @@ const MealPlanMainInner: React.FC = () => {
       error: plansError,
       hasResult: plansHasResult,
       skipped: plansSkipped,
+      hasMore: plansHaveMore,
+      loadingMore: plansLoadingMore,
     },
+    actions: { loadMore: loadMorePlans, refetch: refetchPlans },
   } = useMealPlans();
 
   // The action cluster carries the offline pill (visible only while offline)
@@ -175,7 +170,7 @@ const MealPlanMainInner: React.FC = () => {
   // Lifecycle: optimistic restoration, cache persistence, perf tracking
   useTabScreenLifecycle({
     screenName: 'MealPlanMain',
-    optimisticTypes: ['MealPlan', 'MealPlanItem'],
+    optimisticTypes: ['MealPlanItem'],
     telemetryProperties: () => ({
       plan_id: activePlanId,
       item_count: items.length,
@@ -183,9 +178,16 @@ const MealPlanMainInner: React.FC = () => {
     }),
   });
 
-  // Pull-to-refresh
+  // Pull-to-refresh re-reads the shown plan and the list the selector offers.
   const [refreshing, setRefreshing] = useState(false);
-  const handleRefresh = () => executeRefreshWithFinally(refetch, setRefreshing);
+  const handleRefresh = () =>
+    executeRefreshWithFinally(
+      () => Promise.allSettled([refetch(), refetchPlans()]),
+      setRefreshing,
+    );
+  // With no plan on screen there is no plan query; the failed one is the list.
+  const handleRetryPlans = () =>
+    executeRefreshWithFinally(refetchPlans, setRefreshing);
 
   const plansState = useDataState({
     loading: plansInitialLoading,
@@ -200,8 +202,7 @@ const MealPlanMainInner: React.FC = () => {
 
   // The active plan in the list's own shape: `activeMealPlan` is the masked
   // detail read, which is not a `MealPlanDisplayFragment`.
-  const activePlanForDisplay =
-    mealPlans.find(plan => plan.id === activePlanId) ?? null;
+  const activePlanForDisplay = useMealPlanDisplay(activePlanId);
 
   // Compute plan date boundaries
   const planStartDate = activeMealPlan?.startDate
@@ -282,7 +283,7 @@ const MealPlanMainInner: React.FC = () => {
     }
 
     // For unchecking or custom meals, toggle directly
-    toggleCompleted(id);
+    void toggleCompleted(id);
   };
 
   // Granular deduction isn't part of the meal-plan flow — the API derives the
@@ -293,7 +294,7 @@ const MealPlanMainInner: React.FC = () => {
     notes?: string;
   }) => {
     if (!pendingCook) return;
-    toggleCompleted(pendingCook.id, {
+    void toggleCompleted(pendingCook.id, {
       deductFromPantry: input.deductFromPantry,
       servings: input.servings,
       notes: input.notes,
@@ -302,7 +303,7 @@ const MealPlanMainInner: React.FC = () => {
   };
 
   const handleDeleteItem = (id: string) => {
-    deleteItem(id);
+    void deleteItem(id);
   };
 
   const handleAddRecipe = async (recipeId: string, mealType: MealType) => {
@@ -368,16 +369,20 @@ const MealPlanMainInner: React.FC = () => {
     setTemplateBrowserVisible(true);
   };
 
-  // Plan selector config. Filters apply client-side to the selector's list only
-  // (search / active-only / plan type), so the main calendar's selected plan is
+  // Filters narrow the selector's list only, so the calendar's selected plan is
   // never disturbed by a filter that would exclude it.
   const [planFilters, setPlanFilters] = useState<MealPlanFilterState>(
     EMPTY_MEAL_PLAN_FILTERS,
   );
-  const filteredMealPlans = filterMealPlans(mealPlans, planFilters, new Date());
 
   const planConfig = useMealPlanSelectorConfig({
-    mealPlans: filteredMealPlans,
+    plans: {
+      mealPlans,
+      hasMore: plansHaveMore,
+      loadingMore: plansLoadingMore,
+      loadMore: loadMorePlans,
+    },
+    filters: planFilters,
     selectedMealPlanId: activePlanId,
     loading: plansLoading,
     setSelectedMealPlanId: (id: string) => setSelectedMealPlanId(id),
@@ -390,25 +395,6 @@ const MealPlanMainInner: React.FC = () => {
         <MealPlanFilterBar filters={planFilters} onChange={setPlanFilters} />
       ) : undefined,
   });
-
-  const handleSelectTemplate = (template: MealTemplateDisplayFragment) => {
-    setSelectedTemplate(template);
-    setTemplateBrowserVisible(false);
-    setTemplatePreviewVisible(true);
-  };
-
-  const handleCreateFromTemplate = async (config: {
-    templateId: string;
-    startDate: string;
-    name?: string;
-    servings?: number;
-  }) => {
-    const result = await createPlanFromTemplate(config);
-    if (result) {
-      setTemplatePreviewVisible(false);
-      setSelectedTemplate(null);
-    }
-  };
 
   const handleDuplicatePlan = async (input: {
     mealPlanId: string;
@@ -441,26 +427,19 @@ const MealPlanMainInner: React.FC = () => {
     if (result) setShoppingListSheetVisible(false);
   };
 
+  const tabHeader: ScreenHeaderConfig = {
+    variant: 'tab',
+    label: t('mealPlanMain.label'),
+    title: t('labels.mealPlan'),
+  };
+
   // Cold start with nothing cached: stay on the skeleton until the plan list
   // arrives. Rendering the calendar here would show a week strip and an empty
   // day for a plan that may not exist, then swap to the empty state a moment
   // later. A refetch over existing plans keeps `initialLoading` false, so the
   // skeleton never covers content that is already on screen.
   if (plansInitialLoading) {
-    return (
-      <Screen
-        testID="meal-plan-screen"
-        header={{
-          variant: 'tab',
-          label: t('mealPlanMain.label'),
-          title: t('labels.mealPlan'),
-        }}
-        scroll="list"
-        gutter="none"
-      >
-        <MealPlanSkeleton />
-      </Screen>
-    );
+    return <MealPlanMainFallback />;
   }
 
   // No plans on screen. Which of the three reasons it is decides what to show:
@@ -469,17 +448,13 @@ const MealPlanMainInner: React.FC = () => {
   if (mealPlans.length === 0) {
     return (
       <Screen
-        testID="meal-plan-screen"
-        header={{
-          variant: 'tab',
-          label: t('mealPlanMain.label'),
-          title: t('labels.mealPlan'),
-        }}
+        testID={mealPlanTestIDs.screen}
+        header={tabHeader}
         scroll="list"
         gutter="none"
       >
         {plansState === 'error' || plansState === 'offline' ? (
-          <DataStateView state={plansState} onRetry={handleRefresh} />
+          <DataStateView state={plansState} onRetry={handleRetryPlans} />
         ) : (
           <MealPlanEmptyState
             onCreatePlan={handleCreatePlan}
@@ -487,97 +462,71 @@ const MealPlanMainInner: React.FC = () => {
           />
         )}
 
-        {/* Template Browser Sheet */}
-        <TemplateBrowserSheet
-          visible={templateBrowserVisible}
-          onClose={() => setTemplateBrowserVisible(false)}
-          onSelectTemplate={handleSelectTemplate}
-        />
-
-        {/* Template Preview Sheet */}
-        <TemplatePreviewSheet
-          visible={templatePreviewVisible}
-          template={selectedTemplate}
-          onClose={() => {
-            setTemplatePreviewVisible(false);
-            setSelectedTemplate(null);
-          }}
-          onConfirm={handleCreateFromTemplate}
-          confirmLoading={creatingFromTemplate}
-          onEdit={id => {
-            setTemplatePreviewVisible(false);
-            setSelectedTemplate(null);
-            toMealTemplateBuilder({ templateId: id });
-          }}
+        <TemplateSheets
+          browserVisible={templateBrowserVisible}
+          onCloseBrowser={() => setTemplateBrowserVisible(false)}
         />
       </Screen>
     );
   }
 
-  return (
-    <Screen testID="meal-plan-screen" scroll="list" gutter="none">
-      <View style={styles.headerRow}>
-        <View style={styles.headerContent}>
-          <TabScreenHeader
-            label={t('mealPlanMain.label')}
-            title={activeMealPlan?.name ?? t('labels.mealPlan')}
-            onTitlePress={handleOpenSelector}
-            titleAccessory={
-              <Icon name="chevron-down" size={20} tone="textPrimary" />
-            }
-            offlinePill={false}
-          />
-        </View>
-        {/* Pill lives in the real action cluster so it aligns with the
-            cart/bookmark/settings icons (TabScreenHeader's built-in pill is
-            disabled above). Rendered whenever the pill (offline) or a per-plan
-            action would show, so the pill still appears before a plan is
-            selected without leaving an empty row when online + plan-less. */}
-        {isOfflineVisible || !!activePlanId ? (
-          <View style={styles.headerActions}>
-            <OfflineStatusPill size={22} />
-            {!!activePlanId && (
-              <>
-                {permissions.canGenerateShoppingList ? (
-                  <Pressable
-                    onPress={() => setShoppingListSheetVisible(true)}
-                    hitSlop={8}
-                    style={styles.headerActionButton}
-                    accessibilityLabel={t(
-                      'mealPlanMain.generateShoppingListLabel',
-                    )}
-                  >
-                    <Icon name="cart-outline" size={22} tone="primary" />
-                  </Pressable>
-                ) : null}
-                {permissions.canSaveAsTemplate ? (
-                  <Pressable
-                    onPress={handleSaveAsTemplate}
-                    hitSlop={8}
-                    style={styles.headerActionButton}
-                    accessibilityLabel={t('mealPlanMain.saveAsTemplateLabel')}
-                  >
-                    <Icon name="bookmark-outline" size={22} tone="primary" />
-                  </Pressable>
-                ) : null}
-                <Pressable
-                  onPress={() => setSettingsVisible(true)}
-                  hitSlop={8}
-                  style={styles.headerActionButton}
-                  accessibilityLabel={t('mealPlanMain.planSettingsLabel')}
-                >
-                  <Icon
-                    name="ellipsis-vertical"
-                    size={22}
-                    tone="textSecondary"
-                  />
-                </Pressable>
-              </>
-            )}
-          </View>
-        ) : null}
-      </View>
+  // The pill sits in the real action cluster (the header's built-in one is off
+  // below) so it still shows before a plan is selected, without an empty group.
+  const headerRight =
+    isOfflineVisible || !!activePlanId ? (
+      <>
+        <OfflineStatusPill size={22} />
+        {!!activePlanId && (
+          <>
+            {permissions.canGenerateShoppingList ? (
+              <Pressable
+                onPress={() => setShoppingListSheetVisible(true)}
+                hitSlop={8}
+                style={styles.headerActionButton}
+                accessibilityLabel={t('mealPlanMain.generateShoppingListLabel')}
+              >
+                <Icon name="cart-outline" size={22} tone="primary" />
+              </Pressable>
+            ) : null}
+            {permissions.canSaveAsTemplate ? (
+              <Pressable
+                onPress={handleSaveAsTemplate}
+                hitSlop={8}
+                style={styles.headerActionButton}
+                accessibilityLabel={t('mealPlanMain.saveAsTemplateLabel')}
+              >
+                <Icon name="bookmark-outline" size={22} tone="primary" />
+              </Pressable>
+            ) : null}
+            <Pressable
+              onPress={() => setSettingsVisible(true)}
+              hitSlop={8}
+              style={styles.headerActionButton}
+              accessibilityLabel={t('mealPlanMain.planSettingsLabel')}
+            >
+              <Icon name="ellipsis-vertical" size={22} tone="textSecondary" />
+            </Pressable>
+          </>
+        )}
+      </>
+    ) : undefined;
 
+  return (
+    <Screen
+      testID={mealPlanTestIDs.screen}
+      header={{
+        ...tabHeader,
+        title: activeMealPlan?.name ?? tabHeader.title,
+        onTitlePress: handleOpenSelector,
+        titleAccessory: (
+          <Icon name="chevron-down" size={20} tone="textPrimary" />
+        ),
+        offlinePill: false,
+        headerRight,
+      }}
+      scroll="list"
+      gutter="none"
+    >
       {/* Calendar view */}
       {calendar.viewMode === 'week' ? (
         <WeekStrip
@@ -657,23 +606,9 @@ const MealPlanMainInner: React.FC = () => {
         saving={creatingTemplate}
       />
 
-      {/* Template Browser Sheet */}
-      <TemplateBrowserSheet
-        visible={templateBrowserVisible}
-        onClose={() => setTemplateBrowserVisible(false)}
-        onSelectTemplate={handleSelectTemplate}
-      />
-
-      {/* Template Preview Sheet */}
-      <TemplatePreviewSheet
-        visible={templatePreviewVisible}
-        template={selectedTemplate}
-        onClose={() => {
-          setTemplatePreviewVisible(false);
-          setSelectedTemplate(null);
-        }}
-        onConfirm={handleCreateFromTemplate}
-        confirmLoading={creatingFromTemplate}
+      <TemplateSheets
+        browserVisible={templateBrowserVisible}
+        onCloseBrowser={() => setTemplateBrowserVisible(false)}
       />
 
       {/* Generate Shopping List Sheet */}
@@ -734,23 +669,6 @@ const MealPlanMainInner: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    // Chrome, outside the list — so this screen owns its gutter rather than
-    // inheriting the list's.
-    paddingHorizontal: theme.layout.pageGutter,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: theme.spacing.md,
-    paddingRight: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
   headerActionButton: {
     padding: theme.spacing.xs,
   },

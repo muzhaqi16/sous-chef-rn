@@ -15,6 +15,8 @@ import {
 import { useStore } from '#store';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
+import { t } from '#/i18n';
+import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
 import { useMoveToPantry } from '../useMoveToPantry';
 
 jest.mock('#/services/telemetry', () => ({
@@ -85,13 +87,12 @@ function moveMock() {
 }
 
 describe('useMoveToPantry', () => {
-  it('returns moveToPantry function and loading state', () => {
+  it('returns moveToPantry function', () => {
     const { result } = renderHookWithApollo(() =>
       useMoveToPantry({ currentListId: 'list-1' }),
     );
 
     expect(typeof result.current.moveToPantry).toBe('function');
-    expect(result.current.loading).toBe(false);
   });
 
   it('calls mutation with correct variables', async () => {
@@ -217,9 +218,20 @@ describe('useMoveToPantry', () => {
     });
 
     expect(moveResult).toBe(false);
+    // `CONFLICT` is a state refusal, not a stale version: one alert, described
+    // by its code rather than as "updated by another user".
+    expect(alertSpy).toHaveBeenCalledTimes(1);
     expect(alertSpy).toHaveBeenCalledWith(
-      'Error',
-      'Failed to move item to the pantry. Please try again.',
+      t('labels.error'),
+      expect.any(String),
+    );
+    expect(alertSpy).not.toHaveBeenCalledWith(
+      expect.anything(),
+      getVersionConflictMessage(),
+    );
+    expect(alertSpy).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'Pantry item was modified',
     );
   });
 
@@ -558,10 +570,106 @@ describe('useMoveToPantry pantry item count', () => {
       });
     });
 
+    // The removal is stubbed here, so it records no counter change to pass on.
     expect(restoreItemToShoppingListAfterMoveToPantry).toHaveBeenCalledWith(
       expect.anything(),
       'item-1',
+      undefined,
     );
+  });
+
+  it('evicts the pantry row it published when the move is refused', async () => {
+    const cache = seededCache();
+    const rejected = recordMock(MoveShoppingItemToPantryDocument, {
+      data: {
+        moveShoppingItemToPantry: {
+          __typename: 'ValidationError' as const,
+          message: 'nope',
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [rejected.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 2,
+        removeFromList: true,
+      });
+    });
+
+    const mintedId = (rejected.fired[0]!.input as { pantryItemId: string })
+      .pantryItemId;
+    // An unlinked but cached row is persisted and read back by any detail query.
+    expect(
+      cache.identify({ __typename: 'PantryItem', id: mintedId }) ?? '',
+    ).not.toBe('');
+    expect(
+      cache.extract()[
+        cache.identify({ __typename: 'PantryItem', id: mintedId })!
+      ],
+    ).toBeUndefined();
+  });
+
+  it('evicts the pantry row it published when the server restocks another', async () => {
+    const cache = seededCache();
+    const move = moveMock();
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [move.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 2,
+        removeFromList: true,
+      });
+    });
+
+    const mintedId = (move.fired[0]!.input as { pantryItemId: string })
+      .pantryItemId;
+    expect(
+      cache.extract()[
+        cache.identify({ __typename: 'PantryItem', id: mintedId })!
+      ],
+    ).toBeUndefined();
+  });
+
+  it('re-reads when the list counters moved while the refused move was in flight', async () => {
+    const { ApolloClient } = require('@apollo/client');
+    const refetchQueries = jest
+      .spyOn(ApolloClient.prototype, 'refetchQueries')
+      .mockReturnValue(Promise.resolve([]));
+    (
+      restoreItemToShoppingListAfterMoveToPantry as jest.Mock
+    ).mockReturnValueOnce(false);
+    const rejected = recordMock(MoveShoppingItemToPantryDocument, {
+      data: {
+        moveShoppingItemToPantry: {
+          __typename: 'ValidationError' as const,
+          message: 'nope',
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [rejected.mock], cache: seededCache() },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 2,
+        removeFromList: true,
+      });
+    });
+
+    expect(refetchQueries).toHaveBeenCalled();
+    refetchQueries.mockRestore();
   });
 
   it('withdraws the count when the server supersedes the optimistic row', async () => {

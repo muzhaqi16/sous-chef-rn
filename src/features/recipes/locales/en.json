@@ -60,6 +60,7 @@
     "myRecipesSubtitle": "Create and manage your own custom recipes",
     "myRecipesTitle": "My Recipes",
     "myRecipesSearchPlaceholder": "Search my recipes...",
+    "myRecipesSearchingAll": "Searching all your recipes...",
     "myRecipesEmptyTitle": "No recipes yet",
     "myRecipesEmptyDescription": "Create your first recipe",
     "createRecipe": "Create Recipe",
@@ -71,6 +72,7 @@
     "loadingRecipe": "Loading recipe...",
     "recipeNotFoundDb": "Recipe not found in database",
     "recipeNotFound": "Recipe not found",
+    "loadFailed": "Couldn't load this recipe",
     "percentHealthy": "% healthy",
     "cookedCount": "Cooked {{count}}x",
     "markCooked": "Mark cooked",
@@ -106,6 +108,7 @@
     "savedRecipesSearchPlaceholder": "Search saved recipes...",
     "savedRecipesEmptyTitle": "No saved recipes",
     "savedRecipesEmptyDescription": "Save recipes from search to see them here",
+    "savedRecipesSearchingAll": "Searching all your saved recipes...",
     "removeRecipeFailed": "Failed to remove recipe. Please try again.",
     "filterAll": "All",
     "folders": "Folders",
@@ -365,7 +368,35 @@
   },
   "nutrition": {
     "noData": "No nutrition data available",
-    "servingSize": "Serving Size"
+    "servingSize": "Serving Size",
+    "nutrient": {
+      "totalFat": "Total fat",
+      "saturatedFat": "Saturated fat",
+      "transFat": "Trans fat",
+      "cholesterol": "Cholesterol",
+      "vitaminA": "Vitamin A",
+      "vitaminD": "Vitamin D",
+      "vitaminE": "Vitamin E",
+      "vitaminK": "Vitamin K",
+      "vitaminB6": "Vitamin B6",
+      "vitaminB12": "Vitamin B12",
+      "thiamin": "Thiamin",
+      "riboflavin": "Riboflavin",
+      "niacin": "Niacin",
+      "folate": "Folate",
+      "magnesium": "Magnesium",
+      "phosphorus": "Phosphorus",
+      "zinc": "Zinc",
+      "copper": "Copper",
+      "manganese": "Manganese",
+      "selenium": "Selenium"
+    },
+    "category": {
+      "macro": "Macronutrients",
+      "vitamin": "Vitamins",
+      "mineral": "Minerals",
+      "other": "Other"
+    }
   },
   "cuisineSelector": {
     "title": "Preferred Cuisines",

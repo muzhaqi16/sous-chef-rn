@@ -9,7 +9,7 @@ import {
 } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import { StorageState, StorageType } from '#/graphql/generated/schemaTypes';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { StorageLocationIcon } from '#features/catalog/ui/StorageLocationIcon';
 import { Text } from '#components/atoms/Text';
@@ -31,7 +31,7 @@ export interface StorageLocationFormRef {
 export interface StorageLocationFormInitialData {
   id?: string;
   name?: string;
-  type?: string;
+  type?: StorageType;
   parentLocationId?: string | null;
   description?: string | null;
   temperature?: StorageState | null;
@@ -45,7 +45,7 @@ export interface StorageLocationFormInitialData {
 /** Payload emitted by the form's `onSubmit`. */
 export interface StorageLocationFormValues {
   name: string;
-  type: string;
+  type: StorageType;
   icon: string | null;
   parentLocationId: string | null;
   description: string | null;
@@ -62,7 +62,7 @@ interface StorageLocationFormProps {
   onSubmit: (data: StorageLocationFormValues) => void;
   onCancel: () => void;
   isSubmitting: boolean;
-  availableLocations?: Array<{ id: string; name: string; type: string }>;
+  availableLocations?: Array<{ id: string; name: string; type: StorageType }>;
   hideActions?: boolean;
 }
 
@@ -85,15 +85,15 @@ export const StorageLocationForm = forwardRef<
 
     const [formData, setFormData] = useState({
       name: initialData?.name || '',
-      type: initialData?.type || 'PANTRY_SHELF',
+      type: initialData?.type || StorageType.PantryShelf,
       parentLocationId: initialData?.parentLocationId || undefined,
       description: initialData?.description || '',
       temperature: initialData?.temperature || StorageState.None,
       color: initialData?.color || (null as string | null),
-      isClimateControlled: initialData?.isClimateControlled || false,
+      isClimateControlled: initialData?.isClimateControlled ?? false,
       capacity: formatNumberForInput(initialData?.capacity),
       capacityUnit: initialData?.capacityUnit || '',
-      isDefault: initialData?.isDefault || false,
+      isDefault: initialData?.isDefault ?? false,
     });
 
     // Sync form data when initialData changes (render-time state update)
@@ -103,15 +103,15 @@ export const StorageLocationForm = forwardRef<
       if (initialData) {
         setFormData({
           name: initialData.name || '',
-          type: initialData.type || 'PANTRY_SHELF',
+          type: initialData.type || StorageType.PantryShelf,
           parentLocationId: initialData.parentLocationId || undefined,
           description: initialData.description || '',
           temperature: initialData.temperature || StorageState.None,
           color: initialData.color || null,
-          isClimateControlled: initialData.isClimateControlled || false,
+          isClimateControlled: initialData.isClimateControlled ?? false,
           capacity: formatNumberForInput(initialData.capacity),
           capacityUnit: initialData.capacityUnit || '',
-          isDefault: initialData.isDefault || false,
+          isDefault: initialData.isDefault ?? false,
         });
       }
     }
@@ -161,7 +161,7 @@ export const StorageLocationForm = forwardRef<
       <View style={styles.container}>
         {/* Name */}
         <View style={commonStyles.inputGroup}>
-          <Text style={commonStyles.label}>
+          <Text role="label" tone="secondary" style={styles.fieldLabel}>
             {t('storageLocationForm.name')}
           </Text>
           <ThemedTextInput
@@ -174,7 +174,7 @@ export const StorageLocationForm = forwardRef<
         </View>
         {/* Type Carousel */}
         <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
-          <Text style={commonStyles.label}>
+          <Text role="label" tone="secondary" style={styles.fieldLabel}>
             {t('storageLocationForm.type')}
           </Text>
           <View style={styles.carouselContainer}>
@@ -201,7 +201,7 @@ export const StorageLocationForm = forwardRef<
                 >
                   <StorageLocationIcon type={type.value} size={28} />
                   <Text
-                    role={formData.type === type.value ? 'label' : 'label'}
+                    role="label"
                     style={
                       formData.type === type.value
                         ? styles.typeLabelSelected
@@ -218,7 +218,7 @@ export const StorageLocationForm = forwardRef<
         {/* Parent Location Selector */}
         {parentOptions.length > 0 && (
           <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
-            <Text style={commonStyles.label}>
+            <Text role="label" tone="secondary" style={styles.fieldLabel}>
               {t('storageLocationForm.parentLabel')}
             </Text>
             <View style={styles.carouselContainer}>
@@ -239,7 +239,7 @@ export const StorageLocationForm = forwardRef<
                   }
                 >
                   <Text
-                    role={!formData.parentLocationId ? 'label' : 'label'}
+                    role="label"
                     style={
                       !formData.parentLocationId
                         ? styles.parentLabelSelected
@@ -265,11 +265,7 @@ export const StorageLocationForm = forwardRef<
                     }
                   >
                     <Text
-                      role={
-                        formData.parentLocationId === location.id
-                          ? 'label'
-                          : 'label'
-                      }
+                      role="label"
                       style={
                         formData.parentLocationId === location.id
                           ? styles.parentLabelSelected
@@ -299,7 +295,7 @@ export const StorageLocationForm = forwardRef<
         />
         {/* Temperature */}
         <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
-          <Text style={commonStyles.label}>
+          <Text role="label" tone="secondary" style={styles.fieldLabel}>
             {t('storageLocationForm.temperature')}
           </Text>
           <View style={styles.carouselContainer}>
@@ -322,9 +318,7 @@ export const StorageLocationForm = forwardRef<
                   }
                 >
                   <Text
-                    role={
-                      formData.temperature === option.value ? 'label' : 'label'
-                    }
+                    role="label"
                     style={
                       formData.temperature === option.value
                         ? styles.parentLabelSelected
@@ -340,7 +334,7 @@ export const StorageLocationForm = forwardRef<
         </View>
         {/* Color */}
         <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
-          <Text style={commonStyles.label}>
+          <Text role="label" tone="secondary" style={styles.fieldLabel}>
             {t('storageLocationForm.colorLabel')}
           </Text>
           <View style={styles.carouselContainer}>
@@ -414,9 +408,7 @@ export const StorageLocationForm = forwardRef<
               onPress={onCancel}
               disabled={isSubmitting}
             >
-              <Text style={commonStyles.buttonTextSecondary}>
-                {t('labels.cancel')}
-              </Text>
+              <Text role="body">{t('labels.cancel')}</Text>
             </AppPressable>
             <AppPressable
               style={[commonStyles.button, commonStyles.buttonPrimary]}
@@ -426,7 +418,7 @@ export const StorageLocationForm = forwardRef<
               {isSubmitting ? (
                 <OnPrimaryActivityIndicator size="small" />
               ) : (
-                <Text style={commonStyles.buttonTextPrimary}>
+                <Text role="body" style={commonStyles.buttonTextPrimary}>
                   {initialData ? t('labels.update') : t('labels.create')}
                 </Text>
               )}
@@ -521,6 +513,9 @@ const styles = StyleSheet.create(theme => ({
   },
   hint: {
     marginTop: theme.spacing.xs,
+  },
+  fieldLabel: {
+    marginBottom: theme.spacing.sm,
   },
   colorSwatch: {
     width: 36,

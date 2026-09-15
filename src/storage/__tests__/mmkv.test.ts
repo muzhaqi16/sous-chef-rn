@@ -105,12 +105,10 @@ describe('mmkv storage', () => {
       jest.resetModules();
       const { DeviceKeyManager } = jest.requireMock(
         '#/utils/security/deviceKey',
-      ) as { DeviceKeyManager: { getDeviceEncryptionKey: jest.Mock } };
+      );
       DeviceKeyManager.getDeviceEncryptionKey.mockReset();
       DeviceKeyManager.getDeviceEncryptionKey.mockImplementation(keyImpl);
-      const { createMMKV, existsMMKV } = jest.requireMock(
-        'react-native-mmkv',
-      ) as { createMMKV: jest.Mock; existsMMKV: jest.Mock };
+      const { createMMKV, existsMMKV } = jest.requireMock('react-native-mmkv');
       createMMKV.mockClear();
       existsMMKV.mockReset();
       existsMMKV.mockReturnValue(true);
@@ -192,15 +190,13 @@ describe('mmkv storage', () => {
       jest.resetModules();
       const { DeviceKeyManager } = jest.requireMock(
         '#/utils/security/deviceKey',
-      ) as { DeviceKeyManager: { getDeviceEncryptionKey: jest.Mock } };
+      );
       DeviceKeyManager.getDeviceEncryptionKey.mockReset();
       DeviceKeyManager.getDeviceEncryptionKey.mockResolvedValue({
         key: 'a-key',
         encryptionType: 'AES-256' as const,
       });
-      const { createMMKV, existsMMKV } = jest.requireMock(
-        'react-native-mmkv',
-      ) as { createMMKV: jest.Mock; existsMMKV: jest.Mock };
+      const { createMMKV, existsMMKV } = jest.requireMock('react-native-mmkv');
       createMMKV.mockClear();
       existsMMKV.mockReset();
       existsMMKV.mockReturnValue(true);

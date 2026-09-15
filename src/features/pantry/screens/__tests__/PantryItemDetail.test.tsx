@@ -271,6 +271,27 @@ describe('PantryItemDetail (integration)', () => {
     await screen.findAllByText('Milk');
   });
 
+  it('renders a fractional quantity as a cooking fraction', async () => {
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [
+        itemMock({
+          ...fullItem,
+          quantity: 1.25,
+          unitSymbol: 'cup',
+          unitDisplayAsFraction: true,
+        }),
+      ],
+    });
+    expect(await screen.findAllByText('1 1/4 cup')).toHaveLength(3);
+  });
+
+  it('keeps decimals, rounded to three places, for a unit that opts out of fractions', async () => {
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [itemMock({ ...fullItem, quantity: 177.4412 })],
+    });
+    expect(await screen.findAllByText('177.441 L')).toHaveLength(3);
+  });
+
   it('shows the category and storage state', async () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],

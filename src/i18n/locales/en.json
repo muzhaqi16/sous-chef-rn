@@ -62,6 +62,7 @@
     "deleteItemFailed": "Failed to delete item",
     "fetchItemFailed": "Failed to fetch item details",
     "createHomeFailed": "Failed to create home",
+    "createPantryFailed": "Failed to create pantry",
     "updateHomeFailed": "Failed to update home",
     "setDefaultHomeFailed": "Failed to set default home",
     "updateHomeNameFailed": "Failed to update home name",
@@ -98,8 +99,10 @@
       "contextPrefix": "Context: "
     },
     "rateLimitGeneric": "Too many requests. Please try again later.",
-    "rateLimitMinutes": "Too many requests. Please try again in {{count}} minute(s).",
-    "rateLimitSeconds": "Too many requests. Please try again in {{count}} second(s).",
+    "rateLimitMinutes_one": "Too many requests. Please try again in {{count}} minute.",
+    "rateLimitMinutes_other": "Too many requests. Please try again in {{count}} minutes.",
+    "rateLimitSeconds_one": "Too many requests. Please try again in {{count}} second.",
+    "rateLimitSeconds_other": "Too many requests. Please try again in {{count}} seconds.",
     "notFoundGeneric": "The requested item could not be found. It may have been deleted.",
     "notFoundResource": "The {{resource}} could not be found. It may have been deleted or moved.",
     "resourceNames": {
@@ -129,8 +132,6 @@
     "parentContextRequired": "Parent context is required",
     "createStorageLocationFailed": "Failed to create storage location",
     "missingRequiredInfo": "Missing required information",
-    "invalidInput": "Invalid input",
-    "invalidOperation": "Invalid operation",
     "invalidUnitTitle": "Invalid Unit",
     "addItemFailedRetry": "Failed to add item. Please try again.",
     "restockFailedRetry": "Failed to restock item. Please try again.",
@@ -484,8 +485,8 @@
     "youReAllSet": "You're all set!",
     "durationDays_one": "{{count}} day",
     "durationDays_other": "{{count}} days",
-    "finish": "Finish",
-    "currency": "Currency"
+    "currency": "Currency",
+    "today": "Today"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",
@@ -612,7 +613,6 @@
     "unreadableBody": "We couldn't read that image file. Please try a different one.",
     "updateFailedTitle": "Update Failed",
     "avatarUpdateFailedBody": "Failed to update profile avatar",
-    "coverUpdateFailedBody": "Failed to update profile cover",
     "itemImageUpdateFailedBody": "Failed to update item image",
     "batchThrottledBody": "{{reason}} {{count}} photo(s) were not uploaded — try again shortly.",
     "batchPartialBody": "{{count}} photo(s) could not be uploaded.",
@@ -708,9 +708,6 @@
     "addedToMealPlan": "Added to meal plan",
     "mealPlanDuplicated": "Meal plan duplicated!",
     "itemToggleFailed": "Failed to toggle item",
-    "selectShoppingListFirst": "Please select a shopping list first",
-    "signInToVerifyEmail": "Sign in to finish verifying your email.",
-    "signInToAcceptInvite": "Sign in to accept this invitation.",
     "folderProtected": "\"{{folder}}\" cannot be renamed or deleted",
     "welcomeToEntity": "Welcome to {{name}}!",
     "canCollaborateOn": "You can now collaborate on {{name}}",
@@ -719,10 +716,10 @@
     "addedItemsWithSkipped_one": "Added {{count}} item to your shopping list. {{skipped}} were already there.",
     "addedItemsWithSkipped_other": "Added {{count}} items to your shopping list. {{skipped}} were already there.",
     "allLowStockAlreadyListed_one": "The {{count}} low stock item was already in your list",
-    "allLowStockAlreadyListed_other": "All {{count}} low stock items were already in your list",
-    "verificationLinkInvalid": "That verification link is invalid or has expired.",
-    "resetLinkInvalid": "That password reset link is invalid or has expired.",
-    "invitationLinkInvalid": "That invitation is invalid or has expired.",
-    "linkInvalid": "That link is invalid or has expired."
+    "allLowStockAlreadyListed_other": "All {{count}} low stock items were already in your list"
+  },
+  "pushNotification": {
+    "title": "{{appName}}",
+    "body": "You have a new notification"
   }
 }

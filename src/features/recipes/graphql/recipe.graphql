@@ -45,33 +45,19 @@ query SearchRecipes(
   }
 }
 
-query MyRecipes(
-  $cursor: String
-  $first: Int = 25
-  $category: RecipeCategory
-  $difficulty: Difficulty
-) {
-  recipes(
-    after: $cursor
-    first: $first
-    filters: { category: $category, difficulty: $difficulty }
-  ) {
+query MyRecipes($cursor: String, $first: Int = 25) {
+  recipes(after: $cursor, first: $first) {
     edges {
       node {
         id
-        category
-        difficulty
         # Selected at the parent so the screen can filter the connection
         # without materializing each masked node. Already fetched inside
         # MyRecipeCard_recipe — this only keeps it visible after masking,
         # so it costs nothing on the wire.
         name
         description
-        savedDetails {
-          id
-          folder
-        }
         ...MyRecipeCard_recipe
+        ...useRecipeFavoriteState_recipe
       }
       cursor
     }
@@ -113,10 +99,10 @@ query GetRecipeReviews($id: ID!) {
   }
 }
 
-query MySavedRecipes($folder: String, $first: Int, $after: String) {
+query MySavedRecipes($first: Int, $after: String) {
   me {
     id
-    savedRecipesConnection(folder: $folder, first: $first, after: $after) {
+    savedRecipesConnection(first: $first, after: $after) {
       edges {
         node {
           id

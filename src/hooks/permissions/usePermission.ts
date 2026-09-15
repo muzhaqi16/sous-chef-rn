@@ -5,6 +5,7 @@ import {
   type AppPermission,
   type PermissionStatus,
 } from '#/services/permissions/PermissionService';
+import { logger } from '#/utils/environment';
 
 export function usePermission(permission: AppPermission) {
   const [status, setStatus] = useState<PermissionStatus>('undetermined');
@@ -27,7 +28,9 @@ export function usePermission(permission: AppPermission) {
       setStatus(result);
       setIsChecking(false);
     };
-    check();
+    check().catch(error => {
+      logger.warn('[usePermission] Permission check failed:', error);
+    });
   }, [permission]);
 
   // Re-check when returning from settings
@@ -38,14 +41,15 @@ export function usePermission(permission: AppPermission) {
           const result = await PermissionService.check(permission);
           setStatus(result);
         };
-        check();
+        check().catch(error => {
+          logger.warn('[usePermission] Permission re-check failed:', error);
+        });
       }
     });
     return () => subscription.remove();
   }, [permission]);
 
   return {
-    status,
     isChecking,
     request: requestPermission,
     openSettings,

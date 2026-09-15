@@ -3,6 +3,7 @@ import { StorageState } from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
+  type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { useHybridPantrySearch } from '../useHybridPantrySearch';
@@ -175,11 +176,13 @@ describe('useHybridPantrySearch', () => {
       act(() => {
         result.current.setSearchQuery('Milk');
       });
+      expect(result.current.isSearching).toBe(true);
 
       // Wait for the effect → client.query → recordMock to fire
       await act(async () => {
         await new Promise(r => setTimeout(r, 50));
       });
+      expect(result.current.isSearching).toBe(false);
 
       expect(m.fired).toContainEqual({
         id: 'p1',
@@ -189,6 +192,39 @@ describe('useHybridPantrySearch', () => {
         storageLocationsFirst: 0,
       });
       expect(result.current.useServerSort).toBe(true);
+    });
+
+    it('stops searching when the server search fails', async () => {
+      const failure: MockedResponse = {
+        request: { query: GetPantryDocument, variables: () => true },
+        error: new Error('network down'),
+      };
+
+      const { result } = renderHookWithApollo(
+        () =>
+          useHybridPantrySearch({
+            pantryId: 'p1',
+            locationQueryFilter: null,
+            orderBy: undefined,
+            items: baseItems,
+            totalCount: 1000,
+            hasMore: true,
+            loading: false,
+            isOnline: true,
+          }),
+        { operationMocks: [failure] },
+      );
+
+      act(() => {
+        result.current.setSearchQuery('Milk');
+      });
+      expect(result.current.isSearching).toBe(true);
+
+      await act(async () => {
+        await new Promise(r => setTimeout(r, 50));
+      });
+
+      expect(result.current.isSearching).toBe(false);
     });
 
     it('skips the server query when pantryId is missing', async () => {

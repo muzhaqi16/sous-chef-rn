@@ -10,6 +10,7 @@ import {
   useIsPantryQueryComplete,
 } from '#store/useAppStore';
 import { errorService } from '#/services/errorService';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 
 /**
  * Warms sibling tabs' queries into the cache. `HomeTabs` is lazy, so an
@@ -40,7 +41,7 @@ const WARM_TARGETS: Array<{
   warm: (client: ApolloClient) => Promise<unknown>;
 }> = [
   {
-    name: 'GetShoppingListsLite',
+    name: operationNameOf(GetShoppingListsLiteDocument),
     warm: client =>
       client.query({
         query: GetShoppingListsLiteDocument,
@@ -49,7 +50,7 @@ const WARM_TARGETS: Array<{
       }),
   },
   {
-    name: 'GetMealPlans',
+    name: operationNameOf(GetMealPlansDocument),
     warm: client =>
       client.query({
         query: GetMealPlansDocument,

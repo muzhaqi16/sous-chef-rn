@@ -37,6 +37,7 @@ import {
 } from './SortableListThemeContext';
 import type { ShoppingListRowItem } from './types';
 import { motion } from '#/theme/foundations/motion';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
 /**
  * The row subscribes to its own entity via `useFragment(SortableItem_item)` and
@@ -245,7 +246,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       <View
         style={styles.moveToPantryButton}
         accessibilityLabel={t('shoppingList.alreadyInPantry')}
-        testID={`shopping-list-item-${itemId}-stocked`}
+        testID={shoppingListTestIDs.itemStocked(itemId)}
       >
         {/* Colour comes from the list's single theme read, like every other
             icon in this row — `tone=` would make each cell subscribe. */}
@@ -267,7 +268,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           style={styles.moveToPantryButton}
           hitSlop={HIT_SLOP}
           accessibilityLabel={t('moveToPantry.title')}
-          testID={`shopping-list-item-${itemId}-move-to-pantry`}
+          testID={shoppingListTestIDs.itemMoveToPantry(itemId)}
         >
           <Icon name="archive-outline" size={24} color={themeColors?.primary} />
         </Pressable>
@@ -278,7 +279,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       <View style={styles.rightElementContainer}>
         <QuantityBadge
           // Keyed by item id so a test can open one specific row's sheet.
-          testID={`shopping-list-item-${itemId}-quantity`}
+          testID={shoppingListTestIDs.itemQuantity(itemId)}
           quantity={quantity}
           quantityInput={quantityInput}
           unit={unitDisplay}
@@ -332,7 +333,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           });
         }}
         size={28}
-        testID={`shopping-item-checkbox-${itemId}`}
+        testID={shoppingListTestIDs.itemCheckbox(itemId)}
       />
     );
 
@@ -376,7 +377,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
         itemId={itemId}
         // Keyed by id, not index: a drag would repoint an index-keyed testID at
         // a different row. Swipe actions append `-edit` / `-delete`.
-        testIDPrefix={`shopping-list-item-${itemId}`}
+        testIDPrefix={shoppingListTestIDs.itemRow(itemId)}
         onPress={onItemPress ? () => onItemPress(itemId) : undefined}
         // Hold an unpurchased row to record actual qty/price; falls back to
         // details otherwise. The tutorial advances when that sheet CLOSES

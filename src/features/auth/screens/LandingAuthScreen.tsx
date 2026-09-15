@@ -12,13 +12,14 @@ import { getWebAppUrl } from '#utils/environment';
 import { appConfig } from '#/config/appConfig';
 import { Text } from '#components/atoms/Text';
 import { LocalImage } from '#components/atoms/LocalImage';
+import { authTestIDs } from '#features/auth/testIDs';
 
 export function LandingAuthScreen() {
   const { t } = useTranslation();
   const { toLogin, toSignUp } = useAppNavigation();
 
   return (
-    <AuthWrapper testID="landing-auth-screen">
+    <AuthWrapper testID={authTestIDs.landingScreen}>
       {/* 1. Hero image flex-zone */}
       <View style={styles.heroContainer}>
         <LocalImage
@@ -47,7 +48,7 @@ export function LandingAuthScreen() {
 
         <View style={styles.buttons}>
           <Button
-            testID="landing-login-button"
+            testID={authTestIDs.landingLoginButton}
             title={t('auth.logIn')}
             onPress={toLogin}
             variant="secondary"
@@ -55,7 +56,7 @@ export function LandingAuthScreen() {
             txtStyle={styles.txt}
           />
           <Button
-            testID="landing-signup-button"
+            testID={authTestIDs.landingSignUpButton}
             title={t('auth.signUp')}
             onPress={toSignUp}
             fullWidth

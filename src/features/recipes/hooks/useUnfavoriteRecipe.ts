@@ -1,6 +1,7 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { RemoveRecipeFromFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
 import { performOptimisticUnfavorite } from '#features/recipes/utils/optimisticUnfavorite';
+import { useTranslation } from '#/i18n';
 
 /**
  * Un-save a recipe. The saved edge is dropped and `Recipe.savedDetails` cleared
@@ -8,14 +9,15 @@ import { performOptimisticUnfavorite } from '#features/recipes/utils/optimisticU
  * replays the idempotent unfavorite. A rejection reverts from the snapshot, so
  * there is no `update` callback.
  */
-export function useUnfavoriteRecipe(operation: string) {
+export function useUnfavoriteRecipe() {
   const client = useApolloClient();
+  const { t } = useTranslation();
   const [unfavoriteRecipeMutation] = useMutation(
     RemoveRecipeFromFavoritesDocument,
   );
 
   /** True when the removal was kept — false means it reverted and was reported. */
-  const unfavoriteRecipe = (recipeId: string, reportFailure: () => void) =>
+  const unfavoriteRecipe = (recipeId: string) =>
     performOptimisticUnfavorite({
       client,
       recipeId,
@@ -26,8 +28,7 @@ export function useUnfavoriteRecipe(operation: string) {
           // unreachable instead of surfacing a blocking error.
           context: { localFirst: true },
         }),
-      operation,
-      reportFailure,
+      fallback: t('recipes.removeRecipeFailed'),
     });
 
   return { unfavoriteRecipe };

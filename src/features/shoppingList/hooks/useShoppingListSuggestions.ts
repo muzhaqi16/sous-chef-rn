@@ -1,13 +1,15 @@
 import { useEffect } from 'react';
-import { useQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import {
   GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { preloadImages } from '#components/atoms/CachedImage';
-import type { ErrorLike } from '@apollo/client';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
+import { useDataState } from '#hooks/data/useDataState';
+import { errorService } from '#/services/errorService';
+import type { SuggestionsHookResult } from '#features/catalog/ui/AddItemSheet/types';
 
 /**
  * Per-source fetch limit. Each section is fetched with its own quota, and the
@@ -16,27 +18,9 @@ import type { ErrorLike } from '@apollo/client';
  */
 export const SHOPPING_SUGGESTIONS_LIMIT = 20;
 
-/** Type for a single suggestion from the query result */
 export type ShoppingListSuggestionItem = NonNullable<
   GetShoppingListSuggestionsQuery['shoppingList']
 >['popular'][number];
-
-export interface GroupedSuggestions {
-  [key: string]: ShoppingListSuggestionItem[];
-  recentlyDeleted: ShoppingListSuggestionItem[];
-  frequentlyAdded: ShoppingListSuggestionItem[];
-  popular: ShoppingListSuggestionItem[];
-}
-
-export interface UseShoppingListSuggestionsReturn {
-  suggestions: ShoppingListSuggestionItem[];
-  grouped: GroupedSuggestions;
-  hasSuggestions: boolean;
-  loading: boolean;
-  error: ErrorLike | undefined;
-  refetch: () => Promise<unknown>;
-  isOffline: boolean;
-}
 
 interface UseShoppingListSuggestionsOptions {
   shoppingListId: string | undefined;
@@ -45,41 +29,33 @@ interface UseShoppingListSuggestionsOptions {
 }
 
 /**
- * Hook to fetch shopping list suggestions grouped by source.
- * Each of RECENTLY_DELETED, FREQUENTLY_ADDED, and POPULAR is fetched with its
- * own quota (aliased query fields), so no source can crowd out the others.
+ * Shopping list suggestions grouped by source. Each of RECENTLY_DELETED,
+ * FREQUENTLY_ADDED and POPULAR is fetched with its own quota (aliased query
+ * fields), so no source can crowd out the others.
  */
 export function useShoppingListSuggestions({
   shoppingListId,
   limit = SHOPPING_SUGGESTIONS_LIMIT,
   skip = false,
-}: UseShoppingListSuggestionsOptions): UseShoppingListSuggestionsReturn {
-  const isOffline = useIsEffectivelyOffline();
+}: UseShoppingListSuggestionsOptions): SuggestionsHookResult<ShoppingListSuggestionItem> {
+  const skipped = skip || !shoppingListId;
 
+  // Not skipped offline: `offlineModeLink` serves a cached read and answers a
+  // miss with an error, which `useDataState` classifies as offline.
   const { data, loading, error, refetch } = useQuery(
     GetShoppingListSuggestionsDocument,
-    {
-      variables: {
-        id: shoppingListId ?? '',
-        limit,
-      },
-      skip: !shoppingListId || skip || isOffline,
-    },
+    skipped ? skipToken : { variables: { id: shoppingListId, limit } },
   );
+
+  useApolloErrorLogger(GetShoppingListSuggestionsDocument, error);
 
   const list = data?.shoppingList;
 
-  const grouped: GroupedSuggestions = {
+  const grouped = {
     recentlyDeleted: list?.recentlyDeleted ?? [],
     frequentlyAdded: list?.frequentlyAdded ?? [],
     popular: list?.popular ?? [],
   };
-
-  const suggestions: ShoppingListSuggestionItem[] = [
-    ...grouped.recentlyDeleted,
-    ...grouped.frequentlyAdded,
-    ...grouped.popular,
-  ];
 
   // Preload suggestion images into disk cache for instant display. Keyed on the
   // Apollo result, which only changes when the data does — the derived arrays
@@ -87,9 +63,9 @@ export function useShoppingListSuggestions({
   useEffect(() => {
     if (!list) return;
     const urls = [
-      ...(list.recentlyDeleted ?? []),
-      ...(list.frequentlyAdded ?? []),
-      ...(list.popular ?? []),
+      ...list.recentlyDeleted,
+      ...list.frequentlyAdded,
+      ...list.popular,
     ]
       .map(s => resolveImageUrl(s))
       .filter((url): url is string => !!url);
@@ -98,18 +74,23 @@ export function useShoppingListSuggestions({
     }
   }, [list]);
 
-  const hasSuggestions =
-    grouped.recentlyDeleted.length > 0 ||
-    grouped.frequentlyAdded.length > 0 ||
-    grouped.popular.length > 0;
-
-  return {
-    suggestions: isOffline ? [] : suggestions,
-    grouped,
-    hasSuggestions: isOffline ? false : hasSuggestions,
+  const state = useDataState({
     loading,
     error,
-    refetch,
-    isOffline,
+    hasResult: data !== undefined,
+    isEmpty: Object.values(grouped).every(items => items.length === 0),
+    skipped,
+  });
+
+  return {
+    grouped,
+    state,
+    refetch: () => {
+      void refetch().catch(refetchError =>
+        errorService.reportError(refetchError, {
+          operation: 'useShoppingListSuggestions.refetch',
+        }),
+      );
+    },
   };
 }

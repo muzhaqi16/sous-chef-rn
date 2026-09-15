@@ -8,13 +8,13 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { MarkShoppingListAsDefaultDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { errorService } from '#/services/errorService';
 
 export function useSetDefaultShoppingList() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [mutate, { loading }] = useMutation(MarkShoppingListAsDefaultDocument);
+  const [mutate] = useMutation(MarkShoppingListAsDefaultDocument);
 
   const setAsDefault = async (id: string): Promise<boolean> => {
     const cacheId = client.cache.identify({ __typename: 'ShoppingList', id });
@@ -51,28 +51,20 @@ export function useSetDefaultShoppingList() {
       }
     };
 
-    let result;
-    try {
-      result = await mutate({
-        variables: { input: { id } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Set Default Shopping List error:',
-      });
-    }
-
-    if (!result) {
-      revert();
-      return false;
-    }
-    if (alertIfRejected(result, t('shoppingListScreens.failedToSetDefault'))) {
-      revert();
-      return false;
-    }
-    return true;
+    const settled = await settleMutation(
+      () =>
+        mutate({
+          variables: { input: { id } },
+          context: { localFirst: true },
+        }),
+      {
+        document: MarkShoppingListAsDefaultDocument,
+        fallback: t('shoppingListScreens.failedToSetDefault'),
+        onFailed: revert,
+      },
+    );
+    return settled.status !== 'failed';
   };
 
-  return { setAsDefault, loading };
+  return { setAsDefault };
 }

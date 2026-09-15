@@ -8,6 +8,7 @@ import {
   HealthGoal,
   ImagePerspective,
   Intolerance,
+  InviteStatus,
   ItemType,
   RecipeStatus,
   StorageState,
@@ -26,12 +27,6 @@ import {
  * grows `schemaTypes.ts`, the option lists built with `Object.values(...)` grow
  * with it, and en.json does not — so the new option renders in a picker as its
  * own raw dot-path, "itemType.FROZEN".
- *
- * Several composition sites pass a fallback, `t(key, formatEnum(value))`, which
- * turns VERY_EASY into "Very Easy". A fallback does not make a missing key
- * acceptable and those namespaces are asserted the same as the rest: the string
- * is English regardless of locale, and it is a mechanical re-casing of an API
- * identifier rather than copy anyone wrote.
  *
  * The check runs one direction only — every enum member needs a key, but a
  * namespace may carry keys that are not enum members. `baseDimension.none` is
@@ -163,6 +158,13 @@ const CASES: EnumNamespace[] = [
     enumName: 'ExpirationAction',
     members: ExpirationAction,
     namespace: 'expirationAction.toast',
+    keyFragment: verbatim,
+  },
+  // src/features/home/utils/inviteFormatters.ts — `formatInviteStatus`.
+  {
+    enumName: 'InviteStatus',
+    members: InviteStatus,
+    namespace: 'inviteStatus',
     keyFragment: verbatim,
   },
 ];

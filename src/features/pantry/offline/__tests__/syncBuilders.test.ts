@@ -11,7 +11,15 @@ import type { DocumentNode } from 'graphql';
 import {
   makeQueuedMutation as makeMutation,
   makeSyncCacheStub,
+  queuedMutationFor,
 } from '#/test-utils/queuedMutation';
+import {
+  CreatePantryItemDocument,
+  DeletePantryItemDocument,
+  UpdatePantryItemDocument,
+  UpdatePantryItemQuantityDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import { BarcodeCreatePantryItemDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import type { QueuedMutation } from '#/apollo/offlineQueue/types';
 import { convertToSyncMutation as convertToSyncMutationFn } from '#/apollo/offlineQueue/convertToSyncMutation';
 
@@ -39,7 +47,7 @@ const wrapper = (syncVariables: Record<string, unknown>) =>
 describe('pantry sync builders', () => {
   it('converts CreatePantryItem → SyncPantryItem (id → clientId inside input)', () => {
     const mutation = makeMutation({
-      operationName: 'CreatePantryItem',
+      ...queuedMutationFor(CreatePantryItemDocument),
       // Real CreatePantryItemInput carries pantryId + item:{name}.
       variables: {
         input: { id: 'item-1', pantryId: 'pan-1', item: { name: 'Milk' } },
@@ -62,7 +70,7 @@ describe('pantry sync builders', () => {
       pantryId: 'pan-2',
     });
     const mutation = makeMutation({
-      operationName: 'UpdatePantryItem',
+      ...queuedMutationFor(UpdatePantryItemDocument),
       variables: {
         input: {
           id: 'item-2',
@@ -87,7 +95,7 @@ describe('pantry sync builders', () => {
   it('throws when pantryId cannot be resolved for a pantry-item sync', () => {
     mockClient.cache.readFragment.mockReturnValue(null);
     const mutation = makeMutation({
-      operationName: 'UpdatePantryItem',
+      ...queuedMutationFor(UpdatePantryItemDocument),
       variables: { input: { id: 'orphan-item', itemName: 'Ghost' } },
     });
     expect(() => convertToSyncMutation(mutation)).toThrow(
@@ -104,7 +112,7 @@ describe('pantry sync builders', () => {
       pantryId: 'pan-q',
     });
     const mutation = makeMutation({
-      operationName: 'UpdatePantryItemQuantity',
+      ...queuedMutationFor(UpdatePantryItemQuantityDocument),
       variables: {
         input: {
           pantryItemId: 'item-q',
@@ -130,7 +138,7 @@ describe('pantry sync builders', () => {
       pantryId: 'pan-q2',
     });
     const mutation = makeMutation({
-      operationName: 'UpdatePantryItemQuantity',
+      ...queuedMutationFor(UpdatePantryItemQuantityDocument),
       variables: {
         input: { pantryItemId: 'item-q2', quantity: '', unitId: null },
       },
@@ -144,7 +152,7 @@ describe('pantry sync builders', () => {
 
   it('converts DeletePantryItem → SyncDeletePantryItem', () => {
     const mutation = makeMutation({
-      operationName: 'DeletePantryItem',
+      ...queuedMutationFor(DeletePantryItemDocument),
       variables: { input: { id: 'item-3', version: 2 } },
     });
     const { syncVariables } = convertToSyncMutation(mutation);
@@ -157,7 +165,7 @@ describe('pantry sync builders', () => {
   // canonical counterparts (they create the same entity from the same fields).
   it('converts BarcodeCreatePantryItem → SyncPantryItem', () => {
     const mutation = makeMutation({
-      operationName: 'BarcodeCreatePantryItem',
+      ...queuedMutationFor(BarcodeCreatePantryItemDocument),
       variables: {
         input: { id: 'p-1', pantryId: 'pan-1', itemId: 'cat-1', quantity: 2 },
       },

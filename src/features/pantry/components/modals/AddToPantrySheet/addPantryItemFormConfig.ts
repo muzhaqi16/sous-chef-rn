@@ -1,11 +1,15 @@
 import { object, string, boolean, date } from 'yup';
-import { t } from '#/i18n';
+import { t, type TranslationKey } from '#/i18n';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   StorageState,
   ItemCondition,
   AcquisitionMethod,
 } from '#/graphql/generated/schemaTypes';
+import {
+  ACQUISITION_METHOD_OPTIONS,
+  type OfferedAcquisitionMethod,
+} from '#features/pantry/utils/itemEnumLabels';
 
 // Shape, defaults and validation for the four-page Add-to-Pantry sheet.
 // Validation lives here and renders ON the field; `usePantryItemSubmission`
@@ -15,7 +19,19 @@ import {
 // Messages resolve LAZILY: the schema is built once at module scope, so an
 // eagerly resolved one would freeze whichever language was active at import
 // time. Yup calls this when the rule fails.
-const msg = (key: string) => (): string => t(key);
+const msg = (key: TranslationKey) => (): string => t(key);
+
+// yup types a test's sibling values as `any`; these are the ones the rules read.
+type NetWeightSiblings = Partial<
+  Pick<
+    AddPantryItemFormData,
+    | 'pantryNetWeight'
+    | 'pantryNetWeightUnitId'
+    | 'showPackageDetails'
+    | 'itemNetWeight'
+    | 'weightUnitId'
+  >
+>;
 
 export type AddPantryItemFormData = {
   // Page 1 — Main
@@ -50,7 +66,7 @@ export type AddPantryItemFormData = {
   storeName: string;
   storeId: string | null;
   costPerUnit: string;
-  acquisitionMethod: AcquisitionMethod;
+  acquisitionMethod: OfferedAcquisitionMethod;
 };
 
 /** Which page each validated field lives on, so a failure can navigate to it. */
@@ -125,7 +141,7 @@ export const addPantryItemSchema = object({
   pantryNetWeight: string().test(
     'net-weight-needs-value',
     msg('errors.field.netWeight'),
-    (value, context) => {
+    (value, context: { parent: NetWeightSiblings }) => {
       if ((value ?? '').trim()) return true;
       return !context.parent.pantryNetWeightUnitId;
     },
@@ -133,7 +149,7 @@ export const addPantryItemSchema = object({
   pantryNetWeightUnit: string().test(
     'net-weight-needs-unit',
     msg('labels.pleaseSelectAUnitForTheNetWeight'),
-    (_value, context) => {
+    (_value, context: { parent: NetWeightSiblings }) => {
       const weight = (context.parent.pantryNetWeight ?? '').trim();
       if (!weight) return true;
       return Boolean(context.parent.pantryNetWeightUnitId);
@@ -146,7 +162,7 @@ export const addPantryItemSchema = object({
   itemNetWeight: string().test(
     'item-net-weight-needs-value',
     msg('errors.field.netWeight'),
-    (value, context) => {
+    (value, context: { parent: NetWeightSiblings }) => {
       if (!context.parent.showPackageDetails) return true;
       if ((value ?? '').trim()) return true;
       return !context.parent.weightUnitId;
@@ -155,7 +171,7 @@ export const addPantryItemSchema = object({
   weightUnit: string().test(
     'item-net-weight-needs-unit',
     msg('labels.pleaseSelectAUnitForTheNetWeight'),
-    (_value, context) => {
+    (_value, context: { parent: NetWeightSiblings }) => {
       if (!context.parent.showPackageDetails) return true;
       const weight = (context.parent.itemNetWeight ?? '').trim();
       if (!weight) return true;
@@ -185,5 +201,5 @@ export const addPantryItemSchema = object({
   storeName: string(),
   storeId: string().nullable(),
   costPerUnit: string(),
-  acquisitionMethod: string().oneOf(Object.values(AcquisitionMethod)),
+  acquisitionMethod: string().oneOf(ACQUISITION_METHOD_OPTIONS),
 });

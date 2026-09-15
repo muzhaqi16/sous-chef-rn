@@ -11,7 +11,7 @@ const mockRemoveDietaryRestriction = jest.fn().mockResolvedValue(true);
 
 jest.mock('#features/profile/hooks/useDietaryProfile', () => ({
   useDietaryProfile: () => ({
-    profile: {
+    editableProfile: {
       restrictions: [],
       preferredCuisines: ['ITALIAN', 'MEXICAN'],
       favoriteIngredients: ['Garlic', 'Basil'],
@@ -244,7 +244,7 @@ describe('DietaryProfileScreen - loading state', () => {
         'useDietaryProfile',
       )
       .mockReturnValue({
-        profile: null,
+        editableProfile: null,
         loading: true,
         updateDietaryProfile: mockUpdateDietaryProfile,
         addDietaryRestriction: mockAddDietaryRestriction,
@@ -272,7 +272,7 @@ describe('DietaryProfileScreen - loading state', () => {
         'useDietaryProfile',
       )
       .mockReturnValue({
-        profile: {
+        editableProfile: {
           restrictions: [],
           preferredCuisines: ['ITALIAN'],
           favoriteIngredients: ['Garlic'],
@@ -301,7 +301,7 @@ describe('DietaryProfileScreen - loading state', () => {
   });
 });
 
-describe('DietaryProfileScreen - no profile', () => {
+describe('DietaryProfileScreen - profile never read', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest
@@ -310,7 +310,7 @@ describe('DietaryProfileScreen - no profile', () => {
         'useDietaryProfile',
       )
       .mockReturnValue({
-        profile: null,
+        editableProfile: null,
         loading: false,
         updateDietaryProfile: mockUpdateDietaryProfile,
         addDietaryRestriction: mockAddDietaryRestriction,
@@ -318,9 +318,9 @@ describe('DietaryProfileScreen - no profile', () => {
       });
   });
 
-  it('shows empty state when no profile exists', () => {
+  it('says the profile could not be loaded when nothing was read', () => {
     render(<DietaryProfileScreen />);
-    expect(screen.getByText('No Dietary Profile')).toBeTruthy();
+    expect(screen.getByText("Couldn't load your dietary profile")).toBeTruthy();
   });
 });
 
@@ -333,7 +333,7 @@ describe('DietaryProfileScreen - partial profile', () => {
         'useDietaryProfile',
       )
       .mockReturnValue({
-        profile: {
+        editableProfile: {
           restrictions: [{ type: 'VEGETARIAN', severity: 'STRICT' }],
           preferredCuisines: [],
           favoriteIngredients: [],

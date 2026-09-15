@@ -107,8 +107,12 @@ function transformPantryResult(
   if (info?.servings) {
     subtitleParts.push(t('recipes.servingsCount', { count: info.servings }));
   }
-  const totalTime =
-    info?.readyInMinutes || info?.preparationMinutes || info?.cookingMinutes;
+  // Spoonacular reports an unknown duration as 0, so a zero falls through.
+  const totalTime = [
+    info?.readyInMinutes,
+    info?.preparationMinutes,
+    info?.cookingMinutes,
+  ].find(minutes => minutes !== undefined && minutes !== 0);
   if (totalTime) {
     subtitleParts.push(t('labels.min', { count: totalTime }));
   }
@@ -516,14 +520,14 @@ export function useRecipeDiscovery(
       .join(',');
 
     if (ingredientNames) {
-      fetchPantryDiscovery(
+      void fetchPantryDiscovery(
         ingredientNames,
         handlePantryResultsRef.current,
         updateState,
         controller.signal,
       );
     } else {
-      fetchRandomDiscovery(
+      void fetchRandomDiscovery(
         handleRandomResultsRef.current,
         updateState,
         controller.signal,
@@ -554,7 +558,7 @@ export function useRecipeDiscovery(
       cacheStore.clearAllCache(); // Simple: clear all on refresh
       // Re-use the same setCached pattern on fresh fetch
 
-      fetchPantryDiscovery(
+      void fetchPantryDiscovery(
         ingredientNames,
         handlePantryResultsRef.current,
         updateState,
@@ -567,7 +571,7 @@ export function useRecipeDiscovery(
       delete newCache[cacheKey];
       useRecipeCacheStore.setState({ cache: newCache });
 
-      fetchRandomDiscovery(
+      void fetchRandomDiscovery(
         handleRandomResultsRef.current,
         updateState,
         undefined,
@@ -585,7 +589,10 @@ export function useRecipeDiscovery(
     hasPantryItems,
     pantryHasMore,
     pantryLoadingMore,
-    loadMorePantryItems,
+    // `usePagination` catches a failed page itself.
+    loadMorePantryItems: () => {
+      void loadMorePantryItems();
+    },
     discoveryHasMore,
     loadMoreDiscovery,
   };

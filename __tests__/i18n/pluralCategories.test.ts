@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getI18n } from '#/i18n/config';
+import { isTranslationKey } from '#/i18n';
 
 /**
  * Every plural key resolves in every category its locale actually needs.
@@ -96,7 +97,9 @@ describe('plural categories', () => {
       for (const base of bases) {
         for (const category of needed) {
           const key = `${base}_${category}`;
-          if (typeof i18n.getResource(locale, 'translation', key) !== 'string') {
+          if (
+            typeof i18n.getResource(locale, 'translation', key) !== 'string'
+          ) {
             missing.push(`${key} (needed for category "${category}")`);
           }
         }
@@ -109,6 +112,7 @@ describe('plural categories', () => {
         needed
           .map(category => ({ category, count: countFor(locale, category)! }))
           .filter(({ count }) => {
+            if (!isTranslationKey(base)) return true;
             const value = i18n.t(base, { count });
             return !value || value === base;
           })
@@ -125,12 +129,16 @@ describe('plural categories', () => {
     const i18n = getI18n();
     await i18n.changeLanguage('it');
 
-    const needed = new Intl.PluralRules('it').resolvedOptions().pluralCategories;
+    const needed = new Intl.PluralRules('it').resolvedOptions()
+      .pluralCategories;
     expect(needed).toContain('many');
 
     // `completePluralCategories` filled it, so the Italian form is what renders.
     const italian = i18n.t('recipes.reviewCount', { count: 1_000_000 });
-    const english = i18n.t('recipes.reviewCount', { count: 1_000_000, lng: 'en' });
+    const english = i18n.t('recipes.reviewCount', {
+      count: 1_000_000,
+      lng: 'en',
+    });
     expect(italian).not.toBe(english);
   });
 });
@@ -171,9 +179,8 @@ describe('i18n config on an engine without Intl.PluralRules', () => {
     jest.resetModules();
     // `require`, not dynamic `import()` — this Jest config runs without
     // --experimental-vm-modules, so `import()` rejects rather than loading.
-    const config = jest.requireActual<typeof import('#/i18n/config')>(
-      '#/i18n/config',
-    );
+    const config =
+      jest.requireActual<typeof import('#/i18n/config')>('#/i18n/config');
 
     // Reaching here at all is the assertion: the import must not throw.
     expect(typeof config.getI18n().t('labels.error')).toBe('string');

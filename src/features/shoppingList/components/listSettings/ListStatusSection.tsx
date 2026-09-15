@@ -41,7 +41,7 @@ export const ListStatusSection: React.FC<ListStatusSectionProps> = ({
 
   return (
     <View style={commonStyles.settingsSection}>
-      <Text style={commonStyles.settingsSectionTitle}>
+      <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
         {t('shoppingListScreens.listStatusSection')}
       </Text>
 
@@ -64,7 +64,7 @@ export const ListStatusSection: React.FC<ListStatusSectionProps> = ({
             size={20}
             tone="primary"
           />
-          <Text tone="accent" style={styles.actionText}>
+          <Text role="body" tone="accent" style={styles.actionText}>
             {isCompleted
               ? t('shoppingListScreens.reactivateList')
               : t('shoppingListScreens.markComplete')}
@@ -81,7 +81,7 @@ export const ListStatusSection: React.FC<ListStatusSectionProps> = ({
           size={20}
           tone="primary"
         />
-        <Text tone="accent" style={styles.actionText}>
+        <Text role="body" tone="accent" style={styles.actionText}>
           {isArchived
             ? t('shoppingListScreens.restoreList')
             : t('labels.archiveList')}

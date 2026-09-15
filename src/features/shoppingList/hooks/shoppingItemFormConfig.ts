@@ -1,5 +1,5 @@
 import { object, string, number } from 'yup';
-import { t } from '#/i18n';
+import { t, type TranslationKey } from '#/i18n';
 
 /**
  * Shape, defaults and validation for the shopping-list item form. Shared by the
@@ -9,7 +9,13 @@ import { t } from '#/i18n';
 
 // Messages resolve LAZILY: the schema is built once at module scope, so an
 // eagerly-resolved message would freeze the import-time language.
-const msg = (key: string) => (): string => t(key);
+const msg = (key: TranslationKey) => (): string => t(key);
+
+// yup types a test's sibling values as `any`; these are the ones the rules read.
+interface NetWeightSiblings {
+  netWeight?: string | null;
+  netWeightUnitId?: string | null;
+}
 
 export type ShoppingItemFormData = {
   itemName: string;
@@ -54,9 +60,9 @@ export const SHOPPING_ITEM_DEFAULTS: ShoppingItemFormData = {
 
 // `storeName` is the display label for `storeId`, never sent on its own, so a
 // change to it must not mark the form dirty.
-export const DIRTY_TRACKED_FIELDS = Object.keys(SHOPPING_ITEM_DEFAULTS).filter(
-  field => field !== 'storeName',
-) as (keyof ShoppingItemFormData)[];
+export const DIRTY_TRACKED_FIELDS: readonly string[] = Object.keys(
+  SHOPPING_ITEM_DEFAULTS,
+).filter(field => field !== 'storeName');
 
 export const shoppingItemSchema = object({
   itemName: string().trim().required(msg('errors.itemNameRequired')),
@@ -79,7 +85,7 @@ export const shoppingItemSchema = object({
   netWeight: string().test(
     'net-weight-needs-value',
     msg('errors.field.netWeight'),
-    (value, context) => {
+    (value, context: { parent: NetWeightSiblings }) => {
       if ((value ?? '').trim()) return true;
       return !context.parent.netWeightUnitId;
     },
@@ -89,7 +95,7 @@ export const shoppingItemSchema = object({
   netWeightUnit: string().test(
     'net-weight-needs-unit',
     msg('labels.pleaseSelectAUnitForTheNetWeight'),
-    (_value, context) => {
+    (_value, context: { parent: NetWeightSiblings }) => {
       const weight = (context.parent.netWeight ?? '').trim();
       if (!weight) return true;
       return Boolean(context.parent.netWeightUnitId);

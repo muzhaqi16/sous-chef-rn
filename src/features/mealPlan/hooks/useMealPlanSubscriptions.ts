@@ -321,10 +321,10 @@ function handleTemplateItemChanged(
 export function useMealPlanSubscriptions(userId?: string) {
   const selectedHomeId = useSelectedHomeId() || undefined;
   const isHomeSelectionReady = useIsHomeSelectionReady();
-  const rejected = useSubscriptionRejected('MealPlanEvents');
+  const rejected = useSubscriptionRejected(MealPlanEventsDocument);
 
   const eventHandlers = subscriptionService.register<MealPlanEventsPayload>({
-    subscriptionName: 'MealPlanEvents',
+    document: MealPlanEventsDocument,
     entityType: 'MealPlan',
     enableDeduplication: true,
     userId,
@@ -369,7 +369,8 @@ export function useMealPlanSubscriptions(userId?: string) {
 
   const mealPlanSkip = !selectedHomeId || !isHomeSelectionReady || rejected;
   const mealPlanEvents = useSubscription(MealPlanEventsDocument, {
-    variables: { homeId: selectedHomeId! },
+    // `skip` holds while there is no home, so the empty id is never sent.
+    variables: { homeId: selectedHomeId ?? '' },
     skip: mealPlanSkip,
     // Same reason as `PantryEvents`: the envelope's `node` is `__typename` +
     // `id` only, and `MealPlanForEvent` / `GetMealPlan` read the entity back
@@ -380,7 +381,7 @@ export function useMealPlanSubscriptions(userId?: string) {
     ...eventHandlers,
   });
   useSubscriptionTransportRecovery(
-    'MealPlanEvents',
+    MealPlanEventsDocument,
     mealPlanEvents,
     mealPlanSkip,
   );

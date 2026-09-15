@@ -72,7 +72,6 @@
     "deleteWarning": "Deleting this pantry will permanently remove all items stored in it. This action cannot be undone.",
     "deleteConfirmMessage": "Are you sure you want to delete this pantry? This action cannot be undone and will remove all items in this pantry.",
     "nameEmptyError": "Pantry name cannot be empty",
-    "createFailed": "Failed to create pantry",
     "loadErrorTitle": "Error Loading Pantry",
     "loadErrorMessage": "Failed to load pantry data. Please try again.",
     "userCreatedDescription": "User created pantry"
@@ -177,7 +176,11 @@
     "currentLabel": "Current: ",
     "newQuantity": "New Quantity",
     "reasonPlaceholder": "Why is the quantity being adjusted?",
-    "remainingWeightPlaceholder": "Leave blank to auto-adjust"
+    "remainingWeightPlaceholder": "Leave blank to auto-adjust",
+    "systemReason": {
+      "stackMerged": "Adjustment after merging items",
+      "stackPurged": "Administrative removal"
+    }
   },
   "recordWaste": {
     "wasteBy": "Waste by",
@@ -300,7 +303,8 @@
     "acquisitionMethod": "How acquired",
     "methodPurchased": "Purchased",
     "methodHomegrown": "Homegrown",
-    "methodGifted": "Gifted"
+    "methodGifted": "Gifted",
+    "methodBarcodeScan": "Barcode scan"
   },
   "pantryScreen": {
     "greetingFallback": "Good morning",

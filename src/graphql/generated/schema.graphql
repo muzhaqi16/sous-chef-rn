@@ -1449,7 +1449,9 @@ enum ChangeType {
   LOCATION_UPDATED
   """The stack's portion definition or density override was edited"""
   MEASUREMENT_PROFILE
+  MERGED
   QUANTITY_UPDATED
+  RESTORED
   WEIGHT_CORRECTED
 }
 
@@ -2222,6 +2224,13 @@ input CreatePantryInput {
 input CreatePantryItemInput {
   brand: BrandReferenceInput
   expiresAt: DateTime
+  """
+  When the pantry already holds this item in the resolved unit, add the quantity to that
+  stack and return it instead of refusing with DuplicatePantryItemError. A pantry holds one
+  active stack per item per unit. The added stock is measured by this input's own net weight
+  and records its linked purchase. Stack-level fields (brand, storage, tags, thresholds and
+  the item name) are not applied to the held stack.
+  """
   forceAdd: Boolean
   """
   Optional client-generated permanent ID (CUID2).
@@ -3087,8 +3096,18 @@ input DeletePantryItemInput {
 }
 
 type DeletePantryItemPayload {
+  """
+  True when this call CONVERGED on a pre-existing state (the stack was
+  already removed) — a no-op success that did NOT re-remove or re-publish.
+  The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
-  pantryItem: PantryItem!
+  """
+  The removed stack, or null when it was already removed — an idempotent
+  replay (or second device) that converged as success. See converged.
+  """
+  pantryItem: PantryItem
 }
 
 """
@@ -3829,10 +3848,11 @@ Always include a __typename so the variant can be discriminated.
 union DuplicateMealPlanResult = ConflictError | DuplicateMealPlanPayload | ForbiddenError | NotFoundError | ValidationError
 
 """
-The pantry already has an active stack of this catalog item. Returned by
-`createPantryItem` (unless `forceAdd` is set) so the client can route the
-user to restock the existing item instead of creating a duplicate. The
-`code` is `PANTRY_ITEM_ALREADY_EXISTS`.
+The pantry already holds an active stack of this catalog item in this unit, and
+a pantry holds one. Returned by `createPantryItem` without `forceAdd`, and by
+`updatePantryItem` and `restorePantryItem` when the write would open a second,
+so the client can route the user to restock the existing stack. The `code` is
+`PANTRY_ITEM_ALREADY_EXISTS`.
 """
 type DuplicatePantryItemError implements Error {
   code: ErrorCode!
@@ -5332,7 +5352,12 @@ enum ItemMatchType {
 
 """
 Client-settable subset of an item's metadata. The stored column also carries
-server-written moderation and merge-audit keys, which are not settable here.
+server-written moderation, merge-audit and enrichment keys, which are not
+settable here and which an update never removes.
+
+On an update the object is MERGED into the stored metadata: a field set to a
+value overwrites it, a field set to null removes it, and an omitted field is
+kept. Passing null for the whole object removes every field listed here.
 """
 input ItemMetadataInput {
   isDairyFree: Boolean
@@ -7342,7 +7367,15 @@ type Mutation {
   already-deleted pantry before it could converge.
   """
   deletePantry(input: DeletePantryInput!): DeletePantryResult!
-  """Delete a pantry item (soft delete)."""
+  """
+  Remove a pantry item. Reversible: the stack stops being held and leaves the
+  pantry's inventory, keeping its quantity, batches, costs and change history
+  so restorePantryItem can put it back. It moves no stock, so it writes no
+  consumption record and changes no usage or waste total.
+  
+  There is no client-facing permanent delete — destroying a stack is
+  adminPurgePantryItems.
+  """
   deletePantryItem(input: DeletePantryItemInput!): DeletePantryItemResult!
   """Delete a purchase record."""
   deletePurchase(input: DeletePurchaseInput!): DeletePurchaseResult!
@@ -7635,6 +7668,13 @@ type Mutation {
   """Restore a soft-deleted item"""
   restoreItem(input: RestoreItemInput!): RestoreItemResult!
   """
+  Put back a pantry item removed by deletePantryItem, with the batches
+  retired alongside it. Refused with ConflictError when the stack is not
+  removed, and with DuplicatePantryItemError when the pantry already holds
+  that item in that unit.
+  """
+  restorePantryItem(input: RestorePantryItemInput!): RestorePantryItemResult!
+  """
   Revoke one device credential. The device's current session is unaffected -
   this ends the ability to sign back in on it, not the session running on it.
   """
@@ -7642,10 +7682,13 @@ type Mutation {
   """
   Sign one device out, leaving every other device signed in.
   
-  Ends every live session bound to that device, including each token in a
-  rotation lineage that started there. Deliberately narrower than a
-  revoke-all: it does not touch other devices' sessions, their access tokens,
-  or their device credentials.
+  Ends every live session bound to that device: each token in a rotation
+  lineage that started there, that device's stored credential, and the access
+  token it is already holding. A client signing out the device it runs on
+  MUST expect its own next request to be refused.
+  
+  Deliberately narrower than a revoke-all: it does not touch other devices'
+  sessions, their access tokens, or their device credentials.
   """
   revokeDeviceSessions(input: RevokeDeviceSessionsInput!): RevokeDeviceSessionsResult!
   """Send a test notification of a specific type to the current user."""
@@ -8614,6 +8657,12 @@ type Pantry {
   location: String
   metadata: JSON
   name: String!
+  """
+  Every stack removed from this pantry, most recently removed first. Each can
+  be put back with restorePantryItem, which refuses when the pantry already
+  holds that item in that unit. Bounded field: limit defaults to 10 and is
+  clamped server-side to a maximum of 50.
+  """
   recentlyDeletedItems(limit: Int = 10): [PantryItem!]!
   stats: PantryStats!
   storageLocationsConnection(after: String, before: String, first: Int, last: Int, orderBy: StorageLocationOrderBy): StorageLocationConnection!
@@ -8836,8 +8885,8 @@ type PantryItem {
   whose price is known — null when that is none of it.
   """
   totalCost: Float
-  unit: Unit
-  unitId: ID
+  unit: Unit!
+  unitId: ID!
   updatedAt: DateTime!
   usageRecords(after: String, before: String, first: Int, last: Int, orderBy: PantryItemUsageOrderBy): PantryItemUsageConnection!
   version: Int!
@@ -8954,11 +9003,17 @@ type PantryItemChange {
   deviceId: String
   field: String
   id: ID!
+  """The stack's item name when the change was recorded."""
+  itemName: String
   metadata: JSON
   newValue: String
   oldValue: String
-  pantryItem: PantryItem!
-  pantryItemId: ID!
+  pantryId: ID
+  """
+  Null once the stack is destroyed by adminPurgePantryItems; pantryId and itemName still name it.
+  """
+  pantryItem: PantryItem
+  pantryItemId: ID
   source: ChangeSource!
 }
 
@@ -9112,7 +9167,7 @@ type PantryItemSuggestion {
   """Item name for display"""
   name: String!
   """
-  Pantry item ID - present for LOW_STOCK, EXPIRING_SOON, and RECENTLY_DELETED sources
+  Pantry item ID - present for LOW_STOCK, EXPIRING_SOON and RECENTLY_DELETED, where it names the removed stack restorePantryItem takes
   """
   pantryItemId: ID
   """Popularity ranking position (for POPULAR source)"""
@@ -9700,23 +9755,46 @@ type Query {
   """List compatible units for an item with conversion metadata."""
   compatibleUnitsForItem(currentUnitId: ID, itemId: ID!): [CompatibleUnit!]!
   """
-  Get ranked consumption-eligible units for a catalog item.
-  Returns units in priority order: the stack's own portion unit → default
-  consume unit → curated → auto measurement → tracking unit → portions.
-  Requires an itemId (catalog item) plus the pantry item's tracking unit context.
+  Ranked consumption-eligible units for a CATALOG item, for a stack described
+  by its unit ids. Amounts are optional: which units are offered does not
+  depend on them. A netWeight, portionsPerTrackingUnit or densityOverride of
+  zero or less is refused, and so is a portionsPerTrackingUnit without its
+  portionUnitId.
   """
   consumptionUnitsForItem(
+    """The stack's density in g/mL, when it overrides the item's."""
+    densityOverride: Float
     itemId: ID!
+    """The net weight of ONE tracking unit. Optional."""
+    netWeight: Float
+    """
+    The unit the stack's net weight is recorded in. Its measure is offered
+    whether or not netWeight is passed.
+    """
     netWeightUnitId: ID
     """
     The stack's own portion unit (PantryItem.portionUnitId), when it defines
-    one. Pass it and "clove" is offered first for a stack that says a bulb
-    holds ten; omit it and the list is what the catalog alone supports, which
-    is narrower than what createPantryItemUsage accepts for that stack.
+    one. Passed with or without its count it is read as the stack's portion,
+    so "clove" is offered first for a bulb stack.
     """
     portionUnitId: ID
+    """
+    How many portion units one tracking unit holds. Optional; requires
+    portionUnitId.
+    """
+    portionsPerTrackingUnit: Float
     trackingUnitId: ID!
-  ): [RankedUnit!]!
+  ): [RankedUnit!]! @deprecated(reason: "Use consumptionUnitsForPantryItem instead.")
+  """
+  Ranked units this pantry stack can be consumed in, best first: its own
+  portion unit → the item's default consume unit → curated → the net-weight
+  family → the tracking unit → portions.
+  
+  Every unit returned converts into what the stack measures, so each one is a
+  unit createPantryItemUsage accepts. Re-query after any edit to the stack's
+  unit, net weight, portion definition or density — all four change the answer.
+  """
+  consumptionUnitsForPantryItem(pantryItemId: ID!): [RankedUnit!]!
   """
   Convert quantity between units with item context
   Supports both same-type (cup→tbsp) and cross-type (cup→gram) conversions
@@ -9780,10 +9858,15 @@ type Query {
   itemConversions(includeStandard: Boolean, itemId: ID!): [ItemUnitConversion!]!
   """
   List items with filtering and cursor-based pagination (Relay spec).
-  Use filters for UPC, SKU, or external ID lookups:
-  - items(filters: { upc, upcFormat }) - UPC/barcode lookup
-  - items(filters: { sku, skuStoreId }) - SKU lookup
-  - items(filters: { externalId, externalProvider }) - External ID lookup
+  Use filters for UPC or SKU lookups:
+  - items(filters: { lookup: { upc, upcFormat } }) - UPC/barcode lookup
+  - items(filters: { lookup: { sku, skuStoreId } }) - SKU lookup
+  
+  A curated list (curation isPopular, isTrending, isRecent, showInOnboarding)
+  and a UPC/SKU lookup each return a single page, so after, before and last
+  are refused, and each applies a subset of the filters. A filter the
+  request's mode does not apply is refused with a validation error naming
+  it, never ignored.
   """
   items(after: String, before: String, filters: ItemFilters, first: Int, last: Int, orderBy: ItemOrderBy): ItemConnection!
   """
@@ -9883,16 +9966,28 @@ type Query {
   Reachable anonymously so a not-yet-signed-up recipient can preview.
   """
   resolveShareLink(code: String!): ResolveShareLinkResult
+  """The list restockUnitsForPantryItem returns."""
+  restockUnitsForItem(pantryItemId: ID!): [RankedUnit!]! @deprecated(reason: "Use restockUnitsForPantryItem instead.")
   """
-  Get ranked restock-eligible units for a pantry item.
-  Returns units in priority order: tracking unit → curated retail → auto measurement.
+  Ranked units this pantry stack can be restocked in, best first: the tracking
+  unit → its own portion unit → curated retail units → the net-weight family.
+  Every unit returned converts into what the stack measures, so each one is a
+  unit restockPantryItem accepts.
   """
-  restockUnitsForItem(pantryItemId: ID!): [RankedUnit!]!
+  restockUnitsForPantryItem(pantryItemId: ID!): [RankedUnit!]!
   """Fetch a single saved recipe by its ID."""
   savedRecipe(id: ID!): SavedRecipe
   """List all folder names the user has organized saved recipes into."""
   savedRecipeFolders: [String!]!
-  """Search items with cursor-based pagination (Relay spec)."""
+  """
+  Search items with cursor-based pagination (Relay spec).
+  
+  With an orderBy, every page is reachable through after, before and last.
+  Without one, matches are ranked by relevance (the caller's own private
+  items, then their frequent items, then by popularity). A ranked list has
+  no cursor, so only its first page is served: after, before and last are
+  refused with a validation error until an orderBy is named.
+  """
   searchItems(after: String, before: String, filters: ItemFilters, first: Int, last: Int, orderBy: ItemOrderBy, query: String!): ItemConnection!
   """
   Semantic (vector) search over the catalog. The prompt is embedded
@@ -10944,6 +11039,22 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union RestoreItemResult = ConflictError | ForbiddenError | NotFoundError | RestoreItemPayload | ValidationError
+
+input RestorePantryItemInput {
+  id: ID!
+}
+
+type RestorePantryItemPayload {
+  pantry: Pantry
+  pantryItem: PantryItem!
+}
+
+"""
+Result of RestorePantryItem. Select on RestorePantryItemPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union RestorePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | RestorePantryItemPayload | ValidationError
 
 enum RestrictionSeverity {
   ALLERGY
@@ -12484,6 +12595,13 @@ input SyncPantryItemInput {
   clientId: ID!
   expirationAlert: Boolean
   expiresAt: DateTime
+  """
+  When the pantry already holds this item in the resolved unit, add the quantity to that
+  stack and return it instead of refusing with DuplicatePantryItemError. A pantry holds one
+  active stack per item per unit. The added stock is measured by this input's own net weight
+  and records its linked purchase. Stack-level fields (brand, storage, tags, thresholds and
+  the item name) are not applied to the held stack.
+  """
   forceAdd: Boolean
   isComposted: Boolean
   isRecycled: Boolean
@@ -12825,7 +12943,7 @@ enum TopLevelErrorCode {
   """
   UNAUTHENTICATED
   """
-  The unit is not valid for the requested operation. Carries no machine-readable list of the units that would be: a mutation reports this as a ValidationError union member, which has no extensions, and the message names the acceptable alternatives in prose. To present them as options, re-query consumptionUnitsForItem or restockUnitsForItem.
+  The unit is not valid for the requested operation. The message states why — curation, no conversion route, a fact the food does not record, or a measure the stack cannot express. Carries no machine-readable list of the units that would be: a mutation reports this as a ValidationError union member, which has no extensions, and the message names the acceptable alternatives in prose. To present them as options, re-query consumptionUnitsForPantryItem or restockUnitsForPantryItem.
   """
   UNIT_INVALID
   VALIDATION_FAILED
@@ -13662,7 +13780,7 @@ Result of UpdatePantryItem. Select on UpdatePantryItemPayload for the
 success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
-union UpdatePantryItemResult = ConflictError | ForbiddenError | NotFoundError | UpdatePantryItemPayload | ValidationError
+union UpdatePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | UpdatePantryItemPayload | ValidationError
 
 type UpdatePantryPayload {
   home: Home

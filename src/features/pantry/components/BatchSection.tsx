@@ -3,7 +3,7 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { type PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
+import type { PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { BatchStatus } from '#/graphql/generated/schemaTypes';
 import { BatchListItem } from './BatchListItem';
 import { useOpenPantryItemBatch } from '#features/pantry/hooks/mutations/useOpenPantryItemBatch';
@@ -57,11 +57,11 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
   const hasMore = allBatchCount > shownBatches.length;
 
   const handleOpen = (batchId: string) => {
-    openBatch(batchId);
+    void openBatch(batchId);
   };
 
   const handleWaste = (batchId: string) => {
-    wasteBatch(batchId);
+    void wasteBatch(batchId);
   };
 
   return (

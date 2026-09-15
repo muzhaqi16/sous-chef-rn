@@ -1182,7 +1182,9 @@ export enum ChangeType {
   LocationUpdated = 'LOCATION_UPDATED',
   /** The stack's portion definition or density override was edited */
   MeasurementProfile = 'MEASUREMENT_PROFILE',
+  Merged = 'MERGED',
   QuantityUpdated = 'QUANTITY_UPDATED',
+  Restored = 'RESTORED',
   WeightCorrected = 'WEIGHT_CORRECTED'
 }
 
@@ -1972,6 +1974,13 @@ export type CreatePantryInput = {
 export type CreatePantryItemInput = {
   brand?: InputMaybe<BrandReferenceInput>;
   expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  /**
+   * When the pantry already holds this item in the resolved unit, add the quantity to that
+   * stack and return it instead of refusing with DuplicatePantryItemError. A pantry holds one
+   * active stack per item per unit. The added stock is measured by this input's own net weight
+   * and records its linked purchase. Stack-level fields (brand, storage, tags, thresholds and
+   * the item name) are not applied to the held stack.
+   */
   forceAdd?: InputMaybe<Scalars['Boolean']['input']>;
   /**
    * Optional client-generated permanent ID (CUID2).
@@ -2863,8 +2872,18 @@ export type DeletePantryItemInput = {
 
 export type DeletePantryItemPayload = {
   __typename: 'DeletePantryItemPayload';
+  /**
+   * True when this call CONVERGED on a pre-existing state (the stack was
+   * already removed) — a no-op success that did NOT re-remove or re-publish.
+   * The canonical, API-wide replay flag.
+   */
+  converged: Scalars['Boolean']['output'];
   pantry: Maybe<Pantry>;
-  pantryItem: PantryItem;
+  /**
+   * The removed stack, or null when it was already removed — an idempotent
+   * replay (or second device) that converged as success. See converged.
+   */
+  pantryItem: Maybe<PantryItem>;
 };
 
 /**
@@ -3613,10 +3632,11 @@ export type DuplicateMealPlanPayload = {
 export type DuplicateMealPlanResult = ConflictError | DuplicateMealPlanPayload | ForbiddenError | NotFoundError | ValidationError;
 
 /**
- * The pantry already has an active stack of this catalog item. Returned by
- * `createPantryItem` (unless `forceAdd` is set) so the client can route the
- * user to restock the existing item instead of creating a duplicate. The
- * `code` is `PANTRY_ITEM_ALREADY_EXISTS`.
+ * The pantry already holds an active stack of this catalog item in this unit, and
+ * a pantry holds one. Returned by `createPantryItem` without `forceAdd`, and by
+ * `updatePantryItem` and `restorePantryItem` when the write would open a second,
+ * so the client can route the user to restock the existing stack. The `code` is
+ * `PANTRY_ITEM_ALREADY_EXISTS`.
  */
 export type DuplicatePantryItemError = Error & {
   __typename: 'DuplicatePantryItemError';
@@ -5254,7 +5274,12 @@ export enum ItemMatchType {
 
 /**
  * Client-settable subset of an item's metadata. The stored column also carries
- * server-written moderation and merge-audit keys, which are not settable here.
+ * server-written moderation, merge-audit and enrichment keys, which are not
+ * settable here and which an update never removes.
+ *
+ * On an update the object is MERGED into the stored metadata: a field set to a
+ * value overwrites it, a field set to null removes it, and an omitted field is
+ * kept. Passing null for the whole object removes every field listed here.
  */
 export type ItemMetadataInput = {
   isDairyFree?: InputMaybe<Scalars['Boolean']['input']>;
@@ -7286,7 +7311,15 @@ export type Mutation = {
    * already-deleted pantry before it could converge.
    */
   deletePantry: DeletePantryResult;
-  /** Delete a pantry item (soft delete). */
+  /**
+   * Remove a pantry item. Reversible: the stack stops being held and leaves the
+   * pantry's inventory, keeping its quantity, batches, costs and change history
+   * so restorePantryItem can put it back. It moves no stock, so it writes no
+   * consumption record and changes no usage or waste total.
+   *
+   * There is no client-facing permanent delete — destroying a stack is
+   * adminPurgePantryItems.
+   */
   deletePantryItem: DeletePantryItemResult;
   /** Delete a purchase record. */
   deletePurchase: DeletePurchaseResult;
@@ -7579,6 +7612,13 @@ export type Mutation = {
   /** Restore a soft-deleted item */
   restoreItem: RestoreItemResult;
   /**
+   * Put back a pantry item removed by deletePantryItem, with the batches
+   * retired alongside it. Refused with ConflictError when the stack is not
+   * removed, and with DuplicatePantryItemError when the pantry already holds
+   * that item in that unit.
+   */
+  restorePantryItem: RestorePantryItemResult;
+  /**
    * Revoke one device credential. The device's current session is unaffected -
    * this ends the ability to sign back in on it, not the session running on it.
    */
@@ -7586,10 +7626,13 @@ export type Mutation = {
   /**
    * Sign one device out, leaving every other device signed in.
    *
-   * Ends every live session bound to that device, including each token in a
-   * rotation lineage that started there. Deliberately narrower than a
-   * revoke-all: it does not touch other devices' sessions, their access tokens,
-   * or their device credentials.
+   * Ends every live session bound to that device: each token in a rotation
+   * lineage that started there, that device's stored credential, and the access
+   * token it is already holding. A client signing out the device it runs on
+   * MUST expect its own next request to be refused.
+   *
+   * Deliberately narrower than a revoke-all: it does not touch other devices'
+   * sessions, their access tokens, or their device credentials.
    */
   revokeDeviceSessions: RevokeDeviceSessionsResult;
   /** Send a test notification of a specific type to the current user. */
@@ -9757,6 +9800,19 @@ export type MutationRestoreItemArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationRestorePantryItemArgs = {
+  input: RestorePantryItemInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationRevokeDeviceCredentialArgs = {
   input: RevokeDeviceCredentialInput;
 };
@@ -11289,6 +11345,12 @@ export type Pantry = {
   location: Maybe<Scalars['String']['output']>;
   metadata: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
+  /**
+   * Every stack removed from this pantry, most recently removed first. Each can
+   * be put back with restorePantryItem, which refuses when the pantry already
+   * holds that item in that unit. Bounded field: limit defaults to 10 and is
+   * clamped server-side to a maximum of 50.
+   */
   recentlyDeletedItems: Array<PantryItem>;
   stats: PantryStats;
   storageLocationsConnection: StorageLocationConnection;
@@ -11605,8 +11667,8 @@ export type PantryItem = {
    * whose price is known — null when that is none of it.
    */
   totalCost: Maybe<Scalars['Float']['output']>;
-  unit: Maybe<Unit>;
-  unitId: Maybe<Scalars['ID']['output']>;
+  unit: Unit;
+  unitId: Scalars['ID']['output'];
   updatedAt: Scalars['DateTime']['output'];
   usageRecords: PantryItemUsageConnection;
   version: Scalars['Int']['output'];
@@ -11744,11 +11806,15 @@ export type PantryItemChange = {
   deviceId: Maybe<Scalars['String']['output']>;
   field: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
+  /** The stack's item name when the change was recorded. */
+  itemName: Maybe<Scalars['String']['output']>;
   metadata: Maybe<Scalars['JSON']['output']>;
   newValue: Maybe<Scalars['String']['output']>;
   oldValue: Maybe<Scalars['String']['output']>;
-  pantryItem: PantryItem;
-  pantryItemId: Scalars['ID']['output'];
+  pantryId: Maybe<Scalars['ID']['output']>;
+  /** Null once the stack is destroyed by adminPurgePantryItems; pantryId and itemName still name it. */
+  pantryItem: Maybe<PantryItem>;
+  pantryItemId: Maybe<Scalars['ID']['output']>;
   source: ChangeSource;
 };
 
@@ -11899,7 +11965,7 @@ export type PantryItemSuggestion = {
   minQuantity: Maybe<Scalars['Float']['output']>;
   /** Item name for display */
   name: Scalars['String']['output'];
-  /** Pantry item ID - present for LOW_STOCK, EXPIRING_SOON, and RECENTLY_DELETED sources */
+  /** Pantry item ID - present for LOW_STOCK, EXPIRING_SOON and RECENTLY_DELETED, where it names the removed stack restorePantryItem takes */
   pantryItemId: Maybe<Scalars['ID']['output']>;
   /** Popularity ranking position (for POPULAR source) */
   popularityRank: Maybe<Scalars['Int']['output']>;
@@ -12488,12 +12554,24 @@ export type Query = {
   /** List compatible units for an item with conversion metadata. */
   compatibleUnitsForItem: Array<CompatibleUnit>;
   /**
-   * Get ranked consumption-eligible units for a catalog item.
-   * Returns units in priority order: the stack's own portion unit → default
-   * consume unit → curated → auto measurement → tracking unit → portions.
-   * Requires an itemId (catalog item) plus the pantry item's tracking unit context.
+   * Ranked consumption-eligible units for a CATALOG item, for a stack described
+   * by its unit ids. Amounts are optional: which units are offered does not
+   * depend on them. A netWeight, portionsPerTrackingUnit or densityOverride of
+   * zero or less is refused, and so is a portionsPerTrackingUnit without its
+   * portionUnitId.
+   * @deprecated Use consumptionUnitsForPantryItem instead.
    */
   consumptionUnitsForItem: Array<RankedUnit>;
+  /**
+   * Ranked units this pantry stack can be consumed in, best first: its own
+   * portion unit → the item's default consume unit → curated → the net-weight
+   * family → the tracking unit → portions.
+   *
+   * Every unit returned converts into what the stack measures, so each one is a
+   * unit createPantryItemUsage accepts. Re-query after any edit to the stack's
+   * unit, net weight, portion definition or density — all four change the answer.
+   */
+  consumptionUnitsForPantryItem: Array<RankedUnit>;
   /**
    * Convert quantity between units with item context
    * Supports both same-type (cup→tbsp) and cross-type (cup→gram) conversions
@@ -12557,10 +12635,15 @@ export type Query = {
   itemConversions: Array<ItemUnitConversion>;
   /**
    * List items with filtering and cursor-based pagination (Relay spec).
-   * Use filters for UPC, SKU, or external ID lookups:
-   * - items(filters: { upc, upcFormat }) - UPC/barcode lookup
-   * - items(filters: { sku, skuStoreId }) - SKU lookup
-   * - items(filters: { externalId, externalProvider }) - External ID lookup
+   * Use filters for UPC or SKU lookups:
+   * - items(filters: { lookup: { upc, upcFormat } }) - UPC/barcode lookup
+   * - items(filters: { lookup: { sku, skuStoreId } }) - SKU lookup
+   *
+   * A curated list (curation isPopular, isTrending, isRecent, showInOnboarding)
+   * and a UPC/SKU lookup each return a single page, so after, before and last
+   * are refused, and each applies a subset of the filters. A filter the
+   * request's mode does not apply is refused with a validation error naming
+   * it, never ignored.
    */
   items: ItemConnection;
   /**
@@ -12661,15 +12744,30 @@ export type Query = {
    */
   resolveShareLink: Maybe<ResolveShareLinkResult>;
   /**
-   * Get ranked restock-eligible units for a pantry item.
-   * Returns units in priority order: tracking unit → curated retail → auto measurement.
+   * The list restockUnitsForPantryItem returns.
+   * @deprecated Use restockUnitsForPantryItem instead.
    */
   restockUnitsForItem: Array<RankedUnit>;
+  /**
+   * Ranked units this pantry stack can be restocked in, best first: the tracking
+   * unit → its own portion unit → curated retail units → the net-weight family.
+   * Every unit returned converts into what the stack measures, so each one is a
+   * unit restockPantryItem accepts.
+   */
+  restockUnitsForPantryItem: Array<RankedUnit>;
   /** Fetch a single saved recipe by its ID. */
   savedRecipe: Maybe<SavedRecipe>;
   /** List all folder names the user has organized saved recipes into. */
   savedRecipeFolders: Array<Scalars['String']['output']>;
-  /** Search items with cursor-based pagination (Relay spec). */
+  /**
+   * Search items with cursor-based pagination (Relay spec).
+   *
+   * With an orderBy, every page is reachable through after, before and last.
+   * Without one, matches are ranked by relevance (the caller's own private
+   * items, then their frequent items, then by popularity). A ranked list has
+   * no cursor, so only its first page is served: after, before and last are
+   * refused with a validation error until an orderBy is named.
+   */
   searchItems: ItemConnection;
   /**
    * Semantic (vector) search over the catalog. The prompt is embedded
@@ -12862,10 +12960,18 @@ export type QueryCompatibleUnitsForItemArgs = {
 
 
 export type QueryConsumptionUnitsForItemArgs = {
+  densityOverride?: InputMaybe<Scalars['Float']['input']>;
   itemId: Scalars['ID']['input'];
+  netWeight?: InputMaybe<Scalars['Float']['input']>;
   netWeightUnitId?: InputMaybe<Scalars['ID']['input']>;
   portionUnitId?: InputMaybe<Scalars['ID']['input']>;
+  portionsPerTrackingUnit?: InputMaybe<Scalars['Float']['input']>;
   trackingUnitId: Scalars['ID']['input'];
+};
+
+
+export type QueryConsumptionUnitsForPantryItemArgs = {
+  pantryItemId: Scalars['ID']['input'];
 };
 
 
@@ -13156,6 +13262,11 @@ export type QueryResolveShareLinkArgs = {
 
 
 export type QueryRestockUnitsForItemArgs = {
+  pantryItemId: Scalars['ID']['input'];
+};
+
+
+export type QueryRestockUnitsForPantryItemArgs = {
   pantryItemId: Scalars['ID']['input'];
 };
 
@@ -14342,6 +14453,23 @@ export type RestoreItemPayload = {
  * Always include a __typename so the variant can be discriminated.
  */
 export type RestoreItemResult = ConflictError | ForbiddenError | NotFoundError | RestoreItemPayload | ValidationError;
+
+export type RestorePantryItemInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type RestorePantryItemPayload = {
+  __typename: 'RestorePantryItemPayload';
+  pantry: Maybe<Pantry>;
+  pantryItem: PantryItem;
+};
+
+/**
+ * Result of RestorePantryItem. Select on RestorePantryItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type RestorePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | RestorePantryItemPayload | ValidationError;
 
 export enum RestrictionSeverity {
   Allergy = 'ALLERGY',
@@ -16069,6 +16197,13 @@ export type SyncPantryItemInput = {
   clientId: Scalars['ID']['input'];
   expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
   expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  /**
+   * When the pantry already holds this item in the resolved unit, add the quantity to that
+   * stack and return it instead of refusing with DuplicatePantryItemError. A pantry holds one
+   * active stack per item per unit. The added stock is measured by this input's own net weight
+   * and records its linked purchase. Stack-level fields (brand, storage, tags, thresholds and
+   * the item name) are not applied to the held stack.
+   */
   forceAdd?: InputMaybe<Scalars['Boolean']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
@@ -16364,7 +16499,7 @@ export enum TopLevelErrorCode {
   SubscriptionLimitExceeded = 'SUBSCRIPTION_LIMIT_EXCEEDED',
   /** No credentials were presented. Apollo's standard code, which clients already branch on. */
   Unauthenticated = 'UNAUTHENTICATED',
-  /** The unit is not valid for the requested operation. Carries no machine-readable list of the units that would be: a mutation reports this as a ValidationError union member, which has no extensions, and the message names the acceptable alternatives in prose. To present them as options, re-query consumptionUnitsForItem or restockUnitsForItem. */
+  /** The unit is not valid for the requested operation. The message states why — curation, no conversion route, a fact the food does not record, or a measure the stack cannot express. Carries no machine-readable list of the units that would be: a mutation reports this as a ValidationError union member, which has no extensions, and the message names the acceptable alternatives in prose. To present them as options, re-query consumptionUnitsForPantryItem or restockUnitsForPantryItem. */
   UnitInvalid = 'UNIT_INVALID',
   ValidationFailed = 'VALIDATION_FAILED',
   ValidationUniqueConstraint = 'VALIDATION_UNIQUE_CONSTRAINT',
@@ -17217,7 +17352,7 @@ export type UpdatePantryItemQuantityResult = ConflictError | ForbiddenError | No
  * success case; every other member is a business error carrying a message.
  * Always include a __typename so the variant can be discriminated.
  */
-export type UpdatePantryItemResult = ConflictError | ForbiddenError | NotFoundError | UpdatePantryItemPayload | ValidationError;
+export type UpdatePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | UpdatePantryItemPayload | ValidationError;
 
 export type UpdatePantryPayload = {
   __typename: 'UpdatePantryPayload';

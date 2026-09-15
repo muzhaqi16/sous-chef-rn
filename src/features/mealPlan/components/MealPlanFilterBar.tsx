@@ -1,50 +1,12 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { parseISO } from 'date-fns';
 import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from '#components/atoms/themedComponents';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { MealPlanType } from '#/graphql/generated/schemaTypes';
-import { matchesTerm } from '#hooks/search/useLocalSearch';
-
-export interface MealPlanFilterState {
-  search: string;
-  activeOnly: boolean;
-  planType: MealPlanType | null;
-}
-
-export const EMPTY_MEAL_PLAN_FILTERS: MealPlanFilterState = {
-  search: '',
-  activeOnly: false,
-  planType: null,
-};
-
-/**
- * Client-side filter for the plan selector list. Filtering the loaded set (not a
- * refetch) keeps the main calendar's selected plan stable and is instant — the
- * selector shows all of a user's plans, so pagination isn't a concern here.
- */
-export function filterMealPlans<
-  T extends {
-    name: string;
-    planType: MealPlanType;
-    startDate: string;
-    endDate: string;
-  },
->(plans: T[], filters: MealPlanFilterState, now: Date): T[] {
-  return plans.filter(plan => {
-    if (!matchesTerm(plan, filters.search, ['name'])) return false;
-    if (filters.planType && plan.planType !== filters.planType) return false;
-    if (filters.activeOnly) {
-      const start = parseISO(plan.startDate);
-      const end = parseISO(plan.endDate);
-      if (now < start || now > end) return false;
-    }
-    return true;
-  });
-}
+import type { MealPlanFilterState } from '#features/mealPlan/utils/mealPlanFilters';
 
 /** A pill toggle used for the active-only + plan-type filters. */
 const FilterChip: React.FC<{

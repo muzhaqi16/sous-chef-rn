@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import {
   Pressable,
   PrimaryActivityIndicator,
@@ -23,36 +23,38 @@ import {
 } from '#components/molecules/ChipScrollRow';
 import { useMealTemplates } from '#features/mealPlan/hooks/useMealTemplates';
 import { TemplateCategory } from '#/graphql/generated/schemaTypes';
-import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 
-const CATEGORY_KEYS: { key: TemplateCategory | undefined; labelKey: string }[] =
-  [
-    { key: undefined, labelKey: 'templateBrowser.categoryAll' },
-    { key: TemplateCategory.Weekly, labelKey: 'saveAsTemplate.categoryWeekly' },
-    {
-      key: TemplateCategory.Monthly,
-      labelKey: 'saveAsTemplate.categoryMonthly',
-    },
-    {
-      key: TemplateCategory.Breakfast,
-      labelKey: 'labels.breakfast',
-    },
-    { key: TemplateCategory.Lunch, labelKey: 'labels.lunch' },
-    { key: TemplateCategory.Dinner, labelKey: 'labels.dinner' },
-    {
-      key: TemplateCategory.Holiday,
-      labelKey: 'saveAsTemplate.categoryHoliday',
-    },
-    {
-      key: TemplateCategory.SpecialDiet,
-      labelKey: 'saveAsTemplate.categorySpecialDiet',
-    },
-    { key: TemplateCategory.Custom, labelKey: 'saveAsTemplate.categoryCustom' },
-  ];
+const CATEGORY_KEYS: {
+  key: TemplateCategory | undefined;
+  labelKey: TranslationKey;
+}[] = [
+  { key: undefined, labelKey: 'templateBrowser.categoryAll' },
+  { key: TemplateCategory.Weekly, labelKey: 'saveAsTemplate.categoryWeekly' },
+  {
+    key: TemplateCategory.Monthly,
+    labelKey: 'saveAsTemplate.categoryMonthly',
+  },
+  {
+    key: TemplateCategory.Breakfast,
+    labelKey: 'labels.breakfast',
+  },
+  { key: TemplateCategory.Lunch, labelKey: 'labels.lunch' },
+  { key: TemplateCategory.Dinner, labelKey: 'labels.dinner' },
+  {
+    key: TemplateCategory.Holiday,
+    labelKey: 'saveAsTemplate.categoryHoliday',
+  },
+  {
+    key: TemplateCategory.SpecialDiet,
+    labelKey: 'saveAsTemplate.categorySpecialDiet',
+  },
+  { key: TemplateCategory.Custom, labelKey: 'saveAsTemplate.categoryCustom' },
+];
 
 const keyExtractor = (item: MealTemplateDisplayFragment) => item.id;
 
@@ -166,7 +168,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
         ) : dataState === 'empty' ? (
           <View style={styles.emptyInset}>
             <Icon name="document-text-outline" size={48} tone="textTertiary" />
-            <Text tone="secondary" align="center">
+            <Text role="body" tone="secondary" align="center">
               {t('templateBrowser.noTemplates')}
             </Text>
           </View>

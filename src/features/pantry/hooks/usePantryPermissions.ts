@@ -25,11 +25,7 @@ export function usePantryPermissions(): PantryPermissions {
   const { currentHome } = useCurrentHome();
 
   return (() => {
-    const membership = (
-      currentHome as {
-        myMembership?: Parameters<typeof getPantryPermissions>[0];
-      } | null
-    )?.myMembership;
+    const membership = currentHome?.myMembership;
     if (!membership) {
       return UNKNOWN_MEMBERSHIP_PERMISSIONS;
     }

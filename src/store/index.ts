@@ -14,32 +14,35 @@ import {
 } from 'zustand/middleware';
 
 enableMapSet();
-import { createAuthSlice, AuthState } from './slices/authSlice';
+import type { AuthState } from './slices/authSlice';
+import { createAuthSlice } from './slices/authSlice';
+import type { PreferencesState } from './slices/preferencesSlice';
 import {
   applyThemePreferenceToRuntime,
   createPreferencesSlice,
-  PreferencesState,
 } from './slices/preferencesSlice';
 import { FontScalePreference } from './slices/preferenceTypes';
-import { createAppSlice, AppState } from './slices/appSlice';
-import { createUISlice, UIState } from './slices/uiSlice';
-import { createTutorialSlice, TutorialState } from './slices/tutorialSlice';
-import {
-  createResetManager,
+import type { AppState } from './slices/appSlice';
+import { createAppSlice } from './slices/appSlice';
+import type { UIState } from './slices/uiSlice';
+import { createUISlice } from './slices/uiSlice';
+import type { TutorialState } from './slices/tutorialSlice';
+import { createTutorialSlice } from './slices/tutorialSlice';
+import type {
   ResetOptions,
   RESET_SCENARIOS,
   SessionEndReason,
 } from './resetManager';
+import { createResetManager } from './resetManager';
 
-import {
-  createNavigationSlice,
-  NavigationState,
-} from './slices/navigationSlice';
-import { createTelemetrySlice, TelemetryState } from './slices/telemetrySlice';
+import type { NavigationState } from './slices/navigationSlice';
+import { createNavigationSlice } from './slices/navigationSlice';
+import type { TelemetryState } from './slices/telemetrySlice';
+import { createTelemetrySlice } from './slices/telemetrySlice';
+import type { NetworkState } from './slices/networkSlice';
 import {
   createNetworkSlice,
   hydrateOfflineModeFromStorage,
-  NetworkState,
 } from './slices/networkSlice';
 import {
   zustandStorage,
@@ -143,9 +146,11 @@ export const handleStoreRehydration = (
   // `#/i18n` pulls in `i18n/config`, which has load-time side effects.
   const language = state?.language;
   if (language && language !== 'en') {
-    import('#/i18n').then(({ changeLanguage }) => {
-      void changeLanguage(language);
-    });
+    void import('#/i18n')
+      .then(({ changeLanguage }) => {
+        void changeLanguage(language);
+      })
+      .catch(error => logger.warn('Loading the stored language failed', error));
   }
 
   void hydrateSessionTokensThenFinish(state);
@@ -155,12 +160,14 @@ export const handleStoreRehydration = (
   const startTs = (globalThis as { __APP_START_TIMESTAMP?: number })
     .__APP_START_TIMESTAMP;
   if (startTs) {
-    import('#services/telemetry').then(({ Telemetry }) => {
-      Telemetry.histogram(
-        'app_js_entry_to_store_ready_ms',
-        Date.now() - startTs,
-      );
-    });
+    void import('#services/telemetry')
+      .then(({ Telemetry }) => {
+        Telemetry.histogram(
+          'app_js_entry_to_store_ready_ms',
+          Date.now() - startTs,
+        );
+      })
+      .catch(error => logger.warn('Loading telemetry failed', error));
   }
 
   // Outside persist (see partialize) so the last setting is readable before
@@ -300,6 +307,9 @@ const PERSISTED_KEY_SET: ReadonlySet<string> = new Set(PERSISTED_KEYS);
 const LEGACY_HINT_PREFIX = 'feature_hint_shown_';
 const LEGACY_LOGIN_COUNT_PREFIX = 'login_count_';
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 const legacyTutorialKeys = (): string[] => {
   try {
     return storage
@@ -322,8 +332,10 @@ const BLOB_ONLY_KEYS: ReadonlySet<string> = new Set([
 
 export { PERSISTED_KEYS };
 
-const pickPersisted = (state: RootState): Pick<RootState, PersistedKey> => {
-  const persisted = {} as Pick<RootState, PersistedKey>;
+const pickPersisted = (
+  state: RootState,
+): Partial<Pick<RootState, PersistedKey>> => {
+  const persisted: Partial<Pick<RootState, PersistedKey>> = {};
   for (const key of PERSISTED_KEYS) {
     assignKey(persisted, state, key);
   }
@@ -333,7 +345,7 @@ const pickPersisted = (state: RootState): Pick<RootState, PersistedKey> => {
 // Separate generic so each assignment is typed per-key instead of as the
 // intersection of all persisted value types.
 const assignKey = <K extends PersistedKey>(
-  target: Pick<RootState, PersistedKey>,
+  target: Partial<Pick<RootState, PersistedKey>>,
   source: RootState,
   key: K,
 ): void => {
@@ -441,13 +453,21 @@ export const useStore = create<RootState>()(
           // hold it. Same key strings, different home — without this every
           // dismissed coach mark replays and every login count restarts at 0.
           if (version < 16) {
-            const state = (persistedState ?? {}) as Record<string, unknown>;
-            const hints = {
-              ...((state.featureHintsShown as Record<string, boolean>) ?? {}),
-            };
-            const counts = {
-              ...((state.loginCounts as Record<string, number>) ?? {}),
-            };
+            const state = isRecord(persistedState) ? persistedState : {};
+            const hints: Record<string, boolean> = {};
+            if (isRecord(state.featureHintsShown)) {
+              for (const [key, shown] of Object.entries(
+                state.featureHintsShown,
+              )) {
+                if (typeof shown === 'boolean') hints[key] = shown;
+              }
+            }
+            const counts: Record<string, number> = {};
+            if (isRecord(state.loginCounts)) {
+              for (const [userId, count] of Object.entries(state.loginCounts)) {
+                if (typeof count === 'number') counts[userId] = count;
+              }
+            }
 
             for (const key of legacyTutorialKeys()) {
               if (key.startsWith(LEGACY_HINT_PREFIX)) {

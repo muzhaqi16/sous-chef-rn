@@ -2,6 +2,26 @@
 
 This guide helps diagnose and fix crashes when ProGuard/R8 code shrinking is enabled in release builds.
 
+## Crash reporting
+
+Android builds report native crashes to Firebase Crashlytics (project
+`souschef-68c1a`, package `dev.souschef.app`). A native crash — a Fabric mount
+exception, for example — kills the process before any JS telemetry can send, so
+Crashlytics is the only record of one outside a device's logcat.
+
+- **Android only.** iOS has no Firebase configuration; the module is excluded from
+  iOS autolinking in `react-native.config.js`.
+- **Off in debug builds.** `firebase.json` sets `crashlytics_debug_enabled: false`,
+  so development crashes stay local.
+- **Readable release traces.** The Crashlytics Gradle plugin
+  (`com.google.firebase.crashlytics`) applies under the same condition as
+  google-services — `android/app/google-services.json` present — and uploads the
+  R8 mapping for minified builds.
+- **Native crashes only.** No JS module import exists yet, so unhandled JS
+  exceptions still go to Telemetry/Loki, not Crashlytics.
+- Crashlytics must be enabled once in the Firebase console for the project before
+  reports appear.
+
 ## Prerequisites
 
 - Android device or emulator connected

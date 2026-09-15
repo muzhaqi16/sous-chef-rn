@@ -39,7 +39,6 @@ export interface ScannedItem {
 
 export interface BarcodeScannerState {
   // Current scan state
-  scannedBarcode: string | null;
   isScanning: boolean;
 
   // Search state
@@ -55,7 +54,6 @@ export interface BarcodeScannerState {
   recentlyScanned: ScannedItem[];
 
   // Actions
-  setScannedBarcode: (barcode: string) => void;
   setScanning: (isScanning: boolean) => void;
   setSearchResults: (results: ScannedItem[]) => void;
   setSearching: (isSearching: boolean) => void;
@@ -73,7 +71,6 @@ export interface BarcodeScannerState {
  * clears the whole store rather than a hand-copied subset.
  */
 export const initialBarcodeScannerState = {
-  scannedBarcode: null,
   isScanning: false,
   searchResults: [] as ScannedItem[],
   isSearching: false,
@@ -89,12 +86,6 @@ export const useBarcodeScannerStore = create<BarcodeScannerState>()(
   persist(
     immer(set => ({
       ...initialBarcodeScannerState,
-
-      setScannedBarcode: barcode =>
-        set(state => {
-          state.scannedBarcode = barcode;
-          state.searchError = null; // Clear any previous errors
-        }),
 
       setScanning: isScanning =>
         set(state => {
@@ -164,7 +155,6 @@ export const useBarcodeScannerStore = create<BarcodeScannerState>()(
       // keeps the history, only a session end empties it.
       resetScanner: () =>
         set(state => {
-          state.scannedBarcode = null;
           state.isScanning = false;
           state.searchResults = [];
           state.isSearching = false;

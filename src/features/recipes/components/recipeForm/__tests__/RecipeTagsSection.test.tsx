@@ -3,7 +3,11 @@
 import React from 'react';
 import { render, userEvent } from '@testing-library/react-native';
 import { RecipeTagsSection } from '../RecipeTagsSection';
-import { Diet, HealthGoal, Intolerance } from '#/graphql/generated/schemaTypes';
+import type {
+  Diet,
+  HealthGoal,
+  Intolerance,
+} from '#/graphql/generated/schemaTypes';
 
 jest.mock(
   '#components/organisms/MultiSelectChipSheet/MultiSelectChipSheet',
@@ -119,14 +123,14 @@ describe('RecipeTagsSection', () => {
     expect(queryByTestId('sheet-Intolerances')).toBeTruthy();
   });
 
-  it('formats enum labels correctly', () => {
+  it('labels an enum value from its key', () => {
     const { getByText } = render(
       <RecipeTagsSection
         {...defaultProps}
-        healthGoals={['WEIGHT_LOSS' as HealthGoal]}
+        healthGoals={['HIGH_PROTEIN' as HealthGoal]}
       />,
     );
-    expect(getByText('Weight Loss')).toBeTruthy();
+    expect(getByText('High Protein')).toBeTruthy();
   });
 
   it('renders multiple selected chips', () => {

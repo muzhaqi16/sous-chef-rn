@@ -10,7 +10,7 @@ import {
   toImagePerspective,
   MAX_GALLERY_PHOTOS,
 } from '../imageUtils';
-import { ImagePerspective } from '#/graphql/generated/schemaTypes';
+import { ImageKind, ImagePerspective } from '#/graphql/generated/schemaTypes';
 
 describe('imageUtils', () => {
   // ==========================================================================
@@ -18,47 +18,47 @@ describe('imageUtils', () => {
   // ==========================================================================
   describe('pickImageUrl', () => {
     it('returns null for null images', () => {
-      expect(pickImageUrl(null, 'THUMBNAIL')).toBeNull();
+      expect(pickImageUrl(null, ImageKind.Thumbnail)).toBeNull();
     });
 
     it('returns null for undefined images', () => {
-      expect(pickImageUrl(undefined, 'THUMBNAIL')).toBeNull();
+      expect(pickImageUrl(undefined, ImageKind.Thumbnail)).toBeNull();
     });
 
     it('returns null for empty array', () => {
-      expect(pickImageUrl([], 'THUMBNAIL')).toBeNull();
+      expect(pickImageUrl([], ImageKind.Thumbnail)).toBeNull();
     });
 
     it('returns matching kind url', () => {
       const images = [
-        { url: 'https://cdn.example.com/thumb.jpg', kind: 'THUMBNAIL' },
-        { url: 'https://cdn.example.com/main.jpg', kind: 'MAIN' },
+        { url: 'https://cdn.example.com/thumb.jpg', kind: ImageKind.Thumbnail },
+        { url: 'https://cdn.example.com/main.jpg', kind: ImageKind.Main },
       ];
-      expect(pickImageUrl(images, 'THUMBNAIL')).toBe(
+      expect(pickImageUrl(images, ImageKind.Thumbnail)).toBe(
         'https://cdn.example.com/thumb.jpg',
       );
     });
 
     it('falls back to MAIN kind when preferred kind is missing', () => {
       const images = [
-        { url: 'https://cdn.example.com/main.jpg', kind: 'MAIN' },
-        { url: 'https://cdn.example.com/other.jpg', kind: 'OTHER' },
+        { url: 'https://cdn.example.com/main.jpg', kind: ImageKind.Main },
+        { url: 'https://cdn.example.com/other.jpg', kind: ImageKind.Size_128 },
       ];
-      expect(pickImageUrl(images, 'THUMBNAIL')).toBe(
+      expect(pickImageUrl(images, ImageKind.Thumbnail)).toBe(
         'https://cdn.example.com/main.jpg',
       );
     });
 
     it('returns null when neither preferred kind nor MAIN exists', () => {
       const images = [
-        { url: 'https://cdn.example.com/other.jpg', kind: 'OTHER' },
+        { url: 'https://cdn.example.com/other.jpg', kind: ImageKind.Size_128 },
       ];
-      expect(pickImageUrl(images, 'THUMBNAIL')).toBeNull();
+      expect(pickImageUrl(images, ImageKind.Thumbnail)).toBeNull();
     });
 
     it('handles images with null kind', () => {
       const images = [{ url: 'https://cdn.example.com/a.jpg', kind: null }];
-      expect(pickImageUrl(images, 'THUMBNAIL')).toBeNull();
+      expect(pickImageUrl(images, ImageKind.Thumbnail)).toBeNull();
     });
   });
 
@@ -70,8 +70,11 @@ describe('imageUtils', () => {
       const photo = {
         url: 'https://cdn.example.com/original.jpg',
         variants: [
-          { url: 'https://cdn.example.com/thumb.jpg', kind: 'THUMBNAIL' },
-          { url: 'https://cdn.example.com/512.jpg', kind: 'SIZE_512' },
+          {
+            url: 'https://cdn.example.com/thumb.jpg',
+            kind: ImageKind.Thumbnail,
+          },
+          { url: 'https://cdn.example.com/512.jpg', kind: ImageKind.Size_512 },
         ],
       };
       expect(photoDisplayUrl(photo, 'large')).toBe(
@@ -83,8 +86,11 @@ describe('imageUtils', () => {
       const photo = {
         url: 'https://cdn.example.com/original.jpg',
         variants: [
-          { url: 'https://cdn.example.com/thumb.jpg', kind: 'THUMBNAIL' },
-          { url: 'https://cdn.example.com/512.jpg', kind: 'SIZE_512' },
+          {
+            url: 'https://cdn.example.com/thumb.jpg',
+            kind: ImageKind.Thumbnail,
+          },
+          { url: 'https://cdn.example.com/512.jpg', kind: ImageKind.Size_512 },
         ],
       };
       expect(photoDisplayUrl(photo, 'small')).toBe(
@@ -108,7 +114,10 @@ describe('imageUtils', () => {
       const photo = {
         url: 'https://cdn.example.com/original.jpg',
         variants: [
-          { url: 'https://cdn.example.com/thumb.jpg', kind: 'THUMBNAIL' },
+          {
+            url: 'https://cdn.example.com/thumb.jpg',
+            kind: ImageKind.Thumbnail,
+          },
         ],
       };
       expect(photoDisplayUrl(photo, 'xlarge')).toBe(
@@ -228,7 +237,7 @@ describe('imageUtils', () => {
   // ==========================================================================
   describe('getPerspectiveLabel', () => {
     // Stand-in for i18next: returns the key so the test can assert which one was
-    // asked for, and honours `defaultValue` the way i18next does for a miss.
+    // asked for. Whether a key exists is read from the loaded copy.
     const translate = (key: string) => key;
 
     it('looks the label up under itemPhotos.perspective', () => {
@@ -243,10 +252,8 @@ describe('imageUtils', () => {
     // A provider can supply a perspective outside our set; a capitalized raw
     // value beats showing a missing-key marker.
     it('falls back to the capitalized raw value for an unknown perspective', () => {
-      const missing = (_key: string, options?: Record<string, unknown>) =>
-        String(options?.defaultValue ?? '');
-      expect(getPerspectiveLabel('custom', missing)).toBe('Custom');
-      expect(getPerspectiveLabel('topDown', missing)).toBe('TopDown');
+      expect(getPerspectiveLabel('custom', translate)).toBe('Custom');
+      expect(getPerspectiveLabel('topDown', translate)).toBe('TopDown');
     });
   });
 

@@ -1,12 +1,10 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
-import { Control, FieldErrors } from 'react-hook-form';
+import type { Control, FieldErrors } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
-import {
-  DynamicFormFields,
-  FieldDef,
-} from '#components/molecules/DynamicFormFields';
+import type { FieldDef } from '#components/molecules/DynamicFormFields';
+import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
 import { FormInput } from '#components/atoms/FormInput';
 import type { PantryItemFormData } from './PantryItemForm';
 import { SectionHeader } from '#components/atoms/SectionHeader';

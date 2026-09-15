@@ -1,3 +1,4 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { createContext, useContext } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -45,7 +46,7 @@ export const PantryStickyTabs: React.FC<PantryStickyTabsProps> = ({
         activeTabId={value.activeTabId}
         onTabChange={value.onTabChange}
         counts={value.counts}
-        testIDPrefix="pantry-location-tab"
+        testIDPrefix={pantryTestIDs.locationTabPrefix}
       />
     </View>
   );

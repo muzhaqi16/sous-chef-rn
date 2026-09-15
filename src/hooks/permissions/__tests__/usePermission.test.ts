@@ -48,11 +48,12 @@ describe('usePermission', () => {
     (PermissionService.request as jest.Mock).mockResolvedValue('granted');
   });
 
-  it('starts with undetermined status', () => {
+  it('reports neither granted nor blocked before the check resolves', () => {
     const { result } = renderHook(() => usePermission('camera'));
 
-    // Initial state before async check resolves
-    expect(result.current.status).toBe('undetermined');
+    expect(result.current.isChecking).toBe(true);
+    expect(result.current.isGranted).toBe(false);
+    expect(result.current.isBlocked).toBe(false);
   });
 
   it('checks permission on mount', async () => {
@@ -69,7 +70,6 @@ describe('usePermission', () => {
     const { result } = renderHook(() => usePermission('camera'));
 
     await waitFor(() => {
-      expect(result.current.status).toBe('granted');
       expect(result.current.isGranted).toBe(true);
     });
   });
@@ -92,8 +92,9 @@ describe('usePermission', () => {
     const { result } = renderHook(() => usePermission('camera'));
 
     await waitFor(() => {
-      expect(result.current.status).toBe('denied');
+      expect(result.current.isChecking).toBe(false);
     });
+    expect(result.current.isGranted).toBe(false);
 
     await act(async () => {
       const requestResult = await result.current.request();
@@ -101,13 +102,14 @@ describe('usePermission', () => {
     });
 
     expect(PermissionService.request).toHaveBeenCalledWith('camera');
+    expect(result.current.isGranted).toBe(true);
   });
 
   it('openSettings calls PermissionService.openSettings', async () => {
     const { result } = renderHook(() => usePermission('camera'));
 
-    act(() => {
-      result.current.openSettings();
+    await act(async () => {
+      await result.current.openSettings();
     });
 
     expect(PermissionService.openSettings).toHaveBeenCalled();
@@ -124,7 +126,7 @@ describe('usePermission', () => {
     );
 
     await waitFor(() => {
-      expect(result.current.status).toBe('granted');
+      expect(result.current.isGranted).toBe(true);
     });
 
     rerender({ perm: 'photos' as AppPermission });
@@ -155,7 +157,6 @@ describe('usePermission', () => {
 
     expect(PermissionService.check).toHaveBeenCalledWith('camera');
     await waitFor(() => {
-      expect(result.current.status).toBe('granted');
       expect(result.current.isGranted).toBe(true);
     });
   });
@@ -187,7 +188,7 @@ describe('usePermission', () => {
     );
 
     await waitFor(() => {
-      expect(result.current.status).toBe('denied');
+      expect(result.current.isChecking).toBe(false);
     });
 
     rerender({ perm: 'photos' as AppPermission });

@@ -1,5 +1,5 @@
 import { array, mixed, number, object, string, type ObjectSchema } from 'yup';
-import { t } from '#/i18n';
+import { t, type TranslationKey } from '#/i18n';
 import {
   RecipeStatus,
   type Difficulty,
@@ -16,9 +16,10 @@ import type {
 
 // Messages resolve LAZILY: the schema is built once at module scope, so an
 // eagerly resolved one freezes whichever language was active at import time.
-const msg = (key: string) => (): string => t(key);
-const msgWith = (key: string, options: Record<string, unknown>) => (): string =>
-  t(key, options);
+const msg = (key: TranslationKey) => (): string => t(key);
+const msgWith =
+  (key: TranslationKey, options: Record<string, unknown>) => (): string =>
+    t(key, options);
 
 /** The API's JSON-scalar bounds. */
 const JSON_MAX_ITEMS = 1000;

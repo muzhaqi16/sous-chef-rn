@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import { useDefaultHome } from '#features/home/hooks/useDefaultHome';
 
 interface AuthenticatedDataProviderProps {

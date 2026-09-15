@@ -1,28 +1,30 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 
 interface NutrientRow {
-  labelKey: string;
+  labelKey: TranslationKey;
   value: string;
 }
 
 // nutritionData is an untyped JSON blob (Spoonacular-shaped). Narrow to a record
 // after a runtime typeof check — no `any`, just defensive structural access.
+function isRecord(x: unknown): x is Record<string, unknown> {
+  return x !== null && typeof x === 'object';
+}
+
 function asRecord(x: unknown): Record<string, unknown> | null {
-  return x !== null && typeof x === 'object'
-    ? (x as Record<string, unknown>)
-    : null;
+  return isRecord(x) ? x : null;
 }
 
 // Keys are the Spoonacular nutrient `name` values (matched against the blob);
 // values are the i18n keys whose label is resolved at render time so the macro
 // names follow the active language.
-const MACRO_LABEL_KEYS: Record<string, string> = {
+const MACRO_LABEL_KEYS: Record<string, TranslationKey> = {
   Calories: 'labels.calories',
   Protein: 'recipes.macroProtein',
   Carbohydrates: 'recipes.macroCarbohydrates',

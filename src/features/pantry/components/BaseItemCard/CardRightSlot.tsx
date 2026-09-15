@@ -12,6 +12,7 @@ import type { CardRightSlotProps } from './types';
 import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
 import { rowType } from '#/theme/foundations/type';
+import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 
 const MetaSlot: React.FC<
   Pick<CardRightSlotProps, 'primary' | 'secondary' | 'tertiary' | 'testID'>
@@ -83,7 +84,9 @@ const InteractiveSlot: React.FC<CardRightSlotProps> = ({
         </Pressable>
       </View>
       <View style={styles.counterValue}>
-        <Text role={rowType.title}>{quantity || 0}</Text>
+        <Text role={rowType.title}>
+          {formatQuantityForDisplay(quantity ?? 0)}
+        </Text>
         {unit ? (
           <Text
             role={rowType.subtitle}

@@ -108,7 +108,7 @@ export const usePerformanceDashboard = (): PerformanceDashboardData => {
   }, []);
 
   const onRefresh = () => {
-    executeRefreshWithFinally(async () => {
+    void executeRefreshWithFinally(async () => {
       if (trackMemory && isEnabled) {
         await MemoryMonitor.takeSnapshot('manual_refresh');
       }

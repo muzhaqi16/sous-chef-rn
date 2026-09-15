@@ -51,7 +51,7 @@ describe('CardLeftSlot', () => {
   it('renders custom children when type is custom', () => {
     render(
       <CardLeftSlot type="custom">
-        <Text>Custom content</Text>
+        <Text role="body">Custom content</Text>
       </CardLeftSlot>,
     );
     expect(screen.getByText('Custom content')).toBeTruthy();

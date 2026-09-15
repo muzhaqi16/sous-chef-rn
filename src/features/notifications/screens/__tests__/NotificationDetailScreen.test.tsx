@@ -1,7 +1,16 @@
 'use no memo';
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { NotificationType } from '#/graphql/generated/schemaTypes';
+import {
+  NotificationCategory,
+  NotificationStatus,
+  NotificationType,
+  Priority,
+} from '#/graphql/generated/schemaTypes';
+import {
+  toDisplayNotification,
+  type DisplayNotification,
+} from '#features/notifications/utils/toDisplayNotification';
 import { NotificationDetailScreen } from '../NotificationDetailScreen';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -38,42 +47,83 @@ const makeRoute = (params: Partial<DetailParams> = {}): DetailRoute => ({
   params: params as DetailParams,
 });
 
+// The server's English rides along on the fragment, as it does on the wire.
+const makeNotification = (
+  type: NotificationType,
+  payload: Record<string, unknown>,
+  server: { title: string; message: string },
+): DisplayNotification =>
+  toDisplayNotification({
+    __typename: 'Notification',
+    id: 'n-1',
+    type,
+    status: NotificationStatus.Sent,
+    priority: Priority.Normal,
+    title: server.title,
+    message: server.message,
+    payload,
+    category: NotificationCategory.Pantry,
+    sentAt: '2026-01-01T00:00:00Z',
+    expiresAt: null,
+    sourceId: null,
+    sourceType: null,
+    actionUrl: null,
+    readAt: null,
+  });
+
 describe('NotificationDetailScreen', () => {
   it('shows error when notification is missing', () => {
     render(<NotificationDetailScreen route={makeRoute()} />);
     expect(screen.getByText('Notification not found')).toBeTruthy();
   });
 
-  // The detail screen prefers getNotificationDisplayMessage (the localized /
-  // top-level message) over the raw payload.message. With a placeholder payload
-  // that lacks the expiry fields, the display falls back to notification.message.
-  it('renders notification with expiry type', () => {
-    const notification = {
-      id: '1',
-      type: NotificationType.ExpiryReminder,
-      title: 'Items Expiring Soon',
-      sentAt: '2026-01-01T00:00:00Z',
-      message: 'Test message',
-      payload: { message: 'Milk is expiring soon' },
-      requiresAction: false,
-    } as DetailParams['notification'];
+  it('renders an expiry reminder from its payload', () => {
+    const server = {
+      title: 'Expiration Reminder',
+      message: 'Milk expires in 2 days (Mar 3)',
+    };
+    const notification = makeNotification(
+      NotificationType.ExpiryReminder,
+      { itemName: 'Milk', daysUntilExpiry: 1 },
+      server,
+    );
     render(<NotificationDetailScreen route={makeRoute({ notification })} />);
-    expect(screen.getByText('Items Expiring Soon')).toBeTruthy();
-    expect(screen.getByText('Test message')).toBeTruthy();
+    expect(screen.getByText('Expiry reminder')).toBeTruthy();
+    expect(screen.getByText('Milk expires tomorrow')).toBeTruthy();
+    expect(screen.queryByText(server.title)).toBeNull();
+    expect(screen.queryByText(server.message)).toBeNull();
   });
 
-  it('renders notification with object payload', () => {
-    const notification = {
-      id: '2',
-      type: NotificationType.LowStock,
+  it('renders a low-stock alert from its payload', () => {
+    const server = {
       title: 'Low Stock Alert',
-      sentAt: '2026-01-01T00:00:00Z',
-      message: 'Stock alert',
-      payload: { message: 'Low stock detected' },
-      requiresAction: false,
-    } as DetailParams['notification'];
+      message: 'Rice is running low (2 remaining)',
+    };
+    const notification = makeNotification(
+      NotificationType.LowStock,
+      { itemName: 'Rice', currentQuantity: 2, minQuantity: 5 },
+      server,
+    );
     render(<NotificationDetailScreen route={makeRoute({ notification })} />);
-    expect(screen.getByText('Low Stock Alert')).toBeTruthy();
-    expect(screen.getByText('Stock alert')).toBeTruthy();
+    expect(screen.getByText('Low stock')).toBeTruthy();
+    expect(screen.getByText('Rice is running low (2 left)')).toBeTruthy();
+    expect(screen.queryByText(server.title)).toBeNull();
+    expect(screen.queryByText(server.message)).toBeNull();
+  });
+
+  it('falls back to generic copy, not the server text, when the payload has no names', () => {
+    const server = {
+      title: 'Announcement',
+      message: 'A message an administrator typed',
+    };
+    const notification = makeNotification(
+      NotificationType.ListUpdated,
+      {},
+      server,
+    );
+    render(<NotificationDetailScreen route={makeRoute({ notification })} />);
+    expect(screen.getByText('Shopping list updated')).toBeTruthy();
+    expect(screen.getByText('A shared shopping list has changes')).toBeTruthy();
+    expect(screen.queryByText(server.message)).toBeNull();
   });
 });

@@ -1,7 +1,9 @@
 import type { RefObject } from 'react';
 import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 import type { SearchBarRef } from '#components/molecules/SearchBar';
-import { type ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import type { TranslationKey } from '#/i18n';
+import type { DataState } from '#hooks/data/useDataState';
 
 export interface BaseSuggestionItem {
   id: string;
@@ -15,7 +17,7 @@ export interface SuggestionGroupConfig<
   T extends BaseSuggestionItem = BaseSuggestionItem,
 > {
   key: string;
-  titleKey: string;
+  titleKey: TranslationKey;
   accessor: (grouped: Record<string, T[]>) => T[];
   /** Lower renders first. */
   priority: number;
@@ -31,7 +33,7 @@ export interface QuickAddConfig {
   fireAndForget: boolean;
   enableExitAnimations: boolean;
   /** Interpolates `{{name}}`. */
-  toastMessageKey: string;
+  toastMessageKey: TranslationKey;
 }
 
 export interface AddDetailsConfig {
@@ -47,10 +49,10 @@ export interface AddItemSheetConfig<
    * `AddItemSheet` at render: these configs are module-level constants, so a
    * `t()` here would freeze the copy in the bootstrap language.
    */
-  titleKey: string;
+  titleKey: TranslationKey;
   testIDPrefix: string;
   placeholderIcon: 'cube-outline' | 'cart-outline';
-  searchPlaceholderKey: string;
+  searchPlaceholderKey: TranslationKey;
   suggestionGroups: SuggestionGroupConfig<T>[];
   quickAdd: QuickAddConfig;
   addDetails: AddDetailsConfig;
@@ -58,16 +60,16 @@ export interface AddItemSheetConfig<
   deferFetch: boolean;
   barcodeSource: 'pantry' | 'shoppingList';
   addManuallyPosition: 'top' | 'bottom';
-  emptyStateMessageKey: string;
-  emptyStateSubtextKey: string;
+  emptyStateMessageKey: TranslationKey;
+  emptyStateSubtextKey: TranslationKey;
 }
 
 export interface SuggestionsHookResult<
   T extends BaseSuggestionItem = BaseSuggestionItem,
 > {
   grouped: Record<string, T[]>;
-  loading: boolean;
-  hasSuggestions: boolean;
+  /** A failed or offline read is its own state, never "No suggestions yet". */
+  state: DataState;
   refetch: () => void;
 }
 

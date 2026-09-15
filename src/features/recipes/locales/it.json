@@ -60,6 +60,7 @@
     "myRecipesSubtitle": "Crea e gestisci le tue ricette",
     "myRecipesTitle": "Le mie ricette",
     "myRecipesSearchPlaceholder": "Cerca le mie ricette...",
+    "myRecipesSearchingAll": "Ricerca in tutte le tue ricette...",
     "myRecipesEmptyTitle": "Ancora nessuna ricetta",
     "myRecipesEmptyDescription": "Crea la tua prima ricetta",
     "createRecipe": "Crea ricetta",
@@ -71,6 +72,7 @@
     "loadingRecipe": "Caricamento ricetta...",
     "recipeNotFoundDb": "Ricetta non trovata nel database",
     "recipeNotFound": "Ricetta non trovata",
+    "loadFailed": "Impossibile caricare la ricetta",
     "percentHealthy": "% sana",
     "cookedCount": "Cucinata {{count}}x",
     "markCooked": "Segna come cucinata",
@@ -106,6 +108,7 @@
     "savedRecipesSearchPlaceholder": "Cerca ricette salvate...",
     "savedRecipesEmptyTitle": "Nessuna ricetta salvata",
     "savedRecipesEmptyDescription": "Salva le ricette dalla ricerca per vederle qui",
+    "savedRecipesSearchingAll": "Ricerca in tutte le tue ricette salvate...",
     "removeRecipeFailed": "Impossibile rimuovere la ricetta. Riprova.",
     "filterAll": "Tutte",
     "folders": "Cartelle",
@@ -365,7 +368,35 @@
   },
   "nutrition": {
     "noData": "Nessun dato nutrizionale disponibile",
-    "servingSize": "Dimensione porzione"
+    "servingSize": "Dimensione porzione",
+    "nutrient": {
+      "totalFat": "Grassi totali",
+      "saturatedFat": "Grassi saturi",
+      "transFat": "Grassi trans",
+      "cholesterol": "Colesterolo",
+      "vitaminA": "Vitamina A",
+      "vitaminD": "Vitamina D",
+      "vitaminE": "Vitamina E",
+      "vitaminK": "Vitamina K",
+      "vitaminB6": "Vitamina B6",
+      "vitaminB12": "Vitamina B12",
+      "thiamin": "Tiamina",
+      "riboflavin": "Riboflavina",
+      "niacin": "Niacina",
+      "folate": "Folati",
+      "magnesium": "Magnesio",
+      "phosphorus": "Fosforo",
+      "zinc": "Zinco",
+      "copper": "Rame",
+      "manganese": "Manganese",
+      "selenium": "Selenio"
+    },
+    "category": {
+      "macro": "Macronutrienti",
+      "vitamin": "Vitamine",
+      "mineral": "Minerali",
+      "other": "Altri"
+    }
   },
   "cuisineSelector": {
     "title": "Cucine preferite",

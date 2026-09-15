@@ -1,7 +1,7 @@
-import { type ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import {
-  type MembershipRole,
-  type MembershipStatus,
+import type { ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import type {
+  MembershipRole,
+  MembershipStatus,
 } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n';
 

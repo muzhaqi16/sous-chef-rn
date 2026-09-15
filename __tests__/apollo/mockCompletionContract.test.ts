@@ -23,7 +23,6 @@ import {
   renderHookWithApollo,
   throwOnMisrepresentedFixtureValues,
   throwOnUnknownFixtureKeys,
-  type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 
 const ECHO_ITEMS = gql`
@@ -62,7 +61,7 @@ function complete(query: DocumentNode, data: unknown): Record<string, unknown> {
   const completed = completeMockedResponse({
     request: { query, variables: () => true },
     result: { data: data as Record<string, unknown> },
-  } as MockedResponse);
+  });
   const result = completed.result as (vars: Record<string, unknown>) => {
     data: Record<string, unknown>;
   };
@@ -264,7 +263,7 @@ describe('completion is memoized per variables, not across them', () => {
           },
         },
       }),
-    } as unknown as MockedResponse);
+    });
     const run = (category: string) =>
       (
         echo.result as (v: Record<string, unknown>) => {
@@ -318,7 +317,7 @@ describe('schema drift fails at wrapper construction', () => {
           {
             request: { query: drifted },
             result: { data: {} },
-          } as MockedResponse,
+          },
         ],
       }),
     ).toThrow(/does not match src\/graphql\/generated\/schema\.graphql/);
@@ -338,7 +337,7 @@ describe('a fixture the operation cannot return is rejected', () => {
           units: [{ __typename: 'Unit', id: 'u-1', notAFieldThisQueryAsks: 1 }],
         },
       },
-    } as unknown as MockedResponse);
+    });
     (echo.result as (v: Record<string, unknown>) => unknown)({});
 
     expect(() => throwOnUnknownFixtureKeys()).toThrow(
@@ -350,7 +349,7 @@ describe('a fixture the operation cannot return is rejected', () => {
     const echo = completeMockedResponse({
       request: { query: PROBE_UNITS, variables: () => true },
       result: { data: { units: [{ __typename: 'Unit', id: 'u-1' }] } },
-    } as unknown as MockedResponse);
+    });
     (echo.result as (v: Record<string, unknown>) => unknown)({});
 
     expect(() => throwOnUnknownFixtureKeys()).not.toThrow();

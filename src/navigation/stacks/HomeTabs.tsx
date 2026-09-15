@@ -6,10 +6,6 @@ import {
   createBottomTabNavigator,
   createBottomTabScreen,
 } from '@react-navigation/bottom-tabs';
-import { pantryFeature } from '#features/pantry/manifest';
-import { shoppingListFeature } from '#features/shoppingList/manifest';
-import { recipesFeature } from '#features/recipes/manifest';
-import { mealPlanFeature } from '#features/mealPlan/manifest';
 import { TAB_APPEARANCE } from '#features/registry';
 import { PantryStack } from '#navigation/stacks/PantryStack';
 import { ShoppingListStack } from '#navigation/stacks/ShoppingListStack';
@@ -53,22 +49,10 @@ export const HomeTabs = createBottomTabNavigator({
     inactiveBehavior: 'none',
   },
   screens: {
-    Pantry: createBottomTabScreen({
-      screen: PantryStack,
-      options: { title: pantryFeature.tab!.titleKey },
-    }),
-    ShoppingList: createBottomTabScreen({
-      screen: ShoppingListStack,
-      options: { title: shoppingListFeature.tab!.titleKey },
-    }),
-    Recipe: createBottomTabScreen({
-      screen: RecipeStack,
-      options: { title: recipesFeature.tab!.titleKey },
-    }),
-    MealPlan: createBottomTabScreen({
-      screen: MealPlanStack,
-      options: { title: mealPlanFeature.tab!.titleKey },
-    }),
+    Pantry: createBottomTabScreen({ screen: PantryStack }),
+    ShoppingList: createBottomTabScreen({ screen: ShoppingListStack }),
+    Recipe: createBottomTabScreen({ screen: RecipeStack }),
+    MealPlan: createBottomTabScreen({ screen: MealPlanStack }),
   },
 });
 
